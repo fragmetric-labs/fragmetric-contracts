@@ -23,6 +23,12 @@ pub mod deposit_program {
         user_token_amount.token = data.token;
         user_token_amount.amount = user_token_amount.amount.checked_add(data.amount).unwrap();
         msg!("User's token amount is incremented. Current token {} amount: {}", user_token_amount.token, user_token_amount.amount);
+
+        emit!(Incremented {
+            user: user_token_amount.key(),
+            token: user_token_amount.token.clone(),
+            amount: user_token_amount.amount
+        });
         Ok(())
     }
 
@@ -33,6 +39,12 @@ pub mod deposit_program {
         user_token_amount.token = data.token;
         user_token_amount.amount = user_token_amount.amount.checked_sub(data.amount).unwrap();
         msg!("User's token amount is decremented. Current token {} amount: {}", user_token_amount.token, user_token_amount.amount);
+
+        emit!(Decremented {
+            user: user_token_amount.key(),
+            token: user_token_amount.token.clone(),
+            amount: user_token_amount.amount
+        });
         Ok(())
     }
 }
@@ -65,6 +77,13 @@ pub struct UserTokenAmount {
 
 #[event]
 pub struct Incremented {
+    pub user: Pubkey,
+    pub token: String,
+    pub amount: u64,
+}
+
+#[event]
+pub struct Decremented {
     pub user: Pubkey,
     pub token: String,
     pub amount: u64,
