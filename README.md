@@ -12,6 +12,16 @@ And you have to set the solana config rpc url to local.
 $ solana config set --url localhost
 ```
 
+And install dependencies.
+```
+$ npm install
+```
+
+And prepare the developer solana key from AWS.
+```
+$ make wallet
+```
+
 # Build the Program
 
 ```
@@ -26,10 +36,19 @@ $ solana-test-validator
 ```
 It seems to get halts sometimes. If it halts, use `--reset` flag.
 
-2. Run test code.
+2. Run test codes.
 ```
 $ anchor test --skip-local-validator
 ```
+If you want to run the specific test file,
+first, add the test command at `Anchor.toml` file's `[scripts]` section.
+For example, there's `test-deposit-program` command.
+
+If you want to run only the `tests/deposit-program.ts` test file, then run the below command.
+```
+$ anchor run test-deposit-program --skip-local-validator
+```
+
 
 # Deploy the Program to Devnet
 
@@ -49,4 +68,24 @@ wallet = "~/.config/solana/id.json"
 4. Deploy
 ```
 $ anchor deploy
+```
+
+## For RateLimit Error from RPC node
+
+1. Set the solana config rpc url to the QuickNode url.
+```
+$ solana config set --url https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/
+```
+
+2. Change provider cluster at `Anchor.toml` to the QuickNode url.
+```
+[provider]
+cluster = "https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/"
+```
+
+## To Deal with Multiple Programs at the Same Repository
+
+1. If you want to make another anchor program at this repository, you can use this command.
+```
+$ anchor new <another program name>
 ```
