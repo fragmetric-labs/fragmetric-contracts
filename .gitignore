@@ -5,6 +5,8 @@ target
 node_modules
 test-ledger
 .yarn
+.idea
+.vscode
 
 # solana id from aws
 id.json

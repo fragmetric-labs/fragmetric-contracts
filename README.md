@@ -17,9 +17,13 @@ And install dependencies.
 $ npm install
 ```
 
-And prepare the developer solana key from AWS.
+And prepare the developer Solana key from AWS.
 ```
-$ make wallet
+$ aws sso login --profile encrypt_dev
+...
+$ export AWS_DEFAULT_PROFILE=encrypt_dev
+$ anchor run init-wallet
+
 ```
 
 # Build the Program
