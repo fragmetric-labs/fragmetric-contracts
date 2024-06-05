@@ -46,7 +46,7 @@ For example, there's `test-deposit-program` command.
 
 If you want to run only the `tests/deposit-program.ts` test file, then run the below command.
 ```
-$ anchor run test-deposit-program --skip-local-validator
+$ anchor run test-deposit-program
 ```
 
 
