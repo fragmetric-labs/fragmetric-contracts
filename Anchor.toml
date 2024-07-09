@@ -4,21 +4,21 @@
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-deposit_program = "5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc"
-
 [programs.devnet]
 deposit_program = "5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc"
+
+[programs.localnet]
+deposit_program = "5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc"
+restaking = "4trkJGMF6idmp7chxhEEJGqBvbYQcN4QV3iQAnYuPZet"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "Localnet"
 wallet = "./id.json"
 
 [scripts]
 init-wallet = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq .devnet | jq -c fromjson > id.json && cat id.json >/dev/null && echo \"encrypt_dev/wallet data copied to ./id.json\""
-
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 test-deposit-program = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/deposit-program.ts"
