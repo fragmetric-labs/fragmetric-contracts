@@ -9,4 +9,11 @@ impl Fund {
     ) -> Result<()> {
         Ok(())
     }
+
+    pub fn deposit_sol(
+        &mut self,
+        amount: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
 }
