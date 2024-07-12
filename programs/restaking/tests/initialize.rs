@@ -13,14 +13,14 @@ async fn test_initialize() {
 
     let mut context = validator.start_with_context().await;
 
-    let init_ix = Instruction {
-        program_id: restaking::ID,
-        accounts: restaking::accounts::Initialize {
-            admin: admin.pubkey(),
-            token_mint_authority: admin.pubkey(),
-            fund: fund_pda,
-        }
-    }
+    // let init_ix = Instruction {
+    //     program_id: restaking::ID,
+    //     accounts: restaking::accounts::Initialize {
+    //         admin: admin.pubkey(),
+    //         token_mint_authority: admin.pubkey(),
+    //         fund: fund_pda,
+    //     }
+    // }
 }
 
 /// Struct set up to hold the validator, an optional user account, and the fund PDA.

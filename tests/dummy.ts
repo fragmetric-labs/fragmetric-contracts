@@ -1,14 +1,14 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, web3 } from "@coral-xyz/anchor";
 import { expect } from "chai";
-import { DepositProgram } from "../target/types/deposit_program";
+import { Dummy } from "../target/types/dummy";
 
 describe("dummy", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.DepositProgram as Program<DepositProgram>;
+  const program = anchor.workspace.Dummy as Program<Dummy>;
 
   const user1 = anchor.web3.Keypair.generate();
   const user2 = anchor.web3.Keypair.generate();

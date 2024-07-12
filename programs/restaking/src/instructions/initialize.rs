@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::{spl_token_2022::extension::{self, confidential_transfer::instruction}, Token2022}, token_interface::{Mint, TokenAccount}};
-use anchor_spl::token::Mint;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 // use crate::state::*;
 use crate::fund::*;
@@ -10,13 +9,12 @@ use crate::fund::*;
 pub struct Initialize<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
-    #[account(mut)]
-    pub token_mint_authority: Signer<'info>,
 
     #[account(
         init,
         payer = admin,
-        seeds = [b"fund", receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
+        // seeds = [b"fund", receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
+        seeds = [b"fund"],
         bump,
         space = 8 + 4 + 4 + 914,
     )]
@@ -26,11 +24,12 @@ pub struct Initialize<'info> {
         init,
         payer = admin,
         seeds = [receipt_token_name.as_bytes().as_ref()],
+        bump,
         mint::token_program = token_program,
         mint::decimals = 9,
-        mint::authority = token_mint_authority,
-        mint::freeze_authority = token_mint_authority,
-        extensions::transfer_hook::authority = token_mint_authority,
+        mint::authority = fund,
+        mint::freeze_authority = fund,
+        extensions::transfer_hook::authority = fund,
         extensions::transfer_hook::program_id = crate::ID,
     )]
     pub receipt_token_mint: InterfaceAccount<'info, Mint>, // fragSOL token mint account
@@ -44,7 +43,7 @@ pub struct Initialize<'info> {
     )]
     pub receipt_token_lock_account: InterfaceAccount<'info, TokenAccount>, // fund's fragSOL lock account
 
-    pub token_program: Program<'info, Token2022>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 

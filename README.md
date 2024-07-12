@@ -1,6 +1,6 @@
 # Structure
 
-Main logic of deposit-program is at `programs/deposit-program/src/lib.rs`.
+Main logic of dummy is at `programs/dummy/src/lib.rs`.
 
 # Setting
 
@@ -45,11 +45,11 @@ $ anchor test --skip-local-validator
 ```
 If you want to run the specific test file,
 first, add the test command at `Anchor.toml` file's `[scripts]` section.
-For example, there's `test-deposit-program` command.
+For example, there's `test-dummy` command.
 
 If you want to run only the `tests/dummy.ts` test file, then run the below command.
 ```
-$ anchor run test-deposit-program
+$ anchor run test-dummy
 ```
 
 
