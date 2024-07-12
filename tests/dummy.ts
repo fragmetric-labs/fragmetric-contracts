@@ -3,7 +3,7 @@ import { Program, web3 } from "@coral-xyz/anchor";
 import { expect } from "chai";
 import { DepositProgram } from "../target/types/deposit_program";
 
-describe("deposit-program", () => {
+describe("dummy", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);

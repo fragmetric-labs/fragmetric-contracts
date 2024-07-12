@@ -45,7 +45,7 @@ DAAKCRDyMVUMT0fjjlnQAQDFHUs6TIcxrNTtEZFjUFm1M0PJ1Dng/cDW4xN80fsn
 declare_id!("5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc");
 
 #[program]
-pub mod deposit_program {
+pub mod dummy {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
@@ -88,6 +88,28 @@ pub mod deposit_program {
         });
         Ok(())
     }
+
+    pub fn versioned_method(ctx: Context<Update>, data: VersionedState) -> Result<()> {
+        match data {
+            VersionedState::V1(data) => {
+                // DO SOMETHING...
+                emit!(VersionedEventV1 {
+                    field1: data.field1,
+                    field2: data.field2,
+                })
+            },
+            VersionedState::V2(data) => {
+                // DO SOMETHING...
+                emit!(VersionedEventV2 {
+                    field1: data.field1,
+                    field2: data.field2,
+                    field3: data.field3,
+                    field4: data.field4,
+                })
+            },
+        }
+        return err!(Errors::NotImplemented)
+    }
 }
 
 #[derive(Accounts)]
@@ -128,4 +150,46 @@ pub struct Decremented {
     pub user: Pubkey,
     pub token: String,
     pub amount: u64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub enum VersionedState {
+    V1(VersionedStateV1),
+    V2(VersionedStateV2),
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct VersionedStateV1 {
+    field1: u64,
+    field2: String,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct VersionedStateV2 {
+    field1: u64,
+    field2: u32,
+    field3: String,
+    field4: bool,
+}
+
+#[event]
+struct VersionedEventV1 {
+    field1: u64,
+    field2: String,
+}
+
+#[event]
+struct VersionedEventV2 {
+    field1: u64,
+    field2: u32,
+    field3: String,
+    field4: bool,
+}
+
+#[error_code]
+pub enum Errors {
+    #[msg("invalid data format")]
+    InvalidDataFormat,
+    #[msg("not implemented")]
+    NotImplemented,
 }

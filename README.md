@@ -21,8 +21,7 @@ And prepare the developer Solana key from AWS.
 ```
 $ aws sso login --profile encrypt_dev
 ...
-$ export AWS_DEFAULT_PROFILE=encrypt_dev
-$ anchor run init-wallet
+$ anchor run set-dev-wallet
 
 ```
 
@@ -48,7 +47,7 @@ If you want to run the specific test file,
 first, add the test command at `Anchor.toml` file's `[scripts]` section.
 For example, there's `test-deposit-program` command.
 
-If you want to run only the `tests/deposit-program.ts` test file, then run the below command.
+If you want to run only the `tests/dummy.ts` test file, then run the below command.
 ```
 $ anchor run test-deposit-program
 ```
