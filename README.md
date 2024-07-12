@@ -1,95 +1,73 @@
-# Structure
+# Fragmetric Solana Programs
+## 1. Introduction
+TODO...
 
-Main logic of deposit-program is at `programs/deposit-program/src/lib.rs`.
+# 2. Contribution Guide
+## 2.1. Developer Configuration
 
-# Setting
-
-You have to install `solana-cli`, `anchor` at your local.
-Take a look at this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
-
-And you have to set the solana config rpc url to local.
-```
-$ solana config set --url localhost
-```
-
-And install dependencies.
+- Install `solana-cli`, `anchor-cli 0.30.1` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
+- Install testing tool dependencies.
 ```
 $ npm install
 ```
 
-And prepare the developer Solana key from AWS.
+## 2.2. Local Development
 ```
+# Update code and build the updated binary
+$ anchor build -p dummy
+...
+
+
+# Run Solana network locally
+$ solana-test-validator
+...
+
+
+# Prepare your Solana Wallet account for program deployment/upgrade transactions also a keypair for program account. 
+# In case of the Fragmetric inhouse members, run below script to fetch a shared wallet keypair from the cloud.
 $ aws sso login --profile encrypt_dev
 ...
-$ export AWS_DEFAULT_PROFILE=encrypt_dev
-$ anchor run init-wallet
+$ anchor run set-dev-wallet
+encrypt_dev/wallet data copied to ./id.json
 
+$ anchor run set-dev-dummy-program-keypair
+encrypt_dev/dummyProgramKeypair data copied to ./programs/dummy/id.json
+
+# Deploy or Upgrade the program
+# Be noted that the "./id.json" keypair will have the upgrade authority of your local program,
+# And already have the upgrade authoirty of the devnet program.
+$ anchor deploy --provider.wallet ./id.json --provider.cluster=localnet --program-name dummy --program-keypair ./programs/dummy/id.json
+
+
+# If there is no enough buffer in the program data account, refer the below command to extend the buffer size with the given number of bytes.
+# Be noted that the maximum accounts size is 10MB.
+$ solana program extend [PROGRAM_ADDRESS] 1000 --keypair ./id.json
+Extended Program Id A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV by 1000 bytes
 ```
 
-# Build the Program
-
+## 2.3. Devnet Deployment
 ```
-$ anchor build
+# We've used the same program keypair for both local, devnet environment for the convenience.
+$ anchor deploy --provider.wallet ./id.json --provider.cluster=devnet --program-name dummy --program-keypair ./programs/dummy/id.json
+
+# Upgrade IDL
+$ anchor idl upgrade --provider.wallet ./id.json --provider.cluster=devnet --filepath ./target/idl/dummy.json $(solana address -k ./programs/dummy/id.json)
 ```
 
-# Run Test Code
-
+## 2.4. Testing
 1. Run the localnet at the seperate terminal.
+If it halts, use `--reset` flag.
 ```
 $ solana-test-validator
 ```
-It seems to get halts sometimes. If it halts, use `--reset` flag.
 
 2. Run test codes.
+Be noted that devnet usually fails to get airdrop to create a new account for clean test.
+So, you can use pre-funded accounts' keypairs in `./tests/user1.json, ...` to deal with devnet test-cases.
 ```
-$ anchor test --skip-local-validator
-```
-If you want to run the specific test file,
-first, add the test command at `Anchor.toml` file's `[scripts]` section.
-For example, there's `test-deposit-program` command.
+$ anchor run test-dummy --provider.cluster=localnet
+...
 
-If you want to run only the `tests/deposit-program.ts` test file, then run the below command.
-```
-$ anchor run test-deposit-program
-```
-
-
-# Deploy the Program to Devnet
-
-1. Set the solana config rpc url to devnet.
-```
-$ solana config set --url devnet
-```
-
-2. Change provider cluster at `Anchor.toml` to devnet.
-```
-[provider]
-cluster = "devnet"
-wallet = "~/.config/solana/id.json"
-```
-
-3. Build again
-4. Deploy
-```
-$ anchor deploy
-```
-
-## For RateLimit Error from RPC node
-
-1. Set the solana config rpc url to the QuickNode url.
-```
-$ solana config set --url https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/
-```
-
-2. Change provider cluster at `Anchor.toml` to the QuickNode url.
-```
-[provider]
-cluster = "https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/"
-```
-
-## To Deal with Multiple Programs at the Same Repository
-
-1. If you want to make another anchor program at this repository, you can use this command.
-```
-$ anchor new <another program name>
+$ anchor run test-dummy --provider.cluster=devnet
+...
 ```

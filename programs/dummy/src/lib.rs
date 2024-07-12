@@ -42,15 +42,17 @@ DAAKCRDyMVUMT0fjjlnQAQDFHUs6TIcxrNTtEZFjUFm1M0PJ1Dng/cDW4xN80fsn
 // "
 }
 
-declare_id!("5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc");
+declare_id!("A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV");
 
 #[program]
-pub mod deposit_program {
+pub mod dummy {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let user_token_amount = &mut ctx.accounts.user_token_amount;
+        user_token_amount.user = ctx.accounts.user.key();
         user_token_amount.amount = 0;
+        user_token_amount.bump = user_token_amount.bump.clone();
 
         // msg!("User Account Created");
         // msg!("User Amount: {}", user_token_amount.amount);
@@ -88,6 +90,28 @@ pub mod deposit_program {
         });
         Ok(())
     }
+
+    pub fn versioned_method(ctx: Context<Update>, data: VersionedState) -> Result<()> {
+        match data {
+            VersionedState::V1(data) => {
+                // DO SOMETHING...
+                emit!(VersionedEventV1 {
+                    field1: data.field1,
+                    field2: data.field2,
+                })
+            },
+            VersionedState::V2(data) => {
+                // DO SOMETHING...
+                emit!(VersionedEventV2 {
+                    field1: data.field1,
+                    field2: data.field2,
+                    field3: data.field3,
+                    field4: data.field4,
+                })
+            },
+        }
+        return err!(Errors::NotImplemented)
+    }
 }
 
 #[derive(Accounts)]
@@ -95,6 +119,8 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = user,
+        seeds = [b"user_token_amount", user.key().as_ref()],
+        bump,
         space = 8 + size_of::<UserTokenAmount>(),
     )]
     pub user_token_amount: Account<'info, UserTokenAmount>,
@@ -112,6 +138,8 @@ pub struct Update<'info> {
 
 #[account]
 pub struct UserTokenAmount {
+    pub user: Pubkey,
+    pub bump: u8,
     pub token: String,
     pub amount: u64,
 }
@@ -128,4 +156,46 @@ pub struct Decremented {
     pub user: Pubkey,
     pub token: String,
     pub amount: u64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub enum VersionedState {
+    V1(VersionedStateV1),
+    V2(VersionedStateV2),
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct VersionedStateV1 {
+    field1: u64,
+    field2: String,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct VersionedStateV2 {
+    field1: u64,
+    field2: u32,
+    field3: String,
+    field4: bool,
+}
+
+#[event]
+struct VersionedEventV1 {
+    field1: u64,
+    field2: String,
+}
+
+#[event]
+struct VersionedEventV2 {
+    field1: u64,
+    field2: u32,
+    field3: String,
+    field4: bool,
+}
+
+#[error_code]
+pub enum Errors {
+    #[msg("invalid data format")]
+    InvalidDataFormat,
+    #[msg("not implemented")]
+    NotImplemented,
 }
