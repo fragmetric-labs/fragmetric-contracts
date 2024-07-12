@@ -42,7 +42,7 @@ DAAKCRDyMVUMT0fjjlnQAQDFHUs6TIcxrNTtEZFjUFm1M0PJ1Dng/cDW4xN80fsn
 // "
 }
 
-declare_id!("5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc");
+declare_id!("A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV");
 
 #[program]
 pub mod dummy {
@@ -50,7 +50,9 @@ pub mod dummy {
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let user_token_amount = &mut ctx.accounts.user_token_amount;
+        user_token_amount.user = ctx.accounts.user.key();
         user_token_amount.amount = 0;
+        user_token_amount.bump = user_token_amount.bump.clone();
 
         // msg!("User Account Created");
         // msg!("User Amount: {}", user_token_amount.amount);
@@ -117,6 +119,8 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = user,
+        seeds = [b"user_token_amount", user.key().as_ref()],
+        bump,
         space = 8 + size_of::<UserTokenAmount>(),
     )]
     pub user_token_amount: Account<'info, UserTokenAmount>,
@@ -134,6 +138,8 @@ pub struct Update<'info> {
 
 #[account]
 pub struct UserTokenAmount {
+    pub user: Pubkey,
+    pub bump: u8,
     pub token: String,
     pub amount: u64,
 }

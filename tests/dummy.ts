@@ -16,6 +16,27 @@ describe("dummy", () => {
 
   const user1 = anchor.web3.Keypair.generate();
   const user2 = anchor.web3.Keypair.generate();
+  const [userData1, userDataBump1] = anchor.web3.PublicKey.findProgramAddressSync([
+        Buffer.from("user_token_amount"),
+        user1.publicKey.toBuffer(),
+      ],
+      program.programId,
+    );
+  const [userData2, userDataBump2] = anchor.web3.PublicKey.findProgramAddressSync([
+        Buffer.from("user_token_amount"),
+        user2.publicKey.toBuffer(),
+      ],
+      program.programId,
+    );
+  console.log({
+    program: program.programId.toBase58(),
+    user1: user1.publicKey.toBase58(),
+    userData1: userData1.toBase58(),
+    userDataBump1,
+    user2: user2.publicKey.toBase58(),
+    userData2: userData2.toBase58(),
+    userDataBump2,
+  })
 
   it("Is initialized!", async () => {
     // airdrop some SOL to new user
@@ -33,12 +54,12 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .initialize()
-      .accounts({ userTokenAmount: user1.publicKey })
+      .accounts({ user: user1.publicKey })
       .signers([user1])
       .rpc();
     console.log("Initialize transaction signature", tx);
 
-    const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
+    const account1 = await program.account.userTokenAmount.fetch(userData1);
     expect(account1.amount.toNumber()).to.equal(0);
   });
 
@@ -50,12 +71,12 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .increment(data)
-      .accounts({ userTokenAmount: user1.publicKey, user: user1.publicKey })
+      .accounts({ userTokenAmount: userData1, user: user1.publicKey })
       .signers([user1])
       .rpc();
     console.log("Increment transaction:", tx);
 
-    const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
+    const account1 = await program.account.userTokenAmount.fetch(userData1);
     console.log("Updated amount:", account1.amount.toNumber());
     expect(account1.amount.toNumber()).to.equal(100);
   });
@@ -68,12 +89,12 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .decrement(data)
-      .accounts({ userTokenAmount: user1.publicKey, user: user1.publicKey })
+      .accounts({ userTokenAmount: userData1, user: user1.publicKey })
       .signers([user1])
       .rpc();
     console.log("Decrement transaction:", tx);
 
-    const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
+    const account1 = await program.account.userTokenAmount.fetch(userData1);
     console.log("Updated amount:", account1.amount.toNumber());
     expect(account1.amount.toNumber()).to.equal(70);
   });
@@ -86,12 +107,12 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .increment(data)
-      .accounts({ userTokenAmount: user1.publicKey, user: user1.publicKey })
+      .accounts({ userTokenAmount: userData1, user: user1.publicKey })
       .signers([user1])
       .rpc();
     console.log("Increment transaction:", tx);
 
-    const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
+    const account1 = await program.account.userTokenAmount.fetch(userData1);
     console.log("Updated amount:", account1.amount.toNumber());
     expect(account1.amount.toNumber()).to.equal(120);
   });
@@ -112,12 +133,12 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .initialize()
-      .accounts({ userTokenAmount: user2.publicKey })
+      .accounts({ user: user2.publicKey })
       .signers([user2])
       .rpc();
     console.log("Initialize transaction signature", tx);
 
-    const account2 = await program.account.userTokenAmount.fetch(user2.publicKey);
+    const account2 = await program.account.userTokenAmount.fetch(userData2);
     expect(account2.amount.toNumber()).to.equal(0);
   });
 
@@ -129,16 +150,16 @@ describe("dummy", () => {
 
     const tx = await program.methods
       .increment(data)
-      .accounts({ userTokenAmount: user2.publicKey, user: user2.publicKey })
+      .accounts({ userTokenAmount: userData2, user: user2.publicKey })
       .signers([user2])
       .rpc();
     console.log("Increment transaction:", tx);
 
-    const account2 = await program.account.userTokenAmount.fetch(user2.publicKey);
+    const account2 = await program.account.userTokenAmount.fetch(userData2);
     console.log("Updated amount:", account2.amount.toNumber());
     expect(account2.amount.toNumber()).to.equal(50);
 
-    const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
+    const account1 = await program.account.userTokenAmount.fetch(userData1);
     console.log("Check user1's amount is not changed:", account1.amount.toNumber());
     expect(account1.amount.toNumber()).to.equal(120);
   });
@@ -153,7 +174,7 @@ describe("dummy", () => {
     expect(
       program.methods
         .versionedMethod(data)
-        .accounts({ userTokenAmount: user2.publicKey, user: user2.publicKey })
+        .accounts({ userTokenAmount: userData2, user: user2.publicKey })
         .signers([user2])
         .rpc()
     ).to.eventually.throw('NotImplemented');

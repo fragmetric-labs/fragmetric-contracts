@@ -5,10 +5,10 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-dummy = "5yYKAKV5r62ooXrKZNpxr9Bkk7CTtpyJ8sXD7k2WryUc"
+dummy = "A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV"
 
 [programs.localnet]
-dummy = "CuYyiJ8dQZ4ZvS8Wonkua97i6fGcY1jctd7PT5pLKuSC"
+dummy = "A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV"
 restaking = "9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D"
 
 [registry]
