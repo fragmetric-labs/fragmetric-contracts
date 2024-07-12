@@ -11,11 +11,12 @@ describe("dummy", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-
   const program = anchor.workspace.Dummy as Program<Dummy>;
 
-  const user1 = anchor.web3.Keypair.generate();
-  const user2 = anchor.web3.Keypair.generate();
+  const isLocal = provider.connection.rpcEndpoint.includes("127.0.0.1");
+  const user1 = isLocal ? anchor.web3.Keypair.generate() : anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./user1.json")));
+  const user2 = isLocal ? anchor.web3.Keypair.generate() : anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./user2.json")));
+
   const [userData1, userDataBump1] = anchor.web3.PublicKey.findProgramAddressSync([
         Buffer.from("user_token_amount"),
         user1.publicKey.toBuffer(),
@@ -28,7 +29,9 @@ describe("dummy", () => {
       ],
       program.programId,
     );
+
   console.log({
+    isLocal,
     program: program.programId.toBase58(),
     user1: user1.publicKey.toBase58(),
     userData1: userData1.toBase58(),
@@ -39,14 +42,16 @@ describe("dummy", () => {
   })
 
   it("Is initialized!", async () => {
-    // airdrop some SOL to new user
-    const airdropSignature = await provider.connection.requestAirdrop(
-      user1.publicKey,
-      5 * web3.LAMPORTS_PER_SOL // 5 SOL
-    );
+    if (isLocal) {
+      // airdrop some SOL to new user
+      const airdropSignature = await provider.connection.requestAirdrop(
+        user1.publicKey,
+        5 * web3.LAMPORTS_PER_SOL // 5 SOL
+      );
 
-    // confirm the transaction
-    await provider.connection.confirmTransaction(airdropSignature);
+      // confirm the transaction
+      await provider.connection.confirmTransaction(airdropSignature);
+    }
 
     // check the balance
     const user1Bal = await provider.connection.getBalance(user1.publicKey);
@@ -118,14 +123,16 @@ describe("dummy", () => {
   });
 
   it("Initialize user2", async () => {
-    // airdrop some SOL to new user
-    const airdropSignature = await provider.connection.requestAirdrop(
-      user2.publicKey,
-      4 * web3.LAMPORTS_PER_SOL // 4 SOL
-    );
+    if (isLocal) {
+      // airdrop some SOL to new user
+      const airdropSignature = await provider.connection.requestAirdrop(
+          user2.publicKey,
+          4 * web3.LAMPORTS_PER_SOL // 4 SOL
+      );
 
-    // confirm the transaction
-    await provider.connection.confirmTransaction(airdropSignature);
+      // confirm the transaction
+      await provider.connection.confirmTransaction(airdropSignature);
+    }
 
     // check the balance
     const user2Bal = await provider.connection.getBalance(user2.publicKey);

@@ -1,94 +1,68 @@
-# Structure
+# Fragmetric Solana Programs
+## 1. Introduction
+TODO...
 
-Main logic of dummy is at `programs/dummy/src/lib.rs`.
+# 2. Contribution Guide
+## 2.1. Developer Configuration
 
-# Setting
-
-You have to install `solana-cli`, `anchor` at your local.
-Take a look at this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
-
-And you have to set the solana config rpc url to local.
-```
-$ solana config set --url localhost
-```
-
-And install dependencies.
+- Install `solana-cli`, `anchor-cli 0.30.1` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
+- Install testing tool dependencies.
 ```
 $ npm install
 ```
 
-# Build the Program
-
+## 2.2. Local Development
 ```
-$ anchor build
-```
+# Update code and build the updated binary
+$ anchor build -p dummy
+...
 
-# Run Test Code
 
-1. Run the localnet at the seperate terminal.
-```
+# Run Solana network locally
 $ solana-test-validator
-```
-It seems to get halts sometimes. If it halts, use `--reset` flag.
-
-2. Run test codes.
-```
-$ anchor test --skip-local-validator
-```
-If you want to run the specific test file,
-first, add the test command at `Anchor.toml` file's `[scripts]` section.
-For example, there's `test-dummy` command.
-
-If you want to run only the `tests/dummy.ts` test file, then run the below command.
-```
-$ anchor run test-dummy
-```
+...
 
 
-# Deploy the Program to Devnet
-
-1. Set the solana config rpc url to devnet.
-```
-$ solana config set --url devnet
-```
-
-
-2. prepare the developer Solana key from AWS.
-```
+# Prepare your Solana Wallet account for program deployment/upgrade transactions 
+# In case of the Fragmetric inhouse members, run below script to fetch a shared wallet keypair from the cloud.
 $ aws sso login --profile encrypt_dev
 ...
 $ anchor run set-dev-wallet
+encrypt_dev/wallet data copied to ./id.json
+
+
+# Deploy or Upgrade the program
+# Be noted that the "./id.json" keypair will have the upgrade authority of your local program,
+# And already have the upgrade authoirty of the devnet program.
+$ anchor deploy --provider.wallet ./id.json --provider.cluster=localnet --program-name dummy --program-keypair ./programs/dummy/id.json
+
+
+# If there is no enough buffer in the program data account, refer the below command to extend the buffer size with the given number of bytes.
+# Be noted that the maximum accounts size is 10MB.
+$ solana program extend [PROGRAM_ADDRESS] 1000 --keypair ./id.json
+Extended Program Id A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV by 1000 bytes
 ```
 
-2. Change provider cluster at `Anchor.toml` to devnet.
+## 2.3. Devnet Deployment
 ```
-[provider]
-cluster = "devnet"
-wallet = "./id.json"
-```
-
-3. Build again
-4. Deploy
-```
-$ anchor deploy
+# We've used the same program keypair for both local, devnet environment for the convenience.
+$ anchor deploy --provider.wallet ./id.json --provider.cluster=localnet --program-name dummy --program-keypair ./programs/dummy/id.json
 ```
 
-## For RateLimit Error from RPC node
-
-1. Set the solana config rpc url to the QuickNode url.
+## 2.4. Testing
+1. Run the localnet at the seperate terminal.
+If it halts, use `--reset` flag.
 ```
-$ solana config set --url https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/
-```
-
-2. Change provider cluster at `Anchor.toml` to the QuickNode url.
-```
-[provider]
-cluster = "https://palpable-few-ensemble.solana-devnet.quiknode.pro/187c644705468fcb556c12b70dc5a41dfd355961/"
+$ solana-test-validator
 ```
 
-## To Deal with Multiple Programs at the Same Repository
-
-1. If you want to make another anchor program at this repository, you can use this command.
+2. Run test codes.
+Be noted that devnet usually fails to get airdrop to create a new account for clean test.
+So, you can use pre-funded accounts' keypairs in `./tests/user1.json, ...` to deal with devnet test-cases.
 ```
-$ anchor new <another program name>
+$ anchor run test-dummy --provider.cluster=localnet
+...
+
+$ anchor run test-dummy --provider.cluster=devnet
+...
 ```
