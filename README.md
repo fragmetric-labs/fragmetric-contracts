@@ -17,14 +17,6 @@ And install dependencies.
 $ npm install
 ```
 
-And prepare the developer Solana key from AWS.
-```
-$ aws sso login --profile encrypt_dev
-...
-$ anchor run set-dev-wallet
-
-```
-
 # Build the Program
 
 ```
@@ -60,11 +52,19 @@ $ anchor run test-dummy
 $ solana config set --url devnet
 ```
 
+
+2. prepare the developer Solana key from AWS.
+```
+$ aws sso login --profile encrypt_dev
+...
+$ anchor run set-dev-wallet
+```
+
 2. Change provider cluster at `Anchor.toml` to devnet.
 ```
 [provider]
 cluster = "devnet"
-wallet = "~/.config/solana/id.json"
+wallet = "./id.json"
 ```
 
 3. Build again

@@ -1,7 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, web3 } from "@coral-xyz/anchor";
+import * as chai from 'chai';
+import chaiAsPromised from "chai-as-promised";
 import { expect } from "chai";
 import { Dummy } from "../target/types/dummy";
+
+chai.use(chaiAsPromised);
 
 describe("dummy", () => {
   // Configure the client to use the local cluster.
@@ -137,5 +141,21 @@ describe("dummy", () => {
     const account1 = await program.account.userTokenAmount.fetch(user1.publicKey);
     console.log("Check user1's amount is not changed:", account1.amount.toNumber());
     expect(account1.amount.toNumber()).to.equal(120);
+  });
+
+  it("can send versioned data", async () => {
+    const data = {
+      v1: {
+        field1: 1234,
+        field2: "hello",
+      },
+    };
+    expect(
+      program.methods
+        .versionedMethod(data)
+        .accounts({ userTokenAmount: user2.publicKey, user: user2.publicKey })
+        .signers([user2])
+        .rpc()
+    ).to.eventually.throw('NotImplemented');
   });
 });
