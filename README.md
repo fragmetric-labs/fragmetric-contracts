@@ -27,10 +27,10 @@ $ solana-test-validator
 # In case of the Fragmetric inhouse members, run below script to fetch a shared wallet keypair from the cloud.
 $ aws sso login --profile encrypt_dev
 ...
-$ anchor run set-dev-wallet
+$ anchor run set-devnet-wallet
 encrypt_dev/wallet data copied to ./id.json
 
-$ anchor run set-dev-dummy-program-keypair
+$ anchor run set-devnet-dummy-program-keypair
 encrypt_dev/dummyProgramKeypair data copied to ./programs/dummy/id.json
 
 # Deploy or Upgrade the program

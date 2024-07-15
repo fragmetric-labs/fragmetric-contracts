@@ -11,7 +11,8 @@ pub use instructions::*;
 pub use fund::*;
 // pub use oracle::*;
 
-declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
+// mainnet: FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc
+declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
 
 #[program]
 pub mod restaking {
