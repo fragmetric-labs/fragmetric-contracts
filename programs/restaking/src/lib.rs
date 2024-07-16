@@ -11,8 +11,11 @@ pub use instructions::*;
 pub use fund::*;
 // pub use oracle::*;
 
-// mainnet: FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc
+#[cfg(feature = "mainnet")]
+declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
+#[cfg(not(feature = "mainnet"))]
 declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
+// declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
 
 #[program]
 pub mod restaking {
