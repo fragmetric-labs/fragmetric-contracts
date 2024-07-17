@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "utils/fragmetric-util-derive",
+    "utils/fragmetric-util",
 ]
 resolver = "2"
 
