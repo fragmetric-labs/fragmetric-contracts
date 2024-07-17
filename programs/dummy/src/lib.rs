@@ -117,7 +117,7 @@ pub mod dummy {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
-        init,
+        init_if_needed,
         payer = user,
         seeds = [b"user_token_amount", user.key().as_ref()],
         bump,
