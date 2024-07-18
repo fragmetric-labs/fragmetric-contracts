@@ -171,44 +171,96 @@ describe("dummy", () => {
     expect(account1.amount.toNumber()).to.equal(120);
   });
 
-  it("create/update user account(v1)", async () => {
-    const user = (program.provider as anchor.AnchorProvider).wallet;
-    const [userAccountAddr, _] = anchor.web3.PublicKey.findProgramAddressSync(
-      [user.publicKey.toBuffer()],
-      program.programId,
-    );
+  ////////////////////////////////////////////////////////////////////////////
+  // Instruction Versioning Tests
+  ////////////////////////////////////////////////////////////////////////////
 
-    const create_req = {
-      v1: {
-        0: {
-          field1: new anchor.BN(100),
-          field2: "Hello fragmetric!",
-        }
-      }
-    };
-    await program.methods.createUserAccount(create_req).accounts({
-      user: user.publicKey,
-    }).signers([]).rpc();
+  // How to run
+  // 1. Build & Deploy previous version (v1) on localnet
+  // 2. Run "create/update user account(v1)" testcase -> user account is created
+  // 3. Build & Deploy upgraded version (v2) on localnet
+  // 4. Run "upgrade user account after version upgrade(v2)"
 
-    const account1 = (await program.account.accountData.fetch(userAccountAddr));
-    expect(account1.owner.toString()).to.be.equal(user.publicKey.toString());
-    expect(account1.data.v1[0].field1.toNumber()).to.be.equal(create_req.v1[0].field1.toNumber());
-    expect(account1.data.v1[0].field2).to.be.equal(create_req.v1[0].field2);
+  // it("create/update user account(v1)", async () => {
+  //   const user = (program.provider as anchor.AnchorProvider).wallet;
+  //   const [userAccountAddr, _] = anchor.web3.PublicKey.findProgramAddressSync(
+  //     [user.publicKey.toBuffer()],
+  //     program.programId,
+  //   );
 
-    const update_req = {
-      v1: {
-        0: {
-          field1: new anchor.BN(0),
-          field2: "Bye",
-        }
-      }
-    };
-    await program.methods.updateUserAccount(update_req).accounts({
-      user: user.publicKey,
-    }).signers([]).rpc();
+  //   const create_req = {
+  //     v1: {
+  //       0: {
+  //         field1: new anchor.BN(100),
+  //         field2: "Hello fragmetric!",
+  //       }
+  //     }
+  //   };
+  //   await program.methods.createUserAccount(create_req).accounts({
+  //     user: user.publicKey,
+  //   }).signers([]).rpc();
 
-    const account2 = (await program.account.accountData.fetch(userAccountAddr));
-    expect(account2.data.v1[0].field1.toNumber()).to.be.equal(update_req.v1[0].field1.toNumber());
-    expect(account2.data.v1[0].field2).to.be.equal(update_req.v1[0].field2);
-  })
+  //   const account1 = await program.account.accountData.fetch(userAccountAddr);
+  //   expect(account1.owner.toString()).to.be.equal(user.publicKey.toString());
+  //   expect(account1.data.v1[0].field1.toNumber()).to.be.equal(create_req.v1[0].field1.toNumber());
+  //   expect(account1.data.v1[0].field2).to.be.equal(create_req.v1[0].field2);
+
+  //   const update_req = {
+  //     v1: {
+  //       0: {
+  //         field1: new anchor.BN(0),
+  //         field2: "Bye",
+  //       }
+  //     }
+  //   };
+  //   await program.methods.updateUserAccount(update_req).accounts({
+  //     user: user.publicKey,
+  //   }).signers([]).rpc();
+
+  //   const account2 = await program.account.accountData.fetch(userAccountAddr);
+  //   expect(account2.data.v1[0].field1.toNumber()).to.be.equal(update_req.v1[0].field1.toNumber());
+  //   expect(account2.data.v1[0].field2).to.be.equal(update_req.v1[0].field2);
+  // })
+  
+  // it("update user account after version upgrade(v2)", async () => {
+  //   const user = (program.provider as anchor.AnchorProvider).wallet;
+  //   const [userAccountAddr, _] = anchor.web3.PublicKey.findProgramAddressSync(
+  //     [user.publicKey.toBuffer()],
+  //     program.programId,
+  //   );
+
+  //   const previous_req = {
+  //     v1: {
+  //       0: {
+  //         field1: new anchor.BN(0),
+  //         field2: "Bye",
+  //       }
+  //     }
+  //   };
+  //   const account1 = await program.account.accountData.fetch(userAccountAddr);
+  //   expect(account1.owner.toString()).to.be.equal(user.publicKey.toString());
+  //   expect(account1.data.v1[0].field1.toNumber()).to.be.equal(previous_req.v1[0].field1.toNumber());
+  //   expect(account1.data.v1[0].field2).to.be.equal(previous_req.v1[0].field2);
+
+  //   const update_req = {
+  //     v2: {
+  //       0: {
+  //         field1: new anchor.BN(7),
+  //         field2: 20,
+  //         field3: "Hi again!",
+  //         field4: true,
+  //       }
+  //     }
+  //   }
+  //   await program.methods.updateUserAccount(update_req).accounts({
+  //     user: user.publicKey,
+  //   }).signers([]).rpc();
+
+  //   const account2 = await program.account.accountData.fetch(userAccountAddr);
+  //   expect(account2.owner.toString()).to.be.equal(user.publicKey.toString());
+  //   expect(account2.data.v2[0].field1.toNumber()).to.be.equal(update_req.v2[0].field1.toNumber());
+  //   expect(account2.data.v2[0].field2).to.be.equal(update_req.v2[0].field2);
+  //   expect(account2.data.v2[0].field3).to.be.equal(update_req.v2[0].field3);
+  //   expect(account2.data.v2[0].field4).to.be.equal(update_req.v2[0].field4);
+  // })
 });
