@@ -1424,6 +1424,7 @@ name = "dummy"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "fragmetric-util",
  "solana-security-txt",
 ]
 
