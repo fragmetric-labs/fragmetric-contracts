@@ -38,8 +38,21 @@ encrypt_dev/dummyProgramKeypair data copied to ./programs/dummy/id.json
 # And already have the upgrade authoirty of the devnet program.
 $ anchor deploy --provider.wallet ./id.json --provider.cluster=localnet --program-name dummy --program-keypair ./programs/dummy/id.json
 
+# When failed to deploy or upgrade the program, the intermediary buffer account still exists, holding some rent.
+# To recover the intermediate account's keypair, enter 12-word seed phrase provided at command-line error prompt.
+$ solana-keygen recover -o ./intermediate.json -f
+[recover] seed phrase:
+[recover] If this seed phrase has an associated passphrase, enter it now. Otherwise, press ENTER to continue:
+Recovered pubkey `"3Q3KTEkP8UFpuMwFoPGDS5RG4nFTQeRt8PVpEnRC8rCS"`. Continue? (y/n):
+y
+Wrote recovered keypair to ./intermediate.json
 
-# If there is no enough buffer in the program data account, refer the below command to extend the buffer size with the given number of bytes.
+# Then close the buffer account and reclaim rent
+$ solana program close $(solana address -k ./intermediate.json) -k ./id.json -u d
+# or resume deploy
+$ solana program deploy --buffer ./intermediate.json -k ./id.json -u d
+
+# If there is no enough buffer in the program account, refer the below command to extend the buffer size with the given number of bytes.
 # Be noted that the maximum accounts size is 10MB.
 $ solana program extend [PROGRAM_ADDRESS] 1000 --keypair ./id.json
 Extended Program Id A58NQYmJCyDPsc1EfaQZ99piFopPtCYArP242rLTbYbV by 1000 bytes
