@@ -1,8 +1,8 @@
 pub mod structs;
 pub use structs::*;
 
-pub mod initialize;
 pub mod deposit;
+pub mod initialize;
 
-pub use initialize::*;
 pub use deposit::*;
+pub use initialize::*;
