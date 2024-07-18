@@ -171,6 +171,22 @@ describe("dummy", () => {
     expect(account1.amount.toNumber()).to.equal(120);
   });
 
+  it("can send versioned data", async () => {
+    const data = {
+      v1: {
+        field1: 1234,
+        field2: "hello",
+      },
+    };
+    expect(
+      program.methods
+        .versionedMethod(data)
+        .accounts({ userTokenAmount: userData2, user: user2.publicKey })
+        .signers([user2])
+        .rpc()
+    ).to.eventually.throw('NotImplemented');
+  });
+
   ////////////////////////////////////////////////////////////////////////////
   // Instruction Versioning Tests
   ////////////////////////////////////////////////////////////////////////////
