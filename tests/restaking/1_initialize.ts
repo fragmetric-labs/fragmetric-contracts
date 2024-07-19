@@ -6,17 +6,31 @@ import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 
-describe("deposit_sol", () => {
+describe("initialize", () => {
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
+    // console.log(provider)
 
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
     const admin = anchor.web3.Keypair.generate();
-    const depositor = anchor.web3.Keypair.generate();
+    console.log(`admin key: ${admin.publicKey}`);
 
     const lst1 = anchor.web3.Keypair.generate();
     const lst2 = anchor.web3.Keypair.generate();
+
+    const receipt_token_name = "fragSOL";
+    const [receipt_token_mint_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(receipt_token_name)],
+        program.programId
+    );
+    const [fund_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("fund"), receipt_token_mint_pda.toBuffer()],
+        // [Buffer.from("fund")],
+        program.programId
+    );
+
+    // const providerKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../id.json")));
 
     before("Sol airdrop", async () => {
         // airdrop some SOL to the signer
@@ -31,35 +45,18 @@ describe("deposit_sol", () => {
         // check the balance
         const adminBal = await provider.connection.getBalance(admin.publicKey);
         console.log(`admin SOL balance: ${adminBal}`);
-
-        // airdrop depositor
-        airdropSignature = await provider.connection.requestAirdrop(
-            depositor.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-        await provider.connection.confirmTransaction(airdropSignature);
-        const depositorBal = await provider.connection.getBalance(depositor.publicKey);
-        console.log(`depositor SOL balance: ${depositorBal}`);
     });
 
     it("Is initialized!", async () => {
-        const receipt_token_name = "fragSOL";
         const default_protocol_fee_rate = 10;
         const whitelisted_tokens = [lst1.publicKey, lst2.publicKey];
-        const lst_caps = [new anchor.BN(1000), new anchor.BN(2000)];
+        const lst_caps = [new anchor.BN(1_000_000_000 * 1000), new anchor.BN(1_000_000_000 * 2000)];
+        const lsts_amount_in = [new anchor.BN(0), new anchor.BN(0)];
 
-        const [fund_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund")],
-            program.programId
-        );
-        const [receipt_token_mint_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from(receipt_token_name)],
-            program.programId
-        );
-        const [receipt_token_lock_account_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_lock"), receipt_token_mint_pda.toBuffer()],
-            program.programId
-        );
+        // const [receipt_token_lock_account_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+        //     [Buffer.from("receipt_lock"), receipt_token_mint_pda.toBuffer()],
+        //     program.programId
+        // );
 
         // spl.createMint(
         //     provider.connection,
@@ -69,7 +66,7 @@ describe("deposit_sol", () => {
         //     9,
         // )
 
-        console.log(fund_pda, receipt_token_mint_pda, receipt_token_lock_account_pda);
+        console.log(fund_pda, receipt_token_mint_pda);
         console.log(TOKEN_2022_PROGRAM_ID, anchor.web3.SystemProgram.programId);
 
         const tx = await program.methods
@@ -78,27 +75,18 @@ describe("deposit_sol", () => {
                 default_protocol_fee_rate,
                 whitelisted_tokens,
                 lst_caps,
+                lsts_amount_in,
             )
             .accounts({
                 admin: admin.publicKey,
                 // fund: fund_pda,
                 // receiptTokenMint: receipt_token_mint_pda,
                 // receiptTokenLockAccount: receipt_token_lock_account_pda,
-                // tokenProgram: TOKEN_2022_PROGRAM_ID,
+                tokenProgram: TOKEN_2022_PROGRAM_ID,
                 // systemProgram: anchor.web3.SystemProgram.programId,
             })
             .signers([admin])
             .rpc();
         console.log("Initialize transaction signature", tx);
     });
-
-    // it("Deposit SOL!", async () => {
-    //     let amount = new anchor.BN(1_000);
-
-    //     const tx = await program.methods
-    //         .depositSol(
-    //             amount,
-    //         )
-    //         .accounts({ depositor: depositor.publicKey })
-    // });
 });

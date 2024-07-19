@@ -10,15 +10,17 @@ impl Fund {
         whitelisted_tokens: Vec<Pubkey>,
         lst_caps: Vec<u64>,
         receipt_token_mint: Pubkey,
-        receipt_token_lock_account: Pubkey,
+        // receipt_token_lock_account: Pubkey,
+        lsts_amount_in: Vec<u128>,
     ) -> Result<()> {
         self.admin = admin;
         self.update_default_protocol_fee_rate(default_protocol_fee_rate)?;
         self.update_whitelisted_tokens(whitelisted_tokens)?;
-        // self.total_deposited_amount = 0;
         self.update_lst_caps(lst_caps)?;
         self.receipt_token_mint = receipt_token_mint;
-        self.receipt_token_lock_account = receipt_token_lock_account;
+        // self.receipt_token_lock_account = receipt_token_lock_account;
+        self.sol_amount_in = 0;
+        self.update_lst_amount_in(lsts_amount_in)?;
 
         Ok(())
     }
@@ -33,22 +35,23 @@ impl Fund {
         Ok(())
     }
 
-    pub fn update_whitelisted_tokens(
-        &mut self,
-        whitelisted_tokens: Vec<Pubkey>,
-    ) -> Result<()> {
+    pub fn update_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<Pubkey>) -> Result<()> {
         // check if there's no duplicated token address
         self.whitelisted_tokens = whitelisted_tokens;
 
         Ok(())
     }
 
-    pub fn update_lst_caps(
-        &mut self,
-        lst_caps: Vec<u64>,
-    ) -> Result<()> {
+    pub fn update_lst_caps(&mut self, lst_caps: Vec<u64>) -> Result<()> {
         // check if lst_caps length is same as whitelisted_tokens length
         self.lst_caps = lst_caps;
+
+        Ok(())
+    }
+
+    pub fn update_lst_amount_in(&mut self, lsts_amount_in: Vec<u128>) -> Result<()> {
+        // check length
+        self.lsts_amount_in = lsts_amount_in;
 
         Ok(())
     }
@@ -60,9 +63,9 @@ fn test_initialize() {
     let token_mint_authority = Pubkey::new_unique();
     let default_protocol_fee_rate = 100;
     let whitelisted_tokens = vec![Pubkey::new_unique(), Pubkey::new_unique()];
-    let lst_caps = vec![1000, 2000];
+    let lst_caps = vec![1_000_000_000 * 1000, 1_000_000_000 * 2000];
     let receipt_token_mint = Pubkey::new_unique();
-    let receipt_token_lock_account = Pubkey::new_unique();
+    let lsts_amount_in = vec![1_000_000_000, 2_000_000_000];
 
     let mut fund = Fund {
         admin: Pubkey::default(),
@@ -70,7 +73,9 @@ fn test_initialize() {
         whitelisted_tokens: vec![],
         lst_caps: vec![],
         receipt_token_mint: Pubkey::default(),
-        receipt_token_lock_account: Pubkey::default(),
+        // receipt_token_lock_account: Pubkey::default(),
+        sol_amount_in: 0,
+        lsts_amount_in: vec![],
     };
 
     let result = fund.initialize(
@@ -79,7 +84,7 @@ fn test_initialize() {
         whitelisted_tokens.clone(),
         lst_caps.clone(),
         receipt_token_mint,
-        receipt_token_lock_account,
+        lsts_amount_in,
     );
 
     assert!(result.is_ok());
@@ -88,5 +93,4 @@ fn test_initialize() {
     assert_eq!(fund.whitelisted_tokens, whitelisted_tokens);
     assert_eq!(fund.lst_caps, lst_caps);
     assert_eq!(fund.receipt_token_mint, receipt_token_mint);
-    assert_eq!(fund.receipt_token_lock_account, receipt_token_lock_account);
 }

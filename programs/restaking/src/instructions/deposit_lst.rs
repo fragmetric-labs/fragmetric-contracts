@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token_interface::{Mint, TokenAccount, TokenInterface}};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token_interface::{Mint, TokenAccount, TokenInterface},
+};
 
 use crate::fund::*;
 
@@ -40,8 +43,8 @@ pub struct DepositLST<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<DepositLST>, amount: u64,) -> Result<()> {
+pub fn handler(ctx: Context<DepositLST>, amount: u64) -> Result<()> {
     let fund = &mut ctx.accounts.fund;
 
-    Ok((fund.deposit_lst(amount))?)
+    Ok((deposit_lst(amount))?)
 }

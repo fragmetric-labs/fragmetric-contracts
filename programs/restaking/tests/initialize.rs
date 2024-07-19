@@ -1,47 +1,79 @@
-use anchor_lang::prelude::*;
-use anchor_lang::solana_program::instruction::Instruction;
-use solana_program_test::{tokio, ProgramTest};
-use solana_sdk::{account::Account, signature::Keypair, signer::Signer};
+use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
+use anchor_spl::{
+    associated_token::{
+        spl_associated_token_account::processor::process_instruction, AssociatedToken,
+    },
+    token_interface::spl_token_2022,
+};
+use restaking::{self, receipt_token_authority};
+use solana_program_test::{processor, tokio, ProgramTest, ProgramTestContext};
+use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 #[tokio::test]
 async fn test_initialize() {
     let SetUpTest {
         validator,
         admin,
-        fund_pda,
+        receipt_token_mint,
+        fund,
+        receipt_token_authority,
     } = SetUpTest::new();
 
     let mut context = validator.start_with_context().await;
 
-    // let init_ix = Instruction {
-    //     program_id: restaking::ID,
-    //     accounts: restaking::accounts::Initialize {
-    //         admin: admin.pubkey(),
-    //         token_mint_authority: admin.pubkey(),
-    //         fund: fund_pda,
-    //     }
-    // }
+    let initialize_ix = Instruction {
+        program_id: restaking::ID,
+        accounts: restaking::accounts::InitializeFund {
+            admin: admin.pubkey(),
+            fund,
+            receipt_token_mint,
+            receipt_token_authority,
+            // receipt_token_lock_account,
+            token_program: spl_token_2022::ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None),
+        data: restaking::instruction::Initialize {
+            receipt_token_name: "fragSOL".to_string(),
+            default_protocol_fee_rate: 10,
+            whitelisted_tokens: [Pubkey::new_unique(), Pubkey::new_unique()].to_vec(),
+            lst_caps: [1_000_000_000 * 1000, 1_000_000_000 * 2000].to_vec(),
+            lsts_amount_in: [1000, 2000].to_vec(),
+        }
+        .try_to_vec()
+        .unwrap(),
+    };
+
+    let initialize_tx = Transaction::new_signed_with_payer(
+        &[initialize_ix],
+        Some(&admin.pubkey()),
+        &[&admin],
+        context.last_blockhash,
+    );
+
+    context
+        .banks_client
+        .process_transaction(initialize_tx)
+        .await
+        .unwrap();
 }
 
-/// Struct set up to hold the validator, an optional user account, and the fund PDA.
-/// Use SetUpTest::new() to create a new instance.
 pub struct SetUpTest {
     pub validator: ProgramTest,
     pub admin: Keypair,
-    pub fund_pda: Pubkey,
+    pub receipt_token_mint: Pubkey,
+    // pub receipt_token_lock_account: Pubkey,
+    pub fund: Pubkey,
+    pub receipt_token_authority: Pubkey,
 }
 
-/// Returns the validator, an optional funded user account, and the fund PDA.
 impl SetUpTest {
     pub fn new() -> Self {
-        // Both of these work
-
+        // let mut validator = ProgramTest::new("restaking", restaking::ID, processor!(restaking::entry));
+        let mut validator = ProgramTest::new("restaking", restaking::ID, None);
         // let mut validator = ProgramTest::default();
         // validator.add_program("restaking", restaking::ID, None);
-        let mut validator = ProgramTest::new("restaking", restaking::ID, None);
 
-        // create a new user and fund with 1 SOL
-        // add the user to the validator / ledger
         let admin = Keypair::new();
         validator.add_account(
             admin.pubkey(),
@@ -51,13 +83,48 @@ impl SetUpTest {
             },
         );
 
-        // get the fund PDA -- uses the same seed we used in the program
-        let (fund_pda, _) = Pubkey::find_program_address(&[b"fund"], &restaking::ID);
+        let (receipt_token_mint_pda, _) =
+            Pubkey::find_program_address(&[b"fragSOL"], &restaking::ID);
+        let (fund_pda, _) = Pubkey::find_program_address(
+            &[b"fund", receipt_token_mint_pda.as_ref()],
+            &restaking::ID,
+        );
+        // let (fund_pda, _) = Pubkey::find_program_address(&[b"fund"], &restaking::ID);
+        // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
+        let (receipt_token_authority_pda, _) = Pubkey::find_program_address(
+            &[b"receipt_token_authority", receipt_token_mint_pda.as_ref()],
+            &restaking::ID,
+        );
+
+        msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
+        msg!("fund_pda: {}", fund_pda);
+        msg!(
+            "receipt_token_authority_pda: {}",
+            receipt_token_authority_pda
+        );
+        // msg!("receipt_token_lock_account_pda: {}", receipt_token_lock_account_pda);
 
         Self {
             validator,
             admin,
-            fund_pda,
+            receipt_token_mint: receipt_token_mint_pda,
+            // receipt_token_lock_account: receipt_token_lock_account_pda,
+            fund: fund_pda,
+            receipt_token_authority: receipt_token_authority_pda,
         }
     }
+}
+
+pub async fn load_and_deserialize<T: AccountDeserialize>(
+    mut ctx: ProgramTestContext,
+    address: Pubkey,
+) -> T {
+    let account = ctx
+        .banks_client
+        .get_account(address)
+        .await
+        .unwrap() // unwraps the Result into an Option<Account>
+        .unwrap(); // unwraps the Option<Account> into an Account
+
+    T::try_deserialize(&mut account.data.as_slice()).unwrap()
 }
