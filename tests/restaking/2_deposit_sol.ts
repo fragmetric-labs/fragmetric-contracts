@@ -58,7 +58,6 @@ describe("deposit_sol", () => {
                 .accounts({
                     depositor: depositor.publicKey,
                     // depositor: provider.wallet.publicKey,
-                    fund: fund_pda,
                     receiptTokenMint: receipt_token_mint_pda,
                     // receiptTokenAccount: provider.wallet.publicKey,
                     tokenProgram: TOKEN_2022_PROGRAM_ID,

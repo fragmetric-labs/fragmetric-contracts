@@ -23,32 +23,6 @@ async fn test_deposit_sol() {
     let mut context = validator.start_with_context().await;
     let amount: u64 = 1_000;
 
-    // let deposit_sol_initialize_ix = Instruction {
-    //     program_id: restaking::ID,
-    //     accounts: restaking::accounts::InitializeDepositSOL { // Context struct type
-    //         depositor: depositor.pubkey(),
-    //         receipt_token_mint,
-    //         receipt_token_account,
-    //         token_program: spl_token_2022::ID,
-    //         // associated_token_program: associated_token::ID,
-    //         system_program: system_program::ID,
-    //     }
-    //     .to_account_metas(None),
-    //     data: restaking::instruction::InitializeDepositSol {}.try_to_vec().unwrap(), // instruction name
-    // };
-    // let deposit_sol_initialize_tx = Transaction::new_signed_with_payer(
-    //     &[deposit_sol_initialize_ix],
-    //     Some(&depositor.pubkey()),
-    //     &[&depositor],
-    //     context.last_blockhash,
-    // );
-
-    // context
-    //     .banks_client
-    //     .process_transaction(deposit_sol_initialize_tx)
-    //     .await
-    //     .unwrap();
-
     let deposit_sol_ix = Instruction {
         program_id: restaking::ID,
         accounts: restaking::accounts::DepositSOL {

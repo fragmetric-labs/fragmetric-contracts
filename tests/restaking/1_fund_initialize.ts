@@ -6,7 +6,7 @@ import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 
-describe("initialize", () => {
+describe("fund_initialize", () => {
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
     // console.log(provider)
@@ -16,8 +16,8 @@ describe("initialize", () => {
     const admin = anchor.web3.Keypair.generate();
     console.log(`admin key: ${admin.publicKey}`);
 
-    const lst1 = anchor.web3.Keypair.generate();
-    const lst2 = anchor.web3.Keypair.generate();
+    const token1 = anchor.web3.Keypair.generate();
+    const token2 = anchor.web3.Keypair.generate();
 
     const receipt_token_name = "fragSOL";
     const [receipt_token_mint_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -49,9 +49,18 @@ describe("initialize", () => {
 
     it("Is initialized!", async () => {
         const default_protocol_fee_rate = 10;
-        const whitelisted_tokens = [lst1.publicKey, lst2.publicKey];
-        const lst_caps = [new anchor.BN(1_000_000_000 * 1000), new anchor.BN(1_000_000_000 * 2000)];
-        const lsts_amount_in = [new anchor.BN(0), new anchor.BN(0)];
+        const tokens = [
+            {
+                address: token1.publicKey,
+                token_cap: new anchor.BN(1_000_000_000 * 1000),
+                token_amount_in: 0,
+            },
+            {
+                address: token2.publicKey,
+                token_cap: new anchor.BN(1_000_000_000 * 2000),
+                token_amount_in: 0,
+            }
+        ];
 
         // const [receipt_token_lock_account_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
         //     [Buffer.from("receipt_lock"), receipt_token_mint_pda.toBuffer()],
@@ -70,12 +79,10 @@ describe("initialize", () => {
         console.log(TOKEN_2022_PROGRAM_ID, anchor.web3.SystemProgram.programId);
 
         const tx = await program.methods
-            .initialize(
+            .fundInitialize(
                 receipt_token_name,
                 default_protocol_fee_rate,
-                whitelisted_tokens,
-                lst_caps,
-                lsts_amount_in,
+                tokens,
             )
             .accounts({
                 admin: admin.publicKey,

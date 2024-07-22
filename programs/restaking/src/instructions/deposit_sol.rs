@@ -1,18 +1,22 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, system_program};
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::fund::*;
-use crate::error::ErrorCode;
+use crate::{error::ErrorCode, fund::*};
+use crate::constants::*;
 
 #[derive(Accounts)]
 pub struct DepositSOL<'info> {
     #[account(mut)]
     pub depositor: Signer<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
     pub fund: Account<'info, Fund>,
 
     pub receipt_token_mint: InterfaceAccount<'info, Mint>,
@@ -30,22 +34,38 @@ pub struct DepositSOL<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<DepositSOL>, amount: u64) -> Result<()> {
-    let fund = &mut ctx.accounts.fund;
-    let depositor = &mut ctx.accounts.depositor;
-    let receipt_token_account = ctx.accounts.receipt_token_account.to_account_info().key;
-    msg!("receipt_token_account: {}", receipt_token_account);
+impl<'info> DepositSOL<'info> {
+    pub fn handler(ctx: Context<Self>, amount: u64) -> Result<()> {
+        let receipt_token_account = ctx.accounts.receipt_token_account.to_account_info().key;
+        msg!("receipt_token_account: {}", receipt_token_account);
 
-    let res = deposit_sol(
-        depositor,
-        fund,
-        &ctx.accounts.system_program,
-        amount
-    );
+        Self::transfer_sol_cpi_ctx(&ctx, amount)?;
 
-    if res.is_ok() {
-        Ok(())
-    } else {
-        err!(ErrorCode::SolTransferFailed)
+        let fund = &mut ctx.accounts.fund;
+        Ok(deposit_sol(fund, amount)?)
+    }
+
+    pub fn transfer_sol_cpi_ctx(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        let depositor = &ctx.accounts.depositor;
+        let fund = &ctx.accounts.fund;
+
+        let sol_transfer_cpi_ctx = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: depositor.to_account_info(),
+                to: fund.to_account_info(),
+            },
+        );
+
+        msg!("Transferring from {} to {}", depositor.key, fund.key());
+
+        let res = system_program::transfer(sol_transfer_cpi_ctx, amount);
+        msg!("Transferred {} SOL", amount);
+
+        if res.is_ok() {
+            Ok(())
+        } else {
+            err!(ErrorCode::SolTransferFailed)
+        }
     }
 }
