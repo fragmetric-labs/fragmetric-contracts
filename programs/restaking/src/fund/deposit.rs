@@ -1,17 +1,25 @@
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::prelude::*;
 
-use crate::structs::Fund;
+use crate::fund::*;
+use crate::error::ErrorCode;
 
-pub fn deposit_token(amount: u64) -> Result<()> {
-    Ok(())
-}
+impl Fund {
+    pub fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
+        for mapped_token in self.tokens.iter_mut() {
+            if mapped_token.address == token {
+                if mapped_token.token_cap < (mapped_token.token_amount_in + amount as u128) as u64 {
+                    return Err(ErrorCode::ExceedsTokenCap)?;
+                }
+                mapped_token.token_amount_in += amount as u128;
+                return Ok(())
+            }
+        }
+        err!(ErrorCode::NotExistingToken)
+    }
 
-pub fn deposit_sol<'info>(
-    fund: &mut Account<'info, Fund>,
-    amount: u64,
-) -> Result<()> {
-    fund.sol_amount_in += amount as u128;
-
-    // Ok(res)
-    Ok(())
+    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
+        self.sol_amount_in += amount as u128;
+    
+        Ok(())
+    }
 }

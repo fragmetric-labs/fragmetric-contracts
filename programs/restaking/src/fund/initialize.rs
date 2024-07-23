@@ -105,6 +105,7 @@ fn test_initialize() {
     assert_eq!(fund.admin, admin);
     assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
     assert_eq!(fund.receipt_token_mint, receipt_token_mint);
+    msg!("fund tokens: {:?}", fund.tokens);
 }
 
 #[test]

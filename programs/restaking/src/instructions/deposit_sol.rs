@@ -42,7 +42,7 @@ impl<'info> DepositSOL<'info> {
         Self::transfer_sol_cpi_ctx(&ctx, amount)?;
 
         let fund = &mut ctx.accounts.fund;
-        Ok(deposit_sol(fund, amount)?)
+        Ok(fund.deposit_sol(amount)?)
     }
 
     pub fn transfer_sol_cpi_ctx(ctx: &Context<Self>, amount: u64) -> Result<()> {

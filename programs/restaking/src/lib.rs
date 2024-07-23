@@ -62,4 +62,8 @@ pub mod restaking {
     pub fn deposit_sol(ctx: Context<DepositSOL>, amount: u64) -> Result<()> {
         DepositSOL::handler(ctx, amount)
     }
+
+    pub fn deposit_token(ctx: Context<DepositToken>, amount: u64) -> Result<()> {
+        DepositToken::handler(ctx, amount)
+    }
 }

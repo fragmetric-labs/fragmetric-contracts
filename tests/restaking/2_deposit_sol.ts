@@ -12,14 +12,11 @@ describe("deposit_sol", () => {
 
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const depositor = anchor.web3.Keypair.generate();
+    const depositor = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
     console.log(`depositor key: ${depositor.publicKey}`);
 
     // for depositor provider
     const depositorProvider = new anchor.AnchorProvider(provider.connection, new anchor.Wallet(depositor)); // and setProvider when needed
-
-    const lst1 = anchor.web3.Keypair.generate();
-    const lst2 = anchor.web3.Keypair.generate();
 
     const receipt_token_name = "fragSOL";
     const [receipt_token_mint_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -28,7 +25,6 @@ describe("deposit_sol", () => {
     );
     const [fund_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
         [Buffer.from("fund"), receipt_token_mint_pda.toBuffer()],
-        // [Buffer.from("fund")],
         program.programId
     );
 

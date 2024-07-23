@@ -5,19 +5,16 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
+import * as fs from "fs";
 
 describe("fund_initialize", () => {
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
-    // console.log(provider)
 
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const admin = anchor.web3.Keypair.generate();
+    const admin = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     console.log(`admin key: ${admin.publicKey}`);
-
-    const token1 = anchor.web3.Keypair.generate();
-    const token2 = anchor.web3.Keypair.generate();
 
     const receipt_token_name = "fragSOL";
     const [receipt_token_mint_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -26,11 +23,13 @@ describe("fund_initialize", () => {
     );
     const [fund_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
         [Buffer.from("fund"), receipt_token_mint_pda.toBuffer()],
-        // [Buffer.from("fund")],
         program.programId
     );
 
     // const providerKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../id.json")));
+
+    let tokenMint1;
+    let tokenMint2;
 
     before("Sol airdrop", async () => {
         // airdrop some SOL to the signer
@@ -45,20 +44,50 @@ describe("fund_initialize", () => {
         // check the balance
         const adminBal = await provider.connection.getBalance(admin.publicKey);
         console.log(`admin SOL balance: ${adminBal}`);
+
+        // create token mint accounts
+        tokenMint1 = await spl.createMint(
+            provider.connection,
+            admin,
+            admin.publicKey,
+            admin.publicKey,
+            9,
+            undefined,
+            undefined,
+            TOKEN_2022_PROGRAM_ID
+        );
+        tokenMint2 = await spl.createMint(
+            provider.connection,
+            admin,
+            admin.publicKey,
+            admin.publicKey,
+            9,
+            undefined,
+            undefined,
+            TOKEN_2022_PROGRAM_ID
+        );
+        console.log(`tokenMint1 written:`, tokenMint1);
+        console.log("tokenMint2 written:", tokenMint2);
+
+        fs.writeFileSync("./tests/restaking/tokenMint1", JSON.stringify(tokenMint1));
+        fs.writeFileSync("./tests/restaking/tokenMint2", JSON.stringify(tokenMint2));
     });
 
     it("Is initialized!", async () => {
         const default_protocol_fee_rate = 10;
+        const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
+        const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
+
         const tokens = [
             {
-                address: token1.publicKey,
-                token_cap: new anchor.BN(1_000_000_000 * 1000),
-                token_amount_in: 0,
+                address: tokenMint1,
+                tokenCap: tokenCap1,
+                tokenAmountIn: new anchor.BN(0),
             },
             {
-                address: token2.publicKey,
-                token_cap: new anchor.BN(1_000_000_000 * 2000),
-                token_amount_in: 0,
+                address: tokenMint2,
+                tokenCap: tokenCap2,
+                tokenAmountIn: new anchor.BN(0),
             }
         ];
 
@@ -75,7 +104,7 @@ describe("fund_initialize", () => {
         //     9,
         // )
 
-        console.log(fund_pda, receipt_token_mint_pda);
+        console.log(`fund_pda: ${fund_pda}, receipt_token_mint_pda: ${receipt_token_mint_pda}`);
         console.log(TOKEN_2022_PROGRAM_ID, anchor.web3.SystemProgram.programId);
 
         const tx = await program.methods
@@ -95,5 +124,17 @@ describe("fund_initialize", () => {
             .signers([admin])
             .rpc();
         console.log("Initialize transaction signature", tx);
+
+        // check fund initialized correctly
+        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).tokens;
+        console.log(`tokenInitialized:`, tokensInitialized);
+
+        expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
+        expect(tokensInitialized[0].tokenCap.toNumber()).to.eq(tokenCap1.toNumber());
+        expect(tokensInitialized[0].tokenAmountIn.toNumber()).to.eq(0);
+
+        expect(tokensInitialized[1].address.toString()).to.eq(tokenMint2.toString());
+        expect(tokensInitialized[1].tokenCap.toNumber()).to.equal(tokenCap2.toNumber());
+        expect(tokensInitialized[1].tokenAmountIn.toNumber()).to.eq(0);
     });
 });

@@ -9,4 +9,6 @@ pub enum ErrorCode {
     AlreadyExistingToken,
     #[msg("Not existing token")]
     NotExistingToken,
+    #[msg("Exceeds the token cap")]
+    ExceedsTokenCap,
 }
