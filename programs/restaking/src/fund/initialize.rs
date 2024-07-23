@@ -9,12 +9,12 @@ impl Fund {
         admin: Pubkey,
         default_protocol_fee_rate: u16,
         receipt_token_mint: Pubkey,
-        tokens: Vec<TokenInfo>,
+        whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
         self.admin = admin;
         self.update_default_protocol_fee_rate(default_protocol_fee_rate)?;
         self.receipt_token_mint = receipt_token_mint;
-        self.set_tokens(tokens)?;
+        self.set_whitelisted_tokens(whitelisted_tokens)?;
         // self.receipt_token_lock_account = receipt_token_lock_account;
         self.sol_amount_in = 0;
 
@@ -31,9 +31,9 @@ impl Fund {
         Ok(())
     }
 
-    pub fn set_tokens(&mut self, tokens: Vec<TokenInfo>) -> Result<()> {
+    pub fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
         // check if there's no duplicated token address
-        self.tokens = tokens;
+        self.whitelisted_tokens = whitelisted_tokens;
 
         Ok(())
     }
@@ -45,7 +45,7 @@ impl Fund {
     ) -> Result<()> {
         self.check_if_token_exists(&token)?;
 
-        self.tokens.push(
+        self.whitelisted_tokens.push(
             TokenInfo {
                 address: token,
                 token_cap: token_cap,
@@ -57,9 +57,9 @@ impl Fund {
     }
 
     fn check_if_token_exists(&self, token: &Pubkey) -> Result<()> {
-        for check in self.tokens.iter().map(|info| &info.address) {
+        for check in self.whitelisted_tokens.iter().map(|info| &info.address) {
             if check == token {
-                return Err(ErrorCode::AlreadyExistingToken)?;
+                return Err(ErrorCode::FundAlreadyExistingToken)?;
             }
         }
         Ok(())
@@ -76,7 +76,7 @@ fn test_initialize() {
         admin: Pubkey::default(),
         default_protocol_fee_rate: 0,
         receipt_token_mint: Pubkey::default(),
-        tokens: vec![],
+        whitelisted_tokens: vec![],
         // receipt_token_lock_account: Pubkey::default(),
         sol_amount_in: 0,
     };
@@ -105,7 +105,7 @@ fn test_initialize() {
     assert_eq!(fund.admin, admin);
     assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
     assert_eq!(fund.receipt_token_mint, receipt_token_mint);
-    msg!("fund tokens: {:?}", fund.tokens);
+    msg!("fund whitelisted_tokens: {:?}", fund.whitelisted_tokens);
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn test_add_whitelisted_token() {
         admin: Pubkey::default(),
         default_protocol_fee_rate: 0,
         receipt_token_mint: Pubkey::default(),
-        tokens: vec![],
+        whitelisted_tokens: vec![],
         sol_amount_in: 0
     };
 
@@ -131,7 +131,7 @@ fn test_add_whitelisted_token() {
     let token3 = token1.clone();
     let tokens = vec![token1, token2];
 
-    fund.set_tokens(tokens).unwrap();
+    fund.set_whitelisted_tokens(tokens).unwrap();
 
     fund.add_whitelisted_token(token3.address, token3.token_cap).unwrap();
 }
@@ -142,6 +142,7 @@ fn test_sort() {
     msg!("whitelisted_tokens: {:?}", whitelisted_tokens);
 
     let mut sorted_tokens: Vec<_> = whitelisted_tokens.into_iter().collect();
-    sorted_tokens.sort();
+    // sorted_tokens.sort();
+    sorted_tokens.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
     msg!("sorted_tokens: {:?}", sorted_tokens);
 }

@@ -102,7 +102,7 @@ describe("deposit_token", () => {
             console.log(`deposit token tx: ${tx}`);
 
             // check if token's amount_in increased correctly
-            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).tokens;
+            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
             console.log("tokensFromFund:", tokensFromFund);
 
             expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(amount.toNumber());
@@ -149,7 +149,7 @@ describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).tokens;
+        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000).toNumber());

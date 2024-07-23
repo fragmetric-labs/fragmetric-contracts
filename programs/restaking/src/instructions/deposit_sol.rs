@@ -65,7 +65,7 @@ impl<'info> DepositSOL<'info> {
         if res.is_ok() {
             Ok(())
         } else {
-            err!(ErrorCode::SolTransferFailed)
+            err!(ErrorCode::FundSolTransferFailed)
         }
     }
 }

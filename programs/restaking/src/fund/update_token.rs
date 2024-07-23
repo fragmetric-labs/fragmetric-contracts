@@ -9,13 +9,13 @@ impl Fund {
         token: Pubkey,
         info: TokenInfo,
     ) -> Result<()> {
-        for mapped_token in self.tokens.iter_mut() {
+        for mapped_token in self.whitelisted_tokens.iter_mut() {
             if mapped_token.address == token {
                 *mapped_token = info;
                 return Ok(())
             }
         }
-        err!(ErrorCode::NotExistingToken)
+        err!(ErrorCode::FundNotExistingToken)
     }
 }
 
@@ -29,7 +29,7 @@ fn test_update_token() {
         admin: Pubkey::default(),
         default_protocol_fee_rate: 0,
         receipt_token_mint: Pubkey::default(),
-        tokens: vec![],
+        whitelisted_tokens: vec![],
         sol_amount_in: 0,
     };
 
@@ -48,8 +48,8 @@ fn test_update_token() {
     let tokens = vec![token1, token2];
 
     fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens).unwrap();
-    msg!("{:?}", fund.tokens.iter());
+    msg!("{:?}", fund.whitelisted_tokens.iter());
 
     fund.update_token(token1_update.address, token1_update).unwrap();
-    msg!("{:?}", fund.tokens.iter());
+    msg!("{:?}", fund.whitelisted_tokens.iter());
 }

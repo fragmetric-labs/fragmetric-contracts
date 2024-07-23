@@ -59,7 +59,7 @@ impl<'info> InitializeFund<'info> {
         ctx: Context<Self>,
         receipt_token_name: String,
         default_protocol_fee_rate: u16,
-        tokens: Vec<TokenInfo>,
+        whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
         let fund = &mut ctx.accounts.fund;
         let receipt_token_mint_addr = ctx.accounts.receipt_token_mint.to_account_info().key;
@@ -69,7 +69,7 @@ impl<'info> InitializeFund<'info> {
             ctx.accounts.admin.key(),
             default_protocol_fee_rate,
             ctx.accounts.receipt_token_mint.key(),
-            tokens,
+            whitelisted_tokens,
             // ctx.accounts.receipt_token_lock_account.key(),
         )?)
     }   
