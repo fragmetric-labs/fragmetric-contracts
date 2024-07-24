@@ -1,33 +1,25 @@
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::prelude::*;
 
-use crate::structs::Fund;
+use crate::error::ErrorCode;
+use crate::fund::*;
 
-pub fn deposit_lst(amount: u64) -> Result<()> {
-    Ok(())
-}
+impl Fund {
+    pub fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
+        for mapped_token in self.whitelisted_tokens.iter_mut() {
+            if mapped_token.address == token {
+                if mapped_token.token_cap < (mapped_token.token_amount_in + amount as u128) as u64 {
+                    return Err(ErrorCode::FundExceedsTokenCap)?;
+                }
+                mapped_token.token_amount_in += amount as u128;
+                return Ok(());
+            }
+        }
+        err!(ErrorCode::FundNotExistingToken)
+    }
 
-pub fn deposit_sol<'info>(
-    from: &mut Signer<'info>,
-    to: &mut Account<'info, Fund>,
-    system_program: &Program<'info, System>,
-    amount: u64,
-) -> Result<()> {
-    msg!("depositor {}, fund {}", from.key, to.key());
+    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
+        self.sol_amount_in += amount as u128;
 
-    let sol_transfer_cpi_ctx = CpiContext::new(
-        system_program.to_account_info(),
-        system_program::Transfer {
-            from: from.to_account_info(),
-            to: to.to_account_info(),
-        },
-    );
-
-    msg!("Transferring from {} to {}", from.key, to.key());
-
-    let res = system_program::transfer(sol_transfer_cpi_ctx, amount)?;
-
-    to.sol_amount_in += amount as u128;
-
-    msg!("Transferred {} SOL", amount);
-    Ok(res)
+        Ok(())
+    }
 }

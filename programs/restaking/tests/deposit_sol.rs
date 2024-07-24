@@ -1,13 +1,10 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
 use anchor_spl::{
-    associated_token::{
-        self, get_associated_token_address_with_program_id,
-        spl_associated_token_account::processor::process_instruction, AssociatedToken,
-    },
+    associated_token::{self, get_associated_token_address_with_program_id},
     token_interface::spl_token_2022,
 };
-use restaking;
-use solana_program_test::{processor, tokio, ProgramTest, ProgramTestContext};
+
+use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 #[tokio::test]
@@ -22,32 +19,6 @@ async fn test_deposit_sol() {
 
     let mut context = validator.start_with_context().await;
     let amount: u64 = 1_000;
-
-    // let deposit_sol_initialize_ix = Instruction {
-    //     program_id: restaking::ID,
-    //     accounts: restaking::accounts::InitializeDepositSOL { // Context struct type
-    //         depositor: depositor.pubkey(),
-    //         receipt_token_mint,
-    //         receipt_token_account,
-    //         token_program: spl_token_2022::ID,
-    //         // associated_token_program: associated_token::ID,
-    //         system_program: system_program::ID,
-    //     }
-    //     .to_account_metas(None),
-    //     data: restaking::instruction::InitializeDepositSol {}.try_to_vec().unwrap(), // instruction name
-    // };
-    // let deposit_sol_initialize_tx = Transaction::new_signed_with_payer(
-    //     &[deposit_sol_initialize_ix],
-    //     Some(&depositor.pubkey()),
-    //     &[&depositor],
-    //     context.last_blockhash,
-    // );
-
-    // context
-    //     .banks_client
-    //     .process_transaction(deposit_sol_initialize_tx)
-    //     .await
-    //     .unwrap();
 
     let deposit_sol_ix = Instruction {
         program_id: restaking::ID,
@@ -97,8 +68,8 @@ pub struct SetUpTest {
     pub fund: Pubkey,
 }
 
-impl SetUpTest {
-    pub fn new() -> Self {
+impl Default for SetUpTest {
+    fn default() -> Self {
         // let mut validator = ProgramTest::new("restaking", restaking::ID, processor!(restaking::entry));
         let mut validator = ProgramTest::new("restaking", restaking::ID, None);
         // let mut validator = ProgramTest::default();
@@ -141,6 +112,12 @@ impl SetUpTest {
             receipt_token_account,
             fund: fund_pda,
         }
+    }
+}
+
+impl SetUpTest {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

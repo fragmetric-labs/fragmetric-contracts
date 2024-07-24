@@ -21,25 +21,43 @@ declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
 pub mod restaking {
     use super::*;
 
-    pub fn initialize(
+    pub fn fund_initialize(
         ctx: Context<InitializeFund>,
         receipt_token_name: String,
         default_protocol_fee_rate: u16,
-        whitelisted_tokens: Vec<Pubkey>,
-        lst_caps: Vec<u64>,
-        lsts_amount_in: Vec<u128>,
+        tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        instructions::initialize::handler(
-            ctx,
-            receipt_token_name,
-            default_protocol_fee_rate,
-            whitelisted_tokens,
-            lst_caps,
-            lsts_amount_in,
-        )
+        InitializeFund::handler(ctx, receipt_token_name, default_protocol_fee_rate, tokens)
+    }
+
+    pub fn fund_add_whitelisted_token(
+        ctx: Context<FundUpdateToken>,
+        token: Pubkey,
+        token_cap: u64,
+    ) -> Result<()> {
+        FundUpdateToken::add_whitelisted_token(ctx, token, token_cap)
+    }
+
+    pub fn fund_update_token_info(
+        ctx: Context<FundUpdateToken>,
+        token: Pubkey,
+        info: TokenInfo,
+    ) -> Result<()> {
+        FundUpdateToken::update_token_info(ctx, token, info)
+    }
+
+    pub fn fund_update_default_protocol_fee_rate(
+        ctx: Context<FundUpdateToken>,
+        default_protocol_fee_rate: u16,
+    ) -> Result<()> {
+        FundUpdateToken::update_default_protocol_fee_rate(ctx, default_protocol_fee_rate)
     }
 
     pub fn deposit_sol(ctx: Context<DepositSOL>, amount: u64) -> Result<()> {
-        instructions::deposit_sol::handler(ctx, amount)
+        DepositSOL::handler(ctx, amount)
+    }
+
+    pub fn deposit_token(ctx: Context<DepositToken>, amount: u64) -> Result<()> {
+        DepositToken::handler(ctx, amount)
     }
 }

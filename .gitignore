@@ -11,3 +11,6 @@ test-ledger
 # solana id from aws
 id.json
 mainnet-id.json
+
+# for test
+tests/**/tokenMint*

@@ -1,16 +1,11 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
-use anchor_spl::{
-    associated_token::{
-        spl_associated_token_account::processor::process_instruction, AssociatedToken,
-    },
-    token_interface::spl_token_2022,
-};
-use restaking::{self, receipt_token_authority};
-use solana_program_test::{processor, tokio, ProgramTest, ProgramTestContext};
+use anchor_spl::token_interface::spl_token_2022;
+use restaking::{self};
+use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 #[tokio::test]
-async fn test_initialize() {
+async fn test_fund_initialize() {
     let SetUpTest {
         validator,
         admin,
@@ -20,6 +15,9 @@ async fn test_initialize() {
     } = SetUpTest::new();
 
     let mut context = validator.start_with_context().await;
+
+    let lst1 = Pubkey::new_unique();
+    let lst2 = Pubkey::new_unique();
 
     let initialize_ix = Instruction {
         program_id: restaking::ID,
@@ -33,12 +31,22 @@ async fn test_initialize() {
             system_program: system_program::ID,
         }
         .to_account_metas(None),
-        data: restaking::instruction::Initialize {
+        data: restaking::instruction::FundInitialize {
             receipt_token_name: "fragSOL".to_string(),
             default_protocol_fee_rate: 10,
-            whitelisted_tokens: [Pubkey::new_unique(), Pubkey::new_unique()].to_vec(),
-            lst_caps: [1_000_000_000 * 1000, 1_000_000_000 * 2000].to_vec(),
-            lsts_amount_in: [1000, 2000].to_vec(),
+            tokens: [
+                restaking::TokenInfo {
+                    address: lst1.key(),
+                    token_cap: 1_000_000_000 * 1000,
+                    token_amount_in: 1_000_000_000,
+                },
+                restaking::TokenInfo {
+                    address: lst2.key(),
+                    token_cap: 1_000_000_000 * 2000,
+                    token_amount_in: 2_000_000_000,
+                },
+            ]
+            .to_vec(),
         }
         .try_to_vec()
         .unwrap(),
@@ -67,8 +75,8 @@ pub struct SetUpTest {
     pub receipt_token_authority: Pubkey,
 }
 
-impl SetUpTest {
-    pub fn new() -> Self {
+impl Default for SetUpTest {
+    fn default() -> Self {
         // let mut validator = ProgramTest::new("restaking", restaking::ID, processor!(restaking::entry));
         let mut validator = ProgramTest::new("restaking", restaking::ID, None);
         // let mut validator = ProgramTest::default();
@@ -112,6 +120,11 @@ impl SetUpTest {
             fund: fund_pda,
             receipt_token_authority: receipt_token_authority_pda,
         }
+    }
+}
+impl SetUpTest {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
