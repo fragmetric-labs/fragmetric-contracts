@@ -1,6 +1,8 @@
+use std::collections::BTreeSet;
+
 use anchor_lang::prelude::*;
 
-use crate::fund::*;
+use crate::{error::ErrorCode, fund::*};
 
 impl Fund {
     pub(super) fn initialize(
@@ -31,8 +33,17 @@ impl Fund {
     }
 
     fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
-        // TODO check if there's no duplicated token address
+        Self::check_duplicates(&whitelisted_tokens)?;
         self.whitelisted_tokens = whitelisted_tokens;
+
+        Ok(())
+    }
+
+    fn check_duplicates(tokens: &Vec<TokenInfo>) -> Result<()> {
+        let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
+        if token_addresses.len() != tokens.len() {
+            return Err(ErrorCode::FundDuplicatedToken)?;
+        }
 
         Ok(())
     }
@@ -68,11 +79,15 @@ mod tests {
             token_amount_in: 2_000_000_000,
         };
 
+        let tokens = vec![token1.clone(), token1.clone()];
+        let _ = fund
+            .initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens)
+            .unwrap_err();
+
         let tokens = vec![token1, token2];
+        fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens)
+            .unwrap();
 
-        let result = fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens);
-
-        assert!(result.is_ok());
         assert_eq!(fund.admin, admin);
         assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
         assert_eq!(fund.receipt_token_mint, receipt_token_mint);

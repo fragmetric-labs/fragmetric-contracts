@@ -11,6 +11,8 @@ pub enum ErrorCode {
     FundAlreadyExistingToken,
     #[msg("Not existing token")]
     FundNotExistingToken,
+    #[msg("Duplicated tokens in the list")]
+    FundDuplicatedToken,
     #[msg("Exceeds the token cap")]
     FundExceedsTokenCap,
 }
