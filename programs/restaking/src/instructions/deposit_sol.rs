@@ -4,8 +4,8 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{error::ErrorCode, fund::*};
 use crate::constants::*;
+use crate::{error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct DepositSOL<'info> {
@@ -42,7 +42,7 @@ impl<'info> DepositSOL<'info> {
         Self::transfer_sol_cpi_ctx(&ctx, amount)?;
 
         let fund = &mut ctx.accounts.fund;
-        Ok(fund.deposit_sol(amount)?)
+        fund.deposit_sol(amount)
     }
 
     pub fn transfer_sol_cpi_ctx(ctx: &Context<Self>, amount: u64) -> Result<()> {

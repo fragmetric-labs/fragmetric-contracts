@@ -1,18 +1,14 @@
 use anchor_lang::prelude::*;
 
-use crate::fund::*;
 use crate::error::ErrorCode;
+use crate::fund::*;
 
 impl Fund {
-    pub fn update_token(
-        &mut self,
-        token: Pubkey,
-        info: TokenInfo,
-    ) -> Result<()> {
+    pub fn update_token(&mut self, token: Pubkey, info: TokenInfo) -> Result<()> {
         for mapped_token in self.whitelisted_tokens.iter_mut() {
             if mapped_token.address == token {
                 *mapped_token = info;
-                return Ok(())
+                return Ok(());
             }
         }
         err!(ErrorCode::FundNotExistingToken)
@@ -47,9 +43,11 @@ fn test_update_token() {
     token1_update.token_cap = 1_000_000_000 * 3000;
     let tokens = vec![token1, token2];
 
-    fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens).unwrap();
+    fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens)
+        .unwrap();
     msg!("{:?}", fund.whitelisted_tokens.iter());
 
-    fund.update_token(token1_update.address, token1_update).unwrap();
+    fund.update_token(token1_update.address, token1_update)
+        .unwrap();
     msg!("{:?}", fund.whitelisted_tokens.iter());
 }

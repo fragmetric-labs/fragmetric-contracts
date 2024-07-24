@@ -1,13 +1,10 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
 use anchor_spl::{
-    associated_token::{
-        self, get_associated_token_address_with_program_id,
-        spl_associated_token_account::processor::process_instruction, AssociatedToken,
-    },
+    associated_token::{self, get_associated_token_address_with_program_id},
     token_interface::spl_token_2022,
 };
-use restaking;
-use solana_program_test::{processor, tokio, ProgramTest, ProgramTestContext};
+
+use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 #[tokio::test]
@@ -71,8 +68,8 @@ pub struct SetUpTest {
     pub fund: Pubkey,
 }
 
-impl SetUpTest {
-    pub fn new() -> Self {
+impl Default for SetUpTest {
+    fn default() -> Self {
         // let mut validator = ProgramTest::new("restaking", restaking::ID, processor!(restaking::entry));
         let mut validator = ProgramTest::new("restaking", restaking::ID, None);
         // let mut validator = ProgramTest::default();
@@ -115,6 +112,12 @@ impl SetUpTest {
             receipt_token_account,
             fund: fund_pda,
         }
+    }
+}
+
+impl SetUpTest {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

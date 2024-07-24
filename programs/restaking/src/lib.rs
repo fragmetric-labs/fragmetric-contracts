@@ -7,7 +7,6 @@ pub mod instructions;
 use anchor_lang::prelude::*;
 
 pub use constants::*;
-pub use error::*;
 pub use fund::*;
 pub use instructions::*;
 // pub use oracle::*;
@@ -26,20 +25,15 @@ pub mod restaking {
         ctx: Context<InitializeFund>,
         receipt_token_name: String,
         default_protocol_fee_rate: u16,
-        tokens: Vec<TokenInfo>
+        tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        InitializeFund::handler(
-            ctx,
-            receipt_token_name,
-            default_protocol_fee_rate,
-            tokens,
-        )
+        InitializeFund::handler(ctx, receipt_token_name, default_protocol_fee_rate, tokens)
     }
 
     pub fn fund_add_whitelisted_token(
         ctx: Context<FundUpdateToken>,
         token: Pubkey,
-        token_cap: u64
+        token_cap: u64,
     ) -> Result<()> {
         FundUpdateToken::add_whitelisted_token(ctx, token, token_cap)
     }
@@ -47,14 +41,14 @@ pub mod restaking {
     pub fn fund_update_token_info(
         ctx: Context<FundUpdateToken>,
         token: Pubkey,
-        info: TokenInfo
+        info: TokenInfo,
     ) -> Result<()> {
         FundUpdateToken::update_token_info(ctx, token, info)
     }
 
     pub fn fund_update_default_protocol_fee_rate(
         ctx: Context<FundUpdateToken>,
-        default_protocol_fee_rate: u16
+        default_protocol_fee_rate: u16,
     ) -> Result<()> {
         FundUpdateToken::update_default_protocol_fee_rate(ctx, default_protocol_fee_rate)
     }

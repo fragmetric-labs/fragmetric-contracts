@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::fund::*;
 use crate::constants::*;
+use crate::fund::*;
 
 #[derive(Accounts)]
 pub struct FundUpdateToken<'info> {
@@ -13,24 +13,16 @@ pub struct FundUpdateToken<'info> {
 }
 
 impl<'info> FundUpdateToken<'info> {
-    pub fn add_whitelisted_token(
-        ctx: Context<Self>,
-        token: Pubkey,
-        token_cap: u64
-    ) -> Result<()> {
+    pub fn add_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
         let fund = &mut ctx.accounts.fund;
 
-        Ok(fund.add_whitelisted_token(token, token_cap)?)
+        fund.add_whitelisted_token(token, token_cap)
     }
 
-    pub fn update_token_info(
-        ctx: Context<Self>,
-        token: Pubkey,
-        info: TokenInfo
-    ) -> Result<()> {
+    pub fn update_token_info(ctx: Context<Self>, token: Pubkey, info: TokenInfo) -> Result<()> {
         let fund = &mut ctx.accounts.fund;
 
-        Ok(fund.update_token(token, info)?)
+        fund.update_token(token, info)
     }
 
     pub fn update_default_protocol_fee_rate(
@@ -39,6 +31,6 @@ impl<'info> FundUpdateToken<'info> {
     ) -> Result<()> {
         let fund = &mut ctx.accounts.fund;
 
-        Ok(fund.update_default_protocol_fee_rate(default_protocol_fee_rate)?)
+        fund.update_default_protocol_fee_rate(default_protocol_fee_rate)
     }
 }

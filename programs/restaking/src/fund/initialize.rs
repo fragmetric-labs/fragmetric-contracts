@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::fund::*;
 use crate::error::ErrorCode;
+use crate::fund::*;
 
 impl Fund {
     pub fn initialize(
@@ -38,20 +38,14 @@ impl Fund {
         Ok(())
     }
 
-    pub fn add_whitelisted_token(
-        &mut self,
-        token: Pubkey,
-        token_cap: u64,
-    ) -> Result<()> {
+    pub fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) -> Result<()> {
         self.check_if_token_exists(&token)?;
 
-        self.whitelisted_tokens.push(
-            TokenInfo {
-                address: token,
-                token_cap: token_cap,
-                token_amount_in: 0
-            }
-        );
+        self.whitelisted_tokens.push(TokenInfo {
+            address: token,
+            token_cap,
+            token_amount_in: 0,
+        });
 
         Ok(())
     }
@@ -94,12 +88,7 @@ fn test_initialize() {
 
     let tokens = vec![token1, token2];
 
-    let result = fund.initialize(
-        admin,
-        default_protocol_fee_rate,
-        receipt_token_mint,
-        tokens,
-    );
+    let result = fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens);
 
     assert!(result.is_ok());
     assert_eq!(fund.admin, admin);
@@ -115,7 +104,7 @@ fn test_add_whitelisted_token() {
         default_protocol_fee_rate: 0,
         receipt_token_mint: Pubkey::default(),
         whitelisted_tokens: vec![],
-        sol_amount_in: 0
+        sol_amount_in: 0,
     };
 
     let token1 = TokenInfo {
@@ -133,16 +122,22 @@ fn test_add_whitelisted_token() {
 
     fund.set_whitelisted_tokens(tokens).unwrap();
 
-    fund.add_whitelisted_token(token3.address, token3.token_cap).unwrap();
+    fund.add_whitelisted_token(token3.address, token3.token_cap)
+        .unwrap();
 }
 
 #[test]
 fn test_sort() {
-    let whitelisted_tokens = vec![Pubkey::new_unique(), Pubkey::new_unique(), Pubkey::new_unique(), Pubkey::new_unique(), Pubkey::new_unique()];
+    let whitelisted_tokens = vec![
+        Pubkey::new_unique(),
+        Pubkey::new_unique(),
+        Pubkey::new_unique(),
+        Pubkey::new_unique(),
+        Pubkey::new_unique(),
+    ];
     msg!("whitelisted_tokens: {:?}", whitelisted_tokens);
 
     let mut sorted_tokens: Vec<_> = whitelisted_tokens.into_iter().collect();
-    // sorted_tokens.sort();
-    sorted_tokens.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+    sorted_tokens.sort_by_key(|k| k.to_string());
     msg!("sorted_tokens: {:?}", sorted_tokens);
 }

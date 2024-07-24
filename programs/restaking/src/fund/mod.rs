@@ -1,10 +1,6 @@
-pub mod structs;
+mod structs;
 pub use structs::*;
 
-pub mod deposit;
-pub mod initialize;
-pub mod update_token;
-
-pub use deposit::*;
-pub use initialize::*;
-pub use update_token::*;
+mod deposit;
+mod initialize;
+mod update_token;

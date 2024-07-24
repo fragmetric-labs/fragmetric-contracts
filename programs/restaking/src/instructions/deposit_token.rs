@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface, TransferChecked, transfer_checked},
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
-use crate::fund::*;
 use crate::constants::*;
+use crate::fund::*;
 
 #[derive(Accounts)]
 pub struct DepositToken<'info> {
@@ -58,10 +58,10 @@ pub struct DepositToken<'info> {
 impl<'info> DepositToken<'info> {
     pub fn handler(ctx: Context<Self>, amount: u64) -> Result<()> {
         Self::transfer_token_cpi_ctx(&ctx, amount)?;
-    
+
         let fund = &mut ctx.accounts.fund;
         let token = &ctx.accounts.token_mint;
-        Ok(fund.deposit_token(token.key(), amount)?)
+        fund.deposit_token(token.key(), amount)
     }
 
     pub fn transfer_token_cpi_ctx(ctx: &Context<Self>, amount: u64) -> Result<()> {
@@ -81,6 +81,6 @@ impl<'info> DepositToken<'info> {
             },
         );
 
-        Ok(transfer_checked(token_transfer_cpi_ctx, amount, token_mint.decimals)?)
+        transfer_checked(token_transfer_cpi_ctx, amount, token_mint.decimals)
     }
 }

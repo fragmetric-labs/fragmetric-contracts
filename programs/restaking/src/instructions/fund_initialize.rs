@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
-use crate::fund::*;
 use crate::constants::*;
+use crate::fund::*;
 
 #[derive(Accounts)]
 #[instruction(receipt_token_name: String)]
@@ -31,7 +31,7 @@ pub struct InitializeFund<'info> {
     #[account(
         init,
         payer = admin,
-        seeds = [receipt_token_name.as_bytes().as_ref()],
+        seeds = [receipt_token_name.as_bytes()],
         bump,
         mint::token_program = token_program,
         mint::decimals = 9,
@@ -55,6 +55,7 @@ pub struct InitializeFund<'info> {
 }
 
 impl<'info> InitializeFund<'info> {
+    #[allow(unused_variables)]
     pub fn handler(
         ctx: Context<Self>,
         receipt_token_name: String,
@@ -64,13 +65,13 @@ impl<'info> InitializeFund<'info> {
         let fund = &mut ctx.accounts.fund;
         let receipt_token_mint_addr = ctx.accounts.receipt_token_mint.to_account_info().key;
         msg!("receipit_token_mint: {}", receipt_token_mint_addr);
-    
-        Ok(fund.initialize(
+
+        fund.initialize(
             ctx.accounts.admin.key(),
             default_protocol_fee_rate,
             ctx.accounts.receipt_token_mint.key(),
             whitelisted_tokens,
             // ctx.accounts.receipt_token_lock_account.key(),
-        )?)
-    }   
+        )
+    }
 }

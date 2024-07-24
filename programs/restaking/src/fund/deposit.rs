@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::fund::*;
 use crate::error::ErrorCode;
+use crate::fund::*;
 
 impl Fund {
     pub fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
@@ -11,7 +11,7 @@ impl Fund {
                     return Err(ErrorCode::FundExceedsTokenCap)?;
                 }
                 mapped_token.token_amount_in += amount as u128;
-                return Ok(())
+                return Ok(());
             }
         }
         err!(ErrorCode::FundNotExistingToken)
@@ -19,7 +19,7 @@ impl Fund {
 
     pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
         self.sol_amount_in += amount as u128;
-    
+
         Ok(())
     }
 }

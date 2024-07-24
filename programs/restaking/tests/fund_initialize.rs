@@ -45,7 +45,8 @@ async fn test_fund_initialize() {
                     token_cap: 1_000_000_000 * 2000,
                     token_amount_in: 2_000_000_000,
                 },
-            ].to_vec(),
+            ]
+            .to_vec(),
         }
         .try_to_vec()
         .unwrap(),
@@ -74,8 +75,8 @@ pub struct SetUpTest {
     pub receipt_token_authority: Pubkey,
 }
 
-impl SetUpTest {
-    pub fn new() -> Self {
+impl Default for SetUpTest {
+    fn default() -> Self {
         // let mut validator = ProgramTest::new("restaking", restaking::ID, processor!(restaking::entry));
         let mut validator = ProgramTest::new("restaking", restaking::ID, None);
         // let mut validator = ProgramTest::default();
@@ -119,6 +120,11 @@ impl SetUpTest {
             fund: fund_pda,
             receipt_token_authority: receipt_token_authority_pda,
         }
+    }
+}
+impl SetUpTest {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
