@@ -1,10 +1,12 @@
 use anchor_lang::prelude::*;
 
+pub mod common;
 pub mod constants;
 pub mod error;
 pub mod fund;
 // pub mod oracle;
 
+use common::*;
 use fund::*;
 // use oracle::*;
 
@@ -17,6 +19,10 @@ declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
 #[program]
 pub mod restaking {
     use super::*;
+
+    pub fn log_message(ctx: Context<LogMessage>, message: String) -> Result<()> {
+        LogMessage::log_message(ctx, message)
+    }
 
     pub fn fund_initialize(
         ctx: Context<FundInitialize>,
