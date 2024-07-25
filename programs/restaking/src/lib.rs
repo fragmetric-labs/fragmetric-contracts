@@ -1,15 +1,14 @@
+use anchor_lang::prelude::*;
+
+pub mod common;
 pub mod constants;
 pub mod error;
 pub mod fund;
-pub mod instructions;
 // pub mod oracle;
 
-use anchor_lang::prelude::*;
-
-pub use constants::*;
-pub use fund::*;
-pub use instructions::*;
-// pub use oracle::*;
+use common::*;
+use fund::*;
+// use oracle::*;
 
 #[cfg(feature = "mainnet")]
 declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
@@ -21,43 +20,49 @@ declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
 pub mod restaking {
     use super::*;
 
+    pub fn log_message(ctx: Context<LogMessage>, message: String) -> Result<()> {
+        LogMessage::log_message(ctx, message)
+    }
+
     pub fn fund_initialize(
-        ctx: Context<InitializeFund>,
-        receipt_token_name: String,
-        default_protocol_fee_rate: u16,
-        tokens: Vec<TokenInfo>,
+        ctx: Context<FundInitialize>,
+        request: FundInitializeRequest,
     ) -> Result<()> {
-        InitializeFund::handler(ctx, receipt_token_name, default_protocol_fee_rate, tokens)
+        FundInitialize::initialize_fund(ctx, request)
     }
 
     pub fn fund_add_whitelisted_token(
-        ctx: Context<FundUpdateToken>,
-        token: Pubkey,
-        token_cap: u64,
+        ctx: Context<FundUpdate>,
+        request: FundAddWhitelistedTokenRequest,
     ) -> Result<()> {
-        FundUpdateToken::add_whitelisted_token(ctx, token, token_cap)
+        FundUpdate::add_whitelisted_token(ctx, request)
     }
 
     pub fn fund_update_token_info(
-        ctx: Context<FundUpdateToken>,
-        token: Pubkey,
-        info: TokenInfo,
+        ctx: Context<FundUpdate>,
+        request: FundUpdateTokenInfoRequest,
     ) -> Result<()> {
-        FundUpdateToken::update_token_info(ctx, token, info)
+        FundUpdate::update_token_info(ctx, request)
     }
 
     pub fn fund_update_default_protocol_fee_rate(
-        ctx: Context<FundUpdateToken>,
-        default_protocol_fee_rate: u16,
+        ctx: Context<FundUpdate>,
+        request: FundUpdateDefaultProtocolFeeRateRequest,
     ) -> Result<()> {
-        FundUpdateToken::update_default_protocol_fee_rate(ctx, default_protocol_fee_rate)
+        FundUpdate::update_default_protocol_fee_rate(ctx, request)
     }
 
-    pub fn deposit_sol(ctx: Context<DepositSOL>, amount: u64) -> Result<()> {
-        DepositSOL::handler(ctx, amount)
+    pub fn fund_deposit_sol(
+        ctx: Context<FundDepositSOL>,
+        request: FundDepositSOLRequest,
+    ) -> Result<()> {
+        FundDepositSOL::deposit_sol(ctx, request)
     }
 
-    pub fn deposit_token(ctx: Context<DepositToken>, amount: u64) -> Result<()> {
-        DepositToken::handler(ctx, amount)
+    pub fn fund_deposit_token(
+        ctx: Context<FundDepositToken>,
+        request: FundDepositTokenRequest,
+    ) -> Result<()> {
+        FundDepositToken::deposit_token(ctx, request)
     }
 }

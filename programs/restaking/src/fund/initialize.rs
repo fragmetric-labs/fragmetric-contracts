@@ -1,27 +1,37 @@
+use std::collections::BTreeSet;
+
 use anchor_lang::prelude::*;
 
-use crate::error::ErrorCode;
-use crate::fund::*;
+use crate::{error::ErrorCode, fund::*};
 
 impl Fund {
-    pub fn initialize(
+    pub(super) fn initialize(
         &mut self,
         admin: Pubkey,
-        default_protocol_fee_rate: u16,
         receipt_token_mint: Pubkey,
-        whitelisted_tokens: Vec<TokenInfo>,
+        // receipt_token_lock_account: Pubkey,
     ) -> Result<()> {
         self.admin = admin;
-        self.update_default_protocol_fee_rate(default_protocol_fee_rate)?;
         self.receipt_token_mint = receipt_token_mint;
-        self.set_whitelisted_tokens(whitelisted_tokens)?;
         // self.receipt_token_lock_account = receipt_token_lock_account;
+        Ok(())
+    }
+}
+
+impl FundV1 {
+    pub(super) fn initialize(
+        &mut self,
+        default_protocol_fee_rate: u16,
+        whitelisted_tokens: Vec<TokenInfo>,
+    ) -> Result<()> {
+        self.set_default_protocol_fee_rate(default_protocol_fee_rate)?;
+        self.set_whitelisted_tokens(whitelisted_tokens)?;
         self.sol_amount_in = 0;
 
         Ok(())
     }
 
-    pub fn update_default_protocol_fee_rate(
+    pub(super) fn set_default_protocol_fee_rate(
         &mut self,
         default_protocol_fee_rate: u16,
     ) -> Result<()> {
@@ -31,113 +41,62 @@ impl Fund {
         Ok(())
     }
 
-    pub fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
-        // check if there's no duplicated token address
+    fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
+        Self::check_duplicates(&whitelisted_tokens)?;
         self.whitelisted_tokens = whitelisted_tokens;
 
         Ok(())
     }
 
-    pub fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) -> Result<()> {
-        self.check_if_token_exists(&token)?;
-
-        self.whitelisted_tokens.push(TokenInfo {
-            address: token,
-            token_cap,
-            token_amount_in: 0,
-        });
-
-        Ok(())
-    }
-
-    fn check_if_token_exists(&self, token: &Pubkey) -> Result<()> {
-        for check in self.whitelisted_tokens.iter().map(|info| &info.address) {
-            if check == token {
-                return Err(ErrorCode::FundAlreadyExistingToken)?;
-            }
+    fn check_duplicates(tokens: &[TokenInfo]) -> Result<()> {
+        let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
+        if token_addresses.len() != tokens.len() {
+            return Err(ErrorCode::FundDuplicatedToken)?;
         }
+
         Ok(())
     }
 }
 
-#[test]
-fn test_initialize() {
-    let admin = Pubkey::new_unique();
-    let default_protocol_fee_rate = 100;
-    let receipt_token_mint = Pubkey::new_unique();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let mut fund = Fund {
-        admin: Pubkey::default(),
-        default_protocol_fee_rate: 0,
-        receipt_token_mint: Pubkey::default(),
-        whitelisted_tokens: vec![],
-        // receipt_token_lock_account: Pubkey::default(),
-        sol_amount_in: 0,
-    };
+    #[test]
+    fn test_initialize() {
+        let default_protocol_fee_rate = 100;
 
-    let token1 = TokenInfo {
-        address: Pubkey::new_unique(),
-        token_cap: 1_000_000_000 * 1000,
-        token_amount_in: 1_000_000_000,
-    };
-    let token2 = TokenInfo {
-        address: Pubkey::new_unique(),
-        token_cap: 1_000_000_000 * 2000,
-        token_amount_in: 2_000_000_000,
-    };
+        let mut fund = FundV1 {
+            default_protocol_fee_rate: 0,
+            whitelisted_tokens: vec![],
+            sol_amount_in: 0,
+        };
 
-    let tokens = vec![token1, token2];
+        let token1 = TokenInfo {
+            address: Pubkey::new_unique(),
+            token_cap: 1_000_000_000 * 1000,
+            token_amount_in: 1_000_000_000,
+        };
+        let token2 = TokenInfo {
+            address: Pubkey::new_unique(),
+            token_cap: 1_000_000_000 * 2000,
+            token_amount_in: 2_000_000_000,
+        };
 
-    let result = fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens);
+        let tokens = vec![token1.clone(), token1.clone()];
+        let _ = fund
+            .initialize(default_protocol_fee_rate, tokens)
+            .unwrap_err();
 
-    assert!(result.is_ok());
-    assert_eq!(fund.admin, admin);
-    assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
-    assert_eq!(fund.receipt_token_mint, receipt_token_mint);
-    msg!("fund whitelisted_tokens: {:?}", fund.whitelisted_tokens);
-}
+        let tokens = vec![token1, token2];
+        fund.initialize(default_protocol_fee_rate, tokens.clone())
+            .unwrap();
 
-#[test]
-fn test_add_whitelisted_token() {
-    let mut fund = Fund {
-        admin: Pubkey::default(),
-        default_protocol_fee_rate: 0,
-        receipt_token_mint: Pubkey::default(),
-        whitelisted_tokens: vec![],
-        sol_amount_in: 0,
-    };
-
-    let token1 = TokenInfo {
-        address: Pubkey::new_unique(),
-        token_cap: 1_000_000_000 * 1000,
-        token_amount_in: 1_000_000_000,
-    };
-    let token2 = TokenInfo {
-        address: Pubkey::new_unique(),
-        token_cap: 1_000_000_000 * 2000,
-        token_amount_in: 2_000_000_000,
-    };
-    let token3 = token1.clone();
-    let tokens = vec![token1, token2];
-
-    fund.set_whitelisted_tokens(tokens).unwrap();
-
-    fund.add_whitelisted_token(token3.address, token3.token_cap)
-        .unwrap();
-}
-
-#[test]
-fn test_sort() {
-    let whitelisted_tokens = vec![
-        Pubkey::new_unique(),
-        Pubkey::new_unique(),
-        Pubkey::new_unique(),
-        Pubkey::new_unique(),
-        Pubkey::new_unique(),
-    ];
-    msg!("whitelisted_tokens: {:?}", whitelisted_tokens);
-
-    let mut sorted_tokens: Vec<_> = whitelisted_tokens.into_iter().collect();
-    sorted_tokens.sort_by_key(|k| k.to_string());
-    msg!("sorted_tokens: {:?}", sorted_tokens);
+        assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
+        for (actual, expected) in std::iter::zip(fund.whitelisted_tokens, tokens) {
+            assert_eq!(actual.address, expected.address);
+            assert_eq!(actual.token_cap, expected.token_cap);
+            assert_eq!(actual.token_amount_in, expected.token_amount_in);
+        }
+    }
 }

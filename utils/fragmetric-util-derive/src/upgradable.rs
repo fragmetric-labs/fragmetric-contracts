@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::quote;
-use syn::{spanned::Spanned, Attribute, Error, Field, Fields, Ident, ItemStruct, Meta, Type};
+use syn::{
+    spanned::Spanned, Attribute, Error, Field, Fields, Ident, ItemStruct, Meta, Type, Visibility,
+};
 
 use super::Result;
 
@@ -16,8 +18,10 @@ const REQUIRES_ATTRIBUTES: &str = "Upgradable data field requires attributes
 ";
 
 pub(crate) fn __derive_require_upgradable(input: ItemStruct) -> Result<TokenStream> {
+    let struct_vis = input.vis;
     let struct_ident = input.ident;
     let struct_ident_span = struct_ident.span();
+    let latest_type_ident = __generate_latest_type_ident(&struct_ident, struct_ident_span);
     let _upgradable_field = __search_upgradable_field(struct_ident_span, input.fields)?;
     let upgradable_field_type_ident = __into_field_type_ident(_upgradable_field.ty)?;
     let upgradable_field_ident = _upgradable_field.ident.unwrap();
@@ -25,22 +29,28 @@ pub(crate) fn __derive_require_upgradable(input: ItemStruct) -> Result<TokenStre
         __into_upgradable_field_metadata(_upgradable_field.attrs)?;
 
     __generate_code(
+        struct_vis,
         struct_ident,
         upgradable_field_ident,
         upgradable_field_type_ident,
         latest_version_ident,
         variant_ident,
+        latest_type_ident,
     )
 }
 
 fn __generate_code(
+    struct_vis: Visibility,
     struct_ident: Ident,
     upgradable_field_ident: Ident,
     upgradable_field_type_ident: Ident,
     latest_version_ident: Ident,
     variant_ident: Ident,
+    latest_type_ident: Ident,
 ) -> Result<TokenStream> {
     Ok(quote! {
+        #struct_vis type #latest_type_ident = #latest_version_ident;
+
         impl ::fragmetric_util::upgradable::__private::__AsMut<#latest_version_ident> for #struct_ident {
             fn __as_mut(&mut self) -> &mut #latest_version_ident {
                 #[allow(unreachable_patterns)]
@@ -55,6 +65,12 @@ fn __generate_code(
     })
 }
 
+fn __generate_latest_type_ident(struct_ident: &Ident, struct_ident_span: Span) -> Ident {
+    let mut name = struct_ident.to_string();
+    name += "LatestVersion";
+    Ident::new(&name, struct_ident_span)
+}
+
 fn __search_upgradable_field(struct_ident_span: Span, fields: Fields) -> Result<Field> {
     let mut iter = fields.into_iter().filter(__is_field_upgradable);
     let upgradable_field = iter
@@ -64,7 +80,7 @@ fn __search_upgradable_field(struct_ident_span: Span, fields: Fields) -> Result<
         let attr_meta = __into_upgradable_attribute_metadata(field.attrs).unwrap();
         return Err(Error::new(attr_meta.span(), DUPLICATE_UPGRADABLE_FIELD));
     }
-    return Ok(upgradable_field);
+    Ok(upgradable_field)
 }
 
 fn __is_field_upgradable(field: &Field) -> bool {
@@ -76,15 +92,11 @@ fn __is_field_upgradable(field: &Field) -> bool {
 }
 
 fn __into_upgradable_attribute_metadata(attrs: Vec<Attribute>) -> Option<Meta> {
-    attrs
-        .into_iter()
-        .map(|attr| attr.meta)
-        .filter(|meta| {
-            meta.path()
-                .get_ident()
-                .is_some_and(|ident| ident == "upgradable")
-        })
-        .next()
+    attrs.into_iter().map(|attr| attr.meta).find(|meta| {
+        meta.path()
+            .get_ident()
+            .is_some_and(|ident| ident == "upgradable")
+    })
 }
 
 fn __into_field_type_ident(ty: Type) -> Result<Ident> {

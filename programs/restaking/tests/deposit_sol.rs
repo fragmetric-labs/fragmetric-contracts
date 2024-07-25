@@ -3,6 +3,7 @@ use anchor_spl::{
     associated_token::{self, get_associated_token_address_with_program_id},
     token_interface::spl_token_2022,
 };
+use fragmetric_util::Upgradable;
 
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
@@ -11,7 +12,8 @@ use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transacti
 async fn test_deposit_sol() {
     let SetUpTest {
         validator,
-        depositor,
+        user,
+        receipt_token_authority,
         receipt_token_mint,
         receipt_token_account,
         fund,
@@ -22,9 +24,10 @@ async fn test_deposit_sol() {
 
     let deposit_sol_ix = Instruction {
         program_id: restaking::ID,
-        accounts: restaking::accounts::DepositSOL {
-            depositor: depositor.pubkey(),
+        accounts: restaking::accounts::FundDepositSOL {
+            user: user.pubkey(),
             fund,
+            receipt_token_authority,
             receipt_token_mint,
             receipt_token_account,
             token_program: spl_token_2022::ID,
@@ -32,15 +35,19 @@ async fn test_deposit_sol() {
             system_program: system_program::ID,
         }
         .to_account_metas(None),
-        data: restaking::instruction::DepositSol { amount }
-            .try_to_vec()
-            .unwrap(),
+        data: restaking::instruction::FundDepositSol {
+            request: restaking::fund::FundDepositSOLRequest::V1(
+                restaking::fund::FundDepositSOLRequestV1 { amount },
+            ),
+        }
+        .try_to_vec()
+        .unwrap(),
     };
 
     let deposit_sol_tx = Transaction::new_signed_with_payer(
         &[deposit_sol_ix],
-        Some(&depositor.pubkey()),
-        &[&depositor],
+        Some(&user.pubkey()),
+        &[&user],
         context.last_blockhash,
     );
 
@@ -50,18 +57,19 @@ async fn test_deposit_sol() {
         .await
         .unwrap();
 
-    let _fund: restaking::Fund = load_and_deserialize(context, fund).await;
+    let mut _fund: restaking::fund::Fund = load_and_deserialize(context, fund).await;
 
     msg!("fund admin: {}", _fund.admin);
     msg!(
         "fund default_protocol_fee_rate: {}",
-        _fund.default_protocol_fee_rate
+        _fund.to_latest_version().default_protocol_fee_rate
     );
 }
 
 pub struct SetUpTest {
     pub validator: ProgramTest,
-    pub depositor: Keypair,
+    pub user: Keypair,
+    pub receipt_token_authority: Pubkey,
     pub receipt_token_mint: Pubkey,
     // pub receipt_token_lock_account: Pubkey,
     pub receipt_token_account: Pubkey,
@@ -75,9 +83,9 @@ impl Default for SetUpTest {
         // let mut validator = ProgramTest::default();
         // validator.add_program("restaking", restaking::ID, None);
 
-        let depositor = Keypair::new();
+        let user = Keypair::new();
         validator.add_account(
-            depositor.pubkey(),
+            user.pubkey(),
             Account {
                 lamports: 1_000_000_000,
                 ..Account::default()
@@ -87,10 +95,16 @@ impl Default for SetUpTest {
         let (receipt_token_mint_pda, _) =
             Pubkey::find_program_address(&[b"fragSOL"], &restaking::ID);
         let (fund_pda, _) = Pubkey::find_program_address(
-            &[b"fund", receipt_token_mint_pda.as_ref()],
+            &[
+                restaking::constants::FUND_SEED,
+                receipt_token_mint_pda.as_ref(),
+            ],
             &restaking::ID,
         );
-        // let (fund_pda, _) = Pubkey::find_program_address(&[b"fund"], &restaking::ID);
+        let (receipt_token_authority_pda, _) = Pubkey::find_program_address(
+            &[restaking::constants::RECEIPT_TOKEN_AUTHORITY_SEED],
+            &restaking::ID,
+        );
         // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
@@ -98,7 +112,7 @@ impl Default for SetUpTest {
         // msg!("receipt_token_lock_account_pda: {}", receipt_token_lock_account_pda);
 
         let receipt_token_account = get_associated_token_address_with_program_id(
-            &depositor.pubkey(),
+            &user.pubkey(),
             &receipt_token_mint_pda,
             &associated_token::ID,
         );
@@ -106,8 +120,9 @@ impl Default for SetUpTest {
 
         Self {
             validator,
-            depositor,
+            user,
             receipt_token_mint: receipt_token_mint_pda,
+            receipt_token_authority: receipt_token_authority_pda,
             // receipt_token_lock_account: receipt_token_lock_account_pda,
             receipt_token_account,
             fund: fund_pda,
