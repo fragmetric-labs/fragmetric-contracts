@@ -3,6 +3,7 @@ use anchor_spl::{
     associated_token::{self, get_associated_token_address_with_program_id},
     token_interface::spl_token_2022,
 };
+use fragmetric_util::Upgradable;
 
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
@@ -35,7 +36,9 @@ async fn test_deposit_sol() {
         }
         .to_account_metas(None),
         data: restaking::instruction::FundDepositSol {
-            request: restaking::fund::FundDepositSOLRequest { amount },
+            request: restaking::fund::FundDepositSOLRequest::V1(
+                restaking::fund::FundDepositSOLRequestV1 { amount },
+            ),
         }
         .try_to_vec()
         .unwrap(),
@@ -54,12 +57,12 @@ async fn test_deposit_sol() {
         .await
         .unwrap();
 
-    let _fund: restaking::fund::Fund = load_and_deserialize(context, fund).await;
+    let mut _fund: restaking::fund::Fund = load_and_deserialize(context, fund).await;
 
     msg!("fund admin: {}", _fund.admin);
     msg!(
         "fund default_protocol_fee_rate: {}",
-        _fund.default_protocol_fee_rate
+        _fund.to_latest_version().default_protocol_fee_rate
     );
 }
 

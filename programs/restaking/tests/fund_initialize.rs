@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
-use anchor_spl::token_interface::spl_token_2022;
+// use anchor_spl::token_interface::spl_token_2022;
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
@@ -26,27 +26,28 @@ async fn test_fund_initialize() {
             receipt_token_mint,
             receipt_token_authority,
             // receipt_token_lock_account,
-            token_program: spl_token_2022::ID,
+            // token_program: spl_token_2022::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None),
         data: restaking::instruction::FundInitialize {
-            request: restaking::fund::FundInitializeRequest {
-                receipt_token_name: "fragSOL".to_string(),
-                default_protocol_fee_rate: 10,
-                whitelisted_tokens: vec![
-                    restaking::fund::TokenInfo {
-                        address: lst1.key(),
-                        token_cap: 1_000_000_000 * 1000,
-                        token_amount_in: 1_000_000_000,
-                    },
-                    restaking::fund::TokenInfo {
-                        address: lst2.key(),
-                        token_cap: 1_000_000_000 * 2000,
-                        token_amount_in: 2_000_000_000,
-                    },
-                ],
-            },
+            request: restaking::fund::FundInitializeRequest::V1(
+                restaking::fund::FundInitializeRequestV1 {
+                    default_protocol_fee_rate: 10,
+                    whitelisted_tokens: vec![
+                        restaking::fund::TokenInfo {
+                            address: lst1.key(),
+                            token_cap: 1_000_000_000 * 1000,
+                            token_amount_in: 1_000_000_000,
+                        },
+                        restaking::fund::TokenInfo {
+                            address: lst2.key(),
+                            token_cap: 1_000_000_000 * 2000,
+                            token_amount_in: 2_000_000_000,
+                        },
+                    ],
+                },
+            ),
         }
         .try_to_vec()
         .unwrap(),

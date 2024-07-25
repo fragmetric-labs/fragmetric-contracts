@@ -3,6 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
+use fragmetric_util::{request, Upgradable};
 
 use crate::{constants::*, error::ErrorCode, fund::*};
 
@@ -15,15 +16,23 @@ pub struct FundDepositToken<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
+        realloc = 8 + Fund::INIT_SPACE,
+        // TODO must paid by fund
+        realloc::payer = user,
+        realloc::zero = false,
     )]
-    pub fund: Box<Account<'info, Fund>>,
+    pub fund: Account<'info, Fund>,
 
     #[account(
         mut,
         seeds = [RECEIPT_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
+        realloc = 8 + ReceiptTokenAuthority::INIT_SPACE,
+        // TODO must paid by fund
+        realloc::payer = user,
+        realloc::zero = false,
     )]
-    pub receipt_token_authority: Box<Account<'info, ReceiptTokenAuthority>>,
+    pub receipt_token_authority: Account<'info, ReceiptTokenAuthority>,
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         init_if_needed,
@@ -58,13 +67,14 @@ pub struct FundDepositToken<'info> {
 
 impl<'info> FundDepositToken<'info> {
     pub fn deposit_token(ctx: Context<Self>, request: FundDepositTokenRequest) -> Result<()> {
-        let amount = request.amount;
+        let FundDepositTokenArgs { amount } = request.into();
         Self::transfer_token_cpi(&ctx, amount)?;
 
         let Self {
             fund, token_mint, ..
         } = ctx.accounts;
-        fund.deposit_token(token_mint.key(), amount)
+        fund.to_latest_version()
+            .deposit_token(token_mint.key(), amount)
         // TODO mint receipt token
     }
 
@@ -95,7 +105,27 @@ impl<'info> FundDepositToken<'info> {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundDepositTokenRequest {
+pub struct FundDepositTokenArgs {
     pub amount: u64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+#[request(FundDepositTokenArgs)]
+pub enum FundDepositTokenRequest {
+    V1(FundDepositTokenRequestV1),
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct FundDepositTokenRequestV1 {
+    pub amount: u64,
+}
+
+impl From<FundDepositTokenRequest> for FundDepositTokenArgs {
+    fn from(value: FundDepositTokenRequest) -> Self {
+        match value {
+            FundDepositTokenRequest::V1(value) => Self {
+                amount: value.amount,
+            },
+        }
+    }
 }

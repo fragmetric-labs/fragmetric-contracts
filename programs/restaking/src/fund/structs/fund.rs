@@ -1,14 +1,36 @@
 use anchor_lang::prelude::*;
+use fragmetric_util::{RequireUpgradable, Upgradable};
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, RequireUpgradable)]
 pub struct Fund {
-    pub admin: Pubkey,                  // 32
+    pub admin: Pubkey,
+    pub receipt_token_mint: Pubkey,
+    // pub receipt_token_lock_account: Pubkey,
+    #[upgradable(latest = FundV1, variant = V1)]
+    pub data: VersionedFund,
+}
+
+impl Upgradable for Fund {
+    type LatestVersion = FundV1;
+
+    fn upgrade(&mut self) {
+        match self.data {
+            VersionedFund::V1(_) => (),
+        }
+    }
+}
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub enum VersionedFund {
+    V1(FundV1),
+}
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct FundV1 {
     pub default_protocol_fee_rate: u16, // 2
-    pub receipt_token_mint: Pubkey,     // 32
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
-    // pub receipt_token_lock_account: Pubkey, // 32
     pub sol_amount_in: u128, // 16
 }
 

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{error::ErrorCode, fund::*};
 
-impl Fund {
+impl FundV1 {
     pub(super) fn update_token(&mut self, token: Pubkey, info: TokenInfo) -> Result<()> {
         let token_info = self
             .whitelisted_tokens
@@ -43,10 +43,8 @@ mod tests {
 
     #[test]
     fn test_add_whitelisted_token() {
-        let mut fund = Fund {
-            admin: Pubkey::default(),
+        let mut fund = FundV1 {
             default_protocol_fee_rate: 0,
-            receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
         };
@@ -71,14 +69,10 @@ mod tests {
 
     #[test]
     fn test_update_token() {
-        let admin = Pubkey::new_unique();
         let default_protocol_fee_rate = 10;
-        let receipt_token_mint = Pubkey::new_unique();
 
-        let mut fund = Fund {
-            admin: Pubkey::default(),
+        let mut fund = FundV1 {
             default_protocol_fee_rate: 0,
-            receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
         };
@@ -97,8 +91,7 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         let tokens = vec![token1, token2];
 
-        fund.initialize(admin, default_protocol_fee_rate, receipt_token_mint, tokens)
-            .unwrap();
+        fund.initialize(default_protocol_fee_rate, tokens).unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
 
         fund.update_token(token1_update.address, token1_update)

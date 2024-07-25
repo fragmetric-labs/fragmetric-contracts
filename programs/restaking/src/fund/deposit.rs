@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{error::ErrorCode, fund::*};
 
-impl Fund {
+impl FundV1 {
     pub(super) fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
         let token_info = self
             .whitelisted_tokens
@@ -14,7 +14,7 @@ impl Fund {
             return Err(ErrorCode::FundExceedsTokenCap)?;
         }
 
-        token_info.token_cap += amount as u128;
+        token_info.token_amount_in += amount as u128;
 
         Ok(())
     }

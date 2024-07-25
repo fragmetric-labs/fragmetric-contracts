@@ -3,8 +3,8 @@ use anchor_lang::prelude::*;
 #[error_code]
 pub enum ErrorCode {
     // fund
-    #[msg("Sol transfer failed")]
-    FundSolTransferFailed,
+    #[msg("SOL transfer failed")]
+    FundSOLTransferFailed,
     #[msg("Token transfer failed")]
     FundTokenTransferFailed,
     #[msg("Already existing token")]
