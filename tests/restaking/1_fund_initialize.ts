@@ -5,6 +5,8 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
+import * as fs from "fs";
+import * as utils from "../utils/utils";
 
 export const fund_initialize = describe("fund_initialize", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -14,50 +16,72 @@ export const fund_initialize = describe("fund_initialize", () => {
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     console.log(`Payer key: ${payer.publicKey}`);
 
-    let receiptTokenMint: anchor.web3.PublicKey;
+    let receiptTokenMint: anchor.web3.Keypair;
     let tokenMint1: anchor.web3.PublicKey;
     let tokenMint2: anchor.web3.PublicKey;
     let fund_pda: anchor.web3.PublicKey;
-    let receipt_token_authority_pda: anchor.web3.PublicKey;
+    let fund_token_authority_pda: anchor.web3.PublicKey;
+        
+    // generate keypair to use as address for the transfer-hook enabled mint account
+    const mintOwner = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json"))); // same as payer
+    const decimals = 9;
 
     before("Sol airdrop", async () => {
-        // airdrop some SOL to the admin
-        let airdropSignature = await program.provider.connection.requestAirdrop(
-            admin.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-
-        // confirm the transaction
-        await program.provider.connection.confirmTransaction(airdropSignature);
-
-        // airdrop some SOL to the signer
-        airdropSignature = await program.provider.connection.requestAirdrop(
-            payer.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-
-        // confirm the transaction
-        await program.provider.connection.confirmTransaction(airdropSignature);
-
-        // check the balance
-        const adminBal = await program.provider.connection.getBalance(admin.publicKey);
-        console.log(`Admin SOL balance: ${adminBal}`);
-        const payerBal = await program.provider.connection.getBalance(payer.publicKey);
-        console.log(`Payer SOL balance: ${payerBal}`);
+        await utils.requestAirdrop(program.provider, payer, 10);
     });
 
-    before("Create Mint", async () => {
-        receiptTokenMint = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID,
+    before("Prepare accounts", async () => {
+        receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
+        [fund_token_authority_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("fund_token_authority"), receiptTokenMint.publicKey.toBuffer()],
+            program.programId
         );
-        // create token mint accounts
+        [fund_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
+            program.programId
+        );
+
+        // NEED TO CHECK: receiptTokenMint == createMint result account
+        console.log(`mintOwner: ${mintOwner.publicKey}, receiptTokenMint: ${receiptTokenMint.publicKey}, fund_pda: ${fund_pda}, fund_token_authority_pda: ${fund_token_authority_pda}`);
+    });
+
+    it("Create receipt token mint with Transfer Hook extension", async () => {
+        const extensions = [spl.ExtensionType.TransferHook];
+        const mintLen = spl.getMintLen(extensions);
+        console.log(`mintLen: ${mintLen}`);
+        const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(mintLen);
+        console.log(`lamports: ${lamports}`);
+
+        const mintTx = new anchor.web3.Transaction().add(
+            anchor.web3.SystemProgram.createAccount({
+                fromPubkey: mintOwner.publicKey,
+                newAccountPubkey: receiptTokenMint.publicKey,
+                lamports: lamports,
+                space: mintLen,
+                programId: TOKEN_2022_PROGRAM_ID,
+            }),
+            spl.createInitializeTransferHookInstruction(
+                receiptTokenMint.publicKey,
+                fund_token_authority_pda,
+                program.programId,
+                TOKEN_2022_PROGRAM_ID,
+            ),
+            spl.createInitializeMintInstruction(
+                receiptTokenMint.publicKey,
+                decimals,
+                fund_token_authority_pda,
+                mintOwner.publicKey,
+                TOKEN_2022_PROGRAM_ID,
+            ),
+        );
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            mintTx,
+            [mintOwner, receiptTokenMint],
+        );
+    });
+
+    it("Create test token mint accounts for initialize", async () => {
         tokenMint1 = await spl.createMint(
             program.provider.connection,
             payer,
@@ -79,18 +103,12 @@ export const fund_initialize = describe("fund_initialize", () => {
             TOKEN_2022_PROGRAM_ID
         );
 
-        [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.toBuffer()],
-            program.programId
-        );
-        [receipt_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_authority"), receiptTokenMint.toBuffer()],
-            program.programId,
-        );
+        fs.writeFileSync("./tests/restaking/tokenMint1", JSON.stringify(tokenMint1));
+        fs.writeFileSync("./tests/restaking/tokenMint2", JSON.stringify(tokenMint2));
 
-        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint, undefined, TOKEN_2022_PROGRAM_ID));
+        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID));
         console.log("Fund =", fund_pda);
-        console.log("Receipt Token Authority =", receipt_token_authority_pda);
+        console.log("Fund Token Authority =", fund_token_authority_pda);
         console.log("Receipt Token Mint =", receiptTokenMintAccount.address);
         console.log("It's authority =", receiptTokenMintAccount.mintAuthority);
         console.log("It's freeze authority = ", receiptTokenMintAccount.freezeAuthority);
@@ -119,14 +137,6 @@ export const fund_initialize = describe("fund_initialize", () => {
         //     program.programId
         // );
 
-        // spl.createMint(
-        //     provider.connection,
-        //     admin,
-        //     admin.publicKey,
-        //     admin.publicKey,
-        //     9,
-        // )
-
         const tx = await program.methods
             .fundInitialize({
                 v1: {
@@ -137,8 +147,8 @@ export const fund_initialize = describe("fund_initialize", () => {
                 }
             })
             .accounts({
-                receiptTokenMint: receiptTokenMint,
-                // tokenProgram: TOKEN_2022_PROGRAM_ID,
+                receiptTokenMint: receiptTokenMint.publicKey,
+                // receiptTokenLockAccount: receipt_token_lock_account_pda,
             })
             .signers([])
             .rpc();
