@@ -1,6 +1,7 @@
 use anchor_lang::{prelude::*, system_program};
 use anchor_spl::{
     associated_token::AssociatedToken,
+    token_2022::spl_token_2022,
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 use fragmetric_util::{request, Upgradable};
@@ -33,6 +34,7 @@ pub struct FundDepositSOL<'info> {
         realloc::zero = false,
     )]
     pub receipt_token_authority: Account<'info, ReceiptTokenAuthority>,
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         init_if_needed,
@@ -43,6 +45,7 @@ pub struct FundDepositSOL<'info> {
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
+    #[account(address = spl_token_2022::ID)]
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,

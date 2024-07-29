@@ -29,6 +29,7 @@ pub struct FundInitialize<'info> {
 
     // NOTE will be initialized externally
     #[account(
+        address = FRAGSOL_MINT_ADDRESS,
         // mint::authority = receipt_token_authority,
         // mint::freeze_authority = receipt_token_authority,
         // extensions::transfer_hook::authority = receipt_token_authority,
@@ -44,6 +45,7 @@ pub struct FundInitialize<'info> {
     //     token::authority = fund,
     // )]
     // pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
+    // #[account(address = spl_token_2022::ID)]
     // pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
