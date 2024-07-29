@@ -4,14 +4,14 @@ use anchor_spl::{token_2022::spl_token_2022::{extension::{transfer_hook::Transfe
 use crate::{constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
-pub struct FragSOLTransferHook<'info> {
+pub struct TransferHook<'info> {
     #[account(
         token::mint = mint,
         token::authority = owner,
     )]
     pub source_token: InterfaceAccount<'info, TokenAccount>,
 
-    pub mint: InterfaceAccount<'info, Mint>, // fragSOL mint account
+    pub mint: InterfaceAccount<'info, Mint>, // receipt token mint account
 
     #[account(
         token::mint = mint,
@@ -38,7 +38,7 @@ pub struct FragSOLTransferHook<'info> {
     pub fund: Account<'info, Fund>,
 }
 
-impl<'info> FragSOLTransferHook<'info> {
+impl<'info> TransferHook<'info> {
     pub fn transfer_hook(ctx: Context<Self>, amount: u64) -> Result<()> {
         // for destination in ctx.accounts.whitelisted_destination_token.addresses.iter() {
         //     if destination == &ctx.accounts.destination_token.key() {

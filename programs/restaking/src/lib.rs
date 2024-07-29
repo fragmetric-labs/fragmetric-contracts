@@ -84,9 +84,9 @@ pub mod restaking {
 
     #[interface(spl_transfer_hook_interface::execute)]
     pub fn token_transfer_hook(
-        ctx: Context<FragSOLTransferHook>,
+        ctx: Context<TransferHook>,
         amount: u64,
     ) -> Result<()> {
-        FragSOLTransferHook::transfer_hook(ctx, amount)
+        TransferHook::transfer_hook(ctx, amount)
     }
 }
