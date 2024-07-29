@@ -73,7 +73,6 @@ pub struct SetUpTest {
     pub validator: ProgramTest,
     pub admin: Keypair,
     pub receipt_token_mint: Pubkey,
-    // pub receipt_token_lock_account: Pubkey,
     pub fund: Pubkey,
     pub fund_token_authority: Pubkey,
     pub receipt_token_lock_account: Pubkey,
@@ -105,24 +104,24 @@ impl Default for SetUpTest {
             &[b"fund_token_authority", receipt_token_mint_pda.as_ref()],
             &restaking::ID,
         );
-        let receipt_token_lock_account = get_associated_token_address(
-            &fund_token_authority_pda,
-            &receipt_token_mint_pda
-        );
+        let receipt_token_lock_account =
+            get_associated_token_address(&fund_token_authority_pda, &receipt_token_mint_pda);
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
         msg!("fund_pda: {}", fund_pda);
         msg!("fund_token_authority_pda: {}", fund_token_authority_pda);
-        // msg!("receipt_token_lock_account_pda: {}", receipt_token_lock_account_pda);
+        msg!(
+            "receipt_token_lock_account_pda: {}",
+            receipt_token_lock_account
+        );
 
         Self {
             validator,
             admin,
             receipt_token_mint: receipt_token_mint_pda,
-            // receipt_token_lock_account: receipt_token_lock_account_pda,
             fund: fund_pda,
             fund_token_authority: fund_token_authority_pda,
-            receipt_token_lock_account: receipt_token_lock_account,
+            receipt_token_lock_account,
         }
     }
 }

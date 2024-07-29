@@ -83,10 +83,7 @@ pub mod restaking {
     }
 
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(
-        ctx: Context<TokenTransferHook>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn token_transfer_hook(ctx: Context<TokenTransferHook>, amount: u64) -> Result<()> {
         TokenTransferHook::transfer_hook(ctx, amount)
     }
 }

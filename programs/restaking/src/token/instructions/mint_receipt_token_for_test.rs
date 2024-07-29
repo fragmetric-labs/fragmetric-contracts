@@ -40,10 +40,17 @@ pub struct TokenMintReceiptToken<'info> {
 impl<'info> TokenMintReceiptToken<'info> {
     pub fn mint_receipt_token_for_test(ctx: Context<Self>, amount: u64) -> Result<()> {
         let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
-        msg!("user's receipt_token_account key: {:?}", receipt_token_account_key);
+        msg!(
+            "user's receipt_token_account key: {:?}",
+            receipt_token_account_key
+        );
 
         Self::mint_token_cpi(&ctx, amount)?;
-        msg!("Minted {} to user token account {:?}", amount, receipt_token_account_key);
+        msg!(
+            "Minted {} to user token account {:?}",
+            amount,
+            receipt_token_account_key
+        );
 
         Ok(())
     }
@@ -65,7 +72,8 @@ impl<'info> TokenMintReceiptToken<'info> {
                 to: ctx.accounts.receipt_token_account.to_account_info(),
                 authority: ctx.accounts.fund_token_authority.to_account_info(),
             },
-        ).with_signer(signer_seeds);
+        )
+        .with_signer(signer_seeds);
 
         mint_to(mint_token_cpi_ctx, amount)
     }

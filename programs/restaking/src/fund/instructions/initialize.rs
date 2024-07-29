@@ -1,5 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{Mint, TokenAccount}};
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token_2022::Token2022,
+    token_interface::{Mint, TokenAccount},
+};
 use fragmetric_util::{request, Upgradable};
 
 use crate::{constants::*, fund::*, Empty};
@@ -27,14 +31,7 @@ pub struct FundInitialize<'info> {
     )]
     pub fund_token_authority: Account<'info, Empty>,
 
-    // NOTE will be initialized externally
-    #[account(
-        address = FRAGSOL_MINT_ADDRESS,
-        // mint::authority = fund_token_authority,
-        // mint::freeze_authority = fund_token_authority,
-        // extensions::transfer_hook::authority = fund_token_authority,
-        // extensions::transfer_hook::program_id = crate::ID,
-    )]
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
     #[account(
         init,

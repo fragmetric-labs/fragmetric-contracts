@@ -1,5 +1,14 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::spl_token_2022::{extension::{transfer_hook::TransferHookAccount, BaseStateWithExtensionsMut, PodStateWithExtensionsMut}, pod::PodAccount}, token_interface::{Mint, TokenAccount}};
+use anchor_spl::{
+    token_2022::spl_token_2022::{
+        extension::{
+            transfer_hook::TransferHookAccount, BaseStateWithExtensionsMut,
+            PodStateWithExtensionsMut,
+        },
+        pod::PodAccount,
+    },
+    token_interface::{Mint, TokenAccount},
+};
 
 use crate::{constants::*, error::ErrorCode, fund::*};
 
@@ -30,7 +39,6 @@ pub struct TokenTransferHook<'info> {
     pub extra_account_meta_list: UncheckedAccount<'info>,
 
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
-
     #[account(
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],

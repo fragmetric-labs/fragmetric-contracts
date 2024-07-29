@@ -5,15 +5,9 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl Fund {
-    pub(super) fn initialize(
-        &mut self,
-        admin: Pubkey,
-        receipt_token_mint: Pubkey,
-        // receipt_token_lock_account: Pubkey,
-    ) -> Result<()> {
+    pub(super) fn initialize(&mut self, admin: Pubkey, receipt_token_mint: Pubkey) -> Result<()> {
         self.admin = admin;
         self.receipt_token_mint = receipt_token_mint;
-        // self.receipt_token_lock_account = receipt_token_lock_account;
         Ok(())
     }
 }
