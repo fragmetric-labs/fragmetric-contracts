@@ -10,7 +10,7 @@ async fn test_fund_initialize() {
         admin,
         receipt_token_mint,
         fund,
-        receipt_token_authority,
+        fund_token_authority,
     } = SetUpTest::new();
 
     let mut context = validator.start_with_context().await;
@@ -24,7 +24,7 @@ async fn test_fund_initialize() {
             admin: admin.pubkey(),
             fund,
             receipt_token_mint,
-            receipt_token_authority,
+            fund_token_authority,
             // receipt_token_lock_account,
             // token_program: spl_token_2022::ID,
             system_program: system_program::ID,
@@ -73,7 +73,7 @@ pub struct SetUpTest {
     pub receipt_token_mint: Pubkey,
     // pub receipt_token_lock_account: Pubkey,
     pub fund: Pubkey,
-    pub receipt_token_authority: Pubkey,
+    pub fund_token_authority: Pubkey,
 }
 
 impl Default for SetUpTest {
@@ -100,17 +100,14 @@ impl Default for SetUpTest {
         );
         // let (fund_pda, _) = Pubkey::find_program_address(&[b"fund"], &restaking::ID);
         // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
-        let (receipt_token_authority_pda, _) = Pubkey::find_program_address(
-            &[b"receipt_token_authority", receipt_token_mint_pda.as_ref()],
+        let (fund_token_authority_pda, _) = Pubkey::find_program_address(
+            &[b"fund_token_authority", receipt_token_mint_pda.as_ref()],
             &restaking::ID,
         );
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
         msg!("fund_pda: {}", fund_pda);
-        msg!(
-            "receipt_token_authority_pda: {}",
-            receipt_token_authority_pda
-        );
+        msg!("fund_token_authority_pda: {}", fund_token_authority_pda);
         // msg!("receipt_token_lock_account_pda: {}", receipt_token_lock_account_pda);
 
         Self {
@@ -119,7 +116,7 @@ impl Default for SetUpTest {
             receipt_token_mint: receipt_token_mint_pda,
             // receipt_token_lock_account: receipt_token_lock_account_pda,
             fund: fund_pda,
-            receipt_token_authority: receipt_token_authority_pda,
+            fund_token_authority: fund_token_authority_pda,
         }
     }
 }

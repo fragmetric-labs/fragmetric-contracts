@@ -13,7 +13,7 @@ async fn test_deposit_sol() {
     let SetUpTest {
         validator,
         user,
-        receipt_token_authority,
+        fund_token_authority,
         receipt_token_mint,
         receipt_token_account,
         fund,
@@ -27,7 +27,7 @@ async fn test_deposit_sol() {
         accounts: restaking::accounts::FundDepositSOL {
             user: user.pubkey(),
             fund,
-            receipt_token_authority,
+            fund_token_authority,
             receipt_token_mint,
             receipt_token_account,
             token_program: spl_token_2022::ID,
@@ -69,7 +69,7 @@ async fn test_deposit_sol() {
 pub struct SetUpTest {
     pub validator: ProgramTest,
     pub user: Keypair,
-    pub receipt_token_authority: Pubkey,
+    pub fund_token_authority: Pubkey,
     pub receipt_token_mint: Pubkey,
     // pub receipt_token_lock_account: Pubkey,
     pub receipt_token_account: Pubkey,
@@ -101,8 +101,8 @@ impl Default for SetUpTest {
             ],
             &restaking::ID,
         );
-        let (receipt_token_authority_pda, _) = Pubkey::find_program_address(
-            &[restaking::constants::RECEIPT_TOKEN_AUTHORITY_SEED],
+        let (fund_token_authority_pda, _) = Pubkey::find_program_address(
+            &[restaking::constants::FUND_TOKEN_AUTHORITY_SEED],
             &restaking::ID,
         );
         // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
@@ -122,7 +122,7 @@ impl Default for SetUpTest {
             validator,
             user,
             receipt_token_mint: receipt_token_mint_pda,
-            receipt_token_authority: receipt_token_authority_pda,
+            fund_token_authority: fund_token_authority_pda,
             // receipt_token_lock_account: receipt_token_lock_account_pda,
             receipt_token_account,
             fund: fund_pda,

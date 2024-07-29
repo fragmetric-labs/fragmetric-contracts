@@ -21,7 +21,7 @@ pub mod dummy {
         let user_token_amount = &mut ctx.accounts.user_token_amount;
         user_token_amount.user = ctx.accounts.user.key();
         user_token_amount.amount = 0;
-        user_token_amount.bump = user_token_amount.bump.clone();
+        user_token_amount.bump = ctx.bumps.user_token_amount;
 
         // msg!("User Account Created");
         // msg!("User Amount: {}", user_token_amount.amount);
