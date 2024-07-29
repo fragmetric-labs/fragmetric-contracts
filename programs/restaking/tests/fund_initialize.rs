@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
-// use anchor_spl::token_interface::spl_token_2022;
+use anchor_spl::associated_token::get_associated_token_address;
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
@@ -11,6 +11,7 @@ async fn test_fund_initialize() {
         receipt_token_mint,
         fund,
         fund_token_authority,
+        receipt_token_lock_account,
     } = SetUpTest::new();
 
     let mut context = validator.start_with_context().await;
@@ -25,8 +26,9 @@ async fn test_fund_initialize() {
             fund,
             receipt_token_mint,
             fund_token_authority,
-            // receipt_token_lock_account,
-            // token_program: spl_token_2022::ID,
+            receipt_token_lock_account,
+            token_program: anchor_spl::token_2022::ID,
+            associated_token_program: anchor_spl::associated_token::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None),
@@ -74,6 +76,7 @@ pub struct SetUpTest {
     // pub receipt_token_lock_account: Pubkey,
     pub fund: Pubkey,
     pub fund_token_authority: Pubkey,
+    pub receipt_token_lock_account: Pubkey,
 }
 
 impl Default for SetUpTest {
@@ -98,11 +101,13 @@ impl Default for SetUpTest {
             &[b"fund", receipt_token_mint_pda.as_ref()],
             &restaking::ID,
         );
-        // let (fund_pda, _) = Pubkey::find_program_address(&[b"fund"], &restaking::ID);
-        // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
         let (fund_token_authority_pda, _) = Pubkey::find_program_address(
             &[b"fund_token_authority", receipt_token_mint_pda.as_ref()],
             &restaking::ID,
+        );
+        let receipt_token_lock_account = get_associated_token_address(
+            &fund_token_authority_pda,
+            &receipt_token_mint_pda
         );
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
@@ -117,6 +122,7 @@ impl Default for SetUpTest {
             // receipt_token_lock_account: receipt_token_lock_account_pda,
             fund: fund_pda,
             fund_token_authority: fund_token_authority_pda,
+            receipt_token_lock_account: receipt_token_lock_account,
         }
     }
 }

@@ -5,6 +5,8 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
+import * as fs from "fs";
+import * as utils from "../utils/utils";
 
 export const deposit_sol = describe("deposit_sol", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -19,39 +21,15 @@ export const deposit_sol = describe("deposit_sol", () => {
     // for depositor provider
     // const userProvider = new anchor.AnchorProvider(program.provider.connection, new anchor.Wallet(user)); // and setProvider when needed
 
-    let receiptTokenMint: anchor.web3.PublicKey;
+    let receiptTokenMint: anchor.web3.Keypair;
     let tokenMint1: anchor.web3.PublicKey;
     let tokenMint2: anchor.web3.PublicKey;
     let fund_pda: anchor.web3.PublicKey;
-    let receipt_token_authority_pda: anchor.web3.PublicKey;
+    let fund_token_authority_pda: anchor.web3.PublicKey;
 
     before("Sol airdrop", async () => {
-        // airdrop some SOL to the admin
-        let airdropSignature = await program.provider.connection.requestAirdrop(
-            admin.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-
-        // confirm the transaction
-        await program.provider.connection.confirmTransaction(airdropSignature);
-
-        // airdrop some SOL to the signer
-        airdropSignature = await program.provider.connection.requestAirdrop(
-            payer.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-
-        // confirm the transaction
-        await program.provider.connection.confirmTransaction(airdropSignature);
-
-        // airdrop some SOL to the user
-        airdropSignature = await program.provider.connection.requestAirdrop(
-            user.publicKey,
-            1 * anchor.web3.LAMPORTS_PER_SOL // 1 SOL
-        );
-
-        // confirm the transaction
-        await program.provider.connection.confirmTransaction(airdropSignature);
+        await utils.requestAirdrop(program.provider, payer, 10);
+        await utils.requestAirdrop(program.provider, user, 10);
 
         // check the balance
         const adminBal = await program.provider.connection.getBalance(admin.publicKey);
@@ -62,89 +40,28 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`User SOL balance: ${userBal}`);
     });
 
-    before("Create Mint", async () => {
-        receiptTokenMint = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID,
-        );
-        // create token mint accounts
-        tokenMint1 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
-        tokenMint2 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
+    before("Prepare accounts", async () => {
+        receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
+        tokenMint1 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint1", {encoding: "utf8"}).replace(/"/g, ''));
+        tokenMint2 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint2", {encoding: "utf8"}).replace(/"/g, ''));
+        console.log(`tokenMint1: ${tokenMint1}, tokenMint2: ${tokenMint2}`);
 
         [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.toBuffer()],
+            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
-        [receipt_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_authority"), receiptTokenMint.toBuffer()],
+        [fund_token_authority_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("fund_token_authority"), receiptTokenMint.publicKey.toBuffer()],
             program.programId,
         );
 
-        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint, undefined, TOKEN_2022_PROGRAM_ID));
+        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID));
         console.log("Fund =", fund_pda);
-        console.log("Receipt Token Authority =", receipt_token_authority_pda);
+        console.log("Fund Token Authority =", fund_token_authority_pda);
         console.log("Receipt Token Mint =", receiptTokenMintAccount.address);
         console.log("It's authority =", receiptTokenMintAccount.mintAuthority);
         console.log("It's freeze authority = ", receiptTokenMintAccount.freezeAuthority);
-    })
-
-    before("Initialize Fund", async () => {
-        const default_protocol_fee_rate = 10;
-        const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
-        const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
-
-        const tokens = [
-            {
-                address: tokenMint1,
-                tokenCap: tokenCap1,
-                tokenAmountIn: new anchor.BN(0),
-            },
-            {
-                address: tokenMint2,
-                tokenCap: tokenCap2,
-                tokenAmountIn: new anchor.BN(0),
-            }
-        ];
-        await program.methods
-            .fundInitialize({
-                v1: {
-                    0: {
-                        defaultProtocolFeeRate: default_protocol_fee_rate,
-                        whitelistedTokens: tokens,
-                    }
-                }
-            })
-            .accounts({
-                receiptTokenMint: receiptTokenMint,
-                // tokenProgram: TOKEN_2022_PROGRAM_ID,
-            })
-            .signers([])
-            .rpc();
-    })
+    });
 
     it("Deposit SOL!", async () => {
         let amount = new anchor.BN(1_000);
@@ -163,10 +80,6 @@ export const deposit_sol = describe("deposit_sol", () => {
                 })
                 .accounts({
                     user: user.publicKey,
-                    // depositor: provider.wallet.publicKey,
-                    receiptTokenMint: receiptTokenMint,
-                    // receiptTokenAccount: provider.wallet.publicKey,
-                    tokenProgram: TOKEN_2022_PROGRAM_ID,
                 })
                 .signers([user])
                 .rpc();
@@ -178,7 +91,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
             // check associated token account
             const associatedToken = await spl.getAssociatedTokenAddress(
-                receiptTokenMint,
+                receiptTokenMint.publicKey,
                 user.publicKey,
                 false,
                 TOKEN_2022_PROGRAM_ID,

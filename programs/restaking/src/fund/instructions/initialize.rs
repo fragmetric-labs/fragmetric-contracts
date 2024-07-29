@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{Mint, TokenAccount}};
 use fragmetric_util::{request, Upgradable};
 
 use crate::{constants::*, fund::*, Empty};
@@ -36,16 +36,17 @@ pub struct FundInitialize<'info> {
         // extensions::transfer_hook::program_id = crate::ID,
     )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
-    // #[account(
-    //     init,
-    //     payer = admin,
-    //     seeds = [b"receipt_lock", receipt_token_mint.key().as_ref()],
-    //     bump,
-    //     token::mint = receipt_token_mint,
-    //     token::authority = fund,
-    // )]
-    // pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
-    // pub token_program: Program<'info, Token2022>,
+    #[account(
+        init,
+        payer = admin,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_token_authority,
+        associated_token::token_program = token_program,
+    )]
+    pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
+
+    pub token_program: Program<'info, Token2022>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 

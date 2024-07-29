@@ -15,4 +15,7 @@ pub enum ErrorCode {
     FundDuplicatedToken,
     #[msg("Exceeds the token cap")]
     FundExceedsTokenCap,
+    // receipt_token_extensions
+    #[msg("Token is not currently transferring")]
+    TokenNotCurrentlyTransferring,
 }

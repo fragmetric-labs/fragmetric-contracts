@@ -4,10 +4,12 @@ pub mod common;
 pub mod constants;
 pub mod error;
 pub mod fund;
+pub mod token;
 // pub mod oracle;
 
 use common::*;
 use fund::*;
+use token::*;
 // use oracle::*;
 
 #[cfg(feature = "mainnet")]
@@ -64,5 +66,27 @@ pub mod restaking {
         request: FundDepositTokenRequest,
     ) -> Result<()> {
         FundDepositToken::deposit_token(ctx, request)
+    }
+
+    pub fn token_mint_receipt_token_for_test(
+        ctx: Context<TokenMintReceiptToken>,
+        amount: u64,
+    ) -> Result<()> {
+        TokenMintReceiptToken::mint_receipt_token_for_test(ctx, amount)
+    }
+
+    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    pub fn token_initialize_extra_account_meta_list(
+        ctx: Context<TokenInitializeExtraAccountMetaList>,
+    ) -> Result<()> {
+        TokenInitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
+    }
+
+    #[interface(spl_transfer_hook_interface::execute)]
+    pub fn token_transfer_hook(
+        ctx: Context<TokenTransferHook>,
+        amount: u64,
+    ) -> Result<()> {
+        TokenTransferHook::transfer_hook(ctx, amount)
     }
 }

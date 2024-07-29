@@ -14,3 +14,4 @@ mainnet-id.json
 
 # for test
 tests/**/tokenMint*
+tests/**/*.json
