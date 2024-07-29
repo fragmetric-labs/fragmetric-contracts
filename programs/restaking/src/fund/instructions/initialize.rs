@@ -45,8 +45,7 @@ pub struct FundInitialize<'info> {
     //     token::authority = fund,
     // )]
     // pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
-    // #[account(address = spl_token_2022::ID)]
-    // pub token_program: Interface<'info, TokenInterface>,
+    // pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 

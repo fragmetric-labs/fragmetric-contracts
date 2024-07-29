@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_2022::spl_token_2022,
-    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
+    token_2022::Token2022,
+    token_interface::{transfer_checked, Mint, TokenAccount, TransferChecked},
 };
 use fragmetric_util::{request, Upgradable};
 
@@ -58,8 +58,7 @@ pub struct FundDepositToken<'info> {
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
-    #[account(address = spl_token_2022::ID)]
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
