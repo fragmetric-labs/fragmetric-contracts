@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, error::ErrorCode, fund::*};
+use crate::{constants::*, error::ErrorCode, fund::*, Empty};
 
 #[derive(Accounts)]
 pub struct FundDepositToken<'info> {
@@ -26,14 +26,10 @@ pub struct FundDepositToken<'info> {
 
     #[account(
         mut,
-        seeds = [RECEIPT_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + ReceiptTokenAuthority::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = user,
-        realloc::zero = false,
     )]
-    pub receipt_token_authority: Account<'info, ReceiptTokenAuthority>,
+    pub fund_token_authority: Account<'info, Empty>,
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
@@ -57,7 +53,7 @@ pub struct FundDepositToken<'info> {
         init_if_needed,
         payer = user,
         associated_token::mint = token_mint,
-        associated_token::authority = receipt_token_authority,
+        associated_token::authority = fund_token_authority,
         associated_token::token_program = token_program,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account

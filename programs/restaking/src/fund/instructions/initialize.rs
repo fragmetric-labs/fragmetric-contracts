@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, fund::*};
+use crate::{constants::*, fund::*, Empty};
 
 #[derive(Accounts)]
 pub struct FundInitialize<'info> {
@@ -21,18 +21,18 @@ pub struct FundInitialize<'info> {
     #[account(
         init,
         payer = admin,
-        seeds = [RECEIPT_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + ReceiptTokenAuthority::INIT_SPACE,
+        space = 8 + Empty::INIT_SPACE,
     )]
-    pub receipt_token_authority: Account<'info, ReceiptTokenAuthority>,
+    pub fund_token_authority: Account<'info, Empty>,
 
     // NOTE will be initialized externally
     #[account(
         address = FRAGSOL_MINT_ADDRESS,
-        // mint::authority = receipt_token_authority,
-        // mint::freeze_authority = receipt_token_authority,
-        // extensions::transfer_hook::authority = receipt_token_authority,
+        // mint::authority = fund_token_authority,
+        // mint::freeze_authority = fund_token_authority,
+        // extensions::transfer_hook::authority = fund_token_authority,
         // extensions::transfer_hook::program_id = crate::ID,
     )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
@@ -52,13 +52,10 @@ pub struct FundInitialize<'info> {
 
 impl<'info> FundInitialize<'info> {
     pub fn initialize_fund(ctx: Context<Self>, request: FundInitializeRequest) -> Result<()> {
-        let receipt_token_authority_key = ctx.accounts.receipt_token_authority.key();
+        let fund_token_authority_key = ctx.accounts.fund_token_authority.key();
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
         msg!("receipt_token_mint: {}", receipt_token_mint_key);
-        msg!(
-            "receipt_token_mint_authority: {}",
-            receipt_token_authority_key,
-        );
+        msg!("fund_token_authority: {}", fund_token_authority_key,);
 
         let args = FundInitializeArgs::from(request);
         ctx.accounts.fund.initialize(
