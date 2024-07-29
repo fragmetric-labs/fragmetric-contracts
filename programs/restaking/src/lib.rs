@@ -15,8 +15,7 @@ use token::*;
 #[cfg(feature = "mainnet")]
 declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
 #[cfg(not(feature = "mainnet"))]
-// declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
-declare_id!("9UpfJBgVKuZ1EzowJL6qgkYVwv3HhLpo93aP8L1QW86D");
+declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
 
 #[program]
 pub mod restaking {
