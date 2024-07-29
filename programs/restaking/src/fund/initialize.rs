@@ -12,7 +12,7 @@ impl Fund {
     }
 }
 
-impl FundV1 {
+impl FundV2 {
     pub(super) fn initialize(
         &mut self,
         default_protocol_fee_rate: u16,
@@ -21,6 +21,9 @@ impl FundV1 {
         self.set_default_protocol_fee_rate(default_protocol_fee_rate)?;
         self.set_whitelisted_tokens(whitelisted_tokens)?;
         self.sol_amount_in = 0;
+        self.pending_withdrawals = BatchWithdrawal::new(1);
+        self.withdrawals_in_progress = Default::default();
+        self.reserved_fund = Default::default();
 
         Ok(())
     }
@@ -60,10 +63,13 @@ mod tests {
     fn test_initialize() {
         let default_protocol_fee_rate = 100;
 
-        let mut fund = FundV1 {
+        let mut fund = FundV2 {
             default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
+            pending_withdrawals: BatchWithdrawal::new(0),
+            withdrawals_in_progress: Default::default(),
+            reserved_fund: Default::default(),
         };
 
         let token1 = TokenInfo {
@@ -92,5 +98,6 @@ mod tests {
             assert_eq!(actual.token_cap, expected.token_cap);
             assert_eq!(actual.token_amount_in, expected.token_amount_in);
         }
+        assert_eq!(fund.pending_withdrawals.batch_id, 1);
     }
 }

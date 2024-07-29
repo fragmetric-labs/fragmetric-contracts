@@ -67,6 +67,20 @@ pub mod restaking {
         FundDepositToken::deposit_token(ctx, request)
     }
 
+    pub fn fund_request_withdrawal(
+        ctx: Context<FundRequestWithdrawal>,
+        request: FundRequestWithdrawalRequest,
+    ) -> Result<()> {
+        FundRequestWithdrawal::request_withdrawal(ctx, request)
+    }
+    
+    pub fn fund_withdraw_sol(
+        ctx: Context<FundWithdrawSOL>,
+        request: FundWithdrawSOLRequest,
+    ) -> Result<()> {
+        FundWithdrawSOL::withdraw_sol(ctx, request)
+    }
+    
     // for test
     pub fn token_mint_receipt_token_for_test(
         ctx: Context<TokenMintReceiptToken>,

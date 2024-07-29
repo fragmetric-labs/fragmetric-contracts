@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{error::ErrorCode, fund::*};
 
-impl FundV1 {
+impl FundV2 {
     pub(super) fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
         let token_info = self
             .whitelisted_tokens
