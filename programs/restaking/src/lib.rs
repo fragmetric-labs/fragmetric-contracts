@@ -69,24 +69,24 @@ pub mod restaking {
     }
 
     pub fn token_mint_receipt_token_for_test(
-        ctx: Context<MintReceiptToken>,
+        ctx: Context<TokenMintReceiptToken>,
         amount: u64,
     ) -> Result<()> {
-        MintReceiptToken::mint_receipt_token_for_test(ctx, amount)
+        TokenMintReceiptToken::mint_receipt_token_for_test(ctx, amount)
     }
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn token_initialize_extra_account_meta_list(
-        ctx: Context<InitializeExtraAccountMetaList>,
+        ctx: Context<TokenInitializeExtraAccountMetaList>,
     ) -> Result<()> {
-        InitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
+        TokenInitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
     }
 
     #[interface(spl_transfer_hook_interface::execute)]
     pub fn token_transfer_hook(
-        ctx: Context<TransferHook>,
+        ctx: Context<TokenTransferHook>,
         amount: u64,
     ) -> Result<()> {
-        TransferHook::transfer_hook(ctx, amount)
+        TokenTransferHook::transfer_hook(ctx, amount)
     }
 }

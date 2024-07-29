@@ -78,8 +78,7 @@ export const transfer_hook = describe("transfer_hook", () => {
             .tokenMintReceiptTokenForTest(new anchor.BN(amount))
             .accounts({
                 payer: admin.publicKey,
-                receiptTokenAccountOwner: user1.publicKey,
-                receiptTokenMint: receiptTokenMint.publicKey,
+                receiptTokenAccountOwner: user1.publicKey
             })
             .signers([admin])
             .rpc();
@@ -91,7 +90,6 @@ export const transfer_hook = describe("transfer_hook", () => {
             .tokenInitializeExtraAccountMetaList()
             .accounts({
                 payer: mintOwner.publicKey,
-                mint: receiptTokenMint.publicKey,
             })
             .instruction();
         const tx = new anchor.web3.Transaction().add(initializeExtraAccountMetaListIx);

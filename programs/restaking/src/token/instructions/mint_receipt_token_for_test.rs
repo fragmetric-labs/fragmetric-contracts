@@ -6,15 +6,15 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::{constants::*, Empty};
 
 #[derive(Accounts)]
-pub struct MintReceiptToken<'info> {
+pub struct TokenMintReceiptToken<'info> {
     #[account(mut)]
     payer: Signer<'info>,
 
     /// CHECK: receipt token account owner could be user or pda
     receipt_token_account_owner: UncheckedAccount<'info>,
 
-    #[account(mut)]
-    pub receipt_token_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
@@ -30,14 +30,14 @@ pub struct MintReceiptToken<'info> {
         associated_token::authority = receipt_token_account_owner,
         associated_token::token_program = token_program,
     )]
-    pub receipt_token_account: InterfaceAccount<'info, TokenAccount>, // user's fragSOL token account
+    pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> MintReceiptToken<'info> {
+impl<'info> TokenMintReceiptToken<'info> {
     pub fn mint_receipt_token_for_test(ctx: Context<Self>, amount: u64) -> Result<()> {
         let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
         msg!("user's receipt_token_account key: {:?}", receipt_token_account_key);

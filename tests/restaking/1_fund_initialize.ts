@@ -148,7 +148,6 @@ export const fund_initialize = describe("fund_initialize", () => {
             })
             .accounts({
                 receiptTokenMint: receiptTokenMint.publicKey,
-                // receiptTokenLockAccount: receipt_token_lock_account_pda,
             })
             .signers([])
             .rpc();

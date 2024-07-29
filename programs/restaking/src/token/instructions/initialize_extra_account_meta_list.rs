@@ -6,23 +6,24 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 use crate::{constants::*, fund::*};
 
 #[derive(Accounts)]
-pub struct InitializeExtraAccountMetaList<'info> {
+pub struct TokenInitializeExtraAccountMetaList<'info> {
     #[account(mut)]
     payer: Signer<'info>,
 
     /// CHECK: ExtraAccountaMetaList Account, must use these seeds
     #[account(
         init,
-        seeds = [b"extra-account-metas", mint.key().as_ref()],
+        seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
         bump,
         space = ExtraAccountMetaList::size_of(
-            InitializeExtraAccountMetaList::extra_account_metas()?.len(),
+            TokenInitializeExtraAccountMetaList::extra_account_metas()?.len(),
         )?,
         payer = payer
     )]
     pub extra_account_meta_list: UncheckedAccount<'info>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     // #[account(
     //     init_if_needed,
@@ -35,7 +36,7 @@ pub struct InitializeExtraAccountMetaList<'info> {
 
     #[account(
         mut,
-        seeds = [FUND_SEED, mint.key().as_ref()],
+        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund: Account<'info, Fund>,
@@ -51,7 +52,7 @@ pub struct InitializeExtraAccountMetaList<'info> {
 //     pub addresses: Vec<Pubkey>,
 // }
 
-impl<'info> InitializeExtraAccountMetaList<'info> {
+impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
         let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
         msg!("extra_account_meta_list_key: {:?}", extra_account_meta_list_key);
