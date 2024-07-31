@@ -156,7 +156,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log("Initialize transaction signature", tx);
 
         // check fund initialized correctly
-        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).data.v1[0].whitelistedTokens;
+        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
 
         expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
         expect(tokensInitialized[0].tokenCap.toNumber()).to.eq(tokenCap1.toNumber());
