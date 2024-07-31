@@ -69,42 +69,38 @@ export const deposit_sol = describe("deposit_sol", () => {
         const fundBal_bef = await program.provider.connection.getBalance(fund_pda);
         console.log(`fund balance before:`, fundBal_bef);
 
-        try {
-            const tx = await program.methods
-                .fundDepositSol({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
+        const tx = await program.methods
+            .fundDepositSol({
+                v1: {
+                    0: {
+                        amount: amount,
                     }
-                })
-                .accounts({
-                    user: user.publicKey,
-                })
-                .signers([user])
-                .rpc();
-            console.log("DepositSOL transaction signature", tx);
+                }
+            })
+            .accounts({
+                user: user.publicKey,
+            })
+            .signers([user])
+            .rpc();
+        console.log("DepositSOL transaction signature", tx);
 
-            const fundBal_aft = await program.provider.connection.getBalance(fund_pda);
-            console.log(`fund balance after:`, fundBal_aft);
-            console.log(`balance difference:`, fundBal_aft - fundBal_bef);
+        const fundBal_aft = await program.provider.connection.getBalance(fund_pda);
+        console.log(`fund balance after:`, fundBal_aft);
+        console.log(`balance difference:`, fundBal_aft - fundBal_bef);
 
-            // check associated token account
-            const associatedToken = await spl.getAssociatedTokenAddress(
-                receiptTokenMint.publicKey,
-                user.publicKey,
-                false,
-                TOKEN_2022_PROGRAM_ID,
-            );
-            console.log(`associatedToken address:`, associatedToken);
+        // check associated token account
+        const associatedToken = await spl.getAssociatedTokenAddress(
+            receiptTokenMint.publicKey,
+            user.publicKey,
+            false,
+            TOKEN_2022_PROGRAM_ID,
+        );
+        console.log(`associatedToken address:`, associatedToken);
 
-            // check the sol_amount_in has accumulated
-            let totalSolAmtInFund = (await program.account.fund.fetch(fund_pda)).data.v1[0].solAmountIn;
-            console.log(`total sol amount in Fund:`, totalSolAmtInFund.toString());
-            expect(totalSolAmtInFund.toString()).to.eq(amount.toString());
-        } catch (err) {
-            console.log("DepositSOL err:", err);
-            throw Error(err);
-        }
+        // check the sol_amount_in has accumulated
+        let fundData = (await program.account.fund.fetch(fund_pda)).data.v1[0];
+
+        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toString());
+        expect(fundData.solAmountIn.toString()).to.eq(amount.toString());
     });
 });

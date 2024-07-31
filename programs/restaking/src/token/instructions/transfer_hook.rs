@@ -48,11 +48,34 @@ impl<'info> TokenTransferHook<'info> {
         // }
 
         Self::check_is_transferring(&ctx)?;
+        Self::call_transfer_hook(
+            ctx.accounts.source_token_account.to_account_info(),
+            ctx.accounts.receipt_token_mint.to_account_info(),
+            ctx.accounts.destination_token_account.to_account_info(),
+            ctx.accounts.owner.to_account_info(),
+            amount,
+        )?;
 
+        Ok(())
+    }
+
+    pub(crate) fn _call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let source_token_account_key = ctx.accounts.source_token_account.key();
         let destination_token_account_key = ctx.accounts.destination_token_account.key();
         msg!("transfer hook executed! amount {} passed from {:?} to {:?}", amount, source_token_account_key, destination_token_account_key);
         msg!("fund pda: {:?}", ctx.accounts.fund.key());
+
+        Ok(())
+    }
+
+    pub(crate) fn call_transfer_hook(
+        source_token_account: AccountInfo,
+        mint_account: AccountInfo,
+        destination_token_account: AccountInfo,
+        owner: AccountInfo,
+        amount: u64,
+    ) -> Result<()> {
+        msg!("transfer hook executed! amount {} passed from {:?} to {:?}", amount, source_token_account.key(), destination_token_account.key());
 
         Ok(())
     }
