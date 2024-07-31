@@ -78,7 +78,7 @@ impl<'info> FundRequestWithdrawal<'info> {
         } = ctx.accounts;
         let withdrawal_request = fund
             .to_latest_version()
-            .request_withdrawal(receipt_token_amount)?;
+            .create_withdrawal_request(receipt_token_amount)?;
         user_account
             .to_latest_version()
             .push_withdrawal_request(withdrawal_request)

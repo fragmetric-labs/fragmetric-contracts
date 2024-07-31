@@ -95,6 +95,6 @@ export const withdraw = describe("withdraw", () => {
             .signers([user]).rpc();
         
         const pendingBatch = (await program.account.fund.fetch(fund_pda)).data.v2[0].pendingWithdrawals;
-        expect(pendingBatch.numWithdrawalRequests).to.equal(new anchor.BN(1));
+        expect(pendingBatch.numWithdrawalRequests.toNumber()).to.equal(1);
     })
 })

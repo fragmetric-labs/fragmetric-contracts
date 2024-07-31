@@ -3,12 +3,9 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl BatchWithdrawal {
-    fn add_withdrawal_request(&mut self, amount: u64) -> Result<()> {
-        // Check max withdrawal request amount (constant)??
+    fn add_withdrawal_request(&mut self, amount: u64) {
         self.num_withdrawal_requests += 1;
         self.receipt_token_to_process += amount as u128;
-
-        Ok(())
     }
 
     fn next_batch_id(&self) -> u64 {
@@ -41,18 +38,15 @@ impl WithdrawalsInProgress {
         self.batch_withdrawal_queue.push(batch);
     }
 
-    fn pop_completed_batch(&mut self) -> Option<BatchWithdrawal> {
-        let completed_batch = self
-            .batch_withdrawal_queue
-            .first()
-            .filter(|batch| batch.is_completed())?;
-
-        self.num_withdrawal_requests_in_progress -= completed_batch.num_withdrawal_requests;
-        let mut batch_iter = std::mem::take(&mut self.batch_withdrawal_queue).into_iter();
-        let completed_batch = batch_iter.next();
-        self.batch_withdrawal_queue = batch_iter.collect();
-
-        completed_batch
+    fn pop_completed_batches(&mut self) -> Vec<BatchWithdrawal> {
+        let (completed, remaining) = std::mem::take(&mut self.batch_withdrawal_queue)
+            .into_iter()
+            .partition(|batch| batch.is_completed());
+        self.batch_withdrawal_queue = remaining;
+        completed.iter().for_each(|batch| {
+            self.num_withdrawal_requests_in_progress -= batch.num_withdrawal_requests
+        });
+        completed
     }
 }
 
@@ -65,35 +59,27 @@ impl ReservedFund {
         self.sol_remaining += batch.sol_reserved;
     }
 
-    fn check_if_withdrawal_completed(&self, batch_id: u64) -> Result<()> {
+    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
             err!(ErrorCode::FundWithdrawlNotCompleted)?
         }
 
-        Ok(())
-    }
-
-    pub(super) fn withdraw_sol(&mut self, receipt_token_amount: u64) -> Result<u64> {
-        // TODO later we have to use oracle data, now 1:1
-        #[allow(clippy::identity_op)]
-        let withdraw_amount = receipt_token_amount * 1;
-
         self.sol_remaining = self
             .sol_remaining
-            .checked_sub(withdraw_amount as u128)
+            .checked_sub(amount as u128)
             .ok_or_else(|| error!(ErrorCode::FundNotEnoughReservedSol))?;
 
-        Ok(withdraw_amount)
+        Ok(())
     }
 }
 
 impl FundV2 {
-    pub(super) fn request_withdrawal(
+    pub(super) fn create_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,
     ) -> Result<WithdrawalRequest> {
         self.pending_withdrawals
-            .add_withdrawal_request(receipt_token_amount)?;
+            .add_withdrawal_request(receipt_token_amount);
         WithdrawalRequest::new(self.pending_withdrawals.batch_id, self.current_request_id())
     }
 
@@ -107,7 +93,7 @@ impl FundV2 {
 
     // Called by operator
     #[allow(unused)]
-    pub(crate) fn start_batch_withdrawal(&mut self) {
+    pub(crate) fn start_processing_pending_batch_withdrawal(&mut self) {
         let new = BatchWithdrawal::new(self.pending_withdrawals.next_batch_id());
         let old = std::mem::replace(&mut self.pending_withdrawals, new);
         self.withdrawals_in_progress.push_batch_in_progress(old);
@@ -115,14 +101,13 @@ impl FundV2 {
 
     // Called by operator
     #[allow(unused)]
-    pub(crate) fn end_batch_withdrawal(&mut self) {
-        if let Some(batch) = self.withdrawals_in_progress.pop_completed_batch() {
-            self.reserved_fund.record_completed_batch_withdrawal(batch);
-        }
-    }
-
-    pub(super) fn check_if_withdrawal_completed(&self, batch_id: u64) -> Result<()> {
-        self.reserved_fund.check_if_withdrawal_completed(batch_id)
+    pub(crate) fn end_processing_completed_batch_withdrawals(&mut self) {
+        self.withdrawals_in_progress
+            .pop_completed_batches()
+            .into_iter()
+            .for_each(|batch| {
+                self.reserved_fund.record_completed_batch_withdrawal(batch);
+            });
     }
 }
 

@@ -54,14 +54,15 @@ impl<'info> FundWithdrawSOL<'info> {
             .to_latest_version()
             .pop_withdrawal_request(request_id)?;
 
-        let lamports = {
-            let fund = fund.to_latest_version();
-            fund.check_if_withdrawal_completed(batch_id)?;
-            fund.reserved_fund.withdraw_sol(receipt_token_amount)?
-        };
+        // TODO later we have to use oracle data, but now 1:1
+        #[allow(clippy::identity_op)]
+        let sol_amount = receipt_token_amount * 1;
+        fund.to_latest_version()
+            .reserved_fund
+            .withdraw_sol(batch_id, sol_amount)?;
 
-        fund.sub_lamports(lamports)?;
-        user.add_lamports(lamports)?;
+        fund.sub_lamports(sol_amount)?;
+        user.add_lamports(sol_amount)?;
 
         Ok(())
     }
