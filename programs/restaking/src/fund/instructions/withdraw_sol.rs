@@ -11,13 +11,13 @@ pub struct FundWithdrawSOL<'info> {
 
     #[account(
         mut,
-        seeds = [USER_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + UserAccount::INIT_SPACE,
+        realloc = 8 + UserReceipt::INIT_SPACE,
         realloc::payer = user,
         realloc::zero = false,
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
@@ -41,7 +41,7 @@ impl<'info> FundWithdrawSOL<'info> {
         let FundWithdrawSOLArgs { request_id } = request.into();
         let Self {
             user,
-            user_account,
+            user_receipt,
             fund,
             ..
         } = ctx.accounts;
@@ -50,7 +50,7 @@ impl<'info> FundWithdrawSOL<'info> {
             batch_id,
             receipt_token_amount,
             ..
-        } = user_account
+        } = user_receipt
             .to_latest_version()
             .pop_withdrawal_request(request_id)?;
 

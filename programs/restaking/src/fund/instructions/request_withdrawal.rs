@@ -16,11 +16,11 @@ pub struct FundRequestWithdrawal<'info> {
     #[account(
         init_if_needed,
         payer = user,
-        seeds = [USER_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + UserAccount::INIT_SPACE,
+        space = 8 + UserReceipt::INIT_SPACE,
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
@@ -76,12 +76,12 @@ impl<'info> FundRequestWithdrawal<'info> {
         Self::call_transfer_hook(&ctx, receipt_token_amount)?;
 
         let Self {
-            fund, user_account, ..
+            fund, user_receipt, ..
         } = ctx.accounts;
         let withdrawal_request = fund
             .to_latest_version()
             .create_withdrawal_request(receipt_token_amount)?;
-        user_account
+        user_receipt
             .to_latest_version()
             .push_withdrawal_request(withdrawal_request)
     }

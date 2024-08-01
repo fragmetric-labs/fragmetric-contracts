@@ -3,28 +3,28 @@ use fragmetric_util::{RequireUpgradable, Upgradable};
 
 #[account]
 #[derive(InitSpace, RequireUpgradable)]
-pub struct UserAccount {
-    #[upgradable(latest = UserAccountV1, variant = V1)]
-    pub data: VersionedUserAccount,
+pub struct UserReceipt {
+    #[upgradable(latest = UserReceiptV1, variant = V1)]
+    pub data: VersionedUserReceipt,
 }
 
-impl Upgradable for UserAccount {
-    type LatestVersion = UserAccountV1;
+impl Upgradable for UserReceipt {
+    type LatestVersion = UserReceiptV1;
 
     fn upgrade(&mut self) {
         match self.data {
-            VersionedUserAccount::V1(_) => (),
+            VersionedUserReceipt::V1(_) => (),
         }
     }
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub enum VersionedUserAccount {
-    V1(UserAccountV1),
+pub enum VersionedUserReceipt {
+    V1(UserReceiptV1),
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct UserAccountV1 {
+pub struct UserReceiptV1 {
     #[max_len(32)]
     pub withdrawal_requests: Vec<WithdrawalRequest>,
 }
