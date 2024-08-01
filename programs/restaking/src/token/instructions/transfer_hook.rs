@@ -68,6 +68,7 @@ impl<'info> TokenTransferHook<'info> {
         Ok(())
     }
 
+    #[allow(unused_variables)]
     pub(crate) fn call_transfer_hook(
         source_token_account: AccountInfo,
         mint_account: AccountInfo,
@@ -76,7 +77,12 @@ impl<'info> TokenTransferHook<'info> {
         fund: AccountInfo,
         amount: u64,
     ) -> Result<()> {
-        msg!("transfer hook executed! amount {} passed from {:?} to {:?}", amount, source_token_account.key(), destination_token_account.key());
+        msg!(
+            "transfer hook executed! amount {} passed from {:?} to {:?}",
+            amount,
+            source_token_account.key(),
+            destination_token_account.key()
+        );
         msg!("fund pda: {:?}", fund.key());
 
         Ok(())

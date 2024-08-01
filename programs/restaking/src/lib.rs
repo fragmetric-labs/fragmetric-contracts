@@ -74,6 +74,7 @@ pub mod restaking {
         FundRequestWithdrawal::request_withdrawal(ctx, request)
     }
 
+    // for test
     pub fn fund_process_withdrawal_requests_for_test(
         ctx: Context<FundProcessWithdrawalRequestsForTest>,
     ) -> Result<()> {
@@ -86,7 +87,7 @@ pub mod restaking {
     ) -> Result<()> {
         FundWithdrawSOL::withdraw_sol(ctx, request)
     }
-    
+
     // for test
     pub fn token_mint_receipt_token_for_test(
         ctx: Context<TokenMintReceiptToken>,

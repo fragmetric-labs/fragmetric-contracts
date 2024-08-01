@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, error::ErrorCode, fund::*, Empty, token::TokenTransferHook};
+use crate::{constants::*, error::ErrorCode, fund::*, token::TokenTransferHook, Empty};
 
 #[derive(Accounts)]
 pub struct FundDepositSOL<'info> {
@@ -30,7 +30,7 @@ pub struct FundDepositSOL<'info> {
         bump,
     )]
     pub fund_token_authority: Account<'info, Empty>,
-    
+
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
@@ -86,16 +86,24 @@ impl<'info> FundDepositSOL<'info> {
         Ok(())
     }
 
+    #[allow(unused_variables)]
     fn get_receipt_token_by_sol_exchange_rate(ctx: &Context<Self>, amount: u64) -> Result<u64> {
         Ok(amount)
     }
 
     fn mint_receipt_token(ctx: Context<Self>, amount: u64) -> Result<()> {
         let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
-        msg!("user's receipt token account key: {:?}", receipt_token_account_key);
+        msg!(
+            "user's receipt token account key: {:?}",
+            receipt_token_account_key
+        );
 
         Self::mint_token_cpi(&ctx, amount)?;
-        msg!("Minted {} to user token account {:?}", amount, receipt_token_account_key);
+        msg!(
+            "Minted {} to user token account {:?}",
+            amount,
+            receipt_token_account_key
+        );
 
         Self::call_transfer_hook(&ctx, amount)?;
 
@@ -119,7 +127,8 @@ impl<'info> FundDepositSOL<'info> {
                 to: ctx.accounts.receipt_token_account.to_account_info(),
                 authority: ctx.accounts.fund_token_authority.to_account_info(),
             },
-        ).with_signer(signer_seeds);
+        )
+        .with_signer(signer_seeds);
 
         mint_to(mint_token_cpi_ctx, amount)
     }
