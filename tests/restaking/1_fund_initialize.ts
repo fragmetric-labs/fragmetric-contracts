@@ -11,8 +11,9 @@ import * as utils from "../utils/utils";
 export const fund_initialize = describe("fund_initialize", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
+    console.log(`programId: ${program.programId}`);
 
-    const admin = (program.provider as anchor.AnchorProvider).wallet;
+    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     console.log(`Payer key: ${payer.publicKey}`);
 
@@ -23,7 +24,7 @@ export const fund_initialize = describe("fund_initialize", () => {
     let fund_token_authority_pda: anchor.web3.PublicKey;
         
     // generate keypair to use as address for the transfer-hook enabled mint account
-    const mintOwner = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json"))); // same as payer
+    const mintOwner = admin; // same as admin
     const decimals = 9;
 
     before("Sol airdrop", async () => {
@@ -53,7 +54,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log(`lamports: ${lamports}`);
 
         const mintTx = new anchor.web3.Transaction().add(
-            anchor.web3.SystemProgram.createAccount({
+            anchor.web3.SystemProgram.createAccount({ // already in use at devnet
                 fromPubkey: mintOwner.publicKey,
                 newAccountPubkey: receiptTokenMint.publicKey,
                 lamports: lamports,
@@ -77,7 +78,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             mintTx,
-            [mintOwner, receiptTokenMint],
+            [mintOwner.payer, receiptTokenMint],
         );
     });
 
@@ -119,7 +120,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
 
-        const tokens = [
+        const whitelistedTokens = [
             {
                 address: tokenMint1,
                 tokenCap: tokenCap1,
@@ -131,6 +132,7 @@ export const fund_initialize = describe("fund_initialize", () => {
                 tokenAmountIn: new anchor.BN(0),
             }
         ];
+        // const whitelistedTokens = [];
 
         // const [receipt_token_lock_account_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
         //     [Buffer.from("receipt_lock"), receipt_token_mint_pda.toBuffer()],
@@ -142,7 +144,7 @@ export const fund_initialize = describe("fund_initialize", () => {
                 v1: {
                     0: {
                         defaultProtocolFeeRate: default_protocol_fee_rate,
-                        whitelistedTokens: tokens,
+                        whitelistedTokens: whitelistedTokens,
                     }
                 }
             })

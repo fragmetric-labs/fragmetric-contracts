@@ -67,6 +67,7 @@ pub mod restaking {
         FundDepositToken::deposit_token(ctx, request)
     }
 
+    // for test
     pub fn token_mint_receipt_token_for_test(
         ctx: Context<TokenMintReceiptToken>,
         amount: u64,
