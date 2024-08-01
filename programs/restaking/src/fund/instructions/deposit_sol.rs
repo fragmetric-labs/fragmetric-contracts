@@ -129,6 +129,7 @@ impl<'info> FundDepositSOL<'info> {
             ctx.accounts.receipt_token_mint.to_account_info(),
             ctx.accounts.receipt_token_account.to_account_info(),
             ctx.accounts.user.to_account_info(),
+            ctx.accounts.fund.to_account_info(),
             amount,
         )
     }
