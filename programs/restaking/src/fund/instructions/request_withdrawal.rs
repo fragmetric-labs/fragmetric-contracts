@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, error::ErrorCode, fund::*, Empty};
+use crate::{constants::*, error::ErrorCode, fund::*, Empty, TokenTransferHook};
 
 #[derive(Accounts)]
 pub struct FundRequestWithdrawal<'info> {
@@ -73,6 +73,7 @@ impl<'info> FundRequestWithdrawal<'info> {
         } = request.into();
         Self::burn_token_cpi(&ctx, receipt_token_amount)?;
         Self::mint_token_cpi(&ctx, receipt_token_amount)?;
+        Self::call_transfer_hook(&ctx, receipt_token_amount)?;
 
         let Self {
             fund, user_account, ..
@@ -135,6 +136,26 @@ impl<'info> FundRequestWithdrawal<'info> {
 
         mint_to(mint_token_cpi_ctx, amount)
             .map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))
+    }
+
+    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        let Self {
+            receipt_token_account,
+            receipt_token_lock_account,
+            receipt_token_mint,
+            fund,
+            user,
+            ..
+        } = &*ctx.accounts;
+
+        TokenTransferHook::call_transfer_hook(
+            receipt_token_account.to_account_info(),
+            receipt_token_mint.to_account_info(),
+            receipt_token_lock_account.to_account_info(),
+            user.to_account_info(),
+            fund.to_account_info(),
+            amount,
+        )
     }
 }
 
