@@ -38,11 +38,11 @@ pub struct WithdrawalRequest {
 }
 
 impl WithdrawalRequest {
-    pub fn new(batch_id: u64, request_id: u64) -> Result<Self> {
+    pub fn new(batch_id: u64, request_id: u64, receipt_token_amount: u64) -> Result<Self> {
         Ok(Self {
             batch_id,
             request_id,
-            receipt_token_amount: 0,
+            receipt_token_amount,
             timestamp: Clock::get()?.unix_timestamp,
         })
     }

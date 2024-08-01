@@ -65,14 +65,20 @@ export const withdraw = describe("withdraw", () => {
             .rpc();
     })
 
-    before("Create ExtraAccountMetaList Account", async () => {
-        await program.methods
-            .tokenInitializeExtraAccountMetaList()
-            .accounts({
-                payer: admin.publicKey,
-            })
-            .signers([admin])
-            .rpc();
+    before("Deposit SOL", async () => {
+        const amount = 1 * 10 ** decimals;
+        await program.methods.fundDepositSol({
+            v1: {
+                0: {
+                    amount: new anchor.BN(amount),
+                }
+            }
+        })
+        .accounts({
+            user: user.publicKey,
+        })
+        .signers([user])
+        .rpc();
     })
 
     it("Request withdrawal", async () => {
@@ -96,5 +102,47 @@ export const withdraw = describe("withdraw", () => {
         
         const pendingBatch = (await program.account.fund.fetch(fund_pda)).data.v2[0].pendingWithdrawals;
         expect(pendingBatch.numWithdrawalRequests.toNumber()).to.equal(1);
+    })
+
+    it("Process all withdrawals", async () => {
+        const amount = 1 * 10 ** decimals;
+
+        await program.methods
+            .fundProcessWithdrawalRequestsForTest()
+            .accounts({
+                payer: admin.publicKey,
+            })
+            .signers([admin])
+            .rpc();
+        
+        const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].reservedFund;
+        expect(reservedFund.numCompletedWithdrawalRequests.toNumber()).to.equal(1);
+        expect(reservedFund.lastCompletedBatchId.toNumber()).to.equal(1);
+        expect(reservedFund.solRemaining.toNumber()).to.equal(amount);
+    })
+
+    it("Withdraw sol", async () => {
+        const amount = 1 * 10 ** decimals;
+        const balanceBefore = await program.provider.connection.getBalance(user.publicKey);
+        
+        await program.methods
+            .fundWithdrawSol({
+                v1: {
+                    0: {
+                        requestId: new anchor.BN(1),
+                    }
+                }
+            })
+            .accounts({
+                user: user.publicKey,
+            })
+            .signers([user])
+            .rpc();
+        
+        const balanceAfter = await program.provider.connection.getBalance(user.publicKey);
+        expect(balanceAfter - balanceBefore).to.equal(amount);
+
+        const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].reservedFund;
+        expect(reservedFund.solRemaining.toNumber()).to.equal(0);
     })
 })

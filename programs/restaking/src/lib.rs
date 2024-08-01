@@ -73,7 +73,13 @@ pub mod restaking {
     ) -> Result<()> {
         FundRequestWithdrawal::request_withdrawal(ctx, request)
     }
-    
+
+    pub fn fund_process_withdrawal_requests_for_test(
+        ctx: Context<FundProcessWithdrawalRequestsForTest>,
+    ) -> Result<()> {
+        FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
+    }
+
     pub fn fund_withdraw_sol(
         ctx: Context<FundWithdrawSOL>,
         request: FundWithdrawSOLRequest,

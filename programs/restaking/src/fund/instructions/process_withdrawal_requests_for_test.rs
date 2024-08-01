@@ -25,13 +25,12 @@ pub struct FundProcessWithdrawalRequestsForTest<'info> {
     pub fund: Account<'info, Fund>,
 
     #[account(
-        mut,
         seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_token_authority: Account<'info, Empty>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         mut,

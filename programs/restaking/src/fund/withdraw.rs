@@ -80,7 +80,11 @@ impl FundV2 {
     ) -> Result<WithdrawalRequest> {
         self.pending_withdrawals
             .add_withdrawal_request(receipt_token_amount);
-        WithdrawalRequest::new(self.pending_withdrawals.batch_id, self.current_request_id())
+        WithdrawalRequest::new(
+            self.pending_withdrawals.batch_id,
+            self.current_request_id(),
+            receipt_token_amount,
+        )
     }
 
     fn current_request_id(&self) -> u64 {

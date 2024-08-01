@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
-    token_interface::{transfer_checked, Mint, TokenAccount, TransferChecked},
+    token_interface::{burn, mint_to, Burn, Mint, MintTo, TokenAccount},
 };
 use fragmetric_util::{request, Upgradable};
 
@@ -40,7 +40,7 @@ pub struct FundRequestWithdrawal<'info> {
     )]
     pub fund_token_authority: Account<'info, Empty>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         init_if_needed,
@@ -71,7 +71,8 @@ impl<'info> FundRequestWithdrawal<'info> {
         let FundRequestWithdrawalArgs {
             receipt_token_amount,
         } = request.into();
-        Self::transfer_token_cpi(&ctx, receipt_token_amount)?;
+        Self::burn_token_cpi(&ctx, receipt_token_amount)?;
+        Self::mint_token_cpi(&ctx, receipt_token_amount)?;
 
         let Self {
             fund, user_account, ..
@@ -84,30 +85,56 @@ impl<'info> FundRequestWithdrawal<'info> {
             .push_withdrawal_request(withdrawal_request)
     }
 
-    fn transfer_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let Self {
             user,
             receipt_token_mint,
             receipt_token_account,
-            receipt_token_lock_account,
             token_program,
             ..
         } = &*ctx.accounts;
 
-        let transfer_token_cpi_ctx = CpiContext::new(
+        let burn_token_cpi_ctx = CpiContext::new(
             token_program.to_account_info(),
-            TransferChecked {
-                from: receipt_token_account.to_account_info(),
+            Burn {
                 mint: receipt_token_mint.to_account_info(),
-                to: receipt_token_lock_account.to_account_info(),
+                from: receipt_token_account.to_account_info(),
                 authority: user.to_account_info(),
             },
         );
 
-        transfer_checked(transfer_token_cpi_ctx, amount, receipt_token_mint.decimals)
-            .map_err(|_| ErrorCode::FundReceiptTokenLockFailed)?;
+        burn(burn_token_cpi_ctx, amount).map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))
+    }
 
-        Ok(())
+    fn mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        let Self {
+            receipt_token_lock_account,
+            receipt_token_mint,
+            fund_token_authority,
+            token_program,
+            ..
+        } = &*ctx.accounts;
+
+        let bump = ctx.bumps.fund_token_authority;
+        let receipt_token_mint_key = receipt_token_mint.key();
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            FUND_TOKEN_AUTHORITY_SEED,
+            receipt_token_mint_key.as_ref(),
+            &[bump],
+        ]];
+
+        let mint_token_cpi_ctx = CpiContext::new_with_signer(
+            token_program.to_account_info(),
+            MintTo {
+                mint: receipt_token_mint.to_account_info(),
+                to: receipt_token_lock_account.to_account_info(),
+                authority: fund_token_authority.to_account_info(),
+            },
+            signer_seeds,
+        );
+
+        mint_to(mint_token_cpi_ctx, amount)
+            .map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))
     }
 }
 
