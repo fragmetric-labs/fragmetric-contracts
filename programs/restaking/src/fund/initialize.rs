@@ -67,6 +67,7 @@ mod tests {
             default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
+            withdrawal_enabled_flag: true,
             pending_withdrawals: BatchWithdrawal::new(0),
             withdrawals_in_progress: Default::default(),
             reserved_fund: Default::default(),

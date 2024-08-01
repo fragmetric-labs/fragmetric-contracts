@@ -88,6 +88,10 @@ pub mod restaking {
         FundWithdrawSOL::withdraw_sol(ctx, request)
     }
 
+    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
+        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
+    }
+
     // for test
     pub fn token_mint_receipt_token_for_test(
         ctx: Context<TokenMintReceiptToken>,

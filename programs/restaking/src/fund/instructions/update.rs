@@ -55,6 +55,13 @@ impl<'info> FundUpdate<'info> {
             .to_latest_version()
             .set_default_protocol_fee_rate(default_protocol_fee_rate)
     }
+
+    pub fn update_withdrawal_enabled_flag(ctx: Context<Self>, flag: bool) -> Result<()> {
+        ctx.accounts
+            .fund
+            .to_latest_version()
+            .set_withdrawal_enabled_flag(flag)
+    }
 }
 
 pub struct FundAddWhitelistedTokenArgs {

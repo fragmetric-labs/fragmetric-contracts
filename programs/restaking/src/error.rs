@@ -26,4 +26,6 @@ pub enum ErrorCode {
     FundWithdrawlNotCompleted,
     #[msg("Not enough reserved Sol")]
     FundNotEnoughReservedSol,
+    #[msg("Withdrawal is currently disabled")]
+    FundWithdrawalDisabled,
 }

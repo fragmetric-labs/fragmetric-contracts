@@ -3,9 +3,13 @@ import * as spl from "@solana/spl-token";
 import { Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
+import * as chai from 'chai';
+import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
+
+chai.use(chaiAsPromised);
 
 export const withdraw = describe("withdraw", () => {
     const provider = anchor.AnchorProvider.env();
@@ -144,5 +148,30 @@ export const withdraw = describe("withdraw", () => {
 
         const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].reservedFund;
         expect(reservedFund.solRemaining.toNumber()).to.equal(0);
+    })
+
+    it("Block withdrawal", async () => {
+        const amount = 1 * 10 ** decimals;
+
+        await program.methods
+            .fundUpdateWithdrawalEnabledFlag(false)
+            .accounts({fund: fund_pda})
+            .rpc();
+
+        expect(program.methods
+            .fundRequestWithdrawal({
+                v1: {
+                    0: {
+                        receiptTokenAmount: new anchor.BN(amount),
+                    }
+                }
+            })
+            .accounts({
+                user: user.publicKey,
+            })
+            .signers([user]).rpc())
+            .to
+            .eventually
+            .throw("FundWithdrawalDisabled");
     })
 })

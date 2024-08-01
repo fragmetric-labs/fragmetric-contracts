@@ -21,6 +21,7 @@ impl Upgradable for Fund {
                     default_protocol_fee_rate: old.default_protocol_fee_rate,
                     whitelisted_tokens,
                     sol_amount_in: old.sol_amount_in,
+                    withdrawal_enabled_flag: true,
                     pending_withdrawals: BatchWithdrawal::new(1),
                     withdrawals_in_progress: Default::default(),
                     reserved_fund: Default::default(),
@@ -51,6 +52,7 @@ pub struct FundV2 {
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u128, // 16
+    pub withdrawal_enabled_flag: bool,
     // Withdrawal Status = PENDING
     pub pending_withdrawals: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS

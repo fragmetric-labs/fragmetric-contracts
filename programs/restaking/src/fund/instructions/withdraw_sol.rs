@@ -58,7 +58,6 @@ impl<'info> FundWithdrawSOL<'info> {
         #[allow(clippy::identity_op)]
         let sol_amount = receipt_token_amount * 1;
         fund.to_latest_version()
-            .reserved_fund
             .withdraw_sol(batch_id, sol_amount)?;
 
         fund.sub_lamports(sol_amount)?;

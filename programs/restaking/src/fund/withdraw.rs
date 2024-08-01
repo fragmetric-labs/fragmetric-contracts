@@ -59,7 +59,7 @@ impl ReservedFund {
         self.sol_remaining += batch.sol_reserved;
     }
 
-    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
+    fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
             err!(ErrorCode::FundWithdrawlNotCompleted)?
         }
@@ -78,6 +78,8 @@ impl FundV2 {
         &mut self,
         receipt_token_amount: u64,
     ) -> Result<WithdrawalRequest> {
+        self.check_is_withdrawal_enabled()?;
+
         self.pending_withdrawals
             .add_withdrawal_request(receipt_token_amount);
         WithdrawalRequest::new(
@@ -93,6 +95,19 @@ impl FundV2 {
                 .withdrawals_in_progress
                 .num_withdrawal_requests_in_progress
             + self.pending_withdrawals.num_withdrawal_requests
+    }
+
+    fn check_is_withdrawal_enabled(&self) -> Result<()> {
+        if !self.withdrawal_enabled_flag {
+            err!(ErrorCode::FundWithdrawalDisabled)?
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
+        self.check_is_withdrawal_enabled()?;
+        self.reserved_fund.withdraw_sol(batch_id, amount)
     }
 
     // Called by operator

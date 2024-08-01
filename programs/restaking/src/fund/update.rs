@@ -35,6 +35,12 @@ impl FundV2 {
 
         Ok(())
     }
+
+    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) -> Result<()> {
+        self.withdrawal_enabled_flag = flag;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -47,6 +53,7 @@ mod tests {
             default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
+            withdrawal_enabled_flag: true,
             pending_withdrawals: BatchWithdrawal::new(1),
             withdrawals_in_progress: Default::default(),
             reserved_fund: Default::default(),
@@ -78,6 +85,7 @@ mod tests {
             default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
+            withdrawal_enabled_flag: true,
             pending_withdrawals: BatchWithdrawal::new(1),
             withdrawals_in_progress: Default::default(),
             reserved_fund: Default::default(),
