@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
-    token_interface::{burn, Burn, Mint, TokenAccount},
+    token_interface::{Mint, TokenAccount},
 };
 use fragmetric_util::Upgradable;
 
-use crate::{constants::*, fund::*, Empty};
+use crate::{constants::*, fund::*, token::*, Empty};
 
 #[derive(Accounts)]
 pub struct FundProcessWithdrawalRequestsForTest<'info> {
@@ -68,10 +68,6 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
             })
             .sum();
 
-        Self::burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
-
-        let fund = ctx.accounts.fund.to_latest_version();
-
         // Operator Instruction - Record unstaking result to the fund
         // NOTE: assumes that the amount of unstaked SOL is equal to the amount of burned fragSOL
         let unstaking_ratio = 1; // unstaked SOL per 1 fragSOL
@@ -97,39 +93,28 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
             batch.sol_reserved += sol_reserved;
         }
 
+        Self::call_burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
+
         // Operator Instruction - Ends processing completed withdrawals
-        fund.end_processing_completed_batch_withdrawals();
+        ctx.accounts
+            .fund
+            .to_latest_version()
+            .end_processing_completed_batch_withdrawals();
 
         Ok(())
     }
 
-    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            fund_token_authority,
-            receipt_token_mint,
-            receipt_token_lock_account,
-            token_program,
-            ..
-        } = &*ctx.accounts;
-
+    fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
-        let receipt_token_mint_key = receipt_token_mint.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            FUND_TOKEN_AUTHORITY_SEED,
-            receipt_token_mint_key.as_ref(),
-            &[bump],
-        ]];
+        let key = ctx.accounts.receipt_token_mint.key();
+        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
-        let burn_token_cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            Burn {
-                mint: receipt_token_mint.to_account_info(),
-                from: receipt_token_lock_account.to_account_info(),
-                authority: fund_token_authority.to_account_info(),
-            },
-            signer_seeds,
-        );
-
-        burn(burn_token_cpi_ctx, amount)
+        ctx.accounts.token_program.burn_token_cpi(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_lock_account,
+            ctx.accounts.fund_token_authority.to_account_info(),
+            Some(&[signer_seeds.as_ref()]),
+            amount,
+        )
     }
 }

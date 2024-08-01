@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
-    token_interface::{burn, mint_to, Burn, Mint, MintTo, TokenAccount},
+    token_interface::{Mint, TokenAccount},
 };
 use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, error::ErrorCode, fund::*, Empty, TokenTransferHook};
+use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
 #[derive(Accounts)]
 pub struct FundRequestWithdrawal<'info> {
@@ -71,9 +71,8 @@ impl<'info> FundRequestWithdrawal<'info> {
         let FundRequestWithdrawalArgs {
             receipt_token_amount,
         } = request.into();
-        Self::burn_token_cpi(&ctx, receipt_token_amount)?;
-        Self::mint_token_cpi(&ctx, receipt_token_amount)?;
-        Self::call_transfer_hook(&ctx, receipt_token_amount)?;
+        Self::lock_receipt_token(&ctx, receipt_token_amount)
+            .map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))?;
 
         let Self {
             fund, user_receipt, ..
@@ -86,74 +85,41 @@ impl<'info> FundRequestWithdrawal<'info> {
             .push_withdrawal_request(withdrawal_request)
     }
 
-    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            user,
-            receipt_token_mint,
-            receipt_token_account,
-            token_program,
-            ..
-        } = &*ctx.accounts;
-
-        let burn_token_cpi_ctx = CpiContext::new(
-            token_program.to_account_info(),
-            Burn {
-                mint: receipt_token_mint.to_account_info(),
-                from: receipt_token_account.to_account_info(),
-                authority: user.to_account_info(),
-            },
-        );
-
-        burn(burn_token_cpi_ctx, amount).map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))
+    fn lock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        Self::call_burn_token_cpi(ctx, amount)?;
+        Self::call_mint_token_cpi(ctx, amount)?;
+        Self::call_transfer_hook(ctx, amount)
     }
 
-    fn mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            receipt_token_lock_account,
-            receipt_token_mint,
-            fund_token_authority,
-            token_program,
-            ..
-        } = &*ctx.accounts;
+    fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        ctx.accounts.token_program.burn_token_cpi(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_account,
+            ctx.accounts.user.to_account_info(),
+            None,
+            amount,
+        )
+    }
 
+    fn call_mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
-        let receipt_token_mint_key = receipt_token_mint.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            FUND_TOKEN_AUTHORITY_SEED,
-            receipt_token_mint_key.as_ref(),
-            &[bump],
-        ]];
+        let key = ctx.accounts.receipt_token_mint.key();
+        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
-        let mint_token_cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            MintTo {
-                mint: receipt_token_mint.to_account_info(),
-                to: receipt_token_lock_account.to_account_info(),
-                authority: fund_token_authority.to_account_info(),
-            },
-            signer_seeds,
-        );
-
-        mint_to(mint_token_cpi_ctx, amount)
-            .map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))
+        ctx.accounts.token_program.mint_token_cpi(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_lock_account,
+            ctx.accounts.fund_token_authority.to_account_info(),
+            Some(&[signer_seeds.as_ref()]),
+            amount,
+        )
     }
 
     fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            receipt_token_account,
-            receipt_token_lock_account,
-            receipt_token_mint,
-            fund,
-            user,
-            ..
-        } = &*ctx.accounts;
-
-        TokenTransferHook::call_transfer_hook(
-            receipt_token_account.to_account_info(),
-            receipt_token_mint.to_account_info(),
-            receipt_token_lock_account.to_account_info(),
-            user.to_account_info(),
-            fund.to_account_info(),
+        ctx.accounts.receipt_token_mint.transfer_hook(
+            Some(&ctx.accounts.receipt_token_account),
+            Some(&ctx.accounts.receipt_token_lock_account),
+            &ctx.accounts.fund,
             amount,
         )
     }
