@@ -69,9 +69,9 @@ pub mod restaking {
 
     pub fn fund_request_withdrawal(
         ctx: Context<FundRequestWithdrawal>,
-        request: FundRequestWithdrawalRequest,
+        receipt_token_amount: u64,
     ) -> Result<()> {
-        FundRequestWithdrawal::request_withdrawal(ctx, request)
+        FundRequestWithdrawal::request_withdrawal(ctx, receipt_token_amount)
     }
 
     // for test
@@ -81,11 +81,8 @@ pub mod restaking {
         FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
     }
 
-    pub fn fund_withdraw_sol(
-        ctx: Context<FundWithdrawSOL>,
-        request: FundWithdrawSOLRequest,
-    ) -> Result<()> {
-        FundWithdrawSOL::withdraw_sol(ctx, request)
+    pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
+        FundWithdrawSOL::withdraw_sol(ctx, request_id)
     }
 
     pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {

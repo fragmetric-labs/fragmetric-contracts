@@ -130,7 +130,7 @@ impl FundV2 {
     }
 }
 
-impl UserReceiptV1 {
+impl UserReceipt {
     pub(super) fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         // Check max withdrawal request amount (constant)??
         self.withdrawal_requests.push(request);

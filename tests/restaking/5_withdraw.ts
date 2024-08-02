@@ -92,13 +92,7 @@ export const withdraw = describe("withdraw", () => {
         console.log("User:", user.publicKey);
 
         await program.methods
-            .fundRequestWithdrawal({
-                v1: {
-                    0: {
-                        receiptTokenAmount: new anchor.BN(amount),
-                    }
-                }
-            })
+            .fundRequestWithdrawal(new anchor.BN(amount))
             .accounts({
                 user: user.publicKey,
             })
@@ -130,13 +124,7 @@ export const withdraw = describe("withdraw", () => {
         const balanceBefore = await program.provider.connection.getBalance(user.publicKey);
         
         await program.methods
-            .fundWithdrawSol({
-                v1: {
-                    0: {
-                        requestId: new anchor.BN(1),
-                    }
-                }
-            })
+            .fundWithdrawSol(new anchor.BN(1))
             .accounts({
                 user: user.publicKey,
             })
@@ -159,13 +147,7 @@ export const withdraw = describe("withdraw", () => {
             .rpc();
 
         expect(program.methods
-            .fundRequestWithdrawal({
-                v1: {
-                    0: {
-                        receiptTokenAmount: new anchor.BN(amount),
-                    }
-                }
-            })
+            .fundRequestWithdrawal(new anchor.BN(amount))
             .accounts({
                 user: user.publicKey,
             })

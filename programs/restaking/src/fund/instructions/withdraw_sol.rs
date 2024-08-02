@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use fragmetric_util::{request, Upgradable};
+use fragmetric_util::Upgradable;
 
 use crate::{constants::*, fund::*};
 
@@ -37,8 +37,7 @@ pub struct FundWithdrawSOL<'info> {
 }
 
 impl<'info> FundWithdrawSOL<'info> {
-    pub fn withdraw_sol(ctx: Context<Self>, request: FundWithdrawSOLRequest) -> Result<()> {
-        let FundWithdrawSOLArgs { request_id } = request.into();
+    pub fn withdraw_sol(ctx: Context<Self>, request_id: u64) -> Result<()> {
         let Self {
             user,
             user_receipt,
@@ -46,48 +45,17 @@ impl<'info> FundWithdrawSOL<'info> {
             ..
         } = ctx.accounts;
 
-        let WithdrawalRequest {
-            batch_id,
-            receipt_token_amount,
-            ..
-        } = user_receipt
-            .to_latest_version()
-            .pop_withdrawal_request(request_id)?;
+        let request = user_receipt.pop_withdrawal_request(request_id)?;
 
         // TODO later we have to use oracle data, but now 1:1
         #[allow(clippy::identity_op)]
-        let sol_amount = receipt_token_amount * 1;
+        let sol_amount = request.receipt_token_amount * 1;
         fund.to_latest_version()
-            .withdraw_sol(batch_id, sol_amount)?;
+            .withdraw_sol(request.batch_id, sol_amount)?;
 
         fund.sub_lamports(sol_amount)?;
         user.add_lamports(sol_amount)?;
 
         Ok(())
-    }
-}
-
-pub struct FundWithdrawSOLArgs {
-    pub request_id: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundWithdrawSOLArgs)]
-pub enum FundWithdrawSOLRequest {
-    V1(FundWithdrawSOLRequestV1),
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundWithdrawSOLRequestV1 {
-    pub request_id: u64,
-}
-
-impl From<FundWithdrawSOLRequest> for FundWithdrawSOLArgs {
-    fn from(value: FundWithdrawSOLRequest) -> Self {
-        match value {
-            FundWithdrawSOLRequest::V1(value) => Self {
-                request_id: value.request_id,
-            },
-        }
     }
 }

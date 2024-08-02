@@ -4,7 +4,7 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
-use fragmetric_util::{request, Upgradable};
+use fragmetric_util::Upgradable;
 
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
@@ -64,13 +64,7 @@ pub struct FundRequestWithdrawal<'info> {
 }
 
 impl<'info> FundRequestWithdrawal<'info> {
-    pub fn request_withdrawal(
-        ctx: Context<Self>,
-        request: FundRequestWithdrawalRequest,
-    ) -> Result<()> {
-        let FundRequestWithdrawalArgs {
-            receipt_token_amount,
-        } = request.into();
+    pub fn request_withdrawal(ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
         Self::lock_receipt_token(&ctx, receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundReceiptTokenLockFailed))?;
 
@@ -80,9 +74,7 @@ impl<'info> FundRequestWithdrawal<'info> {
         let withdrawal_request = fund
             .to_latest_version()
             .create_withdrawal_request(receipt_token_amount)?;
-        user_receipt
-            .to_latest_version()
-            .push_withdrawal_request(withdrawal_request)
+        user_receipt.push_withdrawal_request(withdrawal_request)
     }
 
     fn lock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
@@ -122,30 +114,5 @@ impl<'info> FundRequestWithdrawal<'info> {
             &ctx.accounts.fund,
             amount,
         )
-    }
-}
-
-pub struct FundRequestWithdrawalArgs {
-    pub receipt_token_amount: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundRequestWithdrawalArgs)]
-pub enum FundRequestWithdrawalRequest {
-    V1(FundRequestWithdrawalV1),
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundRequestWithdrawalV1 {
-    pub receipt_token_amount: u64,
-}
-
-impl From<FundRequestWithdrawalRequest> for FundRequestWithdrawalArgs {
-    fn from(value: FundRequestWithdrawalRequest) -> Self {
-        match value {
-            FundRequestWithdrawalRequest::V1(value) => Self {
-                receipt_token_amount: value.receipt_token_amount,
-            },
-        }
     }
 }
