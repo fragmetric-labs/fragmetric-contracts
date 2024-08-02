@@ -52,18 +52,24 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
         let fund = ctx.accounts.fund.to_latest_version();
 
         // Operator Instruction - Decides to start processing pending withdrawals
-        if fund.pending_withdrawals.receipt_token_to_process > 0 {
-            fund.start_processing_pending_batch_withdrawal();
+        if fund
+            .withdrawal_status
+            .pending_batch_withdrawal
+            .receipt_token_to_process
+            > 0
+        {
+            fund.withdrawal_status
+                .start_processing_pending_batch_withdrawal()?;
         }
 
-        // Operator Instruction - Request for LST unstaking (to make SOL) and burn fragSOL
+        // Operator Instruction - Request for LST unstaking (to make SOL)
         let receipt_token_amount_to_burn = fund
-            .withdrawals_in_progress
-            .batch_withdrawal_queue
+            .withdrawal_status
+            .batch_withdrawals_in_progress
             .iter_mut()
             .map(|batch| {
                 let amount = batch.receipt_token_to_process;
-                batch.record_processing_start(amount as u64);
+                batch.record_unstaking_start(amount as u64);
                 amount
             })
             .sum();
@@ -74,8 +80,8 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
 
         let mut burned_receipt_token_amount = receipt_token_amount_to_burn;
         for batch in fund
-            .withdrawals_in_progress
-            .batch_withdrawal_queue
+            .withdrawal_status
+            .batch_withdrawals_in_progress
             .iter_mut()
         {
             if burned_receipt_token_amount == 0 {
@@ -87,10 +93,8 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
                 batch.receipt_token_being_processed,
             );
             burned_receipt_token_amount -= receipt_token_amount;
-            let sol_reserved = receipt_token_amount * unstaking_ratio;
-            batch.receipt_token_being_processed -= receipt_token_amount;
-            batch.receipt_token_processed += receipt_token_amount;
-            batch.sol_reserved += sol_reserved;
+            let sol_amount = receipt_token_amount * unstaking_ratio;
+            batch.record_unstaking_end(receipt_token_amount as u64, sol_amount as u64);
         }
 
         Self::call_burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
@@ -99,9 +103,8 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
         ctx.accounts
             .fund
             .to_latest_version()
-            .end_processing_completed_batch_withdrawals();
-
-        Ok(())
+            .withdrawal_status
+            .end_processing_completed_batch_withdrawals()
     }
 
     fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {

@@ -85,21 +85,57 @@ export const withdraw = describe("withdraw", () => {
         .rpc();
     })
 
-    it("Request withdrawal", async () => {
+    it("Create withdrawal request", async () => {
         const amount = 1 * 10 ** decimals;
 
         console.log("User receipt token account:", userReceiptTokenAccount);
         console.log("User:", user.publicKey);
 
+
+        const balanceBefore = (await spl.getAccount(program.provider.connection, userReceiptTokenAccount, undefined, TOKEN_2022_PROGRAM_ID)).amount;
+
+        for (let i = 0; i < 3; i++) {
+            await program.methods
+                .fundCreateWithdrawalRequest(new anchor.BN(amount))
+                .accounts({
+                    user: user.publicKey,
+                })
+                .signers([user]).rpc();
+        }
+
+        const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda)).data.v2[0].withdrawalStatus.pendingBatchWithdrawal;
+        expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(3);
+
+        const balanceAfter = (await spl.getAccount(program.provider.connection, userReceiptTokenAccount, undefined, TOKEN_2022_PROGRAM_ID)).amount;
+        expect(balanceBefore - balanceAfter).to.equal(BigInt(3 * amount))
+    })
+
+    it("Cancel withdrawal request", async () => {
+        const amount = 1 * 10 ** decimals;
+        const balanceBefore = (await spl.getAccount(program.provider.connection, userReceiptTokenAccount, undefined, TOKEN_2022_PROGRAM_ID)).amount;
+
         await program.methods
-            .fundCreateWithdrawalRequest(new anchor.BN(amount))
+            .fundCancelWithdrawalRequest(new anchor.BN(2))
             .accounts({
                 user: user.publicKey,
             })
-            .signers([user]).rpc();
+            .signers([user])
+            .rpc();
         
-        const pendingBatch = (await program.account.fund.fetch(fund_pda)).data.v2[0].pendingWithdrawals;
-        expect(pendingBatch.numWithdrawalRequests.toNumber()).to.equal(1);
+        const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda)).data.v2[0].withdrawalStatus.pendingBatchWithdrawal;
+        expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(2);
+
+        const balanceAfter = (await spl.getAccount(program.provider.connection, userReceiptTokenAccount, undefined, TOKEN_2022_PROGRAM_ID)).amount;
+        expect(balanceAfter - balanceBefore).to.equal(BigInt(amount))
+
+        expect(program.methods
+            .fundCancelWithdrawalRequest(new anchor.BN(2))
+            .accounts({
+                user: user.publicKey,
+            })
+            .signers([user])
+            .rpc()
+        ).to.eventually.throw("FundWithdrawalRequestNotFound");
     })
 
     it("Process all withdrawals", async () => {
@@ -112,19 +148,23 @@ export const withdraw = describe("withdraw", () => {
             })
             .signers([admin])
             .rpc();
-        
-        const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].reservedFund;
-        expect(reservedFund.numCompletedWithdrawalRequests.toNumber()).to.equal(1);
-        expect(reservedFund.lastCompletedBatchId.toNumber()).to.equal(1);
-        expect(reservedFund.solRemaining.toNumber()).to.equal(amount);
+
+        const withdrawalStatus = (await program.account.fund.fetch(fund_pda)).data.v2[0].withdrawalStatus;
+        expect(withdrawalStatus.lastCompletedBatchId.toNumber()).to.equal(1);
+
+        const reservedFund = withdrawalStatus.reservedFund;
+        expect(reservedFund.numCompletedWithdrawalRequests.toNumber()).to.equal(2);
+        expect(reservedFund.solRemaining.toNumber()).to.equal(2 * amount);
     })
 
     it("Withdraw sol", async () => {
         const amount = 1 * 10 ** decimals;
+        const sol_withdraw_fee_rate = 10;
+        const fee = amount * sol_withdraw_fee_rate / 10000;
         const balanceBefore = await program.provider.connection.getBalance(user.publicKey);
-        
+
         await program.methods
-            .fundWithdrawSol(new anchor.BN(1))
+            .fundWithdrawSol(new anchor.BN(3))
             .accounts({
                 user: user.publicKey,
             })
@@ -132,10 +172,10 @@ export const withdraw = describe("withdraw", () => {
             .rpc();
         
         const balanceAfter = await program.provider.connection.getBalance(user.publicKey);
-        expect(balanceAfter - balanceBefore).to.equal(amount);
+        expect(balanceAfter - balanceBefore).to.equal(amount - fee);
 
-        const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].reservedFund;
-        expect(reservedFund.solRemaining.toNumber()).to.equal(0);
+        const reservedFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].withdrawalStatus.reservedFund;
+        expect(reservedFund.solRemaining.toNumber()).to.equal(amount + fee);
     })
 
     it("Block withdrawal", async () => {
@@ -148,6 +188,16 @@ export const withdraw = describe("withdraw", () => {
 
         expect(program.methods
             .fundCreateWithdrawalRequest(new anchor.BN(amount))
+            .accounts({
+                user: user.publicKey,
+            })
+            .signers([user]).rpc())
+            .to
+            .eventually
+            .throw("FundWithdrawalDisabled");
+        
+        expect(program.methods
+            .fundWithdrawSol(new anchor.BN(1))
             .accounts({
                 user: user.publicKey,
             })

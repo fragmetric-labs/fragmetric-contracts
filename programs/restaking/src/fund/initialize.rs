@@ -21,9 +21,7 @@ impl FundV2 {
         self.set_default_protocol_fee_rate(default_protocol_fee_rate)?;
         self.set_whitelisted_tokens(whitelisted_tokens)?;
         self.sol_amount_in = 0;
-        self.pending_withdrawals = BatchWithdrawal::new(1);
-        self.withdrawals_in_progress = Default::default();
-        self.reserved_fund = Default::default();
+        self.withdrawal_status = Default::default();
 
         Ok(())
     }
@@ -67,10 +65,7 @@ mod tests {
             default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
-            withdrawal_enabled_flag: true,
-            pending_withdrawals: BatchWithdrawal::new(0),
-            withdrawals_in_progress: Default::default(),
-            reserved_fund: Default::default(),
+            withdrawal_status: Default::default(),
         };
 
         let token1 = TokenInfo {
@@ -99,6 +94,6 @@ mod tests {
             assert_eq!(actual.token_cap, expected.token_cap);
             assert_eq!(actual.token_amount_in, expected.token_amount_in);
         }
-        assert_eq!(fund.pending_withdrawals.batch_id, 1);
+        assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 1);
     }
 }

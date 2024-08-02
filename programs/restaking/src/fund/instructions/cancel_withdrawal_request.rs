@@ -9,7 +9,7 @@ use fragmetric_util::Upgradable;
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
 #[derive(Accounts)]
-pub struct FundCreateWithdrawalRequest<'info> {
+pub struct FundCancelWithdrawalRequest<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -63,33 +63,38 @@ pub struct FundCreateWithdrawalRequest<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> FundCreateWithdrawalRequest<'info> {
-    pub fn request_withdrawal(ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
-        Self::lock_receipt_token(&ctx, receipt_token_amount)
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
-
-        let Self {
-            fund, user_receipt, ..
-        } = ctx.accounts;
-        let withdrawal_request = fund
+impl<'info> FundCancelWithdrawalRequest<'info> {
+    pub fn cancel_withdrawal_request(ctx: Context<Self>, request_id: u64) -> Result<()> {
+        let request = ctx
+            .accounts
+            .user_receipt
+            .pop_withdrawal_request(request_id)?;
+        ctx.accounts
+            .fund
             .to_latest_version()
             .withdrawal_status
-            .create_withdrawal_request(receipt_token_amount)?;
-        user_receipt.push_withdrawal_request(withdrawal_request)
+            .cancel_withdrawal_request(request.batch_id, request.receipt_token_amount)?;
+
+        Self::unlock_receipt_token(&ctx, request.receipt_token_amount)
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
-    fn lock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn unlock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
         Self::call_burn_token_cpi(ctx, amount)?;
         Self::call_mint_token_cpi(ctx, amount)?;
         Self::call_transfer_hook(ctx, amount)
     }
 
     fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        let bump = ctx.bumps.fund_token_authority;
+        let key = ctx.accounts.receipt_token_mint.key();
+        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
+
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_account,
-            ctx.accounts.user.to_account_info(),
-            None,
+            &ctx.accounts.receipt_token_lock_account,
+            ctx.accounts.fund_token_authority.to_account_info(),
+            Some(&[signer_seeds.as_ref()]),
             amount,
         )
     }
@@ -101,7 +106,7 @@ impl<'info> FundCreateWithdrawalRequest<'info> {
 
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_lock_account,
+            &ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,
@@ -110,8 +115,8 @@ impl<'info> FundCreateWithdrawalRequest<'info> {
 
     fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
         ctx.accounts.receipt_token_mint.transfer_hook(
-            Some(&ctx.accounts.receipt_token_account),
             Some(&ctx.accounts.receipt_token_lock_account),
+            Some(&ctx.accounts.receipt_token_account),
             &ctx.accounts.fund,
             amount,
         )

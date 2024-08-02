@@ -1,3 +1,4 @@
+mod cancel_withdrawal_request;
 mod create_withdrawal_request;
 mod deposit_sol;
 mod deposit_token;
@@ -6,6 +7,7 @@ mod process_withdrawal_requests_for_test;
 mod update;
 mod withdraw_sol;
 
+pub use cancel_withdrawal_request::*;
 pub use create_withdrawal_request::*;
 pub use deposit_sol::*;
 pub use deposit_token::*;

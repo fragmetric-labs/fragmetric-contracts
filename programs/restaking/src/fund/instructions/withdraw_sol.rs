@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use fragmetric_util::Upgradable;
 
-use crate::{constants::*, fund::*};
+use crate::{constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundWithdrawSOL<'info> {
@@ -37,24 +37,31 @@ pub struct FundWithdrawSOL<'info> {
 }
 
 impl<'info> FundWithdrawSOL<'info> {
-    pub fn withdraw_sol(ctx: Context<Self>, request_id: u64) -> Result<()> {
-        let Self {
-            user,
-            user_receipt,
-            fund,
-            ..
-        } = ctx.accounts;
+    pub fn withdraw_sol(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
+        let request = ctx
+            .accounts
+            .user_receipt
+            .pop_withdrawal_request(request_id)?;
 
-        let request = user_receipt.pop_withdrawal_request(request_id)?;
-
-        // TODO later we have to use oracle data, but now 1:1
-        #[allow(clippy::identity_op)]
-        let sol_amount = request.receipt_token_amount * 1;
-        fund.to_latest_version()
+        let sol_amount = Self::get_sol_amount_by_exchange_rate(&ctx, request.receipt_token_amount)?;
+        let sol_amount = ctx
+            .accounts
+            .fund
+            .to_latest_version()
             .withdraw_sol(request.batch_id, sol_amount)?;
 
-        fund.sub_lamports(sol_amount)?;
-        user.add_lamports(sol_amount)?;
+        Self::transfer_sol(&mut ctx, sol_amount)
+            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))
+    }
+
+    #[allow(unused_variables)]
+    fn get_sol_amount_by_exchange_rate(ctx: &Context<Self>, amount: u64) -> Result<u64> {
+        Ok(amount)
+    }
+
+    fn transfer_sol(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+        ctx.accounts.fund.sub_lamports(amount)?;
+        ctx.accounts.user.add_lamports(amount)?;
 
         Ok(())
     }

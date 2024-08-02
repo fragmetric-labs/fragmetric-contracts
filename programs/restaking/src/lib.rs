@@ -74,6 +74,13 @@ pub mod restaking {
         FundCreateWithdrawalRequest::request_withdrawal(ctx, receipt_token_amount)
     }
 
+    pub fn fund_cancel_withdrawal_request(
+        ctx: Context<FundCancelWithdrawalRequest>,
+        request_id: u64,
+    ) -> Result<()> {
+        FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
+    }
+
     // for test
     pub fn fund_process_withdrawal_requests_for_test(
         ctx: Context<FundProcessWithdrawalRequestsForTest>,
