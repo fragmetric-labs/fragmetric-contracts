@@ -67,11 +67,11 @@ pub mod restaking {
         FundDepositToken::deposit_token(ctx, request)
     }
 
-    pub fn fund_request_withdrawal(
-        ctx: Context<FundRequestWithdrawal>,
+    pub fn fund_create_withdrawal_request(
+        ctx: Context<FundCreateWithdrawalRequest>,
         receipt_token_amount: u64,
     ) -> Result<()> {
-        FundRequestWithdrawal::request_withdrawal(ctx, receipt_token_amount)
+        FundCreateWithdrawalRequest::request_withdrawal(ctx, receipt_token_amount)
     }
 
     // for test

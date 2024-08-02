@@ -92,7 +92,7 @@ export const withdraw = describe("withdraw", () => {
         console.log("User:", user.publicKey);
 
         await program.methods
-            .fundRequestWithdrawal(new anchor.BN(amount))
+            .fundCreateWithdrawalRequest(new anchor.BN(amount))
             .accounts({
                 user: user.publicKey,
             })
@@ -147,7 +147,7 @@ export const withdraw = describe("withdraw", () => {
             .rpc();
 
         expect(program.methods
-            .fundRequestWithdrawal(new anchor.BN(amount))
+            .fundCreateWithdrawalRequest(new anchor.BN(amount))
             .accounts({
                 user: user.publicKey,
             })
