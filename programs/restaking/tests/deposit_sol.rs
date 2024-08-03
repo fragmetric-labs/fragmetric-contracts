@@ -62,7 +62,10 @@ async fn test_deposit_sol() {
     msg!("fund admin: {}", _fund.admin);
     msg!(
         "fund default_protocol_fee_rate: {}",
-        _fund.to_latest_version().default_protocol_fee_rate
+        _fund
+            .to_latest_version()
+            .withdrawal_status
+            .default_protocol_fee_rate
     );
 }
 

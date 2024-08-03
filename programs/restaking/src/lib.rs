@@ -53,6 +53,18 @@ pub mod restaking {
         FundUpdate::update_default_protocol_fee_rate(ctx, request)
     }
 
+    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
+        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
+    }
+
+    pub fn fund_update_batch_processing_threshold(
+        ctx: Context<FundUpdate>,
+        amount: u128,
+        duration: i64,
+    ) -> Result<()> {
+        FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
+    }
+
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         request: FundDepositSOLRequest,
@@ -90,10 +102,6 @@ pub mod restaking {
 
     pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
         FundWithdrawSOL::withdraw_sol(ctx, request_id)
-    }
-
-    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
-        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
     }
 
     // for test

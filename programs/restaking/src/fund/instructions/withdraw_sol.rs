@@ -48,6 +48,7 @@ impl<'info> FundWithdrawSOL<'info> {
             .accounts
             .fund
             .to_latest_version()
+            .withdrawal_status
             .withdraw_sol(request.batch_id, sol_amount)?;
 
         Self::transfer_sol(&mut ctx, sol_amount)

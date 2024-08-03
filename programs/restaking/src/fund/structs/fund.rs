@@ -18,10 +18,12 @@ impl Upgradable for Fund {
             VersionedFund::V1(ref mut old) => {
                 let whitelisted_tokens = std::mem::take(&mut old.whitelisted_tokens);
                 self.data = VersionedFund::V2(FundV2 {
-                    default_protocol_fee_rate: old.default_protocol_fee_rate,
                     whitelisted_tokens,
                     sol_amount_in: old.sol_amount_in,
-                    withdrawal_status: Default::default(),
+                    withdrawal_status: WithdrawalStatus {
+                        default_protocol_fee_rate: old.default_protocol_fee_rate,
+                        ..Default::default()
+                    },
                 });
             }
             VersionedFund::V2(_) => (),
@@ -46,7 +48,6 @@ pub struct FundV1 {
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct FundV2 {
-    pub default_protocol_fee_rate: u16, // 2
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u128, // 16
@@ -80,6 +81,7 @@ pub struct WithdrawalStatus {
     pub last_batch_processing_started_at: Option<i64>,
     pub last_batch_processing_completed_at: Option<i64>,
 
+    pub default_protocol_fee_rate: u16,
     pub withdrawal_enabled_flag: bool,
     pub batch_processing_threshold_amount: u128,
     pub batch_processing_threshold_duration: i64,
@@ -103,6 +105,7 @@ impl Default for WithdrawalStatus {
             last_batch_processing_started_at: None,
             last_batch_processing_completed_at: None,
             withdrawal_enabled_flag: true,
+            default_protocol_fee_rate: 0,
             batch_processing_threshold_amount: 0,
             batch_processing_threshold_duration: 0,
             pending_batch_withdrawal: BatchWithdrawal::empty(1),

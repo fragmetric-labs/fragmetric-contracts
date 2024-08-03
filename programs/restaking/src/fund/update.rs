@@ -35,12 +35,6 @@ impl FundV2 {
 
         Ok(())
     }
-
-    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) -> Result<()> {
-        self.withdrawal_status.withdrawal_enabled_flag = flag;
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -50,7 +44,6 @@ mod tests {
     #[test]
     fn test_add_whitelisted_token() {
         let mut fund = FundV2 {
-            default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
@@ -71,15 +64,17 @@ mod tests {
 
         fund.whitelisted_tokens = tokens;
         fund.add_whitelisted_token(token3.address, token3.token_cap)
-            .unwrap();
+            .unwrap_err();
     }
 
     #[test]
     fn test_update_token() {
         let default_protocol_fee_rate = 10;
+        let withdrawal_enabled_flag = true;
+        let batch_processing_threshold_amount = 10;
+        let batch_processing_threshold_duration = 10;
 
         let mut fund = FundV2 {
-            default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
@@ -99,7 +94,14 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         let tokens = vec![token1, token2];
 
-        fund.initialize(default_protocol_fee_rate, tokens).unwrap();
+        fund.initialize(
+            default_protocol_fee_rate,
+            tokens,
+            withdrawal_enabled_flag,
+            batch_processing_threshold_amount,
+            batch_processing_threshold_duration,
+        )
+        .unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
 
         fund.update_token(token1_update.address, token1_update)

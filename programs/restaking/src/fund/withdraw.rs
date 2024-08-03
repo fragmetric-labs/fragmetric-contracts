@@ -87,10 +87,17 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
+    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<u64> {
         self.check_is_withdrawal_enabled()?;
         self.check_is_batch_processing_completed(batch_id)?;
-        self.reserved_fund.withdraw_sol(amount)
+        let amount = self.deduct_withdrawal_fee(amount);
+        self.reserved_fund.withdraw_sol(amount)?;
+
+        Ok(amount)
+    }
+
+    fn deduct_withdrawal_fee(&self, amount: u64) -> u64 {
+        amount - amount * self.default_protocol_fee_rate as u64 / 10000
     }
 
     fn check_is_withdrawal_enabled(&self) -> Result<()> {
@@ -159,19 +166,6 @@ impl WithdrawalStatus {
             });
         self.batch_withdrawals_in_progress = remaining;
         completed
-    }
-}
-
-impl FundV2 {
-    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<u64> {
-        let amount = self.deduct_withdrawal_fee(amount);
-        self.withdrawal_status.withdraw_sol(batch_id, amount)?;
-
-        Ok(amount)
-    }
-
-    fn deduct_withdrawal_fee(&self, amount: u64) -> u64 {
-        amount - amount * self.default_protocol_fee_rate as u64 / 10000
     }
 }
 

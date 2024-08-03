@@ -53,6 +53,7 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts
             .fund
             .to_latest_version()
+            .withdrawal_status
             .set_default_protocol_fee_rate(default_protocol_fee_rate)
     }
 
@@ -60,7 +61,20 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts
             .fund
             .to_latest_version()
+            .withdrawal_status
             .set_withdrawal_enabled_flag(flag)
+    }
+
+    pub fn update_batch_processing_threshold(
+        ctx: Context<Self>,
+        amount: u128,
+        duration: i64,
+    ) -> Result<()> {
+        ctx.accounts
+            .fund
+            .to_latest_version()
+            .withdrawal_status
+            .set_batch_processing_threshold(amount, duration)
     }
 }
 
