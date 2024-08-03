@@ -85,7 +85,7 @@ export const withdraw = describe("withdraw", () => {
         .rpc();
     })
 
-    it("Create withdrawal request", async () => {
+    it("Request withdrawal", async () => {
         const amount = 1 * 10 ** decimals;
 
         console.log("User receipt token account:", userReceiptTokenAccount);
@@ -96,7 +96,7 @@ export const withdraw = describe("withdraw", () => {
 
         for (let i = 0; i < 3; i++) {
             await program.methods
-                .fundCreateWithdrawalRequest(new anchor.BN(amount))
+                .fundRequestWithdrawal(new anchor.BN(amount))
                 .accounts({
                     user: user.publicKey,
                 })
@@ -187,7 +187,7 @@ export const withdraw = describe("withdraw", () => {
             .rpc();
 
         expect(program.methods
-            .fundCreateWithdrawalRequest(new anchor.BN(amount))
+            .fundRequestWithdrawal(new anchor.BN(amount))
             .accounts({
                 user: user.publicKey,
             })

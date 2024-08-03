@@ -9,7 +9,7 @@ use fragmetric_util::Upgradable;
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
 #[derive(Accounts)]
-pub struct FundCreateWithdrawalRequest<'info> {
+pub struct FundRequestWithdrawal<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -63,7 +63,7 @@ pub struct FundCreateWithdrawalRequest<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> FundCreateWithdrawalRequest<'info> {
+impl<'info> FundRequestWithdrawal<'info> {
     pub fn request_withdrawal(ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
         Self::lock_receipt_token(&ctx, receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
