@@ -53,7 +53,28 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts
             .fund
             .to_latest_version()
+            .withdrawal_status
             .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+    }
+
+    pub fn update_withdrawal_enabled_flag(ctx: Context<Self>, flag: bool) -> Result<()> {
+        ctx.accounts
+            .fund
+            .to_latest_version()
+            .withdrawal_status
+            .set_withdrawal_enabled_flag(flag)
+    }
+
+    pub fn update_batch_processing_threshold(
+        ctx: Context<Self>,
+        amount: Option<u128>,
+        duration: Option<i64>,
+    ) -> Result<()> {
+        ctx.accounts
+            .fund
+            .to_latest_version()
+            .withdrawal_status
+            .set_batch_processing_threshold(amount, duration)
     }
 }
 

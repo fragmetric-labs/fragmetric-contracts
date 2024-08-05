@@ -18,4 +18,14 @@ pub enum ErrorCode {
     // receipt_token_extensions
     #[msg("Token is not currently transferring")]
     TokenNotCurrentlyTransferring,
+    #[msg("Withdrawal request not found")]
+    FundWithdrawalRequestNotFound,
+    #[msg("Withdrawal request not completed")]
+    FundWithdrawalNotCompleted,
+    #[msg("Not enough reserved Sol")]
+    FundNotEnoughReservedSol,
+    #[msg("Withdrawal is currently disabled")]
+    FundWithdrawalDisabled,
+    #[msg("Withdrawal request already started processing")]
+    FundWithdrawalAlreadyInProgress,
 }

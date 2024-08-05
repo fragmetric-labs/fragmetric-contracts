@@ -46,6 +46,13 @@ pub mod restaking {
         FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
     }
 
+    pub fn fund_initialize_withdrawal_enabled_flag(
+        ctx: Context<FundInitializeFields>,
+        flag: bool,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_withdrawal_enabled_flag(ctx, flag)
+    }
+
     pub fn fund_add_whitelisted_token(
         ctx: Context<FundUpdate>,
         request: FundAddWhitelistedTokenRequest,
@@ -67,6 +74,18 @@ pub mod restaking {
         FundUpdate::update_sol_withdrawal_fee_rate(ctx, request)
     }
 
+    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
+        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
+    }
+
+    pub fn fund_update_batch_processing_threshold(
+        ctx: Context<FundUpdate>,
+        amount: Option<u128>,
+        duration: Option<i64>,
+    ) -> Result<()> {
+        FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
+    }
+
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         request: FundDepositSOLRequest,
@@ -79,6 +98,31 @@ pub mod restaking {
         request: FundDepositTokenRequest,
     ) -> Result<()> {
         FundDepositToken::deposit_token(ctx, request)
+    }
+
+    pub fn fund_request_withdrawal(
+        ctx: Context<FundRequestWithdrawal>,
+        receipt_token_amount: u64,
+    ) -> Result<()> {
+        FundRequestWithdrawal::request_withdrawal(ctx, receipt_token_amount)
+    }
+
+    pub fn fund_cancel_withdrawal_request(
+        ctx: Context<FundCancelWithdrawalRequest>,
+        request_id: u64,
+    ) -> Result<()> {
+        FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
+    }
+
+    // for test
+    pub fn fund_process_withdrawal_requests_for_test(
+        ctx: Context<FundProcessWithdrawalRequestsForTest>,
+    ) -> Result<()> {
+        FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
+    }
+
+    pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
+        FundWithdrawSOL::withdraw_sol(ctx, request_id)
     }
 
     // for test
@@ -97,10 +141,7 @@ pub mod restaking {
     }
 
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(
-        ctx: Context<TokenTransferHook>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn token_transfer_hook(ctx: Context<TokenTransferHook>, amount: u64) -> Result<()> {
         TokenTransferHook::transfer_hook(ctx, amount)
     }
 }

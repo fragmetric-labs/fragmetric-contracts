@@ -1,0 +1,27 @@
+use anchor_lang::prelude::*;
+
+#[account]
+#[derive(InitSpace)]
+pub struct UserReceipt {
+    #[max_len(32)]
+    pub withdrawal_requests: Vec<WithdrawalRequest>,
+}
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct WithdrawalRequest {
+    pub batch_id: u64,
+    pub request_id: u64,
+    pub receipt_token_amount: u64,
+    pub created_at: i64,
+}
+
+impl WithdrawalRequest {
+    pub fn new(batch_id: u64, request_id: u64, receipt_token_amount: u64) -> Result<Self> {
+        Ok(Self {
+            batch_id,
+            request_id,
+            receipt_token_amount,
+            created_at: Clock::get()?.unix_timestamp,
+        })
+    }
+}

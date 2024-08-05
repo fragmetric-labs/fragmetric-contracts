@@ -3354,6 +3354,8 @@ dependencies = [
  "pyth-solana-receiver-sdk",
  "solana-program-test",
  "solana-sdk",
+ "spl-tlv-account-resolution 0.6.5",
+ "spl-transfer-hook-interface 0.6.5",
 ]
 
 [[package]]
