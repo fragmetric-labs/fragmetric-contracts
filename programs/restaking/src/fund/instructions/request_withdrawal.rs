@@ -68,14 +68,29 @@ impl<'info> FundRequestWithdrawal<'info> {
         Self::lock_receipt_token(&mut ctx, receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
 
-        let Self {
-            fund, user_receipt, ..
-        } = ctx.accounts;
-        let withdrawal_request = fund
+        let withdrawal_request = ctx
+            .accounts
+            .fund
             .to_latest_version()
             .withdrawal_status
             .create_withdrawal_request(receipt_token_amount)?;
-        user_receipt.push_withdrawal_request(withdrawal_request)
+        let request_id = withdrawal_request.request_id;
+        ctx.accounts
+            .user_receipt
+            .push_withdrawal_request(withdrawal_request)?;
+
+        emit!(FundWithdrawalRequested {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_account: ctx.accounts.user_receipt.key(),
+            request_id,
+            lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            lrt_requested_amount: receipt_token_amount,
+            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+        });
+
+        Ok(())
     }
 
     fn lock_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {

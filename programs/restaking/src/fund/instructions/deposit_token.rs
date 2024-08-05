@@ -81,11 +81,33 @@ impl<'info> FundDepositToken<'info> {
         let Self {
             fund, token_mint, ..
         } = ctx.accounts;
-        fund.to_latest_version()
+        let token_amount_in_fund = fund
+            .to_latest_version()
             .deposit_token(token_mint.key(), amount)?;
 
         let mint_amount = Self::get_receipt_token_by_token_exchange_rate(&ctx, amount)?;
-        Self::mint_receipt_token(&mut ctx, mint_amount)
+        Self::mint_receipt_token(&mut ctx, mint_amount)?;
+
+        let admin = ctx.accounts.fund.admin;
+        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
+        let fund = ctx.accounts.fund.to_latest_version();
+        emit!(FundTokenDeposited {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            deposited_token_mint: ctx.accounts.token_mint.key(),
+            deposited_token_user_account: ctx.accounts.user_token_account.key(),
+            token_deposit_amount: amount,
+            token_amount_in_fund,
+            minted_lrt_mint: receipt_token_mint.key(),
+            minted_lrt_amount: mint_amount,
+            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            wallet_provider: None,
+            fpoint_accrual_rate_multiplier: None,
+            fund_info: fund.to_info(admin, receipt_token_mint),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+        });
+
+        Ok(())
     }
 
     fn transfer_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {

@@ -66,7 +66,26 @@ impl<'info> FundDepositSOL<'info> {
         ctx.accounts.fund.to_latest_version().deposit_sol(amount)?;
 
         let mint_amount = Self::get_receipt_token_by_sol_exchange_rate(&ctx, amount)?;
-        Self::mint_receipt_token(&mut ctx, mint_amount)
+        Self::mint_receipt_token(&mut ctx, mint_amount)?;
+
+        let admin = ctx.accounts.fund.admin;
+        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
+        let fund = ctx.accounts.fund.to_latest_version();
+        emit!(FundSOLDeposited {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            sol_deposit_amount: amount,
+            sol_amount_in_fund: fund.sol_amount_in,
+            minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            minted_lrt_amount: mint_amount,
+            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            wallet_provider: None,
+            fpoint_accrual_rate_multiplier: None,
+            fund_info: fund.to_info(admin, receipt_token_mint),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+        });
+
+        Ok(())
     }
 
     fn transfer_sol_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {

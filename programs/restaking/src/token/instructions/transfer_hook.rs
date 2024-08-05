@@ -58,6 +58,15 @@ impl<'info> TokenTransferHook<'info> {
         Self::check_is_transferring(&ctx)?;
         Self::call_transfer_hook(&ctx, amount)?;
 
+        emit!(TokenLRTTransferred {
+            lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            lrt_amount: amount,
+            source_lrt_account: ctx.accounts.source_token_account.key(),
+            source_lrt_account_owner: ctx.accounts.source_token_account.owner,
+            destination_lrt_account: ctx.accounts.destination_token_account.key(),
+            destination_lrt_account_onwer: ctx.accounts.destination_token_account.owner,
+        });
+
         Ok(())
     }
 

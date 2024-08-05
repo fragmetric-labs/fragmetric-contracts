@@ -75,8 +75,21 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .withdrawal_status
             .cancel_withdrawal_request(request.batch_id, request.receipt_token_amount)?;
 
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
         Self::unlock_receipt_token(&mut ctx, request.receipt_token_amount)
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
+
+        emit!(FundWithdrawalRequestCanceled {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_account: ctx.accounts.user_receipt.key(),
+            request_id,
+            lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            lrt_requested_amount: request.receipt_token_amount,
+            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+        });
+
+        Ok(())
     }
 
     fn unlock_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
