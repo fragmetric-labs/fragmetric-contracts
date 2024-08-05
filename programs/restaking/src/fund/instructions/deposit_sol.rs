@@ -14,6 +14,15 @@ pub struct FundDepositSOL<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        init_if_needed,
+        payer = user,
+        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + UserReceipt::INIT_SPACE,
+    )]
+    pub user_receipt: Account<'info, UserReceipt>,
+
+    #[account(
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,

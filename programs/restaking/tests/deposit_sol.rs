@@ -5,6 +5,7 @@ use anchor_spl::{
 };
 use fragmetric_util::Upgradable;
 
+use restaking::constants::{FRAGSOL_MINT_ADDRESS, USER_RECEIPT_SEED};
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
@@ -13,6 +14,7 @@ async fn test_deposit_sol() {
     let SetUpTest {
         validator,
         user,
+        user_receipt,
         fund_token_authority,
         receipt_token_mint,
         receipt_token_account,
@@ -26,6 +28,7 @@ async fn test_deposit_sol() {
         program_id: restaking::ID,
         accounts: restaking::accounts::FundDepositSOL {
             user: user.pubkey(),
+            user_receipt,
             fund,
             fund_token_authority,
             receipt_token_mint,
@@ -72,6 +75,7 @@ async fn test_deposit_sol() {
 pub struct SetUpTest {
     pub validator: ProgramTest,
     pub user: Keypair,
+    pub user_receipt: Pubkey,
     pub fund_token_authority: Pubkey,
     pub receipt_token_mint: Pubkey,
     // pub receipt_token_lock_account: Pubkey,
@@ -97,6 +101,10 @@ impl Default for SetUpTest {
 
         let (receipt_token_mint_pda, _) =
             Pubkey::find_program_address(&[b"fragSOL"], &restaking::ID);
+        let (user_receipt_pda, _) = Pubkey::find_program_address(
+            &[USER_RECEIPT_SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+            &restaking::ID,
+        );
         let (fund_pda, _) = Pubkey::find_program_address(
             &[
                 restaking::constants::FUND_SEED,
@@ -124,6 +132,7 @@ impl Default for SetUpTest {
         Self {
             validator,
             user,
+            user_receipt: user_receipt_pda,
             receipt_token_mint: receipt_token_mint_pda,
             fund_token_authority: fund_token_authority_pda,
             // receipt_token_lock_account: receipt_token_lock_account_pda,
