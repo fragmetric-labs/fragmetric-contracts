@@ -33,17 +33,17 @@ pub mod restaking {
     }
 
     pub fn fund_initialize_sol_withdrawal_fee_rate(
-        ctx: Context<FundInitializeOthers>,
+        ctx: Context<FundInitializeFields>,
         sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        FundInitializeOthers::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
+        FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
     pub fn fund_initialize_whitelisted_tokens(
-        ctx: Context<FundInitializeOthers>,
+        ctx: Context<FundInitializeFields>,
         whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        FundInitializeOthers::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
+        FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
     }
 
     pub fn fund_add_whitelisted_token(

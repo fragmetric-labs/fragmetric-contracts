@@ -5,7 +5,7 @@ use fragmetric_util::Upgradable;
 use crate::{constants::*, fund::*};
 
 #[derive(Accounts)]
-pub struct FundInitializeOthers<'info> {
+pub struct FundInitializeFields<'info> {
     #[account(mut, address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
@@ -20,7 +20,7 @@ pub struct FundInitializeOthers<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 }
 
-impl<'info> FundInitializeOthers<'info> {
+impl<'info> FundInitializeFields<'info> {
     pub fn initialize_sol_withdrawal_fee_rate(ctx: Context<Self>, sol_withdrawal_fee_rate: u16) -> Result<()> {
         ctx.accounts.fund
             .to_latest_version()
