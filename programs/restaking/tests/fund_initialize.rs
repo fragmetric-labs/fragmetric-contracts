@@ -33,23 +33,23 @@ async fn test_fund_initialize() {
         }
         .to_account_metas(None),
         data: restaking::instruction::FundInitialize {
-            request: restaking::fund::FundInitializeRequest::V1(
-                restaking::fund::FundInitializeRequestV1 {
-                    default_protocol_fee_rate: 10,
-                    whitelisted_tokens: vec![
-                        restaking::fund::TokenInfo {
-                            address: lst1.key(),
-                            token_cap: 1_000_000_000 * 1000,
-                            token_amount_in: 1_000_000_000,
-                        },
-                        restaking::fund::TokenInfo {
-                            address: lst2.key(),
-                            token_cap: 1_000_000_000 * 2000,
-                            token_amount_in: 2_000_000_000,
-                        },
-                    ],
-                },
-            ),
+            // request: restaking::fund::FundInitializeRequest::V1(
+            //     restaking::fund::FundInitializeRequestV1 {
+            //         default_protocol_fee_rate: 10,
+            //         whitelisted_tokens: vec![
+            //             restaking::fund::TokenInfo {
+            //                 address: lst1.key(),
+            //                 token_cap: 1_000_000_000 * 1000,
+            //                 token_amount_in: 1_000_000_000,
+            //             },
+            //             restaking::fund::TokenInfo {
+            //                 address: lst2.key(),
+            //                 token_cap: 1_000_000_000 * 2000,
+            //                 token_amount_in: 2_000_000_000,
+            //             },
+            //         ],
+            //     },
+            // ),
         }
         .try_to_vec()
         .unwrap(),

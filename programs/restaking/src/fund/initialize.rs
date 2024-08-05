@@ -21,27 +21,23 @@ impl Fund {
 impl FundV1 {
     pub(super) fn initialize(
         &mut self,
-        default_protocol_fee_rate: u16,
-        whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        self.set_default_protocol_fee_rate(default_protocol_fee_rate)?;
-        self.set_whitelisted_tokens(whitelisted_tokens)?;
         self.sol_amount_in = 0;
 
         Ok(())
     }
 
-    pub(super) fn set_default_protocol_fee_rate(
+    pub(super) fn set_sol_withdrawal_fee_rate(
         &mut self,
-        default_protocol_fee_rate: u16,
+        sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
         // max protocol fee rate (상수) 넘어서지 못하게 하는 제약조건 필요?
-        self.default_protocol_fee_rate = default_protocol_fee_rate;
+        self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
 
         Ok(())
     }
 
-    fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
+    pub(super) fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
         Self::check_duplicates(&whitelisted_tokens)?;
         self.whitelisted_tokens = whitelisted_tokens;
 
@@ -64,10 +60,10 @@ mod tests {
 
     #[test]
     fn test_initialize() {
-        let default_protocol_fee_rate = 100;
+        let sol_withdrawal_fee_rate = 100;
 
         let mut fund = FundV1 {
-            default_protocol_fee_rate: 0,
+            sol_withdrawal_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
         };
@@ -83,16 +79,16 @@ mod tests {
             token_amount_in: 2_000_000_000,
         };
 
-        let tokens = vec![token1.clone(), token1.clone()];
         let _ = fund
-            .initialize(default_protocol_fee_rate, tokens)
+            .initialize()
             .unwrap_err();
 
-        let tokens = vec![token1, token2];
-        fund.initialize(default_protocol_fee_rate, tokens.clone())
-            .unwrap();
+        fund.set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate).unwrap();
 
-        assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
+        let tokens = vec![token1, token2];
+        fund.set_whitelisted_tokens(tokens.clone());
+
+        assert_eq!(fund.sol_withdrawal_fee_rate, sol_withdrawal_fee_rate);
         for (actual, expected) in std::iter::zip(fund.whitelisted_tokens, tokens) {
             assert_eq!(actual.address, expected.address);
             assert_eq!(actual.token_cap, expected.token_cap);

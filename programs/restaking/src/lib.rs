@@ -27,9 +27,23 @@ pub mod restaking {
 
     pub fn fund_initialize(
         ctx: Context<FundInitialize>,
-        request: FundInitializeRequest,
+        // request: FundInitializeRequest,
     ) -> Result<()> {
-        FundInitialize::initialize_fund(ctx, request)
+        FundInitialize::initialize_fund(ctx)
+    }
+
+    pub fn fund_initialize_sol_withdrawal_fee_rate(
+        ctx: Context<FundInitializeFields>,
+        sol_withdrawal_fee_rate: u16,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
+    }
+
+    pub fn fund_initialize_whitelisted_tokens(
+        ctx: Context<FundInitializeFields>,
+        whitelisted_tokens: Vec<TokenInfo>,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
     }
 
     pub fn fund_add_whitelisted_token(
@@ -46,11 +60,11 @@ pub mod restaking {
         FundUpdate::update_token_info(ctx, request)
     }
 
-    pub fn fund_update_default_protocol_fee_rate(
+    pub fn fund_update_sol_withdrawal_fee_rate(
         ctx: Context<FundUpdate>,
-        request: FundUpdateDefaultProtocolFeeRateRequest,
+        request: FundUpdateSolWithdrawalFeeRateRequest,
     ) -> Result<()> {
-        FundUpdate::update_default_protocol_fee_rate(ctx, request)
+        FundUpdate::update_sol_withdrawal_fee_rate(ctx, request)
     }
 
     pub fn fund_deposit_sol(

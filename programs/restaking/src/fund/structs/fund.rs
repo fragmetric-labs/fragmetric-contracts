@@ -28,7 +28,7 @@ pub enum VersionedFund {
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct FundV1 {
-    pub default_protocol_fee_rate: u16, // 2
+    pub sol_withdrawal_fee_rate: u16, // 2
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u128, // 16
