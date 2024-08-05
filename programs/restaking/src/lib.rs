@@ -34,16 +34,16 @@ pub mod restaking {
 
     pub fn fund_initialize_sol_withdrawal_fee_rate(
         ctx: Context<FundInitializeOthers>,
-        request: FundInitializeSolWithdrawalFeeRateRequest,
+        sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        FundInitializeOthers::initialize_sol_withdrawal_fee_rate(ctx, request)
+        FundInitializeOthers::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
     pub fn fund_initialize_whitelisted_tokens(
         ctx: Context<FundInitializeOthers>,
-        request: FundInitializeWhitelistedTokensRequest,
+        whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        FundInitializeOthers::initialize_whitelisted_tokens(ctx, request)
+        FundInitializeOthers::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
     }
 
     pub fn fund_add_whitelisted_token(

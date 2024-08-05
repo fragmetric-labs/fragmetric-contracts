@@ -116,7 +116,7 @@ export const fund_initialize = describe("fund_initialize", () => {
     });
 
     it("Is initialized!", async () => {
-        const sol_withdrawal_fee_rate = 10;
+        const solWithdrawalFeeRate = 10;
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
 
@@ -146,24 +146,12 @@ export const fund_initialize = describe("fund_initialize", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeSolWithdrawalFeeRate({
-                    v1: {
-                        0: {
-                            solWithdrawalFeeRate: sol_withdrawal_fee_rate,
-                        }
-                    }
-                })
+                .fundInitializeSolWithdrawalFeeRate(solWithdrawalFeeRate)
                 .accounts({})
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeWhitelistedTokens({
-                    v1: {
-                        0: {
-                            whitelistedTokens: whitelistedTokens,
-                        }
-                    }
-                })
+                .fundInitializeWhitelistedTokens(whitelistedTokens)
                 .accounts({})
                 .signers([])
                 .instruction(),
