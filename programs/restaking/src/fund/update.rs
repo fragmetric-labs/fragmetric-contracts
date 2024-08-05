@@ -30,7 +30,7 @@ impl FundV2 {
             .iter()
             .any(|info| info.address == *token)
         {
-            return Err(ErrorCode::FundAlreadyExistingToken)?;
+            err!(ErrorCode::FundAlreadyExistingToken)?
         }
 
         Ok(())

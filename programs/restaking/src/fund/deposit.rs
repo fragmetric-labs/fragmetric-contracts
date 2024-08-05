@@ -8,10 +8,10 @@ impl FundV2 {
             .whitelisted_tokens
             .iter_mut()
             .find(|info| info.address == token)
-            .ok_or(ErrorCode::FundNotExistingToken)?;
+            .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
 
         if token_info.token_cap < token_info.token_amount_in + amount as u128 {
-            return Err(ErrorCode::FundExceedsTokenCap)?;
+            err!(ErrorCode::FundExceedsTokenCap)?
         }
 
         token_info.token_amount_in += amount as u128;
