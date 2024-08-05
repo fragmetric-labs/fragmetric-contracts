@@ -16,7 +16,7 @@ pub struct FundInfo {
 #[event]
 pub struct FundSOLDeposited {
     pub user: Pubkey,
-    pub user_minted_lrt_account: Pubkey,
+    pub user_lrt_account: Pubkey,
 
     pub sol_deposit_amount: u64,
     pub sol_amount_in_fund: u128,
@@ -33,7 +33,7 @@ pub struct FundSOLDeposited {
 #[event]
 pub struct FundTokenDeposited {
     pub user: Pubkey,
-    pub user_minted_lrt_account: Pubkey,
+    pub user_lrt_account: Pubkey,
 
     pub deposited_token_mint: Pubkey,
     pub deposited_token_user_account: Pubkey,
@@ -51,16 +51,19 @@ pub struct FundTokenDeposited {
 }
 
 #[event]
-pub struct LRTTransferred {
+pub struct TokenLRTTransferred {
     pub lrt_mint: Pubkey,
-    pub lrt_amount: Pubkey,
+    pub lrt_amount: u64,
     pub source_lrt_account: Pubkey,
+    pub source_lrt_account_owner: Pubkey,
     pub destination_lrt_account: Pubkey,
+    pub destination_lrt_account_onwer: Pubkey,
 }
 
 #[event]
 pub struct FundWithdrawalRequested {
     pub user: Pubkey,
+    pub user_lrt_account: Pubkey,
     pub user_receipt_account: Pubkey,   // Receipt of withdrawal request
 
     pub request_id: u64,
@@ -69,8 +72,9 @@ pub struct FundWithdrawalRequested {
 }
 
 #[event]
-pub struct FundWithdrawalRequestCancelled {
+pub struct FundWithdrawalRequestCanceled {
     pub user: Pubkey,
+    pub user_lrt_account: Pubkey,
     pub user_receipt_account: Pubkey,   // Receipt of withdrawal request
     
     pub request_id: u64,
@@ -82,7 +86,6 @@ pub struct FundWithdrawalRequestCancelled {
 pub struct FundSOLWithdrawed {
     pub user: Pubkey,
     pub user_receipt_account: Pubkey,   // Receipt of withdrawal request
-    pub user_minted_lrt_account: Pubkey,
 
     pub request_id: u64,
     pub lrt_mint: Pubkey,
