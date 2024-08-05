@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use super::FundInfo;
+use crate::fund::*;
 
 #[event]
 pub struct FundSOLWithdrawed {
@@ -15,4 +15,5 @@ pub struct FundSOLWithdrawed {
     pub sol_fee_amount: u64,
 
     pub fund_info: FundInfo,
+    pub user_receipt: UserReceipt,
 }
