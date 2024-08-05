@@ -6,4 +6,4 @@ pub const ADMIN_PUBKEY: Pubkey = pubkey!("91zBeWL8kHBaMtaVrHwWsck1UacDKvje82QQ3H
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGsJAbW4cHk2DYhtAWohV6MUMauJHCFtT1vGvRwnXN");
 pub const FUND_SEED: &[u8] = b"fund";
 pub const FUND_TOKEN_AUTHORITY_SEED: &[u8] = b"fund_token_authority";
-pub const USER_ACCOUNT_SEED: &[u8] = b"user_account";
+pub const USER_RECEIPT_SEED: &[u8] = b"user_receipt";

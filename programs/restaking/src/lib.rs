@@ -27,9 +27,38 @@ pub mod restaking {
 
     pub fn fund_initialize(
         ctx: Context<FundInitialize>,
-        request: FundInitializeRequest,
+        // request: FundInitializeRequest,
     ) -> Result<()> {
-        FundInitialize::initialize_fund(ctx, request)
+        FundInitialize::initialize_fund(ctx)
+    }
+
+    pub fn fund_initialize_sol_withdrawal_fee_rate(
+        ctx: Context<FundInitializeFields>,
+        sol_withdrawal_fee_rate: u16,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
+    }
+
+    pub fn fund_initialize_whitelisted_tokens(
+        ctx: Context<FundInitializeFields>,
+        whitelisted_tokens: Vec<TokenInfo>,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
+    }
+
+    pub fn fund_initialize_withdrawal_enabled_flag(
+        ctx: Context<FundInitializeFields>,
+        flag: bool,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_withdrawal_enabled_flag(ctx, flag)
+    }
+
+    pub fn fund_initialize_batch_processing_threshold(
+        ctx: Context<FundInitializeFields>,
+        amount: u128,
+        duration: i64,
+    ) -> Result<()> {
+        FundInitializeFields::initialize_batch_processing_threshold(ctx, amount, duration)
     }
 
     pub fn fund_add_whitelisted_token(
@@ -46,11 +75,23 @@ pub mod restaking {
         FundUpdate::update_token_info(ctx, request)
     }
 
-    pub fn fund_update_default_protocol_fee_rate(
+    pub fn fund_update_sol_withdrawal_fee_rate(
         ctx: Context<FundUpdate>,
-        request: FundUpdateDefaultProtocolFeeRateRequest,
+        request: FundUpdateSolWithdrawalFeeRateRequest,
     ) -> Result<()> {
-        FundUpdate::update_default_protocol_fee_rate(ctx, request)
+        FundUpdate::update_sol_withdrawal_fee_rate(ctx, request)
+    }
+
+    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
+        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
+    }
+
+    pub fn fund_update_batch_processing_threshold(
+        ctx: Context<FundUpdate>,
+        amount: Option<u128>,
+        duration: Option<i64>,
+    ) -> Result<()> {
+        FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
     }
 
     pub fn fund_deposit_sol(
@@ -69,24 +110,29 @@ pub mod restaking {
 
     pub fn fund_request_withdrawal(
         ctx: Context<FundRequestWithdrawal>,
-        request: FundRequestWithdrawalRequest,
+        receipt_token_amount: u64,
     ) -> Result<()> {
-        FundRequestWithdrawal::request_withdrawal(ctx, request)
+        FundRequestWithdrawal::request_withdrawal(ctx, receipt_token_amount)
     }
 
+    pub fn fund_cancel_withdrawal_request(
+        ctx: Context<FundCancelWithdrawalRequest>,
+        request_id: u64,
+    ) -> Result<()> {
+        FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
+    }
+
+    // for test
     pub fn fund_process_withdrawal_requests_for_test(
         ctx: Context<FundProcessWithdrawalRequestsForTest>,
     ) -> Result<()> {
         FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
     }
 
-    pub fn fund_withdraw_sol(
-        ctx: Context<FundWithdrawSOL>,
-        request: FundWithdrawSOLRequest,
-    ) -> Result<()> {
-        FundWithdrawSOL::withdraw_sol(ctx, request)
+    pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
+        FundWithdrawSOL::withdraw_sol(ctx, request_id)
     }
-    
+
     // for test
     pub fn token_mint_receipt_token_for_test(
         ctx: Context<TokenMintReceiptToken>,

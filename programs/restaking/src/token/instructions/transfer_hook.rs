@@ -10,7 +10,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, error::ErrorCode, fund::*};
+use crate::{constants::*, error::ErrorCode, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct TokenTransferHook<'info> {
@@ -56,30 +56,18 @@ impl<'info> TokenTransferHook<'info> {
         // }
 
         Self::check_is_transferring(&ctx)?;
-        Self::call_transfer_hook(
-            ctx.accounts.source_token_account.to_account_info(),
-            ctx.accounts.receipt_token_mint.to_account_info(),
-            ctx.accounts.destination_token_account.to_account_info(),
-            ctx.accounts.owner.to_account_info(),
-            ctx.accounts.fund.to_account_info(),
-            amount,
-        )?;
+        Self::call_transfer_hook(&ctx, amount)?;
 
         Ok(())
     }
 
-    pub(crate) fn call_transfer_hook(
-        source_token_account: AccountInfo,
-        mint_account: AccountInfo,
-        destination_token_account: AccountInfo,
-        owner: AccountInfo,
-        fund: AccountInfo,
-        amount: u64,
-    ) -> Result<()> {
-        msg!("transfer hook executed! amount {} passed from {:?} to {:?}", amount, source_token_account.key(), destination_token_account.key());
-        msg!("fund pda: {:?}", fund.key());
-
-        Ok(())
+    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
+        ctx.accounts.receipt_token_mint.transfer_hook(
+            Some(&ctx.accounts.source_token_account),
+            Some(&ctx.accounts.destination_token_account),
+            &ctx.accounts.fund,
+            amount,
+        )
     }
 
     fn check_is_transferring(ctx: &Context<Self>) -> Result<()> {

@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token_2022::{mint_to, MintTo, Token2022};
+use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-use crate::{constants::*, Empty};
+use crate::{constants::*, token::*, Empty};
 
 #[derive(Accounts)]
 pub struct TokenMintReceiptToken<'info> {
@@ -45,7 +45,7 @@ impl<'info> TokenMintReceiptToken<'info> {
             receipt_token_account_key
         );
 
-        Self::mint_token_cpi(&ctx, amount)?;
+        Self::call_mint_token_cpi(&ctx, amount)?;
         msg!(
             "Minted {} to user token account {:?}",
             amount,
@@ -55,26 +55,17 @@ impl<'info> TokenMintReceiptToken<'info> {
         Ok(())
     }
 
-    fn mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
-        // PDA signer seeds
-        let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            FUND_TOKEN_AUTHORITY_SEED,
-            receipt_token_mint_key.as_ref(),
-            &[bump],
-        ]];
+        let key = ctx.accounts.receipt_token_mint.key();
+        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
-        let mint_token_cpi_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            MintTo {
-                mint: ctx.accounts.receipt_token_mint.to_account_info(),
-                to: ctx.accounts.receipt_token_account.to_account_info(),
-                authority: ctx.accounts.fund_token_authority.to_account_info(),
-            },
+        ctx.accounts.token_program.mint_token_cpi(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_account,
+            ctx.accounts.fund_token_authority.to_account_info(),
+            Some(&[signer_seeds.as_ref()]),
+            amount,
         )
-        .with_signer(signer_seeds);
-
-        mint_to(mint_token_cpi_ctx, amount)
     }
 }

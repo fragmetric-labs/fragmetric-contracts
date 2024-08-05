@@ -1,5 +1,5 @@
 mod fund;
-mod user_account;
+mod user_receipt;
 
 pub use fund::*;
-pub use user_account::*;
+pub use user_receipt::*;

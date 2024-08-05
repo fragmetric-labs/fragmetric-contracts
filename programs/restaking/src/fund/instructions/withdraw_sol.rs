@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use fragmetric_util::{request, Upgradable};
 
-use crate::{constants::*, fund::*};
+use fragmetric_util::Upgradable;
+
+use crate::{constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundWithdrawSOL<'info> {
@@ -11,13 +12,13 @@ pub struct FundWithdrawSOL<'info> {
 
     #[account(
         mut,
-        seeds = [USER_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + UserAccount::INIT_SPACE,
+        realloc = 8 + UserReceipt::INIT_SPACE,
         realloc::payer = user,
         realloc::zero = false,
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
@@ -37,58 +38,33 @@ pub struct FundWithdrawSOL<'info> {
 }
 
 impl<'info> FundWithdrawSOL<'info> {
-    pub fn withdraw_sol(ctx: Context<Self>, request: FundWithdrawSOLRequest) -> Result<()> {
-        let FundWithdrawSOLArgs { request_id } = request.into();
-        let Self {
-            user,
-            user_account,
-            fund,
-            ..
-        } = ctx.accounts;
-
-        let WithdrawalRequest {
-            batch_id,
-            receipt_token_amount,
-            ..
-        } = user_account
-            .to_latest_version()
+    pub fn withdraw_sol(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
+        let request = ctx
+            .accounts
+            .user_receipt
             .pop_withdrawal_request(request_id)?;
 
-        // TODO later we have to use oracle data, but now 1:1
-        #[allow(clippy::identity_op)]
-        let sol_amount = receipt_token_amount * 1;
-        fund.to_latest_version()
-            .reserved_fund
-            .withdraw_sol(batch_id, sol_amount)?;
+        let sol_amount = Self::get_sol_amount_by_exchange_rate(&ctx, request.receipt_token_amount)?;
+        let sol_amount = ctx
+            .accounts
+            .fund
+            .to_latest_version()
+            .withdrawal_status
+            .withdraw_sol(request.batch_id, sol_amount)?;
 
-        fund.sub_lamports(sol_amount)?;
-        user.add_lamports(sol_amount)?;
+        Self::transfer_sol(&mut ctx, sol_amount)
+            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))
+    }
+
+    #[allow(unused_variables)]
+    fn get_sol_amount_by_exchange_rate(ctx: &Context<Self>, amount: u64) -> Result<u64> {
+        Ok(amount)
+    }
+
+    fn transfer_sol(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+        ctx.accounts.fund.sub_lamports(amount)?;
+        ctx.accounts.user.add_lamports(amount)?;
 
         Ok(())
-    }
-}
-
-pub struct FundWithdrawSOLArgs {
-    pub request_id: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundWithdrawSOLArgs)]
-pub enum FundWithdrawSOLRequest {
-    V1(FundWithdrawSOLRequestV1),
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundWithdrawSOLRequestV1 {
-    pub request_id: u64,
-}
-
-impl From<FundWithdrawSOLRequest> for FundWithdrawSOLArgs {
-    fn from(value: FundWithdrawSOLRequest) -> Self {
-        match value {
-            FundWithdrawSOLRequest::V1(value) => Self {
-                request_id: value.request_id,
-            },
-        }
     }
 }

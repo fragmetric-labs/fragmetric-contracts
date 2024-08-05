@@ -44,12 +44,9 @@ mod tests {
     #[test]
     fn test_add_whitelisted_token() {
         let mut fund = FundV2 {
-            default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
-            pending_withdrawals: BatchWithdrawal::new(1),
-            withdrawals_in_progress: Default::default(),
-            reserved_fund: Default::default(),
+            withdrawal_status: Default::default(),
         };
 
         let token1 = TokenInfo {
@@ -67,20 +64,17 @@ mod tests {
 
         fund.whitelisted_tokens = tokens;
         fund.add_whitelisted_token(token3.address, token3.token_cap)
-            .unwrap();
+            .unwrap_err();
     }
 
     #[test]
     fn test_update_token() {
-        let default_protocol_fee_rate = 10;
+        let sol_withdrawal_fee_rate = 10;
 
         let mut fund = FundV2 {
-            default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
-            pending_withdrawals: BatchWithdrawal::new(1),
-            withdrawals_in_progress: Default::default(),
-            reserved_fund: Default::default(),
+            withdrawal_status: Default::default(),
         };
 
         let token1 = TokenInfo {
@@ -97,7 +91,11 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         let tokens = vec![token1, token2];
 
-        fund.initialize(default_protocol_fee_rate, tokens).unwrap();
+        fund.initialize().unwrap();
+        fund.set_whitelisted_tokens(tokens).unwrap();
+        fund.withdrawal_status
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+            .unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
 
         fund.update_token(token1_update.address, token1_update)

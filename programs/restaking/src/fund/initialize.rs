@@ -13,32 +13,17 @@ impl Fund {
 }
 
 impl FundV2 {
-    pub(super) fn initialize(
+    pub(super) fn initialize(&mut self) -> Result<()> {
+        self.sol_amount_in = 0;
+        self.withdrawal_status = Default::default();
+
+        Ok(())
+    }
+
+    pub(super) fn set_whitelisted_tokens(
         &mut self,
-        default_protocol_fee_rate: u16,
         whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        self.set_default_protocol_fee_rate(default_protocol_fee_rate)?;
-        self.set_whitelisted_tokens(whitelisted_tokens)?;
-        self.sol_amount_in = 0;
-        self.pending_withdrawals = BatchWithdrawal::new(1);
-        self.withdrawals_in_progress = Default::default();
-        self.reserved_fund = Default::default();
-
-        Ok(())
-    }
-
-    pub(super) fn set_default_protocol_fee_rate(
-        &mut self,
-        default_protocol_fee_rate: u16,
-    ) -> Result<()> {
-        // max protocol fee rate (상수) 넘어서지 못하게 하는 제약조건 필요?
-        self.default_protocol_fee_rate = default_protocol_fee_rate;
-
-        Ok(())
-    }
-
-    fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) -> Result<()> {
         Self::check_duplicates(&whitelisted_tokens)?;
         self.whitelisted_tokens = whitelisted_tokens;
 
@@ -55,21 +40,55 @@ impl FundV2 {
     }
 }
 
+impl WithdrawalStatus {
+    pub(super) fn set_sol_withdrawal_fee_rate(
+        &mut self,
+        sol_withdrawal_fee_rate: u16,
+    ) -> Result<()> {
+        // max protocol fee rate (상수) 넘어서지 못하게 하는 제약조건 필요?
+        self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
+
+        Ok(())
+    }
+
+    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) -> Result<()> {
+        self.withdrawal_enabled_flag = flag;
+
+        Ok(())
+    }
+
+    pub(super) fn set_batch_processing_threshold(
+        &mut self,
+        amount: Option<u128>,
+        duration: Option<i64>,
+    ) -> Result<()> {
+        // Threshold 값에 대한 validation 필요?
+        if let Some(amount) = amount {
+            self.batch_processing_threshold_amount = amount;
+        }
+        if let Some(duration) = duration {
+            self.batch_processing_threshold_duration = duration;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_initialize() {
-        let default_protocol_fee_rate = 100;
+        let sol_withdrawal_fee_rate = 100;
+        let withdrawal_enabled_flag = false;
+        let batch_processing_threshold_amount = 10;
+        let batch_processing_threshold_duration = 10;
 
         let mut fund = FundV2 {
-            default_protocol_fee_rate: 0,
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
-            pending_withdrawals: BatchWithdrawal::new(0),
-            withdrawals_in_progress: Default::default(),
-            reserved_fund: Default::default(),
+            withdrawal_status: Default::default(),
         };
 
         let token1 = TokenInfo {
@@ -83,21 +102,45 @@ mod tests {
             token_amount_in: 2_000_000_000,
         };
 
-        let tokens = vec![token1.clone(), token1.clone()];
-        let _ = fund
-            .initialize(default_protocol_fee_rate, tokens)
-            .unwrap_err();
+        fund.initialize().unwrap();
 
         let tokens = vec![token1, token2];
-        fund.initialize(default_protocol_fee_rate, tokens.clone())
+        fund.set_whitelisted_tokens(tokens.clone()).unwrap();
+
+        fund.withdrawal_status
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+            .unwrap();
+        fund.withdrawal_status
+            .set_withdrawal_enabled_flag(withdrawal_enabled_flag)
+            .unwrap();
+        fund.withdrawal_status
+            .set_batch_processing_threshold(
+                Some(batch_processing_threshold_amount),
+                Some(batch_processing_threshold_duration),
+            )
             .unwrap();
 
-        assert_eq!(fund.default_protocol_fee_rate, default_protocol_fee_rate);
         for (actual, expected) in std::iter::zip(fund.whitelisted_tokens, tokens) {
             assert_eq!(actual.address, expected.address);
             assert_eq!(actual.token_cap, expected.token_cap);
             assert_eq!(actual.token_amount_in, expected.token_amount_in);
         }
-        assert_eq!(fund.pending_withdrawals.batch_id, 1);
+        assert_eq!(
+            fund.withdrawal_status.sol_withdrawal_fee_rate,
+            sol_withdrawal_fee_rate
+        );
+        assert_eq!(
+            fund.withdrawal_status.withdrawal_enabled_flag,
+            withdrawal_enabled_flag
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_amount,
+            batch_processing_threshold_amount
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            batch_processing_threshold_duration
+        );
+        assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 1);
     }
 }
