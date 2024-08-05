@@ -93,7 +93,15 @@ impl<'info> OperatorRun<'info> {
             batch.record_processing_end(receipt_token_amount, sol_reserved);
         }
 
+        let sol_amount_moved = unstaking_ratio * fund.sol_reserved;
+
+        fund.sol_amount_in = fund.sol_amount_in
+            .checked_sub(sol_amount_moved)
+            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
+
         fund.end_processing_completed_batch_withdrawals();
+
+        fund.last_batch_processing_started_at = Some(current.unix_timestamp);
 
         Ok(())
     }

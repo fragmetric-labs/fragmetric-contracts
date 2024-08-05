@@ -51,22 +51,18 @@ impl<'info> OperatorRunIfNeeded<'info> {
     /// This instructions is available to anyone.
     /// However, the threshold should be met
     pub fn operator_run(ctx: Context<Self>) {
+        let fund = ctx.accounts.fund.to_latest_version();
         
-        // get below configuration value from fund
-        let TODO_LAST_PROCESS_TIME = 1722499490;
-        let TODO_FUND_AMOUNT_THRESHOLD_CONFIG = 50_000_000_000; // 50 SOL
-        let TODO_FUND_DURATION_THRESHOLD_CONFIG = 4032000; // 2weeks
         // Threshhold
-        let TODO_UNMET_THRESHHOLD = false;
+        let mut unmet_threshold = false;
 
         let current = Clock::get()?;
 
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
-        if (current.unix_timestamp - TODO_LAST_PROCESS_TIME) > 4032000 {
-            TODO_UNMET_THRESHHOLD = true;
+        if (current.unix_timestamp - fund.last_batch_processing_started_at) > fund.batch_processing_threshold_duration {
+            unmet_threshold = true;
         }
 
-        let fund = ctx.accounts.fund.to_latest_version();
 
         if fund.pending_withdrawals.receipt_token_to_process > 0 {
             fund.start_processing_pending_batch_withdrawal();
@@ -83,12 +79,12 @@ impl<'info> OperatorRunIfNeeded<'info> {
             }).sum();
 
         // if receipt_token_amount_to_burn exceeds TODO_FUND_AMOUNT_THRESHOLD_CONFIG fragSOL
-        if receipt_token_amount_to_burn > TODO_FUND_AMOUNT_THRESHOLD_CONFIG {
-            TODO_UNMET_THRESHHOLD = true;
+        if receipt_token_amount_to_burn > fund.batch_processing_threshold_amount {
+            unmet_threshold = true;
         }
 
         // if no condition is met, 
-        if TODO_UNMET_THRESHHOLD {
+        if unmet_threshold {
             return err!(ErrorCode::OperatorUnmetThreshold);
         }
 
@@ -118,7 +114,15 @@ impl<'info> OperatorRunIfNeeded<'info> {
             batch.record_processing_end(receipt_token_amount, sol_reserved);
         }
 
+        let sol_amount_moved = unstaking_ratio * fund.sol_reserved;
+
+        fund.sol_amount_in = fund.sol_amount_in
+            .checked_sub(sol_amount_moved)
+            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
+
         fund.end_processing_completed_batch_withdrawals();
+
+        fund.last_batch_processing_started_at = Some(current.unix_timestamp);
 
         Ok(())
     }
