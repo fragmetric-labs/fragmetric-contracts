@@ -4,7 +4,7 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
-use fragmetric_util::{request, Upgradable};
+use fragmetric_util::Upgradable;
 
 use crate::{constants::*, fund::*, Empty};
 
@@ -48,73 +48,18 @@ pub struct FundInitialize<'info> {
 }
 
 impl<'info> FundInitialize<'info> {
-    pub fn initialize_fund(ctx: Context<Self>, request: FundInitializeRequest) -> Result<()> {
+    pub fn initialize_fund(ctx: Context<Self>) -> Result<()> {
         let fund_token_authority_key = ctx.accounts.fund_token_authority.key();
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
         msg!("receipt_token_mint: {}", receipt_token_mint_key);
         msg!("fund_token_authority: {}", fund_token_authority_key,);
 
-        let args = FundInitializeArgs::from(request);
-        ctx.accounts
-            .fund
-            .initialize(ctx.accounts.admin.key(), receipt_token_mint_key)?;
-        ctx.accounts.fund.to_latest_version().initialize(
-            args.default_protocol_fee_rate,
-            args.whitelisted_tokens,
-            args.withdrawal_enabled_flag,
-            args.batch_processing_threshold_amount,
-            args.batch_processing_threshold_duration,
-        )
-    }
-}
-
-pub struct FundInitializeArgs {
-    pub default_protocol_fee_rate: u16,
-    pub whitelisted_tokens: Vec<TokenInfo>,
-    pub withdrawal_enabled_flag: bool,
-    pub batch_processing_threshold_amount: u128,
-    pub batch_processing_threshold_duration: i64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundInitializeArgs)]
-pub enum FundInitializeRequest {
-    V1(FundInitializeRequestV1),
-    V2(FundInitializeRequestV2),
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundInitializeRequestV1 {
-    pub default_protocol_fee_rate: u16,
-    pub whitelisted_tokens: Vec<TokenInfo>,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundInitializeRequestV2 {
-    pub default_protocol_fee_rate: u16,
-    pub whitelisted_tokens: Vec<TokenInfo>,
-    pub withdrawal_enabled_flag: bool,
-    pub batch_processing_threshold_amount: u128,
-    pub batch_processing_threshold_duration: i64,
-}
-
-impl From<FundInitializeRequest> for FundInitializeArgs {
-    fn from(value: FundInitializeRequest) -> Self {
-        match value {
-            FundInitializeRequest::V1(value) => Self {
-                default_protocol_fee_rate: value.default_protocol_fee_rate,
-                whitelisted_tokens: value.whitelisted_tokens,
-                withdrawal_enabled_flag: true,
-                batch_processing_threshold_amount: 0,
-                batch_processing_threshold_duration: 0,
-            },
-            FundInitializeRequest::V2(value) => Self {
-                default_protocol_fee_rate: value.default_protocol_fee_rate,
-                whitelisted_tokens: value.whitelisted_tokens,
-                withdrawal_enabled_flag: value.withdrawal_enabled_flag,
-                batch_processing_threshold_amount: value.batch_processing_threshold_amount,
-                batch_processing_threshold_duration: value.batch_processing_threshold_duration,
-            },
-        }
+        // let args = FundInitializeArgs::from(request);
+        ctx.accounts.fund.initialize(
+            ctx.accounts.admin.key(),
+            receipt_token_mint_key,
+            // ctx.accounts.receipt_token_lock_account.key(),
+        )?;
+        ctx.accounts.fund.to_latest_version().initialize()
     }
 }

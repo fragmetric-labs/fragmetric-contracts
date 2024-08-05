@@ -43,18 +43,18 @@ impl<'info> FundUpdate<'info> {
             .update_token(token, info)
     }
 
-    pub fn update_default_protocol_fee_rate(
+    pub fn update_sol_withdrawal_fee_rate(
         ctx: Context<Self>,
-        request: FundUpdateDefaultProtocolFeeRateRequest,
+        request: FundUpdateSolWithdrawalFeeRateRequest,
     ) -> Result<()> {
-        let FundUpdateDefaultProtocolFeeRateArgs {
-            default_protocol_fee_rate,
+        let FundUpdateSolWithdrawalFeeRateArgs {
+            sol_withdrawal_fee_rate,
         } = request.into();
         ctx.accounts
             .fund
             .to_latest_version()
             .withdrawal_status
-            .set_default_protocol_fee_rate(default_protocol_fee_rate)
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
     }
 
     pub fn update_withdrawal_enabled_flag(ctx: Context<Self>, flag: bool) -> Result<()> {
@@ -67,8 +67,8 @@ impl<'info> FundUpdate<'info> {
 
     pub fn update_batch_processing_threshold(
         ctx: Context<Self>,
-        amount: u128,
-        duration: i64,
+        amount: Option<u128>,
+        duration: Option<i64>,
     ) -> Result<()> {
         ctx.accounts
             .fund
@@ -134,26 +134,26 @@ impl From<FundUpdateTokenInfoRequest> for FundUpdateTokenInfoArgs {
     }
 }
 
-pub struct FundUpdateDefaultProtocolFeeRateArgs {
-    pub default_protocol_fee_rate: u16,
+pub struct FundUpdateSolWithdrawalFeeRateArgs {
+    pub sol_withdrawal_fee_rate: u16,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundUpdateDefaultProtocolFeeRateArgs)]
-pub enum FundUpdateDefaultProtocolFeeRateRequest {
-    V1(FundUpdateDefaultProtocolFeeRateRequestV1),
+#[request(FundUpdateSolWithdrawalFeeRateArgs)]
+pub enum FundUpdateSolWithdrawalFeeRateRequest {
+    V1(FundUpdateSolWithdrawalFeeRateRequestV1),
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundUpdateDefaultProtocolFeeRateRequestV1 {
-    pub default_protocol_fee_rate: u16,
+pub struct FundUpdateSolWithdrawalFeeRateRequestV1 {
+    pub sol_withdrawal_fee_rate: u16,
 }
 
-impl From<FundUpdateDefaultProtocolFeeRateRequest> for FundUpdateDefaultProtocolFeeRateArgs {
-    fn from(value: FundUpdateDefaultProtocolFeeRateRequest) -> Self {
+impl From<FundUpdateSolWithdrawalFeeRateRequest> for FundUpdateSolWithdrawalFeeRateArgs {
+    fn from(value: FundUpdateSolWithdrawalFeeRateRequest) -> Self {
         match value {
-            FundUpdateDefaultProtocolFeeRateRequest::V1(value) => Self {
-                default_protocol_fee_rate: value.default_protocol_fee_rate,
+            FundUpdateSolWithdrawalFeeRateRequest::V1(value) => Self {
+                sol_withdrawal_fee_rate: value.sol_withdrawal_fee_rate,
             },
         }
     }

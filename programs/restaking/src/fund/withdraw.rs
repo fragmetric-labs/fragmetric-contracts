@@ -97,7 +97,7 @@ impl WithdrawalStatus {
     }
 
     fn deduct_withdrawal_fee(&self, amount: u64) -> u64 {
-        amount - amount * self.default_protocol_fee_rate as u64 / 10000
+        amount - amount * self.sol_withdrawal_fee_rate as u64 / 10000
     }
 
     fn check_is_withdrawal_enabled(&self) -> Result<()> {
