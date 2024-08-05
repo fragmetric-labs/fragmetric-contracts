@@ -11,7 +11,7 @@ where
     fn mint_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,
-        to: &InterfaceAccount<'info, TokenAccount>,
+        to: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
         amount: u64,
@@ -22,7 +22,7 @@ impl<'info> MintExt<'info> for Program<'info, Token2022> {
     fn mint_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,
-        to: &InterfaceAccount<'info, TokenAccount>,
+        to: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
         amount: u64,
@@ -40,6 +40,7 @@ impl<'info> MintExt<'info> for Program<'info, Token2022> {
             mint_receipt_token_cpi_ctx = mint_receipt_token_cpi_ctx.with_signer(signer_seeds);
         }
 
-        mint_to(mint_receipt_token_cpi_ctx, amount)
+        mint_to(mint_receipt_token_cpi_ctx, amount)?;
+        to.reload()
     }
 }

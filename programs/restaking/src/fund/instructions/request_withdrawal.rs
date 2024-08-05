@@ -64,8 +64,8 @@ pub struct FundRequestWithdrawal<'info> {
 }
 
 impl<'info> FundRequestWithdrawal<'info> {
-    pub fn request_withdrawal(ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
-        Self::lock_receipt_token(&ctx, receipt_token_amount)
+    pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+        Self::lock_receipt_token(&mut ctx, receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
 
         let Self {
@@ -78,30 +78,30 @@ impl<'info> FundRequestWithdrawal<'info> {
         user_receipt.push_withdrawal_request(withdrawal_request)
     }
 
-    fn lock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn lock_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         Self::call_burn_token_cpi(ctx, amount)?;
         Self::call_mint_token_cpi(ctx, amount)?;
         Self::call_transfer_hook(ctx, amount)
     }
 
-    fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_account,
+            &mut ctx.accounts.receipt_token_account,
             ctx.accounts.user.to_account_info(),
             None,
             amount,
         )
     }
 
-    fn call_mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_lock_account,
+            &mut ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,
