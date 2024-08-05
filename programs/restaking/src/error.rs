@@ -26,4 +26,8 @@ pub enum ErrorCode {
     FundWithdrawlNotCompleted,
     #[msg("Not enough reserved Sol")]
     FundNotEnoughReservedSol,
+
+    // Operator
+    #[msg("Batch unmet threshold")]
+    OperatorUnmetThreshold,
 }
