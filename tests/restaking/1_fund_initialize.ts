@@ -116,7 +116,7 @@ export const fund_initialize = describe("fund_initialize", () => {
     });
 
     it("Is initialized!", async () => {
-        const default_protocol_fee_rate = 10;
+        const sol_withdrawal_fee_rate = 10;
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
 
@@ -139,21 +139,40 @@ export const fund_initialize = describe("fund_initialize", () => {
         //     program.programId
         // );
 
-        const tx = await program.methods
-            .fundInitialize({
-                v1: {
-                    0: {
-                        defaultProtocolFeeRate: default_protocol_fee_rate,
-                        whitelistedTokens: whitelistedTokens,
+        const txs = new anchor.web3.Transaction().add(
+            await program.methods
+                .fundInitialize()
+                .accounts({})
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundInitializeSolWithdrawalFeeRate({
+                    v1: {
+                        0: {
+                            solWithdrawalFeeRate: sol_withdrawal_fee_rate,
+                        }
                     }
-                }
-            })
-            .accounts({
-                receiptTokenMint: receiptTokenMint.publicKey,
-            })
-            .signers([])
-            .rpc();
-        console.log("Initialize transaction signature", tx);
+                })
+                .accounts({})
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundInitializeWhitelistedTokens({
+                    v1: {
+                        0: {
+                            whitelistedTokens: whitelistedTokens,
+                        }
+                    }
+                })
+                .accounts({})
+                .signers([])
+                .instruction(),
+        );
+        const txSig = await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            txs,
+            [admin.payer],
+        );
 
         // check fund initialized correctly
         const tokensInitialized = (await program.account.fund.fetch(fund_pda)).data.v1[0].whitelistedTokens;
