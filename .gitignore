@@ -14,4 +14,5 @@ mainnet-id.json
 
 # for test
 tests/**/tokenMint*
-tests/**/*.json
+tests/**/fragsolMint.json
+tests/**/*_origin.json
