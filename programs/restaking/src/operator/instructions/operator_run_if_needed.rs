@@ -4,12 +4,12 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
+
+use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 use fragmetric_util::Upgradable;
 
-use crate::{constants::*, fund::*, token::*, Empty};
-
 #[derive(Accounts)]
-pub struct FundProcessWithdrawalRequestsForTest<'info> {
+pub struct OperatorRunIfNeeded<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -25,13 +25,15 @@ pub struct FundProcessWithdrawalRequestsForTest<'info> {
     pub fund: Account<'info, Fund>,
 
     #[account(
+        mut,
         seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_token_authority: Account<'info, Empty>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
     #[account(
         mut,
         associated_token::mint = receipt_token_mint,
@@ -45,24 +47,39 @@ pub struct FundProcessWithdrawalRequestsForTest<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
-    /// This is an instruction for test purpose:
-    /// It mocks 4 instructions that should be performed by operator.
-    pub fn process_withdrawal_requests_for_test(mut ctx: Context<Self>) -> Result<()> {
+impl<'info> OperatorRunIfNeeded<'info> {
+    /// RUn operator if conditions are met.
+    /// This instructions is available to anyone.
+    /// However, the threshold should be met
+    pub fn operator_run_if_needed(ctx: Context<Self>) -> Result<()> {
         let fund = ctx.accounts.fund.to_latest_version();
 
-        // Operator Instruction - Decides to start processing pending withdrawals
+        // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
+        let current_time = Clock::get()?.unix_timestamp;
+
+        let mut threshold_satified = match fund.withdrawal_status.last_batch_processing_started_at {
+            Some(x)
+                if (current_time - x)
+                    > fund.withdrawal_status.batch_processing_threshold_duration =>
+            {
+                true
+            }
+            _ => false,
+        };
+
         if fund
             .withdrawal_status
             .pending_batch_withdrawal
             .receipt_token_to_process
-            > 0
+            > fund.withdrawal_status.batch_processing_threshold_amount
         {
-            fund.withdrawal_status
-                .start_processing_pending_batch_withdrawal()?;
+            threshold_satified = true;
         }
 
-        // Operator Instruction - Request for LST unstaking (to make SOL)
+        if threshold_satified {
+            return err!(ErrorCode::OperatorUnmetThreshold);
+        }
+
         let receipt_token_amount_to_burn = fund
             .withdrawal_status
             .batch_withdrawals_in_progress
@@ -74,9 +91,14 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
             })
             .sum();
 
-        // Operator Instruction - Record unstaking result to the fund
-        // NOTE: assumes that the amount of unstaked SOL is equal to the amount of burned fragSOL
-        let unstaking_ratio = 1; // unstaked SOL per 1 fragSOL
+        fund.withdrawal_status
+            .start_processing_pending_batch_withdrawal()?;
+
+        Self::burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
+
+        let fund = ctx.accounts.fund.to_latest_version();
+
+        let unstaking_ratio = 1;
 
         let mut burned_receipt_token_amount = receipt_token_amount_to_burn;
         for batch in fund
@@ -92,29 +114,36 @@ impl<'info> FundProcessWithdrawalRequestsForTest<'info> {
                 burned_receipt_token_amount,
                 batch.receipt_token_being_processed,
             );
+
             burned_receipt_token_amount -= receipt_token_amount;
-            let sol_amount = receipt_token_amount * unstaking_ratio;
-            batch.record_unstaking_end(receipt_token_amount as u64, sol_amount as u64);
+            let sol_reserved = receipt_token_amount * unstaking_ratio;
+            batch.record_unstaking_end(receipt_token_amount as u64, sol_reserved as u64);
         }
 
-        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
+        let sol_amount_moved = unstaking_ratio * receipt_token_amount_to_burn;
 
-        // Operator Instruction - Ends processing completed withdrawals
-        ctx.accounts
-            .fund
-            .to_latest_version()
-            .withdrawal_status
-            .end_processing_completed_batch_withdrawals()
+        fund.sol_amount_in = fund
+            .sol_amount_in
+            .checked_sub(sol_amount_moved)
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
+
+        fund.withdrawal_status
+            .end_processing_completed_batch_withdrawals()?;
+
+        fund.withdrawal_status.last_batch_processing_started_at =
+            Some(Clock::get()?.unix_timestamp);
+
+        Ok(())
     }
 
-    fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_account,
+            &ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,

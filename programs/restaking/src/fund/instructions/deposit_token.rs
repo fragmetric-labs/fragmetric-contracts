@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
-    token_interface::{transfer_checked, Mint, TokenAccount, TransferChecked},
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 use fragmetric_util::{request, Upgradable};
 
@@ -47,7 +47,7 @@ pub struct FundDepositToken<'info> {
         payer = user,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
-        associated_token::token_program = token_program,
+        associated_token::token_program = token_2022_program,
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
@@ -64,11 +64,12 @@ pub struct FundDepositToken<'info> {
         payer = user,
         associated_token::mint = token_mint,
         associated_token::authority = fund_token_authority,
-        associated_token::token_program = token_program,
+        associated_token::token_program = token_interface,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
-    pub token_program: Program<'info, Token2022>,
+    pub token_interface: Interface<'info, TokenInterface>,
+    pub token_2022_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
@@ -116,12 +117,12 @@ impl<'info> FundDepositToken<'info> {
             user_token_account,
             fund_token_account,
             token_mint,
-            token_program,
+            token_interface,
             ..
         } = &*ctx.accounts;
 
         let token_transfer_cpi_ctx = CpiContext::new(
-            token_program.to_account_info(),
+            token_interface.to_account_info(),
             TransferChecked {
                 from: user_token_account.to_account_info(),
                 to: fund_token_account.to_account_info(),
@@ -165,7 +166,7 @@ impl<'info> FundDepositToken<'info> {
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
-        ctx.accounts.token_program.mint_token_cpi(
+        ctx.accounts.token_2022_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
