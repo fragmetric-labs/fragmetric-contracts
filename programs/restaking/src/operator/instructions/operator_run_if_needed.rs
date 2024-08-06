@@ -51,7 +51,7 @@ impl<'info> OperatorRunIfNeeded<'info> {
     /// RUn operator if conditions are met.
     /// This instructions is available to anyone.
     /// However, the threshold should be met
-    pub fn operator_run_if_needed(ctx: Context<Self>) -> Result<()> {
+    pub fn operator_run_if_needed(mut ctx: Context<Self>) -> Result<()> {
         let fund = ctx.accounts.fund.to_latest_version();
 
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
@@ -94,7 +94,7 @@ impl<'info> OperatorRunIfNeeded<'info> {
         fund.withdrawal_status
             .start_processing_pending_batch_withdrawal()?;
 
-        Self::burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
+        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
 
         let fund = ctx.accounts.fund.to_latest_version();
 
@@ -128,22 +128,17 @@ impl<'info> OperatorRunIfNeeded<'info> {
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
         fund.withdrawal_status
-            .end_processing_completed_batch_withdrawals()?;
-
-        fund.withdrawal_status.last_batch_processing_started_at =
-            Some(Clock::get()?.unix_timestamp);
-
-        Ok(())
+            .end_processing_completed_batch_withdrawals()
     }
 
-    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_lock_account,
+            &mut ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,

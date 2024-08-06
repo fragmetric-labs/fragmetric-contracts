@@ -3,20 +3,20 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl FundV2 {
-    pub(super) fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<()> {
+    pub(super) fn deposit_token(&mut self, token: Pubkey, amount: u64) -> Result<u128> {
         let token_info = self
             .whitelisted_tokens
             .iter_mut()
             .find(|info| info.address == token)
-            .ok_or(ErrorCode::FundNotExistingToken)?;
+            .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
 
         if token_info.token_cap < token_info.token_amount_in + amount as u128 {
-            return Err(ErrorCode::FundExceedsTokenCap)?;
+            err!(ErrorCode::FundExceedsTokenCap)?
         }
 
         token_info.token_amount_in += amount as u128;
 
-        Ok(())
+        Ok(token_info.token_amount_in)
     }
 
     pub(super) fn deposit_sol(&mut self, amount: u64) -> Result<()> {

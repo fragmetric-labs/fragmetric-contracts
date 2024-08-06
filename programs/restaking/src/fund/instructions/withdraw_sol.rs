@@ -44,15 +44,32 @@ impl<'info> FundWithdrawSOL<'info> {
             .pop_withdrawal_request(request_id)?;
 
         let sol_amount = Self::get_sol_amount_by_exchange_rate(&ctx, request.receipt_token_amount)?;
-        let sol_amount = ctx
+        let sol_withdraw_amount = ctx
             .accounts
             .fund
             .to_latest_version()
             .withdrawal_status
             .withdraw_sol(request.batch_id, sol_amount)?;
+        let sol_fee_amount = sol_amount - sol_withdraw_amount;
 
-        Self::transfer_sol(&mut ctx, sol_amount)
-            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))
+        Self::transfer_sol(&mut ctx, sol_withdraw_amount)
+            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;
+
+        let admin = ctx.accounts.fund.admin;
+        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
+        let fund = ctx.accounts.fund.to_latest_version();
+        emit!(FundSOLWithdrawn {
+            user: ctx.accounts.user.key(),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+            request_id,
+            lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            lrt_amount: request.receipt_token_amount,
+            sol_withdraw_amount,
+            sol_fee_amount,
+            fund_info: fund.to_info(admin, receipt_token_mint),
+        });
+
+        Ok(())
     }
 
     #[allow(unused_variables)]

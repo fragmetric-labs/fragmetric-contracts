@@ -14,6 +14,15 @@ pub struct FundDepositSOL<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        init_if_needed,
+        payer = user,
+        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + UserReceipt::INIT_SPACE,
+    )]
+    pub user_receipt: Account<'info, UserReceipt>,
+
+    #[account(
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
@@ -48,7 +57,7 @@ pub struct FundDepositSOL<'info> {
 }
 
 impl<'info> FundDepositSOL<'info> {
-    pub fn deposit_sol(ctx: Context<Self>, request: FundDepositSOLRequest) -> Result<()> {
+    pub fn deposit_sol(mut ctx: Context<Self>, request: FundDepositSOLRequest) -> Result<()> {
         let FundDepositSOLArgs { amount } = request.into();
         let receipt_token_account = ctx.accounts.receipt_token_account.key();
         msg!("receipt_token_account: {}", receipt_token_account);
@@ -57,7 +66,26 @@ impl<'info> FundDepositSOL<'info> {
         ctx.accounts.fund.to_latest_version().deposit_sol(amount)?;
 
         let mint_amount = Self::get_receipt_token_by_sol_exchange_rate(&ctx, amount)?;
-        Self::mint_receipt_token(&ctx, mint_amount)
+        Self::mint_receipt_token(&mut ctx, mint_amount)?;
+
+        let admin = ctx.accounts.fund.admin;
+        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
+        let fund = ctx.accounts.fund.to_latest_version();
+        emit!(FundSOLDeposited {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+            sol_deposit_amount: amount,
+            sol_amount_in_fund: fund.sol_amount_in,
+            minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            minted_lrt_amount: mint_amount,
+            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            wallet_provider: None,
+            fpoint_accrual_rate_multiplier: None,
+            fund_info: fund.to_info(admin, receipt_token_mint),
+        });
+
+        Ok(())
     }
 
     fn transfer_sol_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
@@ -91,7 +119,7 @@ impl<'info> FundDepositSOL<'info> {
         Ok(amount)
     }
 
-    fn mint_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn mint_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
         msg!(
             "user's receipt token account key: {:?}",
@@ -110,14 +138,14 @@ impl<'info> FundDepositSOL<'info> {
         Ok(())
     }
 
-    fn call_mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_account,
+            &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,

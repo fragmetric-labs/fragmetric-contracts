@@ -11,7 +11,7 @@ where
     fn burn_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,
-        from: &InterfaceAccount<'info, TokenAccount>,
+        from: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
         amount: u64,
@@ -22,7 +22,7 @@ impl<'info> BurnExt<'info> for Program<'info, Token2022> {
     fn burn_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,
-        from: &InterfaceAccount<'info, TokenAccount>,
+        from: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
         amount: u64,
@@ -40,6 +40,7 @@ impl<'info> BurnExt<'info> for Program<'info, Token2022> {
             burn_receipt_token_cpi_ctx = burn_receipt_token_cpi_ctx.with_signer(signer_seeds);
         }
 
-        burn(burn_receipt_token_cpi_ctx, amount)
+        burn(burn_receipt_token_cpi_ctx, amount)?;
+        from.reload()
     }
 }

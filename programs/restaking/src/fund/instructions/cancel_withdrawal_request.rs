@@ -64,7 +64,7 @@ pub struct FundCancelWithdrawalRequest<'info> {
 }
 
 impl<'info> FundCancelWithdrawalRequest<'info> {
-    pub fn cancel_withdrawal_request(ctx: Context<Self>, request_id: u64) -> Result<()> {
+    pub fn cancel_withdrawal_request(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
         let request = ctx
             .accounts
             .user_receipt
@@ -75,38 +75,50 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .withdrawal_status
             .cancel_withdrawal_request(request.batch_id, request.receipt_token_amount)?;
 
-        Self::unlock_receipt_token(&ctx, request.receipt_token_amount)
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+        Self::unlock_receipt_token(&mut ctx, request.receipt_token_amount)
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
+
+        emit!(FundWithdrawalRequestCanceled {
+            user: ctx.accounts.user.key(),
+            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+            request_id,
+            lrt_mint: ctx.accounts.receipt_token_mint.key(),
+            lrt_requested_amount: request.receipt_token_amount,
+            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+        });
+
+        Ok(())
     }
 
-    fn unlock_receipt_token(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn unlock_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         Self::call_burn_token_cpi(ctx, amount)?;
         Self::call_mint_token_cpi(ctx, amount)?;
         Self::call_transfer_hook(ctx, amount)
     }
 
-    fn call_burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_lock_account,
+            &mut ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,
         )
     }
 
-    fn call_mint_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_account,
+            &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[signer_seeds.as_ref()]),
             amount,

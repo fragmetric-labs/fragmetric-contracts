@@ -267,7 +267,7 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
-                    tokenInterface: spl.TOKEN_PROGRAM_ID,
+                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
                 .instruction(),
@@ -283,7 +283,7 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: mSOLMint.address,
                     userTokenAccount: userMSOLTokenAccount.address,
-                    tokenInterface: spl.TOKEN_PROGRAM_ID,
+                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
                 .instruction(),
@@ -299,7 +299,7 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: jitoSOLMint.address,
                     userTokenAccount: userJitoSOLTokenAccount.address,
-                    tokenInterface: spl.TOKEN_PROGRAM_ID,
+                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
                 .instruction(),
@@ -315,7 +315,7 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: infMint.address,
                     userTokenAccount: userInfTokenAccount.address,
-                    tokenInterface: spl.TOKEN_PROGRAM_ID,
+                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
                 .instruction(),

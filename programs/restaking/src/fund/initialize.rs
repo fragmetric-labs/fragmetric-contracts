@@ -33,7 +33,7 @@ impl FundV2 {
     fn check_duplicates(tokens: &[TokenInfo]) -> Result<()> {
         let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
         if token_addresses.len() != tokens.len() {
-            return Err(ErrorCode::FundDuplicatedToken)?;
+            err!(ErrorCode::FundDuplicatedToken)?
         }
 
         Ok(())
