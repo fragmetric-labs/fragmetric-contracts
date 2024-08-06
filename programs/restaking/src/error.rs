@@ -15,6 +15,10 @@ pub enum ErrorCode {
     FundDuplicatedToken,
     #[msg("Exceeds the token cap")]
     FundExceedsTokenCap,
+    #[msg("Batch withdrwal amount exceeds SOL amount in fund")]
+    FundWithdrawalRequestExceedsSOLAmountsInTemp,
+    #[msg("Operator unmet threshold")]
+    OperatorUnmetThreshold,
     // receipt_token_extensions
     #[msg("Token is not currently transferring")]
     TokenNotCurrentlyTransferring,

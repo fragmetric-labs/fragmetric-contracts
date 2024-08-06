@@ -4,11 +4,13 @@ pub mod common;
 pub mod constants;
 pub mod error;
 pub mod fund;
+pub mod operator;
 pub mod token;
 // pub mod oracle;
 
 use common::*;
 use fund::*;
+use operator::*;
 use token::*;
 // use oracle::*;
 
@@ -122,15 +124,16 @@ pub mod restaking {
         FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
     }
 
-    // for test
-    pub fn fund_process_withdrawal_requests_for_test(
-        ctx: Context<FundProcessWithdrawalRequestsForTest>,
-    ) -> Result<()> {
-        FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
-    }
-
     pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
         FundWithdrawSOL::withdraw_sol(ctx, request_id)
+    }
+
+    pub fn operator_run_if_needed(ctx: Context<OperatorRunIfNeeded>) -> Result<()> {
+        OperatorRunIfNeeded::operator_run_if_needed(ctx)
+    }
+
+    pub fn operator_run(ctx: Context<OperatorRun>) -> Result<()> {
+        OperatorRun::operator_run(ctx)
     }
 
     // for test
