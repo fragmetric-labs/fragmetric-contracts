@@ -124,13 +124,6 @@ pub mod restaking {
         FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
     }
 
-    // for test
-    pub fn fund_process_withdrawal_requests_for_test(
-        ctx: Context<FundProcessWithdrawalRequestsForTest>,
-    ) -> Result<()> {
-        FundProcessWithdrawalRequestsForTest::process_withdrawal_requests_for_test(ctx)
-    }
-
     pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
         FundWithdrawSOL::withdraw_sol(ctx, request_id)
     }

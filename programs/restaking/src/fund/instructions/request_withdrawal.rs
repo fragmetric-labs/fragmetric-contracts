@@ -16,7 +16,6 @@ pub struct FundRequestWithdrawal<'info> {
     #[account(
         init_if_needed,
         payer = user,
-
         seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
         space = 8 + UserReceipt::INIT_SPACE,

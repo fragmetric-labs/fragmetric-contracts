@@ -123,7 +123,6 @@ pub struct BatchWithdrawal {
     pub receipt_token_being_processed: u128,
     pub receipt_token_processed: u128,
     pub sol_reserved: u128,
-
     pub processing_started_at: Option<i64>,
 }
 
