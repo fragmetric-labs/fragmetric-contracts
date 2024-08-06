@@ -12,7 +12,7 @@ pub struct FundWithdrawalRequestCanceled {
     pub lrt_mint: Pubkey,
     pub lrt_requested_amount: u64,
 
-    pub lrt_amount_in_user_account: u64,
+    pub lrt_amount_in_user_lrt_account: u64,
 
     pub user_receipt: UserReceipt,
 }

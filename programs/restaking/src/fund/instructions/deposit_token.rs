@@ -100,7 +100,7 @@ impl<'info> FundDepositToken<'info> {
             token_amount_in_fund,
             minted_lrt_mint: receipt_token_mint.key(),
             minted_lrt_amount: mint_amount,
-            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
             wallet_provider: None,
             fpoint_accrual_rate_multiplier: None,
             fund_info: fund.to_info(admin, receipt_token_mint),

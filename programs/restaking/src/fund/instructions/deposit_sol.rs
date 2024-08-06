@@ -78,7 +78,7 @@ impl<'info> FundDepositSOL<'info> {
             sol_amount_in_fund: fund.sol_amount_in,
             minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
             minted_lrt_amount: mint_amount,
-            lrt_amount_in_user_account: ctx.accounts.receipt_token_account.amount,
+            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
             wallet_provider: None,
             fpoint_accrual_rate_multiplier: None,
             fund_info: fund.to_info(admin, receipt_token_mint),
