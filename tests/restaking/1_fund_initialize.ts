@@ -62,10 +62,10 @@ export const fund_initialize = describe("fund_initialize", () => {
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
-        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
     });
 
     it("Create receipt token mint with Transfer Hook extension", async () => {

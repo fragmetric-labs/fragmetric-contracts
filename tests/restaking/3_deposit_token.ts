@@ -68,10 +68,10 @@ export const deposit_token = describe("deposit_token", () => {
         tokenMint2 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint2", {encoding: "utf8"}).replace(/"/g, ''));
         console.log(`tokenMint1: ${tokenMint1}, tokenMint2: ${tokenMint2}`);
 
-        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
         console.log(`bSOLMint: ${bSOLMintPublicKey}, mSOLMint: ${mSOLMintPublicKey}, jitoSOLMint: ${jitoSOLMintPublicKey}, infMint: ${infMintPublicKey}`);
 
         [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(

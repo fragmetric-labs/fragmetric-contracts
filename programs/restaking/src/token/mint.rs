@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{mint_to, Mint, MintTo, TokenAccount};
-
-use super::TokenProgram;
+use anchor_spl::{
+    token_2022::Token2022,
+    token_interface::{mint_to, Mint, MintTo, TokenAccount},
+};
 
 pub(crate) trait MintExt<'info>
 where
@@ -17,10 +18,7 @@ where
     ) -> Result<()>;
 }
 
-impl<'info, T> MintExt<'info> for T
-where
-    T: TokenProgram<'info> + 'info,
-{
+impl<'info> MintExt<'info> for Program<'info, Token2022> {
     fn mint_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,

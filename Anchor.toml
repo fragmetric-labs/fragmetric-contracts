@@ -35,19 +35,19 @@ test-restaking = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/resta
 # mock mainnet bSOL mint
 [[test.validator.account]]
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-filename = "tests/restaking/clones/mainnet/bSOL_mint.json"
+filename = "tests/restaking/lsts/mainnet/clones/bSOL_mint.json"
 
 # mock mainnet mSOL mint
 [[test.validator.account]]
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-filename = "tests/restaking/clones/mainnet/mSOL_mint.json"
+filename = "tests/restaking/lsts/mainnet/clones/mSOL_mint.json"
 
 # mock mainnet JitoSOL mint
 [[test.validator.account]]
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-filename = "tests/restaking/clones/mainnet/JitoSOL_mint.json"
+filename = "tests/restaking/lsts/mainnet/clones/JitoSOL_mint.json"
 
 # mock mainnet INF mint
 [[test.validator.account]]
 address = "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
-filename = "tests/restaking/clones/mainnet/INF_mint.json"
+filename = "tests/restaking/lsts/mainnet/clones/INF_mint.json"
