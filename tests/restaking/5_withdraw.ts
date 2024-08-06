@@ -74,7 +74,7 @@ export const withdraw = describe("withdraw", () => {
   });
 
   before("Deposit SOL", async () => {
-    const amount = 1 * 10 ** decimals;
+    const amount = 5 * 10 ** decimals;
     await program.methods
       .fundDepositSol({
         v1: {
