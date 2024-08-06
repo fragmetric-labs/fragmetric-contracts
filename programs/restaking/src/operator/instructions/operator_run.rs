@@ -53,15 +53,8 @@ impl<'info> OperatorRun<'info> {
     pub fn operator_run(ctx: Context<Self>) -> Result<()> {
         let fund = ctx.accounts.fund.to_latest_version();
 
-        if fund
-            .withdrawal_status
-            .pending_batch_withdrawal
-            .receipt_token_to_process
-            > 0
-        {
-            fund.withdrawal_status
-                .start_processing_pending_batch_withdrawal()?;
-        }
+        fund.withdrawal_status
+            .start_processing_pending_batch_withdrawal()?;
 
         let receipt_token_amount_to_burn = fund
             .withdrawal_status

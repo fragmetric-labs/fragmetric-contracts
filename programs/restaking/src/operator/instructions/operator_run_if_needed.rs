@@ -57,7 +57,7 @@ impl<'info> OperatorRunIfNeeded<'info> {
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
         let current_time = Clock::get()?.unix_timestamp;
 
-        let mut unmet_threshold = match fund.withdrawal_status.last_batch_processing_started_at {
+        let mut threshold_satified = match fund.withdrawal_status.last_batch_processing_started_at {
             Some(x)
                 if (current_time - x)
                     > fund.withdrawal_status.batch_processing_threshold_duration =>
@@ -71,10 +71,13 @@ impl<'info> OperatorRunIfNeeded<'info> {
             .withdrawal_status
             .pending_batch_withdrawal
             .receipt_token_to_process
-            > 0
+            > fund.withdrawal_status.batch_processing_threshold_amount
         {
-            fund.withdrawal_status
-                .start_processing_pending_batch_withdrawal()?;
+            threshold_satified = true;
+        }
+
+        if threshold_satified {
+            return err!(ErrorCode::OperatorUnmetThreshold);
         }
 
         let receipt_token_amount_to_burn = fund
@@ -88,15 +91,8 @@ impl<'info> OperatorRunIfNeeded<'info> {
             })
             .sum();
 
-        // if receipt_token_amount_to_burn exceeds TODO_FUND_AMOUNT_THRESHOLD_CONFIG fragSOL
-        if receipt_token_amount_to_burn > fund.withdrawal_status.batch_processing_threshold_amount {
-            unmet_threshold = true;
-        }
-
-        // if no condition is met,
-        if unmet_threshold {
-            return err!(ErrorCode::OperatorUnmetThreshold);
-        }
+        fund.withdrawal_status
+            .start_processing_pending_batch_withdrawal()?;
 
         Self::burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
 
