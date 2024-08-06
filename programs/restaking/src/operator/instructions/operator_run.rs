@@ -50,7 +50,7 @@ pub struct OperatorRun<'info> {
 impl<'info> OperatorRun<'info> {
     /// Manually run the operator.
     /// This instruction is only available to ADMIN
-    pub fn operator_run(ctx: Context<Self>) -> Result<()> {
+    pub fn operator_run(mut ctx: Context<Self>) -> Result<()> {
         let fund = ctx.accounts.fund.to_latest_version();
 
         fund.withdrawal_status
@@ -89,7 +89,7 @@ impl<'info> OperatorRun<'info> {
             batch.record_unstaking_end(receipt_token_amount as u64, sol_reserved as u64);
         }
 
-        Self::burn_token_cpi(&ctx, receipt_token_amount_to_burn as u64)?;
+        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
 
         let fund = ctx.accounts.fund.to_latest_version();
 
@@ -100,17 +100,11 @@ impl<'info> OperatorRun<'info> {
             .checked_sub(sol_amount_moved)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
-        fund.withdrawal_status.last_batch_processing_started_at =
-            Some(Clock::get()?.unix_timestamp);
-
-        ctx.accounts
-            .fund
-            .to_latest_version()
-            .withdrawal_status
+        fund.withdrawal_status
             .end_processing_completed_batch_withdrawals()
     }
 
-    fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let bump = ctx.bumps.fund_token_authority;
         let key = ctx.accounts.receipt_token_mint.key();
         let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
