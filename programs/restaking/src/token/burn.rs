@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token_2022::Token2022,
-    token_interface::{burn, Burn, Mint, TokenAccount},
-};
+use anchor_spl::token_interface::{burn, Burn, Mint, TokenAccount};
+
+use super::TokenProgram;
 
 pub(crate) trait BurnExt<'info>
 where
@@ -18,7 +17,10 @@ where
     ) -> Result<()>;
 }
 
-impl<'info> BurnExt<'info> for Program<'info, Token2022> {
+impl<'info, T> BurnExt<'info> for T
+where
+    T: TokenProgram<'info> + 'info,
+{
     fn burn_token_cpi(
         &self,
         mint: &InterfaceAccount<'info, Mint>,

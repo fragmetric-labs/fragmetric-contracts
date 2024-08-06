@@ -28,3 +28,26 @@ set-mainnet-restaking-program-keypair = "(which jq 1>/dev/null || brew install j
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 test-dummy = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/dummy.ts"
 test-restaking = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/restaking.ts"
+
+# [test.validator]
+# url = "https://api.devnet.solana.com" # devnet rpc url
+
+# mock mainnet bSOL mint
+[[test.validator.account]]
+address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
+filename = "tests/restaking/clones/mainnet/bSOL_mint.json"
+
+# mock mainnet mSOL mint
+[[test.validator.account]]
+address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+filename = "tests/restaking/clones/mainnet/mSOL_mint.json"
+
+# mock mainnet JitoSOL mint
+[[test.validator.account]]
+address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+filename = "tests/restaking/clones/mainnet/JitoSOL_mint.json"
+
+# mock mainnet INF mint
+[[test.validator.account]]
+address = "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
+filename = "tests/restaking/clones/mainnet/INF_mint.json"

@@ -20,6 +20,17 @@ export const fund_initialize = describe("fund_initialize", () => {
     let receiptTokenMint: anchor.web3.Keypair;
     let tokenMint1: anchor.web3.PublicKey;
     let tokenMint2: anchor.web3.PublicKey;
+
+    let bSOLMintPublicKey: anchor.web3.PublicKey;
+    let mSOLMintPublicKey: anchor.web3.PublicKey;
+    let jitoSOLMintPublicKey: anchor.web3.PublicKey;
+    let infMintPublicKey: anchor.web3.PublicKey;
+
+    let bSOLMint: spl.Mint;
+    let mSOLMint: spl.Mint;
+    let jitoSOLMint: spl.Mint;
+    let infMint: spl.Mint;
+
     let fund_pda: anchor.web3.PublicKey;
     let fund_token_authority_pda: anchor.web3.PublicKey;
         
@@ -44,6 +55,17 @@ export const fund_initialize = describe("fund_initialize", () => {
 
         // NEED TO CHECK: receiptTokenMint == createMint result account
         console.log(`mintOwner: ${mintOwner.publicKey}, receiptTokenMint: ${receiptTokenMint.publicKey}, fund_pda: ${fund_pda}, fund_token_authority_pda: ${fund_token_authority_pda}`);
+    });
+
+    before("Prepare mainnet token mint accounts for localnet", async () => {
+        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/bSOL_mint.json");
+        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
+        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
+        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
+        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokens/mainnet/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
     });
 
     it("Create receipt token mint with Transfer Hook extension", async () => {
@@ -82,7 +104,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         );
     });
 
-    it("Create test token mint accounts for initialize", async () => {
+    it.skip("Create test token mint accounts for initialize", async () => { // for localnet
         tokenMint1 = await spl.createMint(
             program.provider.connection,
             payer,
@@ -115,22 +137,59 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log("It's freeze authority = ", receiptTokenMintAccount.freezeAuthority);
     });
 
+    it("Set mainnet token mint accounts for initialize", async () => { // for localnet
+        bSOLMint = await spl.getMint(
+            program.provider.connection,
+            bSOLMintPublicKey,
+        );
+        mSOLMint = await spl.getMint(
+            program.provider.connection,
+            mSOLMintPublicKey,
+        );
+        jitoSOLMint = await spl.getMint(
+            program.provider.connection,
+            jitoSOLMintPublicKey,
+        );
+        infMint = await spl.getMint(
+            program.provider.connection,
+            infMintPublicKey,
+        );
+        console.log(`bSOL mintAuthority: ${bSOLMint.mintAuthority}`);
+        console.log(`mSOL mintAuthority: ${mSOLMint.mintAuthority}`);
+        console.log(`JitoSOL mintAuthority: ${jitoSOLMint.mintAuthority}`);
+        console.log(`INF mintAuthority: ${infMint.mintAuthority}`);
+    });
+
     it("Is initialized!", async () => {
         const solWithdrawalFeeRate = 10;
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
+        const tokenCap3 = new anchor.BN(1_000_000_000 * 3000);
+        const tokenCap4 = new anchor.BN(1_000_000_000 * 4000);
 
         const whitelistedTokens = [
             {
-                address: tokenMint1,
+                // address: tokenMint1,
+                address: bSOLMint.address,
                 tokenCap: tokenCap1,
                 tokenAmountIn: new anchor.BN(0),
             },
             {
-                address: tokenMint2,
+                // address: tokenMint2,
+                address: mSOLMint.address,
                 tokenCap: tokenCap2,
                 tokenAmountIn: new anchor.BN(0),
-            }
+            },
+            {
+                address: jitoSOLMint.address,
+                tokenCap: tokenCap3,
+                tokenAmountIn: new anchor.BN(0),
+            },
+            {
+                address: infMint.address,
+                tokenCap: tokenCap4,
+                tokenAmountIn: new anchor.BN(0),
+            },
         ];
         // const whitelistedTokens = [];
 
@@ -165,12 +224,22 @@ export const fund_initialize = describe("fund_initialize", () => {
         // check fund initialized correctly
         const tokensInitialized = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
 
-        expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
+        // expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
+        expect(tokensInitialized[0].address.toString()).to.eq(bSOLMint.address.toString());
         expect(tokensInitialized[0].tokenCap.toNumber()).to.eq(tokenCap1.toNumber());
         expect(tokensInitialized[0].tokenAmountIn.toNumber()).to.eq(0);
 
-        expect(tokensInitialized[1].address.toString()).to.eq(tokenMint2.toString());
+        // expect(tokensInitialized[1].address.toString()).to.eq(tokenMint2.toString());
+        expect(tokensInitialized[1].address.toString()).to.eq(mSOLMint.address.toString());
         expect(tokensInitialized[1].tokenCap.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].tokenAmountIn.toNumber()).to.eq(0);
+
+        expect(tokensInitialized[2].address.toString()).to.eq(jitoSOLMint.address.toString());
+        expect(tokensInitialized[2].tokenCap.toNumber()).to.equal(tokenCap3.toNumber());
+        expect(tokensInitialized[2].tokenAmountIn.toNumber()).to.eq(0);
+
+        expect(tokensInitialized[3].address.toString()).to.eq(infMint.address.toString());
+        expect(tokensInitialized[3].tokenCap.toNumber()).to.equal(tokenCap4.toNumber());
+        expect(tokensInitialized[3].tokenAmountIn.toNumber()).to.eq(0);
     });
 });
