@@ -2,16 +2,17 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
-    token_interface::{burn, Burn, Mint, TokenAccount},
-};
-use solana_program::{
-    clock::Clock,
+    token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, fund::*, error::ErrorCode, Empty};
+use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
+use fragmetric_util::Upgradable;
 
 #[derive(Accounts)]
 pub struct OperatorRunIfNeeded<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
     #[account(
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
@@ -50,40 +51,49 @@ impl<'info> OperatorRunIfNeeded<'info> {
     /// RUn operator if conditions are met.
     /// This instructions is available to anyone.
     /// However, the threshold should be met
-    pub fn operator_run(ctx: Context<Self>) {
+    pub fn operator_run_if_needed(ctx: Context<Self>) -> Result<()> {
         let fund = ctx.accounts.fund.to_latest_version();
-        
-        // Threshhold
-        let mut unmet_threshold = false;
-
-        let current = Clock::get()?;
 
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
-        if (current.unix_timestamp - fund.last_batch_processing_started_at) > fund.batch_processing_threshold_duration {
-            unmet_threshold = true;
-        }
+        let current_time = Clock::get()?.unix_timestamp;
 
+        let mut unmet_threshold = match fund.withdrawal_status.last_batch_processing_started_at {
+            Some(x)
+                if (current_time - x)
+                    > fund.withdrawal_status.batch_processing_threshold_duration =>
+            {
+                true
+            }
+            _ => false,
+        };
 
-        if fund.pending_withdrawals.receipt_token_to_process > 0 {
-            fund.start_processing_pending_batch_withdrawal();
+        if fund
+            .withdrawal_status
+            .pending_batch_withdrawal
+            .receipt_token_to_process
+            > 0
+        {
+            fund.withdrawal_status
+                .start_processing_pending_batch_withdrawal()?;
         }
 
         let receipt_token_amount_to_burn = fund
-            .withdrawals_in_progress
-            .batch_withdrawal_queue
+            .withdrawal_status
+            .batch_withdrawals_in_progress
             .iter_mut()
             .map(|batch| {
-            let amount = batch.receipt_token_to_process;
-            batch.record_processing_start(amount as u64);
-            amount
-            }).sum();
+                let amount = batch.receipt_token_to_process;
+                batch.record_unstaking_start(amount as u64);
+                amount
+            })
+            .sum();
 
         // if receipt_token_amount_to_burn exceeds TODO_FUND_AMOUNT_THRESHOLD_CONFIG fragSOL
-        if receipt_token_amount_to_burn > fund.batch_processing_threshold_amount {
+        if receipt_token_amount_to_burn > fund.withdrawal_status.batch_processing_threshold_amount {
             unmet_threshold = true;
         }
 
-        // if no condition is met, 
+        // if no condition is met,
         if unmet_threshold {
             return err!(ErrorCode::OperatorUnmetThreshold);
         }
@@ -96,9 +106,9 @@ impl<'info> OperatorRunIfNeeded<'info> {
 
         let mut burned_receipt_token_amount = receipt_token_amount_to_burn;
         for batch in fund
-            .withdrawals_in_progress
-            .batch_withdrawal_queue
-            .iter_mut() 
+            .withdrawal_status
+            .batch_withdrawals_in_progress
+            .iter_mut()
         {
             if burned_receipt_token_amount == 0 {
                 break;
@@ -111,49 +121,36 @@ impl<'info> OperatorRunIfNeeded<'info> {
 
             burned_receipt_token_amount -= receipt_token_amount;
             let sol_reserved = receipt_token_amount * unstaking_ratio;
-            batch.record_processing_end(receipt_token_amount, sol_reserved);
+            batch.record_unstaking_end(receipt_token_amount as u64, sol_reserved as u64);
         }
 
-        let sol_amount_moved = unstaking_ratio * fund.sol_reserved;
+        let sol_amount_moved = unstaking_ratio * receipt_token_amount_to_burn;
 
-        fund.sol_amount_in = fund.sol_amount_in
+        fund.sol_amount_in = fund
+            .sol_amount_in
             .checked_sub(sol_amount_moved)
-            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
-        fund.end_processing_completed_batch_withdrawals();
+        fund.withdrawal_status
+            .end_processing_completed_batch_withdrawals()?;
 
-        fund.last_batch_processing_started_at = Some(current.unix_timestamp);
+        fund.withdrawal_status.last_batch_processing_started_at =
+            Some(Clock::get()?.unix_timestamp);
 
         Ok(())
     }
 
     fn burn_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            fund_token_authority,
-            receipt_token_mint,
-            receipt_token_lock_account,
-            token_programm,
-            ..
-        } = &*ctx.accounts;
-
         let bump = ctx.bumps.fund_token_authority;
-        let receipt_token_mint_key = receipt_token_mint.key();
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            FUND_TOKEN_AUTHORITY_SEED,
-            receipt_token_mint_key.as_ref(),
-            &[bump],
-        ]];
+        let key = ctx.accounts.receipt_token_mint.key();
+        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
 
-        let burn_token_cpi_ctx = CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            Burn {
-                mint: receipt_token_mint.to_account_info(),
-                from: receipt_token_lock_account.to_account_info(),
-                authority: fund_token_authority,to_account_info(),
-            },
-            signer_seeds,
-        );
-
-        burn(burn_token_cpi_ctx, amount)
+        ctx.accounts.token_program.burn_token_cpi(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_lock_account,
+            ctx.accounts.fund_token_authority.to_account_info(),
+            Some(&[signer_seeds.as_ref()]),
+            amount,
+        )
     }
 }

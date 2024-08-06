@@ -19,24 +19,24 @@ export const withdraw = describe("withdraw", () => {
 
   const user = anchor.web3.Keypair.generate();
   const admin = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(require("../user1.json")),
+    Uint8Array.from(require("../user1.json"))
   );
   const decimals = 9;
 
   const receiptTokenMint = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(require("./fragsolMint.json")),
+    Uint8Array.from(require("./fragsolMint.json"))
   );
 
   const [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
-    program.programId,
+    program.programId
   );
 
   let userReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
     receiptTokenMint.publicKey,
     user.publicKey,
     false,
-    TOKEN_2022_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID
   );
 
   before("Sol airdrop", async () => {
@@ -50,13 +50,13 @@ export const withdraw = describe("withdraw", () => {
         userReceiptTokenAccount,
         user.publicKey,
         receiptTokenMint.publicKey,
-        TOKEN_2022_PROGRAM_ID,
-      ),
+        TOKEN_2022_PROGRAM_ID
+      )
     );
     const txSig = await anchor.web3.sendAndConfirmTransaction(
       provider.connection,
       tx,
-      [admin],
+      [admin]
     );
   });
 
@@ -101,7 +101,7 @@ export const withdraw = describe("withdraw", () => {
         program.provider.connection,
         userReceiptTokenAccount,
         undefined,
-        TOKEN_2022_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID
       )
     ).amount;
 
@@ -124,7 +124,7 @@ export const withdraw = describe("withdraw", () => {
         program.provider.connection,
         userReceiptTokenAccount,
         undefined,
-        TOKEN_2022_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID
       )
     ).amount;
     expect(balanceBefore - balanceAfter).to.equal(BigInt(3 * amount));
@@ -137,7 +137,7 @@ export const withdraw = describe("withdraw", () => {
         program.provider.connection,
         userReceiptTokenAccount,
         undefined,
-        TOKEN_2022_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID
       )
     ).amount;
 
@@ -158,7 +158,7 @@ export const withdraw = describe("withdraw", () => {
         program.provider.connection,
         userReceiptTokenAccount,
         undefined,
-        TOKEN_2022_PROGRAM_ID,
+        TOKEN_2022_PROGRAM_ID
       )
     ).amount;
     expect(balanceAfter - balanceBefore).to.equal(BigInt(amount));
@@ -170,20 +170,38 @@ export const withdraw = describe("withdraw", () => {
           user: user.publicKey,
         })
         .signers([user])
-        .rpc(),
+        .rpc()
     ).to.eventually.throw("FundWithdrawalRequestNotFound");
   });
 
   it("Process all withdrawals", async () => {
     const amount = 1 * 10 ** decimals;
 
-    await program.methods
-      .fundProcessWithdrawalRequestsForTest()
-      .accounts({
-        payer: admin.publicKey,
-      })
-      .signers([admin])
-      .rpc();
+    const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda))
+      .data.v2[0].withdrawalStatus.pendingBatchWithdrawal;
+
+    console.log(pendingBatchWithdrawal);
+
+    console.log(
+      "Sol Amount In",
+      (
+        await program.account.fund.fetch(fund_pda)
+      ).data.v2[0].solAmountIn.toNumber()
+    );
+
+    console.log(
+      "receiptTokenToProcess",
+      pendingBatchWithdrawal.receiptTokenToProcess.toNumber()
+    );
+
+    console.log(
+      (
+        await program.account.fund.fetch(fund_pda)
+      ).data.v2[0].solAmountIn.toNumber() -
+        pendingBatchWithdrawal.receiptTokenToProcess.toNumber()
+    );
+
+    await program.methods.operatorRun().accounts({}).signers([]).rpc();
 
     const withdrawalStatus = (await program.account.fund.fetch(fund_pda)).data
       .v2[0].withdrawalStatus;
@@ -199,7 +217,7 @@ export const withdraw = describe("withdraw", () => {
     const sol_withdraw_fee_rate = 10;
     const fee = (amount * sol_withdraw_fee_rate) / 10000;
     const balanceBefore = await program.provider.connection.getBalance(
-      user.publicKey,
+      user.publicKey
     );
 
     await program.methods
@@ -211,7 +229,7 @@ export const withdraw = describe("withdraw", () => {
       .rpc();
 
     const balanceAfter = await program.provider.connection.getBalance(
-      user.publicKey,
+      user.publicKey
     );
     expect(balanceAfter - balanceBefore).to.equal(amount - fee);
 
@@ -235,7 +253,7 @@ export const withdraw = describe("withdraw", () => {
           user: user.publicKey,
         })
         .signers([user])
-        .rpc(),
+        .rpc()
     ).to.eventually.throw("FundWithdrawalDisabled");
 
     expect(
@@ -245,7 +263,7 @@ export const withdraw = describe("withdraw", () => {
           user: user.publicKey,
         })
         .signers([user])
-        .rpc(),
+        .rpc()
     ).to.eventually.throw("FundWithdrawalDisabled");
   });
 });
