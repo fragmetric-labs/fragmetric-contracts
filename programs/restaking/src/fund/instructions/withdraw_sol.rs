@@ -58,16 +58,15 @@ impl<'info> FundWithdrawSOL<'info> {
         let admin = ctx.accounts.fund.admin;
         let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
         let fund = ctx.accounts.fund.to_latest_version();
-        emit!(FundSOLWithdrawed {
+        emit!(FundSOLWithdrawn {
             user: ctx.accounts.user.key(),
-            user_receipt_account: ctx.accounts.user_receipt.key(),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             request_id,
             lrt_mint: ctx.accounts.receipt_token_mint.key(),
             lrt_amount: request.receipt_token_amount,
             sol_withdraw_amount,
             sol_fee_amount,
             fund_info: fund.to_info(admin, receipt_token_mint),
-            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
         });
 
         Ok(())

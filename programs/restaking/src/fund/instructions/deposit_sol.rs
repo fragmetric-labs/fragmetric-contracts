@@ -74,6 +74,7 @@ impl<'info> FundDepositSOL<'info> {
         emit!(FundSOLDeposited {
             user: ctx.accounts.user.key(),
             user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             sol_deposit_amount: amount,
             sol_amount_in_fund: fund.sol_amount_in,
             minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
@@ -82,7 +83,6 @@ impl<'info> FundDepositSOL<'info> {
             wallet_provider: None,
             fpoint_accrual_rate_multiplier: None,
             fund_info: fund.to_info(admin, receipt_token_mint),
-            user_receipt: Clone::clone(&ctx.accounts.user_receipt),
         });
 
         Ok(())

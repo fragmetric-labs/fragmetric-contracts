@@ -3,9 +3,9 @@ use anchor_lang::prelude::*;
 use crate::fund::*;
 
 #[event]
-pub struct FundSOLWithdrawed {
+pub struct FundSOLWithdrawn {
     pub user: Pubkey,
-    pub user_receipt_account: Pubkey, // Receipt of withdrawal request
+    pub user_receipt: UserReceipt,
 
     pub request_id: u64,
     pub lrt_mint: Pubkey,
@@ -15,5 +15,4 @@ pub struct FundSOLWithdrawed {
     pub sol_fee_amount: u64,
 
     pub fund_info: FundInfo,
-    pub user_receipt: UserReceipt,
 }

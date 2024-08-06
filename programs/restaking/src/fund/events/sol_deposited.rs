@@ -6,6 +6,7 @@ use crate::fund::*;
 pub struct FundSOLDeposited {
     pub user: Pubkey,
     pub user_lrt_account: Pubkey,
+    pub user_receipt: UserReceipt,
 
     pub sol_deposit_amount: u64,
     pub sol_amount_in_fund: u128,
@@ -18,5 +19,4 @@ pub struct FundSOLDeposited {
     pub fpoint_accrual_rate_multiplier: Option<f32>,
 
     pub fund_info: FundInfo,
-    pub user_receipt: UserReceipt,
 }

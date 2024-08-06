@@ -1,15 +1,15 @@
 mod info;
 mod sol_deposited;
-mod sol_withdrawed;
+mod sol_withdrawn;
 mod token_deposited;
-mod withdrawal_request_cancelled;
+mod withdrawal_request_canceled;
 mod withdrawal_requested;
 
 pub use info::*;
 pub use sol_deposited::*;
-pub use sol_withdrawed::*;
+pub use sol_withdrawn::*;
 pub use token_deposited::*;
-pub use withdrawal_request_cancelled::*;
+pub use withdrawal_request_canceled::*;
 pub use withdrawal_requested::*;
 
 // // TO BE DONE

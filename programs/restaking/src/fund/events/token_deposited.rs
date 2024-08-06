@@ -6,6 +6,7 @@ use crate::fund::*;
 pub struct FundTokenDeposited {
     pub user: Pubkey,
     pub user_lrt_account: Pubkey,
+    pub user_receipt: UserReceipt,
 
     pub deposited_token_mint: Pubkey,
     pub deposited_token_user_account: Pubkey,
@@ -21,5 +22,4 @@ pub struct FundTokenDeposited {
     pub fpoint_accrual_rate_multiplier: Option<f32>,
 
     pub fund_info: FundInfo,
-    pub user_receipt: UserReceipt,
 }
