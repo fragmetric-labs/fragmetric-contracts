@@ -14,16 +14,16 @@ pub struct FundInitialize<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
         bump,
         space = 8 + Fund::INIT_SPACE,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
         bump,
@@ -34,7 +34,7 @@ pub struct FundInitialize<'info> {
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = fund_token_authority,
