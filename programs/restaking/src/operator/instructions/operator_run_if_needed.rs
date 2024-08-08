@@ -57,15 +57,10 @@ impl<'info> OperatorRunIfNeeded<'info> {
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
         let current_time = Clock::get()?.unix_timestamp;
 
-        let mut threshold_satified = match fund.withdrawal_status.last_batch_processing_started_at {
-            Some(x)
-                if (current_time - x)
-                    > fund.withdrawal_status.batch_processing_threshold_duration =>
-            {
-                true
-            }
-            _ => false,
-        };
+        let mut threshold_satified = matches!(
+            fund.withdrawal_status.last_batch_processing_started_at,
+            Some(x) if (current_time - x) > fund.withdrawal_status.batch_processing_threshold_duration
+        );
 
         if fund
             .withdrawal_status
@@ -83,18 +78,21 @@ impl<'info> OperatorRunIfNeeded<'info> {
         fund.withdrawal_status
             .start_processing_pending_batch_withdrawal()?;
 
-        let receipt_token_amount_to_burn = fund
+        let mut receipt_token_amount_to_burn: u64 = 0;
+        for batch in fund
             .withdrawal_status
             .batch_withdrawals_in_progress
             .iter_mut()
-            .map(|batch| {
-                let amount = batch.receipt_token_to_process;
-                batch.record_unstaking_start(amount as u64);
-                amount
-            })
-            .sum();
+        {
+            let amount = u64::try_from(batch.receipt_token_to_process)
+                .map_err(|_| error!(ErrorCode::CalculationFailure))?;
+            batch.record_unstaking_start(amount)?;
+            receipt_token_amount_to_burn = receipt_token_amount_to_burn
+                .checked_add(amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        }
 
-        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
+        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn)?;
 
         let fund = ctx.accounts.fund.to_latest_version();
 
@@ -111,20 +109,30 @@ impl<'info> OperatorRunIfNeeded<'info> {
             }
 
             let receipt_token_amount = std::cmp::min(
-                burned_receipt_token_amount,
+                burned_receipt_token_amount as u128,
                 batch.receipt_token_being_processed,
-            );
+            ) as u64;
 
             burned_receipt_token_amount -= receipt_token_amount;
-            let sol_reserved = receipt_token_amount * unstaking_ratio;
-            batch.record_unstaking_end(receipt_token_amount as u64, sol_reserved as u64);
+            let sol_reserved = u64::try_from(
+                (receipt_token_amount as u128)
+                    .checked_mul(unstaking_ratio)
+                    .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+            )
+            .map_err(|_| error!(ErrorCode::CalculationFailure))?;
+            batch.record_unstaking_end(receipt_token_amount, sol_reserved)?;
         }
 
-        let sol_amount_moved = unstaking_ratio * receipt_token_amount_to_burn;
+        let sol_amount_moved = u64::try_from(
+            (receipt_token_amount_to_burn as u128)
+                .checked_mul(unstaking_ratio)
+                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+        )
+        .map_err(|_| error!(ErrorCode::CalculationFailure))?;
 
         fund.sol_amount_in = fund
             .sol_amount_in
-            .checked_sub(sol_amount_moved)
+            .checked_sub(sol_amount_moved as u128)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
         fund.withdrawal_status
