@@ -48,7 +48,7 @@ pub struct OperatorRunIfNeeded<'info> {
 }
 
 impl<'info> OperatorRunIfNeeded<'info> {
-    /// RUn operator if conditions are met.
+    /// Run operator if conditions are met.
     /// This instructions is available to anyone.
     /// However, the threshold should be met
     pub fn operator_run_if_needed(mut ctx: Context<Self>) -> Result<()> {
@@ -76,9 +76,12 @@ impl<'info> OperatorRunIfNeeded<'info> {
             threshold_satified = true;
         }
 
-        if threshold_satified {
+        if !threshold_satified {
             return err!(ErrorCode::OperatorUnmetThreshold);
         }
+
+        fund.withdrawal_status
+            .start_processing_pending_batch_withdrawal()?;
 
         let receipt_token_amount_to_burn = fund
             .withdrawal_status
@@ -90,9 +93,6 @@ impl<'info> OperatorRunIfNeeded<'info> {
                 amount
             })
             .sum();
-
-        fund.withdrawal_status
-            .start_processing_pending_batch_withdrawal()?;
 
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
 
