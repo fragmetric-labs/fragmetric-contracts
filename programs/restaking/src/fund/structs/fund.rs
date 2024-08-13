@@ -7,19 +7,19 @@ pub struct Fund {
     pub receipt_token_mint: Pubkey,
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
-    pub sol_amount_in: u128, // 16
+    pub sol_amount_in: u64,
     pub withdrawal_status: WithdrawalStatus,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenInfo {
     pub address: Pubkey,
-    pub token_cap: u128,
-    pub token_amount_in: u128,
+    pub token_cap: u64,
+    pub token_amount_in: u64,
 }
 
 impl TokenInfo {
-    pub fn empty(address: Pubkey, token_cap: u128) -> Self {
+    pub fn empty(address: Pubkey, token_cap: u64) -> Self {
         Self {
             address,
             token_cap,
@@ -40,7 +40,7 @@ pub struct WithdrawalStatus {
 
     pub sol_withdrawal_fee_rate: u16,
     pub withdrawal_enabled_flag: bool,
-    pub batch_processing_threshold_amount: u128,
+    pub batch_processing_threshold_amount: u64,
     pub batch_processing_threshold_duration: i64,
 
     // Withdrawal Status = PENDING
@@ -85,10 +85,10 @@ impl WithdrawalStatus {
 pub struct BatchWithdrawal {
     pub batch_id: u64,
     pub num_withdrawal_requests: u64,
-    pub receipt_token_to_process: u128,
-    pub receipt_token_being_processed: u128,
-    pub receipt_token_processed: u128,
-    pub sol_reserved: u128,
+    pub receipt_token_to_process: u64,
+    pub receipt_token_being_processed: u64,
+    pub receipt_token_processed: u64,
+    pub sol_reserved: u64,
     pub processing_started_at: Option<i64>,
 }
 
@@ -111,5 +111,5 @@ pub struct ReservedFund {
     pub num_completed_withdrawal_requests: u64,
     pub total_receipt_token_processed: u128,
     pub total_sol_reserved: u128,
-    pub sol_remaining: u128,
+    pub sol_remaining: u64,
 }

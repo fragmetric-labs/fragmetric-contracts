@@ -40,7 +40,7 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,

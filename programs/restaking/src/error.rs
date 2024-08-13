@@ -32,4 +32,6 @@ pub enum ErrorCode {
     FundWithdrawalDisabled,
     #[msg("Withdrawal request already started processing")]
     FundWithdrawalAlreadyInProgress,
+    #[msg("Calculation failed due to overflow/underflow")]
+    CalculationFailure,
 }

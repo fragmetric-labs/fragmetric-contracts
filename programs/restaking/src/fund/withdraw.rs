@@ -3,14 +3,24 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl BatchWithdrawal {
-    fn add_withdrawal_request(&mut self, amount: u64) {
+    fn add_withdrawal_request(&mut self, receipt_token_amount: u64) -> Result<()> {
         self.num_withdrawal_requests += 1;
-        self.receipt_token_to_process += amount as u128;
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_add(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+
+        Ok(())
     }
 
-    fn remove_withdrawal_request(&mut self, amount: u64) {
+    fn remove_withdrawal_request(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests -= 1;
-        self.receipt_token_to_process -= amount as u128;
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_sub(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+
+        Ok(())
     }
 
     fn start_batch_processing(&mut self) -> Result<()> {
@@ -25,31 +35,65 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    pub(crate) fn record_unstaking_start(&mut self, receipt_token_amount: u64) {
-        self.receipt_token_to_process -= receipt_token_amount as u128;
-        self.receipt_token_being_processed += receipt_token_amount as u128;
+    pub(crate) fn record_unstaking_start(&mut self, receipt_token_amount: u64) -> Result<()> {
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_sub(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.receipt_token_being_processed = self
+            .receipt_token_being_processed
+            .checked_add(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+
+        Ok(())
     }
 
     // Called by operator
-    pub(crate) fn record_unstaking_end(&mut self, receipt_token_amount: u64, sol_amount: u64) {
-        self.receipt_token_being_processed -= receipt_token_amount as u128;
-        self.receipt_token_processed += receipt_token_amount as u128;
-        self.sol_reserved += sol_amount as u128;
+    pub(crate) fn record_unstaking_end(
+        &mut self,
+        receipt_token_amount: u64,
+        sol_amount: u64,
+    ) -> Result<()> {
+        self.receipt_token_being_processed = self
+            .receipt_token_being_processed
+            .checked_sub(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.receipt_token_processed = self
+            .receipt_token_processed
+            .checked_add(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.sol_reserved = self
+            .sol_reserved
+            .checked_add(sol_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+
+        Ok(())
     }
 }
 
 impl ReservedFund {
-    fn record_completed_batch_withdrawal(&mut self, batch: BatchWithdrawal) {
+    fn record_completed_batch_withdrawal(&mut self, batch: BatchWithdrawal) -> Result<()> {
         self.num_completed_withdrawal_requests += batch.num_withdrawal_requests;
-        self.total_receipt_token_processed += batch.receipt_token_processed;
-        self.total_sol_reserved += batch.sol_reserved;
-        self.sol_remaining += batch.sol_reserved;
+        self.total_receipt_token_processed = self
+            .total_receipt_token_processed
+            .checked_add(batch.receipt_token_processed as u128)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.total_sol_reserved = self
+            .total_sol_reserved
+            .checked_add(batch.sol_reserved as u128)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.sol_remaining = self
+            .sol_remaining
+            .checked_add(batch.sol_reserved)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+
+        Ok(())
     }
 
     fn withdraw_sol(&mut self, amount: u64) -> Result<()> {
         self.sol_remaining = self
             .sol_remaining
-            .checked_sub(amount as u128)
+            .checked_sub(amount)
             .ok_or_else(|| error!(ErrorCode::FundNotEnoughReservedSol))?;
 
         Ok(())
@@ -61,13 +105,13 @@ impl WithdrawalStatus {
         &mut self,
         receipt_token_amount: u64,
     ) -> Result<WithdrawalRequest> {
-        self.check_is_withdrawal_enabled()?;
+        self.check_withdrawal_enabled()?;
 
         let request_id = self.next_request_id;
         self.next_request_id += 1;
 
         self.pending_batch_withdrawal
-            .add_withdrawal_request(receipt_token_amount);
+            .add_withdrawal_request(receipt_token_amount)?;
         WithdrawalRequest::new(
             self.pending_batch_withdrawal.batch_id,
             request_id,
@@ -80,27 +124,32 @@ impl WithdrawalStatus {
         batch_id: u64,
         receipt_token_amount: u64,
     ) -> Result<()> {
-        self.check_is_batch_processing_not_started(batch_id)?;
+        self.check_batch_processing_not_started(batch_id)?;
         self.pending_batch_withdrawal
-            .remove_withdrawal_request(receipt_token_amount);
-
-        Ok(())
+            .remove_withdrawal_request(receipt_token_amount)
     }
 
-    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<u64> {
-        self.check_is_withdrawal_enabled()?;
-        self.check_is_batch_processing_completed(batch_id)?;
-        let amount = self.deduct_withdrawal_fee(amount);
-        self.reserved_fund.withdraw_sol(amount)?;
-
-        Ok(amount)
+    pub(super) fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {
+        self.__calculate_sol_withdrawal_fee(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 
-    fn deduct_withdrawal_fee(&self, amount: u64) -> u64 {
-        amount - amount * self.sol_withdrawal_fee_rate as u64 / Self::WITHDRAWAL_FEE_RATE_DIVISOR
+    fn __calculate_sol_withdrawal_fee(&self, amount: u64) -> Option<u64> {
+        u64::try_from(
+            (amount as u128)
+                .checked_mul(self.sol_withdrawal_fee_rate as u128)?
+                .checked_div(Self::WITHDRAWAL_FEE_RATE_DIVISOR as u128)?,
+        )
+        .ok()
     }
 
-    fn check_is_withdrawal_enabled(&self) -> Result<()> {
+    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
+        self.check_withdrawal_enabled()?;
+        self.check_batch_processing_completed(batch_id)?;
+        self.reserved_fund.withdraw_sol(amount)
+    }
+
+    fn check_withdrawal_enabled(&self) -> Result<()> {
         if !self.withdrawal_enabled_flag {
             err!(ErrorCode::FundWithdrawalDisabled)?
         }
@@ -108,7 +157,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn check_is_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
+    fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
         if batch_id < self.pending_batch_withdrawal.batch_id {
             err!(ErrorCode::FundWithdrawalAlreadyInProgress)?
         }
@@ -116,7 +165,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn check_is_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
+    fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
             err!(ErrorCode::FundWithdrawalNotCompleted)?
         }
@@ -147,9 +196,11 @@ impl WithdrawalStatus {
             self.last_completed_batch_id = batch.batch_id;
             self.last_batch_processing_completed_at = Some(Clock::get()?.unix_timestamp);
         }
-        completed_batch_withdrawals.into_iter().for_each(|batch| {
-            self.reserved_fund.record_completed_batch_withdrawal(batch);
-        });
+        for batch in completed_batch_withdrawals {
+            self.reserved_fund
+                .record_completed_batch_withdrawal(batch)?;
+        }
+
         Ok(())
     }
 

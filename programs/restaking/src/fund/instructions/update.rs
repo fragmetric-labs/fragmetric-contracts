@@ -13,14 +13,14 @@ pub struct FundUpdate<'info> {
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 }
 
 impl<'info> FundUpdate<'info> {
-    pub fn add_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u128) -> Result<()> {
+    pub fn add_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
         ctx.accounts.fund.add_whitelisted_token(token, token_cap)
     }
 
@@ -47,7 +47,7 @@ impl<'info> FundUpdate<'info> {
 
     pub fn update_batch_processing_threshold(
         ctx: Context<Self>,
-        amount: Option<u128>,
+        amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
         ctx.accounts

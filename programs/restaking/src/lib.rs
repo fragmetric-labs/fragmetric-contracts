@@ -57,7 +57,7 @@ pub mod restaking {
 
     pub fn fund_initialize_batch_processing_threshold(
         ctx: Context<FundInitializeFields>,
-        amount: u128,
+        amount: u64,
         duration: i64,
     ) -> Result<()> {
         FundInitializeFields::initialize_batch_processing_threshold(ctx, amount, duration)
@@ -66,7 +66,7 @@ pub mod restaking {
     pub fn fund_add_whitelisted_token(
         ctx: Context<FundUpdate>,
         token: Pubkey,
-        token_cap: u128,
+        token_cap: u64,
     ) -> Result<()> {
         FundUpdate::add_whitelisted_token(ctx, token, token_cap)
     }
@@ -92,7 +92,7 @@ pub mod restaking {
 
     pub fn fund_update_batch_processing_threshold(
         ctx: Context<FundUpdate>,
-        amount: Option<u128>,
+        amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
         FundUpdate::update_batch_processing_threshold(ctx, amount, duration)

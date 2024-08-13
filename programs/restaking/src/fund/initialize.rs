@@ -18,13 +18,13 @@ impl Fund {
         &mut self,
         whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        Self::check_duplicates(&whitelisted_tokens)?;
+        Self::check_duplicate_does_not_exist(&whitelisted_tokens)?;
         self.whitelisted_tokens = whitelisted_tokens;
 
         Ok(())
     }
 
-    fn check_duplicates(tokens: &[TokenInfo]) -> Result<()> {
+    fn check_duplicate_does_not_exist(tokens: &[TokenInfo]) -> Result<()> {
         let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
         if token_addresses.len() != tokens.len() {
             err!(ErrorCode::FundDuplicatedToken)?
@@ -53,7 +53,7 @@ impl WithdrawalStatus {
 
     pub(super) fn set_batch_processing_threshold(
         &mut self,
-        amount: Option<u128>,
+        amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
         // Threshold 값에 대한 validation 필요?

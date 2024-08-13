@@ -19,7 +19,7 @@ pub struct FundInitialize<'info> {
         bump,
         space = 8 + Fund::INIT_SPACE,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         init,

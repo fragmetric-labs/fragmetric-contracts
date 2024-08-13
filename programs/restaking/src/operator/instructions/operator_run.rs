@@ -18,7 +18,7 @@ pub struct OperatorRun<'info> {
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         mut,
@@ -45,49 +45,51 @@ impl<'info> OperatorRun<'info> {
     /// Manually run the operator.
     /// This instruction is only available to ADMIN
     pub fn operator_run(mut ctx: Context<Self>) -> Result<()> {
-        let fund = &mut ctx.accounts.fund;
+        let withdrawal_status = &mut ctx.accounts.fund.withdrawal_status;
 
-        fund.withdrawal_status
-            .start_processing_pending_batch_withdrawal()?;
+        withdrawal_status.start_processing_pending_batch_withdrawal()?;
 
-        let receipt_token_amount_to_burn = fund
-            .withdrawal_status
-            .batch_withdrawals_in_progress
-            .iter_mut()
-            .map(|batch| {
-                let amount = batch.receipt_token_to_process;
-                batch.record_unstaking_start(amount as u64);
-                amount
-            })
-            .sum();
+        let mut receipt_token_amount_to_burn: u64 = 0;
+        for batch in &mut withdrawal_status.batch_withdrawals_in_progress {
+            let amount = batch.receipt_token_to_process;
+            batch.record_unstaking_start(amount)?;
+            receipt_token_amount_to_burn = receipt_token_amount_to_burn
+                .checked_add(amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        }
 
         let unstaking_ratio = 1;
 
-        let mut burned_receipt_token_amount = receipt_token_amount_to_burn;
-        for batch in fund
-            .withdrawal_status
-            .batch_withdrawals_in_progress
-            .iter_mut()
-        {
-            if burned_receipt_token_amount == 0 {
+        let mut receipt_token_amount_not_burned = receipt_token_amount_to_burn;
+        for batch in &mut withdrawal_status.batch_withdrawals_in_progress {
+            if receipt_token_amount_not_burned == 0 {
                 break;
             }
 
             let receipt_token_amount = std::cmp::min(
-                burned_receipt_token_amount,
+                receipt_token_amount_not_burned,
                 batch.receipt_token_being_processed,
             );
-
-            burned_receipt_token_amount -= receipt_token_amount;
-            let sol_reserved = receipt_token_amount * unstaking_ratio;
-            batch.record_unstaking_end(receipt_token_amount as u64, sol_reserved as u64);
+            receipt_token_amount_not_burned -= receipt_token_amount; // guaranteed to be safe
+            let sol_amount_reserved = u64::try_from(
+                (receipt_token_amount as u128)
+                    .checked_mul(unstaking_ratio)
+                    .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+            )
+            .map_err(|_| error!(ErrorCode::CalculationFailure))?;
+            batch.record_unstaking_end(receipt_token_amount, sol_amount_reserved)?;
         }
 
-        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
+        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn)?;
 
         let fund = &mut ctx.accounts.fund;
 
-        let sol_amount_moved = unstaking_ratio * receipt_token_amount_to_burn;
+        let sol_amount_moved = u64::try_from(
+            unstaking_ratio
+                .checked_mul(receipt_token_amount_to_burn as u128)
+                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+        )
+        .map_err(|_| error!(ErrorCode::CalculationFailure))?;
 
         fund.sol_amount_in = fund
             .sol_amount_in

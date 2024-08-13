@@ -13,7 +13,7 @@ pub struct FundInitializeFields<'info> {
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -39,7 +39,7 @@ impl<'info> FundInitializeFields<'info> {
 
     pub fn initialize_batch_processing_threshold(
         ctx: Context<Self>,
-        amount: u128,
+        amount: u64,
         duration: i64,
     ) -> Result<()> {
         ctx.accounts

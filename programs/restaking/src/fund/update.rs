@@ -15,8 +15,8 @@ impl Fund {
         Ok(())
     }
 
-    pub(super) fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u128) -> Result<()> {
-        self.check_if_token_exists(&token)?;
+    pub(super) fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) -> Result<()> {
+        self.check_token_does_not_exist(&token)?;
 
         let token_info = TokenInfo::empty(token, token_cap);
         self.whitelisted_tokens.push(token_info);
@@ -24,7 +24,7 @@ impl Fund {
         Ok(())
     }
 
-    fn check_if_token_exists(&self, token: &Pubkey) -> Result<()> {
+    fn check_token_does_not_exist(&self, token: &Pubkey) -> Result<()> {
         if self
             .whitelisted_tokens
             .iter()

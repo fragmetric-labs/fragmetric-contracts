@@ -20,7 +20,7 @@ pub struct FundWithdrawSOL<'info> {
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -34,12 +34,15 @@ impl<'info> FundWithdrawSOL<'info> {
             .pop_withdrawal_request(request_id)?;
 
         let sol_amount = Self::get_sol_amount_by_exchange_rate(&ctx, request.receipt_token_amount)?;
-        let sol_withdraw_amount = ctx
-            .accounts
-            .fund
+        let fund = &mut ctx.accounts.fund;
+        let sol_fee_amount = fund
             .withdrawal_status
-            .withdraw_sol(request.batch_id, sol_amount)?;
-        let sol_fee_amount = sol_amount - sol_withdraw_amount;
+            .calculate_sol_withdrawal_fee(sol_amount)?;
+        let sol_withdraw_amount = sol_amount
+            .checked_sub(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        fund.withdrawal_status
+            .withdraw_sol(request.batch_id, sol_withdraw_amount)?;
 
         Self::transfer_sol(&mut ctx, sol_withdraw_amount)
             .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;
