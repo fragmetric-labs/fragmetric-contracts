@@ -24,8 +24,8 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts.fund.add_whitelisted_token(token, token_cap)
     }
 
-    pub fn update_token_info(ctx: Context<Self>, token: Pubkey, info: TokenInfo) -> Result<()> {
-        ctx.accounts.fund.update_token(token, info)
+    pub fn update_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
+        ctx.accounts.fund.update_whitelisted_token(token, token_cap)
     }
 
     pub fn update_sol_withdrawal_fee_rate(

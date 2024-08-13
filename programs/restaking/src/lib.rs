@@ -71,12 +71,12 @@ pub mod restaking {
         FundUpdate::add_whitelisted_token(ctx, token, token_cap)
     }
 
-    pub fn fund_update_token_info(
+    pub fn fund_update_whitelisted_token(
         ctx: Context<FundUpdate>,
         token: Pubkey,
-        info: TokenInfo,
+        token_cap: u64,
     ) -> Result<()> {
-        FundUpdate::update_token_info(ctx, token, info)
+        FundUpdate::update_whitelisted_token(ctx, token, token_cap)
     }
 
     pub fn fund_update_sol_withdrawal_fee_rate(

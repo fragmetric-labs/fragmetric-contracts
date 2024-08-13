@@ -3,14 +3,14 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl Fund {
-    pub(super) fn update_token(&mut self, token: Pubkey, info: TokenInfo) -> Result<()> {
+    pub(super) fn update_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) -> Result<()> {
         let token_info = self
             .whitelisted_tokens
             .iter_mut()
             .find(|info| info.address == token)
             .ok_or(ErrorCode::FundNotExistingToken)?;
 
-        *token_info = info;
+        token_info.token_cap = token_cap;
 
         Ok(())
     }
@@ -96,7 +96,7 @@ mod tests {
         fund.set_whitelisted_tokens(tokens).unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
 
-        fund.update_token(token1_update.address, token1_update)
+        fund.update_whitelisted_token(token1_update.address, token1_update.token_cap)
             .unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
     }
