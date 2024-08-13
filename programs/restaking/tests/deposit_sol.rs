@@ -3,7 +3,6 @@ use anchor_spl::{
     associated_token::{self, get_associated_token_address_with_program_id},
     token_interface::spl_token_2022,
 };
-use fragmetric_util::Upgradable;
 
 use restaking::constants::{FRAGSOL_MINT_ADDRESS, USER_RECEIPT_SEED};
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
@@ -38,13 +37,9 @@ async fn test_deposit_sol() {
             system_program: system_program::ID,
         }
         .to_account_metas(None),
-        data: restaking::instruction::FundDepositSol {
-            request: restaking::fund::FundDepositSOLRequest::V1(
-                restaking::fund::FundDepositSOLRequestV1 { amount },
-            ),
-        }
-        .try_to_vec()
-        .unwrap(),
+        data: restaking::instruction::FundDepositSol { amount }
+            .try_to_vec()
+            .unwrap(),
     };
 
     let deposit_sol_tx = Transaction::new_signed_with_payer(
@@ -65,10 +60,7 @@ async fn test_deposit_sol() {
     msg!("fund admin: {}", _fund.admin);
     msg!(
         "fund sol_withdrawal_fee_rate: {}",
-        _fund
-            .to_latest_version()
-            .withdrawal_status
-            .sol_withdrawal_fee_rate
+        _fund.withdrawal_status.sol_withdrawal_fee_rate
     );
 }
 

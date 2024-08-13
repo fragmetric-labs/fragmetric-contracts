@@ -6,7 +6,6 @@ use anchor_spl::{
 };
 
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
-use fragmetric_util::Upgradable;
 
 #[derive(Accounts)]
 pub struct OperatorRunIfNeeded<'info> {
@@ -17,10 +16,6 @@ pub struct OperatorRunIfNeeded<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + Fund::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = payer,
-        realloc::zero = false,
     )]
     pub fund: Account<'info, Fund>,
 
@@ -44,7 +39,6 @@ pub struct OperatorRunIfNeeded<'info> {
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> OperatorRunIfNeeded<'info> {
@@ -52,20 +46,15 @@ impl<'info> OperatorRunIfNeeded<'info> {
     /// This instructions is available to anyone.
     /// However, the threshold should be met
     pub fn operator_run_if_needed(mut ctx: Context<Self>) -> Result<()> {
-        let fund = ctx.accounts.fund.to_latest_version();
+        let fund = &mut ctx.accounts.fund;
 
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
         let current_time = Clock::get()?.unix_timestamp;
 
-        let mut threshold_satified = match fund.withdrawal_status.last_batch_processing_started_at {
-            Some(x)
-                if (current_time - x)
-                    > fund.withdrawal_status.batch_processing_threshold_duration =>
-            {
-                true
-            }
-            _ => false,
-        };
+        let mut threshold_satified = matches!(
+            fund.withdrawal_status.last_batch_processing_started_at,
+            Some(x) if (current_time - x) > fund.withdrawal_status.batch_processing_threshold_duration
+        );
 
         if fund
             .withdrawal_status
@@ -96,7 +85,7 @@ impl<'info> OperatorRunIfNeeded<'info> {
 
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
 
-        let fund = ctx.accounts.fund.to_latest_version();
+        let fund = &mut ctx.accounts.fund;
 
         let unstaking_ratio = 1;
 

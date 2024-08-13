@@ -4,7 +4,6 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
-use fragmetric_util::Upgradable;
 
 use crate::{constants::*, fund::*, Empty};
 
@@ -55,11 +54,8 @@ impl<'info> FundInitialize<'info> {
         msg!("fund_token_authority: {}", fund_token_authority_key,);
 
         // let args = FundInitializeArgs::from(request);
-        ctx.accounts.fund.initialize(
-            ctx.accounts.admin.key(),
-            receipt_token_mint_key,
-            // ctx.accounts.receipt_token_lock_account.key(),
-        )?;
-        ctx.accounts.fund.to_latest_version().initialize()
+        ctx.accounts
+            .fund
+            .initialize(ctx.accounts.admin.key(), receipt_token_mint_key)
     }
 }

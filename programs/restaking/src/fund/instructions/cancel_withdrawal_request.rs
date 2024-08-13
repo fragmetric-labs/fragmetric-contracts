@@ -4,7 +4,6 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
-use fragmetric_util::Upgradable;
 
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
@@ -14,11 +13,9 @@ pub struct FundCancelWithdrawalRequest<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + UserReceipt::INIT_SPACE,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -26,10 +23,6 @@ pub struct FundCancelWithdrawalRequest<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + Fund::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = user,
-        realloc::zero = false,
     )]
     pub fund: Account<'info, Fund>,
 
@@ -43,8 +36,7 @@ pub struct FundCancelWithdrawalRequest<'info> {
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program,
@@ -60,7 +52,6 @@ pub struct FundCancelWithdrawalRequest<'info> {
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundCancelWithdrawalRequest<'info> {
@@ -71,7 +62,6 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .pop_withdrawal_request(request_id)?;
         ctx.accounts
             .fund
-            .to_latest_version()
             .withdrawal_status
             .cancel_withdrawal_request(request.batch_id, request.receipt_token_amount)?;
 

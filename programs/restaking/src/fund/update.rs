@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{error::ErrorCode, fund::*};
 
-impl FundV2 {
+impl Fund {
     pub(super) fn update_token(&mut self, token: Pubkey, info: TokenInfo) -> Result<()> {
         let token_info = self
             .whitelisted_tokens
@@ -43,7 +43,9 @@ mod tests {
 
     #[test]
     fn test_add_whitelisted_token() {
-        let mut fund = FundV2 {
+        let mut fund = Fund {
+            admin: Pubkey::default(),
+            receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
@@ -69,9 +71,9 @@ mod tests {
 
     #[test]
     fn test_update_token() {
-        let sol_withdrawal_fee_rate = 10;
-
-        let mut fund = FundV2 {
+        let mut fund = Fund {
+            admin: Pubkey::default(),
+            receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
@@ -91,11 +93,7 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         let tokens = vec![token1, token2];
 
-        fund.initialize().unwrap();
         fund.set_whitelisted_tokens(tokens).unwrap();
-        fund.withdrawal_status
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
-            .unwrap();
         println!("{:?}", fund.whitelisted_tokens.iter());
 
         fund.update_token(token1_update.address, token1_update)

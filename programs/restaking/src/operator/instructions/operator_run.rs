@@ -6,7 +6,6 @@ use anchor_spl::{
 };
 
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
-use fragmetric_util::Upgradable;
 
 #[derive(Accounts)]
 pub struct OperatorRun<'info> {
@@ -18,10 +17,6 @@ pub struct OperatorRun<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + Fund::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = admin,
-        realloc::zero = false,
     )]
     pub fund: Account<'info, Fund>,
 
@@ -44,14 +39,13 @@ pub struct OperatorRun<'info> {
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> OperatorRun<'info> {
     /// Manually run the operator.
     /// This instruction is only available to ADMIN
     pub fn operator_run(mut ctx: Context<Self>) -> Result<()> {
-        let fund = ctx.accounts.fund.to_latest_version();
+        let fund = &mut ctx.accounts.fund;
 
         fund.withdrawal_status
             .start_processing_pending_batch_withdrawal()?;
@@ -91,7 +85,7 @@ impl<'info> OperatorRun<'info> {
 
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn as u64)?;
 
-        let fund = ctx.accounts.fund.to_latest_version();
+        let fund = &mut ctx.accounts.fund;
 
         let sol_amount_moved = unstaking_ratio * receipt_token_amount_to_burn;
 

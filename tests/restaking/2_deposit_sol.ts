@@ -70,13 +70,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`fund balance before:`, fundBal_bef);
 
         const tx = await program.methods
-            .fundDepositSol({
-                v1: {
-                    0: {
-                        amount: amount,
-                    }
-                }
-            })
+            .fundDepositSol(amount)
             .accounts({
                 user: user.publicKey,
             })
@@ -98,7 +92,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`associatedToken address:`, associatedToken);
 
         // check the sol_amount_in has accumulated
-        let fundData = (await program.account.fund.fetch(fund_pda)).data.v2[0];
+        let fundData = await program.account.fund.fetch(fund_pda);
 
         console.log(`total sol amount in Fund:`, fundData.solAmountIn.toString());
         expect(fundData.solAmountIn.toString()).to.eq(amount.toString());

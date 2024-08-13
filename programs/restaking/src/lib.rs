@@ -65,23 +65,25 @@ pub mod restaking {
 
     pub fn fund_add_whitelisted_token(
         ctx: Context<FundUpdate>,
-        request: FundAddWhitelistedTokenRequest,
+        token: Pubkey,
+        token_cap: u128,
     ) -> Result<()> {
-        FundUpdate::add_whitelisted_token(ctx, request)
+        FundUpdate::add_whitelisted_token(ctx, token, token_cap)
     }
 
     pub fn fund_update_token_info(
         ctx: Context<FundUpdate>,
-        request: FundUpdateTokenInfoRequest,
+        token: Pubkey,
+        info: TokenInfo,
     ) -> Result<()> {
-        FundUpdate::update_token_info(ctx, request)
+        FundUpdate::update_token_info(ctx, token, info)
     }
 
     pub fn fund_update_sol_withdrawal_fee_rate(
         ctx: Context<FundUpdate>,
-        request: FundUpdateSolWithdrawalFeeRateRequest,
+        sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        FundUpdate::update_sol_withdrawal_fee_rate(ctx, request)
+        FundUpdate::update_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
     pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
@@ -96,18 +98,12 @@ pub mod restaking {
         FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
     }
 
-    pub fn fund_deposit_sol(
-        ctx: Context<FundDepositSOL>,
-        request: FundDepositSOLRequest,
-    ) -> Result<()> {
-        FundDepositSOL::deposit_sol(ctx, request)
+    pub fn fund_deposit_sol(ctx: Context<FundDepositSOL>, amount: u64) -> Result<()> {
+        FundDepositSOL::deposit_sol(ctx, amount)
     }
 
-    pub fn fund_deposit_token(
-        ctx: Context<FundDepositToken>,
-        request: FundDepositTokenRequest,
-    ) -> Result<()> {
-        FundDepositToken::deposit_token(ctx, request)
+    pub fn fund_deposit_token(ctx: Context<FundDepositToken>, amount: u64) -> Result<()> {
+        FundDepositToken::deposit_token(ctx, amount)
     }
 
     pub fn fund_request_withdrawal(

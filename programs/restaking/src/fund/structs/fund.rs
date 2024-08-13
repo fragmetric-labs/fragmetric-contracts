@@ -1,53 +1,10 @@
 use anchor_lang::prelude::*;
-use fragmetric_util::{RequireUpgradable, Upgradable};
 
 #[account]
-#[derive(InitSpace, RequireUpgradable)]
+#[derive(InitSpace)]
 pub struct Fund {
     pub admin: Pubkey,
     pub receipt_token_mint: Pubkey,
-    #[upgradable(latest = FundV2, variant = V2)]
-    pub data: VersionedFund,
-}
-
-impl Upgradable for Fund {
-    type LatestVersion = FundV2;
-
-    fn upgrade(&mut self) {
-        match self.data {
-            VersionedFund::V1(ref mut old) => {
-                let whitelisted_tokens = std::mem::take(&mut old.whitelisted_tokens);
-                self.data = VersionedFund::V2(FundV2 {
-                    whitelisted_tokens,
-                    sol_amount_in: old.sol_amount_in,
-                    withdrawal_status: WithdrawalStatus {
-                        sol_withdrawal_fee_rate: old.sol_withdrawal_fee_rate,
-                        ..Default::default()
-                    },
-                });
-            }
-            VersionedFund::V2(_) => (),
-        }
-    }
-}
-
-#[allow(clippy::large_enum_variant)]
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub enum VersionedFund {
-    V1(FundV1),
-    V2(FundV2),
-}
-
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct FundV1 {
-    pub sol_withdrawal_fee_rate: u16, // 2
-    #[max_len(20)]
-    pub whitelisted_tokens: Vec<TokenInfo>,
-    pub sol_amount_in: u128, // 16
-}
-
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct FundV2 {
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u128, // 16
@@ -112,6 +69,15 @@ impl Default for WithdrawalStatus {
             batch_withdrawals_in_progress: vec![],
             reserved_fund: Default::default(),
         }
+    }
+}
+
+impl WithdrawalStatus {
+    /// 1 fee rate = 1bps = 0.01%
+    pub const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
+
+    pub fn sol_withdrawal_fee_rate_f32(&self) -> f32 {
+        self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
 }
 

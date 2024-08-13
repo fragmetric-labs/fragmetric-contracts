@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use fragmetric_util::Upgradable;
 
 use crate::{constants::*, error::ErrorCode, fund::*};
 
@@ -13,9 +12,6 @@ pub struct FundWithdrawSOL<'info> {
         mut,
         seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + UserReceipt::INIT_SPACE,
-        realloc::payer = user,
-        realloc::zero = false,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -23,17 +19,11 @@ pub struct FundWithdrawSOL<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + Fund::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = user,
-        realloc::zero = false,
     )]
     pub fund: Account<'info, Fund>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundWithdrawSOL<'info> {
@@ -47,7 +37,6 @@ impl<'info> FundWithdrawSOL<'info> {
         let sol_withdraw_amount = ctx
             .accounts
             .fund
-            .to_latest_version()
             .withdrawal_status
             .withdraw_sol(request.batch_id, sol_amount)?;
         let sol_fee_amount = sol_amount - sol_withdraw_amount;
@@ -55,9 +44,6 @@ impl<'info> FundWithdrawSOL<'info> {
         Self::transfer_sol(&mut ctx, sol_withdraw_amount)
             .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;
 
-        let admin = ctx.accounts.fund.admin;
-        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
-        let fund = ctx.accounts.fund.to_latest_version();
         emit!(FundSOLWithdrawn {
             user: ctx.accounts.user.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
@@ -66,7 +52,7 @@ impl<'info> FundWithdrawSOL<'info> {
             lrt_amount: request.receipt_token_amount,
             sol_withdraw_amount,
             sol_fee_amount,
-            fund_info: fund.to_info(admin, receipt_token_mint),
+            fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
         });
 
         Ok(())

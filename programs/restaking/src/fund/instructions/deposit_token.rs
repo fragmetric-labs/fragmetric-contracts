@@ -4,7 +4,6 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
-use fragmetric_util::{request, Upgradable};
 
 use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
 
@@ -26,10 +25,6 @@ pub struct FundDepositToken<'info> {
         mut,
         seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
         bump,
-        realloc = 8 + Fund::INIT_SPACE,
-        // TODO must paid by fund
-        realloc::payer = user,
-        realloc::zero = false,
     )]
     pub fund: Account<'info, Fund>,
 
@@ -75,23 +70,17 @@ pub struct FundDepositToken<'info> {
 }
 
 impl<'info> FundDepositToken<'info> {
-    pub fn deposit_token(mut ctx: Context<Self>, request: FundDepositTokenRequest) -> Result<()> {
-        let FundDepositTokenArgs { amount } = request.into();
+    pub fn deposit_token(mut ctx: Context<Self>, amount: u64) -> Result<()> {
         Self::transfer_token_cpi(&ctx, amount)?;
 
         let Self {
             fund, token_mint, ..
         } = ctx.accounts;
-        let token_amount_in_fund = fund
-            .to_latest_version()
-            .deposit_token(token_mint.key(), amount)?;
+        let token_amount_in_fund = fund.deposit_token(token_mint.key(), amount)?;
 
         let mint_amount = Self::get_receipt_token_by_token_exchange_rate(&ctx, amount)?;
         Self::mint_receipt_token(&mut ctx, mint_amount)?;
 
-        let admin = ctx.accounts.fund.admin;
-        let receipt_token_mint = ctx.accounts.fund.receipt_token_mint;
-        let fund = ctx.accounts.fund.to_latest_version();
         emit!(FundTokenDeposited {
             user: ctx.accounts.user.key(),
             user_lrt_account: ctx.accounts.receipt_token_account.key(),
@@ -100,12 +89,12 @@ impl<'info> FundDepositToken<'info> {
             deposited_token_user_account: ctx.accounts.user_token_account.key(),
             token_deposit_amount: amount,
             token_amount_in_fund,
-            minted_lrt_mint: receipt_token_mint.key(),
+            minted_lrt_mint: ctx.accounts.fund.receipt_token_mint.key(),
             minted_lrt_amount: mint_amount,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
             wallet_provider: None,
             fpoint_accrual_rate_multiplier: None,
-            fund_info: fund.to_info(admin, receipt_token_mint),
+            fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
         });
 
         Ok(())
@@ -182,30 +171,5 @@ impl<'info> FundDepositToken<'info> {
             &ctx.accounts.fund,
             amount,
         )
-    }
-}
-
-pub struct FundDepositTokenArgs {
-    pub amount: u64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[request(FundDepositTokenArgs)]
-pub enum FundDepositTokenRequest {
-    V1(FundDepositTokenRequestV1),
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct FundDepositTokenRequestV1 {
-    pub amount: u64,
-}
-
-impl From<FundDepositTokenRequest> for FundDepositTokenArgs {
-    fn from(value: FundDepositTokenRequest) -> Self {
-        match value {
-            FundDepositTokenRequest::V1(value) => Self {
-                amount: value.amount,
-            },
-        }
     }
 }

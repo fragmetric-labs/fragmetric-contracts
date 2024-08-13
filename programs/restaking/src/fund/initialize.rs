@@ -8,12 +8,6 @@ impl Fund {
     pub(super) fn initialize(&mut self, admin: Pubkey, receipt_token_mint: Pubkey) -> Result<()> {
         self.admin = admin;
         self.receipt_token_mint = receipt_token_mint;
-        Ok(())
-    }
-}
-
-impl FundV2 {
-    pub(super) fn initialize(&mut self) -> Result<()> {
         self.sol_amount_in = 0;
         self.withdrawal_status = Default::default();
 
@@ -80,12 +74,16 @@ mod tests {
 
     #[test]
     fn test_initialize() {
+        let admin = Pubkey::new_unique();
+        let receipt_token_mint = Pubkey::new_unique();
         let sol_withdrawal_fee_rate = 100;
         let withdrawal_enabled_flag = false;
         let batch_processing_threshold_amount = 10;
         let batch_processing_threshold_duration = 10;
 
-        let mut fund = FundV2 {
+        let mut fund = Fund {
+            admin: Pubkey::default(),
+            receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
@@ -102,7 +100,7 @@ mod tests {
             token_amount_in: 2_000_000_000,
         };
 
-        fund.initialize().unwrap();
+        fund.initialize(admin, receipt_token_mint).unwrap();
 
         let tokens = vec![token1, token2];
         fund.set_whitelisted_tokens(tokens.clone()).unwrap();
@@ -120,6 +118,8 @@ mod tests {
             )
             .unwrap();
 
+        assert_eq!(fund.admin, admin);
+        assert_eq!(fund.receipt_token_mint, receipt_token_mint);
         for (actual, expected) in std::iter::zip(fund.whitelisted_tokens, tokens) {
             assert_eq!(actual.address, expected.address);
             assert_eq!(actual.token_cap, expected.token_cap);

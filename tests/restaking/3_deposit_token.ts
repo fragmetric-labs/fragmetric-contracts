@@ -226,13 +226,7 @@ export const deposit_token = describe("deposit_token", () => {
     it.skip("Deposit tokenMint1", async () => {
         try {
             const tx = await program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: tokenMint1,
@@ -243,7 +237,7 @@ export const deposit_token = describe("deposit_token", () => {
             console.log(`Deposit token tx: ${tx}`);
 
             // check if token's amount_in increased correctly
-            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens[0];
+            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens[0];
             console.log("Tokens from fund:", tokensFromFund.tokenAmountIn);
 
             expect(tokensFromFund.tokenAmountIn.toNumber()).to.eq(amount.toNumber());
@@ -256,13 +250,7 @@ export const deposit_token = describe("deposit_token", () => {
     it("Deposit bSOL, mSOL, JitoSOL, INF", async () => {
         const txs = new anchor.web3.Transaction().add(
             await program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
@@ -272,13 +260,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .signers([user])
                 .instruction(),
             await program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: mSOLMint.address,
@@ -288,13 +270,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .signers([user])
                 .instruction(),
             await program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: jitoSOLMint.address,
@@ -304,13 +280,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .signers([user])
                 .instruction(),
             await program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: infMint.address,
@@ -350,13 +320,7 @@ export const deposit_token = describe("deposit_token", () => {
 
         expect(
             program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: tokenMint1,
@@ -367,7 +331,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
+        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000).toNumber());
@@ -394,13 +358,7 @@ export const deposit_token = describe("deposit_token", () => {
 
         expect(
             program.methods
-                .fundDepositToken({
-                    v1: {
-                        0: {
-                            amount: amount,
-                        }
-                    }
-                })
+                .fundDepositToken(amount)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
@@ -411,7 +369,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
+        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000_000 * 10).toNumber());
