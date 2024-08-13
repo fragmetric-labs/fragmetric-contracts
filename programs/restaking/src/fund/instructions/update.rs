@@ -24,7 +24,11 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts.fund.add_whitelisted_token(token, token_cap)
     }
 
-    pub fn update_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
+    pub fn update_whitelisted_token(
+        ctx: Context<Self>,
+        token: Pubkey,
+        token_cap: u64,
+    ) -> Result<()> {
         ctx.accounts.fund.update_whitelisted_token(token, token_cap)
     }
 
