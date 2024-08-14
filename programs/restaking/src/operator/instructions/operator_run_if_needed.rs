@@ -31,7 +31,7 @@ pub struct OperatorRunIfNeeded<'info> {
     )]
     pub fund_token_authority: Account<'info, Empty>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
