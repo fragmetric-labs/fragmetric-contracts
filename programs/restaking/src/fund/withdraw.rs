@@ -130,17 +130,12 @@ impl WithdrawalStatus {
     }
 
     pub(super) fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {
-        self.__calculate_sol_withdrawal_fee(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
-    }
-
-    fn __calculate_sol_withdrawal_fee(&self, amount: u64) -> Option<u64> {
-        u64::try_from(
-            (amount as u128)
-                .checked_mul(self.sol_withdrawal_fee_rate as u128)?
-                .checked_div(Self::WITHDRAWAL_FEE_RATE_DIVISOR as u128)?,
+        crate::utils::proportional_amount(
+            amount,
+            self.sol_withdrawal_fee_rate as u64,
+            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
-        .ok()
+        .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 
     pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {

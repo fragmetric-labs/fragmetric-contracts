@@ -6,6 +6,7 @@ pub mod error;
 pub mod fund;
 pub mod operator;
 pub mod token;
+pub mod utils;
 // pub mod oracle;
 
 use common::*;
