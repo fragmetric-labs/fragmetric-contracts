@@ -11,6 +11,14 @@ pub struct Fund {
     pub withdrawal_status: WithdrawalStatus,
 }
 
+impl Fund {
+    pub fn whitelisted_token_mut(&mut self, address: Pubkey) -> Option<&mut TokenInfo> {
+        self.whitelisted_tokens
+            .iter_mut()
+            .find(|info| info.address == address)
+    }
+}
+
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenInfo {
     pub address: Pubkey,

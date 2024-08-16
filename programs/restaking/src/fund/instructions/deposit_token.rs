@@ -73,10 +73,14 @@ impl<'info> FundDepositToken<'info> {
     pub fn deposit_token(mut ctx: Context<Self>, amount: u64) -> Result<()> {
         Self::transfer_token_cpi(&ctx, amount)?;
 
-        let Self {
-            fund, token_mint, ..
-        } = ctx.accounts;
-        let token_amount_in_fund = fund.deposit_token(token_mint.key(), amount)?;
+        let token_mint = ctx.accounts.token_mint.key();
+        let token_info = ctx
+            .accounts
+            .fund
+            .whitelisted_token_mut(token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
+        token_info.deposit_token(amount)?;
+        let token_amount_in_fund = token_info.token_amount_in;
 
         let mint_amount = Self::get_receipt_token_by_token_exchange_rate(&ctx, amount)?;
         Self::mint_receipt_token(&mut ctx, mint_amount)?;

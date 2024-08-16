@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::{constants::*, fund::*};
+use crate::{constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundUpdate<'info> {
@@ -29,7 +29,11 @@ impl<'info> FundUpdate<'info> {
         token: Pubkey,
         token_cap: u64,
     ) -> Result<()> {
-        ctx.accounts.fund.update_whitelisted_token(token, token_cap)
+        ctx.accounts
+            .fund
+            .whitelisted_token_mut(token)
+            .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?
+            .update(token_cap)
     }
 
     pub fn update_sol_withdrawal_fee_rate(
