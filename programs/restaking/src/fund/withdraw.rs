@@ -3,17 +3,17 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl BatchWithdrawal {
-    fn add_withdrawal_request(&mut self, receipt_token_amount: u64) -> Result<()> {
+    fn add_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests += 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
-            .checked_add(receipt_token_amount)
+            .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
 
         Ok(())
     }
 
-    fn remove_withdrawal_request(&mut self, amount: u64) -> Result<()> {
+    fn remove_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests -= 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
@@ -105,13 +105,11 @@ impl WithdrawalStatus {
         &mut self,
         receipt_token_amount: u64,
     ) -> Result<WithdrawalRequest> {
-        self.check_withdrawal_enabled()?;
-
         let request_id = self.next_request_id;
         self.next_request_id += 1;
 
         self.pending_batch_withdrawal
-            .add_withdrawal_request(receipt_token_amount)?;
+            .add_token_to_process(receipt_token_amount)?;
         WithdrawalRequest::new(
             self.pending_batch_withdrawal.batch_id,
             request_id,
@@ -119,14 +117,9 @@ impl WithdrawalStatus {
         )
     }
 
-    pub(super) fn cancel_withdrawal_request(
-        &mut self,
-        batch_id: u64,
-        receipt_token_amount: u64,
-    ) -> Result<()> {
-        self.check_batch_processing_not_started(batch_id)?;
+    pub(super) fn remove_withdrawal_request(&mut self, receipt_token_amount: u64) -> Result<()> {
         self.pending_batch_withdrawal
-            .remove_withdrawal_request(receipt_token_amount)
+            .remove_token_to_process(receipt_token_amount)
     }
 
     pub(super) fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {
@@ -138,13 +131,11 @@ impl WithdrawalStatus {
         .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 
-    pub(super) fn withdraw_sol(&mut self, batch_id: u64, amount: u64) -> Result<()> {
-        self.check_withdrawal_enabled()?;
-        self.check_batch_processing_completed(batch_id)?;
+    pub(super) fn withdraw_sol(&mut self, amount: u64) -> Result<()> {
         self.reserved_fund.withdraw_sol(amount)
     }
 
-    fn check_withdrawal_enabled(&self) -> Result<()> {
+    pub(super) fn check_withdrawal_enabled(&self) -> Result<()> {
         if !self.withdrawal_enabled_flag {
             err!(ErrorCode::FundWithdrawalDisabled)?
         }
@@ -152,7 +143,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
+    pub(super) fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
         if batch_id < self.pending_batch_withdrawal.batch_id {
             err!(ErrorCode::FundWithdrawalAlreadyInProgress)?
         }
@@ -160,7 +151,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
+    pub(super) fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
             err!(ErrorCode::FundWithdrawalNotCompleted)?
         }

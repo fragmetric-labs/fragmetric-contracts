@@ -56,6 +56,11 @@ pub struct FundRequestWithdrawal<'info> {
 
 impl<'info> FundRequestWithdrawal<'info> {
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+        ctx.accounts
+            .fund
+            .withdrawal_status
+            .check_withdrawal_enabled()?;
+
         Self::lock_receipt_token(&mut ctx, receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
 

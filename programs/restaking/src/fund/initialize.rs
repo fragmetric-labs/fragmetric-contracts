@@ -5,26 +5,18 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl Fund {
-    pub(super) fn initialize(&mut self, admin: Pubkey, receipt_token_mint: Pubkey) -> Result<()> {
+    pub(super) fn initialize(&mut self, admin: Pubkey, receipt_token_mint: Pubkey) {
         self.admin = admin;
         self.receipt_token_mint = receipt_token_mint;
         self.sol_amount_in = 0;
         self.withdrawal_status = Default::default();
-
-        Ok(())
     }
 
-    pub(super) fn set_whitelisted_tokens(
-        &mut self,
-        whitelisted_tokens: Vec<TokenInfo>,
-    ) -> Result<()> {
-        Self::check_duplicate_does_not_exist(&whitelisted_tokens)?;
+    pub(super) fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) {
         self.whitelisted_tokens = whitelisted_tokens;
-
-        Ok(())
     }
 
-    fn check_duplicate_does_not_exist(tokens: &[TokenInfo]) -> Result<()> {
+    pub(super) fn check_duplicate_does_not_exist(tokens: &[TokenInfo]) -> Result<()> {
         let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
         if token_addresses.len() != tokens.len() {
             err!(ErrorCode::FundDuplicatedToken)?
@@ -35,36 +27,25 @@ impl Fund {
 }
 
 impl WithdrawalStatus {
-    pub(super) fn set_sol_withdrawal_fee_rate(
-        &mut self,
-        sol_withdrawal_fee_rate: u16,
-    ) -> Result<()> {
-        // max protocol fee rate (상수) 넘어서지 못하게 하는 제약조건 필요?
+    pub(super) fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
         self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
-
-        Ok(())
     }
 
-    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) -> Result<()> {
+    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) {
         self.withdrawal_enabled_flag = flag;
-
-        Ok(())
     }
 
     pub(super) fn set_batch_processing_threshold(
         &mut self,
         amount: Option<u64>,
         duration: Option<i64>,
-    ) -> Result<()> {
-        // Threshold 값에 대한 validation 필요?
+    ) {
         if let Some(amount) = amount {
             self.batch_processing_threshold_amount = amount;
         }
         if let Some(duration) = duration {
             self.batch_processing_threshold_duration = duration;
         }
-
-        Ok(())
     }
 }
 
@@ -100,23 +81,19 @@ mod tests {
             token_amount_in: 2_000_000_000,
         };
 
-        fund.initialize(admin, receipt_token_mint).unwrap();
+        fund.initialize(admin, receipt_token_mint);
 
         let tokens = vec![token1, token2];
-        fund.set_whitelisted_tokens(tokens.clone()).unwrap();
+        fund.set_whitelisted_tokens(tokens.clone());
 
         fund.withdrawal_status
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
-            .unwrap();
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
         fund.withdrawal_status
-            .set_withdrawal_enabled_flag(withdrawal_enabled_flag)
-            .unwrap();
-        fund.withdrawal_status
-            .set_batch_processing_threshold(
-                Some(batch_processing_threshold_amount),
-                Some(batch_processing_threshold_duration),
-            )
-            .unwrap();
+            .set_withdrawal_enabled_flag(withdrawal_enabled_flag);
+        fund.withdrawal_status.set_batch_processing_threshold(
+            Some(batch_processing_threshold_amount),
+            Some(batch_processing_threshold_duration),
+        );
 
         assert_eq!(fund.admin, admin);
         assert_eq!(fund.receipt_token_mint, receipt_token_mint);

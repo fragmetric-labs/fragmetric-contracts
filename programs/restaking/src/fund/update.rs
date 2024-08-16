@@ -3,24 +3,18 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl TokenInfo {
-    pub(super) fn update(&mut self, token_cap: u64) -> Result<()> {
+    pub(super) fn update(&mut self, token_cap: u64) {
         self.token_cap = token_cap;
-
-        Ok(())
     }
 }
 
 impl Fund {
-    pub(super) fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) -> Result<()> {
-        self.check_token_does_not_exist(&token)?;
-
+    pub(super) fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) {
         let token_info = TokenInfo::empty(token, token_cap);
         self.whitelisted_tokens.push(token_info);
-
-        Ok(())
     }
 
-    fn check_token_does_not_exist(&self, token: &Pubkey) -> Result<()> {
+    pub(super) fn check_token_does_not_exist(&self, token: &Pubkey) -> Result<()> {
         if self
             .whitelisted_tokens
             .iter()
@@ -38,7 +32,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_add_whitelisted_token() {
+    fn test_add_duplicated_token_fails() {
         let mut fund = Fund {
             admin: Pubkey::default(),
             receipt_token_mint: Pubkey::default(),
@@ -61,7 +55,7 @@ mod tests {
         let tokens = vec![token1, token2];
 
         fund.whitelisted_tokens = tokens;
-        fund.add_whitelisted_token(token3.address, token3.token_cap)
+        fund.check_token_does_not_exist(&token3.address)
             .unwrap_err();
     }
 
@@ -89,13 +83,12 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         let tokens = vec![token1, token2];
 
-        fund.set_whitelisted_tokens(tokens).unwrap();
+        fund.set_whitelisted_tokens(tokens);
         println!("{:?}", fund.whitelisted_tokens.iter());
 
         fund.whitelisted_token_mut(token1_update.address)
             .unwrap()
-            .update(token1_update.token_cap)
-            .unwrap();
+            .update(token1_update.token_cap);
         println!("{:?}", fund.whitelisted_tokens.iter());
     }
 }

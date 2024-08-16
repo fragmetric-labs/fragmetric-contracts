@@ -53,9 +53,10 @@ impl<'info> FundInitialize<'info> {
         msg!("receipt_token_mint: {}", receipt_token_mint_key);
         msg!("fund_token_authority: {}", fund_token_authority_key,);
 
-        // let args = FundInitializeArgs::from(request);
         ctx.accounts
             .fund
-            .initialize(ctx.accounts.admin.key(), receipt_token_mint_key)
+            .initialize(ctx.accounts.admin.key(), receipt_token_mint_key);
+
+        Ok(())
     }
 }

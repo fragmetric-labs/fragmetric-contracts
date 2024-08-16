@@ -60,10 +60,11 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .accounts
             .user_receipt
             .pop_withdrawal_request(request_id)?;
-        ctx.accounts
-            .fund
-            .withdrawal_status
-            .cancel_withdrawal_request(request.batch_id, request.receipt_token_amount)?;
+
+        let withdrawal_status = &mut ctx.accounts.fund.withdrawal_status;
+        withdrawal_status.check_batch_processing_not_started(request.batch_id)?;
+
+        withdrawal_status.remove_withdrawal_request(request.receipt_token_amount)?;
 
         Self::unlock_receipt_token(&mut ctx, request.receipt_token_amount)
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;

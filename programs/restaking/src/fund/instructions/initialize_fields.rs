@@ -27,14 +27,18 @@ impl<'info> FundInitializeFields<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
+
+        Ok(())
     }
 
     pub fn initialize_withdrawal_enabled_flag(ctx: Context<Self>, flag: bool) -> Result<()> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_withdrawal_enabled_flag(flag)
+            .set_withdrawal_enabled_flag(flag);
+
+        Ok(())
     }
 
     pub fn initialize_batch_processing_threshold(
@@ -45,13 +49,18 @@ impl<'info> FundInitializeFields<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_batch_processing_threshold(Some(amount), Some(duration))
+            .set_batch_processing_threshold(Some(amount), Some(duration));
+
+        Ok(())
     }
 
     pub fn initialize_whitelisted_tokens(
         ctx: Context<Self>,
         whitelisted_tokens: Vec<TokenInfo>,
     ) -> Result<()> {
-        ctx.accounts.fund.set_whitelisted_tokens(whitelisted_tokens)
+        Fund::check_duplicate_does_not_exist(&whitelisted_tokens)?;
+        ctx.accounts.fund.set_whitelisted_tokens(whitelisted_tokens);
+
+        Ok(())
     }
 }

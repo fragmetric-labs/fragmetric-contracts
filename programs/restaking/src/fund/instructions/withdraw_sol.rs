@@ -34,15 +34,16 @@ impl<'info> FundWithdrawSOL<'info> {
             .pop_withdrawal_request(request_id)?;
 
         let sol_amount = Self::get_sol_amount_by_exchange_rate(&ctx, request.receipt_token_amount)?;
-        let fund = &mut ctx.accounts.fund;
-        let sol_fee_amount = fund
-            .withdrawal_status
-            .calculate_sol_withdrawal_fee(sol_amount)?;
+
+        let withdrawal_status = &mut ctx.accounts.fund.withdrawal_status;
+        withdrawal_status.check_withdrawal_enabled()?;
+        withdrawal_status.check_batch_processing_completed(request.batch_id)?;
+
+        let sol_fee_amount = withdrawal_status.calculate_sol_withdrawal_fee(sol_amount)?;
         let sol_withdraw_amount = sol_amount
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
-        fund.withdrawal_status
-            .withdraw_sol(request.batch_id, sol_withdraw_amount)?;
+        withdrawal_status.withdraw_sol(sol_withdraw_amount)?;
 
         Self::transfer_sol(&mut ctx, sol_withdraw_amount)
             .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;

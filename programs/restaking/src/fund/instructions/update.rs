@@ -21,7 +21,10 @@ pub struct FundUpdate<'info> {
 
 impl<'info> FundUpdate<'info> {
     pub fn add_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
-        ctx.accounts.fund.add_whitelisted_token(token, token_cap)
+        ctx.accounts.fund.check_token_does_not_exist(&token)?;
+        ctx.accounts.fund.add_whitelisted_token(token, token_cap);
+
+        Ok(())
     }
 
     pub fn update_whitelisted_token(
@@ -33,7 +36,9 @@ impl<'info> FundUpdate<'info> {
             .fund
             .whitelisted_token_mut(token)
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?
-            .update(token_cap)
+            .update(token_cap);
+
+        Ok(())
     }
 
     pub fn update_sol_withdrawal_fee_rate(
@@ -43,14 +48,18 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
+
+        Ok(())
     }
 
     pub fn update_withdrawal_enabled_flag(ctx: Context<Self>, flag: bool) -> Result<()> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_withdrawal_enabled_flag(flag)
+            .set_withdrawal_enabled_flag(flag);
+
+        Ok(())
     }
 
     pub fn update_batch_processing_threshold(
@@ -61,6 +70,8 @@ impl<'info> FundUpdate<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .set_batch_processing_threshold(amount, duration)
+            .set_batch_processing_threshold(amount, duration);
+
+        Ok(())
     }
 }
