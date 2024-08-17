@@ -21,7 +21,7 @@ impl WithdrawalRequest {
             batch_id,
             request_id,
             receipt_token_amount,
-            created_at: Clock::get()?.unix_timestamp,
+            created_at: crate::utils::timestamp_now()?,
         })
     }
 }

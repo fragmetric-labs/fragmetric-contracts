@@ -49,7 +49,7 @@ impl<'info> OperatorRunIfNeeded<'info> {
         let withdrawal_status = &mut ctx.accounts.fund.withdrawal_status;
 
         // if last_process_time is more than TODO_FUND_DURATION_THRESHOLD_CONFIG ago
-        let current_time = Clock::get()?.unix_timestamp;
+        let current_time = crate::utils::timestamp_now()?;
 
         let mut threshold_satified = matches!(
             withdrawal_status.last_batch_processing_started_at,

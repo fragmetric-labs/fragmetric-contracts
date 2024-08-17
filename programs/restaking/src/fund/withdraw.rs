@@ -24,7 +24,7 @@ impl BatchWithdrawal {
     }
 
     fn start_batch_processing(&mut self) -> Result<()> {
-        self.processing_started_at = Some(Clock::get()?.unix_timestamp);
+        self.processing_started_at = Some(crate::utils::timestamp_now()?);
         Ok(())
     }
 
@@ -180,7 +180,7 @@ impl WithdrawalStatus {
         let completed_batch_withdrawals = self.pop_completed_batch_withdrawals();
         if let Some(batch) = completed_batch_withdrawals.last() {
             self.last_completed_batch_id = batch.batch_id;
-            self.last_batch_processing_completed_at = Some(Clock::get()?.unix_timestamp);
+            self.last_batch_processing_completed_at = Some(crate::utils::timestamp_now()?);
         }
         for batch in completed_batch_withdrawals {
             self.reserved_fund
