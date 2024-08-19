@@ -32,5 +32,5 @@ pub enum ErrorCode {
     #[msg("Withdrawal request already started processing")]
     FundWithdrawalAlreadyInProgress,
     #[msg("Signature verification failed")]
-    FundSigVerificationFailed,
+    SigVerificationFailed,
 }

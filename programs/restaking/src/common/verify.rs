@@ -2,6 +2,8 @@ use anchor_lang::{prelude::*, solana_program::ed25519_program::ID as ED25519_PRO
 
 use crate::error::ErrorCode;
 
+pub const EXPTECED_IX_SYSVAR_INDEX: usize = 0;
+
 /// Verify Ed25519Program instruction fields
 pub fn verify_ed25519_ix(
     ix: &anchor_lang::solana_program::instruction::Instruction,
@@ -14,7 +16,7 @@ pub fn verify_ed25519_ix(
     // And data of this size
     {
         msg!("ix.data.len(): {}, msg.len(): {}", ix.data.len(), msg.len());
-        return err!(ErrorCode::FundSigVerificationFailed); // Otherwise, we can already throw err
+        return err!(ErrorCode::SigVerificationFailed); // Otherwise, we can already throw err
     }
 
     check_ed25519_data(&ix.data, pubkey, msg) // If that's not the case, check data
@@ -68,7 +70,7 @@ fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8]) -> Result<()> {
             message_data_size,
             &exp_message_data_size.to_le_bytes()
         );
-        return err!(ErrorCode::FundSigVerificationFailed);
+        return err!(ErrorCode::SigVerificationFailed);
     }
 
     // Arguments
@@ -77,7 +79,7 @@ fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8]) -> Result<()> {
     {
         msg!("data_pubkey: {:?}, pubkey: {:?}", data_pubkey, pubkey);
         msg!("data_msg: {:?}, msg: {:?}", data_msg, msg);
-        return err!(ErrorCode::FundSigVerificationFailed);
+        return err!(ErrorCode::SigVerificationFailed);
     }
 
     Ok(())
