@@ -1,4 +1,10 @@
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::{
+    prelude::*,
+    solana_program::sysvar::{
+        instructions as instructions_sysvar_module, instructions::load_instruction_at_checked,
+    },
+    system_program,
+};
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
@@ -50,13 +56,52 @@ pub struct FundDepositSOL<'info> {
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
+    /// CHECK: This is safe that checks it's ID
+    #[account(address = instructions_sysvar_module::ID)]
+    pub instruction_sysvar: Option<UncheckedAccount<'info>>,
+
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundDepositSOL<'info> {
-    pub fn deposit_sol(mut ctx: Context<Self>, amount: u64) -> Result<()> {
+    pub fn deposit_sol(
+        mut ctx: Context<Self>,
+        amount: u64,
+        metadata: Option<Metadata>,
+    ) -> Result<()> {
+        let wallet_provider: Option<String>;
+        let fpoint_accrual_rate_multiplier: Option<f32>;
+        match metadata {
+            None => {
+                wallet_provider = None;
+                fpoint_accrual_rate_multiplier = None;
+
+                msg!("metadata is null");
+            }
+            Some(_) => {
+                let metadata_unwrap = metadata.clone().unwrap();
+                wallet_provider = Some(metadata_unwrap.wallet_provider);
+                fpoint_accrual_rate_multiplier =
+                    Some(metadata_unwrap.fpoint_accrual_rate_multiplier);
+
+                // need signature verification
+                msg!("metadata is not null");
+                // Get what should be the Ed25519Program instruction
+                let instruction_sysvar = ctx.accounts.instruction_sysvar.as_ref().unwrap();
+                let ed25519_ix =
+                    load_instruction_at_checked(EXPTECED_IX_SYSVAR_INDEX, instruction_sysvar)?;
+
+                // Check that ix is what we expect to have been sent
+                let metadata_unwrap = metadata.clone().unwrap(); // re-clone to use it
+                let payload_vec = metadata_unwrap.try_to_vec()?;
+                let payload = payload_vec.as_slice();
+                verify_ed25519_ix(&ed25519_ix, &ADMIN_PUBKEY.to_bytes(), payload)?;
+                msg!("Signature verification succeed");
+            }
+        }
+
         let receipt_token_account = ctx.accounts.receipt_token_account.key();
         msg!("receipt_token_account: {}", receipt_token_account);
 
@@ -81,8 +126,8 @@ impl<'info> FundDepositSOL<'info> {
             minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
             minted_lrt_amount: mint_amount,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
-            wallet_provider: None,
-            fpoint_accrual_rate_multiplier: None,
+            wallet_provider: wallet_provider,
+            fpoint_accrual_rate_multiplier: fpoint_accrual_rate_multiplier,
             fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
         });
 

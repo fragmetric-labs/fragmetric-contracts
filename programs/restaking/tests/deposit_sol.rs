@@ -34,12 +34,16 @@ async fn test_deposit_sol() {
             receipt_token_account,
             token_program: spl_token_2022::ID,
             associated_token_program: associated_token::ID,
+            instruction_sysvar: None,
             system_program: system_program::ID,
         }
         .to_account_metas(None),
-        data: restaking::instruction::FundDepositSol { amount }
-            .try_to_vec()
-            .unwrap(),
+        data: restaking::instruction::FundDepositSol {
+            amount,
+            metadata: None,
+        }
+        .try_to_vec()
+        .unwrap(),
     };
 
     let deposit_sol_tx = Transaction::new_signed_with_payer(

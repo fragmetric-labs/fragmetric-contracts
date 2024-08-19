@@ -99,12 +99,20 @@ pub mod restaking {
         FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
     }
 
-    pub fn fund_deposit_sol(ctx: Context<FundDepositSOL>, amount: u64) -> Result<()> {
-        FundDepositSOL::deposit_sol(ctx, amount)
+    pub fn fund_deposit_sol(
+        ctx: Context<FundDepositSOL>,
+        amount: u64,
+        metadata: Option<Metadata>,
+    ) -> Result<()> {
+        FundDepositSOL::deposit_sol(ctx, amount, metadata)
     }
 
-    pub fn fund_deposit_token(ctx: Context<FundDepositToken>, amount: u64) -> Result<()> {
-        FundDepositToken::deposit_token(ctx, amount)
+    pub fn fund_deposit_token(
+        ctx: Context<FundDepositToken>,
+        amount: u64,
+        metadata: Option<Metadata>,
+    ) -> Result<()> {
+        FundDepositToken::deposit_token(ctx, amount, metadata)
     }
 
     pub fn fund_request_withdrawal(
