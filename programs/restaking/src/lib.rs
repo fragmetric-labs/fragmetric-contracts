@@ -99,15 +99,17 @@ pub mod restaking {
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         request: FundDepositSOLRequest,
+        metadata: Option<Metadata>,
     ) -> Result<()> {
-        FundDepositSOL::deposit_sol(ctx, request)
+        FundDepositSOL::deposit_sol(ctx, request, metadata)
     }
 
     pub fn fund_deposit_token(
         ctx: Context<FundDepositToken>,
         request: FundDepositTokenRequest,
+        metadata: Option<Metadata>,
     ) -> Result<()> {
-        FundDepositToken::deposit_token(ctx, request)
+        FundDepositToken::deposit_token(ctx, request, metadata)
     }
 
     pub fn fund_request_withdrawal(

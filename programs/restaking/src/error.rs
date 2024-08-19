@@ -19,7 +19,6 @@ pub enum ErrorCode {
     FundWithdrawalRequestExceedsSOLAmountsInTemp,
     #[msg("Operator unmet threshold")]
     OperatorUnmetThreshold,
-    // receipt_token_extensions
     #[msg("Token is not currently transferring")]
     TokenNotCurrentlyTransferring,
     #[msg("Withdrawal request not found")]
@@ -32,4 +31,6 @@ pub enum ErrorCode {
     FundWithdrawalDisabled,
     #[msg("Withdrawal request already started processing")]
     FundWithdrawalAlreadyInProgress,
+    #[msg("Signature verification failed")]
+    SigVerificationFailed,
 }
