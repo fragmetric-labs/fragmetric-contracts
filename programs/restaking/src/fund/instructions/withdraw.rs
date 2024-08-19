@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{common::*, constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
-pub struct FundWithdrawSOL<'info> {
+pub struct FundWithdraw<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -29,8 +29,8 @@ pub struct FundWithdrawSOL<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 }
 
-impl<'info> FundWithdrawSOL<'info> {
-    pub fn withdraw_sol(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
+impl<'info> FundWithdraw<'info> {
+    pub fn withdraw(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
         let request = ctx
             .accounts
             .user_receipt
@@ -46,7 +46,7 @@ impl<'info> FundWithdrawSOL<'info> {
         let sol_withdraw_amount = sol_amount
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
-        withdrawal_status.withdraw_sol(sol_withdraw_amount)?;
+        withdrawal_status.withdraw(sol_withdraw_amount)?;
 
         Self::transfer_sol(&mut ctx, sol_withdraw_amount)
             .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;

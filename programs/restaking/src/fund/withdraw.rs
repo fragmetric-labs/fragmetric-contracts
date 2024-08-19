@@ -90,7 +90,7 @@ impl ReservedFund {
         Ok(())
     }
 
-    fn withdraw_sol(&mut self, amount: u64) -> Result<()> {
+    fn withdraw(&mut self, amount: u64) -> Result<()> {
         self.sol_remaining = self
             .sol_remaining
             .checked_sub(amount)
@@ -131,8 +131,8 @@ impl WithdrawalStatus {
         .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 
-    pub(super) fn withdraw_sol(&mut self, amount: u64) -> Result<()> {
-        self.reserved_fund.withdraw_sol(amount)
+    pub(super) fn withdraw(&mut self, amount: u64) -> Result<()> {
+        self.reserved_fund.withdraw(amount)
     }
 
     pub(super) fn check_withdrawal_enabled(&self) -> Result<()> {

@@ -171,7 +171,7 @@ export const withdraw = describe("withdraw", () => {
     );
 
     await program.methods
-      .fundWithdrawSol(new anchor.BN(3))
+      .fundWithdraw(new anchor.BN(3))
       .accounts({
         user: user.publicKey,
       })
@@ -206,7 +206,7 @@ export const withdraw = describe("withdraw", () => {
 
     expect(
       program.methods
-        .fundWithdrawSol(new anchor.BN(1))
+        .fundWithdraw(new anchor.BN(1))
         .accounts({
           user: user.publicKey,
         })

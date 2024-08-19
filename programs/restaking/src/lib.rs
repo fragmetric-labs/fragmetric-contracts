@@ -121,8 +121,8 @@ pub mod restaking {
         FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
     }
 
-    pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
-        FundWithdrawSOL::withdraw_sol(ctx, request_id)
+    pub fn fund_withdraw(ctx: Context<FundWithdraw>, request_id: u64) -> Result<()> {
+        FundWithdraw::withdraw(ctx, request_id)
     }
 
     pub fn operator_run_if_needed(ctx: Context<OperatorRunIfNeeded>) -> Result<()> {

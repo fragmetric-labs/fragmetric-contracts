@@ -6,7 +6,7 @@ mod initialize;
 mod initialize_fields;
 mod request_withdrawal;
 mod update;
-mod withdraw_sol;
+mod withdraw;
 
 pub use add_supported_token::*;
 pub use cancel_withdrawal_request::*;
@@ -16,4 +16,4 @@ pub use initialize::*;
 pub use initialize_fields::*;
 pub use request_withdrawal::*;
 pub use update::*;
-pub use withdraw_sol::*;
+pub use withdraw::*;
