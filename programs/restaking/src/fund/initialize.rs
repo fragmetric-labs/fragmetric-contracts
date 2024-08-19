@@ -1,30 +1,15 @@
-use std::collections::BTreeSet;
-
 use anchor_lang::prelude::*;
 
-use crate::{error::ErrorCode, fund::*};
+use crate::fund::*;
 
 impl Fund {
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         self.data_version = 1;
         self.bump = bump;
         self.receipt_token_mint = receipt_token_mint;
-        self.whitelisted_tokens = vec![];
+        self.supported_tokens = vec![];
         self.sol_amount_in = 0;
         self.withdrawal_status = Default::default();
-    }
-
-    pub(super) fn set_whitelisted_tokens(&mut self, whitelisted_tokens: Vec<TokenInfo>) {
-        self.whitelisted_tokens = whitelisted_tokens;
-    }
-
-    pub(super) fn check_duplicate_does_not_exist(tokens: &[TokenInfo]) -> Result<()> {
-        let token_addresses: BTreeSet<_> = tokens.iter().map(|info| info.address).collect();
-        if token_addresses.len() != tokens.len() {
-            err!(ErrorCode::FundDuplicatedToken)?
-        }
-
-        Ok(())
     }
 }
 
@@ -91,26 +76,12 @@ mod tests {
             data_version: 1,
             bump: 0,
             receipt_token_mint: Pubkey::default(),
-            whitelisted_tokens: vec![],
+            supported_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
         };
 
-        let token1 = TokenInfo {
-            address: Pubkey::new_unique(),
-            token_cap: 1_000_000_000 * 1000,
-            token_amount_in: 1_000_000_000,
-        };
-        let token2 = TokenInfo {
-            address: Pubkey::new_unique(),
-            token_cap: 1_000_000_000 * 2000,
-            token_amount_in: 2_000_000_000,
-        };
-
         fund.initialize(0, receipt_token_mint);
-
-        let tokens = vec![token1, token2];
-        fund.set_whitelisted_tokens(tokens.clone());
 
         fund.withdrawal_status
             .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
@@ -122,11 +93,6 @@ mod tests {
         );
 
         assert_eq!(fund.receipt_token_mint, receipt_token_mint);
-        for (actual, expected) in std::iter::zip(fund.whitelisted_tokens, tokens) {
-            assert_eq!(actual.address, expected.address);
-            assert_eq!(actual.token_cap, expected.token_cap);
-            assert_eq!(actual.token_amount_in, expected.token_amount_in);
-        }
         assert_eq!(
             fund.withdrawal_status.sol_withdrawal_fee_rate,
             sol_withdrawal_fee_rate

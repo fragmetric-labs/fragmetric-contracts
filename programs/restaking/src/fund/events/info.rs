@@ -16,7 +16,7 @@ impl FundInfo {
     pub fn new_from_fund(fund: &Fund) -> Self {
         FundInfo {
             lrt_mint: fund.receipt_token_mint,
-            supported_tokens: fund.whitelisted_tokens.clone(),
+            supported_tokens: fund.supported_tokens.clone(),
             sol_amount_in: fund.sol_amount_in,
             sol_reserved_amount: fund.withdrawal_status.reserved_fund.sol_remaining,
             sol_withdrawal_fee_rate: fund.withdrawal_status.sol_withdrawal_fee_rate_f32(),

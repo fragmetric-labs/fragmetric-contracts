@@ -21,21 +21,10 @@ pub struct FundUpdate<'info> {
 }
 
 impl<'info> FundUpdate<'info> {
-    pub fn add_whitelisted_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
-        ctx.accounts.fund.check_token_does_not_exist(&token)?;
-        ctx.accounts.fund.add_whitelisted_token(token, token_cap);
-
-        Ok(())
-    }
-
-    pub fn update_whitelisted_token(
-        ctx: Context<Self>,
-        token: Pubkey,
-        token_cap: u64,
-    ) -> Result<()> {
+    pub fn update_supported_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
         ctx.accounts
             .fund
-            .whitelisted_token_mut(token)
+            .supported_token_mut(token)
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?
             .update(token_cap);
 

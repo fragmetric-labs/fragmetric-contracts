@@ -9,14 +9,14 @@ impl TokenInfo {
 }
 
 impl Fund {
-    pub(super) fn add_whitelisted_token(&mut self, token: Pubkey, token_cap: u64) {
+    pub(super) fn add_supported_token(&mut self, token: Pubkey, token_cap: u64) {
         let token_info = TokenInfo::empty(token, token_cap);
-        self.whitelisted_tokens.push(token_info);
+        self.supported_tokens.push(token_info);
     }
 
     pub(super) fn check_token_does_not_exist(&self, token: &Pubkey) -> Result<()> {
         if self
-            .whitelisted_tokens
+            .supported_tokens
             .iter()
             .any(|info| info.address == *token)
         {
@@ -37,7 +37,7 @@ mod tests {
             data_version: 1,
             bump: 0,
             receipt_token_mint: Pubkey::default(),
-            whitelisted_tokens: vec![],
+            supported_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
         };
@@ -55,7 +55,7 @@ mod tests {
         let token3 = token1.clone();
         let tokens = vec![token1, token2];
 
-        fund.whitelisted_tokens = tokens;
+        fund.supported_tokens = tokens;
         fund.check_token_does_not_exist(&token3.address)
             .unwrap_err();
     }
@@ -66,7 +66,7 @@ mod tests {
             data_version: 1,
             bump: 0,
             receipt_token_mint: Pubkey::default(),
-            whitelisted_tokens: vec![],
+            supported_tokens: vec![],
             sol_amount_in: 0,
             withdrawal_status: Default::default(),
         };
@@ -83,14 +83,13 @@ mod tests {
         };
         let mut token1_update = token1.clone();
         token1_update.token_cap = 1_000_000_000 * 3000;
-        let tokens = vec![token1, token2];
+        fund.add_supported_token(token1.address, token1.token_cap);
+        fund.add_supported_token(token2.address, token2.token_cap);
+        println!("{:?}", fund.supported_tokens.iter());
 
-        fund.set_whitelisted_tokens(tokens);
-        println!("{:?}", fund.whitelisted_tokens.iter());
-
-        fund.whitelisted_token_mut(token1_update.address)
+        fund.supported_token_mut(token1_update.address)
             .unwrap()
             .update(token1_update.token_cap);
-        println!("{:?}", fund.whitelisted_tokens.iter());
+        println!("{:?}", fund.supported_tokens.iter());
     }
 }

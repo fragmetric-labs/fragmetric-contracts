@@ -54,14 +54,4 @@ impl<'info> FundInitializeFields<'info> {
 
         Ok(())
     }
-
-    pub fn initialize_whitelisted_tokens(
-        ctx: Context<Self>,
-        whitelisted_tokens: Vec<TokenInfo>,
-    ) -> Result<()> {
-        Fund::check_duplicate_does_not_exist(&whitelisted_tokens)?;
-        ctx.accounts.fund.set_whitelisted_tokens(whitelisted_tokens);
-
-        Ok(())
-    }
 }

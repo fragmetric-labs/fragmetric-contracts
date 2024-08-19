@@ -1,3 +1,4 @@
+mod add_supported_token;
 mod cancel_withdrawal_request;
 mod deposit_sol;
 mod deposit_token;
@@ -7,6 +8,7 @@ mod request_withdrawal;
 mod update;
 mod withdraw_sol;
 
+pub use add_supported_token::*;
 pub use cancel_withdrawal_request::*;
 pub use deposit_sol::*;
 pub use deposit_token::*;

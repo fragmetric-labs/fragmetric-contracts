@@ -25,8 +25,6 @@ export const deposit_sol = describe("deposit_sol", () => {
     // const userProvider = new anchor.AnchorProvider(program.provider.connection, new anchor.Wallet(user)); // and setProvider when needed
 
     let receiptTokenMint: anchor.web3.Keypair;
-    let tokenMint1: anchor.web3.PublicKey;
-    let tokenMint2: anchor.web3.PublicKey;
     let fund_pda: anchor.web3.PublicKey;
     let fund_token_authority_pda: anchor.web3.PublicKey;
 
@@ -47,9 +45,6 @@ export const deposit_sol = describe("deposit_sol", () => {
 
     before("Prepare accounts", async () => {
         receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-        tokenMint1 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint1", {encoding: "utf8"}).replace(/"/g, ''));
-        tokenMint2 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint2", {encoding: "utf8"}).replace(/"/g, ''));
-        console.log(`tokenMint1: ${tokenMint1}, tokenMint2: ${tokenMint2}`);
 
         [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
             [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
@@ -122,9 +117,9 @@ export const deposit_sol = describe("deposit_sol", () => {
             fpointAccrualRateMultiplier: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[21].name, payload);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
         console.log(`encodedData:`, encodedData);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[21].name, encodedData);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
         console.log(`decodedData:`, decodedData);
         const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
 
@@ -141,7 +136,7 @@ export const deposit_sol = describe("deposit_sol", () => {
                 )
                 .accounts({
                     user: user.publicKey,
-                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 })
                 .signers([user])
                 .instruction()
@@ -158,7 +153,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`fund balance after:`, fundBal_aft);
         console.log(`balance difference:`, fundBal_aft - fundBal_bef);
 
-        let fundData = (await program.account.fund.fetch(fund_pda)).data.v2[0];
+        let fundData = await program.account.fund.fetch(fund_pda);
         console.log(`total sol amount in Fund:`, fundData.solAmountIn.toString());
 
         // parse event

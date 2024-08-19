@@ -242,7 +242,7 @@ export const deposit_token = describe("deposit_token", () => {
             console.log(`Deposit token tx: ${tx}`);
 
             // check if token's amount_in increased correctly
-            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens[0];
+            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens[0];
             console.log("Tokens from fund:", tokensFromFund.tokenAmountIn);
 
             expect(tokensFromFund.tokenAmountIn.toNumber()).to.eq(amount.toNumber());
@@ -259,10 +259,12 @@ export const deposit_token = describe("deposit_token", () => {
                 user: user.publicKey,
                 tokenMint: bSOLMint.address,
                 userTokenAccount: userBSOLTokenAccount.address,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
             .signers([user])
-            .rpc();
+            .rpc({commitment: "confirmed"});
+        console.log("Debug");
         // parse event
         let committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
         console.log(`committedTx:`, committedTx);
@@ -277,6 +279,7 @@ export const deposit_token = describe("deposit_token", () => {
                 user: user.publicKey,
                 tokenMint: mSOLMint.address,
                 userTokenAccount: userMSOLTokenAccount.address,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
             .signers([user])
@@ -295,10 +298,11 @@ export const deposit_token = describe("deposit_token", () => {
                 user: user.publicKey,
                 tokenMint: jitoSOLMint.address,
                 userTokenAccount: userJitoSOLTokenAccount.address,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
             .signers([user])
-            .rpc();
+            .rpc({commitment: "confirmed"});
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
         console.log(`committedTx:`, committedTx);
@@ -306,17 +310,18 @@ export const deposit_token = describe("deposit_token", () => {
         for (const event of events) {
             console.log(`FundDepositSOL event:`, event);
         }
-    
+
         txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
                 tokenMint: infMint.address,
                 userTokenAccount: userInfTokenAccount.address,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
             .signers([user])
-            .rpc();
+            .rpc({commitment: "confirmed"});
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
         console.log(`committedTx:`, committedTx);
@@ -324,7 +329,6 @@ export const deposit_token = describe("deposit_token", () => {
         for (const event of events) {
             console.log(`FundDepositSOL event:`, event);
         }
-    
     });
 
     it.skip("Fail when exceeding token cap!", async () => {
@@ -360,7 +364,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
+        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000).toNumber());
@@ -398,7 +402,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
+        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000_000 * 10).toNumber());
@@ -422,7 +426,7 @@ export const deposit_token = describe("deposit_token", () => {
         const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
         console.log(`user bSOL balance:`, userBSOLBal);
 
-        let tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
+        let tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
         console.log("tokensFromFund before:", tokensFromFund);
 
         const fundBSOLBal_bef = tokensFromFund[0].tokenAmountIn.toNumber();
@@ -433,9 +437,9 @@ export const deposit_token = describe("deposit_token", () => {
             fpointAccrualRateMultiplier: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[21].name, payload);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
         console.log(`encodedData:`, encodedData);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[21].name, encodedData);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
         console.log(`decodedData:`, decodedData);
         const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
 
@@ -454,7 +458,7 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
-                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
@@ -468,7 +472,7 @@ export const deposit_token = describe("deposit_token", () => {
         );
         console.log("DepositToken transaction signature", txSig);
 
-        tokensFromFund = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
+        tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
         console.log("tokensFromFund after:", tokensFromFund);
 
         const fundBSOLBal_aft = tokensFromFund[0].tokenAmountIn.toNumber();

@@ -9,7 +9,7 @@ pub struct Fund {
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(20)]
-    pub whitelisted_tokens: Vec<TokenInfo>,
+    pub supported_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u64,
     pub withdrawal_status: WithdrawalStatus,
 }
@@ -31,8 +31,8 @@ impl PDASignerSeeds<3> for Fund {
 }
 
 impl Fund {
-    pub fn whitelisted_token_mut(&mut self, token: Pubkey) -> Option<&mut TokenInfo> {
-        self.whitelisted_tokens
+    pub fn supported_token_mut(&mut self, token: Pubkey) -> Option<&mut TokenInfo> {
+        self.supported_tokens
             .iter_mut()
             .find(|info| info.address == token)
     }

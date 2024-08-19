@@ -76,7 +76,7 @@ export const withdraw = describe("withdraw", () => {
   before("Deposit SOL", async () => {
     const amount = 5 * 10 ** decimals;
     await program.methods
-      .fundDepositSol(new anchor.BN(amount))
+      .fundDepositSol(new anchor.BN(amount), null)
       .accounts({
         user: user.publicKey,
       })

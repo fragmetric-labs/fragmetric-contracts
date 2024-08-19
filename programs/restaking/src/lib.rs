@@ -42,13 +42,6 @@ pub mod restaking {
         FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
-    pub fn fund_initialize_whitelisted_tokens(
-        ctx: Context<FundInitializeFields>,
-        whitelisted_tokens: Vec<TokenInfo>,
-    ) -> Result<()> {
-        FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
-    }
-
     pub fn fund_initialize_withdrawal_enabled_flag(
         ctx: Context<FundInitializeFields>,
         flag: bool,
@@ -64,20 +57,19 @@ pub mod restaking {
         FundInitializeFields::initialize_batch_processing_threshold(ctx, amount, duration)
     }
 
-    pub fn fund_add_whitelisted_token(
-        ctx: Context<FundUpdate>,
-        token: Pubkey,
+    pub fn fund_add_supported_token(
+        ctx: Context<FundAddSupportedToken>,
         token_cap: u64,
     ) -> Result<()> {
-        FundUpdate::add_whitelisted_token(ctx, token, token_cap)
+        FundAddSupportedToken::add_supported_token(ctx, token_cap)
     }
 
-    pub fn fund_update_whitelisted_token(
+    pub fn fund_update_supported_token(
         ctx: Context<FundUpdate>,
         token: Pubkey,
         token_cap: u64,
     ) -> Result<()> {
-        FundUpdate::update_whitelisted_token(ctx, token, token_cap)
+        FundUpdate::update_supported_token(ctx, token, token_cap)
     }
 
     pub fn fund_update_sol_withdrawal_fee_rate(

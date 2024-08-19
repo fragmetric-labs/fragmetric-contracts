@@ -33,7 +33,7 @@ export const fund_initialize = describe("fund_initialize", () => {
 
     let fund_pda: anchor.web3.PublicKey;
     let fund_token_authority_pda: anchor.web3.PublicKey;
-        
+
     // generate keypair to use as address for the transfer-hook enabled mint account
     const mintOwner = admin; // same as admin
     const decimals = 9;
@@ -166,38 +166,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
         const tokenCap3 = new anchor.BN(1_000_000_000 * 3000);
         const tokenCap4 = new anchor.BN(1_000_000_000 * 4000);
-
-        const whitelistedTokens = [
-            {
-                // address: tokenMint1,
-                address: bSOLMint.address,
-                tokenCap: tokenCap1,
-                tokenAmountIn: new anchor.BN(0),
-            },
-            {
-                // address: tokenMint2,
-                address: mSOLMint.address,
-                tokenCap: tokenCap2,
-                tokenAmountIn: new anchor.BN(0),
-            },
-            {
-                address: jitoSOLMint.address,
-                tokenCap: tokenCap3,
-                tokenAmountIn: new anchor.BN(0),
-            },
-            {
-                address: infMint.address,
-                tokenCap: tokenCap4,
-                tokenAmountIn: new anchor.BN(0),
-            },
-        ];
-        // const whitelistedTokens = [];
-
-        // const [receipt_token_lock_account_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-        //     [Buffer.from("receipt_lock"), receipt_token_mint_pda.toBuffer()],
-        //     program.programId
-        // );
-
+ 
         const txs = new anchor.web3.Transaction().add(
             await program.methods
                 .fundInitialize()
@@ -210,8 +179,35 @@ export const fund_initialize = describe("fund_initialize", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeWhitelistedTokens(whitelistedTokens)
-                .accounts({})
+                .fundAddSupportedToken(tokenCap1)
+                .accounts({
+                    tokenMint: bSOLMint.address,
+                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                })
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundAddSupportedToken(tokenCap2)
+                .accounts({
+                    tokenMint: mSOLMint.address,
+                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                })
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundAddSupportedToken(tokenCap3)
+                .accounts({
+                    tokenMint: jitoSOLMint.address,
+                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                })
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundAddSupportedToken(tokenCap4)
+                .accounts({
+                    tokenMint: infMint.address,
+                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                })
                 .signers([])
                 .instruction(),
         );
@@ -222,7 +218,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         );
 
         // check fund initialized correctly
-        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).whitelistedTokens;
+        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).supportedTokens;
 
         // expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
         expect(tokensInitialized[0].address.toString()).to.eq(bSOLMint.address.toString());
