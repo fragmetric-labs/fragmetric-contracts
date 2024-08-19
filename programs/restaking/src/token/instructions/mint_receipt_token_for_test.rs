@@ -3,7 +3,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-use crate::{constants::*, token::*, Empty};
+use crate::{common::*, constants::*, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct TokenMintReceiptToken<'info> {
@@ -18,10 +18,11 @@ pub struct TokenMintReceiptToken<'info> {
 
     #[account(
         mut,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_token_authority.bump,
+        has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
     #[account(
         init_if_needed,
@@ -56,15 +57,11 @@ impl<'info> TokenMintReceiptToken<'info> {
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.fund_token_authority;
-        let key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
-
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[signer_seeds.as_ref()]),
+            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
             amount,
         )
     }

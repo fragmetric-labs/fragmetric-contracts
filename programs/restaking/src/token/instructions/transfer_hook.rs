@@ -10,7 +10,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct TokenTransferHook<'info> {
@@ -41,8 +41,9 @@ pub struct TokenTransferHook<'info> {
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
 }

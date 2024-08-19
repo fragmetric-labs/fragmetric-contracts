@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
 
+use crate::PDASignerSeeds;
+
 #[account]
 #[derive(InitSpace)]
 pub struct Fund {
-    pub admin: Pubkey,
+    pub data_version: u8,
+    pub bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(20)]
     pub whitelisted_tokens: Vec<TokenInfo>,
@@ -11,11 +14,27 @@ pub struct Fund {
     pub withdrawal_status: WithdrawalStatus,
 }
 
+impl PDASignerSeeds<3> for Fund {
+    const SEED: &'static [u8] = b"fund";
+
+    fn signer_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::SEED,
+            self.receipt_token_mint.as_ref(),
+            self.bump_as_slice(),
+        ]
+    }
+
+    fn bump_ref(&self) -> &u8 {
+        &self.bump
+    }
+}
+
 impl Fund {
-    pub fn whitelisted_token_mut(&mut self, address: Pubkey) -> Option<&mut TokenInfo> {
+    pub fn whitelisted_token_mut(&mut self, token: Pubkey) -> Option<&mut TokenInfo> {
         self.whitelisted_tokens
             .iter_mut()
-            .find(|info| info.address == address)
+            .find(|info| info.address == token)
     }
 }
 

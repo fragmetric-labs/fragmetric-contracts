@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
-use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundDepositToken<'info> {
@@ -15,25 +15,32 @@ pub struct FundDepositToken<'info> {
     #[account(
         init_if_needed,
         payer = user,
-        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
         bump,
         space = 8 + UserReceipt::INIT_SPACE,
+        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
+        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         mut,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump,
+        // bump = fund_token_authority.bump,
+        // has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    // pub fund_token_authority: Account<'info, FundTokenAuthority>,
+    /// CHECK: due to stack size limit this is not deserialize yet
+    pub fund_token_authority: UncheckedAccount<'info>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -70,7 +77,47 @@ pub struct FundDepositToken<'info> {
 }
 
 impl<'info> FundDepositToken<'info> {
+    fn deserialize_fund_token_authority_manually(
+        info: &UncheckedAccount<'info>,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+    ) -> Result<FundTokenAuthority> {
+        if info.owner == &anchor_lang::solana_program::system_program::ID && info.lamports() == 0 {
+            return Err(anchor_lang::error::ErrorCode::AccountNotInitialized.into());
+        }
+        if info.owner != &FundTokenAuthority::owner() {
+            return Err(
+                Error::from(anchor_lang::error::ErrorCode::AccountOwnedByWrongProgram)
+                    .with_pubkeys((*info.owner, FundTokenAuthority::owner())),
+            );
+        }
+
+        let mut data: &[u8] = &info.try_borrow_data()?;
+        let fund_token_authority = FundTokenAuthority::try_deserialize(&mut data)?;
+
+        if bump != fund_token_authority.bump {
+            return Err(Error::from(anchor_lang::error::ErrorCode::ConstraintSeeds)
+                .with_account_name("fund_token_authority"));
+        }
+
+        let my_key = fund_token_authority.receipt_token_mint;
+        let target_key = receipt_token_mint;
+        if my_key != target_key {
+            return Err(Error::from(anchor_lang::error::ErrorCode::ConstraintHasOne)
+                .with_account_name("fund_token_authority")
+                .with_pubkeys((my_key, target_key)));
+        }
+
+        Ok(FundTokenAuthority::try_deserialize(&mut data)?)
+    }
+
     pub fn deposit_token(mut ctx: Context<Self>, amount: u64) -> Result<()> {
+        ctx.accounts.user_receipt.initialize_if_needed(
+            ctx.bumps.user_receipt,
+            ctx.accounts.user.key(),
+            ctx.accounts.receipt_token_mint.key(),
+        );
+
         Self::transfer_token_cpi(&ctx, amount)?;
 
         let token_mint = ctx.accounts.token_mint.key();
@@ -155,15 +202,17 @@ impl<'info> FundDepositToken<'info> {
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.fund_token_authority;
-        let key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
+        let fund_token_authority = Self::deserialize_fund_token_authority_manually(
+            &ctx.accounts.fund_token_authority,
+            ctx.bumps.fund_token_authority,
+            ctx.accounts.receipt_token_mint.key(),
+        )?;
 
         ctx.accounts.receipt_token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[signer_seeds.as_ref()]),
+            Some(&[fund_token_authority.signer_seeds().as_ref()]),
             amount,
         )
     }

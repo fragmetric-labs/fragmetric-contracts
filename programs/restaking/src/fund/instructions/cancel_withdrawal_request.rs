@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, error::ErrorCode, fund::*, token::*, Empty};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundCancelWithdrawalRequest<'info> {
@@ -14,24 +14,28 @@ pub struct FundCancelWithdrawalRequest<'info> {
 
     #[account(
         mut,
-        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
+        bump = user_receipt.bump,
+        has_one = user,
+        has_one = receipt_token_mint,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         mut,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_token_authority.bump,
+        has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -89,29 +93,21 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
     }
 
     fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.fund_token_authority;
-        let key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
-
         ctx.accounts.token_program.burn_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[signer_seeds.as_ref()]),
+            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
             amount,
         )
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.fund_token_authority;
-        let key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
-
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[signer_seeds.as_ref()]),
+            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
             amount,
         )
     }

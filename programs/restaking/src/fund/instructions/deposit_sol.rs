@@ -15,25 +15,29 @@ pub struct FundDepositSOL<'info> {
     #[account(
         init_if_needed,
         payer = user,
-        seeds = [USER_RECEIPT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
         bump,
         space = 8 + UserReceipt::INIT_SPACE,
+        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
+        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         mut,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_token_authority.bump,
+        has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -55,6 +59,12 @@ impl<'info> FundDepositSOL<'info> {
     pub fn deposit_sol(mut ctx: Context<Self>, amount: u64) -> Result<()> {
         let receipt_token_account = ctx.accounts.receipt_token_account.key();
         msg!("receipt_token_account: {}", receipt_token_account);
+
+        ctx.accounts.user_receipt.initialize_if_needed(
+            ctx.bumps.user_receipt,
+            ctx.accounts.user.key(),
+            ctx.accounts.receipt_token_mint.key(),
+        );
 
         Self::transfer_sol_cpi(&ctx, amount)?;
         ctx.accounts.fund.deposit_sol(amount)?;
@@ -130,15 +140,11 @@ impl<'info> FundDepositSOL<'info> {
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let bump = ctx.bumps.fund_token_authority;
-        let key = ctx.accounts.receipt_token_mint.key();
-        let signer_seeds = [FUND_TOKEN_AUTHORITY_SEED, key.as_ref(), &[bump]];
-
         ctx.accounts.token_program.mint_token_cpi(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_account,
             ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[signer_seeds.as_ref()]),
+            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
             amount,
         )
     }

@@ -248,54 +248,46 @@ export const deposit_token = describe("deposit_token", () => {
     });
 
     it("Deposit bSOL, mSOL, JitoSOL, INF", async () => {
-        const txs = new anchor.web3.Transaction().add(
-            await program.methods
-                .fundDepositToken(amount)
-                .accounts({
-                    user: user.publicKey,
-                    tokenMint: bSOLMint.address,
-                    userTokenAccount: userBSOLTokenAccount.address,
-                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([user])
-                .instruction(),
-            await program.methods
-                .fundDepositToken(amount)
-                .accounts({
-                    user: user.publicKey,
-                    tokenMint: mSOLMint.address,
-                    userTokenAccount: userMSOLTokenAccount.address,
-                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([user])
-                .instruction(),
-            await program.methods
-                .fundDepositToken(amount)
-                .accounts({
-                    user: user.publicKey,
-                    tokenMint: jitoSOLMint.address,
-                    userTokenAccount: userJitoSOLTokenAccount.address,
-                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([user])
-                .instruction(),
-            await program.methods
-                .fundDepositToken(amount)
-                .accounts({
-                    user: user.publicKey,
-                    tokenMint: infMint.address,
-                    userTokenAccount: userInfTokenAccount.address,
-                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([user])
-                .instruction(),
-        );
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            txs,
-            [user],
-        );
-        console.log(`user deposited tokens tx sig: ${txSig}`);
+        await program.methods
+            .fundDepositToken(amount)
+            .accounts({
+                user: user.publicKey,
+                tokenMint: bSOLMint.address,
+                userTokenAccount: userBSOLTokenAccount.address,
+                depositTokenProgram: spl.TOKEN_PROGRAM_ID,
+            })
+            .signers([user])
+            .rpc();
+        await program.methods
+            .fundDepositToken(amount)
+            .accounts({
+                user: user.publicKey,
+                tokenMint: mSOLMint.address,
+                userTokenAccount: userMSOLTokenAccount.address,
+                depositTokenProgram: spl.TOKEN_PROGRAM_ID,
+            })
+            .signers([user])
+            .rpc();
+        await program.methods
+            .fundDepositToken(amount)
+            .accounts({
+                user: user.publicKey,
+                tokenMint: jitoSOLMint.address,
+                userTokenAccount: userJitoSOLTokenAccount.address,
+                depositTokenProgram: spl.TOKEN_PROGRAM_ID,
+            })
+            .signers([user])
+            .rpc();
+        await program.methods
+            .fundDepositToken(amount)
+            .accounts({
+                user: user.publicKey,
+                tokenMint: infMint.address,
+                userTokenAccount: userInfTokenAccount.address,
+                depositTokenProgram: spl.TOKEN_PROGRAM_ID,
+            })
+            .signers([user])
+            .rpc();
     });
 
     it.skip("Fail when exceeding token cap!", async () => {

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::{constants::*, error::ErrorCode, fund::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundUpdate<'info> {
@@ -10,8 +10,9 @@ pub struct FundUpdate<'info> {
 
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
 

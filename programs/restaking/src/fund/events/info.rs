@@ -4,7 +4,6 @@ use crate::{Fund, TokenInfo};
 
 #[event]
 pub struct FundInfo {
-    pub admin: Pubkey,
     pub lrt_mint: Pubkey,
     pub supported_tokens: Vec<TokenInfo>,
     pub sol_amount_in: u64,
@@ -16,7 +15,6 @@ pub struct FundInfo {
 impl FundInfo {
     pub fn new_from_fund(fund: &Fund) -> Self {
         FundInfo {
-            admin: fund.admin,
             lrt_mint: fund.receipt_token_mint,
             supported_tokens: fund.whitelisted_tokens.clone(),
             sol_amount_in: fund.sol_amount_in,

@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, fund::*, Empty};
+use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
 pub struct FundInitialize<'info> {
@@ -15,7 +15,7 @@ pub struct FundInitialize<'info> {
     #[account(
         init,
         payer = admin,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
         bump,
         space = 8 + Fund::INIT_SPACE,
     )]
@@ -24,11 +24,11 @@ pub struct FundInitialize<'info> {
     #[account(
         init,
         payer = admin,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + Empty::INIT_SPACE,
+        space = 8 + FundTokenAuthority::INIT_SPACE,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
@@ -55,7 +55,10 @@ impl<'info> FundInitialize<'info> {
 
         ctx.accounts
             .fund
-            .initialize(ctx.accounts.admin.key(), receipt_token_mint_key);
+            .initialize(ctx.bumps.fund, receipt_token_mint_key);
+        ctx.accounts
+            .fund_token_authority
+            .initialize(ctx.bumps.fund_token_authority, receipt_token_mint_key);
 
         Ok(())
     }

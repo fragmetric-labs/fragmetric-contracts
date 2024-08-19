@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::spl_token_2022,
 };
 
-use restaking::constants::{FRAGSOL_MINT_ADDRESS, USER_RECEIPT_SEED};
+use restaking::{common::PDASignerSeeds, constants::FRAGSOL_MINT_ADDRESS, fund::*};
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
@@ -57,7 +57,6 @@ async fn test_deposit_sol() {
 
     let mut _fund: restaking::fund::Fund = load_and_deserialize(context, fund).await;
 
-    msg!("fund admin: {}", _fund.admin);
     msg!(
         "fund sol_withdrawal_fee_rate: {}",
         _fund.withdrawal_status.sol_withdrawal_fee_rate
@@ -94,18 +93,15 @@ impl Default for SetUpTest {
         let (receipt_token_mint_pda, _) =
             Pubkey::find_program_address(&[b"fragSOL"], &restaking::ID);
         let (user_receipt_pda, _) = Pubkey::find_program_address(
-            &[USER_RECEIPT_SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+            &[UserReceipt::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
             &restaking::ID,
         );
         let (fund_pda, _) = Pubkey::find_program_address(
-            &[
-                restaking::constants::FUND_SEED,
-                receipt_token_mint_pda.as_ref(),
-            ],
+            &[Fund::SEED, receipt_token_mint_pda.as_ref()],
             &restaking::ID,
         );
         let (fund_token_authority_pda, _) = Pubkey::find_program_address(
-            &[restaking::constants::FUND_TOKEN_AUTHORITY_SEED],
+            &[FundTokenAuthority::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
             &restaking::ID,
         );
         // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);

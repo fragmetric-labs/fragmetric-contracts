@@ -34,7 +34,8 @@ mod tests {
     #[test]
     fn test_add_duplicated_token_fails() {
         let mut fund = Fund {
-            admin: Pubkey::default(),
+            data_version: 1,
+            bump: 0,
             receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
@@ -62,7 +63,8 @@ mod tests {
     #[test]
     fn test_update_token() {
         let mut fund = Fund {
-            admin: Pubkey::default(),
+            data_version: 1,
+            bump: 0,
             receipt_token_mint: Pubkey::default(),
             whitelisted_tokens: vec![],
             sol_amount_in: 0,
