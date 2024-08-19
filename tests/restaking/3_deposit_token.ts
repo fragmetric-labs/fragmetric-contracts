@@ -7,9 +7,9 @@ import * as chai from 'chai';
 import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as fs from "fs";
 import * as utils from "../utils/utils";
 import * as ed25519 from "ed25519";
+import * as restaking from "./1_fund_initialize";
 
 chai.use(chaiAsPromised);
 
@@ -17,30 +17,11 @@ export const deposit_token = describe("deposit_token", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const admin = (program.provider as anchor.AnchorProvider).wallet;
+    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
-    console.log(`User key: ${user.publicKey}`);
-
-    const adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../id.json")));
-
-    let receiptTokenMint: anchor.web3.Keypair;
-
-    let tokenMint1: anchor.web3.PublicKey;
-    let tokenMint2: anchor.web3.PublicKey;
-
-    let bSOLMintPublicKey: anchor.web3.PublicKey;
-    let mSOLMintPublicKey: anchor.web3.PublicKey;
-    let jitoSOLMintPublicKey: anchor.web3.PublicKey;
-    let infMintPublicKey: anchor.web3.PublicKey;
-
-    let bSOLMint: spl.Mint;
-    let mSOLMint: spl.Mint;
-    let jitoSOLMint: spl.Mint;
-    let infMint: spl.Mint;
-
-    let fund_pda: anchor.web3.PublicKey;
-    let fund_token_authority_pda: anchor.web3.PublicKey;
+    console.log(`Payer(user1.json) key: ${payer.publicKey}`);
+    console.log(`User(user2.json) key: ${user.publicKey}`);
 
     let userToken1Account: spl.Account;
     let userBSOLTokenAccount: spl.Account;
@@ -53,231 +34,203 @@ export const deposit_token = describe("deposit_token", () => {
 
     const eventParser = new EventParser(program.programId, program.coder);
 
-    before("Sol airdrop", async () => {
-        await utils.requestAirdrop(program.provider, payer, 10);
-        await utils.requestAirdrop(program.provider, user, 10);
+    // Localnet only
+    before("Sol airdrop to user", async function () {
+        if (utils.isLocalnet(program.provider.connection)) {
+            await utils.requestAirdrop(program.provider, user, 10);
 
-        // check the balance
-        const adminBal = await program.provider.connection.getBalance(admin.publicKey);
-        console.log(`Admin SOL balance: ${adminBal}`);
-        const payerBal = await program.provider.connection.getBalance(payer.publicKey);
-        console.log(`Payer SOL balance: ${payerBal}`);
-        const userBal = await program.provider.connection.getBalance(user.publicKey);
-        console.log(`User SOL balance: ${userBal}`);
-    });
-
-    before("Prepare accounts", async () => {
-        receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-
-        tokenMint1 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint1", {encoding: "utf8"}).replace(/"/g, ''));
-        tokenMint2 = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/tokenMint2", {encoding: "utf8"}).replace(/"/g, ''));
-        console.log(`tokenMint1: ${tokenMint1}, tokenMint2: ${tokenMint2}`);
-
-        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        console.log(`bSOLMint: ${bSOLMintPublicKey}, mSOLMint: ${mSOLMintPublicKey}, jitoSOLMint: ${jitoSOLMintPublicKey}, infMint: ${infMintPublicKey}`);
-
-        [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
-            program.programId
-        );
-        [fund_token_authority_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund_token_authority"), receiptTokenMint.publicKey.toBuffer()],
-            program.programId,
-        );
-
-        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID));
-        console.log("Fund =", fund_pda);
-        console.log("Fund Token Authority =", fund_token_authority_pda);
-        console.log("Receipt Token Mint =", receiptTokenMintAccount.address);
-        console.log("It's authority =", receiptTokenMintAccount.mintAuthority);
-        console.log("It's freeze authority = ", receiptTokenMintAccount.freezeAuthority);
-    });
-
-    before("Prepare mainnet mint accounts", async () => {
-        bSOLMint = await spl.getMint(
-            program.provider.connection,
-            bSOLMintPublicKey,
-        );
-        mSOLMint = await spl.getMint(
-            program.provider.connection,
-            mSOLMintPublicKey,
-        );
-        jitoSOLMint = await spl.getMint(
-            program.provider.connection,
-            jitoSOLMintPublicKey,
-        );
-        infMint = await spl.getMint(
-            program.provider.connection,
-            infMintPublicKey,
-        );
-    });
-
-    // before("Create and Mint User Token Account", async () => {
-    //     // create depositor's token account
-    //     userToken1Account = await spl.getOrCreateAssociatedTokenAccount(
-    //         program.provider.connection,
-    //         user,
-    //         tokenMint1,
-    //         user.publicKey,
-    //         false,
-    //         undefined,
-    //         undefined,
-    //         TOKEN_2022_PROGRAM_ID,
-    //     );
-    //     console.log(`User Token1 Account:`, userToken1Account.address);
-
-    //     // mint some tokens to depositor
-    //     await spl.mintToChecked(
-    //         program.provider.connection,
-    //         payer, // payer를 depositor로 설정하면 missing signature 에러남
-    //         tokenMint1,
-    //         userToken1Account.address,
-    //         payer.publicKey,
-    //         amount.toNumber(),
-    //         9,
-    //         undefined,
-    //         undefined,
-    //         TOKEN_2022_PROGRAM_ID,
-    //     );
-    //     const depositorToken1Bal = await getTokenBalance(program.provider.connection, userToken1Account.address);
-    //     console.log(`User Token1 balance:`, depositorToken1Bal);
-    // });
-
-    before("Mint mainnet mint tokens to the user token account", async () => {
-        // create user's bSOL token account
-        userBSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
-            program.provider.connection,
-            payer,
-            bSOLMint.address,
-            user.publicKey,
-            false,
-            undefined,
-            undefined,
-        );
-        userMSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
-            program.provider.connection,
-            payer,
-            mSOLMint.address,
-            user.publicKey,
-            false,
-            undefined,
-            undefined,
-        );
-        userJitoSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
-            program.provider.connection,
-            payer,
-            jitoSOLMint.address,
-            user.publicKey,
-            false,
-            undefined,
-            undefined,
-        );
-        userInfTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
-            program.provider.connection,
-            payer,
-            infMint.address,
-            user.publicKey,
-            false,
-            undefined,
-            undefined,
-        );
-        console.log(`user bSOL token account: ${userBSOLTokenAccount.address}, mSOL token account: ${userMSOLTokenAccount.address}, JitoSOL token account: ${userJitoSOLTokenAccount.address}, INF token account: ${userInfTokenAccount.address}`);
-
-        // mint tokens to user
-        const mintTokensTx = new anchor.web3.Transaction().add(
-            spl.createMintToCheckedInstruction(
-                bSOLMint.address,
-                userBSOLTokenAccount.address,
-                payer.publicKey,
-                amount.toNumber(),
-                decimals,
-                [],
-            ),
-            spl.createMintToCheckedInstruction(
-                mSOLMint.address,
-                userMSOLTokenAccount.address,
-                payer.publicKey,
-                amount.toNumber(),
-                decimals,
-                [],
-            ),
-            spl.createMintToCheckedInstruction(
-                jitoSOLMint.address,
-                userJitoSOLTokenAccount.address,
-                payer.publicKey,
-                amount.toNumber(),
-                decimals,
-                [],
-            ),
-            spl.createMintToCheckedInstruction(
-                infMint.address,
-                userInfTokenAccount.address,
-                payer.publicKey,
-                amount.toNumber(),
-                decimals,
-                [],
-            ),
-        );
-        await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            mintTokensTx,
-            [payer],
-        );
-    });
-
-    it.skip("Deposit tokenMint1", async () => {
-        try {
-            const tx = await program.methods
-                .fundDepositToken(amount, null)
-                .accounts({
-                    user: user.publicKey,
-                    tokenMint: tokenMint1,
-                    userTokenAccount: userToken1Account.address,
-                })
-                .signers([user])
-                .rpc({ commitment: "confirmed" });
-            console.log(`Deposit token tx: ${tx}`);
-
-            // check if token's amount_in increased correctly
-            const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens[0];
-            console.log("Tokens from fund:", tokensFromFund.tokenAmountIn);
-
-            expect(tokensFromFund.tokenAmountIn.toNumber()).to.eq(amount.toNumber());
-        } catch (err) {
-            console.log("Deposit Token err:");
-            throw new Error(err);
+            // check the balance
+            const adminBal = await program.provider.connection.getBalance(admin.publicKey);
+            console.log(`Admin SOL balance: ${adminBal}`);
+            const payerBal = await program.provider.connection.getBalance(payer.publicKey);
+            console.log(`Payer SOL balance: ${payerBal}`);
+            const userBal = await program.provider.connection.getBalance(user.publicKey);
+            console.log(`User SOL balance: ${userBal}`);
+            console.log("======= Sol airdrop to user =======");
         }
     });
 
-    it("Deposit bSOL, mSOL, JitoSOL, INF with no metadata", async () => {
+    // Devnet only
+    before("Create and mint to user token1 account", async () => {
+        if (utils.isDevnet(program.provider.connection)) {
+            // create depositor's token account
+            userToken1Account = await spl.getOrCreateAssociatedTokenAccount(
+                program.provider.connection,
+                user,
+                restaking.tokenMint1,
+                user.publicKey,
+                false,
+                undefined,
+                undefined,
+                TOKEN_2022_PROGRAM_ID,
+            );
+            console.log(`User Token1 Account:`, userToken1Account.address);
+    
+            // mint some tokens to depositor
+            await spl.mintToChecked(
+                program.provider.connection,
+                payer, // payer를 depositor로 설정하면 missing signature 에러남
+                restaking.tokenMint1,
+                userToken1Account.address,
+                payer.publicKey,
+                amount.toNumber(),
+                9,
+                undefined,
+                undefined,
+                TOKEN_2022_PROGRAM_ID,
+            );
+            const depositorToken1Bal = await getTokenBalance(program.provider.connection, userToken1Account.address);
+            console.log(`User Token1 balance:`, depositorToken1Bal);
+            console.log("======= Create and mint to user token1 account =======");
+        }
+    });
+
+    // Localnet only
+    before("Mint mainnet mint tokens to user token account for localnet", async () => {
+        if (utils.isLocalnet(program.provider.connection)) {
+            // create user's bSOL token account
+            userBSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+                program.provider.connection,
+                payer,
+                restaking.bSOLMint.address,
+                user.publicKey,
+                false,
+                undefined,
+                undefined,
+            );
+            userMSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+                program.provider.connection,
+                payer,
+                restaking.mSOLMint.address,
+                user.publicKey,
+                false,
+                undefined,
+                undefined,
+            );
+            userJitoSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+                program.provider.connection,
+                payer,
+                restaking.jitoSOLMint.address,
+                user.publicKey,
+                false,
+                undefined,
+                undefined,
+            );
+            userInfTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+                program.provider.connection,
+                payer,
+                restaking.infMint.address,
+                user.publicKey,
+                false,
+                undefined,
+                undefined,
+            );
+            console.log(`user bSOL token account    = ${userBSOLTokenAccount.address}`);
+            console.log(`user mSOL token account    = ${userMSOLTokenAccount.address}`);
+            console.log(`user jitoSOL token account = ${userJitoSOLTokenAccount.address}`);
+            console.log(`user INF token account     = ${userInfTokenAccount.address}`);
+    
+            // mint tokens to user
+            const mintTokensTx = new anchor.web3.Transaction().add(
+                spl.createMintToCheckedInstruction(
+                    restaking.bSOLMint.address,
+                    userBSOLTokenAccount.address,
+                    payer.publicKey,
+                    amount.toNumber(),
+                    decimals,
+                    [],
+                ),
+                spl.createMintToCheckedInstruction(
+                    restaking.mSOLMint.address,
+                    userMSOLTokenAccount.address,
+                    payer.publicKey,
+                    amount.toNumber(),
+                    decimals,
+                    [],
+                ),
+                spl.createMintToCheckedInstruction(
+                    restaking.jitoSOLMint.address,
+                    userJitoSOLTokenAccount.address,
+                    payer.publicKey,
+                    amount.toNumber(),
+                    decimals,
+                    [],
+                ),
+                spl.createMintToCheckedInstruction(
+                    restaking.infMint.address,
+                    userInfTokenAccount.address,
+                    payer.publicKey,
+                    amount.toNumber(),
+                    decimals,
+                    [],
+                ),
+            );
+            await anchor.web3.sendAndConfirmTransaction(
+                program.provider.connection,
+                mintTokensTx,
+                [payer],
+            );
+    
+            console.log("======= Mint mainnet mint tokens to user token account for localnet =======");
+        }
+    });
+
+    // Devnet only
+    it("Deposit tokenMint1", async function () {
+        if (!utils.isDevnet(program.provider.connection)) {
+            this.skip();
+        }
+
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        console.log(`token balance before deposit: ${tokenAmountIn_bef}`);
+
+        await program.methods
+            .fundDepositToken(amount, null)
+            .accounts({
+                user: user.publicKey,
+                tokenMint: restaking.tokenMint1,
+                userTokenAccount: userToken1Account.address,
+            })
+            .signers([user])
+            .rpc({ commitment: "confirmed" });
+
+        // check if token's amount_in increased correctly
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        console.log(`token balance after deposit: ${tokenAmountIn_aft}`);
+        expect(tokenAmountIn_aft - tokenAmountIn_bef).to.equal(amount.toNumber());
+    });
+
+    // Localnet only
+    it("Deposit bSOL, mSOL, JitoSOL, INF with no metadata", async function () {
+        if (!utils.isLocalnet(program.provider.connection)) {
+            this.skip();
+        }
+
         let txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: bSOLMint.address,
+                tokenMint: restaking.bSOLMint.address,
                 userTokenAccount: userBSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
             .signers([user])
             .rpc({commitment: "confirmed"});
-        console.log("Debug");
         // parse event
         let committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        // console.log(`committedTx:`, committedTx);
         let events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(event.data.walletProvider).to.be.null;
+            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
         }
     
         txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: mSOLMint.address,
+                tokenMint: restaking.mSOLMint.address,
                 userTokenAccount: userMSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -286,17 +239,18 @@ export const deposit_token = describe("deposit_token", () => {
             .rpc({ commitment: "confirmed" });
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        // console.log(`committedTx:`, committedTx);
         events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(event.data.walletProvider).to.be.null;
+            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
         }
     
         txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: jitoSOLMint.address,
+                tokenMint: restaking.jitoSOLMint.address,
                 userTokenAccount: userJitoSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -305,17 +259,18 @@ export const deposit_token = describe("deposit_token", () => {
             .rpc({commitment: "confirmed"});
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        // console.log(`committedTx:`, committedTx);
         events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(event.data.walletProvider).to.be.null;
+            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
         }
-
+    
         txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: infMint.address,
+                tokenMint: restaking.infMint.address,
                 userTokenAccount: userInfTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -324,14 +279,20 @@ export const deposit_token = describe("deposit_token", () => {
             .rpc({commitment: "confirmed"});
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        // console.log(`committedTx:`, committedTx);
         events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(event.data.walletProvider).to.be.null;
+            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
         }
     });
 
-    it.skip("Fail when exceeding token cap!", async () => {
+    // Devnet only
+    it("Fail when exceeding token1 token cap!", async function () {
+        if (!utils.isDevnet(program.provider.connection)) {
+            this.skip();
+        }
+
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         amount = tokenCap1.sub(amount).add(new anchor.BN(1_000)); // exceeding amount
 
@@ -339,7 +300,7 @@ export const deposit_token = describe("deposit_token", () => {
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            tokenMint1,
+            restaking.tokenMint1,
             userToken1Account.address,
             payer.publicKey,
             amount.toNumber(),
@@ -348,15 +309,16 @@ export const deposit_token = describe("deposit_token", () => {
             undefined,
             TOKEN_2022_PROGRAM_ID,
         );
-        const userToken1Bal = await getTokenBalance(program.provider.connection, userToken1Account.address);
-        console.log(`user token1 balance:`, userToken1Bal);
+
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
             program.methods
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: tokenMint1,
+                    tokenMint: restaking.tokenMint1,
                     userTokenAccount: userToken1Account.address,
                 })
                 .signers([user])
@@ -364,21 +326,25 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
-        console.log("tokensFromFund:", tokensFromFund);
-
-        expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000).toNumber());
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
+        expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
 
-    it("Fail when exceeding token cap!", async () => {
-        const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
-        amount = tokenCap1.sub(amount).add(new anchor.BN(1)); // exceeding amount
+    // Localnet only
+    it("Fail when exceeding bSOL token cap!", async function () {
+        if (!utils.isLocalnet(program.provider.connection)) {
+            this.skip();
+        }
+
+        const tokenCap = new anchor.BN(1_000_000_000 * 1000);
+        amount = tokenCap.sub(amount).add(new anchor.BN(1)); // exceeding amount
 
         // first mint token to depositor
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            bSOLMint.address,
+            restaking.bSOLMint.address,
             userBSOLTokenAccount.address,
             payer.publicKey,
             amount.toNumber(),
@@ -386,15 +352,16 @@ export const deposit_token = describe("deposit_token", () => {
             undefined,
             undefined,
         );
-        const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
-        console.log(`user bSOL balance:`, userBSOLBal);
+
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
             program.methods
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: bSOLMint.address,
+                    tokenMint: restaking.bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
                 })
                 .signers([user])
@@ -402,20 +369,24 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
-        console.log("tokensFromFund:", tokensFromFund);
-
-        expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000_000 * 10).toNumber());
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
+        expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
 
-    it("Deposit bSOL, mSOL, JitoSOL, INF with metadata - should pass signature verification", async () => {
+    // Localnet only
+    it("Deposit bSOL, mSOL, JitoSOL, INF with metadata - should pass signature verification", async function () {
+        if (!utils.isLocalnet(program.provider.connection)) {
+            this.skip();
+        }
+
         let amount = new anchor.BN(1_000_000_000);
 
         // first mint token to depositor
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            bSOLMint.address,
+            restaking.bSOLMint.address,
             userBSOLTokenAccount.address,
             payer.publicKey,
             amount.toNumber(),
@@ -426,11 +397,8 @@ export const deposit_token = describe("deposit_token", () => {
         const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
         console.log(`user bSOL balance:`, userBSOLBal);
 
-        let tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
-        console.log("tokensFromFund before:", tokensFromFund);
-
-        const fundBSOLBal_bef = tokensFromFund[0].tokenAmountIn.toNumber();
-        console.log(`fund bSOL balance before:`, fundBSOLBal_bef);
+        const fundBSOLBal_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        console.log(`fund bSOL balance before deposit:`, fundBSOLBal_bef);
 
         const payload = {
             walletProvider: "backpack",
@@ -438,11 +406,11 @@ export const deposit_token = describe("deposit_token", () => {
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
         let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        console.log(`encodedData:`, encodedData);
         let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
-        console.log(`decodedData:`, decodedData);
-        const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
+        expect(decodedData.walletProvider).to.equal(payload.walletProvider);
+        expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
 
+        const signature = ed25519.Sign(encodedData, Buffer.from(admin.payer.secretKey));
         const tx = new anchor.web3.Transaction().add(
             anchor.web3.Ed25519Program.createInstructionWithPublicKey({
                 publicKey: admin.publicKey.toBytes(),
@@ -456,7 +424,7 @@ export const deposit_token = describe("deposit_token", () => {
                 )
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: bSOLMint.address,
+                    tokenMint: restaking.bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -464,32 +432,36 @@ export const deposit_token = describe("deposit_token", () => {
                 .signers([user])
                 .instruction()
         );
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
+        const depositTokenSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx,
             [user],
             { commitment: "confirmed" },
         );
-        console.log("DepositToken transaction signature", txSig);
 
-        tokensFromFund = (await program.account.fund.fetch(fund_pda)).supportedTokens;
-        console.log("tokensFromFund after:", tokensFromFund);
-
-        const fundBSOLBal_aft = tokensFromFund[0].tokenAmountIn.toNumber();
-        console.log(`fund bSOL balance after:`, fundBSOLBal_aft);
-        console.log(`balance difference:`, fundBSOLBal_aft - fundBSOLBal_bef);
+        const fundBSOLBal_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        console.log(`fund bSOL balance after deposit:`, fundBSOLBal_aft);
+        expect(fundBSOLBal_aft - fundBSOLBal_bef).to.equal(amount.toNumber());
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        const committedTx = await program.provider.connection.getParsedTransaction(depositTokenSig, "confirmed");
+        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(decodedData.walletProvider).to.equal(payload.walletProvider);
+            expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(event.data.walletProvider).to.equal(payload.walletProvider);
+            expect(event.data.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            console.log(`Wallet provider: ${event.data.walletProvider}`);
+            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
         }
     });
 });
 
-const getTokenBalance = async (connection, tokenAccount) => {
+const getTokenBalance = async (
+    connection: anchor.web3.Connection,
+    tokenAccount: anchor.web3.PublicKey,
+) => {
     const info = await connection.getTokenAccountBalance(tokenAccount);
     if (info.value.uiAmount == null) throw new Error("No balance found");
     return info.value.uiAmount;

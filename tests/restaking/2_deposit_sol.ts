@@ -5,112 +5,87 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as fs from "fs";
 import * as utils from "../utils/utils";
+import * as restaking from "./1_fund_initialize";
 import * as ed25519 from "ed25519";
 
 export const deposit_sol = describe("deposit_sol", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const admin = (program.provider as anchor.AnchorProvider).wallet;
+    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
-    console.log(`Payer key: ${payer.publicKey}`);
-    console.log(`User key: ${user.publicKey}`);
-
-    const adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../id.json")));
-
-    // for depositor provider
-    // const userProvider = new anchor.AnchorProvider(program.provider.connection, new anchor.Wallet(user)); // and setProvider when needed
-
-    let receiptTokenMint: anchor.web3.Keypair;
-    let fund_pda: anchor.web3.PublicKey;
-    let fund_token_authority_pda: anchor.web3.PublicKey;
+    console.log(`Payer(user1.json) key: ${payer.publicKey}`);
+    console.log(`User(user2.json) key: ${user.publicKey}`);
 
     const eventParser = new EventParser(program.programId, program.coder);
 
-    before("Sol airdrop", async () => {
-        await utils.requestAirdrop(program.provider, payer, 10);
-        await utils.requestAirdrop(program.provider, user, 10);
-
-        // check the balance
-        const adminBal = await program.provider.connection.getBalance(admin.publicKey);
-        console.log(`Admin SOL balance: ${adminBal}`);
-        const payerBal = await program.provider.connection.getBalance(payer.publicKey);
-        console.log(`Payer SOL balance: ${payerBal}`);
-        const userBal = await program.provider.connection.getBalance(user.publicKey);
-        console.log(`User SOL balance: ${userBal}`);
-    });
-
-    before("Prepare accounts", async () => {
-        receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-
-        [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
-            program.programId
-        );
-        [fund_token_authority_pda, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund_token_authority"), receiptTokenMint.publicKey.toBuffer()],
-            program.programId,
-        );
-
-        const receiptTokenMintAccount = (await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID));
-        console.log("Fund =", fund_pda);
-        console.log("Fund Token Authority =", fund_token_authority_pda);
-        console.log("Receipt Token Mint =", receiptTokenMintAccount.address);
-        console.log("It's authority =", receiptTokenMintAccount.mintAuthority);
-        console.log("It's freeze authority = ", receiptTokenMintAccount.freezeAuthority);
+    // Localnet only
+    before("Sol airdrop to user", async () => {
+        if (utils.isLocalnet(program.provider.connection)) {
+            await utils.requestAirdrop(program.provider, user, 10);
+    
+            // check the balance
+            const adminBal = await program.provider.connection.getBalance(admin.publicKey);
+            console.log(`Admin SOL balance: ${adminBal}`);
+            const payerBal = await program.provider.connection.getBalance(payer.publicKey);
+            console.log(`Payer SOL balance: ${payerBal}`);
+            const userBal = await program.provider.connection.getBalance(user.publicKey);
+            console.log(`User SOL balance: ${userBal}`);
+            console.log("======= Sol airdrop to user =======");
+        }
     });
 
     it("Deposit SOL with no metadata", async () => {
         let amount = new anchor.BN(1_000_000_000);
 
-        const fundBal_bef = await program.provider.connection.getBalance(fund_pda);
-        console.log(`fund balance before:`, fundBal_bef);
+        const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
+        console.log(`fund balance before deposit:`, fundBal_bef);
 
-        const tx = await program.methods
+        const depositSolTx = await program.methods
             .fundDepositSol(amount, null)
             .accounts({
                 user: user.publicKey,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" });
-        console.log("DepositSOL transaction signature", tx);
 
-        const fundBal_aft = await program.provider.connection.getBalance(fund_pda);
-        console.log(`fund balance after:`, fundBal_aft);
-        console.log(`balance difference:`, fundBal_aft - fundBal_bef);
+        const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
+        console.log(`fund balance after deposit:`, fundBal_aft);
+        expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
+
+        // check the sol_amount_in has accumulated
+        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toNumber());
+        expect(fundData.solAmountIn.toNumber()).to.eq(amount.toNumber());
 
         // check associated token account
         const associatedToken = await spl.getAssociatedTokenAddress(
-            receiptTokenMint.publicKey,
+            restaking.receiptTokenMint.publicKey,
             user.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`associatedToken address:`, associatedToken);
-
-        // check the sol_amount_in has accumulated
-        let fundData = await program.account.fund.fetch(fund_pda);
-
-        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toString());
-        expect(fundData.solAmountIn.toString()).to.eq(amount.toString());
+        console.log(`user associatedToken address:`, associatedToken);
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(tx, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
+        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(event.data.walletProvider).to.be.null;
+            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
+            console.log(`Wallet provider: ${event.data.walletProvider}`);
+            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
         }
     });
 
     it("Deposit SOL with metadata - should pass signature verification", async () => {
         let amount = new anchor.BN(1_000_000_000);
 
-        const fundBal_bef = await program.provider.connection.getBalance(fund_pda);
-        console.log(`fund balance before:`, fundBal_bef);
+        const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
+        console.log(`fund balance before deposit:`, fundBal_bef);
 
         const payload = {
             walletProvider: "backpack",
@@ -118,11 +93,11 @@ export const deposit_sol = describe("deposit_sol", () => {
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
         let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        console.log(`encodedData:`, encodedData);
         let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
-        console.log(`decodedData:`, decodedData);
-        const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
+        expect(decodedData.walletProvider).to.equal(payload.walletProvider);
+        expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
 
+        const signature = ed25519.Sign(encodedData, Buffer.from(admin.payer.secretKey));
         const tx = new anchor.web3.Transaction().add(
             anchor.web3.Ed25519Program.createInstructionWithPublicKey({
                 publicKey: admin.publicKey.toBytes(),
@@ -141,27 +116,33 @@ export const deposit_sol = describe("deposit_sol", () => {
                 .signers([user])
                 .instruction()
         );
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
+        const depositSolTx = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx,
             [user],
             { commitment: "confirmed" },
         );
-        console.log("DepositSOL transaction signature", txSig);
 
-        const fundBal_aft = await program.provider.connection.getBalance(fund_pda);
-        console.log(`fund balance after:`, fundBal_aft);
-        console.log(`balance difference:`, fundBal_aft - fundBal_bef);
+        const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
+        console.log(`fund balance after deposit:`, fundBal_aft);
+        expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
 
-        let fundData = await program.account.fund.fetch(fund_pda);
-        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toString());
+        // check the sol_amount_in has accumulated
+        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toNumber());
+        expect(fundData.solAmountIn.toNumber()).to.eq(2 * amount.toNumber());
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        console.log(`committedTx:`, committedTx);
+        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
+        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            console.log(`FundDepositSOL event:`, event);
+            expect(decodedData.walletProvider).to.equal(payload.walletProvider);
+            expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(event.data.walletProvider).to.equal(payload.walletProvider);
+            expect(event.data.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            console.log(`Wallet provider: ${event.data.walletProvider}`);
+            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
         }
     });
 });

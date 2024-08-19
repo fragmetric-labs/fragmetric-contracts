@@ -8,88 +8,72 @@ import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
+import * as restaking from "./1_fund_initialize";
 
 chai.use(chaiAsPromised);
 
 export const withdraw = describe("withdraw", () => {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
-
+  anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Restaking as Program<Restaking>;
 
-  const user = anchor.web3.Keypair.generate();
-  const admin = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(require("../user1.json"))
-  );
-  const decimals = 9;
+  const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
+  const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
+  const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
+  console.log(`Payer(user1.json) key: ${payer.publicKey}`);
+  console.log(`User(user2.json) key: ${user.publicKey}`);
 
-  const receiptTokenMint = anchor.web3.Keypair.fromSecretKey(
-    Uint8Array.from(require("./fragsolMint.json"))
-  );
+  let userReceiptTokenAccount: anchor.web3.PublicKey;
 
-  const [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
-    program.programId
-  );
+  const amount = 1_000_000_000;
 
-  let userReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-    receiptTokenMint.publicKey,
-    user.publicKey,
-    false,
-    TOKEN_2022_PROGRAM_ID
-  );
+  // Localnet only
+  before("Sol airdrop to user", async function () {
+    if (utils.isLocalnet(program.provider.connection)) {
+      await utils.requestAirdrop(program.provider, user, 10);
 
-  before("Sol airdrop", async () => {
-    await utils.requestAirdrop(provider, user, 10);
+      // check the balance
+      const adminBal = await program.provider.connection.getBalance(admin.publicKey);
+      console.log(`Admin SOL balance: ${adminBal}`);
+      const payerBal = await program.provider.connection.getBalance(payer.publicKey);
+      console.log(`Payer SOL balance: ${payerBal}`);
+      const userBal = await program.provider.connection.getBalance(user.publicKey);
+      console.log(`User SOL balance: ${userBal}`);
+      console.log("======= Sol airdrop to user =======");
+    }
   });
 
-  before("Create token accounts", async () => {
-    const tx = new anchor.web3.Transaction().add(
-      spl.createAssociatedTokenAccountInstruction(
-        admin.publicKey,
-        userReceiptTokenAccount,
-        user.publicKey,
-        receiptTokenMint.publicKey,
-        TOKEN_2022_PROGRAM_ID
-      )
+  before("Prepare program accounts", async () => {
+    userReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
+      restaking.receiptTokenMint.publicKey,
+      user.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
     );
-    const txSig = await anchor.web3.sendAndConfirmTransaction(
-      provider.connection,
-      tx,
-      [admin]
-    );
+    console.log(`user receipt token account = ${userReceiptTokenAccount}`);
+    console.log("======= Prepare program accounts =======");
   });
 
-  before("Mint tokens to user1", async () => {
-    const amount = 10 * 10 ** decimals;
-
-    const txSig = await program.methods
-      .tokenMintReceiptTokenForTest(new anchor.BN(amount))
-      .accounts({
-        payer: admin.publicKey,
-        receiptTokenAccountOwner: user.publicKey,
-      })
-      .signers([admin])
-      .rpc();
-  });
-
-  before("Deposit SOL", async () => {
-    const amount = 5 * 10 ** decimals;
+  before("Deposit SOL to mint receipt token", async () => {
+    let amount = new anchor.BN(1_000_000_000 * 5);
     await program.methods
-      .fundDepositSol(new anchor.BN(amount), null)
+      .fundDepositSol(amount, null)
       .accounts({
         user: user.publicKey,
       })
       .signers([user])
-      .rpc();
-  });
+      .rpc({ commitment: "confirmed" });
+
+    const userReceiptTokenBalance = (await spl.getAccount(
+      program.provider.connection,
+      userReceiptTokenAccount,
+      undefined,
+      TOKEN_2022_PROGRAM_ID,
+    )).amount;
+    console.log(`user receipt token balance: ${userReceiptTokenBalance}`);
+    console.log("======= Deposit SOL to mint receipt token =======");
+  })
 
   it("Request withdrawal", async () => {
-    const amount = 1 * 10 ** decimals;
-
-    console.log("User receipt token account:", userReceiptTokenAccount);
-    console.log("User:", user.publicKey);
-
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
@@ -109,7 +93,7 @@ export const withdraw = describe("withdraw", () => {
         .rpc();
     }
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda))
+    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fund_pda))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(3);
 
@@ -125,7 +109,6 @@ export const withdraw = describe("withdraw", () => {
   });
 
   it("Cancel withdrawal request", async () => {
-    const amount = 1 * 10 ** decimals;
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
@@ -143,7 +126,7 @@ export const withdraw = describe("withdraw", () => {
       .signers([user])
       .rpc();
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda))
+    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fund_pda))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(2);
 
@@ -169,35 +152,10 @@ export const withdraw = describe("withdraw", () => {
   });
 
   it("Process all withdrawals", async () => {
-    const amount = 1 * 10 ** decimals;
-
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(fund_pda))
-      .withdrawalStatus.pendingBatchWithdrawal;
-
-    console.log(pendingBatchWithdrawal);
-
-    console.log(
-      "Sol Amount In",
-      (
-        await program.account.fund.fetch(fund_pda)
-      ).solAmountIn.toNumber()
-    );
-
-    console.log(
-      "receiptTokenToProcess",
-      pendingBatchWithdrawal.receiptTokenToProcess.toNumber()
-    );
-
-    console.log(
-      (
-        await program.account.fund.fetch(fund_pda)
-      ).solAmountIn.toNumber() -
-        pendingBatchWithdrawal.receiptTokenToProcess.toNumber()
-    );
-
     await program.methods.operatorRun().accounts({}).signers([]).rpc();
 
-    const withdrawalStatus = (await program.account.fund.fetch(fund_pda)).withdrawalStatus;
+    const fund = await program.account.fund.fetch(restaking.fund_pda)
+    const withdrawalStatus = fund.withdrawalStatus;
     expect(withdrawalStatus.lastCompletedBatchId.toNumber()).to.equal(1);
 
     const reservedFund = withdrawalStatus.reservedFund;
@@ -206,7 +164,6 @@ export const withdraw = describe("withdraw", () => {
   });
 
   it("Withdraw sol", async () => {
-    const amount = 1 * 10 ** decimals;
     const sol_withdraw_fee_rate = 10;
     const fee = (amount * sol_withdraw_fee_rate) / 10000;
     const balanceBefore = await program.provider.connection.getBalance(
@@ -226,17 +183,15 @@ export const withdraw = describe("withdraw", () => {
     );
     expect(balanceAfter - balanceBefore).to.equal(amount - fee);
 
-    const reservedFund = (await program.account.fund.fetch(fund_pda))
+    const reservedFund = (await program.account.fund.fetch(restaking.fund_pda))
       .withdrawalStatus.reservedFund;
     expect(reservedFund.solRemaining.toNumber()).to.equal(amount + fee);
   });
 
   it("Block withdrawal", async () => {
-    const amount = 1 * 10 ** decimals;
-
     await program.methods
       .fundUpdateWithdrawalEnabledFlag(false)
-      .accounts({ fund: fund_pda })
+      .accounts({ fund: restaking.fund_pda })
       .rpc();
 
     expect(

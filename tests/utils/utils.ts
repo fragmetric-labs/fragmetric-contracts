@@ -35,7 +35,22 @@ const changeMintAuthority = (mintAuthority: string, mintFilePath: string) => {
     fs.writeFileSync(mintFilePath, JSON.stringify(mint));
 }
 
+function isLocalnet(conn: anchor.web3.Connection): boolean {
+    return conn.rpcEndpoint == "http://0.0.0.0:8899";
+}
+
+function isDevnet(conn: anchor.web3.Connection): boolean {
+    return conn.rpcEndpoint == anchor.web3.clusterApiUrl("devnet");
+}
+
+function isMainnetBeta(conn: anchor.web3.Connection): boolean {
+    return conn.rpcEndpoint == anchor.web3.clusterApiUrl("mainnet-beta");
+}
+
 export {
     requestAirdrop,
     changeMintAuthority,
+    isLocalnet,
+    isDevnet,
+    isMainnetBeta as isMainnet,
 };
