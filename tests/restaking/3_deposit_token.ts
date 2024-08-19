@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { Program } from "@coral-xyz/anchor";
+import { EventParser, Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import * as chai from 'chai';
@@ -9,6 +9,7 @@ import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as fs from "fs";
 import * as utils from "../utils/utils";
+import * as ed25519 from "ed25519";
 
 chai.use(chaiAsPromised);
 
@@ -20,6 +21,8 @@ export const deposit_token = describe("deposit_token", () => {
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
     console.log(`User key: ${user.publicKey}`);
+
+    const adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../id.json")));
 
     let receiptTokenMint: anchor.web3.Keypair;
 
@@ -47,6 +50,8 @@ export const deposit_token = describe("deposit_token", () => {
 
     let amount = new anchor.BN(1_000_000_000 * 10); // 10
     const decimals = 9;
+
+    const eventParser = new EventParser(program.programId, program.coder);
 
     before("Sol airdrop", async () => {
         await utils.requestAirdrop(program.provider, payer, 10);
@@ -232,14 +237,14 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: tokenMint1,
                     userTokenAccount: userToken1Account.address,
                 })
                 .signers([user])
-                .rpc();
+                .rpc({ commitment: "confirmed" });
             console.log(`Deposit token tx: ${tx}`);
 
             // check if token's amount_in increased correctly
@@ -253,8 +258,8 @@ export const deposit_token = describe("deposit_token", () => {
         }
     });
 
-    it("Deposit bSOL, mSOL, JitoSOL, INF", async () => {
-        const txs = new anchor.web3.Transaction().add(
+    it("Deposit bSOL, mSOL, JitoSOL, INF with no metadata", async () => {
+        const tx = new anchor.web3.Transaction().add(
             await program.methods
                 .fundDepositToken({
                     v1: {
@@ -262,11 +267,12 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
+                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
@@ -278,11 +284,12 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: mSOLMint.address,
                     userTokenAccount: userMSOLTokenAccount.address,
+                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
@@ -294,11 +301,12 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: jitoSOLMint.address,
                     userTokenAccount: userJitoSOLTokenAccount.address,
+                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
@@ -310,11 +318,12 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: infMint.address,
                     userTokenAccount: userInfTokenAccount.address,
+                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([user])
@@ -322,10 +331,19 @@ export const deposit_token = describe("deposit_token", () => {
         );
         const txSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
-            txs,
+            tx,
             [user],
+            { commitment: "confirmed" },
         );
         console.log(`user deposited tokens tx sig: ${txSig}`);
+
+        // parse event
+        const committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
+        console.log(`committedTx:`, committedTx);
+        const events = eventParser.parseLogs(committedTx.meta.logMessages);
+        for (const event of events) {
+            console.log(`FundDepositSOL event:`, event);
+        }
     });
 
     it.skip("Fail when exceeding token cap!", async () => {
@@ -356,7 +374,7 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: tokenMint1,
@@ -375,7 +393,7 @@ export const deposit_token = describe("deposit_token", () => {
 
     it("Fail when exceeding token cap!", async () => {
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
-        amount = tokenCap1.sub(amount).add(new anchor.BN(990)); // exceeding amount
+        amount = tokenCap1.sub(amount).add(new anchor.BN(1)); // exceeding amount
 
         // first mint token to depositor
         await spl.mintToChecked(
@@ -400,7 +418,7 @@ export const deposit_token = describe("deposit_token", () => {
                             amount: amount,
                         }
                     }
-                })
+                }, null)
                 .accounts({
                     user: user.publicKey,
                     tokenMint: bSOLMint.address,
@@ -415,6 +433,86 @@ export const deposit_token = describe("deposit_token", () => {
         console.log("tokensFromFund:", tokensFromFund);
 
         expect(tokensFromFund[0].tokenAmountIn.toNumber()).to.eq(new anchor.BN(1_000_000_000 * 10).toNumber());
+    });
+
+    it("Deposit bSOL, mSOL, JitoSOL, INF with metadata - should pass signature verification", async () => {
+        let amount = new anchor.BN(1_000_000_000);
+
+        // first mint token to depositor
+        await spl.mintToChecked(
+            program.provider.connection,
+            payer,
+            bSOLMint.address,
+            userBSOLTokenAccount.address,
+            payer.publicKey,
+            amount.toNumber(),
+            9,
+            undefined,
+            undefined,
+        );
+        const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
+        console.log(`user bSOL balance:`, userBSOLBal);
+
+        let tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
+        console.log("tokensFromFund before:", tokensFromFund);
+
+        const fundBSOLBal_bef = tokensFromFund[0].tokenAmountIn.toNumber();
+        console.log(`fund bSOL balance before:`, fundBSOLBal_bef);
+
+        const payload = {
+            walletProvider: "backpack",
+            fpointAccrualRateMultiplier: 1.3,
+        };
+        const programBorshCoder = new anchor.BorshCoder(program.idl);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[21].name, payload);
+        console.log(`encodedData:`, encodedData);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[21].name, encodedData);
+        console.log(`decodedData:`, decodedData);
+        const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
+
+        const tx = new anchor.web3.Transaction().add(
+            anchor.web3.Ed25519Program.createInstructionWithPublicKey({
+                publicKey: admin.publicKey.toBytes(),
+                message: encodedData,
+                signature: signature,
+            }),
+            await program.methods
+                .fundDepositToken(
+                    {v1: {0: {amount: amount}}},
+                    payload,
+                )
+                .accounts({
+                    user: user.publicKey,
+                    tokenMint: bSOLMint.address,
+                    userTokenAccount: userBSOLTokenAccount.address,
+                    instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    depositTokenProgram: spl.TOKEN_PROGRAM_ID,
+                })
+                .signers([user])
+                .instruction()
+        );
+        const txSig = await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            tx,
+            [user],
+            { commitment: "confirmed" },
+        );
+        console.log("DepositToken transaction signature", txSig);
+
+        tokensFromFund = (await program.account.fund.fetch(fund_pda)).data.v2[0].whitelistedTokens;
+        console.log("tokensFromFund after:", tokensFromFund);
+
+        const fundBSOLBal_aft = tokensFromFund[0].tokenAmountIn.toNumber();
+        console.log(`fund bSOL balance after:`, fundBSOLBal_aft);
+        console.log(`balance difference:`, fundBSOLBal_aft - fundBSOLBal_bef);
+
+        // parse event
+        const committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
+        console.log(`committedTx:`, committedTx);
+        const events = eventParser.parseLogs(committedTx.meta.logMessages);
+        for (const event of events) {
+            console.log(`FundDepositSOL event:`, event);
+        }
     });
 });
 

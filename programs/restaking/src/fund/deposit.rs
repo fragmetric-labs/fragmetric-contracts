@@ -25,3 +25,9 @@ impl FundV2 {
         Ok(())
     }
 }
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct Metadata {
+    pub wallet_provider: String,
+    pub fpoint_accrual_rate_multiplier: f32,
+}
