@@ -4,9 +4,8 @@ use anchor_spl::{
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
-use fragmetric_util::Upgradable;
 
-use crate::{constants::*, fund::*, Empty};
+use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
 pub struct FundInitialize<'info> {
@@ -16,20 +15,20 @@ pub struct FundInitialize<'info> {
     #[account(
         init,
         payer = admin,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
         bump,
         space = 8 + Fund::INIT_SPACE,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         init,
         payer = admin,
-        seeds = [FUND_TOKEN_AUTHORITY_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + Empty::INIT_SPACE,
+        space = 8 + FundTokenAuthority::INIT_SPACE,
     )]
-    pub fund_token_authority: Account<'info, Empty>,
+    pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
@@ -54,12 +53,13 @@ impl<'info> FundInitialize<'info> {
         msg!("receipt_token_mint: {}", receipt_token_mint_key);
         msg!("fund_token_authority: {}", fund_token_authority_key,);
 
-        // let args = FundInitializeArgs::from(request);
-        ctx.accounts.fund.initialize(
-            ctx.accounts.admin.key(),
-            receipt_token_mint_key,
-            // ctx.accounts.receipt_token_lock_account.key(),
-        )?;
-        ctx.accounts.fund.to_latest_version().initialize()
+        ctx.accounts
+            .fund
+            .initialize(ctx.bumps.fund, receipt_token_mint_key);
+        ctx.accounts
+            .fund_token_authority
+            .initialize(ctx.bumps.fund_token_authority, receipt_token_mint_key);
+
+        Ok(())
     }
 }

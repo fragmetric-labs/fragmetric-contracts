@@ -33,4 +33,8 @@ pub enum ErrorCode {
     FundWithdrawalAlreadyInProgress,
     #[msg("Signature verification failed")]
     SigVerificationFailed,
+    #[msg("Calculation failed due to overflow/underflow")]
+    CalculationFailure,
+    #[msg("Pricing source not provided")]
+    FundPricingSourceNotFound,
 }

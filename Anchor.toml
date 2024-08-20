@@ -29,23 +29,38 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 test-dummy = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/dummy.ts"
 test-restaking = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/restaking.ts"
 
-# [test.validator]
-# url = "https://api.devnet.solana.com" # devnet rpc url
+[test.validator]
+bind_address = "0.0.0.0"
+url = "https://api.mainnet-beta.solana.com"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
 
 # mock mainnet bSOL mint
 [[test.validator.account]]
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
 filename = "tests/restaking/lsts/mainnet/clones/bSOL_mint.json"
 
+# clone mainnet bSOL stake pool
+[[test.validator.clone]]
+address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+
 # mock mainnet mSOL mint
 [[test.validator.account]]
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
 filename = "tests/restaking/lsts/mainnet/clones/mSOL_mint.json"
 
+# clone mainnet mSOL stake pool
+[[test.validator.clone]]
+address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
+
 # mock mainnet JitoSOL mint
 [[test.validator.account]]
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 filename = "tests/restaking/lsts/mainnet/clones/JitoSOL_mint.json"
+
+# clone mainnet JitoSOL stake pool
+[[test.validator.clone]]
+address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
 
 # mock mainnet INF mint
 [[test.validator.account]]

@@ -2,126 +2,149 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
-import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
+import * as restaking from "./1_fund_initialize";
 
 export const transfer_hook = describe("transfer_hook", () => {
-    const provider = anchor.AnchorProvider.env();
-    anchor.setProvider(provider);
-
+    anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const user1 = anchor.web3.Keypair.generate();
-    const user2 = anchor.web3.Keypair.generate();
+    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
+    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
+    const mintOwner = payer;
+    const user2 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
+    const user3 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user3.json")));
+    console.log(`Payer(user1.json) key: ${payer.publicKey}`);
+    console.log(`User2(user2.json) key: ${user2.publicKey}`);
+    console.log(`User3(user3.json) key: ${user3.publicKey}`);
 
-    const admin = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
-    const mintOwner = admin; // same as admin
-    const decimals = 9;
+    let user2ReceiptTokenAccount: anchor.web3.PublicKey;
+    let user3ReceiptTokenAccount: anchor.web3.PublicKey;
+    let extraAccountMetaList: anchor.web3.PublicKey;
 
-    const receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-    const [extraAccountMetaList, ] = anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from("extra-account-metas"), receiptTokenMint.publicKey.toBuffer()],
-        program.programId,
-    );
-    console.log(`extraAccountMetaList address: ${extraAccountMetaList}`);
+    // Localnet only
+    before("Sol airdrop to user", async () => {
+        if (utils.isLocalnet(program.provider.connection)) {
+            await utils.requestAirdrop(program.provider, user2, 10);
+            await utils.requestAirdrop(program.provider, user3, 10);
 
-    let user1ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-        receiptTokenMint.publicKey,
-        user1.publicKey,
-        false,
-        TOKEN_2022_PROGRAM_ID,
-    );
-    let user2ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-        receiptTokenMint.publicKey,
-        user2.publicKey,
-        false,
-        TOKEN_2022_PROGRAM_ID,
-    );
-    console.log(`user1 receipt token account: ${user1ReceiptTokenAccount}, user2 receipt token account: ${user2ReceiptTokenAccount}`);
-
-    before("Sol airdrop", async () => {
-        await utils.requestAirdrop(provider, user1, 10);
-        await utils.requestAirdrop(provider, user2, 10);
+            // check the balance
+            const adminBal = await program.provider.connection.getBalance(admin.publicKey);
+            console.log(`Admin SOL balance: ${adminBal}`);
+            const payerBal = await program.provider.connection.getBalance(payer.publicKey);
+            console.log(`Payer SOL balance: ${payerBal}`);
+            const user2Bal = await program.provider.connection.getBalance(user2.publicKey);
+            console.log(`User2 SOL balance: ${user2Bal}`);
+            const user3Bal = await program.provider.connection.getBalance(user3.publicKey);
+            console.log(`User3 SOL balance: ${user3Bal}`);
+            console.log("======= Sol airdrop to user =======");
+        }
     });
 
-    it("Create token accounts", async () => {
-        const tx = new anchor.web3.Transaction().add(
-            spl.createAssociatedTokenAccountInstruction(
-                admin.publicKey,
-                user1ReceiptTokenAccount,
-                user1.publicKey,
-                receiptTokenMint.publicKey,
-                TOKEN_2022_PROGRAM_ID,
-            ),
-            spl.createAssociatedTokenAccountInstruction(
-                admin.publicKey,
-                user2ReceiptTokenAccount,
-                user2.publicKey,
-                receiptTokenMint.publicKey,
-                TOKEN_2022_PROGRAM_ID,
-            ),
+    before("Prepare program accounts", async () => {
+        user2ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
+            restaking.receiptTokenMint.publicKey,
+            user2.publicKey,
+            false,
+            TOKEN_2022_PROGRAM_ID,
         );
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
-            provider.connection,
-            tx,
-            [admin],
+        user3ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
+            restaking.receiptTokenMint.publicKey,
+            user3.publicKey,
+            false,
+            TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`Create token accounts tx sig: ${txSig}`);
-    });
+        [extraAccountMetaList, ] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("extra-account-metas"), restaking.receiptTokenMint.publicKey.toBuffer()],
+            program.programId,
+        );
+        console.log(`user2 receipt token account    = ${user2ReceiptTokenAccount}`);
+        console.log(`user3 receipt token account    = ${user3ReceiptTokenAccount}`);
+        console.log(`extraAccountMetaList address   = ${extraAccountMetaList}`);
+        console.log("======= Prepare program accounts =======");
+    })
 
-    it("Mint tokens to user1 token account", async () => {
-        const amount = 10 * 10 ** decimals; // 10개
-    
-        const txSig = await program.methods
-            .tokenMintReceiptTokenForTest(new anchor.BN(amount))
+    before("Deposit SOL to mint receipt token", async () => {
+        let amount = new anchor.BN(1_000_000_000);
+        await program.methods
+            .fundDepositSol(amount, null)
             .accounts({
-                payer: admin.publicKey,
-                receiptTokenAccountOwner: user1.publicKey
+                user: user2.publicKey,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                pricingSource0: restaking.bSOLStakePoolPublicKey,
+                pricingSource1: restaking.mSOLStakePoolPublicKey,
+                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
             })
-            .signers([admin])
-            .rpc();
-        console.log(`mint receipt token to user1 tx sig: ${txSig}`);
-    });
+            .signers([user2])
+            .rpc({ commitment: "confirmed" });
+        await program.methods
+            .fundDepositSol(amount, null)
+            .accounts({
+                user: user3.publicKey,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                pricingSource0: restaking.bSOLStakePoolPublicKey,
+                pricingSource1: restaking.mSOLStakePoolPublicKey,
+                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
+            })
+            .signers([user3])
+            .rpc({ commitment: "confirmed" });
+
+        const user2ReceiptTokenBalance = (await spl.getAccount(
+            program.provider.connection,
+            user2ReceiptTokenAccount,
+            undefined,
+            TOKEN_2022_PROGRAM_ID,
+        )).amount;
+        const user3ReceiptTokenBalance = (await spl.getAccount(
+            program.provider.connection,
+            user3ReceiptTokenAccount,
+            undefined,
+            TOKEN_2022_PROGRAM_ID,
+        )).amount;
+        console.log(`user2 receipt token balance: ${user2ReceiptTokenBalance}`);
+        console.log(`user3 receipt token balance: ${user3ReceiptTokenBalance}`);
+        console.log("======= Deposit SOL to mint receipt token =======");
+    })
 
     it("Create ExtraAccountMetaList Account", async () => {
-        const initializeExtraAccountMetaListIx = await program.methods
-            .tokenInitializeExtraAccountMetaList()
-            .accounts({
-                payer: mintOwner.publicKey,
-            })
-            .instruction();
-        const tx = new anchor.web3.Transaction().add(initializeExtraAccountMetaListIx);
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
-            provider.connection,
+        const tx = new anchor.web3.Transaction().add(
+            await program.methods
+                .tokenInitializeExtraAccountMetaList()
+                .accounts({
+                    payer: mintOwner.publicKey,
+                })
+                .instruction()
+        );
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
             tx,
             [mintOwner],
         );
-        console.log(`initializeExtraAccountMetaList tx sig: ${txSig}`);
     });
 
     it("Transfer Hook with Extra Account Meta", async () => {
-        const amountToTransfer = 1 * 10 ** decimals;
+        const amountToTransfer = 1;
+        const decimals = 9;
     
         const transferHookIx = await spl.createTransferCheckedWithTransferHookInstruction(
-            provider.connection,
-            user1ReceiptTokenAccount,
-            receiptTokenMint.publicKey,
+            program.provider.connection,
             user2ReceiptTokenAccount,
-            user1.publicKey,
+            restaking.receiptTokenMint.publicKey,
+            user3ReceiptTokenAccount,
+            user2.publicKey,
             BigInt(amountToTransfer.toString()),
             decimals,
             [],
             undefined,
             spl.TOKEN_2022_PROGRAM_ID,
         );
-        // console.log(`transferHookIx:`, transferHookIx);
         const tx = new anchor.web3.Transaction().add(transferHookIx);
         const txSig = await anchor.web3.sendAndConfirmTransaction(
-            provider.connection,
+            program.provider.connection,
             tx,
-            [user1],
+            [user2],
         );
         console.log(`transfer hook tx sig: ${txSig}`);
     });

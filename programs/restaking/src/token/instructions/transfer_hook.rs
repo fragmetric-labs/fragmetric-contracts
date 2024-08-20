@@ -10,7 +10,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
 
 #[derive(Accounts)]
 pub struct TokenTransferHook<'info> {
@@ -41,10 +41,11 @@ pub struct TokenTransferHook<'info> {
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 }
 
 impl<'info> TokenTransferHook<'info> {
@@ -55,7 +56,7 @@ impl<'info> TokenTransferHook<'info> {
         //     }
         // }
 
-        Self::check_is_transferring(&ctx)?;
+        Self::check_token_transferring(&ctx)?;
         Self::call_transfer_hook(&ctx, amount)?;
 
         emit!(TokenLRTTransferred {
@@ -79,7 +80,7 @@ impl<'info> TokenTransferHook<'info> {
         )
     }
 
-    fn check_is_transferring(ctx: &Context<Self>) -> Result<()> {
+    fn check_token_transferring(ctx: &Context<Self>) -> Result<()> {
         let source_token_account_info = ctx.accounts.source_token_account.to_account_info();
         let mut account_data_ref = source_token_account_info.try_borrow_mut_data()?;
         let mut account = PodStateWithExtensionsMut::<PodAccount>::unpack(*account_data_ref)?;

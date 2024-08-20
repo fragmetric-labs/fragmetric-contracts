@@ -6,6 +6,7 @@ pub mod error;
 pub mod fund;
 pub mod operator;
 pub mod token;
+pub(crate) mod utils;
 // pub mod oracle;
 
 use common::*;
@@ -41,13 +42,6 @@ pub mod restaking {
         FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
-    pub fn fund_initialize_whitelisted_tokens(
-        ctx: Context<FundInitializeFields>,
-        whitelisted_tokens: Vec<TokenInfo>,
-    ) -> Result<()> {
-        FundInitializeFields::initialize_whitelisted_tokens(ctx, whitelisted_tokens)
-    }
-
     pub fn fund_initialize_withdrawal_enabled_flag(
         ctx: Context<FundInitializeFields>,
         flag: bool,
@@ -57,31 +51,33 @@ pub mod restaking {
 
     pub fn fund_initialize_batch_processing_threshold(
         ctx: Context<FundInitializeFields>,
-        amount: u128,
+        amount: u64,
         duration: i64,
     ) -> Result<()> {
         FundInitializeFields::initialize_batch_processing_threshold(ctx, amount, duration)
     }
 
-    pub fn fund_add_whitelisted_token(
-        ctx: Context<FundUpdate>,
-        request: FundAddWhitelistedTokenRequest,
+    pub fn fund_add_supported_token(
+        ctx: Context<FundAddSupportedToken>,
+        token_cap: u64,
+        pricing_source: PricingSource,
     ) -> Result<()> {
-        FundUpdate::add_whitelisted_token(ctx, request)
+        FundAddSupportedToken::add_supported_token(ctx, token_cap, pricing_source)
     }
 
-    pub fn fund_update_token_info(
+    pub fn fund_update_supported_token(
         ctx: Context<FundUpdate>,
-        request: FundUpdateTokenInfoRequest,
+        token: Pubkey,
+        token_cap: u64,
     ) -> Result<()> {
-        FundUpdate::update_token_info(ctx, request)
+        FundUpdate::update_supported_token(ctx, token, token_cap)
     }
 
     pub fn fund_update_sol_withdrawal_fee_rate(
         ctx: Context<FundUpdate>,
-        request: FundUpdateSolWithdrawalFeeRateRequest,
+        sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        FundUpdate::update_sol_withdrawal_fee_rate(ctx, request)
+        FundUpdate::update_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
     pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
@@ -90,26 +86,30 @@ pub mod restaking {
 
     pub fn fund_update_batch_processing_threshold(
         ctx: Context<FundUpdate>,
-        amount: Option<u128>,
+        amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
         FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
     }
 
+    pub fn fund_update_price(ctx: Context<FundUpdatePrice>) -> Result<()> {
+        FundUpdatePrice::update_price(ctx)
+    }
+
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
-        request: FundDepositSOLRequest,
+        amount: u64,
         metadata: Option<Metadata>,
     ) -> Result<()> {
-        FundDepositSOL::deposit_sol(ctx, request, metadata)
+        FundDepositSOL::deposit_sol(ctx, amount, metadata)
     }
 
     pub fn fund_deposit_token(
         ctx: Context<FundDepositToken>,
-        request: FundDepositTokenRequest,
+        amount: u64,
         metadata: Option<Metadata>,
     ) -> Result<()> {
-        FundDepositToken::deposit_token(ctx, request, metadata)
+        FundDepositToken::deposit_token(ctx, amount, metadata)
     }
 
     pub fn fund_request_withdrawal(
@@ -126,8 +126,8 @@ pub mod restaking {
         FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
     }
 
-    pub fn fund_withdraw_sol(ctx: Context<FundWithdrawSOL>, request_id: u64) -> Result<()> {
-        FundWithdrawSOL::withdraw_sol(ctx, request_id)
+    pub fn fund_withdraw(ctx: Context<FundWithdraw>, request_id: u64) -> Result<()> {
+        FundWithdraw::withdraw(ctx, request_id)
     }
 
     pub fn operator_run_if_needed(ctx: Context<OperatorRunIfNeeded>) -> Result<()> {
@@ -136,14 +136,6 @@ pub mod restaking {
 
     pub fn operator_run(ctx: Context<OperatorRun>) -> Result<()> {
         OperatorRun::operator_run(ctx)
-    }
-
-    // for test
-    pub fn token_mint_receipt_token_for_test(
-        ctx: Context<TokenMintReceiptToken>,
-        amount: u64,
-    ) -> Result<()> {
-        TokenMintReceiptToken::mint_receipt_token_for_test(ctx, amount)
     }
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]

@@ -5,7 +5,7 @@ use spl_tlv_account_resolution::{
 };
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::{constants::*, fund::*};
+use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
 pub struct TokenInitializeExtraAccountMetaList<'info> {
@@ -37,10 +37,11 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
     #[account(
         mut,
-        seeds = [FUND_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund.bump,
+        has_one = receipt_token_mint,
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
@@ -78,7 +79,7 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
             ExtraAccountMeta::new_with_seeds(
                 &[
                     Seed::Literal {
-                        bytes: FUND_SEED.to_vec(),
+                        bytes: Fund::SEED.to_vec(),
                     },
                     Seed::AccountKey { index: 1 }, // mint address
                 ],
