@@ -8,6 +8,7 @@ pub use structs::*;
 
 mod deposit;
 mod initialize;
+mod price;
 mod update;
 mod withdraw;
 

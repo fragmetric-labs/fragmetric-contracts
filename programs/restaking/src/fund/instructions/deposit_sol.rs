@@ -56,6 +56,24 @@ pub struct FundDepositSOL<'info> {
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source0: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source1: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source2: UncheckedAccount<'info>,
+
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar_module::ID)]
     pub instruction_sysvar: Option<UncheckedAccount<'info>>,
@@ -102,20 +120,39 @@ impl<'info> FundDepositSOL<'info> {
             }
         }
 
-        let receipt_token_account = ctx.accounts.receipt_token_account.key();
-        msg!("receipt_token_account: {}", receipt_token_account);
-
+        // Initialize
         ctx.accounts.user_receipt.initialize_if_needed(
             ctx.bumps.user_receipt,
             ctx.accounts.user.key(),
             ctx.accounts.receipt_token_mint.key(),
         );
 
+        // Verify
+        require_gte!(ctx.accounts.user.lamports(), amount);
+
+        // Step 1: Calculate mint amount
+        let fund = &mut ctx.accounts.fund;
+        let sources = [
+            ctx.accounts.pricing_source0.as_ref(),
+            ctx.accounts.pricing_source1.as_ref(),
+            ctx.accounts.pricing_source2.as_ref(),
+        ];
+        fund.update_token_prices(&sources)?;
+        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let receipt_token_mint_amount =
+            fund.calculate_receipt_tokens_from_sol(amount, receipt_token_total_supply)?;
+        let receipt_token_price = fund.receipt_token_price(
+            ctx.accounts.receipt_token_mint.decimals,
+            receipt_token_total_supply,
+        )?;
+
+        // Step 2: Deposit SOL
         Self::transfer_sol_cpi(&ctx, amount)?;
         ctx.accounts.fund.deposit_sol(amount)?;
 
-        let mint_amount = Self::get_receipt_token_by_sol_exchange_rate(&ctx, amount)?;
-        Self::mint_receipt_token(&mut ctx, mint_amount)?;
+        // Step 3: Mint receipt token
+        Self::call_mint_token_cpi(&mut ctx, receipt_token_mint_amount)?;
+        Self::call_transfer_hook(&ctx, receipt_token_mint_amount)?;
 
         emit!(FundSOLDeposited {
             user: ctx.accounts.user.key(),
@@ -124,7 +161,8 @@ impl<'info> FundDepositSOL<'info> {
             sol_deposit_amount: amount,
             sol_amount_in_fund: ctx.accounts.fund.sol_amount_in,
             minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
-            minted_lrt_amount: mint_amount,
+            minted_lrt_amount: receipt_token_mint_amount,
+            lrt_price: receipt_token_price,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
             wallet_provider: wallet_provider,
             fpoint_accrual_rate_multiplier: fpoint_accrual_rate_multiplier,
@@ -135,63 +173,29 @@ impl<'info> FundDepositSOL<'info> {
     }
 
     fn transfer_sol_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            user,
-            fund,
-            system_program,
-            ..
-        } = &*ctx.accounts;
-
         let sol_transfer_cpi_ctx = CpiContext::new(
-            system_program.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
             system_program::Transfer {
-                from: user.to_account_info(),
-                to: fund.to_account_info(),
+                from: ctx.accounts.user.to_account_info(),
+                to: ctx.accounts.fund.to_account_info(),
             },
         );
 
-        msg!("Transferring from {} to {}", user.key, fund.key());
-
         system_program::transfer(sol_transfer_cpi_ctx, amount)
-            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;
-
-        msg!("Transferred {} SOL", amount);
-
-        Ok(())
-    }
-
-    #[allow(unused_variables)]
-    fn get_receipt_token_by_sol_exchange_rate(ctx: &Context<Self>, amount: u64) -> Result<u64> {
-        Ok(amount)
-    }
-
-    fn mint_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
-        msg!(
-            "user's receipt token account key: {:?}",
-            receipt_token_account_key
-        );
-
-        Self::call_mint_token_cpi(ctx, amount)?;
-        msg!(
-            "Minted {} to user token account {:?}",
-            amount,
-            receipt_token_account_key
-        );
-
-        Self::call_transfer_hook(ctx, amount)?;
-
-        Ok(())
+            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.token_program.mint_token_cpi(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_account,
-            ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
-            amount,
-        )
+        ctx.accounts
+            .token_program
+            .mint_token_cpi(
+                &mut ctx.accounts.receipt_token_mint,
+                &mut ctx.accounts.receipt_token_account,
+                ctx.accounts.fund_token_authority.to_account_info(),
+                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                amount,
+            )
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
     fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {

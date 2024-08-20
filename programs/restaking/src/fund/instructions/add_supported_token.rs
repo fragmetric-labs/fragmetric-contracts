@@ -48,10 +48,16 @@ pub struct FundAddSupportedToken<'info> {
 }
 
 impl<'info> FundAddSupportedToken<'info> {
-    pub fn add_supported_token(ctx: Context<Self>, token_cap: u64) -> Result<()> {
+    pub fn add_supported_token(
+        ctx: Context<Self>,
+        token_cap: u64,
+        pricing_source: PricingSource,
+    ) -> Result<()> {
         let token = ctx.accounts.token_mint.key();
         ctx.accounts.fund.check_token_does_not_exist(&token)?;
-        ctx.accounts.fund.add_supported_token(token, token_cap);
+        ctx.accounts
+            .fund
+            .add_supported_token(token, token_cap, pricing_source);
 
         Ok(())
     }

@@ -40,6 +40,24 @@ pub struct OperatorRun<'info> {
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source0: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source1: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source2: UncheckedAccount<'info>,
+
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
@@ -52,8 +70,18 @@ impl<'info> OperatorRun<'info> {
 
         withdrawal_status.start_processing_pending_batch_withdrawal()?;
 
+        let fund = &mut ctx.accounts.fund;
+        let sources = [
+            ctx.accounts.pricing_source0.as_ref(),
+            ctx.accounts.pricing_source1.as_ref(),
+            ctx.accounts.pricing_source2.as_ref(),
+        ];
+        fund.update_token_prices(&sources)?;
+        let total_sol_value_in_fund = fund.total_sol_value()?;
+        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+
         let mut receipt_token_amount_to_burn: u64 = 0;
-        for batch in &mut withdrawal_status.batch_withdrawals_in_progress {
+        for batch in &mut fund.withdrawal_status.batch_withdrawals_in_progress {
             let amount = batch.receipt_token_to_process;
             batch.record_unstaking_start(amount)?;
             receipt_token_amount_to_burn = receipt_token_amount_to_burn
@@ -61,10 +89,9 @@ impl<'info> OperatorRun<'info> {
                 .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
         }
 
-        let unstaking_ratio = 1;
-
         let mut receipt_token_amount_not_burned = receipt_token_amount_to_burn;
-        for batch in &mut withdrawal_status.batch_withdrawals_in_progress {
+        let mut total_sol_reserved_amount: u64 = 0;
+        for batch in &mut fund.withdrawal_status.batch_withdrawals_in_progress {
             if receipt_token_amount_not_burned == 0 {
                 break;
             }
@@ -74,39 +101,35 @@ impl<'info> OperatorRun<'info> {
                 batch.receipt_token_being_processed,
             );
             receipt_token_amount_not_burned -= receipt_token_amount; // guaranteed to be safe
-            let sol_amount_reserved = u64::try_from(
-                (receipt_token_amount as u128)
-                    .checked_mul(unstaking_ratio)
-                    .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+
+            let sol_reserved_amount = crate::utils::proportional_amount(
+                receipt_token_amount,
+                total_sol_value_in_fund,
+                receipt_token_total_supply,
             )
-            .map_err(|_| error!(ErrorCode::CalculationFailure))?;
-            batch.record_unstaking_end(receipt_token_amount, sol_amount_reserved)?;
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            total_sol_reserved_amount = total_sol_reserved_amount
+                .checked_add(sol_reserved_amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            batch.record_unstaking_end(receipt_token_amount, sol_reserved_amount)?;
         }
+        fund.sol_amount_in = fund
+            .sol_amount_in
+            .checked_sub(total_sol_reserved_amount)
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn)?;
         Self::call_transfer_hook(&ctx, receipt_token_amount_to_burn)?;
 
-        let fund = &mut ctx.accounts.fund;
-
-        let sol_amount_moved = u64::try_from(
-            unstaking_ratio
-                .checked_mul(receipt_token_amount_to_burn as u128)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
-        )
-        .map_err(|_| error!(ErrorCode::CalculationFailure))?;
-
-        fund.sol_amount_in = fund
-            .sol_amount_in
-            .checked_sub(sol_amount_moved)
-            .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
-
-        fund.withdrawal_status
+        ctx.accounts
+            .fund
+            .withdrawal_status
             .end_processing_completed_batch_withdrawals()
     }
 
     fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         ctx.accounts.token_program.burn_token_cpi(
-            &ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_lock_account,
             ctx.accounts.fund_token_authority.to_account_info(),
             Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),

@@ -10,7 +10,7 @@ where
 {
     fn mint_token_cpi(
         &self,
-        mint: &InterfaceAccount<'info, Mint>,
+        mint: &mut InterfaceAccount<'info, Mint>,
         to: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
@@ -21,7 +21,7 @@ where
 impl<'info> MintExt<'info> for Program<'info, Token2022> {
     fn mint_token_cpi(
         &self,
-        mint: &InterfaceAccount<'info, Mint>,
+        mint: &mut InterfaceAccount<'info, Mint>,
         to: &mut InterfaceAccount<'info, TokenAccount>,
         authority: AccountInfo<'info>,
         signer_seeds: Option<&[&[&[u8]]]>,
@@ -41,6 +41,7 @@ impl<'info> MintExt<'info> for Program<'info, Token2022> {
         }
 
         mint_to(mint_receipt_token_cpi_ctx, amount)?;
+        mint.reload()?;
         to.reload()
     }
 }

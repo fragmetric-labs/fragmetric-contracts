@@ -71,6 +71,24 @@ pub struct FundDepositToken<'info> {
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source0: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source1: UncheckedAccount<'info>,
+
+    // TODO: use address lookup table!
+    // TODO: rename properly!
+    // TODO: use address constraint!
+    /// CHECK: will be checked and deserialized when needed
+    pub pricing_source2: UncheckedAccount<'info>,
+
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar_module::ID)]
     pub instruction_sysvar: Option<UncheckedAccount<'info>>,
@@ -87,12 +105,6 @@ impl<'info> FundDepositToken<'info> {
         amount: u64,
         metadata: Option<Metadata>,
     ) -> Result<()> {
-        ctx.accounts.user_receipt.initialize_if_needed(
-            ctx.bumps.user_receipt,
-            ctx.accounts.user.key(),
-            ctx.accounts.receipt_token_mint.key(),
-        );
-
         let wallet_provider: Option<String>;
         let fpoint_accrual_rate_multiplier: Option<f32>;
         match metadata {
@@ -124,19 +136,46 @@ impl<'info> FundDepositToken<'info> {
             }
         }
 
-        Self::transfer_token_cpi(&ctx, amount)?;
+        // Initialize
+        ctx.accounts.user_receipt.initialize_if_needed(
+            ctx.bumps.user_receipt,
+            ctx.accounts.user.key(),
+            ctx.accounts.receipt_token_mint.key(),
+        );
 
-        let token_mint = ctx.accounts.token_mint.key();
-        let token_info = ctx
+        // Verify
+        let supported_token_index = ctx
             .accounts
             .fund
-            .supported_token_mut(token_mint)
+            .supported_token_position(ctx.accounts.token_mint.key())
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
-        token_info.deposit_token(amount)?;
-        let token_amount_in_fund = token_info.token_amount_in;
+        require_gte!(ctx.accounts.receipt_token_account.amount, amount);
 
-        let mint_amount = Self::get_receipt_token_by_token_exchange_rate(&ctx, amount)?;
-        Self::mint_receipt_token(&mut ctx, mint_amount)?;
+        // Step 1: Calculate mint amount
+        let fund = &mut ctx.accounts.fund;
+        let sources = [
+            ctx.accounts.pricing_source0.as_ref(),
+            ctx.accounts.pricing_source1.as_ref(),
+            ctx.accounts.pricing_source2.as_ref(),
+        ];
+        fund.update_token_prices(&sources)?;
+        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let token_to_sol_value =
+            fund.supported_tokens[supported_token_index].calculate_sol_from_tokens(amount)?;
+        let receipt_token_mint_amount =
+            fund.calculate_receipt_tokens_from_sol(token_to_sol_value, receipt_token_total_supply)?;
+        let receipt_token_price = fund.receipt_token_price(
+            ctx.accounts.receipt_token_mint.decimals,
+            receipt_token_total_supply,
+        )?;
+
+        // Step 2: Deposit Token
+        Self::transfer_token_cpi(&ctx, amount)?;
+        ctx.accounts.fund.supported_tokens[supported_token_index].deposit_token(amount)?;
+
+        // Step 3: Mint receipt token
+        Self::call_mint_token_cpi(&mut ctx, receipt_token_mint_amount)?;
+        Self::call_transfer_hook(&ctx, receipt_token_mint_amount)?;
 
         emit!(FundTokenDeposited {
             user: ctx.accounts.user.key(),
@@ -145,9 +184,11 @@ impl<'info> FundDepositToken<'info> {
             deposited_token_mint: ctx.accounts.token_mint.key(),
             deposited_token_user_account: ctx.accounts.user_token_account.key(),
             token_deposit_amount: amount,
-            token_amount_in_fund,
+            token_amount_in_fund: ctx.accounts.fund.supported_tokens[supported_token_index]
+                .token_amount_in,
             minted_lrt_mint: ctx.accounts.fund.receipt_token_mint.key(),
-            minted_lrt_amount: mint_amount,
+            minted_lrt_amount: receipt_token_mint_amount,
+            lrt_price: receipt_token_price,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
             wallet_provider: wallet_provider,
             fpoint_accrual_rate_multiplier: fpoint_accrual_rate_multiplier,
@@ -158,34 +199,22 @@ impl<'info> FundDepositToken<'info> {
     }
 
     fn transfer_token_cpi(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        let Self {
-            user: authority,
-            user_token_account,
-            fund_token_account,
-            token_mint,
-            deposit_token_program: token_interface,
-            ..
-        } = &*ctx.accounts;
-
         let token_transfer_cpi_ctx = CpiContext::new(
-            token_interface.to_account_info(),
+            ctx.accounts.deposit_token_program.to_account_info(),
             TransferChecked {
-                from: user_token_account.to_account_info(),
-                to: fund_token_account.to_account_info(),
-                mint: token_mint.to_account_info(),
-                authority: authority.to_account_info(),
+                from: ctx.accounts.user_token_account.to_account_info(),
+                to: ctx.accounts.fund_token_account.to_account_info(),
+                mint: ctx.accounts.token_mint.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
             },
         );
 
-        transfer_checked(token_transfer_cpi_ctx, amount, token_mint.decimals)
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
-
-        Ok(())
-    }
-
-    #[allow(unused_variables)]
-    fn get_receipt_token_by_token_exchange_rate(ctx: &Context<Self>, amount: u64) -> Result<u64> {
-        Ok(amount)
+        transfer_checked(
+            token_transfer_cpi_ctx,
+            amount,
+            ctx.accounts.token_mint.decimals,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
     fn mint_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
@@ -208,13 +237,16 @@ impl<'info> FundDepositToken<'info> {
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_program.mint_token_cpi(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_account,
-            ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
-            amount,
-        )
+        ctx.accounts
+            .receipt_token_program
+            .mint_token_cpi(
+                &mut ctx.accounts.receipt_token_mint,
+                &mut ctx.accounts.receipt_token_account,
+                ctx.accounts.fund_token_authority.to_account_info(),
+                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                amount,
+            )
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
     fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {

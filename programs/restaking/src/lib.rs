@@ -60,8 +60,9 @@ pub mod restaking {
     pub fn fund_add_supported_token(
         ctx: Context<FundAddSupportedToken>,
         token_cap: u64,
+        pricing_source: PricingSource,
     ) -> Result<()> {
-        FundAddSupportedToken::add_supported_token(ctx, token_cap)
+        FundAddSupportedToken::add_supported_token(ctx, token_cap, pricing_source)
     }
 
     pub fn fund_update_supported_token(
@@ -131,14 +132,6 @@ pub mod restaking {
 
     pub fn operator_run(ctx: Context<OperatorRun>) -> Result<()> {
         OperatorRun::operator_run(ctx)
-    }
-
-    // for test
-    pub fn token_mint_receipt_token_for_test(
-        ctx: Context<TokenMintReceiptToken>,
-        amount: u64,
-    ) -> Result<()> {
-        TokenMintReceiptToken::mint_receipt_token_for_test(ctx, amount)
     }
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]

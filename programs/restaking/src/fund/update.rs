@@ -9,8 +9,13 @@ impl TokenInfo {
 }
 
 impl Fund {
-    pub(super) fn add_supported_token(&mut self, token: Pubkey, token_cap: u64) {
-        let token_info = TokenInfo::empty(token, token_cap);
+    pub(super) fn add_supported_token(
+        &mut self,
+        token: Pubkey,
+        token_cap: u64,
+        pricing_source: PricingSource,
+    ) {
+        let token_info = TokenInfo::empty(token, token_cap, pricing_source);
         self.supported_tokens.push(token_info);
     }
 
@@ -46,11 +51,19 @@ mod tests {
             address: Pubkey::new_unique(),
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
+            token_to_sol_value: 0,
+            pricing_source: PricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
         };
         let token2 = TokenInfo {
             address: Pubkey::new_unique(),
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
+            token_to_sol_value: 0,
+            pricing_source: PricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
         };
         let token3 = token1.clone();
         let tokens = vec![token1, token2];
@@ -75,16 +88,24 @@ mod tests {
             address: Pubkey::new_unique(),
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
+            token_to_sol_value: 0,
+            pricing_source: PricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
         };
         let token2 = TokenInfo {
             address: Pubkey::new_unique(),
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
+            token_to_sol_value: 0,
+            pricing_source: PricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
         };
         let mut token1_update = token1.clone();
         token1_update.token_cap = 1_000_000_000 * 3000;
-        fund.add_supported_token(token1.address, token1.token_cap);
-        fund.add_supported_token(token2.address, token2.token_cap);
+        fund.add_supported_token(token1.address, token1.token_cap, token1.pricing_source);
+        fund.add_supported_token(token2.address, token2.token_cap, token2.pricing_source);
         println!("{:?}", fund.supported_tokens.iter());
 
         fund.supported_token_mut(token1_update.address)

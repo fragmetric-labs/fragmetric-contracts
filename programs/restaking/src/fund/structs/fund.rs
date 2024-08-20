@@ -31,6 +31,12 @@ impl PDASignerSeeds<3> for Fund {
 }
 
 impl Fund {
+    pub fn supported_token_position(&self, token: Pubkey) -> Option<usize> {
+        self.supported_tokens
+            .iter()
+            .position(|info| info.address == token)
+    }
+
     pub fn supported_token_mut(&mut self, token: Pubkey) -> Option<&mut TokenInfo> {
         self.supported_tokens
             .iter_mut()
@@ -43,16 +49,27 @@ pub struct TokenInfo {
     pub address: Pubkey,
     pub token_cap: u64,
     pub token_amount_in: u64,
+    pub token_to_sol_value: u64,
+    pub pricing_source: PricingSource,
 }
 
 impl TokenInfo {
-    pub fn empty(address: Pubkey, token_cap: u64) -> Self {
+    pub fn empty(address: Pubkey, token_cap: u64, pricing_source: PricingSource) -> Self {
         Self {
             address,
             token_cap,
             token_amount_in: 0,
+            token_to_sol_value: 0,
+            pricing_source,
         }
     }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[non_exhaustive]
+pub enum PricingSource {
+    SPLStakePool { address: Pubkey },
+    MarinadeStakePool { address: Pubkey },
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]

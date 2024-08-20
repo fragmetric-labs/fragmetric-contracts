@@ -60,14 +60,17 @@ pub struct FundRequestWithdrawal<'info> {
 
 impl<'info> FundRequestWithdrawal<'info> {
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+        // Verify
+        require_gte!(
+            ctx.accounts.receipt_token_account.amount,
+            receipt_token_amount
+        );
+
+        // Step 1: Create withdrawal request
         ctx.accounts
             .fund
             .withdrawal_status
             .check_withdrawal_enabled()?;
-
-        Self::lock_receipt_token(&mut ctx, receipt_token_amount)
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))?;
-
         let withdrawal_request = ctx
             .accounts
             .fund
@@ -77,6 +80,11 @@ impl<'info> FundRequestWithdrawal<'info> {
         ctx.accounts
             .user_receipt
             .push_withdrawal_request(withdrawal_request)?;
+
+        // Step 2: Lock receipt token
+        Self::call_burn_token_cpi(&mut ctx, receipt_token_amount)?;
+        Self::call_mint_token_cpi(&mut ctx, receipt_token_amount)?;
+        Self::call_transfer_hook(&mut ctx, receipt_token_amount)?;
 
         emit!(FundWithdrawalRequested {
             user: ctx.accounts.user.key(),
@@ -91,30 +99,30 @@ impl<'info> FundRequestWithdrawal<'info> {
         Ok(())
     }
 
-    fn lock_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        Self::call_burn_token_cpi(ctx, amount)?;
-        Self::call_mint_token_cpi(ctx, amount)?;
-        Self::call_transfer_hook(ctx, amount)
-    }
-
     fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.token_program.burn_token_cpi(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_account,
-            ctx.accounts.user.to_account_info(),
-            None,
-            amount,
-        )
+        ctx.accounts
+            .token_program
+            .burn_token_cpi(
+                &mut ctx.accounts.receipt_token_mint,
+                &mut ctx.accounts.receipt_token_account,
+                ctx.accounts.user.to_account_info(),
+                None,
+                amount,
+            )
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.token_program.mint_token_cpi(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_account,
-            ctx.accounts.fund_token_authority.to_account_info(),
-            Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
-            amount,
-        )
+        ctx.accounts
+            .token_program
+            .mint_token_cpi(
+                &mut ctx.accounts.receipt_token_mint,
+                &mut ctx.accounts.receipt_token_lock_account,
+                ctx.accounts.fund_token_authority.to_account_info(),
+                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                amount,
+            )
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
     fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
