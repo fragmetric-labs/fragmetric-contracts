@@ -17,14 +17,13 @@ pub struct FundUpdatePrice<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        mut,
         seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_token_authority.bump,
         has_one = receipt_token_mint,
     )]
     pub fund_token_authority: Account<'info, FundTokenAuthority>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     // TODO: use address lookup table!

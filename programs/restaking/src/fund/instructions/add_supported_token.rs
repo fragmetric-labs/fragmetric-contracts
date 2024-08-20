@@ -20,7 +20,6 @@ pub struct FundAddSupportedToken<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        mut,
         seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_token_authority.bump,
         has_one = receipt_token_mint,
