@@ -6,6 +6,7 @@ mod initialize;
 mod initialize_fields;
 mod request_withdrawal;
 mod update;
+mod update_price;
 mod withdraw;
 
 pub use add_supported_token::*;
@@ -16,4 +17,5 @@ pub use initialize::*;
 pub use initialize_fields::*;
 pub use request_withdrawal::*;
 pub use update::*;
+pub use update_price::*;
 pub use withdraw::*;

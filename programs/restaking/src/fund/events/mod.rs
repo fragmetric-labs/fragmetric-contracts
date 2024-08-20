@@ -1,4 +1,5 @@
 mod info;
+mod price_updated;
 mod sol_deposited;
 mod sol_withdrawn;
 mod token_deposited;
@@ -6,6 +7,7 @@ mod withdrawal_request_canceled;
 mod withdrawal_requested;
 
 pub use info::*;
+pub use price_updated::*;
 pub use sol_deposited::*;
 pub use sol_withdrawn::*;
 pub use token_deposited::*;

@@ -92,6 +92,10 @@ pub mod restaking {
         FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
     }
 
+    pub fn fund_update_price(ctx: Context<FundUpdatePrice>) -> Result<()> {
+        FundUpdatePrice::update_price(ctx)
+    }
+
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         amount: u64,

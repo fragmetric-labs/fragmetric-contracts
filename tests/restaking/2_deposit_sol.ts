@@ -37,6 +37,27 @@ export const deposit_sol = describe("deposit_sol", () => {
         }
     });
 
+    it("Update price", async () => {
+        const updatePriceTx = await program.methods
+            .fundUpdatePrice()
+            .accounts({
+                payer: admin.publicKey,
+                pricingSource0: restaking.bSOLStakePoolPublicKey,
+                pricingSource1: restaking.mSOLStakePoolPublicKey,
+                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
+            })
+            .rpc({commitment: "confirmed"});
+
+        // parse event
+        const committedTx = await program.provider.connection.getParsedTransaction(updatePriceTx, "confirmed");
+        // console.log(`committedTx:`, committedTx);
+        const events = eventParser.parseLogs(committedTx.meta.logMessages);
+        for (const event of events) {
+            expect(event.data.lrtPrice.toNumber()).to.be.equal(1_000_000_000);
+            console.log(`Receipt token price: ${event.data.lrtPrice}`);
+        }
+    });
+
     it("Deposit SOL with no metadata", async () => {
         let amount = new anchor.BN(1_000_000_000);
 
@@ -107,8 +128,8 @@ export const deposit_sol = describe("deposit_sol", () => {
             fpointAccrualRateMultiplier: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[10].name, payload);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[10].name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
 

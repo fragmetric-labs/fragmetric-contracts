@@ -418,8 +418,8 @@ export const deposit_token = describe("deposit_token", () => {
             fpointAccrualRateMultiplier: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[10].name, payload);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[10].name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
 
