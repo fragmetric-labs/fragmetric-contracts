@@ -12,11 +12,11 @@ impl Fund {
     pub(super) fn add_supported_token(
         &mut self,
         token: Pubkey,
-        token_decimal: u8,
+        token_decimals: u8,
         token_cap: u64,
         pricing_source: PricingSource,
     ) {
-        let token_info = TokenInfo::empty(token, token_decimal, token_cap, pricing_source);
+        let token_info = TokenInfo::empty(token, token_decimals, token_cap, pricing_source);
         self.supported_tokens.push(token_info);
     }
 
@@ -50,7 +50,7 @@ mod tests {
 
         let token1 = TokenInfo {
             address: Pubkey::new_unique(),
-            token_decimal: 9,
+            token_decimals: 9,
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
             token_price: 0,
@@ -60,7 +60,7 @@ mod tests {
         };
         let token2 = TokenInfo {
             address: Pubkey::new_unique(),
-            token_decimal: 9,
+            token_decimals: 9,
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
             token_price: 0,
@@ -89,7 +89,7 @@ mod tests {
 
         let token1 = TokenInfo {
             address: Pubkey::new_unique(),
-            token_decimal: 9,
+            token_decimals: 9,
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
             token_price: 0,
@@ -99,7 +99,7 @@ mod tests {
         };
         let token2 = TokenInfo {
             address: Pubkey::new_unique(),
-            token_decimal: 9,
+            token_decimals: 9,
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
             token_price: 0,
@@ -111,13 +111,13 @@ mod tests {
         token1_update.token_cap = 1_000_000_000 * 3000;
         fund.add_supported_token(
             token1.address,
-            token1.token_decimal,
+            token1.token_decimals,
             token1.token_cap,
             token1.pricing_source,
         );
         fund.add_supported_token(
             token2.address,
-            token2.token_decimal,
+            token2.token_decimals,
             token2.token_cap,
             token2.pricing_source,
         );

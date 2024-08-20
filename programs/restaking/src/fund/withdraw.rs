@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{error::ErrorCode, fund::*};
 
 impl BatchWithdrawal {
-    fn add_token_to_process(&mut self, amount: u64) -> Result<()> {
+    fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests += 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
@@ -13,7 +13,7 @@ impl BatchWithdrawal {
         Ok(())
     }
 
-    fn remove_token_to_process(&mut self, amount: u64) -> Result<()> {
+    fn remove_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests -= 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
@@ -109,7 +109,7 @@ impl WithdrawalStatus {
         self.next_request_id += 1;
 
         self.pending_batch_withdrawal
-            .add_token_to_process(receipt_token_amount)?;
+            .add_receipt_token_to_process(receipt_token_amount)?;
         WithdrawalRequest::new(
             self.pending_batch_withdrawal.batch_id,
             request_id,
@@ -119,7 +119,7 @@ impl WithdrawalStatus {
 
     pub(super) fn remove_withdrawal_request(&mut self, receipt_token_amount: u64) -> Result<()> {
         self.pending_batch_withdrawal
-            .remove_token_to_process(receipt_token_amount)
+            .remove_receipt_token_to_process(receipt_token_amount)
     }
 
     pub(super) fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {

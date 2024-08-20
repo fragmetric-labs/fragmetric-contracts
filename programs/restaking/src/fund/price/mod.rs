@@ -7,10 +7,10 @@ use source::*;
 mod source;
 
 impl TokenInfo {
-    /// Simply it returns 10^token_decimal.
+    /// Simply it returns 10^token_decimals.
     fn token_lamports_per_token(&self) -> Result<u64> {
         10u64
-            .checked_pow(self.token_decimal as u32)
+            .checked_pow(self.token_decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 
@@ -50,12 +50,12 @@ impl Fund {
 
     pub(super) fn receipt_token_price(
         &self,
-        receipt_token_decimal: u8,
+        decimals: u8,
         receipt_token_total_supply: u64,
     ) -> Result<u64> {
         self.calculate_sol_from_receipt_tokens(
             10u64
-                .checked_pow(receipt_token_decimal as u32)
+                .checked_pow(decimals as u32)
                 .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
             receipt_token_total_supply,
         )

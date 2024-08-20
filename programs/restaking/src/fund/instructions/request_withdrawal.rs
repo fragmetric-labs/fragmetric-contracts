@@ -13,11 +13,13 @@ pub struct FundRequestWithdrawal<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
+        space = 8 + UserReceipt::INIT_SPACE,
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
-        bump = user_receipt.bump,
-        has_one = user,
-        has_one = receipt_token_mint,
+        bump,
+        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
+        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -56,10 +58,18 @@ pub struct FundRequestWithdrawal<'info> {
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundRequestWithdrawal<'info> {
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+        // Initialize
+        ctx.accounts.user_receipt.initialize_if_needed(
+            ctx.bumps.user_receipt,
+            ctx.accounts.user.key(),
+            ctx.accounts.receipt_token_mint.key(),
+        );
+
         // Verify
         require_gte!(
             ctx.accounts.receipt_token_account.amount,

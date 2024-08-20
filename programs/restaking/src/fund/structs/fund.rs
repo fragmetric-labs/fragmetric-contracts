@@ -47,7 +47,7 @@ impl Fund {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenInfo {
     pub address: Pubkey,
-    pub token_decimal: u8,
+    pub token_decimals: u8,
     pub token_cap: u64,
     pub token_amount_in: u64,
     pub token_price: u64,
@@ -57,13 +57,13 @@ pub struct TokenInfo {
 impl TokenInfo {
     pub fn empty(
         address: Pubkey,
-        token_decimal: u8,
+        token_decimals: u8,
         token_cap: u64,
         pricing_source: PricingSource,
     ) -> Self {
         Self {
             address,
-            token_decimal,
+            token_decimals,
             token_cap,
             token_amount_in: 0,
             token_price: 0,
