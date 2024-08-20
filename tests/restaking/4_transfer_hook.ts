@@ -72,6 +72,10 @@ export const transfer_hook = describe("transfer_hook", () => {
             .fundDepositSol(amount, null)
             .accounts({
                 user: user2.publicKey,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                pricingSource0: restaking.bSOLStakePoolPublicKey,
+                pricingSource1: restaking.mSOLStakePoolPublicKey,
+                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
             })
             .signers([user2])
             .rpc({ commitment: "confirmed" });
@@ -79,6 +83,10 @@ export const transfer_hook = describe("transfer_hook", () => {
             .fundDepositSol(amount, null)
             .accounts({
                 user: user3.publicKey,
+                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                pricingSource0: restaking.bSOLStakePoolPublicKey,
+                pricingSource1: restaking.mSOLStakePoolPublicKey,
+                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
             })
             .signers([user3])
             .rpc({ commitment: "confirmed" });

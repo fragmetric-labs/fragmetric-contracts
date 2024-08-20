@@ -59,6 +59,10 @@ export const withdraw = describe("withdraw", () => {
       .fundDepositSol(amount, null)
       .accounts({
         user: user.publicKey,
+        // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        pricingSource0: restaking.bSOLStakePoolPublicKey,
+        pricingSource1: restaking.mSOLStakePoolPublicKey,
+        pricingSource2: restaking.jitoSOLStakePoolPublicKey,
       })
       .signers([user])
       .rpc({ commitment: "confirmed" });
@@ -152,7 +156,11 @@ export const withdraw = describe("withdraw", () => {
   });
 
   it("Process all withdrawals", async () => {
-    await program.methods.operatorRun().accounts({}).signers([]).rpc();
+    await program.methods.operatorRun().accounts({
+        pricingSource0: restaking.bSOLStakePoolPublicKey,
+        pricingSource1: restaking.mSOLStakePoolPublicKey,
+        pricingSource2: restaking.jitoSOLStakePoolPublicKey,
+    }).signers([]).rpc();
 
     const fund = await program.account.fund.fetch(restaking.fund_pda)
     const withdrawalStatus = fund.withdrawalStatus;
@@ -174,6 +182,9 @@ export const withdraw = describe("withdraw", () => {
       .fundWithdraw(new anchor.BN(3))
       .accounts({
         user: user.publicKey,
+        pricingSource0: restaking.bSOLStakePoolPublicKey,
+        pricingSource1: restaking.mSOLStakePoolPublicKey,
+        pricingSource2: restaking.jitoSOLStakePoolPublicKey,
       })
       .signers([user])
       .rpc();
@@ -209,6 +220,10 @@ export const withdraw = describe("withdraw", () => {
         .fundWithdraw(new anchor.BN(1))
         .accounts({
           user: user.publicKey,
+          // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+          pricingSource0: restaking.bSOLStakePoolPublicKey,
+          pricingSource1: restaking.mSOLStakePoolPublicKey,
+          pricingSource2: restaking.jitoSOLStakePoolPublicKey,
         })
         .signers([user])
         .rpc()

@@ -25,7 +25,9 @@ export let bSOLMint: spl.Mint;
 export let mSOLMint: spl.Mint;
 export let jitoSOLMint: spl.Mint;
 export let infMint: spl.Mint;
-
+export let bSOLStakePoolPublicKey: anchor.web3.PublicKey;
+export let mSOLStakePoolPublicKey: anchor.web3.PublicKey;
+export let jitoSOLStakePoolPublicKey: anchor.web3.PublicKey;
 
 export const fund_initialize = describe("fund_initialize", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -64,14 +66,17 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log("======= Prepare program accounts =======");
     });
 
-    before("Prepare mainnet token mint accounts for localnet", async () => {
+    before("Prepare mainnet token mint/stake pool accounts for localnet", async () => {
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/bSOL_mint.json");
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
         // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
         bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        bSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
         mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        mSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
         jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
+        jitoSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
         infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
         console.log("======= Prepare mainnet token mint accounts for localnet =======");
     });
@@ -189,9 +194,23 @@ export const fund_initialize = describe("fund_initialize", () => {
 
         const solWithdrawalFeeRate = 10;
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
+        const tokenPricingSource1 = {
+            "splStakePool": {
+                address: bSOLStakePoolPublicKey,
+            }
+        };
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
+        const tokenPricingSource2 = {
+            "marinadeStakePool": {
+                address: mSOLStakePoolPublicKey,
+            }
+        };
         const tokenCap3 = new anchor.BN(1_000_000_000 * 3000);
-        const tokenCap4 = new anchor.BN(1_000_000_000 * 4000);
+        const tokenPricingSource3 = {
+            "splStakePool": {
+                address: jitoSOLStakePoolPublicKey,
+            }
+        };
  
         const txs = new anchor.web3.Transaction().add(
             await program.methods
@@ -205,7 +224,10 @@ export const fund_initialize = describe("fund_initialize", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundAddSupportedToken(tokenCap1)
+                .fundAddSupportedToken(
+                    tokenCap1,
+                    tokenPricingSource1,
+                )
                 .accounts({
                     tokenMint: bSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -213,7 +235,7 @@ export const fund_initialize = describe("fund_initialize", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundAddSupportedToken(tokenCap2)
+                .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
                 .accounts({
                     tokenMint: mSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -221,17 +243,9 @@ export const fund_initialize = describe("fund_initialize", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundAddSupportedToken(tokenCap3)
+                .fundAddSupportedToken(tokenCap3, tokenPricingSource3)
                 .accounts({
                     tokenMint: jitoSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundAddSupportedToken(tokenCap4)
-                .accounts({
-                    tokenMint: infMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -259,9 +273,5 @@ export const fund_initialize = describe("fund_initialize", () => {
         expect(tokensInitialized[2].address.toString()).to.eq(jitoSOLMint.address.toString());
         expect(tokensInitialized[2].tokenCap.toNumber()).to.equal(tokenCap3.toNumber());
         expect(tokensInitialized[2].tokenAmountIn.toNumber()).to.eq(0);
-
-        expect(tokensInitialized[3].address.toString()).to.eq(infMint.address.toString());
-        expect(tokensInitialized[3].tokenCap.toNumber()).to.equal(tokenCap4.toNumber());
-        expect(tokensInitialized[3].tokenAmountIn.toNumber()).to.eq(0);
     });
 });
