@@ -84,7 +84,7 @@ impl<'info> FundRequestWithdrawal<'info> {
         // Step 2: Lock receipt token
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount)?;
         Self::call_mint_token_cpi(&mut ctx, receipt_token_amount)?;
-        Self::call_transfer_hook(&mut ctx, receipt_token_amount)?;
+        Self::call_transfer_hook(&ctx, receipt_token_amount)?;
 
         emit!(FundWithdrawalRequested {
             user: ctx.accounts.user.key(),

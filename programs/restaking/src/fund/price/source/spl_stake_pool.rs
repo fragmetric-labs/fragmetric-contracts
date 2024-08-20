@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use anchor_lang::{
     prelude::*,
     solana_program::clock::{Epoch, UnixTimestamp},

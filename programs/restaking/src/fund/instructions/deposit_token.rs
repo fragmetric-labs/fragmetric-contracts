@@ -190,8 +190,8 @@ impl<'info> FundDepositToken<'info> {
             minted_lrt_amount: receipt_token_mint_amount,
             lrt_price: receipt_token_price,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
-            wallet_provider: wallet_provider,
-            fpoint_accrual_rate_multiplier: fpoint_accrual_rate_multiplier,
+            wallet_provider,
+            fpoint_accrual_rate_multiplier,
             fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
         });
 
@@ -215,25 +215,6 @@ impl<'info> FundDepositToken<'info> {
             ctx.accounts.token_mint.decimals,
         )
         .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
-    }
-
-    fn mint_receipt_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        let receipt_token_account_key = ctx.accounts.receipt_token_account.key();
-        msg!(
-            "user's receipt token account key: {:?}",
-            receipt_token_account_key
-        );
-
-        Self::call_mint_token_cpi(ctx, amount)?;
-        msg!(
-            "Minted {} to user token account {:?}",
-            amount,
-            receipt_token_account_key
-        );
-
-        Self::call_transfer_hook(ctx, amount)?;
-
-        Ok(())
     }
 
     fn call_mint_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {

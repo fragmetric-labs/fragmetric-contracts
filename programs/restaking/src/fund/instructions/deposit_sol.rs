@@ -164,8 +164,8 @@ impl<'info> FundDepositSOL<'info> {
             minted_lrt_amount: receipt_token_mint_amount,
             lrt_price: receipt_token_price,
             lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
-            wallet_provider: wallet_provider,
-            fpoint_accrual_rate_multiplier: fpoint_accrual_rate_multiplier,
+            wallet_provider,
+            fpoint_accrual_rate_multiplier,
             fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
         });
 

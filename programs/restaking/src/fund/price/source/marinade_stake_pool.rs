@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use anchor_lang::{prelude::*, Discriminator};
 
 use super::TokenPriceCalculator;
@@ -149,7 +150,7 @@ impl AccountDeserialize for MarinadeStakePool {
             return Err(ErrorCode::AccountDiscriminatorNotFound)?;
         }
         let given_disc = &buf[..8];
-        if &Self::DISCRIMINATOR != given_disc {
+        if Self::DISCRIMINATOR != given_disc {
             return Err(error!(ErrorCode::AccountDiscriminatorMismatch).with_account_name("State"));
         }
         Self::try_deserialize_unchecked(buf)

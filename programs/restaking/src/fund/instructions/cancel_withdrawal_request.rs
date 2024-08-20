@@ -76,7 +76,7 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
         // Step 2: Unlock receipt token
         Self::call_burn_token_cpi(&mut ctx, request.receipt_token_amount)?;
         Self::call_mint_token_cpi(&mut ctx, request.receipt_token_amount)?;
-        Self::call_transfer_hook(&mut ctx, request.receipt_token_amount)?;
+        Self::call_transfer_hook(&ctx, request.receipt_token_amount)?;
 
         emit!(FundWithdrawalRequestCanceled {
             user: ctx.accounts.user.key(),

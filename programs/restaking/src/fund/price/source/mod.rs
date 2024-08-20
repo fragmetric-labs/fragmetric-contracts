@@ -3,8 +3,8 @@ use anchor_lang::prelude::*;
 mod marinade_stake_pool;
 mod spl_stake_pool;
 
-pub use marinade_stake_pool::*;
-pub use spl_stake_pool::*;
+pub(crate) use marinade_stake_pool::*;
+pub(crate) use spl_stake_pool::*;
 
 /// A type that can calculate the token price with its data.
 pub(super) trait TokenPriceCalculator {

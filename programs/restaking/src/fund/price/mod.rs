@@ -18,9 +18,9 @@ impl TokenInfo {
 }
 
 impl Fund {
-    pub(crate) fn update_token_prices<'info>(
+    pub(crate) fn update_token_prices(
         &mut self,
-        sources: &[&AccountInfo<'info>],
+        sources: &[&AccountInfo],
     ) -> Result<()> {
         for token in &mut self.supported_tokens {
             let calculator: Box<dyn TokenPriceCalculator> = match &token.pricing_source {
@@ -85,11 +85,8 @@ impl Fund {
     pub(crate) fn total_sol_value(&self) -> Result<u64> {
         self.supported_tokens
             .iter()
-            .fold(Ok(self.sol_amount_in), |sum, token| {
-                sum.and_then(|sum| {
-                    sum.checked_add(token.token_to_sol_value)
-                        .ok_or_else(|| error!(ErrorCode::CalculationFailure))
-                })
+            .try_fold(self.sol_amount_in, |sum, token| {
+                sum.checked_add(token.token_to_sol_value).ok_or_else(|| error!(ErrorCode::CalculationFailure))
             })
     }
 }
