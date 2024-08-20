@@ -149,7 +149,7 @@ impl<'info> FundDepositToken<'info> {
             .fund
             .supported_token_position(ctx.accounts.token_mint.key())
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
-        require_gte!(ctx.accounts.receipt_token_account.amount, amount);
+        require_gte!(ctx.accounts.user_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
         let fund = &mut ctx.accounts.fund;
