@@ -7,21 +7,25 @@ use source::*;
 mod source;
 
 impl TokenInfo {
+    /// Simply it returns 10^token_decimal.
+    fn token_lamports_per_token(&self) -> Result<u64> {
+        10u64
+            .checked_pow(self.token_decimal as u32)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+    }
+
     pub(super) fn calculate_sol_from_tokens(&self, token_amount: u64) -> Result<u64> {
         crate::utils::proportional_amount(
             token_amount,
-            self.token_to_sol_value,
-            self.token_amount_in,
+            self.token_price,
+            self.token_lamports_per_token()?,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationFailure))
     }
 }
 
 impl Fund {
-    pub(crate) fn update_token_prices(
-        &mut self,
-        sources: &[&AccountInfo],
-    ) -> Result<()> {
+    pub(crate) fn update_token_prices(&mut self, sources: &[&AccountInfo]) -> Result<()> {
         for token in &mut self.supported_tokens {
             let calculator: Box<dyn TokenPriceCalculator> = match &token.pricing_source {
                 PricingSource::SPLStakePool { address } => {
@@ -37,7 +41,8 @@ impl Fund {
                     Box::new(marinade_stake_pool)
                 }
             };
-            token.token_to_sol_value = calculator.calculate_token_price(token.token_amount_in)?;
+            token.token_price =
+                calculator.calculate_token_price(token.token_lamports_per_token()?)?;
         }
 
         Ok(())
@@ -86,7 +91,8 @@ impl Fund {
         self.supported_tokens
             .iter()
             .try_fold(self.sol_amount_in, |sum, token| {
-                sum.checked_add(token.token_to_sol_value).ok_or_else(|| error!(ErrorCode::CalculationFailure))
+                sum.checked_add(token.calculate_sol_from_tokens(token.token_amount_in)?)
+                    .ok_or_else(|| error!(ErrorCode::CalculationFailure))
             })
     }
 }

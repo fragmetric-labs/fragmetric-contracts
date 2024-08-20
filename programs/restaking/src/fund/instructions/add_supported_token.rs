@@ -54,10 +54,11 @@ impl<'info> FundAddSupportedToken<'info> {
         pricing_source: PricingSource,
     ) -> Result<()> {
         let token = ctx.accounts.token_mint.key();
+        let token_decimal = ctx.accounts.token_mint.decimals;
         ctx.accounts.fund.check_token_does_not_exist(&token)?;
         ctx.accounts
             .fund
-            .add_supported_token(token, token_cap, pricing_source);
+            .add_supported_token(token, token_decimal, token_cap, pricing_source);
 
         Ok(())
     }

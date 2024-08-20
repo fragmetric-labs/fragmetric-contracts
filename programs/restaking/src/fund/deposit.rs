@@ -12,13 +12,7 @@ impl TokenInfo {
             err!(ErrorCode::FundExceedsTokenCap)?
         }
 
-        let new_token_to_sol_value = self
-            .token_to_sol_value
-            .checked_add(self.calculate_sol_from_tokens(amount)?)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
-
         self.token_amount_in = new_token_amount_in;
-        self.token_to_sol_value = new_token_to_sol_value;
 
         Ok(())
     }

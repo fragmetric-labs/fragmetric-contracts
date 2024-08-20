@@ -160,10 +160,12 @@ impl<'info> FundDepositToken<'info> {
         ];
         fund.update_token_prices(&sources)?;
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let token_to_sol_value =
+        let token_amount_to_sol_value =
             fund.supported_tokens[supported_token_index].calculate_sol_from_tokens(amount)?;
-        let receipt_token_mint_amount =
-            fund.calculate_receipt_tokens_from_sol(token_to_sol_value, receipt_token_total_supply)?;
+        let receipt_token_mint_amount = fund.calculate_receipt_tokens_from_sol(
+            token_amount_to_sol_value,
+            receipt_token_total_supply,
+        )?;
         let receipt_token_price = fund.receipt_token_price(
             ctx.accounts.receipt_token_mint.decimals,
             receipt_token_total_supply,
