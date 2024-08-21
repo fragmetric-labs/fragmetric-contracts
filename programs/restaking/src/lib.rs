@@ -60,9 +60,9 @@ pub mod restaking {
     pub fn fund_add_supported_token(
         ctx: Context<FundAddSupportedToken>,
         token_cap: u64,
-        pricing_source: PricingSource,
+        token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        FundAddSupportedToken::add_supported_token(ctx, token_cap, pricing_source)
+        FundAddSupportedToken::add_supported_token(ctx, token_cap, token_pricing_source)
     }
 
     pub fn fund_update_supported_token(

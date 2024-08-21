@@ -14,9 +14,9 @@ impl Fund {
         token: Pubkey,
         token_decimals: u8,
         token_cap: u64,
-        pricing_source: PricingSource,
+        token_pricing_source: TokenPricingSource,
     ) {
-        let token_info = TokenInfo::empty(token, token_decimals, token_cap, pricing_source);
+        let token_info = TokenInfo::empty(token, token_decimals, token_cap, token_pricing_source);
         self.supported_tokens.push(token_info);
     }
 
@@ -54,7 +54,7 @@ mod tests {
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
             token_price: 0,
-            pricing_source: PricingSource::SPLStakePool {
+            token_pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         };
@@ -64,7 +64,7 @@ mod tests {
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
             token_price: 0,
-            pricing_source: PricingSource::SPLStakePool {
+            token_pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         };
@@ -93,7 +93,7 @@ mod tests {
             token_cap: 1_000_000_000 * 1000,
             token_amount_in: 1_000_000_000,
             token_price: 0,
-            pricing_source: PricingSource::SPLStakePool {
+            token_pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         };
@@ -103,7 +103,7 @@ mod tests {
             token_cap: 1_000_000_000 * 2000,
             token_amount_in: 2_000_000_000,
             token_price: 0,
-            pricing_source: PricingSource::SPLStakePool {
+            token_pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         };
@@ -113,13 +113,13 @@ mod tests {
             token1.address,
             token1.token_decimals,
             token1.token_cap,
-            token1.pricing_source,
+            token1.token_pricing_source,
         );
         fund.add_supported_token(
             token2.address,
             token2.token_decimals,
             token2.token_cap,
-            token2.pricing_source,
+            token2.token_pricing_source,
         );
         println!("{:?}", fund.supported_tokens.iter());
 

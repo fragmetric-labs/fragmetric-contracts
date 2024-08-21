@@ -35,6 +35,6 @@ pub enum ErrorCode {
     SigVerificationFailed,
     #[msg("Calculation failed due to overflow/underflow")]
     CalculationFailure,
-    #[msg("Pricing source not provided")]
-    FundPricingSourceNotFound,
+    #[msg("Token pricing source not provided")]
+    FundTokenPricingSourceNotFound,
 }

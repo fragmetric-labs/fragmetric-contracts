@@ -40,22 +40,14 @@ pub struct OperatorRunIfNeeded<'info> {
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
     // TODO: use address lookup table!
-    // TODO: rename properly!
-    // TODO: use address constraint!
+    #[account(address = BSOL_STAKE_POOL_ADDRESS)]
     /// CHECK: will be checked and deserialized when needed
-    pub pricing_source0: UncheckedAccount<'info>,
+    pub token_pricing_source_0: UncheckedAccount<'info>,
 
     // TODO: use address lookup table!
-    // TODO: rename properly!
-    // TODO: use address constraint!
+    #[account(address = MSOL_STAKE_POOL_ADDRESS)]
     /// CHECK: will be checked and deserialized when needed
-    pub pricing_source1: UncheckedAccount<'info>,
-
-    // TODO: use address lookup table!
-    // TODO: rename properly!
-    // TODO: use address constraint!
-    /// CHECK: will be checked and deserialized when needed
-    pub pricing_source2: UncheckedAccount<'info>,
+    pub token_pricing_source_1: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -92,9 +84,8 @@ impl<'info> OperatorRunIfNeeded<'info> {
 
         let fund = &mut ctx.accounts.fund;
         let sources = [
-            ctx.accounts.pricing_source0.as_ref(),
-            ctx.accounts.pricing_source1.as_ref(),
-            ctx.accounts.pricing_source2.as_ref(),
+            ctx.accounts.token_pricing_source_0.as_ref(),
+            ctx.accounts.token_pricing_source_1.as_ref(),
         ];
         fund.update_token_prices(&sources)?;
         let total_sol_value_in_fund = fund.total_sol_value()?;

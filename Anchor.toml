@@ -40,9 +40,10 @@ rpc_port = 8899
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
 filename = "tests/restaking/lsts/mainnet/clones/bSOL_mint.json"
 
-# clone mainnet bSOL stake pool
-[[test.validator.clone]]
-address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+# clone devnet bSOL stake pool
+[[test.validator.account]]
+address = "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
+filename = "tests/restaking/lsts/devnet/clones/bSOL_stake_pool.json"
 
 # mock mainnet mSOL mint
 [[test.validator.account]]

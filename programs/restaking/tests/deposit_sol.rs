@@ -32,6 +32,8 @@ async fn test_deposit_sol() {
             fund_token_authority,
             receipt_token_mint,
             receipt_token_account,
+            token_pricing_source_0: Pubkey::new_unique(),
+            token_pricing_source_1: Pubkey::new_unique(),
             token_program: spl_token_2022::ID,
             associated_token_program: associated_token::ID,
             instruction_sysvar: None,

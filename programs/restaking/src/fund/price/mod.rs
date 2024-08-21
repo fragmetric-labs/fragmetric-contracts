@@ -27,22 +27,23 @@ impl TokenInfo {
 impl Fund {
     pub(crate) fn update_token_prices(&mut self, sources: &[&AccountInfo]) -> Result<()> {
         for token in &mut self.supported_tokens {
-            let calculator: Box<dyn TokenPriceCalculator> = match &token.pricing_source {
-                PricingSource::SPLStakePool { address } => {
-                    let account = find_pricing_source_by_key(sources, address)?;
+            let token_lamports_per_token = token.token_lamports_per_token()?;
+            match &token.token_pricing_source {
+                TokenPricingSource::SPLStakePool { address } => {
+                    let account = find_token_pricing_source_by_key(sources, address)?;
                     let spl_stake_pool =
                         ToCalculator::<SplStakePool>::to_calculator_checked(account)?;
-                    Box::new(spl_stake_pool)
+                    token.token_price =
+                        spl_stake_pool.calculate_token_price(token_lamports_per_token)?;
                 }
-                PricingSource::MarinadeStakePool { address } => {
-                    let account = find_pricing_source_by_key(sources, address)?;
+                TokenPricingSource::MarinadeStakePool { address } => {
+                    let account = find_token_pricing_source_by_key(sources, address)?;
                     let marinade_stake_pool =
                         ToCalculator::<MarinadeStakePool>::to_calculator_checked(account)?;
-                    Box::new(marinade_stake_pool)
+                    token.token_price =
+                        marinade_stake_pool.calculate_token_price(token_lamports_per_token)?;
                 }
-            };
-            token.token_price =
-                calculator.calculate_token_price(token.token_lamports_per_token()?)?;
+            }
         }
 
         Ok(())
@@ -97,12 +98,12 @@ impl Fund {
     }
 }
 
-fn find_pricing_source_by_key<'a, 'info: 'a>(
+fn find_token_pricing_source_by_key<'a, 'info: 'a>(
     sources: &[&'a AccountInfo<'info>],
     key: &Pubkey,
 ) -> Result<&'a AccountInfo<'info>> {
     Ok(sources
         .iter()
         .find(|account| account.key == key)
-        .ok_or_else(|| error!(ErrorCode::FundPricingSourceNotFound))?)
+        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFound))?)
 }

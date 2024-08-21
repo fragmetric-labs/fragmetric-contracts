@@ -214,9 +214,6 @@ export const deposit_token = describe("deposit_token", () => {
                 user: user.publicKey,
                 tokenMint: restaking.bSOLMint.address,
                 userTokenAccount: userBSOLTokenAccount.address,
-                pricingSource0: restaking.bSOLStakePoolPublicKey,
-                pricingSource1: restaking.mSOLStakePoolPublicKey,
-                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
@@ -237,9 +234,6 @@ export const deposit_token = describe("deposit_token", () => {
                 user: user.publicKey,
                 tokenMint: restaking.mSOLMint.address,
                 userTokenAccount: userMSOLTokenAccount.address,
-                pricingSource0: restaking.bSOLStakePoolPublicKey,
-                pricingSource1: restaking.mSOLStakePoolPublicKey,
-                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
@@ -254,34 +248,10 @@ export const deposit_token = describe("deposit_token", () => {
             expect(event.data.fpointAccrualRateMultiplier).to.be.null;
         }
     
-        txSig = await program.methods
-            .fundDepositToken(amount, null)
-            .accounts({
-                user: user.publicKey,
-                tokenMint: restaking.jitoSOLMint.address,
-                userTokenAccount: userJitoSOLTokenAccount.address,
-                pricingSource0: restaking.bSOLStakePoolPublicKey,
-                pricingSource1: restaking.mSOLStakePoolPublicKey,
-                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
-                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-                depositTokenProgram: spl.TOKEN_PROGRAM_ID,
-            })
-            .signers([user])
-            .rpc({commitment: "confirmed"});
-        // parse event
-        committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
-        events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.walletProvider).to.be.null;
-            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
-        }
-
         // check the price of tokens
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
         console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
-        console.log(`jitoSOL price  = ${fundData.supportedTokens[2].tokenPrice}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
@@ -439,9 +409,6 @@ export const deposit_token = describe("deposit_token", () => {
                     user: user.publicKey,
                     tokenMint: restaking.bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
-                    pricingSource0: restaking.bSOLStakePoolPublicKey,
-                    pricingSource1: restaking.mSOLStakePoolPublicKey,
-                    pricingSource2: restaking.jitoSOLStakePoolPublicKey,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
@@ -476,7 +443,6 @@ export const deposit_token = describe("deposit_token", () => {
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
         console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
-        console.log(`jitoSOL price  = ${fundData.supportedTokens[2].tokenPrice}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
