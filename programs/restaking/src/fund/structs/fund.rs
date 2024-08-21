@@ -51,7 +51,7 @@ pub struct TokenInfo {
     pub token_cap: u64,
     pub token_amount_in: u64,
     pub token_price: u64,
-    pub pricing_source: PricingSource,
+    pub token_pricing_source: TokenPricingSource,
 }
 
 impl TokenInfo {
@@ -59,7 +59,7 @@ impl TokenInfo {
         address: Pubkey,
         token_decimals: u8,
         token_cap: u64,
-        pricing_source: PricingSource,
+        token_pricing_source: TokenPricingSource,
     ) -> Self {
         Self {
             address,
@@ -67,14 +67,14 @@ impl TokenInfo {
             token_cap,
             token_amount_in: 0,
             token_price: 0,
-            pricing_source,
+            token_pricing_source,
         }
     }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 #[non_exhaustive]
-pub enum PricingSource {
+pub enum TokenPricingSource {
     SPLStakePool { address: Pubkey },
     MarinadeStakePool { address: Pubkey },
 }

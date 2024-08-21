@@ -50,14 +50,17 @@ impl<'info> FundAddSupportedToken<'info> {
     pub fn add_supported_token(
         ctx: Context<Self>,
         token_cap: u64,
-        pricing_source: PricingSource,
+        token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
         let token = ctx.accounts.token_mint.key();
         let token_decimals = ctx.accounts.token_mint.decimals;
         ctx.accounts.fund.check_token_does_not_exist(&token)?;
-        ctx.accounts
-            .fund
-            .add_supported_token(token, token_decimals, token_cap, pricing_source);
+        ctx.accounts.fund.add_supported_token(
+            token,
+            token_decimals,
+            token_cap,
+            token_pricing_source,
+        );
 
         Ok(())
     }

@@ -42,9 +42,6 @@ export const deposit_sol = describe("deposit_sol", () => {
             .fundUpdatePrice()
             .accounts({
                 payer: admin.publicKey,
-                pricingSource0: restaking.bSOLStakePoolPublicKey,
-                pricingSource1: restaking.mSOLStakePoolPublicKey,
-                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
             })
             .rpc({commitment: "confirmed"});
 
@@ -68,9 +65,6 @@ export const deposit_sol = describe("deposit_sol", () => {
             .fundDepositSol(amount, null)
             .accounts({
                 user: user.publicKey,
-                pricingSource0: restaking.bSOLStakePoolPublicKey,
-                pricingSource1: restaking.mSOLStakePoolPublicKey,
-                pricingSource2: restaking.jitoSOLStakePoolPublicKey,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" });
@@ -87,7 +81,6 @@ export const deposit_sol = describe("deposit_sol", () => {
         // check the price of tokens
         console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
-        console.log(`jitoSOL price  = ${fundData.supportedTokens[2].tokenPrice}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
@@ -148,9 +141,6 @@ export const deposit_sol = describe("deposit_sol", () => {
                 .accounts({
                     user: user.publicKey,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-                    pricingSource0: restaking.bSOLStakePoolPublicKey,
-                    pricingSource1: restaking.mSOLStakePoolPublicKey,
-                    pricingSource2: restaking.jitoSOLStakePoolPublicKey,
                 })
                 .signers([user])
                 .instruction()
@@ -174,7 +164,6 @@ export const deposit_sol = describe("deposit_sol", () => {
         // check the price of tokens
         console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
-        console.log(`jitoSOL price  = ${fundData.supportedTokens[2].tokenPrice}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
