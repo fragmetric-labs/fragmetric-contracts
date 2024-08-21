@@ -50,11 +50,11 @@ export const fund_initialize = describe("fund_initialize", () => {
     before("Prepare program accounts", async () => {
         receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
         [fund_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund_token_authority"), receiptTokenMint.publicKey.toBuffer()],
+            [Buffer.from("fund_token_authority_seed"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
         [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
+            [Buffer.from("fund_seed"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
 

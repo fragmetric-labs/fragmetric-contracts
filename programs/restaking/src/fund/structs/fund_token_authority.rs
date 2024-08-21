@@ -11,7 +11,7 @@ pub struct FundTokenAuthority {
 }
 
 impl PDASignerSeeds<3> for FundTokenAuthority {
-    const SEED: &'static [u8] = b"fund_token_authority";
+    const SEED: &'static [u8] = b"fund_token_authority_seed";
 
     fn signer_seeds(&self) -> [&[u8]; 3] {
         [

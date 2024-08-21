@@ -14,7 +14,7 @@ pub struct UserReceipt {
 }
 
 impl PDASignerSeeds<4> for UserReceipt {
-    const SEED: &'static [u8] = b"user_receipt";
+    const SEED: &'static [u8] = b"user_receipt_seed";
 
     fn signer_seeds(&self) -> [&[u8]; 4] {
         [

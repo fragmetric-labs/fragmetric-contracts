@@ -15,7 +15,7 @@ pub struct Fund {
 }
 
 impl PDASignerSeeds<3> for Fund {
-    const SEED: &'static [u8] = b"fund";
+    const SEED: &'static [u8] = b"fund_seed";
 
     fn signer_seeds(&self) -> [&[u8]; 3] {
         [
