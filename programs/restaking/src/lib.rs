@@ -28,15 +28,11 @@ pub mod restaking {
         LogMessage::log_message(ctx, message)
     }
 
-    pub fn fund_initialize(
-        ctx: Context<FundInitialize>,
-    ) -> Result<()> {
+    pub fn fund_initialize(ctx: Context<FundInitialize>) -> Result<()> {
         FundInitialize::initialize_fund(ctx)
     }
 
-    pub fn fund_initialize_token(
-        ctx: Context<FundInitializeToken>,
-    ) -> Result<()> {
+    pub fn fund_initialize_token(ctx: Context<FundInitializeToken>) -> Result<()> {
         FundInitializeToken::initialize(ctx)
     }
 

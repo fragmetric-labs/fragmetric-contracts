@@ -49,7 +49,12 @@ impl ReceiptTokenLockAuthority {
 }
 
 impl SupportedTokenAuthority {
-    pub(super) fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey, token_mint: Pubkey) {
+    pub(super) fn initialize_if_needed(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        token_mint: Pubkey,
+    ) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;

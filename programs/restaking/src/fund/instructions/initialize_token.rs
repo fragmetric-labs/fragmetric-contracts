@@ -43,9 +43,11 @@ impl<'info> FundInitializeToken<'info> {
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
         let token_mint_key = ctx.accounts.token_mint.key();
 
-        ctx.accounts
-            .supported_token_authority
-            .initialize_if_needed(ctx.bumps.supported_token_authority, receipt_token_mint_key, token_mint_key);
+        ctx.accounts.supported_token_authority.initialize_if_needed(
+            ctx.bumps.supported_token_authority,
+            receipt_token_mint_key,
+            token_mint_key,
+        );
 
         Ok(())
     }

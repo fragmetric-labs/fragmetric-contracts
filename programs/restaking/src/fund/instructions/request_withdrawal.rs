@@ -135,7 +135,11 @@ impl<'info> FundRequestWithdrawal<'info> {
                 &mut ctx.accounts.receipt_token_mint,
                 &mut ctx.accounts.receipt_token_lock_account,
                 ctx.accounts.receipt_token_mint_authority.to_account_info(),
-                Some(&[ctx.accounts.receipt_token_mint_authority.signer_seeds().as_ref()]),
+                Some(&[ctx
+                    .accounts
+                    .receipt_token_mint_authority
+                    .signer_seeds()
+                    .as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
