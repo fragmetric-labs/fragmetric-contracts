@@ -1,7 +1,7 @@
 mod fund;
-mod program_authorities;
+mod authorities;
 mod user_receipt;
 
 pub use fund::*;
-pub use program_authorities::*;
+pub use authorities::*;
 pub use user_receipt::*;
