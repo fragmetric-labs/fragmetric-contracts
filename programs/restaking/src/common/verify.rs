@@ -1,86 +1,116 @@
-use anchor_lang::{prelude::*, solana_program::ed25519_program::ID as ED25519_PROGRAM_ID};
+use anchor_lang::{
+    prelude::*,
+    solana_program::{ed25519_program, instruction::Instruction, sysvar::instructions},
+};
 
 use crate::error::ErrorCode;
 
-pub const EXPTECED_IX_SYSVAR_INDEX: usize = 0;
+pub(crate) struct Ed25519Instruction(Instruction);
 
-/// Verify Ed25519Program instruction fields
-pub fn verify_ed25519_ix(
-    ix: &anchor_lang::solana_program::instruction::Instruction,
-    pubkey: &[u8],
-    msg: &[u8],
-) -> Result<()> {
-    if ix.program_id != ED25519_PROGRAM_ID || // The program id we expect
-        !ix.accounts.is_empty() || // With no context accounts
-        ix.data.len() != (16 + 64 + 32 + msg.len())
-    // And data of this size
-    {
-        msg!("ix.data.len(): {}, msg.len(): {}", ix.data.len(), msg.len());
-        return err!(ErrorCode::SigVerificationFailed); // Otherwise, we can already throw err
+impl Ed25519Instruction {
+    const EXPTECED_IX_SYSVAR_INDEX: usize = 0;
+
+    pub(crate) fn new_from_instruction_sysvar(instruction_sysvar: &AccountInfo) -> Result<Self> {
+        let ix = instructions::load_instruction_at_checked(
+            Self::EXPTECED_IX_SYSVAR_INDEX,
+            instruction_sysvar,
+        )?;
+        require_eq!(ix.program_id, ed25519_program::ID);
+        require_eq!(ix.accounts.len(), 0);
+
+        Ok(Self(ix))
     }
 
-    check_ed25519_data(&ix.data, pubkey, msg) // If that's not the case, check data
-}
+    /// Verify serialized Ed25519Program instruction data
+    pub(crate) fn verify(&self, pubkey: &[u8], payload: &[u8]) -> Result<()> {
+        // According to this layout used by the Ed25519Program
+        // https://github.com/solana-labs/solana-web3.js/blob/master/src/ed25519-program.ts#L33
+        // "Deserializing" byte slices
+        let expected_payload_size =
+            u16::try_from(payload.len()).map_err(|_| error!(ErrorCode::SigVerificationFailed))?;
+        self.check_data_len(payload)?;
+        self.check_data_header(expected_payload_size)?;
+        self.check_data_pubkey(pubkey)?;
+        self.check_data_payload(payload)?;
 
-/// Verify serialized Ed25519Program instruction data
-fn check_ed25519_data(data: &[u8], pubkey: &[u8], msg: &[u8]) -> Result<()> {
-    // According to this layout used by the Ed25519Program
-    // https://github.com/solana-labs/solana-web3.js/blob/master/src/ed25519-program.ts#L33
+        Ok(())
+    }
 
-    // "Deserializing" byte slices
+    fn check_data_len(&self, payload: &[u8]) -> Result<()> {
+        let actual = self.0.data.len();
+        let expected = 16 + 64 + 32 + payload.len();
+        if actual != expected {
+            msg!(
+                "Invalid data length: actual {}, expected {}",
+                actual,
+                expected
+            );
+            err!(ErrorCode::SigVerificationFailed)?;
+        }
 
-    let num_signatures = &[data[0]]; // Byte 0
-    let padding = &[data[1]]; // Byte 1
-    let signature_offset = &data[2..=3]; // Byte 2,3
-    let signature_instruction_index = &data[4..=5]; // Byte 4,5
-    let public_key_offset = &data[6..=7]; // Byte 6,7
-    let public_key_instruction_index = &data[8..=9]; // Byte 8,9
-    let message_data_offset = &data[10..=11]; // Byte 10,11
-    let message_data_size = &data[12..=13]; // Byte 12,13
-    let message_instruction_index = &data[14..=15]; // Byte 14,15
+        Ok(())
+    }
 
-    let data_pubkey = &data[16..16 + 32]; // Bytes 16..16+32
-                                          // let data_sig = &data[48..48+64]; // Bytes 48..48+64
-    let data_msg = &data[112..]; // Bytes 112..end
+    fn check_data_header(&self, expected_payload_size: u16) -> Result<()> {
+        let header = &self.0.data[0..16];
+        let num_signatures = header[0];
+        let padding = header[1];
+        let signature_offset = u16::from_le_bytes([header[2], header[3]]);
+        let signature_instruction_index = u16::from_le_bytes([header[4], header[5]]);
+        let public_key_offset = u16::from_le_bytes([header[6], header[7]]);
+        let public_key_instruction_index = u16::from_le_bytes([header[8], header[9]]);
+        let payload_offset = u16::from_le_bytes([header[10], header[11]]);
+        let payload_size = u16::from_le_bytes([header[12], header[13]]);
+        let payload_instruction_index = u16::from_le_bytes([header[14], header[15]]);
 
-    // Expected values
-
-    let exp_public_key_offset: u16 = 16; // 2*u8 + 7*u16
-    let exp_signature_offset: u16 = exp_public_key_offset + pubkey.len() as u16;
-    // let exp_message_data_offset: u16 = exp_signature_offset + sig.len() as u16;
-    let exp_message_data_offset: u16 = exp_signature_offset + 64u16;
-    let exp_num_signatures: u8 = 1;
-    let exp_message_data_size: u16 = msg.len().try_into().unwrap();
-
-    // Header and Arg Checks
-
-    // Header
-    if num_signatures != &exp_num_signatures.to_le_bytes()
-        || padding != &[0]
-        || signature_offset != exp_signature_offset.to_le_bytes()
-        || signature_instruction_index != u16::MAX.to_le_bytes()
-        || public_key_offset != exp_public_key_offset.to_le_bytes()
-        || public_key_instruction_index != u16::MAX.to_le_bytes()
-        || message_data_offset != exp_message_data_offset.to_le_bytes()
-        || message_data_size != exp_message_data_size.to_le_bytes()
-        || message_instruction_index != u16::MAX.to_le_bytes()
-    {
-        msg!(
-            "message_data_size: {:?}, &exp_message_data_size.to_le_bytes(): {:?}",
-            message_data_size,
-            &exp_message_data_size.to_le_bytes()
+        require_eq!(num_signatures, 1, ErrorCode::SigVerificationFailed);
+        require_eq!(padding, 0, ErrorCode::SigVerificationFailed);
+        require_eq!(signature_offset, 48, ErrorCode::SigVerificationFailed);
+        require_eq!(
+            signature_instruction_index,
+            u16::MAX,
+            ErrorCode::SigVerificationFailed
         );
-        return err!(ErrorCode::SigVerificationFailed);
+        require_eq!(public_key_offset, 16, ErrorCode::SigVerificationFailed);
+        require_eq!(
+            public_key_instruction_index,
+            u16::MAX,
+            ErrorCode::SigVerificationFailed
+        );
+        require_eq!(payload_offset, 112, ErrorCode::SigVerificationFailed);
+        require_eq!(
+            payload_size,
+            expected_payload_size,
+            ErrorCode::SigVerificationFailed
+        );
+        require_eq!(
+            payload_instruction_index,
+            u16::MAX,
+            ErrorCode::SigVerificationFailed
+        );
+
+        Ok(())
     }
 
-    // Arguments
-    if data_pubkey != pubkey || data_msg != msg
-    // data_sig != sig
-    {
-        msg!("data_pubkey: {:?}, pubkey: {:?}", data_pubkey, pubkey);
-        msg!("data_msg: {:?}, msg: {:?}", data_msg, msg);
-        return err!(ErrorCode::SigVerificationFailed);
+    fn check_data_pubkey(&self, pubkey: &[u8]) -> Result<()> {
+        let data_pubkey = &self.0.data[16..48];
+
+        if data_pubkey != pubkey {
+            msg!("Data pubkey mismatch");
+            err!(ErrorCode::SigVerificationFailed)?;
+        }
+
+        Ok(())
     }
 
-    Ok(())
+    fn check_data_payload(&self, payload: &[u8]) -> Result<()> {
+        let data_payload = &self.0.data[112..];
+
+        if data_payload != payload {
+            msg!("Data payload mismatch");
+            err!(ErrorCode::SigVerificationFailed)?;
+        }
+
+        Ok(())
+    }
 }

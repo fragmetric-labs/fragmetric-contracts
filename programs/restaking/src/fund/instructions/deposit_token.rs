@@ -1,9 +1,4 @@
-use anchor_lang::{
-    prelude::*,
-    solana_program::sysvar::{
-        instructions as instructions_sysvar_module, instructions::load_instruction_at_checked,
-    },
-};
+use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructions_sysvar};
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_2022::Token2022,
@@ -82,7 +77,7 @@ pub struct FundDepositToken<'info> {
     pub token_pricing_source_1: UncheckedAccount<'info>,
 
     /// CHECK: This is safe that checks it's ID
-    #[account(address = instructions_sysvar_module::ID)]
+    #[account(address = instructions_sysvar::ID)]
     pub instruction_sysvar: Option<UncheckedAccount<'info>>,
 
     pub deposit_token_program: Interface<'info, TokenInterface>,
@@ -97,36 +92,29 @@ impl<'info> FundDepositToken<'info> {
         amount: u64,
         metadata: Option<Metadata>,
     ) -> Result<()> {
-        let wallet_provider: Option<String>;
-        let fpoint_accrual_rate_multiplier: Option<f32>;
-        match metadata {
-            None => {
-                wallet_provider = None;
-                fpoint_accrual_rate_multiplier = None;
-
-                msg!("metadata is null");
-            }
-            Some(_) => {
-                let metadata_unwrap = metadata.clone().unwrap();
-                wallet_provider = Some(metadata_unwrap.wallet_provider);
-                fpoint_accrual_rate_multiplier =
-                    Some(metadata_unwrap.fpoint_accrual_rate_multiplier);
-
-                // need signature verification
-                msg!("metadata is not null");
-                // Get what should be the Ed25519Program instruction
-                let instruction_sysvar = ctx.accounts.instruction_sysvar.as_ref().unwrap();
-                let ed25519_ix =
-                    load_instruction_at_checked(EXPTECED_IX_SYSVAR_INDEX, instruction_sysvar)?;
-
-                // Check that ix is what we expect to have been sent
-                let metadata_unwrap = metadata.clone().unwrap(); // re-clone to use it
-                let payload_vec = metadata_unwrap.try_to_vec()?;
-                let payload = payload_vec.as_slice();
-                verify_ed25519_ix(&ed25519_ix, &ADMIN_PUBKEY.to_bytes(), payload)?;
-                msg!("Signature verification succeed");
+        if let Some(metadata) = &metadata {
+            match ctx.accounts.instruction_sysvar.as_ref() {
+                Some(sysvar) => {
+                    let ed25519_ix =
+                        Ed25519Instruction::new_from_instruction_sysvar(sysvar.as_ref())?;
+                    let payload = metadata.try_to_vec()?;
+                    ed25519_ix.verify(&ADMIN_PUBKEY.to_bytes(), payload.as_slice())?;
+                }
+                None => {
+                    msg!("Error: Instruction sysvar not provided");
+                    err!(ErrorCode::SigVerificationFailed)?;
+                }
             }
         }
+
+        let (wallet_provider, fpoint_accrual_rate_multiplier) = metadata
+            .map(|metadata| {
+                (
+                    metadata.wallet_provider,
+                    metadata.fpoint_accrual_rate_multiplier,
+                )
+            })
+            .unzip();
 
         // Initialize
         ctx.accounts.user_receipt.initialize_if_needed(

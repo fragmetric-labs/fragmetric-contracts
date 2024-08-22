@@ -6,4 +6,4 @@ pub use structs::*;
 
 mod verify;
 
-pub use verify::*;
+pub(crate) use verify::*;
