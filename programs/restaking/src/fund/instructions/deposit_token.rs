@@ -32,12 +32,19 @@ pub struct FundDepositToken<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        mut,
-        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_token_authority.bump,
+        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), token_mint.key().as_ref()],
+        bump = supported_token_authority.bump,
+        has_one = receipt_token_mint,
+        has_one = token_mint,
+    )]
+    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
+
+    #[account(
+        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_mint_authority.bump,
         has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Box<Account<'info, FundTokenAuthority>>,
+    pub receipt_token_mint_authority: Box<Account<'info, ReceiptTokenMintAuthority>>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -61,7 +68,7 @@ pub struct FundDepositToken<'info> {
     #[account(
         mut,
         associated_token::mint = token_mint,
-        associated_token::authority = fund_token_authority,
+        associated_token::authority = supported_token_authority,
         associated_token::token_program = deposit_token_program,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
@@ -204,8 +211,12 @@ impl<'info> FundDepositToken<'info> {
             .mint_token_cpi(
                 &mut ctx.accounts.receipt_token_mint,
                 &mut ctx.accounts.receipt_token_account,
-                ctx.accounts.fund_token_authority.to_account_info(),
-                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                ctx.accounts.receipt_token_mint_authority.to_account_info(),
+                Some(&[ctx
+                    .accounts
+                    .receipt_token_mint_authority
+                    .signer_seeds()
+                    .as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))

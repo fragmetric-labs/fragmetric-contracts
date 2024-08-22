@@ -1,5 +1,10 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
 use anchor_spl::associated_token::get_associated_token_address;
+use restaking::{
+    common::PDASignerSeeds,
+    constants::FRAGSOL_MINT_ADDRESS,
+    fund::{Fund, ReceiptTokenLockAuthority, ReceiptTokenMintAuthority},
+};
 use solana_program_test::{tokio, ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
@@ -10,7 +15,8 @@ async fn test_fund_initialize() {
         admin,
         receipt_token_mint,
         fund,
-        fund_token_authority,
+        receipt_token_lock_authority,
+        receipt_token_mint_authority,
         receipt_token_lock_account,
     } = SetUpTest::new();
 
@@ -25,7 +31,8 @@ async fn test_fund_initialize() {
             admin: admin.pubkey(),
             fund,
             receipt_token_mint,
-            fund_token_authority,
+            receipt_token_lock_authority,
+            receipt_token_mint_authority,
             receipt_token_lock_account,
             token_program: anchor_spl::token_2022::ID,
             associated_token_program: anchor_spl::associated_token::ID,
@@ -74,7 +81,8 @@ pub struct SetUpTest {
     pub admin: Keypair,
     pub receipt_token_mint: Pubkey,
     pub fund: Pubkey,
-    pub fund_token_authority: Pubkey,
+    pub receipt_token_lock_authority: Pubkey,
+    pub receipt_token_mint_authority: Pubkey,
     pub receipt_token_lock_account: Pubkey,
 }
 
@@ -97,19 +105,38 @@ impl Default for SetUpTest {
         let (receipt_token_mint_pda, _) =
             Pubkey::find_program_address(&[b"fragSOL"], &restaking::ID);
         let (fund_pda, _) = Pubkey::find_program_address(
-            &[b"fund", receipt_token_mint_pda.as_ref()],
+            &[Fund::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
             &restaking::ID,
         );
-        let (fund_token_authority_pda, _) = Pubkey::find_program_address(
-            &[b"fund_token_authority", receipt_token_mint_pda.as_ref()],
+        let (receipt_token_lock_authority_pda, _) = Pubkey::find_program_address(
+            &[
+                ReceiptTokenLockAuthority::SEED,
+                FRAGSOL_MINT_ADDRESS.as_ref(),
+            ],
             &restaking::ID,
         );
-        let receipt_token_lock_account =
-            get_associated_token_address(&fund_token_authority_pda, &receipt_token_mint_pda);
+        let (receipt_token_mint_authority_pda, _) = Pubkey::find_program_address(
+            &[
+                ReceiptTokenMintAuthority::SEED,
+                FRAGSOL_MINT_ADDRESS.as_ref(),
+            ],
+            &restaking::ID,
+        );
+        let receipt_token_lock_account = get_associated_token_address(
+            &receipt_token_lock_authority_pda,
+            &receipt_token_mint_pda,
+        );
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);
         msg!("fund_pda: {}", fund_pda);
-        msg!("fund_token_authority_pda: {}", fund_token_authority_pda);
+        msg!(
+            "receipt_token_lock_authority_pda: {}",
+            receipt_token_lock_authority_pda
+        );
+        msg!(
+            "receipt_token_mint_authority_pda: {}",
+            receipt_token_mint_authority_pda
+        );
         msg!(
             "receipt_token_lock_account_pda: {}",
             receipt_token_lock_account
@@ -120,7 +147,8 @@ impl Default for SetUpTest {
             admin,
             receipt_token_mint: receipt_token_mint_pda,
             fund: fund_pda,
-            fund_token_authority: fund_token_authority_pda,
+            receipt_token_lock_authority: receipt_token_lock_authority_pda,
+            receipt_token_mint_authority: receipt_token_mint_authority_pda,
             receipt_token_lock_account,
         }
     }

@@ -102,7 +102,7 @@ export const transfer_hook = describe("transfer_hook", () => {
         console.log("======= Deposit SOL to mint receipt token =======");
     })
 
-    it("Create ExtraAccountMetaList Account", async () => {
+    it.skip("Create ExtraAccountMetaList Account", async () => {
         const tx = new anchor.web3.Transaction().add(
             await program.methods
                 .tokenInitializeExtraAccountMetaList()

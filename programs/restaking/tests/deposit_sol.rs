@@ -14,7 +14,7 @@ async fn test_deposit_sol() {
         validator,
         user,
         user_receipt,
-        fund_token_authority,
+        receipt_token_mint_authority,
         receipt_token_mint,
         receipt_token_account,
         fund,
@@ -29,7 +29,7 @@ async fn test_deposit_sol() {
             user: user.pubkey(),
             user_receipt,
             fund,
-            fund_token_authority,
+            receipt_token_mint_authority,
             receipt_token_mint,
             receipt_token_account,
             token_pricing_source_0: Pubkey::new_unique(),
@@ -73,7 +73,7 @@ pub struct SetUpTest {
     pub validator: ProgramTest,
     pub user: Keypair,
     pub user_receipt: Pubkey,
-    pub fund_token_authority: Pubkey,
+    pub receipt_token_mint_authority: Pubkey,
     pub receipt_token_mint: Pubkey,
     // pub receipt_token_lock_account: Pubkey,
     pub receipt_token_account: Pubkey,
@@ -106,8 +106,11 @@ impl Default for SetUpTest {
             &[Fund::SEED, receipt_token_mint_pda.as_ref()],
             &restaking::ID,
         );
-        let (fund_token_authority_pda, _) = Pubkey::find_program_address(
-            &[FundTokenAuthority::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+        let (receipt_token_mint_authority_pda, _) = Pubkey::find_program_address(
+            &[
+                ReceiptTokenMintAuthority::SEED,
+                FRAGSOL_MINT_ADDRESS.as_ref(),
+            ],
             &restaking::ID,
         );
         // let (receipt_token_lock_account_pda, _) = Pubkey::find_program_address(&[b"receipt_lock", receipt_token_mint_pda.as_ref()], &restaking::ID);
@@ -128,7 +131,7 @@ impl Default for SetUpTest {
             user,
             user_receipt: user_receipt_pda,
             receipt_token_mint: receipt_token_mint_pda,
-            fund_token_authority: fund_token_authority_pda,
+            receipt_token_mint_authority: receipt_token_mint_authority_pda,
             // receipt_token_lock_account: receipt_token_lock_account_pda,
             receipt_token_account,
             fund: fund_pda,

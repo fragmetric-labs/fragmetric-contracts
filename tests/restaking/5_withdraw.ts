@@ -192,7 +192,7 @@ export const withdraw = describe("withdraw", () => {
   it("Block withdrawal", async () => {
     await program.methods
       .fundUpdateWithdrawalEnabledFlag(false)
-      .accounts({ fund: restaking.fund_pda })
+      .accounts({})
       .rpc();
 
     expect(

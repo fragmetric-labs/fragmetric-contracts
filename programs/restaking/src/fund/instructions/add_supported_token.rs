@@ -20,23 +20,21 @@ pub struct FundAddSupportedToken<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_token_authority.bump,
+        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), token_mint.key().as_ref()],
+        bump = supported_token_authority.bump,
         has_one = receipt_token_mint,
+        has_one = token_mint,
     )]
-    pub fund_token_authority: Box<Account<'info, FundTokenAuthority>>,
+    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(mut)]
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init_if_needed,
-        payer = admin,
         associated_token::mint = token_mint,
-        associated_token::authority = fund_token_authority,
+        associated_token::authority = supported_token_authority,
         associated_token::token_program = token_program,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account

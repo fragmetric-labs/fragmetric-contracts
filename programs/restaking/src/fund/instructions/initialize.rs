@@ -13,7 +13,7 @@ pub struct FundInitialize<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         seeds = [Fund::SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
         bump,
@@ -22,21 +22,31 @@ pub struct FundInitialize<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
-        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + FundTokenAuthority::INIT_SPACE,
+        space = 8 + ReceiptTokenLockAuthority::INIT_SPACE,
     )]
-    pub fund_token_authority: Account<'info, FundTokenAuthority>,
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
+
+    #[account(
+        init_if_needed,
+        payer = admin,
+        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + ReceiptTokenMintAuthority::INIT_SPACE,
+    )]
+    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>, // fragSOL token mint account
+
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         associated_token::mint = receipt_token_mint,
-        associated_token::authority = fund_token_authority,
+        associated_token::authority = receipt_token_lock_authority,
         associated_token::token_program = token_program,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
@@ -48,17 +58,23 @@ pub struct FundInitialize<'info> {
 
 impl<'info> FundInitialize<'info> {
     pub fn initialize_fund(ctx: Context<Self>) -> Result<()> {
-        let fund_token_authority_key = ctx.accounts.fund_token_authority.key();
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
-        msg!("receipt_token_mint: {}", receipt_token_mint_key);
-        msg!("fund_token_authority: {}", fund_token_authority_key,);
 
         ctx.accounts
             .fund
-            .initialize(ctx.bumps.fund, receipt_token_mint_key);
+            .initialize_if_needed(ctx.bumps.fund, receipt_token_mint_key);
         ctx.accounts
-            .fund_token_authority
-            .initialize(ctx.bumps.fund_token_authority, receipt_token_mint_key);
+            .receipt_token_lock_authority
+            .initialize_if_needed(
+                ctx.bumps.receipt_token_lock_authority,
+                receipt_token_mint_key,
+            );
+        ctx.accounts
+            .receipt_token_mint_authority
+            .initialize_if_needed(
+                ctx.bumps.receipt_token_mint_authority,
+                receipt_token_mint_key,
+            );
 
         Ok(())
     }

@@ -30,12 +30,18 @@ pub struct FundCancelWithdrawalRequest<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        mut,
-        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_token_authority.bump,
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_lock_authority.bump,
         has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, FundTokenAuthority>,
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
+
+    #[account(
+        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_mint_authority.bump,
+        has_one = receipt_token_mint,
+    )]
+    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -49,7 +55,7 @@ pub struct FundCancelWithdrawalRequest<'info> {
     #[account(
         mut,
         associated_token::mint = receipt_token_mint,
-        associated_token::authority = fund_token_authority,
+        associated_token::authority = receipt_token_lock_authority,
         associated_token::token_program = token_program,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
@@ -97,8 +103,12 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .burn_token_cpi(
                 &mut ctx.accounts.receipt_token_mint,
                 &mut ctx.accounts.receipt_token_lock_account,
-                ctx.accounts.fund_token_authority.to_account_info(),
-                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                ctx.accounts.receipt_token_lock_authority.to_account_info(),
+                Some(&[ctx
+                    .accounts
+                    .receipt_token_lock_authority
+                    .signer_seeds()
+                    .as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
@@ -110,8 +120,12 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .mint_token_cpi(
                 &mut ctx.accounts.receipt_token_mint,
                 &mut ctx.accounts.receipt_token_account,
-                ctx.accounts.fund_token_authority.to_account_info(),
-                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                ctx.accounts.receipt_token_mint_authority.to_account_info(),
+                Some(&[ctx
+                    .accounts
+                    .receipt_token_mint_authority
+                    .signer_seeds()
+                    .as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))

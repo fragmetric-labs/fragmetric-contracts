@@ -28,33 +28,12 @@ pub mod restaking {
         LogMessage::log_message(ctx, message)
     }
 
-    pub fn fund_initialize(
-        ctx: Context<FundInitialize>,
-        // request: FundInitializeRequest,
-    ) -> Result<()> {
+    pub fn fund_initialize(ctx: Context<FundInitialize>) -> Result<()> {
         FundInitialize::initialize_fund(ctx)
     }
 
-    pub fn fund_initialize_sol_withdrawal_fee_rate(
-        ctx: Context<FundInitializeFields>,
-        sol_withdrawal_fee_rate: u16,
-    ) -> Result<()> {
-        FundInitializeFields::initialize_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
-    }
-
-    pub fn fund_initialize_withdrawal_enabled_flag(
-        ctx: Context<FundInitializeFields>,
-        flag: bool,
-    ) -> Result<()> {
-        FundInitializeFields::initialize_withdrawal_enabled_flag(ctx, flag)
-    }
-
-    pub fn fund_initialize_batch_processing_threshold(
-        ctx: Context<FundInitializeFields>,
-        amount: u64,
-        duration: i64,
-    ) -> Result<()> {
-        FundInitializeFields::initialize_batch_processing_threshold(ctx, amount, duration)
+    pub fn fund_initialize_token(ctx: Context<FundInitializeToken>) -> Result<()> {
+        FundInitializeToken::initialize(ctx)
     }
 
     pub fn fund_add_supported_token(

@@ -3,13 +3,15 @@ use anchor_lang::prelude::*;
 use crate::fund::*;
 
 impl Fund {
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        self.data_version = 1;
-        self.bump = bump;
-        self.receipt_token_mint = receipt_token_mint;
-        self.supported_tokens = vec![];
-        self.sol_amount_in = 0;
-        self.withdrawal_status = Default::default();
+    pub(super) fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+        if self.data_version == 0 {
+            self.data_version = 1;
+            self.bump = bump;
+            self.receipt_token_mint = receipt_token_mint;
+            self.supported_tokens = vec![];
+            self.sol_amount_in = 0;
+            self.withdrawal_status = Default::default();
+        }
     }
 }
 
@@ -36,11 +38,39 @@ impl WithdrawalStatus {
     }
 }
 
-impl FundTokenAuthority {
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        self.data_version = 1;
-        self.bump = bump;
-        self.receipt_token_mint = receipt_token_mint;
+impl ReceiptTokenLockAuthority {
+    pub(super) fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+        if self.data_version == 0 {
+            self.data_version = 1;
+            self.bump = bump;
+            self.receipt_token_mint = receipt_token_mint;
+        }
+    }
+}
+
+impl SupportedTokenAuthority {
+    pub(super) fn initialize_if_needed(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        token_mint: Pubkey,
+    ) {
+        if self.data_version == 0 {
+            self.data_version = 1;
+            self.bump = bump;
+            self.receipt_token_mint = receipt_token_mint;
+            self.token_mint = token_mint;
+        }
+    }
+}
+
+impl ReceiptTokenMintAuthority {
+    pub(super) fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+        if self.data_version == 0 {
+            self.data_version = 1;
+            self.bump = bump;
+            self.receipt_token_mint = receipt_token_mint;
+        }
     }
 }
 
@@ -81,7 +111,7 @@ mod tests {
             withdrawal_status: Default::default(),
         };
 
-        fund.initialize(0, receipt_token_mint);
+        fund.initialize_if_needed(0, receipt_token_mint);
 
         fund.withdrawal_status
             .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);

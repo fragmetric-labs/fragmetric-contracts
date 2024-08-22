@@ -34,12 +34,11 @@ pub struct FundDepositSOL<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        mut,
-        seeds = [FundTokenAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_token_authority.bump,
+        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_mint_authority.bump,
         has_one = receipt_token_mint,
     )]
-    pub fund_token_authority: Account<'info, FundTokenAuthority>,
+    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -171,8 +170,12 @@ impl<'info> FundDepositSOL<'info> {
             .mint_token_cpi(
                 &mut ctx.accounts.receipt_token_mint,
                 &mut ctx.accounts.receipt_token_account,
-                ctx.accounts.fund_token_authority.to_account_info(),
-                Some(&[ctx.accounts.fund_token_authority.signer_seeds().as_ref()]),
+                ctx.accounts.receipt_token_mint_authority.to_account_info(),
+                Some(&[ctx
+                    .accounts
+                    .receipt_token_mint_authority
+                    .signer_seeds()
+                    .as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
