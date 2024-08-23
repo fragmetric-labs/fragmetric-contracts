@@ -124,6 +124,12 @@ pub mod restaking {
         TokenInitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
     }
 
+    pub fn token_update_extra_account_meta_list(
+        ctx: Context<TokenInitializeExtraAccountMetaList>,
+    ) -> Result<()> {
+        TokenInitializeExtraAccountMetaList::update_extra_account_meta_list(ctx)
+    }
+
     #[interface(spl_transfer_hook_interface::execute)]
     pub fn token_transfer_hook(ctx: Context<TokenTransferHook>, amount: u64) -> Result<()> {
         TokenTransferHook::transfer_hook(ctx, amount)

@@ -100,7 +100,7 @@ export const transfer_hook = describe("transfer_hook", () => {
         console.log(`user2 receipt token balance: ${user2ReceiptTokenBalance}`);
         console.log(`user3 receipt token balance: ${user3ReceiptTokenBalance}`);
         console.log("======= Deposit SOL to mint receipt token =======");
-    })
+    });
 
     it.skip("Create ExtraAccountMetaList Account", async () => {
         const tx = new anchor.web3.Transaction().add(
@@ -118,8 +118,24 @@ export const transfer_hook = describe("transfer_hook", () => {
         );
     });
 
+    it("Update ExtraAccountMetaList account", async () => {
+        const tx = new anchor.web3.Transaction().add(
+            await program.methods
+                .tokenUpdateExtraAccountMetaList()
+                .accounts({
+                    payer: mintOwner.publicKey,
+                })
+                .instruction()
+        );
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            tx,
+            [mintOwner],
+        );
+    });
+
     it("Transfer Hook with Extra Account Meta", async () => {
-        const amountToTransfer = 1;
+        const amountToTransfer = 1_000_000_000;
         const decimals = 9;
     
         const transferHookIx = await spl.createTransferCheckedWithTransferHookInstruction(

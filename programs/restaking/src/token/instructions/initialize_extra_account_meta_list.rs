@@ -14,7 +14,7 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
 
     /// CHECK: ExtraAccountaMetaList Account, must use these seeds
     #[account(
-        init,
+        init_if_needed,
         seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
         bump,
         space = ExtraAccountMetaList::size_of(
@@ -68,6 +68,23 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
         ExtraAccountMetaList::init::<ExecuteInstruction>(
             &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
             &extra_account_metas,
+        )?;
+
+        Ok(())
+    }
+
+    pub fn update_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
+        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        msg!(
+            "extra_account_meta_list_key: {:?}",
+            extra_account_meta_list_key
+        );
+
+        let extra_account_metas = Self::extra_account_metas()?;
+
+        ExtraAccountMetaList::update::<ExecuteInstruction>(
+            &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
+            &extra_account_metas
         )?;
 
         Ok(())
