@@ -84,7 +84,7 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
 
         ExtraAccountMetaList::update::<ExecuteInstruction>(
             &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
-            &extra_account_metas
+            &extra_account_metas,
         )?;
 
         Ok(())

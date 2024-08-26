@@ -4,7 +4,7 @@ use crate::fund::*;
 
 #[event]
 pub struct FundPriceUpdated {
-    pub lrt_mint: Pubkey,
-    pub lrt_price: u64,
+    pub receipt_token_mint: Pubkey,
+    pub receipt_token_price: u64,
     pub fund_info: FundInfo,
 }

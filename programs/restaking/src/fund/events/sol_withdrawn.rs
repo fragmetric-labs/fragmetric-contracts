@@ -8,9 +8,9 @@ pub struct FundSOLWithdrawn {
     pub user_receipt: UserReceipt,
 
     pub request_id: u64,
-    pub lrt_mint: Pubkey,
-    pub lrt_amount: u64,
-    pub lrt_price: u64,
+    pub receipt_token_mint: Pubkey,
+    pub receipt_token_amount: u64,
+    pub receipt_token_price: u64,
 
     pub sol_withdraw_amount: u64,
     pub sol_fee_amount: u64,

@@ -50,8 +50,8 @@ export const deposit_sol = describe("deposit_sol", () => {
         // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            expect(event.data.lrtPrice.toNumber()).to.be.equal(1_000_000_000);
-            console.log(`Receipt token price: ${event.data.lrtPrice}`);
+            expect(event.data.receiptTokenPrice.toNumber()).to.be.equal(1_000_000_000);
+            console.log(`Receipt token price: ${event.data.receiptTokenPrice}`);
         }
     });
 

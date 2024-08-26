@@ -135,14 +135,17 @@ impl<'info> FundDepositSOL<'info> {
 
         emit!(FundSOLDeposited {
             user: ctx.accounts.user.key(),
-            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             sol_deposit_amount: amount,
             sol_amount_in_fund: ctx.accounts.fund.sol_amount_in,
-            minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
-            minted_lrt_amount: receipt_token_mint_amount,
-            lrt_price: receipt_token_price,
-            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            minted_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            minted_receipt_token_amount: receipt_token_mint_amount,
+            receipt_token_price,
+            receipt_token_amount_in_user_receipt_token_account: ctx
+                .accounts
+                .receipt_token_account
+                .amount,
             wallet_provider,
             fpoint_accrual_rate_multiplier,
             fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),

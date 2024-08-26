@@ -104,12 +104,15 @@ impl<'info> FundRequestWithdrawal<'info> {
 
         emit!(FundWithdrawalRequested {
             user: ctx.accounts.user.key(),
-            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             request_id,
-            lrt_mint: ctx.accounts.receipt_token_mint.key(),
-            lrt_requested_amount: receipt_token_amount,
-            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            receipt_token_requested_amount: receipt_token_amount,
+            receipt_token_amount_in_user_receipt_token_account: ctx
+                .accounts
+                .receipt_token_account
+                .amount,
         });
 
         Ok(())

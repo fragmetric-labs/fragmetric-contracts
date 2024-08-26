@@ -167,17 +167,20 @@ impl<'info> FundDepositToken<'info> {
 
         emit!(FundTokenDeposited {
             user: ctx.accounts.user.key(),
-            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             deposited_token_mint: ctx.accounts.token_mint.key(),
             deposited_token_user_account: ctx.accounts.user_token_account.key(),
             token_deposit_amount: amount,
             token_amount_in_fund: ctx.accounts.fund.supported_tokens[supported_token_index]
                 .token_amount_in,
-            minted_lrt_mint: ctx.accounts.fund.receipt_token_mint.key(),
-            minted_lrt_amount: receipt_token_mint_amount,
-            lrt_price: receipt_token_price,
-            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            minted_receipt_token_mint: ctx.accounts.fund.receipt_token_mint.key(),
+            minted_receipt_token_amount: receipt_token_mint_amount,
+            receipt_token_price,
+            receipt_token_amount_in_user_receipt_token_account: ctx
+                .accounts
+                .receipt_token_account
+                .amount,
             wallet_provider,
             fpoint_accrual_rate_multiplier,
             fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
