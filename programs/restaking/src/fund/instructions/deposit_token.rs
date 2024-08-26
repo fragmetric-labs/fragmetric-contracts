@@ -67,9 +67,11 @@ pub struct FundDepositToken<'info> {
     pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // depositor's lst token account
     #[account(
         mut,
-        associated_token::mint = token_mint,
-        associated_token::authority = supported_token_authority,
-        associated_token::token_program = deposit_token_program,
+        token::mint = token_mint,
+        token::authority = supported_token_authority,
+        token::token_program = deposit_token_program,
+        seeds = [FUND_TOKEN_ACCOUNT_SEED, token_mint.key().as_ref()],
+        bump,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 

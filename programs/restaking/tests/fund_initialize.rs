@@ -1,5 +1,4 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction, system_program};
-use anchor_spl::associated_token::get_associated_token_address;
 use restaking::{
     common::PDASignerSeeds,
     constants::FRAGSOL_MINT_ADDRESS,
@@ -35,7 +34,6 @@ async fn test_fund_initialize() {
             receipt_token_mint_authority,
             receipt_token_lock_account,
             token_program: anchor_spl::token_2022::ID,
-            associated_token_program: anchor_spl::associated_token::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None),
@@ -122,9 +120,12 @@ impl Default for SetUpTest {
             ],
             &restaking::ID,
         );
-        let receipt_token_lock_account = get_associated_token_address(
-            &receipt_token_lock_authority_pda,
-            &receipt_token_mint_pda,
+        let (receipt_token_lock_account, _) = Pubkey::find_program_address(
+            &[
+                b"receipt_token_lock_account",
+                receipt_token_mint_pda.as_ref(),
+            ],
+            &restaking::ID,
         );
 
         msg!("receipt_token_mint_pda: {}", receipt_token_mint_pda);

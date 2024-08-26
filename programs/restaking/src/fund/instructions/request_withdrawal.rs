@@ -56,9 +56,10 @@ pub struct FundRequestWithdrawal<'info> {
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
     #[account(
         mut,
-        associated_token::mint = receipt_token_mint,
-        associated_token::authority = receipt_token_lock_authority,
-        associated_token::token_program = token_program,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        seeds = [RECEIPT_TOKEN_LOCK_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 

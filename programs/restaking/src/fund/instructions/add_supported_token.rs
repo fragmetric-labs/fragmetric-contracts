@@ -1,8 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
-};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{common::*, constants::*, fund::*};
 
@@ -33,13 +30,13 @@ pub struct FundAddSupportedToken<'info> {
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        associated_token::mint = token_mint,
-        associated_token::authority = supported_token_authority,
-        associated_token::token_program = token_program,
+        token::mint = token_mint,
+        token::authority = supported_token_authority,
+        seeds = [FUND_TOKEN_ACCOUNT_SEED, token_mint.key().as_ref()],
+        bump,
     )]
     pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }

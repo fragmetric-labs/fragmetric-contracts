@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
@@ -33,9 +32,10 @@ pub struct OperatorRun<'info> {
 
     #[account(
         mut,
-        associated_token::mint = receipt_token_mint,
-        associated_token::authority = receipt_token_lock_authority,
-        associated_token::token_program = token_program,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        seeds = [RECEIPT_TOKEN_LOCK_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
@@ -50,7 +50,6 @@ pub struct OperatorRun<'info> {
     pub token_pricing_source_1: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token2022>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 impl<'info> OperatorRun<'info> {
