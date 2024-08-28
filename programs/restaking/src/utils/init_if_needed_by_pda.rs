@@ -63,10 +63,10 @@ impl<'info> InitIfNeededByPDA<'info> for UncheckedAccount<'info> {
                 system_program.allocate(self, minimum_space as u64, signer_seeds)?;
                 system_program.assign_to_program(self, signer_seeds)?;
             }
-            CustomAccount::try_from_unchecked(&*self)
+            CustomAccount::try_from_unchecked(self)
                 .map_err(|e| e.with_account_name(account_name))?
         } else {
-            CustomAccount::try_from(&*self).map_err(|e| e.with_account_name(account_name))?
+            CustomAccount::try_from(self).map_err(|e| e.with_account_name(account_name))?
         };
 
         if minimum_space != self.data_len() {

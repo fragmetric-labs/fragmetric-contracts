@@ -117,7 +117,7 @@ impl RewardAccount {
             .partition::<Vec<_>, _>(|p| p.holder_id.is_none());
 
         // base pool should exist at least one
-        if base.len() == 0 {
+        if base.is_empty() {
             err!(ErrorCode::RewardInvalidPoolConfiguration)?;
         }
 
@@ -134,7 +134,7 @@ impl RewardAccount {
             .collect::<Vec<_>>();
 
         // otherwise falls back to base pools
-        if related.len() == 0 {
+        if related.is_empty() {
             related = base;
         }
 

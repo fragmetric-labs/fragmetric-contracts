@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::Token2022, token_interface::Mint};
+use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
@@ -27,24 +27,8 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    // #[account(
-    //     init_if_needed,
-    //     payer = payer,
-    //     space = 8 + WhitelistedDestinationToken::INIT_SPACE,
-    //     seeds = [b"whitelisted_destination"],
-    //     bump,
-    // )]
-    // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
-    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
-
-// #[account]
-// #[derive(InitSpace)]
-// pub struct WhitelistedDestinationToken {
-//     #[max_len(50)]
-//     pub addresses: Vec<Pubkey>,
-// }
 
 impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {

@@ -224,8 +224,8 @@ impl<'info> TokenTransferHook<'info> {
             &mut ctx.accounts.reward_account,
             receipt_token_mint,
             amount,
-            &mut *source_user_reward_account,
-            &mut *destination_user_reward_account,
+            &mut source_user_reward_account,
+            &mut destination_user_reward_account,
         )?;
 
         // Update source/destination user_receipt's receipt_token_amount
@@ -245,7 +245,7 @@ impl<'info> TokenTransferHook<'info> {
             destination_user_receipt: Clone::clone(&destination_user_receipt),
         });
 
-        // exit
+        // exit - flush data back to solana bpf
         source_user_receipt.exit(&crate::ID)?;
         destination_user_receipt.exit(&crate::ID)?;
         source_user_reward_account.exit(&crate::ID)?;
