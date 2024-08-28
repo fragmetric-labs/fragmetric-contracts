@@ -23,6 +23,8 @@ pub enum ErrorCode {
     OperatorUnmetThreshold,
     #[msg("Token is not currently transferring")]
     TokenNotCurrentlyTransferring,
+    #[msg("Invalid token transfer args")]
+    TokenInvalidTransferArgs,
     #[msg("Withdrawal request not found")]
     FundWithdrawalRequestNotFound,
     #[msg("Withdrawal request not completed")]
@@ -39,4 +41,28 @@ pub enum ErrorCode {
     CalculationFailure,
     #[msg("Token pricing source not provided")]
     FundTokenPricingSourceNotFound,
+    #[msg("Invalid reward type")]
+    RewardInvalidRewardType,
+    #[msg("Already existing reward pool")]
+    RewardAlreadyExistingPool,
+    #[msg("Reward pool not found")]
+    RewardPoolNotFound,
+    #[msg("Reward pool is already closed")]
+    RewardPoolAlreadyClosed,
+    #[msg("Invalid reward pool configuration")]
+    RewardInvalidPoolConfiguration,
+    #[msg("Invalid accounting")]
+    RewardInvalidAccounting,
+    #[msg("Invalid amount or contribution accrual rate")]
+    RewardInvalidAllocatedAmountDelta,
+    #[msg("Cannot find stale settlement block")]
+    RewardStaleSettlementBlockDoesNotExist,
+    #[msg("Invalid settlement block height")]
+    RewardInvalidSettlementBlockHeight,
+    #[msg("Invalid settlement block contribution")]
+    RewardInvalidSettlementBlockContribution,
+    #[msg("Sum of user settled amount cannot exceed total amount")]
+    RewardInvalidTotalUserSettledAmount,
+    #[msg("Sum of user settled contribution cannot exceed total contribution")]
+    RewardInvalidTotalUserSettledContribution,
 }

@@ -5,15 +5,15 @@ pub mod constants;
 pub mod error;
 pub mod fund;
 pub mod operator;
+pub mod reward;
 pub mod token;
 pub(crate) mod utils;
-// pub mod oracle;
 
 use common::*;
 use fund::*;
 use operator::*;
+// use reward::*;
 use token::*;
-// use oracle::*;
 
 #[cfg(feature = "mainnet")]
 declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
