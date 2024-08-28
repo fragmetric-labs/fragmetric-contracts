@@ -4,7 +4,7 @@ mod user_deposited_sol_to_fund;
 mod user_deposited_token_to_fund;
 mod user_requested_withdrawal_from_fund;
 mod user_updated_fund_price;
-mod user_withdrawn_sol_from_fund;
+mod user_withdrew_sol_from_fund;
 
 pub use info::*;
 pub use user_canceled_withdrawal_request_from_fund::*;
@@ -12,7 +12,7 @@ pub use user_deposited_sol_to_fund::*;
 pub use user_deposited_token_to_fund::*;
 pub use user_requested_withdrawal_from_fund::*;
 pub use user_updated_fund_price::*;
-pub use user_withdrawn_sol_from_fund::*;
+pub use user_withdrew_sol_from_fund::*;
 
 // // TO BE DONE
 // /// When operator started processing pending batch

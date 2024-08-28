@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*, operator::*};
 
 #[derive(Accounts)]
 pub struct OperatorRun<'info> {
@@ -68,6 +68,10 @@ impl<'info> OperatorRun<'info> {
         fund.update_token_prices(&sources)?;
         let total_sol_value_in_fund = fund.total_sol_value()?;
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let receipt_token_price = fund.receipt_token_price(
+            ctx.accounts.receipt_token_mint.decimals,
+            receipt_token_total_supply,
+        )?;
 
         let mut receipt_token_amount_to_burn: u64 = 0;
         for batch in &mut fund.withdrawal_status.batch_withdrawals_in_progress {
@@ -113,7 +117,13 @@ impl<'info> OperatorRun<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .end_processing_completed_batch_withdrawals()
+            .end_processing_completed_batch_withdrawals()?;
+
+        emit!(OperatorRan {
+            fund_info: FundInfo::new_from_fund(&ctx.accounts.fund, receipt_token_price, receipt_token_total_supply),
+        });
+
+        Ok(())
     }
 
     fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {

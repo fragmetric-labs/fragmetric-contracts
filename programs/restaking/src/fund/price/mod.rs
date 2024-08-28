@@ -48,7 +48,7 @@ impl Fund {
         Ok(())
     }
 
-    pub(super) fn receipt_token_price(
+    pub(crate) fn receipt_token_price(
         &self,
         decimals: u8,
         receipt_token_total_supply: u64,

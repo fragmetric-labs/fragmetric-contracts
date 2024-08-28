@@ -85,7 +85,7 @@ impl<'info> FundWithdraw<'info> {
             .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))?;
         // TODO transfer sol fee to treasury fund
 
-        emit!(UserWithdrawnSOLFromFund {
+        emit!(UserWithdrewSOLFromFund {
             user: ctx.accounts.user.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             request_id,

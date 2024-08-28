@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::fund::*;
 
 #[event]
-pub struct UserWithdrawnSOLFromFund {
+pub struct UserWithdrewSOLFromFund {
     pub user: Pubkey,
     pub user_receipt: UserReceipt,
 
