@@ -12,7 +12,7 @@ pub(crate) mod utils;
 use common::*;
 use fund::*;
 use operator::*;
-// use reward::*;
+use reward::*;
 use token::*;
 
 #[cfg(feature = "mainnet")]
@@ -115,6 +115,76 @@ pub mod restaking {
 
     pub fn operator_run(ctx: Context<OperatorRun>) -> Result<()> {
         OperatorRun::operator_run(ctx)
+    }
+
+    pub fn reward_add_holder(
+        ctx: Context<RewardAddHolder>,
+        name: String,
+        description: String,
+        pubkeys: Vec<Pubkey>,
+    ) -> Result<()> {
+        RewardAddHolder::add_holder(ctx, name, description, pubkeys)
+    }
+
+    pub fn reward_add_reward(
+        ctx: Context<RewardAddReward>,
+        name: String,
+        description: String,
+        reward_type: String,
+    ) -> Result<()> {
+        RewardAddReward::add_reward(ctx, name, description, reward_type)
+    }
+
+    pub fn reward_add_reward_pool(
+        ctx: Context<RewardAddRewardPool>,
+        name: String,
+        holder_id: Option<u8>,
+        custom_contribution_accrual_rate_enabled: bool,
+    ) -> Result<()> {
+        RewardAddRewardPool::add_reward_pool(
+            ctx,
+            name,
+            holder_id,
+            custom_contribution_accrual_rate_enabled,
+        )
+    }
+
+    pub fn reward_claim_user_rewards(
+        ctx: Context<RewardClaimUserRewards>,
+        reward_pool_id: u8,
+        reward_id: u8,
+    ) -> Result<()> {
+        RewardClaimUserRewards::claim_user_rewards(ctx, reward_pool_id, reward_id)
+    }
+
+    pub fn reward_close_reward_pool(
+        ctx: Context<RewardCloseRewardPool>,
+        reward_pool_id: u8,
+    ) -> Result<()> {
+        RewardCloseRewardPool::close_reward_pool(ctx, reward_pool_id)
+    }
+
+    pub fn reward_initialize(ctx: Context<RewardInitialize>) -> Result<()> {
+        RewardInitialize::initialize_reward(ctx)
+    }
+
+    pub fn reward_settle(
+        ctx: Context<RewardSettle>,
+        reward_pool_id: u8,
+        reward_id: u8,
+        amount: u64,
+    ) -> Result<()> {
+        RewardSettle::settle_reward(ctx, reward_pool_id, reward_id, amount)
+    }
+
+    pub fn reward_update_reward_pools(ctx: Context<RewardUpdateRewardPools>) -> Result<()> {
+        RewardUpdateRewardPools::update_reward_pools(ctx)
+    }
+
+    pub fn reward_update_user_reward_pools(
+        ctx: Context<RewardUpdateUserRewardPools>,
+    ) -> Result<()> {
+        RewardUpdateUserRewardPools::update_user_reward_pools(ctx)
     }
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
