@@ -17,25 +17,25 @@ pub struct FundAddSupportedToken<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
-        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), token_mint.key().as_ref()],
+        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
         bump = supported_token_authority.bump,
         has_one = receipt_token_mint,
-        has_one = token_mint,
+        has_one = supported_token_mint,
     )]
     pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub token_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        token::mint = token_mint,
+        token::mint = supported_token_mint,
         token::authority = supported_token_authority,
-        seeds = [FUND_TOKEN_ACCOUNT_SEED, token_mint.key().as_ref()],
+        seeds = [FUND_SUPPORTED_TOKEN_ACCOUNT_SEED, supported_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
+    pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -44,18 +44,15 @@ pub struct FundAddSupportedToken<'info> {
 impl<'info> FundAddSupportedToken<'info> {
     pub fn add_supported_token(
         ctx: Context<Self>,
-        token_cap: u64,
-        token_pricing_source: TokenPricingSource,
+        capacity_amount: u64,
+        pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        let token = ctx.accounts.token_mint.key();
-        let token_decimals = ctx.accounts.token_mint.decimals;
-        ctx.accounts.fund.check_token_does_not_exist(&token)?;
-        ctx.accounts.fund.add_supported_token(
-            token,
-            token_decimals,
-            token_cap,
-            token_pricing_source,
-        );
+        let mint = ctx.accounts.supported_token_mint.key();
+        let decimals = ctx.accounts.supported_token_mint.decimals;
+        ctx.accounts.fund.check_token_does_not_exist(&mint)?;
+        ctx.accounts
+            .fund
+            .add_supported_token(mint, decimals, capacity_amount, pricing_source);
 
         Ok(())
     }

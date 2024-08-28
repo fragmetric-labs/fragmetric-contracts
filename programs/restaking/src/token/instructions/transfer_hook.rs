@@ -46,6 +46,24 @@ pub struct TokenTransferHook<'info> {
         has_one = receipt_token_mint,
     )]
     pub fund: Box<Account<'info, Fund>>,
+
+    #[account(
+        mut,
+        seeds = [UserReceipt::SEED, source_token_account.owner.key().as_ref(), receipt_token_mint.key().as_ref()],
+        bump = source_user_receipt.bump,
+        constraint = source_user_receipt.user == source_token_account.owner.key(),
+        has_one = receipt_token_mint,
+    )]
+    pub source_user_receipt: Box<Account<'info, UserReceipt>>,
+
+    #[account(
+        mut,
+        seeds = [UserReceipt::SEED, destination_token_account.owner.key().as_ref(), receipt_token_mint.key().as_ref()],
+        bump = destination_user_receipt.bump,
+        constraint = destination_user_receipt.user == destination_token_account.owner.key(),
+        has_one = receipt_token_mint,
+    )]
+    pub destination_user_receipt: Box<Account<'info, UserReceipt>>,
 }
 
 impl<'info> TokenTransferHook<'info> {
@@ -59,13 +77,25 @@ impl<'info> TokenTransferHook<'info> {
         Self::check_token_transferring(&ctx)?;
         Self::call_transfer_hook(&ctx, amount)?;
 
-        emit!(ReceiptTokenTransferred {
-            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
-            receipt_token_amount: amount,
+        // Update source/destination user_receipt's receipt_token_amount
+        let source_token_account_total_amount = ctx.accounts.source_token_account.amount;
+        ctx.accounts
+            .source_user_receipt
+            .set_receipt_token_amount(source_token_account_total_amount);
+        let destination_token_account_total_amount = ctx.accounts.destination_token_account.amount;
+        ctx.accounts
+            .destination_user_receipt
+            .set_receipt_token_amount(destination_token_account_total_amount);
+
+        emit!(UserTransferredReceiptToken {
+            transferred_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            transferred_receipt_token_amount: amount,
             source_receipt_token_account: ctx.accounts.source_token_account.key(),
-            source_receipt_token_account_owner: ctx.accounts.source_token_account.owner,
+            source_user: ctx.accounts.source_token_account.owner,
+            source_user_receipt: Clone::clone(&ctx.accounts.source_user_receipt),
             destination_receipt_token_account: ctx.accounts.destination_token_account.key(),
-            destination_receipt_token_account_onwer: ctx.accounts.destination_token_account.owner,
+            destination_user: ctx.accounts.destination_token_account.owner,
+            destination_user_receipt: Clone::clone(&ctx.accounts.destination_user_receipt),
         });
 
         Ok(())

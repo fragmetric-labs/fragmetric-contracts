@@ -85,17 +85,19 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
         Self::call_mint_token_cpi(&mut ctx, request.receipt_token_amount)?;
         Self::call_transfer_hook(&ctx, request.receipt_token_amount)?;
 
-        emit!(FundWithdrawalRequestCanceled {
+        // Step 3: Update user_receipt's receipt_token_amount
+        let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
+        ctx.accounts
+            .user_receipt
+            .set_receipt_token_amount(receipt_token_account_total_amount);
+
+        emit!(UserCanceledWithdrawalRequestFromFund {
             user: ctx.accounts.user.key(),
             user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             request_id,
-            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
-            receipt_token_requested_amount: request.receipt_token_amount,
-            receipt_token_amount_in_user_receipt_token_account: ctx
-                .accounts
-                .receipt_token_account
-                .amount,
+            requested_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            requested_receipt_token_amount: request.receipt_token_amount,
         });
 
         Ok(())

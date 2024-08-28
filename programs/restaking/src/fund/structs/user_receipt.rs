@@ -9,12 +9,13 @@ pub struct UserReceipt {
     pub bump: u8,
     pub user: Pubkey,
     pub receipt_token_mint: Pubkey,
+    pub receipt_token_amount: u64,
     #[max_len(32)]
     pub withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
 impl PDASignerSeeds<4> for UserReceipt {
-    const SEED: &'static [u8] = b"user_receipt_seed";
+    const SEED: &'static [u8] = b"user_receipt_seed_v2";
 
     fn signer_seeds(&self) -> [&[u8]; 4] {
         [

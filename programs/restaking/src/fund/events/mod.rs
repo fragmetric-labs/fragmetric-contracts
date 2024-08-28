@@ -1,18 +1,18 @@
 mod info;
-mod price_updated;
-mod sol_deposited;
-mod sol_withdrawn;
-mod token_deposited;
-mod withdrawal_request_canceled;
-mod withdrawal_requested;
+mod user_canceled_withdrawal_request_from_fund;
+mod user_deposited_sol_to_fund;
+mod user_deposited_token_to_fund;
+mod user_requested_withdrawal_from_fund;
+mod user_updated_fund_price;
+mod user_withdrawn_sol_from_fund;
 
 pub use info::*;
-pub use price_updated::*;
-pub use sol_deposited::*;
-pub use sol_withdrawn::*;
-pub use token_deposited::*;
-pub use withdrawal_request_canceled::*;
-pub use withdrawal_requested::*;
+pub use user_canceled_withdrawal_request_from_fund::*;
+pub use user_deposited_sol_to_fund::*;
+pub use user_deposited_token_to_fund::*;
+pub use user_requested_withdrawal_from_fund::*;
+pub use user_updated_fund_price::*;
+pub use user_withdrawn_sol_from_fund::*;
 
 // // TO BE DONE
 // /// When operator started processing pending batch

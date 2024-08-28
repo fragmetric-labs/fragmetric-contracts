@@ -17,6 +17,7 @@ export let bSOL_token_authority_pda: anchor.web3.PublicKey;
 export let mSOL_token_authority_pda: anchor.web3.PublicKey;
 export let jitoSOL_token_authority_pda: anchor.web3.PublicKey;
 export let inf_token_authority_pda: anchor.web3.PublicKey;
+export let receipt_token_lock_account_pda: anchor.web3.PublicKey;
 
 // for devnet
 export let tokenMint1: anchor.web3.PublicKey;
@@ -98,6 +99,10 @@ export const fund_initialize = describe("fund_initialize", () => {
             [Buffer.from("fund_seed"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
+        [receipt_token_lock_account_pda] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt_token_lock_account"), receiptTokenMint.publicKey.toBuffer()],
+            program.programId
+        );
 
         // NEED TO CHECK: receiptTokenMint == createMint result account
         console.log(`admin                              = ${admin.publicKey}`);
@@ -109,6 +114,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log(`mSOL_token_authority_pda           = ${mSOL_token_authority_pda}`);
         console.log(`jitoSOL_token_authority_pda        = ${jitoSOL_token_authority_pda}`);
         console.log(`inf_token_authority_pda            = ${inf_token_authority_pda}`);
+        console.log(`receipt_token_lock_account_pda     = ${receipt_token_lock_account_pda}`);
         console.log("======= Prepare program accounts =======");
     });
 
@@ -274,7 +280,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundInitializeToken()
                 .accounts({
-                    tokenMint: bSOLMint.address,
+                    supportedTokenMint: bSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -282,7 +288,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundInitializeToken()
                 .accounts({
-                    tokenMint: mSOLMint.address,
+                    supportedTokenMint: mSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -290,7 +296,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundInitializeToken()
                 .accounts({
-                    tokenMint: jitoSOLMint.address,
+                    supportedTokenMint: jitoSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -298,7 +304,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             // await program.methods
             //     .fundInitializeToken()
             //     .accounts({
-            //         tokenMint: infMint.address,
+            //         supportedTokenMint: infMint.address,
             //         tokenProgram: spl.TOKEN_PROGRAM_ID,
             //     })
             //     .signers([])
@@ -309,7 +315,7 @@ export const fund_initialize = describe("fund_initialize", () => {
                     tokenPricingSource1,
                 )
                 .accounts({
-                    tokenMint: bSOLMint.address,
+                    supportedTokenMint: bSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -317,7 +323,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
                 .accounts({
-                    tokenMint: mSOLMint.address,
+                    supportedTokenMint: mSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -341,15 +347,15 @@ export const fund_initialize = describe("fund_initialize", () => {
         const tokensInitialized = (await program.account.fund.fetch(fund_pda)).supportedTokens;
         console.log(tokensInitialized);
 
-        // expect(tokensInitialized[0].address.toString()).to.eq(tokenMint1.toString());
-        expect(tokensInitialized[0].address.toString()).to.eq(bSOLMint.address.toString());
-        expect(tokensInitialized[0].tokenCap.toNumber()).to.eq(tokenCap1.toNumber());
-        expect(tokensInitialized[0].tokenAmountIn.toNumber()).to.eq(0);
+        // expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint1.toString());
+        expect(tokensInitialized[0].mint.toString()).to.eq(bSOLMint.address.toString());
+        expect(tokensInitialized[0].capacityAmount.toNumber()).to.eq(tokenCap1.toNumber());
+        expect(tokensInitialized[0].operationReservedAmount.toNumber()).to.eq(0);
 
-        // expect(tokensInitialized[1].address.toString()).to.eq(tokenMint2.toString());
-        expect(tokensInitialized[1].address.toString()).to.eq(mSOLMint.address.toString());
-        expect(tokensInitialized[1].tokenCap.toNumber()).to.equal(tokenCap2.toNumber());
-        expect(tokensInitialized[1].tokenAmountIn.toNumber()).to.eq(0);
+        // expect(tokensInitialized[1].mint.toString()).to.eq(tokenMint2.toString());
+        expect(tokensInitialized[1].mint.toString()).to.eq(mSOLMint.address.toString());
+        expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
+        expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
     });
 
     // Devnet only
@@ -418,7 +424,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundAddSupportedToken(tokenCap1, tokenPricingSource1)
                 .accounts({
-                    tokenMint: bSOLMintPublicKey,
+                    supportedTokenMint: bSOLMintPublicKey,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -426,7 +432,7 @@ export const fund_initialize = describe("fund_initialize", () => {
             await program.methods
                 .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
                 .accounts({
-                    tokenMint: mSOLMintPublicKey,
+                    supportedTokenMint: mSOLMintPublicKey,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])

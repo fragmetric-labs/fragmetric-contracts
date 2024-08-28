@@ -102,8 +102,8 @@ impl<'info> OperatorRun<'info> {
                 .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
             batch.record_unstaking_end(receipt_token_amount, sol_reserved_amount)?;
         }
-        fund.sol_amount_in = fund
-            .sol_amount_in
+        fund.sol_operation_reserved_amount = fund
+            .sol_operation_reserved_amount
             .checked_sub(total_sol_reserved_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 

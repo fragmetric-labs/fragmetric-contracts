@@ -21,12 +21,16 @@ pub struct FundUpdate<'info> {
 }
 
 impl<'info> FundUpdate<'info> {
-    pub fn update_supported_token(ctx: Context<Self>, token: Pubkey, token_cap: u64) -> Result<()> {
+    pub fn update_supported_token(
+        ctx: Context<Self>,
+        token: Pubkey,
+        capacity_amount: u64,
+    ) -> Result<()> {
         ctx.accounts
             .fund
             .supported_token_mut(token)
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?
-            .update(token_cap);
+            .update(capacity_amount);
 
         Ok(())
     }

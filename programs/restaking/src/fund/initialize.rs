@@ -9,7 +9,7 @@ impl Fund {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.supported_tokens = vec![];
-            self.sol_amount_in = 0;
+            self.sol_operation_reserved_amount = 0;
             self.withdrawal_status = Default::default();
         }
     }
@@ -53,13 +53,13 @@ impl SupportedTokenAuthority {
         &mut self,
         bump: u8,
         receipt_token_mint: Pubkey,
-        token_mint: Pubkey,
+        supported_token_mint: Pubkey,
     ) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
-            self.token_mint = token_mint;
+            self.supported_token_mint = supported_token_mint;
         }
     }
 }
@@ -86,6 +86,7 @@ impl UserReceipt {
             self.bump = bump;
             self.user = user;
             self.receipt_token_mint = receipt_token_mint;
+            self.receipt_token_amount = 0;
         }
     }
 }
@@ -107,7 +108,7 @@ mod tests {
             bump: 0,
             receipt_token_mint: Pubkey::default(),
             supported_tokens: vec![],
-            sol_amount_in: 0,
+            sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
         };
 

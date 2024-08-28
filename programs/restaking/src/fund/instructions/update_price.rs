@@ -43,10 +43,13 @@ impl<'info> FundUpdatePrice<'info> {
         let receipt_token_price =
             fund.receipt_token_price(receipt_token_mint.decimals, receipt_token_total_supply)?;
 
-        emit!(FundPriceUpdated {
+        emit!(UserUpdatedFundPrice {
             receipt_token_mint: receipt_token_mint.key(),
-            receipt_token_price,
-            fund_info: FundInfo::new_from_fund(fund),
+            fund_info: FundInfo::new_from_fund(
+                fund,
+                receipt_token_price,
+                receipt_token_total_supply
+            ),
         });
 
         Ok(())

@@ -1,3 +1,3 @@
-mod receipt_token_transferred;
+mod user_transferred_receipt_token;
 
-pub use receipt_token_transferred::*;
+pub use user_transferred_receipt_token::*;

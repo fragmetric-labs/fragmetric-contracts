@@ -35,14 +35,6 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
     //     bump,
     // )]
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
-    #[account(
-        mut,
-        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund.bump,
-        has_one = receipt_token_mint,
-    )]
-    pub fund: Box<Account<'info, Fund>>,
-
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
@@ -98,9 +90,41 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: Fund::SEED.to_vec(),
                     },
-                    Seed::AccountKey { index: 1 }, // mint address
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                 ],
                 false, // is_signer,
+                true,  // is_writable
+            )?,
+            // index 6, source user receipt
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserReceipt::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 0,
+                        data_index: 32,
+                        length: 32,
+                    }, // source_token_account.owner, data_index starts from the sum of the front indexes' bytes
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 7, destination user receipt
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserReceipt::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 2,
+                        data_index: 32,
+                        length: 32,
+                    }, // destination_token_account.owner
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
+                ],
+                false, // is_signer
                 true,  // is_writable
             )?,
         ];
