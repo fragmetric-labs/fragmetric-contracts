@@ -5,7 +5,7 @@ use spl_tlv_account_resolution::{
 };
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::{common::*, constants::*, fund::*};
+use crate::{common::*, constants::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct TokenInitializeExtraAccountMetaList<'info> {
@@ -126,6 +126,50 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                 ],
                 false, // is_signer
                 true,  // is_writable
+            )?,
+            // index 8, reward account
+            ExtraAccountMeta::new_with_seeds(
+                &[Seed::Literal {
+                    bytes: RewardAccount::SEED.to_vec(),
+                }],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 9, source user reward account
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserRewardAccount::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 0,
+                        data_index: 32,
+                        length: 32,
+                    }, // source_token_account.owner
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 10, destination user reward account
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserRewardAccount::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 2,
+                        data_index: 32,
+                        length: 32,
+                    }, // destination_token_account.owner
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 11, system program
+            ExtraAccountMeta::new_with_pubkey(
+                &anchor_lang::solana_program::system_program::ID,
+                false,
+                false,
             )?,
         ];
 

@@ -75,7 +75,7 @@ impl ReceiptTokenMintAuthority {
 }
 
 impl UserReceipt {
-    pub(super) fn initialize_if_needed(
+    pub(crate) fn initialize_if_needed(
         &mut self,
         bump: u8,
         user: Pubkey,
