@@ -29,12 +29,6 @@ impl Fund {
     }
 }
 
-impl UserReceipt {
-    pub(crate) fn set_receipt_token_amount(&mut self, total_amount: u64) {
-        self.receipt_token_amount = total_amount;
-    }
-}
-
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct Metadata {
     pub wallet_provider: String,
