@@ -7,7 +7,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundDepositSOL<'info> {
@@ -50,6 +50,23 @@ pub struct FundDepositSOL<'info> {
         associated_token::token_program = token_program,
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED],
+        bump = reward_account.bump,
+    )]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    #[account(
+        init_if_needed,
+        payer = user,
+        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        bump,
+        space = 8 + UserRewardAccount::INIT_SPACE,
+        constraint = user_reward_account.data_version == 0 || user_reward_account.user == user.key(),
+    )]
+    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
 
     // TODO: use address lookup table!
     #[account(address = BSOL_STAKE_POOL_ADDRESS)]
@@ -101,6 +118,9 @@ impl<'info> FundDepositSOL<'info> {
             ctx.accounts.user.key(),
             ctx.accounts.receipt_token_mint.key(),
         );
+        ctx.accounts
+            .user_reward_account
+            .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
 
         // Verify
         require_gte!(ctx.accounts.user.lamports(), amount);
@@ -126,7 +146,11 @@ impl<'info> FundDepositSOL<'info> {
 
         // Step 3: Mint receipt token
         Self::call_mint_token_cpi(&mut ctx, receipt_token_mint_amount)?;
-        Self::call_transfer_hook(&ctx, receipt_token_mint_amount)?;
+        Self::call_transfer_hook(
+            &mut ctx,
+            receipt_token_mint_amount,
+            contribution_accrual_rate,
+        )?;
 
         // Step 4: Update user_receipt's receipt_token_amount
         let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
@@ -183,12 +207,24 @@ impl<'info> FundDepositSOL<'info> {
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
-    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_mint.transfer_hook(
-            None,
-            Some(&ctx.accounts.receipt_token_account),
-            &ctx.accounts.fund,
-            amount,
-        )
+    fn call_transfer_hook(
+        ctx: &mut Context<Self>,
+        amount: u64,
+        contribution_accrual_rate: Option<f32>,
+    ) -> Result<()> {
+        let current_slot = Clock::get()?.slot;
+        let contribution_accrual_rate =
+            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
+
+        ctx.accounts
+            .reward_account
+            .update_reward_pools_token_allocation(
+                ctx.accounts.receipt_token_mint.key(),
+                amount,
+                contribution_accrual_rate,
+                None,
+                Some(&mut ctx.accounts.user_reward_account),
+                current_slot,
+            )
     }
 }

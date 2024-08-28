@@ -112,7 +112,6 @@ impl<'info> OperatorRun<'info> {
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount_to_burn)?;
-        Self::call_transfer_hook(&ctx, receipt_token_amount_to_burn)?;
 
         ctx.accounts
             .fund
@@ -140,15 +139,6 @@ impl<'info> OperatorRun<'info> {
                 .receipt_token_lock_authority
                 .signer_seeds()
                 .as_ref()]),
-            amount,
-        )
-    }
-
-    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_mint.transfer_hook(
-            Some(&ctx.accounts.receipt_token_lock_account),
-            None,
-            &ctx.accounts.fund,
             amount,
         )
     }

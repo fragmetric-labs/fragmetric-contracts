@@ -15,7 +15,7 @@ impl RewardAccount {
 }
 
 impl UserRewardAccount {
-    pub(super) fn initialize_if_needed(&mut self, bump: u8, user: Pubkey) {
+    pub(crate) fn initialize_if_needed(&mut self, bump: u8, user: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;

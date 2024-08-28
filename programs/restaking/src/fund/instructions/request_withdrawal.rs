@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundRequestWithdrawal<'info> {
@@ -13,13 +13,11 @@ pub struct FundRequestWithdrawal<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        init_if_needed,
-        payer = user,
-        space = 8 + UserReceipt::INIT_SPACE,
+        mut,
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
-        bump,
-        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
-        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
+        bump = user_receipt.bump,
+        has_one = user,
+        has_one = receipt_token_mint,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -63,6 +61,21 @@ pub struct FundRequestWithdrawal<'info> {
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED],
+        bump = reward_account.bump,
+    )]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        bump = user_reward_account.bump,
+        has_one = user,
+    )]
+    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
+
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -70,13 +83,6 @@ pub struct FundRequestWithdrawal<'info> {
 
 impl<'info> FundRequestWithdrawal<'info> {
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
-        // Initialize
-        ctx.accounts.user_receipt.initialize_if_needed(
-            ctx.bumps.user_receipt,
-            ctx.accounts.user.key(),
-            ctx.accounts.receipt_token_mint.key(),
-        );
-
         // Verify
         require_gte!(
             ctx.accounts.receipt_token_account.amount,
@@ -102,7 +108,7 @@ impl<'info> FundRequestWithdrawal<'info> {
         // Step 2: Lock receipt token
         Self::call_burn_token_cpi(&mut ctx, receipt_token_amount)?;
         Self::call_mint_token_cpi(&mut ctx, receipt_token_amount)?;
-        Self::call_transfer_hook(&ctx, receipt_token_amount)?;
+        Self::call_transfer_hook(&mut ctx, receipt_token_amount)?;
 
         // Step 3: Update user_receipt's receipt_token_amount
         let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
@@ -153,12 +159,17 @@ impl<'info> FundRequestWithdrawal<'info> {
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
-    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_mint.transfer_hook(
-            Some(&ctx.accounts.receipt_token_account),
-            Some(&ctx.accounts.receipt_token_lock_account),
-            &ctx.accounts.fund,
-            amount,
-        )
+    fn call_transfer_hook(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+        let current_slot = Clock::get()?.slot;
+        ctx.accounts
+            .reward_account
+            .update_reward_pools_token_allocation(
+                ctx.accounts.receipt_token_mint.key(),
+                amount,
+                None,
+                Some(&mut ctx.accounts.user_reward_account),
+                None,
+                current_slot,
+            )
     }
 }
