@@ -93,6 +93,7 @@ impl<'info> FundRequestWithdrawal<'info> {
             .fund
             .withdrawal_status
             .create_withdrawal_request(receipt_token_amount)?;
+        let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
         ctx.accounts
             .user_receipt
@@ -113,6 +114,7 @@ impl<'info> FundRequestWithdrawal<'info> {
             user: ctx.accounts.user.key(),
             user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+            batch_id,
             request_id,
             requested_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,

@@ -10,6 +10,8 @@ pub struct Fund {
     pub receipt_token_mint: Pubkey,
     #[max_len(20)]
     pub supported_tokens: Vec<SupportedTokenInfo>,
+    pub sol_capacity_amount: u64,
+    pub sol_accumulated_deposit_amount: u64,
     pub sol_operation_reserved_amount: u64,
     pub withdrawal_status: WithdrawalStatus,
 }
@@ -49,6 +51,7 @@ pub struct SupportedTokenInfo {
     pub mint: Pubkey,
     pub decimals: u8,
     pub capacity_amount: u64,
+    pub accumulated_deposit_amount: u64,
     pub operation_reserved_amount: u64,
     pub price: u64,
     pub pricing_source: TokenPricingSource,
@@ -65,6 +68,7 @@ impl SupportedTokenInfo {
             mint,
             decimals,
             capacity_amount,
+            accumulated_deposit_amount: 0,
             operation_reserved_amount: 0,
             price: 0,
             pricing_source,
