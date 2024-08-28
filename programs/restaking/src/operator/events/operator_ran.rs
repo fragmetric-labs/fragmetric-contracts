@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 
-use crate::operator::*;
 use crate::fund::FundInfo;
 
 #[event]

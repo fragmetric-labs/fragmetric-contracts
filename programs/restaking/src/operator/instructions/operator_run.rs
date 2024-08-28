@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*, operator::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, operator::*, token::*};
 
 #[derive(Accounts)]
 pub struct OperatorRun<'info> {
@@ -120,7 +120,11 @@ impl<'info> OperatorRun<'info> {
             .end_processing_completed_batch_withdrawals()?;
 
         emit!(OperatorRan {
-            fund_info: FundInfo::new_from_fund(&ctx.accounts.fund, receipt_token_price, receipt_token_total_supply),
+            fund_info: FundInfo::new_from_fund(
+                &ctx.accounts.fund,
+                receipt_token_price,
+                receipt_token_total_supply
+            ),
         });
 
         Ok(())
