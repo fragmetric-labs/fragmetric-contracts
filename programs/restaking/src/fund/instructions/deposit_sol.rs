@@ -15,11 +15,9 @@ pub struct FundDepositSOL<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
         bump,
-        space = 8 + UserReceipt::INIT_SPACE,
         constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
         constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
     )]
@@ -43,8 +41,7 @@ pub struct FundDepositSOL<'info> {
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
         associated_token::token_program = token_program,
@@ -55,11 +52,9 @@ pub struct FundDepositSOL<'info> {
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserRewardAccount::SEED, user.key().as_ref()],
         bump,
-        space = 8 + UserRewardAccount::INIT_SPACE,
         constraint = user_reward_account.data_version == 0 || user_reward_account.user == user.key(),
     )]
     pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
@@ -109,14 +104,14 @@ impl<'info> FundDepositSOL<'info> {
             .unzip();
 
         // Initialize
-        ctx.accounts.user_receipt.initialize_if_needed(
-            ctx.bumps.user_receipt,
-            ctx.accounts.user.key(),
-            ctx.accounts.receipt_token_mint.key(),
-        );
-        ctx.accounts
-            .user_reward_account
-            .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
+        // ctx.accounts.user_receipt.initialize_if_needed(
+        //     ctx.bumps.user_receipt,
+        //     ctx.accounts.user.key(),
+        //     ctx.accounts.receipt_token_mint.key(),
+        // );
+        // ctx.accounts
+        //     .user_reward_account
+        //     .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
 
         // Verify
         require_gte!(ctx.accounts.user.lamports(), amount);

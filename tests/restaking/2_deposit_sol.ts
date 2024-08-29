@@ -61,13 +61,36 @@ export const deposit_sol = describe("deposit_sol", () => {
         const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
         console.log(`fund balance before deposit:`, fundBal_bef);
 
-        const depositSolTx = await program.methods
-            .fundDepositSol(amount, null)
-            .accounts({
-                user: user.publicKey,
-            })
-            .signers([user])
-            .rpc({ commitment: "confirmed" });
+        const depositSolTx = new anchor.web3.Transaction().add(
+            await program.methods
+                .fundInitializeUserAccounts()
+                .accounts({
+                    user: user.publicKey,
+                })
+                .signers([user])
+                .instruction(),
+            await program.methods
+                .fundDepositSol(amount, null)
+                .accounts({
+                    user: user.publicKey,
+                })
+                .signers([])
+                .instruction(),
+        );
+        const depositSolTxSig = await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            depositSolTx,
+            [user],
+            { commitment: "confirmed" },
+        );
+
+        // const depositSolTx = await program.methods
+        //     .fundDepositSol(amount, null)
+        //     .accounts({
+        //         user: user.publicKey,
+        //     })
+        //     .signers([user])
+        //     .rpc({ commitment: "confirmed" });
 
         const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
         console.log(`fund balance after deposit:`, fundBal_aft);
@@ -99,7 +122,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
+        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTxSig, "confirmed");
         // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {

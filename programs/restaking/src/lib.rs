@@ -82,6 +82,10 @@ pub mod restaking {
         FundUpdatePrice::update_price(ctx)
     }
 
+    pub fn fund_initialize_user_accounts(ctx: Context<FundInitializeUserAccounts>) -> Result<()> {
+        FundInitializeUserAccounts::initialize(ctx)
+    }
+
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         amount: u64,
