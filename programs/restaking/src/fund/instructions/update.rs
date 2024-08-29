@@ -21,6 +21,14 @@ pub struct FundUpdate<'info> {
 }
 
 impl<'info> FundUpdate<'info> {
+    pub fn update_sol_capacity_amount(ctx: Context<Self>, capacity_amount: u64) -> Result<()> {
+        ctx.accounts
+            .fund
+            .update_sol_capacity_amount(capacity_amount);
+
+        Ok(())
+    }
+
     pub fn update_supported_token(
         ctx: Context<Self>,
         token: Pubkey,

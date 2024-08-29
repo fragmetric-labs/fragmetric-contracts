@@ -9,6 +9,10 @@ impl SupportedTokenInfo {
 }
 
 impl Fund {
+    pub(super) fn update_sol_capacity_amount(&mut self, capacity_amount: u64) {
+        self.sol_capacity_amount = capacity_amount;
+    }
+
     pub(super) fn add_supported_token(
         &mut self,
         mint: Pubkey,

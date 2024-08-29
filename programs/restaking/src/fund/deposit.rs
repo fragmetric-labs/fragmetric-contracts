@@ -13,8 +13,10 @@ impl SupportedTokenInfo {
         }
 
         self.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount = self.operation_reserved_amount
-            .checked_add(amount).ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.operation_reserved_amount = self
+            .operation_reserved_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
 
         Ok(())
     }
@@ -31,8 +33,10 @@ impl Fund {
         }
 
         self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
-        self.sol_operation_reserved_amount = self.sol_operation_reserved_amount
-            .checked_add(amount).ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        self.sol_operation_reserved_amount = self
+            .sol_operation_reserved_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
 
         Ok(())
     }
