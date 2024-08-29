@@ -9,8 +9,10 @@ pub struct Fund {
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(20)]
-    pub supported_tokens: Vec<TokenInfo>,
-    pub sol_amount_in: u64,
+    pub supported_tokens: Vec<SupportedTokenInfo>,
+    pub sol_capacity_amount: u64,
+    pub sol_accumulated_deposit_amount: u64,
+    pub sol_operation_reserved_amount: u64,
     pub withdrawal_status: WithdrawalStatus,
 }
 
@@ -34,40 +36,42 @@ impl Fund {
     pub fn supported_token_position(&self, token: Pubkey) -> Option<usize> {
         self.supported_tokens
             .iter()
-            .position(|info| info.address == token)
+            .position(|info| info.mint == token)
     }
 
-    pub fn supported_token_mut(&mut self, token: Pubkey) -> Option<&mut TokenInfo> {
+    pub fn supported_token_mut(&mut self, token: Pubkey) -> Option<&mut SupportedTokenInfo> {
         self.supported_tokens
             .iter_mut()
-            .find(|info| info.address == token)
+            .find(|info| info.mint == token)
     }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct TokenInfo {
-    pub address: Pubkey,
-    pub token_decimals: u8,
-    pub token_cap: u64,
-    pub token_amount_in: u64,
-    pub token_price: u64,
-    pub token_pricing_source: TokenPricingSource,
+pub struct SupportedTokenInfo {
+    pub mint: Pubkey,
+    pub decimals: u8,
+    pub capacity_amount: u64,
+    pub accumulated_deposit_amount: u64,
+    pub operation_reserved_amount: u64,
+    pub price: u64,
+    pub pricing_source: TokenPricingSource,
 }
 
-impl TokenInfo {
+impl SupportedTokenInfo {
     pub fn empty(
-        address: Pubkey,
-        token_decimals: u8,
-        token_cap: u64,
-        token_pricing_source: TokenPricingSource,
+        mint: Pubkey,
+        decimals: u8,
+        capacity_amount: u64,
+        pricing_source: TokenPricingSource,
     ) -> Self {
         Self {
-            address,
-            token_decimals,
-            token_cap,
-            token_amount_in: 0,
-            token_price: 0,
-            token_pricing_source,
+            mint,
+            decimals,
+            capacity_amount,
+            accumulated_deposit_amount: 0,
+            operation_reserved_amount: 0,
+            price: 0,
+            pricing_source,
         }
     }
 }

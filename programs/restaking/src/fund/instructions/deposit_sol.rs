@@ -91,13 +91,8 @@ impl<'info> FundDepositSOL<'info> {
             }
         }
 
-        let (wallet_provider, fpoint_accrual_rate_multiplier) = metadata
-            .map(|metadata| {
-                (
-                    metadata.wallet_provider,
-                    metadata.fpoint_accrual_rate_multiplier,
-                )
-            })
+        let (wallet_provider, contribution_accrual_rate) = metadata
+            .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
             .unzip();
 
         // Initialize
@@ -133,19 +128,26 @@ impl<'info> FundDepositSOL<'info> {
         Self::call_mint_token_cpi(&mut ctx, receipt_token_mint_amount)?;
         Self::call_transfer_hook(&ctx, receipt_token_mint_amount)?;
 
-        emit!(FundSOLDeposited {
+        // Step 4: Update user_receipt's receipt_token_amount
+        let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
+        ctx.accounts
+            .user_receipt
+            .set_receipt_token_amount(receipt_token_account_total_amount);
+
+        emit!(UserDepositedSOLToFund {
             user: ctx.accounts.user.key(),
-            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             sol_deposit_amount: amount,
-            sol_amount_in_fund: ctx.accounts.fund.sol_amount_in,
-            minted_lrt_mint: ctx.accounts.receipt_token_mint.key(),
-            minted_lrt_amount: receipt_token_mint_amount,
-            lrt_price: receipt_token_price,
-            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            minted_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider,
-            fpoint_accrual_rate_multiplier,
-            fund_info: FundInfo::new_from_fund(ctx.accounts.fund.as_ref()),
+            contribution_accrual_rate,
+            fund_info: FundInfo::new_from_fund(
+                ctx.accounts.fund.as_ref(),
+                receipt_token_price,
+                receipt_token_total_supply
+            ),
         });
 
         Ok(())

@@ -32,7 +32,7 @@ pub struct SupportedTokenAuthority {
     pub data_version: u8,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
-    pub token_mint: Pubkey,
+    pub supported_token_mint: Pubkey,
 }
 
 impl PDASignerSeeds<4> for SupportedTokenAuthority {
@@ -42,7 +42,7 @@ impl PDASignerSeeds<4> for SupportedTokenAuthority {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
-            self.token_mint.as_ref(),
+            self.supported_token_mint.as_ref(),
             self.bump_as_slice(),
         ]
     }

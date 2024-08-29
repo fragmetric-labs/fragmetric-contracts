@@ -8,13 +8,11 @@ use crate::error::ErrorCode;
 pub(crate) struct Ed25519Instruction(Instruction);
 
 impl Ed25519Instruction {
-    const EXPTECED_IX_SYSVAR_INDEX: usize = 0;
-
     pub(crate) fn new_from_instruction_sysvar(instruction_sysvar: &AccountInfo) -> Result<Self> {
-        let ix = instructions::load_instruction_at_checked(
-            Self::EXPTECED_IX_SYSVAR_INDEX,
-            instruction_sysvar,
-        )?;
+        let current_ix_index: usize =
+            instructions::load_current_index_checked(instruction_sysvar)?.into();
+        let ix =
+            instructions::load_instruction_at_checked(current_ix_index - 1, instruction_sysvar)?;
         require_eq!(ix.program_id, ed25519_program::ID);
         require_eq!(ix.accounts.len(), 0);
 

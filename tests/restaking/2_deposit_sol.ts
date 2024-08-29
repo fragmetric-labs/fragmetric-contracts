@@ -50,8 +50,8 @@ export const deposit_sol = describe("deposit_sol", () => {
         // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            expect(event.data.lrtPrice.toNumber()).to.be.equal(1_000_000_000);
-            console.log(`Receipt token price: ${event.data.lrtPrice}`);
+            expect(event.data.fundInfo.receiptTokenPrice.toNumber()).to.be.equal(1_000_000_000);
+            console.log(`Receipt token price: ${event.data.fundInfo.receiptTokenPrice}`);
         }
     });
 
@@ -75,12 +75,12 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // check the sol_amount_in has accumulated
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
-        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toNumber());
-        expect(fundData.solAmountIn.toNumber()).to.eq(amount.toNumber());
+        console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
+        expect(fundData.solOperationReservedAmount.toNumber()).to.eq(amount.toNumber());
 
         // check the price of tokens
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
+        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
+        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
@@ -104,9 +104,10 @@ export const deposit_sol = describe("deposit_sol", () => {
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
             expect(event.data.walletProvider).to.be.null;
-            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
+            expect(event.data.contributionAccrualRate).to.be.null;
             console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
+            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
+            console.log(`user receipt:`, event.data.userReceipt);
         }
     });
 
@@ -118,13 +119,13 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         const payload = {
             walletProvider: "backpack",
-            fpointAccrualRateMultiplier: 1.3,
+            contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[3].name, payload);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[3].name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-        expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+        expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
         const signature = ed25519.Sign(encodedData, Buffer.from(admin.payer.secretKey));
         const tx = new anchor.web3.Transaction().add(
@@ -158,12 +159,12 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // check the sol_amount_in has accumulated
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
-        console.log(`total sol amount in Fund:`, fundData.solAmountIn.toNumber());
-        expect(fundData.solAmountIn.toNumber()).to.eq(2 * amount.toNumber());
+        console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
+        expect(fundData.solOperationReservedAmount.toNumber()).to.eq(2 * amount.toNumber());
 
         // check the price of tokens
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
+        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
+        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
@@ -187,11 +188,11 @@ export const deposit_sol = describe("deposit_sol", () => {
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
             expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-            expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
             expect(event.data.walletProvider).to.equal(payload.walletProvider);
-            expect(event.data.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
             console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
+            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
         }
     });
 });

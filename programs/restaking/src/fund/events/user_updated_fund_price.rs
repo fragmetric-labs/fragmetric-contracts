@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 use crate::fund::*;
 
 #[event]
-pub struct FundPriceUpdated {
-    pub lrt_mint: Pubkey,
-    pub lrt_price: u64,
+pub struct UserUpdatedFundPrice {
+    pub receipt_token_mint: Pubkey,
     pub fund_info: FundInfo,
 }

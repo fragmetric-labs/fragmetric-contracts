@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
     token_2022::Token2022,
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*, operator::*};
 
 #[derive(Accounts)]
 pub struct OperatorRun<'info> {
@@ -33,9 +32,10 @@ pub struct OperatorRun<'info> {
 
     #[account(
         mut,
-        associated_token::mint = receipt_token_mint,
-        associated_token::authority = receipt_token_lock_authority,
-        associated_token::token_program = token_program,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        seeds = [RECEIPT_TOKEN_LOCK_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
@@ -50,7 +50,6 @@ pub struct OperatorRun<'info> {
     pub token_pricing_source_1: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token2022>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 impl<'info> OperatorRun<'info> {
@@ -69,6 +68,10 @@ impl<'info> OperatorRun<'info> {
         fund.update_token_prices(&sources)?;
         let total_sol_value_in_fund = fund.total_sol_value()?;
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let receipt_token_price = fund.receipt_token_price(
+            ctx.accounts.receipt_token_mint.decimals,
+            receipt_token_total_supply,
+        )?;
 
         let mut receipt_token_amount_to_burn: u64 = 0;
         for batch in &mut fund.withdrawal_status.batch_withdrawals_in_progress {
@@ -103,8 +106,8 @@ impl<'info> OperatorRun<'info> {
                 .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
             batch.record_unstaking_end(receipt_token_amount, sol_reserved_amount)?;
         }
-        fund.sol_amount_in = fund
-            .sol_amount_in
+        fund.sol_operation_reserved_amount = fund
+            .sol_operation_reserved_amount
             .checked_sub(total_sol_reserved_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestExceedsSOLAmountsInTemp))?;
 
@@ -114,7 +117,13 @@ impl<'info> OperatorRun<'info> {
         ctx.accounts
             .fund
             .withdrawal_status
-            .end_processing_completed_batch_withdrawals()
+            .end_processing_completed_batch_withdrawals()?;
+
+        emit!(OperatorRan {
+            fund_info: FundInfo::new_from_fund(&ctx.accounts.fund, receipt_token_price, receipt_token_total_supply),
+        });
+
+        Ok(())
     }
 
     fn call_burn_token_cpi(ctx: &mut Context<Self>, amount: u64) -> Result<()> {

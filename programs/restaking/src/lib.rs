@@ -38,18 +38,18 @@ pub mod restaking {
 
     pub fn fund_add_supported_token(
         ctx: Context<FundAddSupportedToken>,
-        token_cap: u64,
-        token_pricing_source: TokenPricingSource,
+        capacity_amount: u64,
+        pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        FundAddSupportedToken::add_supported_token(ctx, token_cap, token_pricing_source)
+        FundAddSupportedToken::add_supported_token(ctx, capacity_amount, pricing_source)
     }
 
     pub fn fund_update_supported_token(
         ctx: Context<FundUpdate>,
         token: Pubkey,
-        token_cap: u64,
+        capacity_amount: u64,
     ) -> Result<()> {
-        FundUpdate::update_supported_token(ctx, token, token_cap)
+        FundUpdate::update_supported_token(ctx, token, capacity_amount)
     }
 
     pub fn fund_update_sol_withdrawal_fee_rate(
@@ -122,6 +122,12 @@ pub mod restaking {
         ctx: Context<TokenInitializeExtraAccountMetaList>,
     ) -> Result<()> {
         TokenInitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
+    }
+
+    pub fn token_update_extra_account_meta_list(
+        ctx: Context<TokenInitializeExtraAccountMetaList>,
+    ) -> Result<()> {
+        TokenInitializeExtraAccountMetaList::update_extra_account_meta_list(ctx)
     }
 
     #[interface(spl_transfer_hook_interface::execute)]

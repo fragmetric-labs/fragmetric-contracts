@@ -14,7 +14,7 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
 
     /// CHECK: ExtraAccountaMetaList Account, must use these seeds
     #[account(
-        init,
+        init_if_needed,
         seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
         bump,
         space = ExtraAccountMetaList::size_of(
@@ -35,14 +35,6 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
     //     bump,
     // )]
     // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
-    #[account(
-        mut,
-        seeds = [Fund::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund.bump,
-        has_one = receipt_token_mint,
-    )]
-    pub fund: Box<Account<'info, Fund>>,
-
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
@@ -73,6 +65,23 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
         Ok(())
     }
 
+    pub fn update_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
+        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        msg!(
+            "extra_account_meta_list_key: {:?}",
+            extra_account_meta_list_key
+        );
+
+        let extra_account_metas = Self::extra_account_metas()?;
+
+        ExtraAccountMetaList::update::<ExecuteInstruction>(
+            &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
+            &extra_account_metas,
+        )?;
+
+        Ok(())
+    }
+
     pub fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
         let extra_account_metas = vec![
             // index 5, fund pda
@@ -81,9 +90,41 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: Fund::SEED.to_vec(),
                     },
-                    Seed::AccountKey { index: 1 }, // mint address
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                 ],
                 false, // is_signer,
+                true,  // is_writable
+            )?,
+            // index 6, source user receipt
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserReceipt::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 0,
+                        data_index: 32,
+                        length: 32,
+                    }, // source_token_account.owner, data_index starts from the sum of the front indexes' bytes
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 7, destination user receipt
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserReceipt::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 2,
+                        data_index: 32,
+                        length: 32,
+                    }, // destination_token_account.owner
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
+                ],
+                false, // is_signer
                 true,  // is_writable
             )?,
         ];

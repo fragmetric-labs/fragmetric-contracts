@@ -56,9 +56,10 @@ pub struct FundRequestWithdrawal<'info> {
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
     #[account(
         mut,
-        associated_token::mint = receipt_token_mint,
-        associated_token::authority = receipt_token_lock_authority,
-        associated_token::token_program = token_program,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        seeds = [RECEIPT_TOKEN_LOCK_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
@@ -92,6 +93,7 @@ impl<'info> FundRequestWithdrawal<'info> {
             .fund
             .withdrawal_status
             .create_withdrawal_request(receipt_token_amount)?;
+        let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
         ctx.accounts
             .user_receipt
@@ -102,14 +104,20 @@ impl<'info> FundRequestWithdrawal<'info> {
         Self::call_mint_token_cpi(&mut ctx, receipt_token_amount)?;
         Self::call_transfer_hook(&ctx, receipt_token_amount)?;
 
-        emit!(FundWithdrawalRequested {
+        // Step 3: Update user_receipt's receipt_token_amount
+        let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
+        ctx.accounts
+            .user_receipt
+            .set_receipt_token_amount(receipt_token_account_total_amount);
+
+        emit!(UserRequestedWithdrawalFromFund {
             user: ctx.accounts.user.key(),
-            user_lrt_account: ctx.accounts.receipt_token_account.key(),
+            user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
+            batch_id,
             request_id,
-            lrt_mint: ctx.accounts.receipt_token_mint.key(),
-            lrt_requested_amount: receipt_token_amount,
-            lrt_amount_in_user_lrt_account: ctx.accounts.receipt_token_account.amount,
+            requested_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            requested_receipt_token_amount: receipt_token_amount,
         });
 
         Ok(())

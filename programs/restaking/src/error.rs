@@ -13,6 +13,8 @@ pub enum ErrorCode {
     FundNotExistingToken,
     #[msg("Duplicated tokens in the list")]
     FundDuplicatedToken,
+    #[msg("Exceeds the sol cap")]
+    FundExceedsSolCap,
     #[msg("Exceeds the token cap")]
     FundExceedsTokenCap,
     #[msg("Batch withdrwal amount exceeds SOL amount in fund")]

@@ -1,3 +1,3 @@
-mod lrt_transferred;
+mod user_transferred_receipt_token;
 
-pub use lrt_transferred::*;
+pub use user_transferred_receipt_token::*;

@@ -181,21 +181,21 @@ export const deposit_token = describe("deposit_token", () => {
             this.skip();
         }
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`token balance before deposit: ${tokenAmountIn_bef}`);
 
         await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: restaking.tokenMint1,
+                supportedTokenMint: restaking.tokenMint1,
                 userTokenAccount: userToken1Account.address,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" });
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_aft - tokenAmountIn_bef).to.equal(amount.toNumber());
     });
@@ -212,7 +212,7 @@ export const deposit_token = describe("deposit_token", () => {
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: restaking.bSOLMint.address,
+                supportedTokenMint: restaking.bSOLMint.address,
                 userTokenAccount: userBSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -225,14 +225,14 @@ export const deposit_token = describe("deposit_token", () => {
         let events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
             expect(event.data.walletProvider).to.be.null;
-            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
+            expect(event.data.contributionAccrualRate).to.be.null;
         }
     
         txSig = await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                tokenMint: restaking.mSOLMint.address,
+                supportedTokenMint: restaking.mSOLMint.address,
                 userTokenAccount: userMSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -245,13 +245,13 @@ export const deposit_token = describe("deposit_token", () => {
         events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
             expect(event.data.walletProvider).to.be.null;
-            expect(event.data.fpointAccrualRateMultiplier).to.be.null;
+            expect(event.data.contributionAccrualRate).to.be.null;
         }
     
         // check the price of tokens
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
+        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
+        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
@@ -293,7 +293,7 @@ export const deposit_token = describe("deposit_token", () => {
             TOKEN_2022_PROGRAM_ID,
         );
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
@@ -301,7 +301,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: restaking.tokenMint1,
+                    supportedTokenMint: restaking.tokenMint1,
                     userTokenAccount: userToken1Account.address,
                 })
                 .signers([user])
@@ -309,7 +309,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
@@ -336,7 +336,7 @@ export const deposit_token = describe("deposit_token", () => {
             undefined,
         );
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
@@ -344,7 +344,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: restaking.bSOLMint.address,
+                    supportedTokenMint: restaking.bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
                 })
                 .signers([user])
@@ -352,7 +352,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn;
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
@@ -380,18 +380,18 @@ export const deposit_token = describe("deposit_token", () => {
         const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
         console.log(`user bSOL balance:`, userBSOLBal);
 
-        const fundBSOLBal_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        const fundBSOLBal_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`fund bSOL balance before deposit:`, fundBSOLBal_bef);
 
         const payload = {
             walletProvider: "backpack",
-            fpointAccrualRateMultiplier: 1.3,
+            contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[9].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[9].name, encodedData);
+        let encodedData = programBorshCoder.types.encode(program.idl.types[3].name, payload);
+        let decodedData = programBorshCoder.types.decode(program.idl.types[3].name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-        expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+        expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
         const signature = ed25519.Sign(encodedData, Buffer.from(admin.payer.secretKey));
         const tx = new anchor.web3.Transaction().add(
@@ -407,7 +407,7 @@ export const deposit_token = describe("deposit_token", () => {
                 )
                 .accounts({
                     user: user.publicKey,
-                    tokenMint: restaking.bSOLMint.address,
+                    supportedTokenMint: restaking.bSOLMint.address,
                     userTokenAccount: userBSOLTokenAccount.address,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -422,7 +422,7 @@ export const deposit_token = describe("deposit_token", () => {
             { commitment: "confirmed" },
         );
 
-        const fundBSOLBal_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].tokenAmountIn.toNumber();
+        const fundBSOLBal_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`fund bSOL balance after deposit:`, fundBSOLBal_aft);
         expect(fundBSOLBal_aft - fundBSOLBal_bef).to.equal(amount.toNumber());
 
@@ -432,17 +432,17 @@ export const deposit_token = describe("deposit_token", () => {
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
             expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-            expect(decodedData.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
             expect(event.data.walletProvider).to.equal(payload.walletProvider);
-            expect(event.data.fpointAccrualRateMultiplier.toPrecision(2)).to.equal(payload.fpointAccrualRateMultiplier.toString());
+            expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
             console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`fPoint accrual rate multiplier: ${event.data.fpointAccrualRateMultiplier}`);
+            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
         }
 
         // check the price of tokens
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].tokenPrice}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].tokenPrice}`);
+        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
+        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
