@@ -36,6 +36,13 @@ pub mod restaking {
         FundInitializeToken::initialize(ctx)
     }
 
+    pub fn fund_update_sol_capacity_amount(
+        ctx: Context<FundUpdate>,
+        capacity_amount: u64,
+    ) -> Result<()> {
+        FundUpdate::update_sol_capacity_amount(ctx, capacity_amount)
+    }
+
     pub fn fund_add_supported_token(
         ctx: Context<FundAddSupportedToken>,
         capacity_amount: u64,

@@ -156,7 +156,6 @@ export const initialize = describe("initialize everything", () => {
         }
 
         // generate keypair to use as address for the transfer-hook enabled mint account
-        const mintOwner = admin; // same as admin
         const decimals = 9;
     
         const extensions = [spl.ExtensionType.TransferHook];
@@ -233,6 +232,7 @@ export const initialize = describe("initialize everything", () => {
         }
 
         const solWithdrawalFeeRate = 10;
+        const solCap = new anchor.BN(1_000_000_000 * 10000);
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenPricingSource1 = {
             "splStakePool": {
@@ -257,6 +257,11 @@ export const initialize = describe("initialize everything", () => {
             ),
             await program.methods
                 .fundInitialize()
+                .accounts({})
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundUpdateSolCapacityAmount(solCap)
                 .accounts({})
                 .signers([])
                 .instruction(),
@@ -368,6 +373,7 @@ export const initialize = describe("initialize everything", () => {
         }
 
         const solWithdrawalFeeRate = 10;
+        const solCap = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
         const tokenCap1 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
         const tokenPricingSource1 = {
             "splStakePool": {
@@ -394,6 +400,11 @@ export const initialize = describe("initialize everything", () => {
             // initializes
             await program.methods
                 .fundInitialize()
+                .accounts({})
+                .signers([])
+                .instruction(),
+            await program.methods
+                .fundUpdateSolCapacityAmount(solCap)
                 .accounts({})
                 .signers([])
                 .instruction(),
