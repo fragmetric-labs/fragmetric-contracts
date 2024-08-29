@@ -46,7 +46,7 @@ mod tests {
             bump: 0,
             receipt_token_mint: Pubkey::default(),
             supported_tokens: vec![],
-            sol_capacity_amount: 0,
+            sol_capacity_amount: 1_000_000_000 * 10000,
             sol_accumulated_deposit_amount: 0,
             sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
@@ -56,7 +56,7 @@ mod tests {
             mint: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 1000,
-            accumulated_deposit_amount: 1_000_000_000,
+            accumulated_deposit_amount: 0,
             operation_reserved_amount: 1_000_000_000,
             price: 0,
             pricing_source: TokenPricingSource::SPLStakePool {
@@ -67,7 +67,7 @@ mod tests {
             mint: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 2000,
-            accumulated_deposit_amount: 2_000_000_000,
+            accumulated_deposit_amount: 0,
             operation_reserved_amount: 2_000_000_000,
             price: 0,
             pricing_source: TokenPricingSource::SPLStakePool {
@@ -88,7 +88,7 @@ mod tests {
             bump: 0,
             receipt_token_mint: Pubkey::default(),
             supported_tokens: vec![],
-            sol_capacity_amount: 0,
+            sol_capacity_amount: 1_000_000_000 * 10000,
             sol_accumulated_deposit_amount: 0,
             sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
@@ -98,7 +98,7 @@ mod tests {
             mint: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 1000,
-            accumulated_deposit_amount: 1_000_000_000,
+            accumulated_deposit_amount: 0,
             operation_reserved_amount: 1_000_000_000,
             price: 0,
             pricing_source: TokenPricingSource::SPLStakePool {
@@ -109,7 +109,7 @@ mod tests {
             mint: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 2000,
-            accumulated_deposit_amount: 2_000_000_000,
+            accumulated_deposit_amount: 0,
             operation_reserved_amount: 2_000_000_000,
             price: 0,
             pricing_source: TokenPricingSource::SPLStakePool {

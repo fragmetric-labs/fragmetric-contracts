@@ -37,6 +37,13 @@ impl Fund {
             .sol_operation_reserved_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+        if self.sol_capacity_amount < new_sol_accumulated_deposit_amount {
+            err!(ErrorCode::FundExceedsSolCap)?
+        }
+
+        self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
+        self.sol_operation_reserved_amount = self.sol_operation_reserved_amount
+            .checked_add(amount).ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
 
         Ok(())
     }
