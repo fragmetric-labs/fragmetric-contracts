@@ -62,11 +62,7 @@ pub struct TokenTransferHook<'info> {
     /// CHECK: will be deserialized in runtime
     pub destination_user_receipt: UncheckedAccount<'info>,
 
-    #[account(
-        mut,
-        seeds = [RewardAccount::SEED],
-        bump = reward_account.bump,
-    )]
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(

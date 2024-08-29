@@ -51,11 +51,7 @@ pub struct FundDepositSOL<'info> {
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
-    #[account(
-        mut,
-        seeds = [RewardAccount::SEED],
-        bump = reward_account.bump,
-    )]
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(

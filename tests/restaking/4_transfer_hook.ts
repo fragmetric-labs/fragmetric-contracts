@@ -5,7 +5,7 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
-import * as restaking from "./1_fund_initialize";
+import * as restaking from "./1_initialize";
 
 export const transfer_hook = describe("transfer_hook", () => {
     anchor.setProvider(anchor.AnchorProvider.env());

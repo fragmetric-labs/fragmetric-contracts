@@ -1,18 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::{common::*, constants::*, reward::*};
+use crate::{constants::*, reward::*};
 
 #[derive(Accounts)]
 pub struct RewardAddRewardPool<'info> {
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [RewardAccount::SEED],
-        bump = reward_account.bump,
-    )]
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     pub token_mint: Box<InterfaceAccount<'info, Mint>>,

@@ -1,30 +1,17 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::ErrorCode, reward::*, PDASignerSeeds};
+use crate::{error::ErrorCode, reward::*};
 
 #[account]
 #[derive(InitSpace)]
 pub struct RewardAccount {
     pub data_version: u8,
-    pub bump: u8,
     #[max_len(10)]
     pub holders: Vec<Holder>,
     #[max_len(20)]
     pub rewards: Vec<Reward>,
-    #[max_len(20)]
+    #[max_len(5)]
     pub reward_pools: Vec<RewardPool>,
-}
-
-impl PDASignerSeeds<2> for RewardAccount {
-    const SEED: &'static [u8] = b"reward";
-
-    fn signer_seeds(&self) -> [&[u8]; 2] {
-        [Self::SEED, self.bump_as_slice()]
-    }
-
-    fn bump_ref(&self) -> &u8 {
-        &self.bump
-    }
 }
 
 impl RewardAccount {
@@ -46,7 +33,7 @@ pub struct Holder {
     #[max_len(128)]
     pub description: String,
     /// List of allowed pubkeys for this holder.
-    #[max_len(20)]
+    #[max_len(10)]
     pub pubkeys: Vec<Pubkey>,
 }
 
@@ -120,7 +107,7 @@ pub struct RewardPool {
 
     pub contribution: u128,
     pub token_allocated_amount: TokenAllocatedAmount,
-    #[max_len(40)]
+    #[max_len(20)]
     pub reward_settlements: Vec<RewardSettlement>,
 }
 

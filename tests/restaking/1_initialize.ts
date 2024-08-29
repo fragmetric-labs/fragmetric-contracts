@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as utils from "../utils/utils";
 
 export let receiptTokenMint: anchor.web3.Keypair;
+export let rewardAccount: anchor.web3.Keypair;
 // program accounts
 export let fund_pda: anchor.web3.PublicKey;
 export let receipt_token_lock_authority_pda: anchor.web3.PublicKey;
@@ -35,7 +36,7 @@ export let bSOLStakePoolPublicKey: anchor.web3.PublicKey;
 export let mSOLStakePoolPublicKey: anchor.web3.PublicKey;
 export let jitoSOLStakePoolPublicKey: anchor.web3.PublicKey;
 
-export const fund_initialize = describe("fund_initialize", () => {
+export const initialize = describe("initialize everything", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
     console.log(`programId:     ${program.programId}`);
@@ -71,6 +72,7 @@ export const fund_initialize = describe("fund_initialize", () => {
 
     before("Prepare program accounts", async () => {
         receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
+        rewardAccount = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./rewardAccount.json")));
         [receipt_token_lock_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
             [Buffer.from("receipt_token_lock_authority"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
@@ -107,6 +109,7 @@ export const fund_initialize = describe("fund_initialize", () => {
         // NEED TO CHECK: receiptTokenMint == createMint result account
         console.log(`admin                              = ${admin.publicKey}`);
         console.log(`receiptTokenMint                   = ${receiptTokenMint.publicKey}`);
+        console.log(`reward account                     = ${rewardAccount.publicKey}`);
         console.log(`fund_pda                           = ${fund_pda}`);
         console.log(`receipt_token_lock_authority_pda   = ${receipt_token_lock_authority_pda}`);
         console.log(`receipt_token_mint_authority_pda   = ${receipt_token_mint_authority_pda}`);
@@ -118,8 +121,36 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log("======= Prepare program accounts =======");
     });
 
-    // Localnet only: Already created in devnet
-    it("Create receipt token mint with Transfer Hook extension", async function () {
+    // Devnet only
+    it.skip("Create test token mint accounts for initialize", async function () {
+        if (!utils.isDevnet(program.provider.connection)) {
+            this.skip();
+        }
+
+        tokenMint1 = await spl.createMint(
+            program.provider.connection,
+            payer,
+            payer.publicKey,
+            payer.publicKey,
+            9,
+            undefined,
+            undefined,
+            TOKEN_2022_PROGRAM_ID
+        );
+        tokenMint2 = await spl.createMint(
+            program.provider.connection,
+            payer,
+            payer.publicKey,
+            payer.publicKey,
+            9,
+            undefined,
+            undefined,
+            TOKEN_2022_PROGRAM_ID
+        );
+    });
+
+    // Localnet
+    it("Create receipt token mint with Transfer Hook extension on localnet", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
             this.skip();
         }
@@ -166,34 +197,6 @@ export const fund_initialize = describe("fund_initialize", () => {
         expect(receiptTokenMintAccount.freezeAuthority.toString()).to.equal(mintOwner.publicKey.toString());
     });
 
-    // Devnet only
-    it.skip("Create test token mint accounts for initialize", async function () {
-        if (!utils.isDevnet(program.provider.connection)) {
-            this.skip();
-        }
-
-        tokenMint1 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
-        tokenMint2 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
-    });
-
     // Localnet only
     it("Set mainnet token mint accounts for initialize", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
@@ -224,7 +227,7 @@ export const fund_initialize = describe("fund_initialize", () => {
     });
 
     // Localnet only
-    it("Initialize fund and fundTokenAuthority", async function () {
+    it("Initialize", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
             this.skip();
         }
@@ -242,18 +245,16 @@ export const fund_initialize = describe("fund_initialize", () => {
                 address: mSOLStakePoolPublicKey,
             }
         };
-        const tokenCap3 = new anchor.BN(1_000_000_000 * 3000);
-        const tokenPricingSource3 = {
-            "splStakePool": {
-                address: jitoSOLStakePoolPublicKey,
-            }
-        };
 
         const batchProcessingThresholdAmount = new anchor.BN(0);
         const batchProcessingThresholdDuration = new anchor.BN(0);
- 
+
         const txs = new anchor.web3.Transaction().add(
             // initializes
+            await program.account.rewardAccount.createInstruction(
+                rewardAccount,
+                1_048_576,
+            ),
             await program.methods
                 .fundInitialize()
                 .accounts({})
@@ -336,16 +337,18 @@ export const fund_initialize = describe("fund_initialize", () => {
                 })
                 .signers([mintOwner.payer])
                 .instruction(),
+            await program.methods
+                .rewardInitialize()
+                .instruction(),
         );
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             txs,
-            [admin.payer],
+            [admin.payer, rewardAccount],
         );
 
         // check fund initialized correctly
         const tokensInitialized = (await program.account.fund.fetch(fund_pda)).supportedTokens;
-        console.log(tokensInitialized);
 
         // expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint1.toString());
         expect(tokensInitialized[0].mint.toString()).to.eq(bSOLMint.address.toString());

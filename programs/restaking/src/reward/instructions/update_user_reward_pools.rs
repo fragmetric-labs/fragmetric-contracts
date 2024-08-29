@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{common::*, reward::*};
+use crate::{common::*, constants::*, reward::*};
 
 #[derive(Accounts)]
 pub struct RewardUpdateUserRewardPools<'info> {
@@ -19,11 +19,7 @@ pub struct RewardUpdateUserRewardPools<'info> {
 
     // TODO Do we really need to make this account writable just to update settlement block?
     // Will it be ok for parallel execution in force-settlement-all-users situation?
-    #[account(
-        mut,
-        seeds = [RewardAccount::SEED],
-        bump = reward_account.bump,
-    )]
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     pub system_program: Program<'info, System>,

@@ -6,7 +6,7 @@ import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
-import * as restaking from "./1_fund_initialize";
+import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
 
 export const deposit_sol = describe("deposit_sol", () => {

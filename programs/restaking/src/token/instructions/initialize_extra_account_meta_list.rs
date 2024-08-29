@@ -112,10 +112,8 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                 true,  // is_writable
             )?,
             // index 8, reward account
-            ExtraAccountMeta::new_with_seeds(
-                &[Seed::Literal {
-                    bytes: RewardAccount::SEED.to_vec(),
-                }],
+            ExtraAccountMeta::new_with_pubkey(
+                &REWARD_ACCOUNT_ADDRESS,
                 false, // is_signer
                 true,  // is_writable
             )?,

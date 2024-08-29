@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{common::*, constants::*, reward::*};
+use crate::{constants::*, reward::*};
 
 #[derive(Accounts)]
 pub struct RewardInitialize<'info> {
@@ -8,11 +8,8 @@ pub struct RewardInitialize<'info> {
     pub admin: Signer<'info>,
 
     #[account(
-        init_if_needed,
-        payer = admin,
-        seeds = [RewardAccount::SEED],
-        bump,
-        space = 8 + RewardAccount::INIT_SPACE,
+        zero,
+        address = REWARD_ACCOUNT_ADDRESS,
     )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
@@ -21,9 +18,7 @@ pub struct RewardInitialize<'info> {
 
 impl<'info> RewardInitialize<'info> {
     pub fn initialize_reward(ctx: Context<RewardInitialize>) -> Result<()> {
-        ctx.accounts
-            .reward_account
-            .initialize_if_needed(ctx.bumps.reward_account);
+        ctx.accounts.reward_account.initialize_if_needed();
 
         Ok(())
     }

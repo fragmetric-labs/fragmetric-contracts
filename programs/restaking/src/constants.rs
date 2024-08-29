@@ -4,6 +4,8 @@ use anchor_lang::prelude::*;
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("91zBeWL8kHBaMtaVrHwWsck1UacDKvje82QQ3HE2k8mJ");
 #[constant]
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGsJAbW4cHk2DYhtAWohV6MUMauJHCFtT1vGvRwnXN");
+#[constant]
+pub const REWARD_ACCOUNT_ADDRESS: Pubkey = pubkey!("Drdh99fsnAi36iA4DrKxfYq2h5QL3FymDrZ6iBcSCdPF");
 
 pub const RECEIPT_TOKEN_LOCK_ACCOUNT_SEED: &[u8] = b"receipt_token_lock_account";
 pub const FUND_SUPPORTED_TOKEN_ACCOUNT_SEED: &[u8] = b"fund_supported_token_account";

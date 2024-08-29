@@ -1,17 +1,13 @@
 use anchor_lang::prelude::*;
 
-use crate::{common::*, constants::*, reward::*};
+use crate::{constants::*, reward::*};
 
 #[derive(Accounts)]
 pub struct RewardAddHolder<'info> {
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [RewardAccount::SEED],
-        bump = reward_account.bump,
-    )]
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 }
 
