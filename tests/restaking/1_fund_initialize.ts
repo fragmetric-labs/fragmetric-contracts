@@ -2,6 +2,8 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import type { TokenMetadata } from "@solana/spl-token-metadata";
+import { createInitializeInstruction, createUpdateFieldInstruction, pack } from "@solana/spl-token-metadata";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
@@ -46,6 +48,8 @@ export const fund_initialize = describe("fund_initialize", () => {
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
     console.log(`Payer(user1.json) key: ${payer.publicKey}`);
 
+    let receiptTokenMintMetadata: TokenMetadata;
+
     // Localnet
     before("Sol airdrop to payer", async () => {
         if (utils.isLocalnet(program.provider.connection)) {
@@ -71,6 +75,14 @@ export const fund_initialize = describe("fund_initialize", () => {
 
     before("Prepare program accounts", async () => {
         receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
+        receiptTokenMintMetadata = {
+            mint: receiptTokenMint.publicKey,
+            name: "fragSOL",
+            symbol: "FRAGSOL",
+            uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmdTSAPXn8dT2mnS2rxMouedauhjzJeYA74Hmez5P3ZEgE",
+            additionalMetadata: [["description", "Fragmetric Liquid Restaking Token"]],
+            updateAuthority: mintOwner.publicKey,
+        };
         [receipt_token_lock_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
             [Buffer.from("receipt_token_lock_authority"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
@@ -118,6 +130,18 @@ export const fund_initialize = describe("fund_initialize", () => {
         console.log("======= Prepare program accounts =======");
     });
 
+    // NEED ONLY ONCE AT OFF-CHAIN
+    it.skip("Make fragSOL token metadata file - needed only once", async () => {
+        const receiptTokenMintMetadataJson = {
+            name: receiptTokenMintMetadata.name,
+            symbol: receiptTokenMintMetadata.symbol,
+            description: receiptTokenMintMetadata.additionalMetadata[0][1],
+            image: "https://quicknode.quicknode-ipfs.com/ipfs/QmayYcry2mJGHmcYMn1mqiqxR9kkQXtE3uBEzR9y84vQVL",
+            // attributes: [],
+        };
+        fs.writeFileSync("./tests/restaking/fragSOLMetadata.json", JSON.stringify(receiptTokenMintMetadataJson, null, 0));
+    });
+
     // Localnet only: Already created in devnet
     it("Create receipt token mint with Transfer Hook extension", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
@@ -126,10 +150,13 @@ export const fund_initialize = describe("fund_initialize", () => {
 
         // generate keypair to use as address for the transfer-hook enabled mint account
         const decimals = 9;
-    
-        const extensions = [spl.ExtensionType.TransferHook];
+
+        const metadataSize = pack(receiptTokenMintMetadata).length;
+
+        const extensions = [spl.ExtensionType.TransferHook, spl.ExtensionType.MetadataPointer];
         const mintLen = spl.getMintLen(extensions);
-        const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(mintLen);
+        const metadataExtensionLen = spl.TYPE_SIZE + spl.LENGTH_SIZE;
+        const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(mintLen + metadataExtensionLen + metadataSize);
 
         const mintTx = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.createAccount({
@@ -141,17 +168,40 @@ export const fund_initialize = describe("fund_initialize", () => {
             }),
             spl.createInitializeTransferHookInstruction(
                 receiptTokenMint.publicKey,
-                receipt_token_mint_authority_pda,
+                mintOwner.publicKey,
                 program.programId,
                 TOKEN_2022_PROGRAM_ID,
+            ),
+            spl.createInitializeMetadataPointerInstruction(
+                receiptTokenMint.publicKey,
+                mintOwner.publicKey,
+                receiptTokenMint.publicKey,
+                spl.TOKEN_2022_PROGRAM_ID,
             ),
             spl.createInitializeMintInstruction(
                 receiptTokenMint.publicKey,
                 decimals,
-                receipt_token_mint_authority_pda,
                 mintOwner.publicKey,
-                TOKEN_2022_PROGRAM_ID,
+                null, // TODO: freeze authority to be null
+                spl.TOKEN_2022_PROGRAM_ID,
             ),
+            createInitializeInstruction({
+                programId: spl.TOKEN_2022_PROGRAM_ID,
+                mint: receiptTokenMint.publicKey,
+                metadata: receiptTokenMint.publicKey,
+                name: receiptTokenMintMetadata.name,
+                symbol: receiptTokenMintMetadata.symbol,
+                uri: receiptTokenMintMetadata.uri,
+                mintAuthority: mintOwner.publicKey, // receipt_token_mint_authority_pda -> need signature
+                updateAuthority: receiptTokenMintMetadata.updateAuthority,
+            }),
+            createUpdateFieldInstruction({
+                programId: spl.TOKEN_2022_PROGRAM_ID,
+                metadata: receiptTokenMint.publicKey,
+                updateAuthority: receiptTokenMintMetadata.updateAuthority,
+                field: receiptTokenMintMetadata.additionalMetadata[0][0],
+                value: receiptTokenMintMetadata.additionalMetadata[0][1],
+            }),
         );
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
@@ -161,8 +211,7 @@ export const fund_initialize = describe("fund_initialize", () => {
 
         const receiptTokenMintAccount = await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
         expect(receiptTokenMintAccount.address.toString()).to.equal(receiptTokenMint.publicKey.toString());
-        expect(receiptTokenMintAccount.mintAuthority.toString()).to.equal(receipt_token_mint_authority_pda.toString());
-        expect(receiptTokenMintAccount.freezeAuthority.toString()).to.equal(mintOwner.publicKey.toString());
+        // expect(receiptTokenMintAccount.freezeAuthority.toString()).to.equal(mintOwner.publicKey.toString());
     });
 
     // Devnet only
@@ -223,7 +272,7 @@ export const fund_initialize = describe("fund_initialize", () => {
     });
 
     // Localnet only
-    it("Initialize fund and fundTokenAuthority", async function () {
+    it("Initialize fund, extraAccountMetaList and mint authority", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
             this.skip();
         }
@@ -333,6 +382,12 @@ export const fund_initialize = describe("fund_initialize", () => {
                 })
                 .signers([])
                 .instruction(),
+            // set receipt token mint authority to pda
+            await program.methods
+                .tokenSetReceiptTokenMintAuthority()
+                .accounts({})
+                .signers([])
+                .instruction(),
             // initialize extra account meta list
             await program.methods
                 .tokenInitializeExtraAccountMetaList()
@@ -361,6 +416,9 @@ export const fund_initialize = describe("fund_initialize", () => {
         expect(tokensInitialized[1].mint.toString()).to.eq(mSOLMint.address.toString());
         expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
+
+        const receiptTokenMintAccount = await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
+        expect(receiptTokenMintAccount.mintAuthority.toString()).to.equal(receipt_token_mint_authority_pda.toString());
     });
 
     // Devnet only

@@ -124,6 +124,12 @@ pub mod restaking {
         OperatorRun::operator_run(ctx)
     }
 
+    pub fn token_set_receipt_token_mint_authority(
+        ctx: Context<TokenSetReceiptTokenMintAuthority>,
+    ) -> Result<()> {
+        TokenSetReceiptTokenMintAuthority::set_receipt_token_mint_authority(ctx)
+    }
+
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn token_initialize_extra_account_meta_list(
         ctx: Context<TokenInitializeExtraAccountMetaList>,
