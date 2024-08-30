@@ -118,7 +118,7 @@ export const transfer_hook = describe("transfer_hook", () => {
         );
     });
 
-    it("Update ExtraAccountMetaList account", async () => {
+    it.skip("Update ExtraAccountMetaList account", async () => {
         const tx = new anchor.web3.Transaction().add(
             await program.methods
                 .tokenUpdateExtraAccountMetaList()

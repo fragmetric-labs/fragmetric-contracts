@@ -55,7 +55,12 @@ export const deposit_sol = describe("deposit_sol", () => {
         }
     });
 
-    it("Deposit SOL with no metadata", async () => {
+    // Localnet test
+    it("Deposit SOL with no metadata", async function () {
+        if (!utils.isLocalnet(program.provider.connection)) {
+            this.skip();
+        }
+
         let amount = new anchor.BN(1_000_000_000);
 
         const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
@@ -111,7 +116,12 @@ export const deposit_sol = describe("deposit_sol", () => {
         }
     });
 
-    it("Deposit SOL with metadata - should pass signature verification", async () => {
+    // Localnet test
+    it("Deposit SOL with metadata - should pass signature verification", async function () {
+        if (!utils.isLocalnet(program.provider.connection)) {
+            this.skip();
+        }
+
         let amount = new anchor.BN(1_000_000_000);
 
         const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
