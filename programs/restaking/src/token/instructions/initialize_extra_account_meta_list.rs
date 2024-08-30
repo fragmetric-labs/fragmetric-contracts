@@ -153,6 +153,13 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                 false,
                 false,
             )?,
+            ExtraAccountMeta::new_with_seeds(
+                &[Seed::Literal {
+                    bytes: PAYER_ACCOUNT_SEED.to_vec(),
+                }],
+                false, // is_signer
+                true,  // is_writable
+            )?,
         ];
 
         Ok(extra_account_metas)

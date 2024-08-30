@@ -5,7 +5,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, fund::*, reward::*, utils::InitIfNeededByUser};
+use crate::{common::*, constants::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct FundInitializeUserAccounts<'info> {
@@ -21,8 +21,6 @@ pub struct FundInitializeUserAccounts<'info> {
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
         bump,
         space = 8 + UserReceipt::INIT_SPACE,
-        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
-        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
     )]
     pub user_receipt: Box<Account<'info, UserReceipt>>,
 
@@ -35,14 +33,14 @@ pub struct FundInitializeUserAccounts<'info> {
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
-    /// CHECK: will create at initialize
     #[account(
-        mut,
+        init_if_needed,
+        payer = user,
         seeds = [UserRewardAccount::SEED, user.key().as_ref()],
         bump,
-        // constraint = user_reward_account.data_version == 0 || user_reward_account.user == user.key(),
+        space = 8 + UserRewardAccount::INIT_SPACE,
     )]
-    pub user_reward_account: UncheckedAccount<'info>,
+    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -50,34 +48,15 @@ pub struct FundInitializeUserAccounts<'info> {
 }
 
 impl<'info> FundInitializeUserAccounts<'info> {
-    pub fn initialize(ctx: Context<Self>) -> Result<()> {
-        msg!(
-            "user: {}, user_reward_account: {}",
-            ctx.accounts.user.key(),
-            ctx.accounts.user_reward_account.key()
-        );
-
-        // Custom deserialize
-        let mut user_reward_account = ctx
-            .accounts
-            .user_reward_account
-            .init_if_needed_by_user::<UserRewardAccount>(
-                "user_reward_account",
-                AsRef::as_ref(&ctx.accounts.user),
-                8 + UserRewardAccount::INIT_SPACE,
-                &ctx.accounts.system_program,
-            )?;
-        if user_reward_account.data_version != 0 {
-            require_eq!(user_reward_account.bump, ctx.bumps.user_reward_account);
-        }
-
+    pub fn initialize_user_accounts(ctx: Context<Self>) -> Result<()> {
         // Initialize
         ctx.accounts.user_receipt.initialize_if_needed(
             ctx.bumps.user_receipt,
             ctx.accounts.user.key(),
             ctx.accounts.receipt_token_mint.key(),
         );
-        user_reward_account
+        ctx.accounts
+            .user_reward_account
             .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
 
         Ok(())

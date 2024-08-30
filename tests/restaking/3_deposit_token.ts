@@ -189,7 +189,7 @@ export const deposit_token = describe("deposit_token", () => {
             .accounts({
                 user: user.publicKey,
                 supportedTokenMint: restaking.tokenMint1,
-                userTokenAccount: userToken1Account.address,
+                userSupportedTokenAccount: userToken1Account.address,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" });
@@ -213,7 +213,7 @@ export const deposit_token = describe("deposit_token", () => {
             .accounts({
                 user: user.publicKey,
                 supportedTokenMint: restaking.bSOLMint.address,
-                userTokenAccount: userBSOLTokenAccount.address,
+                userSupportedTokenAccount: userBSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
@@ -233,7 +233,7 @@ export const deposit_token = describe("deposit_token", () => {
             .accounts({
                 user: user.publicKey,
                 supportedTokenMint: restaking.mSOLMint.address,
-                userTokenAccount: userMSOLTokenAccount.address,
+                userSupportedTokenAccount: userMSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
             })
@@ -302,7 +302,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .accounts({
                     user: user.publicKey,
                     supportedTokenMint: restaking.tokenMint1,
-                    userTokenAccount: userToken1Account.address,
+                    userSupportedTokenAccount: userToken1Account.address,
                 })
                 .signers([user])
                 .rpc()
@@ -345,7 +345,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .accounts({
                     user: user.publicKey,
                     supportedTokenMint: restaking.bSOLMint.address,
-                    userTokenAccount: userBSOLTokenAccount.address,
+                    userSupportedTokenAccount: userBSOLTokenAccount.address,
                 })
                 .signers([user])
                 .rpc()
@@ -388,8 +388,9 @@ export const deposit_token = describe("deposit_token", () => {
             contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[3].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[3].name, encodedData);
+        let metadataType = program.idl.types.find(v => v.name == "metadata");
+        let encodedData = programBorshCoder.types.encode(metadataType.name, payload);
+        let decodedData = programBorshCoder.types.decode(metadataType.name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
@@ -408,7 +409,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .accounts({
                     user: user.publicKey,
                     supportedTokenMint: restaking.bSOLMint.address,
-                    userTokenAccount: userBSOLTokenAccount.address,
+                    userSupportedTokenAccount: userBSOLTokenAccount.address,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
                 })

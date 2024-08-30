@@ -4,6 +4,8 @@ use super::{system_program::*, CustomAccount};
 
 /// Initialize the program account if needed, paid by PDA.
 /// This trait is to customize anchor framework to utilize initialization with PDA as a payer.
+/// Payer PDA must be owned by system program.
+/// Therefore it is recommended to create a dedicated PDA for this operation.
 pub(crate) trait InitIfNeededByPDA<'info> {
     /// Initialize the program account if needed, paid by PDA.
     /// This trait behaves like `init_if_needed` anchor macro.
@@ -13,7 +15,7 @@ pub(crate) trait InitIfNeededByPDA<'info> {
         payer_pda: &AccountInfo<'info>,
         payer_pda_signer_seeds: &[&[&[u8]]],
         minimum_space: usize,
-        signer_seeds: Option<&[&[&[u8]]]>,
+        new_account_signer_seeds: Option<&[&[&[u8]]]>,
         system_program: &Program<'info, System>,
     ) -> Result<CustomAccount<'_, 'info, T>>;
 }
@@ -26,7 +28,7 @@ impl<'info> InitIfNeededByPDA<'info> for UncheckedAccount<'info> {
         payer_pda: &AccountInfo<'info>,
         payer_pda_signer_seeds: &[&[&[u8]]],
         minimum_space: usize,
-        signer_seeds: Option<&[&[&[u8]]]>,
+        new_account_signer_seeds: Option<&[&[&[u8]]]>,
         system_program: &Program<'info, System>,
     ) -> Result<CustomAccount<'_, 'info, T>> {
         let rent = Rent::get()?;
@@ -35,12 +37,14 @@ impl<'info> InitIfNeededByPDA<'info> for UncheckedAccount<'info> {
             let current_lamports = self.lamports();
             if current_lamports == 0 {
                 let lamports = rent.minimum_balance(minimum_space);
-                system_program.create_program_account(
+                system_program.create_account(
                     payer_pda,
+                    Some(payer_pda_signer_seeds),
                     self,
+                    new_account_signer_seeds,
                     minimum_space as u64,
                     lamports,
-                    signer_seeds,
+                    &crate::ID,
                 )?;
             } else {
                 require_keys_neq!(
@@ -55,13 +59,13 @@ impl<'info> InitIfNeededByPDA<'info> for UncheckedAccount<'info> {
                 if required_lamports > 0 {
                     system_program.transfer(
                         payer_pda,
+                        Some(payer_pda_signer_seeds),
                         self,
                         required_lamports,
-                        Some(payer_pda_signer_seeds),
                     )?;
                 }
-                system_program.allocate(self, minimum_space as u64, signer_seeds)?;
-                system_program.assign_to_program(self, signer_seeds)?;
+                system_program.allocate(self, new_account_signer_seeds, minimum_space as u64)?;
+                system_program.assign(self, new_account_signer_seeds, &crate::ID)?;
             }
             CustomAccount::try_from_unchecked(self)
                 .map_err(|e| e.with_account_name(account_name))?

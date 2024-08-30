@@ -200,6 +200,17 @@ pub mod restaking {
         RewardUpdateUserRewardPools::update_user_reward_pools(ctx)
     }
 
+    pub fn token_initialize_payer_account(ctx: Context<TokenInitializePayerAccount>) -> Result<()> {
+        TokenInitializePayerAccount::initialize_payer_account(ctx)
+    }
+
+    pub fn token_add_payer_account_lamports(
+        ctx: Context<TokenInitializePayerAccount>,
+        amount: u64,
+    ) -> Result<()> {
+        TokenInitializePayerAccount::add_payer_account_lamports(ctx, amount)
+    }
+
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn token_initialize_extra_account_meta_list(
         ctx: Context<TokenInitializeExtraAccountMetaList>,

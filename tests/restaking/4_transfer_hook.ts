@@ -68,22 +68,37 @@ export const transfer_hook = describe("transfer_hook", () => {
 
     before("Deposit SOL to mint receipt token", async () => {
         let amount = new anchor.BN(1_000_000_000);
-        await program.methods
-            .fundDepositSol(amount, null)
-            .accounts({
-                user: user2.publicKey,
-                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            })
-            .signers([user2])
-            .rpc({ commitment: "confirmed" });
-        await program.methods
-            .fundDepositSol(amount, null)
-            .accounts({
-                user: user3.publicKey,
-                // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-            })
-            .signers([user3])
-            .rpc({ commitment: "confirmed" });
+        
+        const depositSolTx = new anchor.web3.Transaction().add(
+            await program.methods
+                .fundInitializeUserAccounts()
+                .accounts({
+                    user: user2.publicKey,
+                })
+                .instruction(),
+            await program.methods
+                .fundDepositSol(amount, null)
+                .accounts({
+                    user: user2.publicKey,
+                })
+                .instruction(),
+        );
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            depositSolTx,
+            [user2],
+            { commitment: "confirmed" },
+        );
+
+        await spl.createAccount(
+            program.provider.connection,
+            payer,
+            restaking.receiptTokenMint.publicKey,
+            user3.publicKey,
+            null,
+            null,
+            TOKEN_2022_PROGRAM_ID,
+        );
 
         const user2ReceiptTokenBalance = (await spl.getAccount(
             program.provider.connection,

@@ -48,6 +48,7 @@ pub struct TokenTransferHook<'info> {
     pub fund: Box<Account<'info, Fund>>,
 
     #[account(
+        mut,
         seeds = [UserReceipt::SEED, source_token_account.owner.as_ref(), receipt_token_mint.key().as_ref()],
         bump,
     )]
@@ -82,11 +83,20 @@ pub struct TokenTransferHook<'info> {
     pub destination_user_reward_account: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
+
+    #[account(
+        mut,
+        seeds = [PAYER_ACCOUNT_SEED],
+        bump,
+        owner = anchor_lang::solana_program::system_program::ID,
+    )]
+    /// CHECK: empty
+    pub payer_account: UncheckedAccount<'info>,
 }
 
 impl<'info> TokenTransferHook<'info> {
     pub fn transfer_hook(ctx: Context<Self>, amount: u64) -> Result<()> {
-        let fund = &*ctx.accounts.fund;
+        let payer_account = &ctx.accounts.payer_account;
         let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
         let source_token_account_owner = ctx.accounts.source_token_account.owner;
         let destination_token_account_owner = ctx.accounts.destination_token_account.owner;
@@ -98,8 +108,8 @@ impl<'info> TokenTransferHook<'info> {
             .source_user_receipt
             .init_if_needed_by_pda::<UserReceipt>(
                 "source_user_receipt",
-                AsRef::as_ref(fund),
-                &[fund.signer_seeds().as_ref()],
+                AsRef::as_ref(payer_account),
+                &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
                 8 + UserReceipt::INIT_SPACE,
                 Some(&[&[
                     UserReceipt::SEED,
@@ -120,8 +130,8 @@ impl<'info> TokenTransferHook<'info> {
             .destination_user_receipt
             .init_if_needed_by_pda::<UserReceipt>(
                 "destination_user_receipt",
-                AsRef::as_ref(fund),
-                &[fund.signer_seeds().as_ref()],
+                AsRef::as_ref(payer_account),
+                &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
                 8 + UserReceipt::INIT_SPACE,
                 Some(&[&[
                     UserReceipt::SEED,
@@ -151,8 +161,8 @@ impl<'info> TokenTransferHook<'info> {
             .source_user_reward_account
             .init_if_needed_by_pda::<UserRewardAccount>(
             "source_user_reward_account",
-            AsRef::as_ref(fund),
-            &[fund.signer_seeds().as_ref()],
+            AsRef::as_ref(payer_account),
+            &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
             8 + UserRewardAccount::INIT_SPACE,
             Some(&[&[
                 UserRewardAccount::SEED,
@@ -174,8 +184,8 @@ impl<'info> TokenTransferHook<'info> {
             .destination_user_reward_account
             .init_if_needed_by_pda::<UserRewardAccount>(
             "destination_user_reward_account",
-            AsRef::as_ref(fund),
-            &[fund.signer_seeds().as_ref()],
+            AsRef::as_ref(payer_account),
+            &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
             8 + UserRewardAccount::INIT_SPACE,
             Some(&[&[
                 UserRewardAccount::SEED,

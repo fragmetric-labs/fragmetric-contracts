@@ -41,7 +41,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         const updatePriceTx = await program.methods
             .fundUpdatePrice()
             .accounts({
-                payer: admin.publicKey,
+                user: admin.publicKey,
             })
             .rpc({commitment: "confirmed"});
 
@@ -118,7 +118,7 @@ export const deposit_sol = describe("deposit_sol", () => {
             undefined,
             TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress);
+        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
         console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
 
         // parse event
@@ -128,9 +128,12 @@ export const deposit_sol = describe("deposit_sol", () => {
         for (const event of events) {
             expect(event.data.walletProvider).to.be.null;
             expect(event.data.contributionAccrualRate).to.be.null;
+            expect(event.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+                userReceiptTokenAccount.amount.toString()
+            )
             console.log(`Wallet provider: ${event.data.walletProvider}`);
             console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-            console.log(`user receipt:`, event.data.userReceipt);
+            console.log(`receipt token balance:`, event.data.userReceipt.receiptTokenAmount.toNumber());
         }
     });
 
@@ -145,8 +148,9 @@ export const deposit_sol = describe("deposit_sol", () => {
             contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[3].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[3].name, encodedData);
+        let metadataType = program.idl.types.find(v => v.name == "metadata");
+        let encodedData = programBorshCoder.types.encode(metadataType.name, payload);
+        let decodedData = programBorshCoder.types.decode(metadataType.name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
@@ -202,7 +206,7 @@ export const deposit_sol = describe("deposit_sol", () => {
             undefined,
             TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress);
+        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
         console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
 
         // parse event
@@ -214,8 +218,12 @@ export const deposit_sol = describe("deposit_sol", () => {
             expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
             expect(event.data.walletProvider).to.equal(payload.walletProvider);
             expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
+            expect(event.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+                userReceiptTokenAccount.amount.toString()
+            )
             console.log(`Wallet provider: ${event.data.walletProvider}`);
             console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
+            console.log(`receipt token balance:`, event.data.userReceipt.receiptTokenAmount.toNumber());
         }
     });
 });

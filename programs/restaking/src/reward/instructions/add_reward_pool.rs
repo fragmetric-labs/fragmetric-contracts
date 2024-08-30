@@ -22,7 +22,7 @@ impl<'info> RewardAddRewardPool<'info> {
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
         // Verify
-        require_gte!(name.len(), 20);
+        require_gte!(16, name.len());
         if let Some(id) = holder_id {
             require_gt!(ctx.accounts.reward_account.holders.len(), id as usize);
         }

@@ -246,110 +246,160 @@ export const initialize = describe("initialize everything", () => {
             }
         };
 
+        const rewardName = "FPoint";
+        const rewardDescription = "FPoint is good";
+        const rewardType = "point";
+
         const batchProcessingThresholdAmount = new anchor.BN(0);
         const batchProcessingThresholdDuration = new anchor.BN(0);
-
-        const txs = new anchor.web3.Transaction().add(
-            // initializes
-            await program.account.rewardAccount.createInstruction(
-                rewardAccount,
-                1_048_576,
-            ),
-            await program.methods
-                .fundInitialize()
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateSolCapacityAmount(solCap)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateSolWithdrawalFeeRate(solWithdrawalFeeRate)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateWithdrawalEnabledFlag(true)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateBatchProcessingThreshold(
-                    batchProcessingThresholdAmount,
-                    batchProcessingThresholdDuration
-                )
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
+        
+        // initializes
+        const initializeFundIx = await program.methods
+            .fundInitialize()
+            .instruction();
+        const updateSolCapacityAmountIx = await program.methods
+            .fundUpdateSolCapacityAmount(solCap)
+            .instruction();
+        const updateSolWithdrawalFeeRateIx = await program.methods
+            .fundUpdateSolWithdrawalFeeRate(solWithdrawalFeeRate)
+            .instruction();
+        const updateWithdrawalEnabledFlagIx = await program.methods
+            .fundUpdateWithdrawalEnabledFlag(true)
+            .instruction();
+        const updateBatchProcessingThresholdIx = await program.methods
+            .fundUpdateBatchProcessingThreshold(
+                batchProcessingThresholdAmount,
+                batchProcessingThresholdDuration,
+            )
+            .instruction();
+        const initializeSupportedTokenIx = async (
+            supportedTokenMint: anchor.web3.PublicKey,
+            tokenProgram: anchor.web3.PublicKey
+        ) => {
+            return await program.methods
                 .fundInitializeSupportedToken()
                 .accounts({
-                    supportedTokenMint: bSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                    supportedTokenMint,
+                    tokenProgram,
                 })
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundInitializeSupportedToken()
-                .accounts({
-                    supportedTokenMint: mSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundInitializeSupportedToken()
-                .accounts({
-                    supportedTokenMint: jitoSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([])
-                .instruction(),
-            // await program.methods
-            //     .fundInitializeToken()
-            //     .accounts({
-            //         supportedTokenMint: infMint.address,
-            //         tokenProgram: spl.TOKEN_PROGRAM_ID,
-            //     })
-            //     .signers([])
-            //     .instruction(),
-            await program.methods
+                .instruction();
+        };
+        const addSupportedTokenIx = async(
+            supportedTokenMint: anchor.web3.PublicKey,
+            tokenProgram: anchor.web3.PublicKey,
+            capacityAmount: anchor.BN,
+            pricingSource,
+        ) => {
+            return await program.methods
                 .fundAddSupportedToken(
-                    tokenCap1,
-                    tokenPricingSource1,
+                    capacityAmount,
+                    pricingSource,
                 )
                 .accounts({
-                    supportedTokenMint: bSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                    supportedTokenMint,
+                    tokenProgram,
                 })
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
+                .instruction();
+        };
+        const createRewardAccountIx = await program.account
+            .rewardAccount
+            .createInstruction(
+                rewardAccount,
+                2097152,
+            );
+        const initializeRewardIx = await program.methods
+            .rewardInitialize()
+            .instruction();
+        const addRewardIx = async (
+            rewardName: string,
+            rewardDescription: string,
+            rewardType: string,
+            rewardTokenMint?: anchor.web3.PublicKey,
+        ) => {
+            if (rewardTokenMint == null) {
+                rewardTokenMint = program.programId;
+            }
+            return await program.methods
+                .rewardAddReward(
+                    rewardName,
+                    rewardDescription,
+                    rewardType,
+                )
                 .accounts({
-                    supportedTokenMint: mSOLMint.address,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
+                    rewardTokenMint,
                 })
-                .signers([])
-                .instruction(),
-            // initialize extra account meta list
-            await program.methods
-                .tokenInitializeExtraAccountMetaList()
+                .instruction();
+        };
+        const addRewardPoolIx = async (
+            name: string,
+            customContributionAccrualRateEnabled: boolean,
+            tokenMint: anchor.web3.PublicKey,
+        ) => {
+            return await program.methods
+                .rewardAddRewardPool(
+                    name,
+                    null,
+                    customContributionAccrualRateEnabled,
+                )
                 .accounts({
-                    payer: mintOwner.publicKey,
+                    tokenMint: tokenMint,
                 })
-                .signers([mintOwner.payer])
-                .instruction(),
-            await program.methods
-                .rewardInitialize()
-                .instruction(),
+                .instruction();
+        };
+        const initializeExtraAccountMetaListIx = await program.methods
+            .tokenInitializeExtraAccountMetaList()
+            .accounts({
+                payer: admin.publicKey,
+            })
+            .instruction();
+        const initializePayerAccountIx = await program.methods
+            .tokenInitializePayerAccount()
+            .instruction();
+        const addPayerAccountLamportsIx = await program.methods
+            .tokenAddPayerAccountLamports(new anchor.BN(10_000_000_000))
+            .instruction();
+
+        const tx1 = new anchor.web3.Transaction().add(
+            initializeFundIx,
+            updateSolCapacityAmountIx,
+            updateSolWithdrawalFeeRateIx,
+            updateWithdrawalEnabledFlagIx,
+            updateBatchProcessingThresholdIx,
+            await initializeSupportedTokenIx(bSOLMint.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(mSOLMint.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(jitoSOLMint.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(infMint.address, spl.TOKEN_PROGRAM_ID),
+            await addSupportedTokenIx(bSOLMint.address, spl.TOKEN_PROGRAM_ID, tokenCap1, tokenPricingSource1),
+            await addSupportedTokenIx(mSOLMint.address, spl.TOKEN_PROGRAM_ID, tokenCap2, tokenPricingSource2),
         );
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
-            txs,
+            tx1,
+            [admin.payer],
+        );
+
+        const tx2 = new anchor.web3.Transaction().add(
+            createRewardAccountIx,
+            initializeRewardIx,
+            await addRewardIx(rewardName, rewardDescription, rewardType),
+            await addRewardPoolIx("fragmetricBase", false, receiptTokenMint.publicKey),
+            await addRewardPoolIx("fragmetricBonus", true, receiptTokenMint.publicKey),
+        )
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            tx2,
             [admin.payer, rewardAccount],
+        );
+
+        const tx3 = new anchor.web3.Transaction().add(
+            initializeExtraAccountMetaListIx,
+            initializePayerAccountIx,
+            addPayerAccountLamportsIx,
+        );
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            tx3,
+            [admin.payer],
         );
 
         // check fund initialized correctly
@@ -364,6 +414,10 @@ export const initialize = describe("initialize everything", () => {
         expect(tokensInitialized[1].mint.toString()).to.eq(mSOLMint.address.toString());
         expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
+
+        const rewardInitialized = await program.account.rewardAccount.fetch(rewardAccount.publicKey);
+        
+        expect(rewardInitialized.dataVersion).to.equal(1);
     });
 
     // Devnet only
