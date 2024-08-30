@@ -17,6 +17,13 @@ impl<'info> RewardCloseRewardPool<'info> {
         ctx.accounts
             .reward_account
             .reward_pool_mut(reward_pool_id)?
-            .close(current_slot)
+            .close(current_slot)?;
+
+        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+            &ctx.accounts.reward_account,
+            vec![reward_pool_id],
+        ));
+
+        Ok(())
     }
 }

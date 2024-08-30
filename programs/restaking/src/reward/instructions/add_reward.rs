@@ -35,6 +35,11 @@ impl<'info> RewardAddReward<'info> {
         let reward = Reward::new(name, description, reward_type);
         ctx.accounts.reward_account.add_reward(reward);
 
+        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+            &ctx.accounts.reward_account,
+            vec![]
+        ));
+
         Ok(())
     }
 }

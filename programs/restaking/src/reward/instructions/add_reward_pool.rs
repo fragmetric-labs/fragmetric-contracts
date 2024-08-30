@@ -43,6 +43,11 @@ impl<'info> RewardAddRewardPool<'info> {
         );
         ctx.accounts.reward_account.add_reward_pool(reward_pool);
 
+        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+            &ctx.accounts.reward_account,
+            vec![ctx.accounts.reward_account.reward_pools.len() as u8 - 1]
+        ));
+
         Ok(())
     }
 }

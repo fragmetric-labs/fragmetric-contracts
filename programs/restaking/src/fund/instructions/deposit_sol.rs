@@ -92,7 +92,7 @@ impl<'info> FundDepositSOL<'info> {
                     ed25519_ix.verify(&ADMIN_PUBKEY.to_bytes(), payload.as_slice())?;
                 }
                 None => {
-                    msg!("Error: Instruction sysvar not provided");
+                    // msg!("Error: Instruction sysvar not provided");
                     err!(ErrorCode::SigVerificationFailed)?;
                 }
             }
@@ -196,7 +196,8 @@ impl<'info> FundDepositSOL<'info> {
         let contribution_accrual_rate =
             contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
-        ctx.accounts
+        let (from_user_update, to_user_update) = ctx
+            .accounts
             .reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
@@ -205,6 +206,13 @@ impl<'info> FundDepositSOL<'info> {
                 None,
                 Some(&mut ctx.accounts.user_reward_account),
                 current_slot,
-            )
+            )?;
+
+        emit!(UserUpdatedRewardPool::new_from_updates(
+            from_user_update,
+            to_user_update
+        ));
+
+        Ok(())
     }
 }

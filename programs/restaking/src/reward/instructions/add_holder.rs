@@ -26,6 +26,11 @@ impl<'info> RewardAddHolder<'info> {
         let holder = Holder::new(name, description, pubkeys);
         ctx.accounts.reward_account.add_holder(holder);
 
+        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+            &ctx.accounts.reward_account,
+            vec![]
+        ));
+
         Ok(())
     }
 }

@@ -269,14 +269,22 @@ impl<'info> TokenTransferHook<'info> {
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
 
-        reward_account.update_reward_pools_token_allocation(
-            receipt_token_mint,
-            amount,
-            None,
-            Some(source_user_reward_account),
-            Some(destination_user_reward_account),
-            current_slot,
-        )
+        let (from_user_update, to_user_update) = reward_account
+            .update_reward_pools_token_allocation(
+                receipt_token_mint,
+                amount,
+                None,
+                Some(source_user_reward_account),
+                Some(destination_user_reward_account),
+                current_slot,
+            )?;
+
+        emit!(UserUpdatedRewardPool::new_from_updates(
+            from_user_update,
+            to_user_update
+        ));
+
+        Ok(())
     }
 
     fn check_token_transferring(ctx: &Context<Self>) -> Result<()> {

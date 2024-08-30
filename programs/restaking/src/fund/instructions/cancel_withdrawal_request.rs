@@ -149,7 +149,8 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
 
     fn call_transfer_hook(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        ctx.accounts
+        let (from_user_update, to_user_update) = ctx
+            .accounts
             .reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
@@ -158,6 +159,13 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
                 None,
                 Some(&mut ctx.accounts.user_reward_account),
                 current_slot,
-            )
+            )?;
+
+        emit!(UserUpdatedRewardPool::new_from_updates(
+            from_user_update,
+            to_user_update
+        ));
+
+        Ok(())
     }
 }

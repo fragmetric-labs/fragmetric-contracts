@@ -57,12 +57,20 @@ impl RewardAccount {
         from: Option<&mut UserRewardAccount>,
         to: Option<&mut UserRewardAccount>,
         current_slot: u64,
-    ) -> Result<()> {
+    ) -> Result<(
+        Option<UserRewardAccountUpdatedInfo>,
+        Option<UserRewardAccountUpdatedInfo>,
+    )> {
         if from.is_none() && to.is_none() || to.is_none() && contribution_accrual_rate.is_some() {
             err!(ErrorCode::TokenInvalidTransferArgs)?;
         }
 
+        let mut from_user_update: Option<UserRewardAccountUpdatedInfo> = None;
+        let mut to_user_update: Option<UserRewardAccountUpdatedInfo> = None;
+
         if let Some(from) = from {
+            let mut from_user_updated_reward_pool: Vec<UserRewardPool> = vec![];
+
             // back-fill not existing pools
             from.backfill_not_existing_pools(&self.reward_pools);
             // find "from user" related reward pools
@@ -76,11 +84,19 @@ impl RewardAccount {
 
                 let effective_deltas =
                     user_reward_pool.update(reward_pool, deltas, current_slot)?;
+                from_user_updated_reward_pool.push(user_reward_pool.clone());
                 reward_pool.update(effective_deltas, current_slot)?;
             }
+
+            from_user_update = Some(UserRewardAccountUpdatedInfo::new_from_user_reward_pool(
+                from.user,
+                from_user_updated_reward_pool,
+            ));
         }
 
         if let Some(to) = to {
+            let mut to_user_updated_reward_pool: Vec<UserRewardPool> = vec![];
+
             // back-fill not existing pools
             to.backfill_not_existing_pools(&self.reward_pools);
             // find "to user" related reward pools
@@ -97,11 +113,17 @@ impl RewardAccount {
                 }];
                 let effective_deltas =
                     user_reward_pool.update(reward_pool, deltas, current_slot)?;
+                to_user_updated_reward_pool.push(user_reward_pool.clone());
                 reward_pool.update(effective_deltas, current_slot)?;
             }
+
+            to_user_update = Some(UserRewardAccountUpdatedInfo::new_from_user_reward_pool(
+                to.user,
+                to_user_updated_reward_pool,
+            ));
         }
 
-        Ok(())
+        Ok((from_user_update, to_user_update))
     }
 
     fn get_related_pools(

@@ -221,12 +221,14 @@ export const deposit_token = describe("deposit_token", () => {
             .rpc({commitment: "confirmed"});
         // parse event
         let committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         let events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.walletProvider).to.be.null;
-            expect(event.data.contributionAccrualRate).to.be.null;
-        }
+        let rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        let depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.be.null;
+        expect(depositEvent.data.contributionAccrualRate).to.be.null;
     
         txSig = await program.methods
             .fundDepositToken(amount, null)
@@ -241,12 +243,14 @@ export const deposit_token = describe("deposit_token", () => {
             .rpc({ commitment: "confirmed" });
         // parse event
         committedTx = await program.provider.connection.getParsedTransaction(txSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.walletProvider).to.be.null;
-            expect(event.data.contributionAccrualRate).to.be.null;
-        }
+        rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.be.null;
+        expect(depositEvent.data.contributionAccrualRate).to.be.null;
     
         // check the price of tokens
         let fundData = await program.account.fund.fetch(restaking.fund_pda);
@@ -429,16 +433,16 @@ export const deposit_token = describe("deposit_token", () => {
 
         // parse event
         const committedTx = await program.provider.connection.getParsedTransaction(depositTokenSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-            expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            expect(event.data.walletProvider).to.equal(payload.walletProvider);
-            expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-        }
+        const rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        const depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.equal(payload.walletProvider);
+        expect(depositEvent.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
+        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
+        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
 
         // check the price of tokens
         let fundData = await program.account.fund.fetch(restaking.fund_pda);

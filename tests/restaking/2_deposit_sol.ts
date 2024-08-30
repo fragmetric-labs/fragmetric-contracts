@@ -123,18 +123,20 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // parse event
         const committedTx = await program.provider.connection.getParsedTransaction(depositSolTxSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.walletProvider).to.be.null;
-            expect(event.data.contributionAccrualRate).to.be.null;
-            expect(event.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
-                userReceiptTokenAccount.amount.toString()
-            )
-            console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-            console.log(`receipt token balance:`, event.data.userReceipt.receiptTokenAmount.toNumber());
-        }
+        const rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        const depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.be.null;
+        expect(depositEvent.data.contributionAccrualRate).to.be.null;
+        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+            userReceiptTokenAccount.amount.toString()
+        )
+        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
+        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
+        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
     });
 
     it("Deposit SOL with metadata - should pass signature verification", async () => {
@@ -211,19 +213,19 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // parse event
         const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-            expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            expect(event.data.walletProvider).to.equal(payload.walletProvider);
-            expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            expect(event.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
-                userReceiptTokenAccount.amount.toString()
-            )
-            console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-            console.log(`receipt token balance:`, event.data.userReceipt.receiptTokenAmount.toNumber());
-        }
+        const rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        const depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.equal(payload.walletProvider);
+        expect(depositEvent.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
+        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+            userReceiptTokenAccount.amount.toString()
+        )
+        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
+        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
+        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
     });
 });

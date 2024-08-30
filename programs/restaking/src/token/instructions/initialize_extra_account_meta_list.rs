@@ -32,11 +32,11 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
 
 impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
-        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
-        msg!(
-            "extra_account_meta_list_key: {:?}",
-            extra_account_meta_list_key
-        );
+        // let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        // msg!(
+        //     "extra_account_meta_list_key: {:?}",
+        //     extra_account_meta_list_key
+        // );
 
         let extra_account_metas = Self::extra_account_metas()?;
 
@@ -50,11 +50,11 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     }
 
     pub fn update_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
-        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
-        msg!(
-            "extra_account_meta_list_key: {:?}",
-            extra_account_meta_list_key
-        );
+        // let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        // msg!(
+        //     "extra_account_meta_list_key: {:?}",
+        //     extra_account_meta_list_key
+        // );
 
         let extra_account_metas = Self::extra_account_metas()?;
 

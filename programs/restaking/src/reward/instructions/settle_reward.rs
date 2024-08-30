@@ -28,6 +28,13 @@ impl<'info> RewardSettle<'info> {
         ctx.accounts
             .reward_account
             .reward_pool_mut(reward_pool_id)?
-            .settle_reward(reward_id, amount, current_slot)
+            .settle_reward(reward_id, amount, current_slot)?;
+
+        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+            &ctx.accounts.reward_account,
+            vec![reward_pool_id],
+        ));
+
+        Ok(())
     }
 }
