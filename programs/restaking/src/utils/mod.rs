@@ -3,11 +3,9 @@ use anchor_lang::prelude::*;
 
 pub(crate) use custom_account::*;
 pub(crate) use init_if_needed_by_pda::*;
-pub(crate) use init_if_needed_by_user::*;
 
 mod custom_account;
 mod init_if_needed_by_pda;
-mod init_if_needed_by_user;
 mod system_program;
 
 /// drops sub-decimal values.

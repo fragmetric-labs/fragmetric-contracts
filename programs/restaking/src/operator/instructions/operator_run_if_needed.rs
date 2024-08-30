@@ -8,7 +8,6 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*, operator::*, tok
 
 #[derive(Accounts)]
 pub struct OperatorRunIfNeeded<'info> {
-    #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(

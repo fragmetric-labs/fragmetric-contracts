@@ -33,7 +33,7 @@ impl PDASignerSeeds<3> for Fund {
 }
 
 impl Fund {
-    pub fn supported_token_position(&self, token: Pubkey) -> Option<usize> {
+    pub fn supported_token_index(&self, token: Pubkey) -> Option<usize> {
         self.supported_tokens
             .iter()
             .position(|info| info.mint == token)

@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
-pub struct FundInitializeToken<'info> {
+pub struct FundInitializeSupportedToken<'info> {
     #[account(mut, address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
@@ -35,8 +35,8 @@ pub struct FundInitializeToken<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> FundInitializeToken<'info> {
-    pub fn initialize(ctx: Context<Self>) -> Result<()> {
+impl<'info> FundInitializeSupportedToken<'info> {
+    pub fn initialize_supported_token(ctx: Context<Self>) -> Result<()> {
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
         let supported_token_mint_key = ctx.accounts.supported_token_mint.key();
 

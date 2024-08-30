@@ -8,7 +8,7 @@ pub struct UserRewardAccount {
     pub data_version: u8,
     pub bump: u8,
     pub user: Pubkey,
-    #[max_len(20)]
+    #[max_len(5)]
     pub user_reward_pools: Vec<UserRewardPool>,
 }
 

@@ -284,7 +284,7 @@ export const initialize = describe("initialize everything", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeToken()
+                .fundInitializeSupportedToken()
                 .accounts({
                     supportedTokenMint: bSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -292,7 +292,7 @@ export const initialize = describe("initialize everything", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeToken()
+                .fundInitializeSupportedToken()
                 .accounts({
                     supportedTokenMint: mSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -300,7 +300,7 @@ export const initialize = describe("initialize everything", () => {
                 .signers([])
                 .instruction(),
             await program.methods
-                .fundInitializeToken()
+                .fundInitializeSupportedToken()
                 .accounts({
                     supportedTokenMint: jitoSOLMint.address,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,

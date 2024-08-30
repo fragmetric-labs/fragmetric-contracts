@@ -9,7 +9,6 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token
 
 #[derive(Accounts)]
 pub struct FundCancelWithdrawalRequest<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(

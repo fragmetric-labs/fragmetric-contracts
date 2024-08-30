@@ -11,15 +11,14 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token
 
 #[derive(Accounts)]
 pub struct FundDepositSOL<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
         mut,
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
-        bump,
-        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
-        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
+        bump = user_receipt.bump,
+        has_one = user,
+        has_one = receipt_token_mint,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -54,8 +53,8 @@ pub struct FundDepositSOL<'info> {
     #[account(
         mut,
         seeds = [UserRewardAccount::SEED, user.key().as_ref()],
-        bump,
-        constraint = user_reward_account.data_version == 0 || user_reward_account.user == user.key(),
+        bump = user_reward_account.bump,
+        has_one = user,
     )]
     pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
 
@@ -102,16 +101,6 @@ impl<'info> FundDepositSOL<'info> {
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
             .unzip();
-
-        // Initialize
-        // ctx.accounts.user_receipt.initialize_if_needed(
-        //     ctx.bumps.user_receipt,
-        //     ctx.accounts.user.key(),
-        //     ctx.accounts.receipt_token_mint.key(),
-        // );
-        // ctx.accounts
-        //     .user_reward_account
-        //     .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
 
         // Verify
         require_gte!(ctx.accounts.user.lamports(), amount);

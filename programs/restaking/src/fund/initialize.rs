@@ -8,32 +8,7 @@ impl Fund {
             self.data_version = 1;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
-            self.supported_tokens = vec![];
-            self.sol_operation_reserved_amount = 0;
             self.withdrawal_status = Default::default();
-        }
-    }
-}
-
-impl WithdrawalStatus {
-    pub(super) fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
-        self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
-    }
-
-    pub(super) fn set_withdrawal_enabled_flag(&mut self, flag: bool) {
-        self.withdrawal_enabled_flag = flag;
-    }
-
-    pub(super) fn set_batch_processing_threshold(
-        &mut self,
-        amount: Option<u64>,
-        duration: Option<i64>,
-    ) {
-        if let Some(amount) = amount {
-            self.batch_processing_threshold_amount = amount;
-        }
-        if let Some(duration) = duration {
-            self.batch_processing_threshold_duration = duration;
         }
     }
 }
@@ -86,7 +61,6 @@ impl UserReceipt {
             self.bump = bump;
             self.user = user;
             self.receipt_token_mint = receipt_token_mint;
-            self.receipt_token_amount = 0;
         }
     }
 }

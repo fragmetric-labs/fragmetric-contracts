@@ -5,7 +5,6 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundWithdraw<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(

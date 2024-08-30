@@ -32,8 +32,10 @@ pub mod restaking {
         FundInitialize::initialize_fund(ctx)
     }
 
-    pub fn fund_initialize_token(ctx: Context<FundInitializeToken>) -> Result<()> {
-        FundInitializeToken::initialize(ctx)
+    pub fn fund_initialize_supported_token(
+        ctx: Context<FundInitializeSupportedToken>,
+    ) -> Result<()> {
+        FundInitializeSupportedToken::initialize_supported_token(ctx)
     }
 
     pub fn fund_update_sol_capacity_amount(
@@ -83,7 +85,7 @@ pub mod restaking {
     }
 
     pub fn fund_initialize_user_accounts(ctx: Context<FundInitializeUserAccounts>) -> Result<()> {
-        FundInitializeUserAccounts::initialize(ctx)
+        FundInitializeUserAccounts::initialize_user_accounts(ctx)
     }
 
     pub fn fund_deposit_sol(

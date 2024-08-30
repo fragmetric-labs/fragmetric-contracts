@@ -302,6 +302,18 @@ impl UserRewardPool {
                     })
                     .transpose()?
                     .unwrap_or_default();
+                // // is equivalent to:
+                // let user_block_settled_amount = if block_contribution > 0 {
+                //     u64::try_from(
+                //         user_block_settled_contribution
+                //             .checked_mul(block.amount as u128)
+                //             .and_then(|x| x.checked_div(block_contribution))
+                //             .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+                //     )
+                //     .map_err(|_| error!(ErrorCode::CalculationFailure))?
+                // } else {
+                //     0
+                // };
 
                 user_reward_settlement.settle_reward(
                     user_block_settled_amount,

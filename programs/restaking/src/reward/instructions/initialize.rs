@@ -4,7 +4,7 @@ use crate::{constants::*, reward::*};
 
 #[derive(Accounts)]
 pub struct RewardInitialize<'info> {
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     #[account(

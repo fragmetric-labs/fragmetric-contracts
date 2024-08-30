@@ -9,7 +9,7 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*, operator::*, tok
 #[derive(Accounts)]
 pub struct OperatorRun<'info> {
     // Only the admin can run the operator manually.
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     #[account(

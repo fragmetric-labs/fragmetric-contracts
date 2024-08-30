@@ -9,7 +9,6 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token
 
 #[derive(Accounts)]
 pub struct FundRequestWithdrawal<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -74,7 +73,6 @@ pub struct FundRequestWithdrawal<'info> {
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundRequestWithdrawal<'info> {

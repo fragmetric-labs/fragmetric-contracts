@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
 pub struct FundAddSupportedToken<'info> {
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     #[account(
@@ -36,9 +36,6 @@ pub struct FundAddSupportedToken<'info> {
         bump,
     )]
     pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
-
-    pub token_program: Interface<'info, TokenInterface>,
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> FundAddSupportedToken<'info> {
