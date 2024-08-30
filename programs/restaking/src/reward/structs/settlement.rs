@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::error::ErrorCode;
 
-pub const REWARD_SETTLEMENT_BLOCK_MAX_SIZE: usize = 100;
+use super::*;
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct RewardSettlement {
@@ -17,11 +17,13 @@ pub struct RewardSettlement {
     pub settled_amount: u64,
     pub settlement_blocks_last_reward_pool_contribution: u128,
     pub settlement_blocks_last_slot: u64,
-    #[max_len(REWARD_SETTLEMENT_BLOCK_MAX_SIZE)]
+    #[max_len(REWARD_SETTLEMENT_BLOCK_MAX_LEN)]
     pub settlement_blocks: Vec<RewardSettlementBlock>,
 }
 
 impl RewardSettlement {
+    pub const REWARD_SETTLEMENT_BLOCK_MAX_SIZE: usize = REWARD_SETTLEMENT_BLOCK_MAX_LEN;
+
     pub fn new(
         reward_id: u8,
         reward_pool_id: u8,

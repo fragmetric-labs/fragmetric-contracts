@@ -2,10 +2,12 @@ use anchor_lang::prelude::*;
 
 use crate::error::ErrorCode;
 
+use super::*;
+
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct TokenAllocatedAmount {
     pub total_amount: u64,
-    #[max_len(10)]
+    #[max_len(TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN)]
     pub records: Vec<TokenAllocatedAmountRecord>,
 }
 

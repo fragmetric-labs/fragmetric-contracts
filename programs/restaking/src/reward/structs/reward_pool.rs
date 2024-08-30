@@ -1,16 +1,18 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::ErrorCode, reward::*};
+use crate::error::ErrorCode;
+
+use super::*;
 
 #[account]
 #[derive(InitSpace)]
 pub struct RewardAccount {
     pub data_version: u8,
-    #[max_len(10)]
+    #[max_len(HOLDERS_MAX_LEN)]
     pub holders: Vec<Holder>,
-    #[max_len(20)]
+    #[max_len(REWARDS_MAX_LEN)]
     pub rewards: Vec<Reward>,
-    #[max_len(5)]
+    #[max_len(REWARD_POOLS_MAX_LEN)]
     pub reward_pools: Vec<RewardPool>,
 }
 
@@ -28,12 +30,12 @@ pub struct Holder {
     /// ID is determined when added to reward account.
     /// At first its value is zero.
     pub id: u8,
-    #[max_len(16)]
+    #[max_len(NAME_MAX_LEN)]
     pub name: String,
-    #[max_len(128)]
+    #[max_len(DESCRIPTION_MAX_LEN)]
     pub description: String,
     /// List of allowed pubkeys for this holder.
-    #[max_len(10)]
+    #[max_len(HOLDER_PUBKEYS_MAX_LEN)]
     pub pubkeys: Vec<Pubkey>,
 }
 
@@ -55,9 +57,9 @@ pub struct Reward {
     /// At first its value is zero.
     pub id: u8,
     pub reward_type: RewardType,
-    #[max_len(16)]
+    #[max_len(NAME_MAX_LEN)]
     pub name: String,
-    #[max_len(128)]
+    #[max_len(DESCRIPTION_MAX_LEN)]
     pub description: String,
 }
 
@@ -93,7 +95,7 @@ pub struct RewardPool {
     /// ID is determined when added to reward account.
     /// At first its value is zero.
     pub id: u8,
-    #[max_len(16)]
+    #[max_len(NAME_MAX_LEN)]
     pub name: String,
 
     /// Holder id is not provided for default holder (fragmetric)
@@ -107,7 +109,7 @@ pub struct RewardPool {
 
     pub contribution: u128,
     pub token_allocated_amount: TokenAllocatedAmount,
-    #[max_len(20)]
+    #[max_len(REWARDS_MAX_LEN)]
     pub reward_settlements: Vec<RewardSettlement>,
 }
 

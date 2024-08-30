@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::{reward::*, PDASignerSeeds};
+use crate::PDASignerSeeds;
+
+use super::*;
 
 #[account]
 #[derive(InitSpace)]
@@ -8,7 +10,7 @@ pub struct UserRewardAccount {
     pub data_version: u8,
     pub bump: u8,
     pub user: Pubkey,
-    #[max_len(5)]
+    #[max_len(REWARD_POOLS_MAX_LEN)]
     pub user_reward_pools: Vec<UserRewardPool>,
 }
 
@@ -30,7 +32,7 @@ pub struct UserRewardPool {
     pub token_allocated_amount: TokenAllocatedAmount,
     pub contribution: u128,
     pub updated_slot: u64,
-    #[max_len(40)]
+    #[max_len(REWARDS_MAX_LEN)]
     pub reward_settlements: Vec<UserRewardSettlement>,
 }
 

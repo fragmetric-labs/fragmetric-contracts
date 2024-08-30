@@ -40,7 +40,7 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        if self.settlement_blocks.len() == REWARD_SETTLEMENT_BLOCK_MAX_SIZE
+        if self.settlement_blocks.len() == Self::REWARD_SETTLEMENT_BLOCK_MAX_SIZE
             && self.clear_stale_settlement_blocks()? == 0
         {
             err!(ErrorCode::RewardStaleSettlementBlockDoesNotExist)?;
