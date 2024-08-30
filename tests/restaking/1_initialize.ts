@@ -248,7 +248,11 @@ export const initialize = describe("initialize everything", () => {
 
         const rewardName = "FPoint";
         const rewardDescription = "FPoint is good";
-        const rewardType = "point";
+        const rewardType = {
+            "point": {
+                decimals: 4,
+            }
+        };
 
         const batchProcessingThresholdAmount = new anchor.BN(0);
         const batchProcessingThresholdDuration = new anchor.BN(0);
@@ -313,7 +317,7 @@ export const initialize = describe("initialize everything", () => {
         const addRewardIx = async (
             rewardName: string,
             rewardDescription: string,
-            rewardType: string,
+            rewardType,
             rewardTokenMint?: anchor.web3.PublicKey,
         ) => {
             if (rewardTokenMint == null) {

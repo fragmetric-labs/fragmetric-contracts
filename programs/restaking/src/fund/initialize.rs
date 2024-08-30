@@ -86,6 +86,7 @@ mod tests {
             sol_accumulated_deposit_amount: 0,
             sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
+            _reserved: [0; 1280],
         };
 
         fund.initialize_if_needed(0, receipt_token_mint);

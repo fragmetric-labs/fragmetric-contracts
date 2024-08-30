@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::PDASignerSeeds;
 
+const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
+
 #[account]
 #[derive(InitSpace)]
 pub struct UserReceipt {
@@ -10,12 +12,13 @@ pub struct UserReceipt {
     pub user: Pubkey,
     pub receipt_token_mint: Pubkey,
     pub receipt_token_amount: u64,
-    #[max_len(32)]
+    #[max_len(MAX_WITHDRAWAL_REQUESTS_SIZE)]
     pub withdrawal_requests: Vec<WithdrawalRequest>,
+    pub _reserved: [u8; 64],
 }
 
 impl PDASignerSeeds<4> for UserReceipt {
-    const SEED: &'static [u8] = b"user_receipt_seed_v2";
+    const SEED: &'static [u8] = b"user_receipt_seed";
 
     fn signer_seeds(&self) -> [&[u8]; 4] {
         [
@@ -31,12 +34,29 @@ impl PDASignerSeeds<4> for UserReceipt {
     }
 }
 
+impl UserReceipt {
+    pub const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = MAX_WITHDRAWAL_REQUESTS_SIZE;
+
+    pub fn dummy(user: Pubkey, receipt_token_mint: Pubkey, receipt_token_amount: u64) -> Self {
+        Self {
+            data_version: 0,
+            bump: 0,
+            user,
+            receipt_token_mint,
+            receipt_token_amount,
+            withdrawal_requests: Default::default(),
+            _reserved: [0; 64],
+        }
+    }
+}
+
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct WithdrawalRequest {
     pub batch_id: u64,
     pub request_id: u64,
     pub receipt_token_amount: u64,
     pub created_at: i64,
+    pub _reserved: [u8; 16],
 }
 
 impl WithdrawalRequest {
@@ -46,6 +66,7 @@ impl WithdrawalRequest {
             request_id,
             receipt_token_amount,
             created_at: crate::utils::timestamp_now()?,
+            _reserved: [0; 16],
         })
     }
 }

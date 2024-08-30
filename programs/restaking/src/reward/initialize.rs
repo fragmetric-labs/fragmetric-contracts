@@ -6,9 +6,6 @@ impl RewardAccount {
     pub(super) fn initialize_if_needed(&mut self) {
         if self.data_version == 0 {
             self.data_version = 1;
-            self.holders = vec![];
-            self.rewards = vec![];
-            self.reward_pools = vec![];
         }
     }
 }
@@ -16,10 +13,11 @@ impl RewardAccount {
 impl UserRewardAccount {
     pub(crate) fn initialize_if_needed(&mut self, bump: u8, user: Pubkey) {
         if self.data_version == 0 {
-            self.data_version = 1;
+            // version = 1 => lazily initialized by transfer hook
+            // version = 2 => fully initialized by user
+            self.data_version = 2;
             self.bump = bump;
             self.user = user;
-            self.user_reward_pools = vec![];
         }
     }
 }

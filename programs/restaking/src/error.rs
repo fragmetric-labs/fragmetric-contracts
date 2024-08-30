@@ -17,6 +17,8 @@ pub enum ErrorCode {
     FundExceedsSolCap,
     #[msg("Exceeds the token cap")]
     FundExceedsTokenCap,
+    #[msg("Exceeds max withdrawal request")]
+    FundExceedsMaxWithdrawalRequestSize,
     #[msg("Batch withdrwal amount exceeds SOL amount in fund")]
     FundWithdrawalRequestExceedsSOLAmountsInTemp,
     #[msg("Operator unmet threshold")]

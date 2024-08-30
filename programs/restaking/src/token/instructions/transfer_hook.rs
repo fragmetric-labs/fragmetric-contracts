@@ -106,54 +106,34 @@ impl<'info> TokenTransferHook<'info> {
         let mut source_user_receipt = ctx
             .accounts
             .source_user_receipt
-            .init_if_needed_by_pda::<UserReceipt>(
-                "source_user_receipt",
-                AsRef::as_ref(payer_account),
-                &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
-                8 + UserReceipt::INIT_SPACE,
-                Some(&[&[
-                    UserReceipt::SEED,
-                    source_token_account_owner.as_ref(),
-                    receipt_token_mint.as_ref(),
-                    &[ctx.bumps.source_user_receipt],
-                ]]),
-                system_program,
-            )?;
-        if source_user_receipt.data_version != 0 {
-            require_eq!(source_user_receipt.bump, ctx.bumps.source_user_receipt);
-            require_keys_eq!(source_user_receipt.user, source_token_account_owner);
-            require_keys_eq!(source_user_receipt.receipt_token_mint, receipt_token_mint);
+            .deserialize_if_exist::<UserReceipt>("source_user_receipt")?;
+        if let Some(source_user_receipt) = &source_user_receipt {
+            if source_user_receipt.data_version != 0 {
+                require_eq!(source_user_receipt.bump, ctx.bumps.source_user_receipt);
+                require_keys_eq!(source_user_receipt.user, source_token_account_owner);
+                require_keys_eq!(source_user_receipt.receipt_token_mint, receipt_token_mint);
+            }
         }
 
         let mut destination_user_receipt = ctx
             .accounts
             .destination_user_receipt
-            .init_if_needed_by_pda::<UserReceipt>(
-                "destination_user_receipt",
-                AsRef::as_ref(payer_account),
-                &[&[PAYER_ACCOUNT_SEED, &[ctx.bumps.payer_account]]],
-                8 + UserReceipt::INIT_SPACE,
-                Some(&[&[
-                    UserReceipt::SEED,
-                    destination_token_account_owner.as_ref(),
-                    receipt_token_mint.as_ref(),
-                    &[ctx.bumps.destination_user_receipt],
-                ]]),
-                system_program,
-            )?;
-        if destination_user_receipt.data_version != 0 {
-            require_eq!(
-                destination_user_receipt.bump,
-                ctx.bumps.destination_user_receipt
-            );
-            require_keys_eq!(
-                destination_user_receipt.user,
-                destination_token_account_owner
-            );
-            require_keys_eq!(
-                destination_user_receipt.receipt_token_mint,
-                receipt_token_mint
-            );
+            .deserialize_if_exist::<UserReceipt>("destination_user_receipt")?;
+        if let Some(destination_user_receipt) = &destination_user_receipt {
+            if destination_user_receipt.data_version != 0 {
+                require_eq!(
+                    destination_user_receipt.bump,
+                    ctx.bumps.destination_user_receipt
+                );
+                require_keys_eq!(
+                    destination_user_receipt.user,
+                    destination_token_account_owner
+                );
+                require_keys_eq!(
+                    destination_user_receipt.receipt_token_mint,
+                    receipt_token_mint
+                );
+            }
         }
 
         let mut source_user_reward_account = ctx
@@ -206,16 +186,20 @@ impl<'info> TokenTransferHook<'info> {
         }
 
         // Initialize
-        source_user_receipt.initialize_if_needed(
-            ctx.bumps.source_user_receipt,
-            source_token_account_owner,
-            receipt_token_mint,
-        );
-        destination_user_receipt.initialize_if_needed(
-            ctx.bumps.destination_user_receipt,
-            destination_token_account_owner,
-            receipt_token_mint,
-        );
+        if let Some(source_user_receipt) = &mut source_user_receipt {
+            source_user_receipt.initialize_if_needed(
+                ctx.bumps.source_user_receipt,
+                source_token_account_owner,
+                receipt_token_mint,
+            );
+        }
+        if let Some(destination_user_receipt) = &mut destination_user_receipt {
+            destination_user_receipt.initialize_if_needed(
+                ctx.bumps.destination_user_receipt,
+                destination_token_account_owner,
+                receipt_token_mint,
+            );
+        }
         source_user_reward_account.initialize_if_needed(
             ctx.bumps.source_user_reward_account,
             source_token_account_owner,
@@ -236,24 +220,44 @@ impl<'info> TokenTransferHook<'info> {
 
         // Update source/destination user_receipt's receipt_token_amount
         let source_token_account_total_amount = ctx.accounts.source_token_account.amount;
-        source_user_receipt.set_receipt_token_amount(source_token_account_total_amount);
+        let source_user_receipt = if let Some(source_user_receipt) = &mut source_user_receipt {
+            source_user_receipt.set_receipt_token_amount(source_token_account_total_amount);
+            source_user_receipt.exit(&crate::ID)?;
+            source_user_receipt.as_ref().clone()
+        } else {
+            UserReceipt::dummy(
+                source_token_account_owner,
+                receipt_token_mint,
+                source_token_account_total_amount,
+            )
+        };
         let destination_token_account_total_amount = ctx.accounts.destination_token_account.amount;
-        destination_user_receipt.set_receipt_token_amount(destination_token_account_total_amount);
+        let destination_user_receipt =
+            if let Some(destination_user_receipt) = &mut destination_user_receipt {
+                destination_user_receipt
+                    .set_receipt_token_amount(destination_token_account_total_amount);
+                destination_user_receipt.exit(&crate::ID)?;
+                destination_user_receipt.as_ref().clone()
+            } else {
+                UserReceipt::dummy(
+                    destination_token_account_owner,
+                    receipt_token_mint,
+                    destination_token_account_total_amount,
+                )
+            };
 
         emit!(UserTransferredReceiptToken {
             transferred_receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             transferred_receipt_token_amount: amount,
             source_receipt_token_account: ctx.accounts.source_token_account.key(),
             source_user: ctx.accounts.source_token_account.owner,
-            source_user_receipt: Clone::clone(&source_user_receipt),
+            source_user_receipt,
             destination_receipt_token_account: ctx.accounts.destination_token_account.key(),
             destination_user: ctx.accounts.destination_token_account.owner,
-            destination_user_receipt: Clone::clone(&destination_user_receipt),
+            destination_user_receipt,
         });
 
         // exit - flush data back to solana bpf
-        source_user_receipt.exit(&crate::ID)?;
-        destination_user_receipt.exit(&crate::ID)?;
         source_user_reward_account.exit(&crate::ID)?;
         destination_user_reward_account.exit(&crate::ID)?;
 

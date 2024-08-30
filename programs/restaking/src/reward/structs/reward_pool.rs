@@ -37,6 +37,7 @@ pub struct Holder {
     /// List of allowed pubkeys for this holder.
     #[max_len(HOLDER_PUBKEYS_MAX_LEN)]
     pub pubkeys: Vec<Pubkey>,
+    pub _reserved: [u8; 256],
 }
 
 impl Holder {
@@ -46,6 +47,7 @@ impl Holder {
             pubkeys,
             name,
             description,
+            _reserved: [0; 256],
         }
     }
 }
@@ -56,11 +58,12 @@ pub struct Reward {
     /// ID is determined when added to reward account.
     /// At first its value is zero.
     pub id: u8,
-    pub reward_type: RewardType,
     #[max_len(NAME_MAX_LEN)]
     pub name: String,
     #[max_len(DESCRIPTION_MAX_LEN)]
     pub description: String,
+    pub reward_type: RewardType,
+    pub _reserved: [u8; 128],
 }
 
 impl Reward {
@@ -70,24 +73,16 @@ impl Reward {
             reward_type,
             name,
             description,
+            _reserved: [0; 128],
         }
     }
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub enum RewardType {
-    Point,
-    Token { mint: Pubkey },
-}
-
-impl RewardType {
-    pub fn new(reward_type: String, reward_token_mint: Option<Pubkey>) -> Result<Self> {
-        match (reward_type.to_lowercase().as_str(), reward_token_mint) {
-            ("point", _) => Ok(Self::Point),
-            ("token", Some(mint)) => Ok(Self::Token { mint }),
-            _ => err!(ErrorCode::RewardInvalidRewardType)?,
-        }
-    }
+    Point { decimals: u8 },
+    Token { mint: Pubkey, decimals: u8 },
+    SOL,
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
@@ -109,6 +104,7 @@ pub struct RewardPool {
 
     pub contribution: u128,
     pub token_allocated_amount: TokenAllocatedAmount,
+    pub _reserved: [u8; 256],
     #[max_len(REWARDS_MAX_LEN)]
     pub reward_settlements: Vec<RewardSettlement>,
 }
@@ -132,6 +128,7 @@ impl RewardPool {
             closed_slot: None,
             token_allocated_amount: Default::default(),
             contribution: 0,
+            _reserved: [0; 256],
             reward_settlements: vec![],
         }
     }

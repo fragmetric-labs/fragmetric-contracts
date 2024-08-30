@@ -2,10 +2,12 @@
 use anchor_lang::prelude::*;
 
 pub(crate) use custom_account::*;
+pub(crate) use deserialize_if_exist::*;
 pub(crate) use init_if_needed_by_pda::*;
 pub(crate) use system_program::*;
 
 mod custom_account;
+mod deserialize_if_exist;
 mod init_if_needed_by_pda;
 mod system_program;
 

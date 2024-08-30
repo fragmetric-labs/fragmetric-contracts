@@ -143,7 +143,7 @@ pub mod restaking {
         ctx: Context<RewardAddReward>,
         name: String,
         description: String,
-        reward_type: String,
+        reward_type: RewardType,
     ) -> Result<()> {
         RewardAddReward::add_reward(ctx, name, description, reward_type)
     }

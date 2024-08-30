@@ -77,6 +77,7 @@ mod tests {
             sol_accumulated_deposit_amount: 0,
             sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
+            _reserved: [0; 1280],
         };
 
         let token1 = SupportedTokenInfo {
@@ -89,6 +90,7 @@ mod tests {
             pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            _reserved: [0; 128],
         };
         let token2 = SupportedTokenInfo {
             mint: Pubkey::new_unique(),
@@ -100,6 +102,7 @@ mod tests {
             pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            _reserved: [0; 128],
         };
         let token3 = token1.clone();
         let tokens = vec![token1, token2];
@@ -119,6 +122,7 @@ mod tests {
             sol_accumulated_deposit_amount: 0,
             sol_operation_reserved_amount: 0,
             withdrawal_status: Default::default(),
+            _reserved: [0; 1280],
         };
 
         let token1 = SupportedTokenInfo {
@@ -131,6 +135,7 @@ mod tests {
             pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            _reserved: [0; 128],
         };
         let token2 = SupportedTokenInfo {
             mint: Pubkey::new_unique(),
@@ -142,6 +147,7 @@ mod tests {
             pricing_source: TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            _reserved: [0; 128],
         };
         let mut token1_update = token1.clone();
         token1_update.capacity_amount = 1_000_000_000 * 3000;

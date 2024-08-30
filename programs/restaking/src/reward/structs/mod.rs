@@ -12,8 +12,8 @@ const NAME_MAX_LEN: usize = 16;
 const DESCRIPTION_MAX_LEN: usize = 128;
 const HOLDERS_MAX_LEN: usize = 10;
 const HOLDER_PUBKEYS_MAX_LEN: usize = 8;
-const REWARDS_MAX_LEN: usize = 40;
-const REWARD_POOLS_MAX_LEN: usize = 5;
+const REWARDS_MAX_LEN: usize = 20;
+const REWARD_POOLS_MAX_LEN: usize = 10;
 const REWARD_SETTLEMENT_BLOCK_MAX_LEN: usize = 100;
 const TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
 

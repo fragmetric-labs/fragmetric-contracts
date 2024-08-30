@@ -19,19 +19,12 @@ impl<'info> RewardAddReward<'info> {
         ctx: Context<Self>,
         name: String,
         description: String,
-        reward_type: String,
+        reward_type: RewardType,
     ) -> Result<()> {
         // Verify
         require_gte!(16, name.len());
         require_gte!(128, description.len());
 
-        let reward_type = RewardType::new(
-            reward_type,
-            ctx.accounts
-                .reward_token_mint
-                .as_ref()
-                .map(|mint| mint.key()),
-        )?;
         let reward = Reward::new(name, description, reward_type);
         ctx.accounts.reward_account.add_reward(reward);
 

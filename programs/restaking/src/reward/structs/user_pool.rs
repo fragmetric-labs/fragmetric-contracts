@@ -32,6 +32,7 @@ pub struct UserRewardPool {
     pub token_allocated_amount: TokenAllocatedAmount,
     pub contribution: u128,
     pub updated_slot: u64,
+    pub _reserved: [u8; 64],
     #[max_len(REWARDS_MAX_LEN)]
     pub reward_settlements: Vec<UserRewardSettlement>,
 }
@@ -43,6 +44,7 @@ impl UserRewardPool {
             token_allocated_amount: Default::default(),
             contribution: 0,
             updated_slot: reward_pool_initial_slot,
+            _reserved: [0; 64],
             reward_settlements: vec![],
         }
     }

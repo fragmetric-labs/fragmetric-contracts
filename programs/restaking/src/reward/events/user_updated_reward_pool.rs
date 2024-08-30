@@ -18,10 +18,7 @@ impl UserUpdatedRewardPool {
         from_user_update: Option<UserRewardAccountUpdatedInfo>,
         to_user_update: Option<UserRewardAccountUpdatedInfo>,
     ) -> Self {
-        let updates = from_user_update
-            .into_iter()
-            .chain(to_user_update)
-            .collect();
+        let updates = from_user_update.into_iter().chain(to_user_update).collect();
         Self { updates }
     }
 }
