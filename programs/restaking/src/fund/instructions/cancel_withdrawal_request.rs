@@ -5,11 +5,10 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundCancelWithdrawalRequest<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -61,6 +60,17 @@ pub struct FundCancelWithdrawalRequest<'info> {
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        bump = user_reward_account.bump,
+        has_one = user,
+    )]
+    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
+
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
@@ -83,7 +93,7 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
         // Step 2: Unlock receipt token
         Self::call_burn_token_cpi(&mut ctx, request.receipt_token_amount)?;
         Self::call_mint_token_cpi(&mut ctx, request.receipt_token_amount)?;
-        Self::call_transfer_hook(&ctx, request.receipt_token_amount)?;
+        Self::call_transfer_hook(&mut ctx, request.receipt_token_amount)?;
 
         // Step 3: Update user_receipt's receipt_token_amount
         let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
@@ -137,12 +147,25 @@ impl<'info> FundCancelWithdrawalRequest<'info> {
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
-    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_mint.transfer_hook(
-            Some(&ctx.accounts.receipt_token_lock_account),
-            Some(&ctx.accounts.receipt_token_account),
-            &ctx.accounts.fund,
-            amount,
-        )
+    fn call_transfer_hook(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+        let current_slot = Clock::get()?.slot;
+        let (from_user_update, to_user_update) = ctx
+            .accounts
+            .reward_account
+            .update_reward_pools_token_allocation(
+                ctx.accounts.receipt_token_mint.key(),
+                amount,
+                None,
+                None,
+                Some(&mut ctx.accounts.user_reward_account),
+                current_slot,
+            )?;
+
+        emit!(UserUpdatedRewardPool::new_from_updates(
+            from_user_update,
+            to_user_update
+        ));
+
+        Ok(())
     }
 }

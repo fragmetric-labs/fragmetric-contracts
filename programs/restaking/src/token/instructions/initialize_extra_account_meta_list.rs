@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::Token2022, token_interface::Mint};
+use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::{common::*, constants::*, fund::*};
+use crate::{common::*, constants::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct TokenInitializeExtraAccountMetaList<'info> {
@@ -27,32 +27,16 @@ pub struct TokenInitializeExtraAccountMetaList<'info> {
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    // #[account(
-    //     init_if_needed,
-    //     payer = payer,
-    //     space = 8 + WhitelistedDestinationToken::INIT_SPACE,
-    //     seeds = [b"whitelisted_destination"],
-    //     bump,
-    // )]
-    // pub whitelisted_destination_token: Account<'info, WhitelistedDestinationToken>,
-    pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
 }
 
-// #[account]
-// #[derive(InitSpace)]
-// pub struct WhitelistedDestinationToken {
-//     #[max_len(50)]
-//     pub addresses: Vec<Pubkey>,
-// }
-
 impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
-        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
-        msg!(
-            "extra_account_meta_list_key: {:?}",
-            extra_account_meta_list_key
-        );
+        // let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        // msg!(
+        //     "extra_account_meta_list_key: {:?}",
+        //     extra_account_meta_list_key
+        // );
 
         let extra_account_metas = Self::extra_account_metas()?;
 
@@ -66,11 +50,11 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
     }
 
     pub fn update_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
-        let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
-        msg!(
-            "extra_account_meta_list_key: {:?}",
-            extra_account_meta_list_key
-        );
+        // let extra_account_meta_list_key = ctx.accounts.extra_account_meta_list.key();
+        // msg!(
+        //     "extra_account_meta_list_key: {:?}",
+        //     extra_account_meta_list_key
+        // );
 
         let extra_account_metas = Self::extra_account_metas()?;
 
@@ -124,6 +108,55 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     }, // destination_token_account.owner
                     Seed::AccountKey { index: 1 }, // receipt_token_mint
                 ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 8, reward account
+            ExtraAccountMeta::new_with_pubkey(
+                &REWARD_ACCOUNT_ADDRESS,
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 9, source user reward account
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserRewardAccount::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 0,
+                        data_index: 32,
+                        length: 32,
+                    }, // source_token_account.owner
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 10, destination user reward account
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: UserRewardAccount::SEED.to_vec(),
+                    },
+                    Seed::AccountData {
+                        account_index: 2,
+                        data_index: 32,
+                        length: 32,
+                    }, // destination_token_account.owner
+                ],
+                false, // is_signer
+                true,  // is_writable
+            )?,
+            // index 11, system program
+            ExtraAccountMeta::new_with_pubkey(
+                &anchor_lang::solana_program::system_program::ID,
+                false,
+                false,
+            )?,
+            ExtraAccountMeta::new_with_seeds(
+                &[Seed::Literal {
+                    bytes: PAYER_ACCOUNT_SEED.to_vec(),
+                }],
                 false, // is_signer
                 true,  // is_writable
             )?,

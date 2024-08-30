@@ -5,7 +5,7 @@ use crate::{common::*, constants::*, error::ErrorCode, fund::*};
 
 #[derive(Accounts)]
 pub struct FundUpdate<'info> {
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     #[account(
@@ -22,9 +22,7 @@ pub struct FundUpdate<'info> {
 
 impl<'info> FundUpdate<'info> {
     pub fn update_sol_capacity_amount(ctx: Context<Self>, capacity_amount: u64) -> Result<()> {
-        ctx.accounts
-            .fund
-            .update_sol_capacity_amount(capacity_amount);
+        ctx.accounts.fund.set_sol_capacity_amount(capacity_amount);
 
         Ok(())
     }
@@ -38,7 +36,7 @@ impl<'info> FundUpdate<'info> {
             .fund
             .supported_token_mut(token)
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?
-            .update(capacity_amount);
+            .set_capacity_amount(capacity_amount);
 
         Ok(())
     }

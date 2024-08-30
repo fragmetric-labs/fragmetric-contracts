@@ -6,7 +6,7 @@ import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
-import * as restaking from "./1_fund_initialize";
+import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
 
 export const deposit_sol = describe("deposit_sol", () => {
@@ -41,7 +41,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         const updatePriceTx = await program.methods
             .fundUpdatePrice()
             .accounts({
-                payer: admin.publicKey,
+                user: admin.publicKey,
             })
             .rpc({commitment: "confirmed"});
 
@@ -66,13 +66,36 @@ export const deposit_sol = describe("deposit_sol", () => {
         const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
         console.log(`fund balance before deposit:`, fundBal_bef);
 
-        const depositSolTx = await program.methods
-            .fundDepositSol(amount, null)
-            .accounts({
-                user: user.publicKey,
-            })
-            .signers([user])
-            .rpc({ commitment: "confirmed" });
+        const depositSolTx = new anchor.web3.Transaction().add(
+            await program.methods
+                .fundInitializeUserAccounts()
+                .accounts({
+                    user: user.publicKey,
+                })
+                .signers([user])
+                .instruction(),
+            await program.methods
+                .fundDepositSol(amount, null)
+                .accounts({
+                    user: user.publicKey,
+                })
+                .signers([])
+                .instruction(),
+        );
+        const depositSolTxSig = await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            depositSolTx,
+            [user],
+            { commitment: "confirmed" },
+        );
+
+        // const depositSolTx = await program.methods
+        //     .fundDepositSol(amount, null)
+        //     .accounts({
+        //         user: user.publicKey,
+        //     })
+        //     .signers([user])
+        //     .rpc({ commitment: "confirmed" });
 
         const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
         console.log(`fund balance after deposit:`, fundBal_aft);
@@ -100,20 +123,25 @@ export const deposit_sol = describe("deposit_sol", () => {
             undefined,
             TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress);
+        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
         console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
-        // console.log(`committedTx:`, committedTx);
+        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTxSig, "confirmed");
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.walletProvider).to.be.null;
-            expect(event.data.contributionAccrualRate).to.be.null;
-            console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-            console.log(`user receipt:`, event.data.userReceipt);
-        }
+        const rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        const depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.be.null;
+        expect(depositEvent.data.contributionAccrualRate).to.be.null;
+        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+            userReceiptTokenAccount.amount.toString()
+        )
+        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
+        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
+        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
     });
 
     // Localnet test
@@ -132,8 +160,9 @@ export const deposit_sol = describe("deposit_sol", () => {
             contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let encodedData = programBorshCoder.types.encode(program.idl.types[3].name, payload);
-        let decodedData = programBorshCoder.types.decode(program.idl.types[3].name, encodedData);
+        let metadataType = program.idl.types.find(v => v.name == "metadata");
+        let encodedData = programBorshCoder.types.encode(metadataType.name, payload);
+        let decodedData = programBorshCoder.types.decode(metadataType.name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
@@ -189,20 +218,24 @@ export const deposit_sol = describe("deposit_sol", () => {
             undefined,
             TOKEN_2022_PROGRAM_ID,
         );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress);
+        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
         console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
 
         // parse event
         const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
-        // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-            expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            expect(event.data.walletProvider).to.equal(payload.walletProvider);
-            expect(event.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-            console.log(`Wallet provider: ${event.data.walletProvider}`);
-            console.log(`contribution accrual rate: ${event.data.contributionAccrualRate}`);
-        }
+        const rewardEvent = events.next().value as anchor.Event;
+        expect(rewardEvent.data.updates.length).to.equal(1);
+        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
+
+        const depositEvent = events.next().value as anchor.Event;
+        expect(depositEvent.data.walletProvider).to.equal(payload.walletProvider);
+        expect(depositEvent.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
+        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+            userReceiptTokenAccount.amount.toString()
+        )
+        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
+        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
+        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
     });
 });

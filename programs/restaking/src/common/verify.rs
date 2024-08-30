@@ -38,11 +38,11 @@ impl Ed25519Instruction {
         let actual = self.0.data.len();
         let expected = 16 + 64 + 32 + payload.len();
         if actual != expected {
-            msg!(
-                "Invalid data length: actual {}, expected {}",
-                actual,
-                expected
-            );
+            // msg!(
+            //     "Invalid data length: actual {}, expected {}",
+            //     actual,
+            //     expected
+            // );
             err!(ErrorCode::SigVerificationFailed)?;
         }
 
@@ -94,7 +94,7 @@ impl Ed25519Instruction {
         let data_pubkey = &self.0.data[16..48];
 
         if data_pubkey != pubkey {
-            msg!("Data pubkey mismatch");
+            // msg!("Data pubkey mismatch");
             err!(ErrorCode::SigVerificationFailed)?;
         }
 
@@ -105,7 +105,7 @@ impl Ed25519Instruction {
         let data_payload = &self.0.data[112..];
 
         if data_payload != payload {
-            msg!("Data payload mismatch");
+            // msg!("Data payload mismatch");
             err!(ErrorCode::SigVerificationFailed)?;
         }
 

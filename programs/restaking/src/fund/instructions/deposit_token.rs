@@ -5,21 +5,18 @@ use anchor_spl::{
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
-use crate::{common::*, constants::*, error::ErrorCode, fund::*, token::*};
+use crate::{common::*, constants::*, error::ErrorCode, fund::*, reward::*, token::*};
 
 #[derive(Accounts)]
 pub struct FundDepositToken<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + UserReceipt::INIT_SPACE,
-        constraint = user_receipt.data_version == 0 || user_receipt.user == user.key(),
-        constraint = user_receipt.data_version == 0 || user_receipt.receipt_token_mint == receipt_token_mint.key(),
+        bump = user_receipt.bump,
+        has_one = user,
+        has_one = receipt_token_mint,
     )]
     pub user_receipt: Box<Account<'info, UserReceipt>>,
 
@@ -49,31 +46,39 @@ pub struct FundDepositToken<'info> {
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
         associated_token::token_program = receipt_token_program,
     )]
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
-    #[account(mut)]
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>, // lst token mint account
     #[account(
         mut,
         token::mint = supported_token_mint,
         token::authority = user.key()
     )]
-    pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // depositor's lst token account
+    pub user_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // depositor's lst token account
     #[account(
         mut,
         token::mint = supported_token_mint,
         token::authority = supported_token_authority,
-        token::token_program = deposit_token_program,
         seeds = [FUND_SUPPORTED_TOKEN_ACCOUNT_SEED, supported_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
+
+    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        bump = user_reward_account.bump,
+        has_one = user,
+    )]
+    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
 
     // TODO: use address lookup table!
     #[account(address = BSOL_STAKE_POOL_ADDRESS)]
@@ -110,7 +115,7 @@ impl<'info> FundDepositToken<'info> {
                     ed25519_ix.verify(&ADMIN_PUBKEY.to_bytes(), payload.as_slice())?;
                 }
                 None => {
-                    msg!("Error: Instruction sysvar not provided");
+                    // msg!("Error: Instruction sysvar not provided");
                     err!(ErrorCode::SigVerificationFailed)?;
                 }
             }
@@ -120,20 +125,13 @@ impl<'info> FundDepositToken<'info> {
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
             .unzip();
 
-        // Initialize
-        ctx.accounts.user_receipt.initialize_if_needed(
-            ctx.bumps.user_receipt,
-            ctx.accounts.user.key(),
-            ctx.accounts.receipt_token_mint.key(),
-        );
-
         // Verify
         let supported_token_index = ctx
             .accounts
             .fund
-            .supported_token_position(ctx.accounts.supported_token_mint.key())
+            .supported_token_index(ctx.accounts.supported_token_mint.key())
             .ok_or_else(|| error!(ErrorCode::FundNotExistingToken))?;
-        require_gte!(ctx.accounts.user_token_account.amount, amount);
+        require_gte!(ctx.accounts.user_supported_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
         let fund = &mut ctx.accounts.fund;
@@ -160,7 +158,11 @@ impl<'info> FundDepositToken<'info> {
 
         // Step 3: Mint receipt token
         Self::call_mint_token_cpi(&mut ctx, receipt_token_mint_amount)?;
-        Self::call_transfer_hook(&ctx, receipt_token_mint_amount)?;
+        Self::call_transfer_hook(
+            &mut ctx,
+            receipt_token_mint_amount,
+            contribution_accrual_rate,
+        )?;
 
         // Step 4: Update user_receipt's receipt_token_amount
         let receipt_token_account_total_amount = ctx.accounts.receipt_token_account.amount;
@@ -173,7 +175,7 @@ impl<'info> FundDepositToken<'info> {
             user_receipt_token_account: ctx.accounts.receipt_token_account.key(),
             user_receipt: Clone::clone(&ctx.accounts.user_receipt),
             supported_token_mint: ctx.accounts.supported_token_mint.key(),
-            supported_token_user_account: ctx.accounts.user_token_account.key(),
+            supported_token_user_account: ctx.accounts.user_supported_token_account.key(),
             supported_token_deposit_amount: amount,
             minted_receipt_token_mint: ctx.accounts.fund.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
@@ -193,7 +195,7 @@ impl<'info> FundDepositToken<'info> {
         let token_transfer_cpi_ctx = CpiContext::new(
             ctx.accounts.deposit_token_program.to_account_info(),
             TransferChecked {
-                from: ctx.accounts.user_token_account.to_account_info(),
+                from: ctx.accounts.user_supported_token_account.to_account_info(),
                 to: ctx.accounts.fund_supported_token_account.to_account_info(),
                 mint: ctx.accounts.supported_token_mint.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
@@ -225,12 +227,32 @@ impl<'info> FundDepositToken<'info> {
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
     }
 
-    fn call_transfer_hook(ctx: &Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.receipt_token_mint.transfer_hook(
-            None,
-            Some(&ctx.accounts.receipt_token_account),
-            &ctx.accounts.fund,
-            amount,
-        )
+    fn call_transfer_hook(
+        ctx: &mut Context<Self>,
+        amount: u64,
+        contribution_accrual_rate: Option<f32>,
+    ) -> Result<()> {
+        let current_slot = Clock::get()?.slot;
+        let contribution_accrual_rate =
+            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
+
+        let (from_user_update, to_user_update) = ctx
+            .accounts
+            .reward_account
+            .update_reward_pools_token_allocation(
+                ctx.accounts.receipt_token_mint.key(),
+                amount,
+                contribution_accrual_rate,
+                None,
+                Some(&mut ctx.accounts.user_reward_account),
+                current_slot,
+            )?;
+
+        emit!(UserUpdatedRewardPool::new_from_updates(
+            from_user_update,
+            to_user_update
+        ));
+
+        Ok(())
     }
 }

@@ -21,11 +21,8 @@ You just can generate any keypair with below cli command.
 $ solana-keygen new -o ./tests/restaking/fragsolMint.json
 $ solana-keygen new -o ./tests/restaking/rewardAccount.json
 ```
-2. Delete rust test files.
 
-To build the anchor idl file correctly, you need to delete the rust test files first. Delete or move the `./programs/restaking/tests/` directory.
-
-3. Run e2e test
+2. Run e2e test
 
 You can configure test sequence by manipulating `./tests/restaking/restaking.ts`. The command below runs e2e test against that sequence.
 ```

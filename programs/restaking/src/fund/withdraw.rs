@@ -208,7 +208,10 @@ impl WithdrawalStatus {
 
 impl UserReceipt {
     pub(super) fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
-        // Check max withdrawal request amount (constant)??
+        if self.withdrawal_requests.len() == Self::MAX_WITHDRAWAL_REQUESTS_SIZE {
+            err!(ErrorCode::FundExceedsMaxWithdrawalRequestSize)?;
+        }
+
         self.withdrawal_requests.push(request);
 
         Ok(())

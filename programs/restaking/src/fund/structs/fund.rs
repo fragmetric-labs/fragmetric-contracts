@@ -8,12 +8,13 @@ pub struct Fund {
     pub data_version: u8,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
-    #[max_len(20)]
+    #[max_len(10)]
     pub supported_tokens: Vec<SupportedTokenInfo>,
     pub sol_capacity_amount: u64,
     pub sol_accumulated_deposit_amount: u64,
     pub sol_operation_reserved_amount: u64,
     pub withdrawal_status: WithdrawalStatus,
+    pub _reserved: [u8; 1280],
 }
 
 impl PDASignerSeeds<3> for Fund {
@@ -33,7 +34,7 @@ impl PDASignerSeeds<3> for Fund {
 }
 
 impl Fund {
-    pub fn supported_token_position(&self, token: Pubkey) -> Option<usize> {
+    pub fn supported_token_index(&self, token: Pubkey) -> Option<usize> {
         self.supported_tokens
             .iter()
             .position(|info| info.mint == token)
@@ -55,6 +56,7 @@ pub struct SupportedTokenInfo {
     pub operation_reserved_amount: u64,
     pub price: u64,
     pub pricing_source: TokenPricingSource,
+    pub _reserved: [u8; 128],
 }
 
 impl SupportedTokenInfo {
@@ -72,6 +74,7 @@ impl SupportedTokenInfo {
             operation_reserved_amount: 0,
             price: 0,
             pricing_source,
+            _reserved: [0; 128],
         }
     }
 }
@@ -145,6 +148,7 @@ pub struct BatchWithdrawal {
     pub receipt_token_processed: u64,
     pub sol_reserved: u64,
     pub processing_started_at: Option<i64>,
+    pub _reserved: [u8; 32],
 }
 
 impl BatchWithdrawal {
@@ -157,14 +161,28 @@ impl BatchWithdrawal {
             receipt_token_processed: 0,
             sol_reserved: 0,
             processing_started_at: None,
+            _reserved: [0; 32],
         }
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ReservedFund {
     pub num_completed_withdrawal_requests: u64,
+    pub sol_remaining: u64,
     pub total_receipt_token_processed: u128,
     pub total_sol_reserved: u128,
-    pub sol_remaining: u64,
+    pub _reserved: [u8; 64],
+}
+
+impl Default for ReservedFund {
+    fn default() -> Self {
+        Self {
+            num_completed_withdrawal_requests: Default::default(),
+            sol_remaining: Default::default(),
+            total_receipt_token_processed: Default::default(),
+            total_sol_reserved: Default::default(),
+            _reserved: [0; 64],
+        }
+    }
 }

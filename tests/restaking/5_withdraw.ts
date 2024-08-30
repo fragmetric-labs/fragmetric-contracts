@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
-import * as restaking from "./1_fund_initialize";
+import * as restaking from "./1_initialize";
 
 chai.use(chaiAsPromised);
 
@@ -55,14 +55,27 @@ export const withdraw = describe("withdraw", () => {
 
   before("Deposit SOL to mint receipt token", async () => {
     let amount = new anchor.BN(1_000_000_000 * 5);
-    await program.methods
-      .fundDepositSol(amount, null)
-      .accounts({
-        user: user.publicKey,
-        // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-      })
-      .signers([user])
-      .rpc({ commitment: "confirmed" });
+
+    const depositSolTx = new anchor.web3.Transaction().add(
+      await program.methods
+        .fundInitializeUserAccounts()
+        .accounts({
+          user: user.publicKey,
+        })
+        .instruction(),
+      await program.methods
+        .fundDepositSol(amount, null)
+        .accounts({
+          user: user.publicKey,
+        })
+        .instruction(),
+    );
+    await anchor.web3.sendAndConfirmTransaction(
+      program.provider.connection,
+      depositSolTx,
+      [user],
+      { commitment: "confirmed" },
+    );
 
     const userReceiptTokenBalance = (await spl.getAccount(
       program.provider.connection,

@@ -5,8 +5,7 @@ use crate::{common::*, constants::*, fund::*};
 
 #[derive(Accounts)]
 pub struct FundUpdatePrice<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    pub user: Signer<'info>,
 
     #[account(
         mut,
