@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 
 #[constant]
-pub const ADMIN_PUBKEY: Pubkey = pubkey!("91zBeWL8kHBaMtaVrHwWsck1UacDKvje82QQ3HE2k8mJ");
+pub const ADMIN_PUBKEY: Pubkey = pubkey!("CiRGR8qLmqryQS375HW3yJPQxGyWiCCZExWrLKVeK4aw");
 #[constant]
-pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGsJAbW4cHk2DYhtAWohV6MUMauJHCFtT1vGvRwnXN");
+pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("24z3s9NgUHNePqJXxCXqnFaBLM5T7fDz2XHETHuipYX1");
 #[constant]
-pub const REWARD_ACCOUNT_ADDRESS: Pubkey = pubkey!("Drdh99fsnAi36iA4DrKxfYq2h5QL3FymDrZ6iBcSCdPF");
+pub const REWARD_ACCOUNT_ADDRESS: Pubkey = pubkey!("FkbzST7uhLhWWeGXnZTyKWshXScm3CeCNArme4fB56Hn");
 
 pub const RECEIPT_TOKEN_LOCK_ACCOUNT_SEED: &[u8] = b"receipt_token_lock_account";
 pub const FUND_SUPPORTED_TOKEN_ACCOUNT_SEED: &[u8] = b"fund_supported_token_account";

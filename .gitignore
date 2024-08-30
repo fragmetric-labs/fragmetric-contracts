@@ -1,6 +1,7 @@
 .anchor
 .DS_Store
-target
+target/**
+!target/deploy/restaking-keypair.json
 **/*.rs.bk
 node_modules
 test-ledger
@@ -16,4 +17,5 @@ mainnet-id.json
 tests/**/tokenMint*
 tests/**/fragsolMint.json
 tests/**/rewardAccount.json
+tests/**/adminAccount.json
 tests/**/*_origin.json

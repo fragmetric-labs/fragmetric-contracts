@@ -18,11 +18,18 @@ $ npm install
 
 You just can generate any keypair with below cli command.
 ```
+# admin account
+$ solana-keygen new -o ./id.json
+
+# global accounts
 $ solana-keygen new -o ./tests/restaking/fragsolMint.json
 $ solana-keygen new -o ./tests/restaking/rewardAccount.json
 ```
 
-2. Run e2e test
+And update `ADMIN_PUBKEY, FRAGSOL_MINT_ADDRESS, REWARD_ACCOUNT_ADDRESS` public keys in `programs/restaking/src/constants.rs` file.
+
+
+2. Run E2E test
 
 You can configure test sequence by manipulating `./tests/restaking/restaking.ts`. The command below runs e2e test against that sequence.
 ```
