@@ -1,6 +1,7 @@
 .anchor
 .DS_Store
-target
+target/**
+!target/deploy/restaking-keypair.json
 **/*.rs.bk
 node_modules
 test-ledger
@@ -11,3 +12,10 @@ test-ledger
 # solana id from aws
 id.json
 mainnet-id.json
+
+# for test
+tests/**/tokenMint*
+tests/**/fragsolMint.json
+tests/**/rewardAccount.json
+tests/**/adminAccount.json
+tests/**/*_origin.json

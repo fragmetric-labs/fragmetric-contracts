@@ -1,8 +1,15 @@
-pub mod structs;
+mod events;
+mod instructions;
+mod structs;
+
+pub use events::*;
+pub use instructions::*;
 pub use structs::*;
 
-pub mod initialize;
-pub mod deposit;
+mod deposit;
+mod initialize;
+mod price;
+mod update;
+mod withdraw;
 
-pub use initialize::*;
 pub use deposit::*;
