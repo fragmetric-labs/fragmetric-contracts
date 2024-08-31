@@ -78,7 +78,7 @@ mod tests {
         let batch_processing_threshold_duration = 10;
 
         let mut fund = Fund {
-            data_version: 1,
+            data_version: 0,
             bump: 0,
             receipt_token_mint: Pubkey::default(),
             supported_tokens: vec![],

@@ -114,7 +114,7 @@ export const initialize = describe("initialize everything", () => {
             program.programId
         );
         [receipt_token_lock_account_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_lock_account"), receiptTokenMint.publicKey.toBuffer()],
+            [Buffer.from("receipt_token_lock"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
 

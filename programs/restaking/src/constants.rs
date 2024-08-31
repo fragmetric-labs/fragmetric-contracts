@@ -7,8 +7,6 @@ pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("24z3s9NgUHNePqJXxCXqnFaBLM5T7f
 #[constant]
 pub const REWARD_ACCOUNT_ADDRESS: Pubkey = pubkey!("FkbzST7uhLhWWeGXnZTyKWshXScm3CeCNArme4fB56Hn");
 
-pub const RECEIPT_TOKEN_LOCK_ACCOUNT_SEED: &[u8] = b"receipt_token_lock_account";
-pub const FUND_SUPPORTED_TOKEN_ACCOUNT_SEED: &[u8] = b"fund_supported_token_account";
 pub const PAYER_ACCOUNT_SEED: &[u8] = b"payer_account";
 
 #[cfg(feature = "mainnet")]

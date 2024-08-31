@@ -9,6 +9,7 @@ import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils/utils";
 import * as restaking from "./1_initialize";
+import {receipt_token_lock_account_pda} from "./1_initialize";
 
 chai.use(chaiAsPromised);
 
@@ -88,6 +89,13 @@ export const withdraw = describe("withdraw", () => {
   })
 
   it("Request withdrawal", async () => {
+    const lockAccountBalanceBefore = (await spl.getAccount(
+        program.provider.connection,
+        receipt_token_lock_account_pda,
+        undefined,
+        TOKEN_2022_PROGRAM_ID,
+    )).amount;
+
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
@@ -120,9 +128,24 @@ export const withdraw = describe("withdraw", () => {
       )
     ).amount;
     expect(balanceBefore - balanceAfter).to.equal(BigInt(3 * amount));
+
+    const lockAccountBalanceAfter = (await spl.getAccount(
+        program.provider.connection,
+        receipt_token_lock_account_pda,
+        undefined,
+        TOKEN_2022_PROGRAM_ID,
+    )).amount;
+    expect(lockAccountBalanceAfter - lockAccountBalanceBefore).to.equal(BigInt(3 * amount));
   });
 
   it("Cancel withdrawal request", async () => {
+    const lockAccountBalanceBefore = (await spl.getAccount(
+        program.provider.connection,
+        receipt_token_lock_account_pda,
+        undefined,
+        TOKEN_2022_PROGRAM_ID,
+    )).amount;
+
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
@@ -163,6 +186,14 @@ export const withdraw = describe("withdraw", () => {
         .signers([user])
         .rpc()
     ).to.eventually.throw("FundWithdrawalRequestNotFound");
+
+    const lockAccountBalanceAfter = (await spl.getAccount(
+        program.provider.connection,
+        receipt_token_lock_account_pda,
+        undefined,
+        TOKEN_2022_PROGRAM_ID,
+    )).amount;
+    expect(lockAccountBalanceBefore - lockAccountBalanceAfter).to.equal(BigInt(amount));
   });
 
   it("Process all withdrawals", async () => {
@@ -175,6 +206,14 @@ export const withdraw = describe("withdraw", () => {
     const reservedFund = withdrawalStatus.reservedFund;
     expect(reservedFund.numCompletedWithdrawalRequests.toNumber()).to.equal(2);
     expect(reservedFund.solRemaining.toNumber()).to.equal(2 * amount);
+
+    const lockAccountBalanceAfter = (await spl.getAccount(
+        program.provider.connection,
+        receipt_token_lock_account_pda,
+        undefined,
+        TOKEN_2022_PROGRAM_ID,
+    )).amount;
+    expect(lockAccountBalanceAfter).to.equal(BigInt(0));
   });
 
   it("Withdraw sol", async () => {

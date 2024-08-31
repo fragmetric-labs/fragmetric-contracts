@@ -57,18 +57,19 @@ pub struct FundDepositToken<'info> {
     pub receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // user's fragSOL token account
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>, // lst token mint account
+
     #[account(
         mut,
         token::mint = supported_token_mint,
         token::authority = user.key()
     )]
-
     pub user_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // depositor's lst token account
+
     #[account(
         mut,
         token::mint = supported_token_mint,
         token::authority = supported_token_authority,
-        seeds = [FUND_SUPPORTED_TOKEN_ACCOUNT_SEED, supported_token_mint.key().as_ref()],
+        seeds = [SupportedTokenAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account

@@ -25,6 +25,10 @@ impl PDASignerSeeds<3> for ReceiptTokenLockAuthority {
     }
 }
 
+impl ReceiptTokenLockAuthority {
+    pub const TOKEN_ACCOUNT_SEED: &'static [u8] = b"receipt_token_lock";
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct SupportedTokenAuthority {
@@ -49,6 +53,10 @@ impl PDASignerSeeds<4> for SupportedTokenAuthority {
     fn bump_ref(&self) -> &u8 {
         &self.bump
     }
+}
+
+impl SupportedTokenAuthority {
+    pub const TOKEN_ACCOUNT_SEED: &'static [u8] = b"supported_token";
 }
 
 #[account]

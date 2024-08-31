@@ -38,7 +38,7 @@ pub struct OperatorRun<'info> {
         mut,
         token::mint = receipt_token_mint,
         token::authority = receipt_token_lock_authority,
-        seeds = [RECEIPT_TOKEN_LOCK_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [ReceiptTokenLockAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
