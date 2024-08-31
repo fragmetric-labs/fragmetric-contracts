@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use super::CustomAccount;
 
-pub(crate) trait DeserializeIfExist<'info> {
+pub trait DeserializeIfExist<'info> {
     fn deserialize_if_exist<T: AccountSerialize + AccountDeserialize + Owner + Clone>(
         &self,
         account_name: &str,

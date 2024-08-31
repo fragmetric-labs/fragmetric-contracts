@@ -160,9 +160,9 @@ export const deposit_sol = describe("deposit_sol", () => {
             contributionAccrualRate: 1.3,
         };
         const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let metadataType = program.idl.types.find(v => v.name == "metadata");
-        let encodedData = programBorshCoder.types.encode(metadataType.name, payload);
-        let decodedData = programBorshCoder.types.decode(metadataType.name, encodedData);
+        let depositMetadataType = program.idl.types.find(v => v.name == "depositMetadata");
+        let encodedData = programBorshCoder.types.encode(depositMetadataType.name, payload);
+        let decodedData = programBorshCoder.types.decode(depositMetadataType.name, encodedData);
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 

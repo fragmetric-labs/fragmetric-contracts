@@ -110,7 +110,7 @@ export const initialize = describe("initialize everything", () => {
             program.programId
         );
         [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund_seed"), receiptTokenMint.publicKey.toBuffer()],
+            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
         [receipt_token_lock_account_pda] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -386,7 +386,7 @@ export const initialize = describe("initialize everything", () => {
         const addRewardPoolIx = async (
             name: string,
             customContributionAccrualRateEnabled: boolean,
-            tokenMint: anchor.web3.PublicKey,
+            receiptTokenMint: anchor.web3.PublicKey,
         ) => {
             return await program.methods
                 .rewardAddRewardPool(
@@ -395,7 +395,7 @@ export const initialize = describe("initialize everything", () => {
                     customContributionAccrualRateEnabled,
                 )
                 .accounts({
-                    tokenMint: tokenMint,
+                    receiptTokenMint: receiptTokenMint,
                 })
                 .instruction();
         };

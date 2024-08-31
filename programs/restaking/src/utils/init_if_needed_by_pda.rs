@@ -6,7 +6,7 @@ use super::{system_program::*, CustomAccount};
 /// This trait is to customize anchor framework to utilize initialization with PDA as a payer.
 /// Payer PDA must be owned by system program.
 /// Therefore it is recommended to create a dedicated PDA for this operation.
-pub(crate) trait InitIfNeededByPDA<'info> {
+pub trait InitIfNeededByPDA<'info> {
     /// Initialize the program account if needed, paid by PDA.
     /// This trait behaves like `init_if_needed` anchor macro.
     fn init_if_needed_by_pda<T: AccountSerialize + AccountDeserialize + Owner + Clone>(

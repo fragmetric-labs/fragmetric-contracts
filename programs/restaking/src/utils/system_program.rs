@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, system_program::*};
 
-pub(crate) trait SystemProgramExt<'info> {
+pub trait SystemProgramExt<'info> {
     /// Transfer sol `from` -> `to`
     fn transfer(
         &self,

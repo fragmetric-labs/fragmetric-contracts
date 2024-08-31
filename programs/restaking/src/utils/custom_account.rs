@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::program_memory::sol_memcpy};
 
 /// A custom type that is similar to [`Account`].
-pub(crate) struct CustomAccount<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Clone> {
+pub struct CustomAccount<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Clone> {
     account: T,
     info: &'a AccountInfo<'info>,
 }
@@ -18,11 +18,11 @@ impl<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Clone + core::fmt
 }
 
 impl<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Clone> CustomAccount<'a, 'info, T> {
-    pub(crate) fn new(info: &'a AccountInfo<'info>, account: T) -> Self {
+    pub fn new(info: &'a AccountInfo<'info>, account: T) -> Self {
         Self { info, account }
     }
 
-    pub(crate) fn exit_with_expected_owner(
+    pub fn exit_with_expected_owner(
         &self,
         expected_owner: &Pubkey,
         program_id: &Pubkey,
@@ -45,13 +45,13 @@ impl<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Clone> CustomAcco
     /// Reloads the account from storage. This is useful, for example, when
     /// observing side effects after CPI.
     #[allow(dead_code)]
-    pub(crate) fn reload(&mut self) -> Result<()> {
+    pub fn reload(&mut self) -> Result<()> {
         let mut data: &[u8] = &self.info.try_borrow_data()?;
         self.account = T::try_deserialize(&mut data)?;
         Ok(())
     }
 
-    pub(crate) fn to_account_info(&self) -> AccountInfo<'info> {
+    pub fn to_account_info(&self) -> AccountInfo<'info> {
         self.info.clone()
     }
 }
@@ -78,7 +78,7 @@ impl<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Owner + Clone>
 
     /// Deserializes the given `info` into a `CustomAccount`.
     #[inline(never)]
-    pub(crate) fn try_from(info: &'a AccountInfo<'info>) -> Result<Self> {
+    pub fn try_from(info: &'a AccountInfo<'info>) -> Result<Self> {
         Self::check_initialized(info)?;
         Self::check_owned_by_program(info)?;
         let mut data: &[u8] = &info.try_borrow_data()?;
@@ -89,7 +89,7 @@ impl<'a, 'info: 'a, T: AccountSerialize + AccountDeserialize + Owner + Clone>
     /// the account discriminator. Be careful when using this and avoid it if
     /// possible.
     #[inline(never)]
-    pub(crate) fn try_from_unchecked(info: &'a AccountInfo<'info>) -> Result<Self> {
+    pub fn try_from_unchecked(info: &'a AccountInfo<'info>) -> Result<Self> {
         Self::check_initialized(info)?;
         Self::check_owned_by_program(info)?;
         let mut data: &[u8] = &info.try_borrow_data()?;

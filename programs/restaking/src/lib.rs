@@ -1,19 +1,13 @@
 use anchor_lang::prelude::*;
 
-pub mod common;
-pub mod constants;
-pub mod error;
-pub mod fund;
-pub mod operator;
-pub mod reward;
-pub mod token;
+pub(crate) mod constants;
+pub(crate) mod errors;
+pub(crate) mod events;
 pub(crate) mod utils;
+pub(crate) mod modules;
+mod instructions;
 
-use common::*;
-use fund::*;
-use operator::*;
-use reward::*;
-use token::*;
+use instructions::*;
 
 #[cfg(feature = "mainnet")]
 declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
@@ -48,7 +42,7 @@ pub mod restaking {
     pub fn fund_add_supported_token(
         ctx: Context<FundAddSupportedToken>,
         capacity_amount: u64,
-        pricing_source: TokenPricingSource,
+        pricing_source: modules::fund::TokenPricingSource,
     ) -> Result<()> {
         FundAddSupportedToken::add_supported_token(ctx, capacity_amount, pricing_source)
     }
@@ -91,7 +85,7 @@ pub mod restaking {
     pub fn fund_deposit_sol(
         ctx: Context<FundDepositSOL>,
         amount: u64,
-        metadata: Option<Metadata>,
+        metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
         FundDepositSOL::deposit_sol(ctx, amount, metadata)
     }
@@ -99,7 +93,7 @@ pub mod restaking {
     pub fn fund_deposit_token(
         ctx: Context<FundDepositToken>,
         amount: u64,
-        metadata: Option<Metadata>,
+        metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
         FundDepositToken::deposit_token(ctx, amount, metadata)
     }
@@ -131,30 +125,30 @@ pub mod restaking {
     }
 
     pub fn reward_add_holder(
-        ctx: Context<RewardAddHolder>,
+        ctx: Context<AddRewardPoolHolderContext>,
         name: String,
         description: String,
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
-        RewardAddHolder::add_holder(ctx, name, description, pubkeys)
+        AddRewardPoolHolderContext::add_reward_pool_holder(ctx, name, description, pubkeys)
     }
 
     pub fn reward_add_reward(
-        ctx: Context<RewardAddReward>,
+        ctx: Context<AddRewardContext>,
         name: String,
         description: String,
-        reward_type: RewardType,
+        reward_type: crate::modules::reward::RewardType,
     ) -> Result<()> {
-        RewardAddReward::add_reward(ctx, name, description, reward_type)
+        AddRewardContext::add_reward(ctx, name, description, reward_type)
     }
 
     pub fn reward_add_reward_pool(
-        ctx: Context<RewardAddRewardPool>,
+        ctx: Context<AddRewardPoolContext>,
         name: String,
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
-        RewardAddRewardPool::add_reward_pool(
+        AddRewardPoolContext::add_reward_pool(
             ctx,
             name,
             holder_id,
