@@ -1,5 +1,10 @@
 use anchor_lang::prelude::*;
 
+#[cfg(feature = "mainnet")]
+declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
+#[cfg(not(feature = "mainnet"))]
+declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
+
 pub(crate) mod constants;
 pub(crate) mod errors;
 pub(crate) mod events;
@@ -8,11 +13,6 @@ pub(crate) mod modules;
 mod instructions;
 
 use instructions::*;
-
-#[cfg(feature = "mainnet")]
-declare_id!("FRAGZZHbvqDwXkqaPSuKocS7EzH7rU7K6h6cW3GQAkEc");
-#[cfg(not(feature = "mainnet"))]
-declare_id!("fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e");
 
 #[program]
 pub mod restaking {
