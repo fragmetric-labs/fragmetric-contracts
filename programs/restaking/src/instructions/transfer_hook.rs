@@ -13,10 +13,9 @@ use anchor_spl::{
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::{UserTransferredReceiptToken, UserUpdatedRewardPool};
-use crate::modules::common::PDASignerSeeds;
+use crate::modules::common::{DeserializeIfExist, InitIfNeededByPDA, PDASignerSeeds};
 use crate::modules::fund::{Fund, UserReceipt};
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
-use crate::utils::{DeserializeIfExist, InitIfNeededByPDA};
 
 #[derive(Accounts)]
 pub struct TokenTransferHook<'info> {
@@ -55,7 +54,7 @@ pub struct TokenTransferHook<'info> {
 
     #[account(
         mut,
-        seeds = [UserReceipt::SEED, source_token_account.owner.as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), source_token_account.owner.as_ref()],
         bump,
     )]
     /// CHECK: will be deserialized in runtime
@@ -63,18 +62,23 @@ pub struct TokenTransferHook<'info> {
 
     #[account(
         mut,
-        seeds = [UserReceipt::SEED, destination_token_account.owner.as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), destination_token_account.owner.as_ref()],
         bump,
     )]
     /// CHECK: will be deserialized in runtime
     pub destination_user_receipt: UncheckedAccount<'info>,
 
-    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
+    )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(
         mut,
-        seeds = [UserRewardAccount::SEED, source_token_account.owner.as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), source_token_account.owner.as_ref()],
         bump,
     )]
     /// CHECK: will be deserialized in runtime
@@ -82,7 +86,7 @@ pub struct TokenTransferHook<'info> {
 
     #[account(
         mut,
-        seeds = [UserRewardAccount::SEED, destination_token_account.owner.as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), destination_token_account.owner.as_ref()],
         bump,
     )]
     /// CHECK: will be deserialized in runtime
@@ -152,6 +156,7 @@ impl<'info> TokenTransferHook<'info> {
             8 + UserRewardAccount::INIT_SPACE,
             Some(&[&[
                 UserRewardAccount::SEED,
+                receipt_token_mint.as_ref(),
                 source_token_account_owner.as_ref(),
                 &[ctx.bumps.source_user_reward_account],
             ]]),
@@ -162,7 +167,14 @@ impl<'info> TokenTransferHook<'info> {
                 source_user_reward_account.bump,
                 ctx.bumps.source_user_reward_account
             );
-            require_keys_eq!(source_user_reward_account.user, source_token_account_owner);
+            require_keys_eq!(
+                source_user_reward_account.receipt_token_mint,
+                receipt_token_mint,
+            );
+            require_keys_eq!(
+                source_user_reward_account.user,
+                source_token_account_owner,
+            );
         }
 
         let mut destination_user_reward_account = ctx
@@ -175,6 +187,7 @@ impl<'info> TokenTransferHook<'info> {
             8 + UserRewardAccount::INIT_SPACE,
             Some(&[&[
                 UserRewardAccount::SEED,
+                receipt_token_mint.as_ref(),
                 destination_token_account_owner.as_ref(),
                 &[ctx.bumps.destination_user_reward_account],
             ]]),
@@ -186,6 +199,10 @@ impl<'info> TokenTransferHook<'info> {
                 ctx.bumps.destination_user_reward_account
             );
             require_keys_eq!(
+                destination_user_reward_account.receipt_token_mint,
+                receipt_token_mint,
+            );
+            require_keys_eq!(
                 destination_user_reward_account.user,
                 destination_token_account_owner
             );
@@ -195,23 +212,25 @@ impl<'info> TokenTransferHook<'info> {
         if let Some(source_user_receipt) = &mut source_user_receipt {
             source_user_receipt.initialize_if_needed(
                 ctx.bumps.source_user_receipt,
-                source_token_account_owner,
                 receipt_token_mint,
+                source_token_account_owner,
             );
         }
         if let Some(destination_user_receipt) = &mut destination_user_receipt {
             destination_user_receipt.initialize_if_needed(
                 ctx.bumps.destination_user_receipt,
-                destination_token_account_owner,
                 receipt_token_mint,
+                destination_token_account_owner,
             );
         }
         source_user_reward_account.initialize_if_needed(
             ctx.bumps.source_user_reward_account,
+            receipt_token_mint,
             source_token_account_owner,
         );
         destination_user_reward_account.initialize_if_needed(
             ctx.bumps.destination_user_reward_account,
+            receipt_token_mint,
             destination_token_account_owner,
         );
 

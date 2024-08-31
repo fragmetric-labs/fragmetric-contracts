@@ -8,7 +8,7 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{Fund, UserReceipt};
-use crate::modules::reward::UserRewardAccount;
+use crate::modules::reward::{RewardAccount, UserRewardAccount};
 
 #[derive(Accounts)]
 pub struct TokenInitializeExtraAccountMetaList<'info> {
@@ -88,12 +88,12 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: UserReceipt::SEED.to_vec(),
                     },
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                     Seed::AccountData {
                         account_index: 0,
                         data_index: 32,
                         length: 32,
                     }, // source_token_account.owner, data_index starts from the sum of the front indexes' bytes
-                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                 ],
                 false, // is_signer
                 true,  // is_writable
@@ -104,19 +104,24 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: UserReceipt::SEED.to_vec(),
                     },
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                     Seed::AccountData {
                         account_index: 2,
                         data_index: 32,
                         length: 32,
                     }, // destination_token_account.owner
-                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                 ],
                 false, // is_signer
                 true,  // is_writable
             )?,
             // index 8, reward account
-            ExtraAccountMeta::new_with_pubkey(
-                &REWARD_ACCOUNT_ADDRESS,
+            ExtraAccountMeta::new_with_seeds(
+                &[
+                    Seed::Literal {
+                        bytes: RewardAccount::SEED.to_vec(),
+                    },
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
+                ],
                 false, // is_signer
                 true,  // is_writable
             )?,
@@ -126,6 +131,7 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: UserRewardAccount::SEED.to_vec(),
                     },
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                     Seed::AccountData {
                         account_index: 0,
                         data_index: 32,
@@ -141,6 +147,7 @@ impl<'info> TokenInitializeExtraAccountMetaList<'info> {
                     Seed::Literal {
                         bytes: UserRewardAccount::SEED.to_vec(),
                     },
+                    Seed::AccountKey { index: 1 }, // receipt_token_mint
                     Seed::AccountData {
                         account_index: 2,
                         data_index: 32,

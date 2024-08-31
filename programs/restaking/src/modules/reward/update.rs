@@ -20,13 +20,11 @@ impl RewardAccount {
 
     pub fn check_pool_does_not_exist(
         &self,
-        receipt_token_mint: Pubkey,
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
         if self.reward_pools.iter().any(|p| {
-            p.receipt_token_mint == receipt_token_mint
-                && p.holder_id == holder_id
+                p.holder_id == holder_id
                 && p.custom_contribution_accrual_rate_enabled
                     == custom_contribution_accrual_rate_enabled
         }) {
@@ -51,7 +49,7 @@ impl RewardAccount {
 
     pub fn update_reward_pools_token_allocation(
         &mut self,
-        token_mint: Pubkey,
+        receipt_token_mint: Pubkey,
         amount: u64,
         contribution_accrual_rate: Option<u8>,
         from: Option<&mut UserRewardAccount>,
@@ -74,7 +72,7 @@ impl RewardAccount {
             // back-fill not existing pools
             from.backfill_not_existing_pools(&self.reward_pools);
             // find "from user" related reward pools
-            for reward_pool in self.get_related_pools(&from.user, &token_mint)? {
+            for reward_pool in self.get_related_pools(&from.user, &receipt_token_mint)? {
                 let user_reward_pool = &mut from.user_reward_pools[reward_pool.id as usize];
                 let deltas = vec![TokenAllocatedAmountDelta {
                     contribution_accrual_rate: None,
@@ -100,7 +98,7 @@ impl RewardAccount {
             // back-fill not existing pools
             to.backfill_not_existing_pools(&self.reward_pools);
             // find "to user" related reward pools
-            for reward_pool in self.get_related_pools(&to.user, &token_mint)? {
+            for reward_pool in self.get_related_pools(&to.user, &receipt_token_mint)? {
                 let user_reward_pool = &mut to.user_reward_pools[reward_pool.id as usize];
                 let effective_contribution_accrual_rate = reward_pool
                     .custom_contribution_accrual_rate_enabled
@@ -129,13 +127,16 @@ impl RewardAccount {
     fn get_related_pools(
         &mut self,
         user: &Pubkey,
-        token_mint: &Pubkey,
+        receipt_token_mint: &Pubkey,
     ) -> Result<Vec<&mut RewardPool>> {
+        if self.receipt_token_mint != receipt_token_mint.key() {
+            return Err(ErrorCode::RewardInvalidPoolAccess)?
+        }
+
         // split into base / holder-specific pools
         let (base, holder_specific) = self
             .reward_pools
             .iter_mut()
-            .filter(|p| p.receipt_token_mint == *token_mint)
             .partition::<Vec<_>, _>(|p| p.holder_id.is_none());
 
         // base pool should exist at least one

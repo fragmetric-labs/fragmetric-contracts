@@ -4,9 +4,8 @@ use anchor_lang::prelude::*;
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("CiRGR8qLmqryQS375HW3yJPQxGyWiCCZExWrLKVeK4aw");
 #[constant]
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("24z3s9NgUHNePqJXxCXqnFaBLM5T7fDz2XHETHuipYX1");
-#[constant]
-pub const REWARD_ACCOUNT_ADDRESS: Pubkey = pubkey!("FkbzST7uhLhWWeGXnZTyKWshXScm3CeCNArme4fB56Hn");
 
+// TODO: ...
 pub const PAYER_ACCOUNT_SEED: &[u8] = b"payer_account";
 
 #[cfg(feature = "mainnet")]

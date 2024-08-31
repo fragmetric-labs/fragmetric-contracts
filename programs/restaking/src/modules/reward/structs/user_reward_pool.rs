@@ -1,23 +1,30 @@
 use anchor_lang::prelude::*;
 
 use crate::modules::common::PDASignerSeeds;
-use crate::modules::reward::{TokenAllocatedAmount, UserRewardSettlement, REWARD_POOLS_MAX_LEN, REWARDS_MAX_LEN};
+use crate::modules::reward::{TokenAllocatedAmount, UserRewardSettlement, REWARD_POOLS_INIT_LEN, REWARDS_INIT_LEN};
 
 #[account]
 #[derive(InitSpace)]
 pub struct UserRewardAccount {
     pub data_version: u8,
     pub bump: u8,
+    pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
-    #[max_len(REWARD_POOLS_MAX_LEN)]
+
+    #[max_len(REWARD_POOLS_INIT_LEN)]
     pub user_reward_pools: Vec<UserRewardPool>,
 }
 
-impl PDASignerSeeds<3> for UserRewardAccount {
+impl PDASignerSeeds<4> for UserRewardAccount {
     const SEED: &'static [u8] = b"user_reward";
 
-    fn signer_seeds(&self) -> [&[u8]; 3] {
-        [Self::SEED, self.user.as_ref(), self.bump_as_slice()]
+    fn signer_seeds(&self) -> [&[u8]; 4] {
+        [
+            Self::SEED,
+            self.receipt_token_mint.as_ref(),
+            self.user.as_ref(),
+            self.bump_as_slice(),
+        ]
     }
 
     fn bump_ref(&self) -> &u8 {
@@ -32,7 +39,7 @@ pub struct UserRewardPool {
     pub contribution: u128,
     pub updated_slot: u64,
     pub _reserved: [u8; 64],
-    #[max_len(REWARDS_MAX_LEN)]
+    #[max_len(REWARDS_INIT_LEN)]
     pub reward_settlements: Vec<UserRewardSettlement>,
 }
 

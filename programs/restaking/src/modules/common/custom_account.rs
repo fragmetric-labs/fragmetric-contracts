@@ -187,6 +187,10 @@ impl std::io::Write for BpfWriter<&mut [u8]> {
         Ok(amt)
     }
 
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+
     fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
         if self.write(buf)? == buf.len() {
             Ok(())
@@ -196,9 +200,5 @@ impl std::io::Write for BpfWriter<&mut [u8]> {
                 "failed to write whole buffer",
             ))
         }
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
     }
 }

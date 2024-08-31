@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
-
-use super::{system_program::*, CustomAccount};
+use super::{CustomAccount, SystemProgramExt};
 
 /// Initialize the program account if needed, paid by PDA.
 /// This trait is to customize anchor framework to utilize initialization with PDA as a payer.
@@ -57,7 +56,7 @@ impl<'info> InitIfNeededByPDA<'info> for UncheckedAccount<'info> {
                     .max(1)
                     .saturating_sub(current_lamports);
                 if required_lamports > 0 {
-                    system_program.transfer(
+                    system_program.transfer_by_pda(
                         payer_pda,
                         Some(payer_pda_signer_seeds),
                         self,

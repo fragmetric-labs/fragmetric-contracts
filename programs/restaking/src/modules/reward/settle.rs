@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
 use crate::modules::reward::{RewardPool, RewardSettlement, RewardSettlementBlock, UserRewardSettlement};
+use crate::modules::reward::structs::REWARD_SETTLEMENT_BLOCK_MAX_LEN;
 
 impl RewardPool {
     pub fn settle_reward(
@@ -41,7 +42,7 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        if self.settlement_blocks.len() == Self::REWARD_SETTLEMENT_BLOCK_MAX_SIZE
+        if self.settlement_blocks.len() == REWARD_SETTLEMENT_BLOCK_MAX_LEN
             && self.clear_stale_settlement_blocks()? == 0
         {
             err!(ErrorCode::RewardStaleSettlementBlockDoesNotExist)?;

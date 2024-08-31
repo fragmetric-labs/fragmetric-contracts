@@ -17,7 +17,7 @@ pub struct FundInitializeUserAccounts<'info> {
     #[account(
         init_if_needed,
         payer = user,
-        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump,
         space = 8 + UserReceipt::INIT_SPACE,
     )]
@@ -35,7 +35,7 @@ pub struct FundInitializeUserAccounts<'info> {
     #[account(
         init_if_needed,
         payer = user,
-        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump,
         space = 8 + UserRewardAccount::INIT_SPACE,
     )]
@@ -49,15 +49,20 @@ pub struct FundInitializeUserAccounts<'info> {
 impl<'info> FundInitializeUserAccounts<'info> {
     pub fn initialize_user_accounts(ctx: Context<Self>) -> Result<()> {
         // Initialize
-        ctx.accounts.user_receipt.initialize_if_needed(
-            ctx.bumps.user_receipt,
-            ctx.accounts.user.key(),
-            ctx.accounts.receipt_token_mint.key(),
-        );
+        ctx.accounts
+            .user_receipt
+            .initialize_if_needed(
+                ctx.bumps.user_receipt,
+                ctx.accounts.receipt_token_mint.key(),
+                ctx.accounts.user.key(),
+            );
         ctx.accounts
             .user_reward_account
-            .initialize_if_needed(ctx.bumps.user_reward_account, ctx.accounts.user.key());
-
+            .initialize_if_needed(
+                ctx.bumps.user_reward_account,
+                ctx.accounts.receipt_token_mint.key(),
+                ctx.accounts.user.key(),
+            );
         Ok(())
     }
 }

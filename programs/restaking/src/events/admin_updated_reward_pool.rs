@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
-use crate::constants::{REWARD_ACCOUNT_ADDRESS};
 use crate::modules::reward::{Holder, Reward, RewardAccount};
 
 #[event]
 pub struct AdminUpdatedRewardPool {
-    pub address: Pubkey,
+    pub receipt_token_mint: Pubkey,
     pub holders: Vec<Holder>,
     pub rewards: Vec<Reward>,
     pub updated_reward_pool_ids: Vec<u8>,
@@ -16,7 +15,7 @@ impl AdminUpdatedRewardPool {
         updated_reward_pool_ids: Vec<u8>,
     ) -> Self {
         Self {
-            address: REWARD_ACCOUNT_ADDRESS,
+            receipt_token_mint: reward_account.receipt_token_mint,
             holders: reward_account.holders.clone(),
             rewards: reward_account.rewards.clone(),
             updated_reward_pool_ids,

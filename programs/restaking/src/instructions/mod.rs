@@ -25,6 +25,7 @@ mod update_fund_price;
 mod update_reward_pools;
 mod update_user_reward_pools;
 mod withdraw;
+mod ensure_reward_account;
 
 pub use add_reward::*;
 pub use add_reward_pool::*;
@@ -53,3 +54,4 @@ pub use update_fund_price::*;
 pub use update_reward_pools::*;
 pub use update_user_reward_pools::*;
 pub use withdraw::*;
+pub use ensure_reward_account::*;

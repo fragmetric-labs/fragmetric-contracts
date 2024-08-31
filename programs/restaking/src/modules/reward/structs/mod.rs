@@ -12,11 +12,12 @@ pub use user_reward_settlement::*;
 
 pub(super) const REWARD_METADATA_NAME_MAX_LEN: usize = 16;
 pub(super) const REWARD_METADATA_DESCRIPTION_MAX_LEN: usize = 128;
-pub(super) const HOLDERS_MAX_LEN: usize = 8;
+pub(super) const HOLDERS_MAX_LEN: usize = 16;
 pub(super) const HOLDER_PUBKEYS_MAX_LEN: usize = 8;
 pub(super) const TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
-pub(super) const REWARDS_MAX_LEN: usize = 2;
-pub(super) const REWARD_POOLS_MAX_LEN: usize = 2;
+pub(super) const REWARDS_INIT_LEN: usize = 5;
+pub(super) const REWARD_POOLS_INIT_LEN: usize = 2;
+pub(super) const REWARD_SETTLEMENT_BLOCK_INIT_LEN: usize = 10;
 pub(super) const REWARD_SETTLEMENT_BLOCK_MAX_LEN: usize = 100;
 
 #[cfg(test)]

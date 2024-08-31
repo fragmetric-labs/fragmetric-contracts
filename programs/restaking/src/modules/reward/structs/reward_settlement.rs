@@ -17,13 +17,11 @@ pub struct RewardSettlement {
     pub settled_amount: u64,
     pub settlement_blocks_last_reward_pool_contribution: u128,
     pub settlement_blocks_last_slot: u64,
-    #[max_len(REWARD_SETTLEMENT_BLOCK_MAX_LEN)]
+    #[max_len(REWARD_SETTLEMENT_BLOCK_INIT_LEN)]
     pub settlement_blocks: Vec<RewardSettlementBlock>,
 }
 
 impl RewardSettlement {
-    pub const REWARD_SETTLEMENT_BLOCK_MAX_SIZE: usize = REWARD_SETTLEMENT_BLOCK_MAX_LEN;
-
     pub fn new(
         reward_id: u8,
         reward_pool_id: u8,

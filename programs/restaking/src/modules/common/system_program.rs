@@ -2,7 +2,7 @@ use anchor_lang::{prelude::*, system_program::*};
 
 pub trait SystemProgramExt<'info> {
     /// Transfer sol `from` -> `to`
-    fn transfer(
+    fn transfer_by_pda(
         &self,
         from: &impl ToAccountInfo<'info>,
         from_signer_seeds: Option<&[&[&[u8]]]>,
@@ -41,7 +41,7 @@ pub trait SystemProgramExt<'info> {
 }
 
 impl<'info> SystemProgramExt<'info> for Program<'info, System> {
-    fn transfer(
+    fn transfer_by_pda(
         &self,
         from: &impl ToAccountInfo<'info>,
         from_signer_seeds: Option<&[&[&[u8]]]>,

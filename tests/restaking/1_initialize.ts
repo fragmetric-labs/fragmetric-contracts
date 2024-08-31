@@ -11,9 +11,9 @@ import * as fs from "fs";
 import * as utils from "../utils/utils";
 
 export let receiptTokenMint: anchor.web3.Keypair;
-export let rewardAccount: anchor.web3.Keypair;
 // program accounts
 export let fund_pda: anchor.web3.PublicKey;
+export let reward_pda: anchor.web3.PublicKey;
 export let receipt_token_lock_authority_pda: anchor.web3.PublicKey;
 export let receipt_token_mint_authority_pda: anchor.web3.PublicKey;
 export let bSOL_token_authority_pda: anchor.web3.PublicKey;
@@ -60,10 +60,10 @@ export const initialize = describe("initialize everything", () => {
     });
 
     before("Prepare mainnet token mint/stake pool accounts for localnet", async () => {
-        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/bSOL_mint.json");
-        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
-        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
-        // utils.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
+        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/bSOL_mint.json");
+        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
+        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
+        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
         bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
         bSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/devnet/addresses/bSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
         mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
@@ -76,7 +76,6 @@ export const initialize = describe("initialize everything", () => {
 
     before("Prepare program accounts", async () => {
         receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-        rewardAccount = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./rewardAccount.json")));
         receiptTokenMintMetadata = {
             mint: receiptTokenMint.publicKey,
             name: "fragSOL",
@@ -117,12 +116,16 @@ export const initialize = describe("initialize everything", () => {
             [Buffer.from("receipt_token_lock"), receiptTokenMint.publicKey.toBuffer()],
             program.programId
         );
+        [reward_pda] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("reward"), receiptTokenMint.publicKey.toBuffer()],
+            program.programId
+        );
 
         // NEED TO CHECK: receiptTokenMint == createMint result account
         console.log(`admin                              = ${admin.publicKey}`);
         console.log(`receiptTokenMint                   = ${receiptTokenMint.publicKey}`);
-        console.log(`reward account                     = ${rewardAccount.publicKey}`);
         console.log(`fund_pda                           = ${fund_pda}`);
+        console.log(`reward account                     = ${reward_pda}`);
         console.log(`receipt_token_lock_authority_pda   = ${receipt_token_lock_authority_pda}`);
         console.log(`receipt_token_mint_authority_pda   = ${receipt_token_mint_authority_pda}`);
         console.log(`bSOL_token_authority_pda           = ${bSOL_token_authority_pda}`);
@@ -354,15 +357,19 @@ export const initialize = describe("initialize everything", () => {
                 })
                 .instruction();
         };
-        const createRewardAccountIx = await program.account
-            .rewardAccount
-            .createInstruction(
-                rewardAccount,
-                2097152,
-            );
         const initializeRewardIx = await program.methods
             .rewardInitialize()
+            .accounts({ rewardAccount: reward_pda })
             .instruction();
+        const reallocIfNeededRewardIx = await program.methods
+            .rewardReallocIfNeeded(null, false)
+            .accounts({ rewardAccount: reward_pda })
+            .instruction();
+        const reallocIfNeededRewardWithAssertionIx = await program.methods
+            .rewardReallocIfNeeded(null, true)
+            .accounts({ rewardAccount: reward_pda })
+            .instruction();
+
         const addRewardIx = async (
             rewardName: string,
             rewardDescription: string,
@@ -432,8 +439,12 @@ export const initialize = describe("initialize everything", () => {
         );
 
         const tx2 = new anchor.web3.Transaction().add(
-            createRewardAccountIx,
             initializeRewardIx,
+            reallocIfNeededRewardIx,
+            reallocIfNeededRewardIx,
+            reallocIfNeededRewardIx,
+            reallocIfNeededRewardIx,
+            reallocIfNeededRewardWithAssertionIx,
             await addRewardIx(rewardName, rewardDescription, rewardType),
             await addRewardPoolIx("fragmetricBase", false, receiptTokenMint.publicKey),
             await addRewardPoolIx("fragmetricBonus", true, receiptTokenMint.publicKey),
@@ -441,7 +452,7 @@ export const initialize = describe("initialize everything", () => {
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx2,
-            [admin.payer, rewardAccount],
+            [admin.payer],
         );
 
         const tx3 = new anchor.web3.Transaction().add(
@@ -474,7 +485,7 @@ export const initialize = describe("initialize everything", () => {
         expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
 
-        const rewardInitialized = await program.account.rewardAccount.fetch(rewardAccount.publicKey);
+        const rewardInitialized = await program.account.rewardAccount.fetch(reward_pda);
         
         expect(rewardInitialized.dataVersion).to.equal(1);
         const receiptTokenMintAccount = await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID);

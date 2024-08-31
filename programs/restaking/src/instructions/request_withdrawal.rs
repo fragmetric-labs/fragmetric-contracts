@@ -15,10 +15,10 @@ pub struct FundRequestWithdrawal<'info> {
 
     #[account(
         mut,
-        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_receipt.bump,
-        has_one = user,
         has_one = receipt_token_mint,
+        has_one = user,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 
@@ -46,6 +46,7 @@ pub struct FundRequestWithdrawal<'info> {
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
     #[account(
         mut,
         associated_token::mint = receipt_token_mint,
@@ -63,13 +64,19 @@ pub struct FundRequestWithdrawal<'info> {
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
 
-    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
+    )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(
         mut,
-        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.bump,
+        has_one = receipt_token_mint,
         has_one = user,
     )]
     pub user_reward_account: Box<Account<'info, UserRewardAccount>>,

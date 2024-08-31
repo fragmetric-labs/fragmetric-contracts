@@ -60,7 +60,10 @@ impl<'info> FundInitialize<'info> {
 
         ctx.accounts
             .fund
-            .initialize_if_needed(ctx.bumps.fund, receipt_token_mint_key);
+            .initialize_if_needed(
+                ctx.bumps.fund,
+                receipt_token_mint_key,
+            );
         ctx.accounts
             .receipt_token_lock_authority
             .initialize_if_needed(

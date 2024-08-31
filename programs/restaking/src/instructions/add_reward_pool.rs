@@ -3,6 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
 use crate::events::AdminUpdatedRewardPool;
+use crate::modules::common::PDASignerSeeds;
 use crate::modules::reward::{RewardAccount, RewardPool};
 
 #[derive(Accounts)]
@@ -10,10 +11,16 @@ pub struct AddRewardPoolContext<'info> {
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
-    pub reward_account: Box<Account<'info, RewardAccount>>,
-
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
+    )]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
 }
 
 impl<'info> AddRewardPoolContext<'info> {
@@ -28,9 +35,7 @@ impl<'info> AddRewardPoolContext<'info> {
         if let Some(id) = holder_id {
             require_gt!(ctx.accounts.reward_account.holders.len(), id as usize);
         }
-        let token_mint = ctx.accounts.receipt_token_mint.key();
         ctx.accounts.reward_account.check_pool_does_not_exist(
-            token_mint,
             holder_id,
             custom_contribution_accrual_rate_enabled,
         )?;
@@ -40,7 +45,6 @@ impl<'info> AddRewardPoolContext<'info> {
             name,
             holder_id,
             custom_contribution_accrual_rate_enabled,
-            token_mint,
             current_slot,
         );
         ctx.accounts.reward_account.add_reward_pool(reward_pool);

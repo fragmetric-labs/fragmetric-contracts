@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::modules::common::PDASignerSeeds;
 use crate::modules::reward::*;
 
 /// Token holder type.
@@ -68,12 +69,33 @@ pub enum RewardType {
 #[derive(InitSpace)]
 pub struct RewardAccount {
     pub data_version: u8,
+    pub bump: u8,
+    pub receipt_token_mint: Pubkey,
+
     #[max_len(HOLDERS_MAX_LEN)]
     pub holders: Vec<Holder>,
-    #[max_len(REWARDS_MAX_LEN)]
+
+    #[max_len(REWARDS_INIT_LEN)]
     pub rewards: Vec<Reward>,
-    #[max_len(REWARD_POOLS_MAX_LEN)]
+
+    #[max_len(REWARD_POOLS_INIT_LEN)]
     pub reward_pools: Vec<RewardPool>,
+}
+
+impl PDASignerSeeds<3> for RewardAccount {
+    const SEED: &'static [u8] = b"reward";
+
+    fn signer_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::SEED,
+            self.receipt_token_mint.as_ref(),
+            self.bump_as_slice(),
+        ]
+    }
+
+    fn bump_ref(&self) -> &u8 {
+        &self.bump
+    }
 }
 
 impl RewardAccount {
@@ -95,7 +117,6 @@ pub struct RewardPool {
     /// Holder id is not provided for default holder (fragmetric)
     pub holder_id: Option<u8>,
     pub custom_contribution_accrual_rate_enabled: bool,
-    pub receipt_token_mint: Pubkey,
 
     pub initial_slot: u64,
     pub updated_slot: u64,
@@ -104,7 +125,8 @@ pub struct RewardPool {
     pub contribution: u128,
     pub token_allocated_amount: TokenAllocatedAmount,
     pub _reserved: [u8; 256],
-    #[max_len(REWARDS_MAX_LEN)]
+
+    #[max_len(REWARDS_INIT_LEN)]
     pub reward_settlements: Vec<RewardSettlement>,
 }
 
@@ -113,7 +135,6 @@ impl RewardPool {
         name: String,
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
-        token_mint: Pubkey,
         current_slot: u64,
     ) -> Self {
         Self {
@@ -121,7 +142,6 @@ impl RewardPool {
             name,
             holder_id,
             custom_contribution_accrual_rate_enabled,
-            receipt_token_mint: token_mint,
             initial_slot: current_slot,
             updated_slot: current_slot,
             closed_slot: None,

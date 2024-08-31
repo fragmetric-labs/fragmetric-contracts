@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-
 use super::CustomAccount;
 
 pub trait DeserializeIfExist<'info> {

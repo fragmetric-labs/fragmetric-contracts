@@ -175,6 +175,10 @@ pub mod restaking {
         RewardInitialize::initialize_reward(ctx)
     }
 
+    pub fn reward_realloc_if_needed(ctx: Context<RewardEnsure>, required_size: Option<u32>, assert: bool) -> Result<()> {
+        RewardEnsure::realloc_if_needed(ctx, required_size, assert)
+    }
+
     pub fn reward_settle(
         ctx: Context<RewardSettle>,
         reward_pool_id: u8,

@@ -14,7 +14,6 @@ $ npm install
 ## 2. Test Guide
 1. You have to prepare 2 accounts before running test.
 - receipt token mint account
-- reward account
 
 You just can generate any keypair with below cli command.
 ```
@@ -23,10 +22,9 @@ $ solana-keygen new -o ./id.json
 
 # global accounts
 $ solana-keygen new -o ./tests/restaking/fragsolMint.json
-$ solana-keygen new -o ./tests/restaking/rewardAccount.json
 ```
 
-And update `ADMIN_PUBKEY, FRAGSOL_MINT_ADDRESS, REWARD_ACCOUNT_ADDRESS` public keys in `programs/restaking/src/constants.rs` file.
+And update `ADMIN_PUBKEY, FRAGSOL_MINT_ADDRESS` public keys in `programs/restaking/src/constants.rs` file.
 
 
 2. Run E2E test

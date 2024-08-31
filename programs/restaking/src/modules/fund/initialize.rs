@@ -53,14 +53,14 @@ impl UserReceipt {
     pub fn initialize_if_needed(
         &mut self,
         bump: u8,
-        user: Pubkey,
         receipt_token_mint: Pubkey,
+        user: Pubkey,
     ) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
-            self.user = user;
             self.receipt_token_mint = receipt_token_mint;
+            self.user = user;
         }
     }
 }

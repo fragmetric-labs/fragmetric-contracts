@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::constants::*;
-use crate::utils::SystemProgramExt;
+use crate::modules::common::SystemProgramExt;
 
 /// TODO change name
 ///
@@ -52,7 +52,7 @@ impl<'info> TokenInitializePayerAccount<'info> {
     }
 
     pub fn add_payer_account_lamports(ctx: Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.system_program.transfer(
+        ctx.accounts.system_program.transfer_by_pda(
             &ctx.accounts.admin,
             None,
             &ctx.accounts.payer_account,

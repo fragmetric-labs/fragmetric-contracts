@@ -8,9 +8,10 @@ const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
 pub struct UserReceipt {
     pub data_version: u8,
     pub bump: u8,
-    pub user: Pubkey,
     pub receipt_token_mint: Pubkey,
+    pub user: Pubkey,
     pub receipt_token_amount: u64,
+
     #[max_len(MAX_WITHDRAWAL_REQUESTS_SIZE)]
     pub withdrawal_requests: Vec<WithdrawalRequest>,
     pub _reserved: [u8; 64],
@@ -22,8 +23,8 @@ impl PDASignerSeeds<4> for UserReceipt {
     fn signer_seeds(&self) -> [&[u8]; 4] {
         [
             Self::SEED,
-            self.user.as_ref(),
             self.receipt_token_mint.as_ref(),
+            self.user.as_ref(),
             self.bump_as_slice(),
         ]
     }

@@ -52,6 +52,10 @@ pub enum ErrorCode {
     RewardPoolAlreadyClosed,
     #[msg("Invalid reward pool configuration")]
     RewardInvalidPoolConfiguration,
+    #[msg("Invalid reward pool access")]
+    RewardInvalidPoolAccess,
+    #[msg("Invalid accounting")]
+    RewardInvalidAccountSize,
     #[msg("Invalid accounting")]
     RewardInvalidAccounting,
     #[msg("Invalid amount or contribution accrual rate")]

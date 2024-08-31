@@ -14,10 +14,10 @@ pub struct FundWithdraw<'info> {
 
     #[account(
         mut,
-        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_receipt.bump,
-        has_one = user,
         has_one = receipt_token_mint,
+        has_one = user,
     )]
     pub user_receipt: Account<'info, UserReceipt>,
 

@@ -15,10 +15,10 @@ pub struct FundDepositToken<'info> {
 
     #[account(
         mut,
-        seeds = [UserReceipt::SEED, user.key().as_ref(), receipt_token_mint.key().as_ref()],
+        seeds = [UserReceipt::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_receipt.bump,
-        has_one = user,
         has_one = receipt_token_mint,
+        has_one = user,
     )]
     pub user_receipt: Box<Account<'info, UserReceipt>>,
 
@@ -74,13 +74,19 @@ pub struct FundDepositToken<'info> {
     )]
     pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
 
-    #[account(mut, address = REWARD_ACCOUNT_ADDRESS)]
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
+    )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 
     #[account(
         mut,
-        seeds = [UserRewardAccount::SEED, user.key().as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.bump,
+        has_one = receipt_token_mint,
         has_one = user,
     )]
     pub user_reward_account: Box<Account<'info, UserRewardAccount>>,

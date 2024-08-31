@@ -1,16 +1,6 @@
 #![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
-mod custom_account;
-mod deserialize_if_exist;
-mod init_if_needed_by_pda;
-mod system_program;
-
-pub use custom_account::*;
-pub use deserialize_if_exist::*;
-pub use init_if_needed_by_pda::*;
-pub use system_program::*;
-
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns amount.
 pub fn proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {
@@ -23,7 +13,7 @@ pub fn proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Opt
             .checked_mul(numerator as u128)?
             .checked_div(denominator as u128)?,
     )
-    .ok()
+        .ok()
 }
 
 #[cfg(target_os = "solana")]
