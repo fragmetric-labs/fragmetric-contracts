@@ -1,9 +1,9 @@
 mod authorities;
-mod fund;
-mod fund_info;
-mod user_receipt;
+mod fund_account;
+mod fund_account_info;
+mod fund_user_account;
 
 pub use authorities::*;
-pub use fund::*;
-pub use fund_info::*;
-pub use user_receipt::*;
+pub use fund_account::*;
+pub use fund_account_info::*;
+pub use fund_user_account::*;

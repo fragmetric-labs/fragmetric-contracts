@@ -85,13 +85,15 @@ impl RewardSettlementBlock {
         self.ending_reward_pool_contribution - self.starting_reward_pool_contribution
     }
 
+    #[inline(always)]
     pub fn is_stale(&self) -> bool {
         self.user_settled_contribution == self.block_contribution()
     }
 
+    #[inline(always)]
     pub fn remaining_amount(&self) -> Result<u64> {
         self.amount
             .checked_sub(self.user_settled_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }

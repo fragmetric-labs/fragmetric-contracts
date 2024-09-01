@@ -2,72 +2,111 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("SOL transfer failed")]
+    #[msg("signature verification failed")]
+    SignatureVerificationFailed,
+
+    #[msg("token is not transferable currently")]
+    TokenNotTransferable,
+
+    #[msg("token is not transferring currently")]
+    TokenNotTransferring,
+
+    #[msg("calculation arithmetic exception")]
+    CalculationArithmeticException,
+
+    #[msg("fund: cannot apply invalid update")]
+    FundInvalidUpdate,
+
+    #[msg("fund: sol transfer failed")]
     FundSOLTransferFailed,
-    #[msg("Token transfer failed")]
+
+    #[msg("fund: token transfer failed")]
     FundTokenTransferFailed,
-    #[msg("Already existing token")]
-    FundAlreadyExistingToken,
-    #[msg("Not existing token")]
-    FundNotExistingToken,
-    #[msg("Duplicated tokens in the list")]
-    FundDuplicatedToken,
-    #[msg("Exceeds the sol cap")]
-    FundExceedsSolCap,
-    #[msg("Exceeds the token cap")]
-    FundExceedsTokenCap,
-    #[msg("Exceeds max withdrawal request")]
-    FundExceedsMaxWithdrawalRequestSize,
-    #[msg("Batch withdrwal amount exceeds SOL amount in fund")]
-    FundWithdrawalRequestExceedsSOLAmountsInTemp,
-    #[msg("Operator unmet threshold")]
-    OperatorUnmetThreshold,
-    #[msg("Token is not currently transferring")]
-    TokenNotCurrentlyTransferring,
-    #[msg("Invalid token transfer args")]
-    TokenInvalidTransferArgs,
-    #[msg("Withdrawal request not found")]
+
+    #[msg("fund: already supported token")]
+    FundAlreadySupportedToken,
+
+    #[msg("fund: not supported the token")]
+    FundNotSupportedToken,
+
+    #[msg("fund: exceeded sol capacity amount")]
+    FundExceededSOLCapacityAmount,
+
+    #[msg("fund: exceeded token capacity amount")]
+    FundExceededTokenCapacityAmount,
+
+    #[msg("fund: exceeded max withdrawal request per user")]
+    FundExceededMaxWithdrawalRequestSizePerUser,
+
+    #[msg("fund: operation reserved sol is exhausted")]
+    FundOperationReservedSOLExhausted,
+
+    #[msg("fund: withdrawal request not found")]
     FundWithdrawalRequestNotFound,
-    #[msg("Withdrawal request not completed")]
-    FundWithdrawalNotCompleted,
-    #[msg("Not enough reserved Sol")]
-    FundNotEnoughReservedSol,
-    #[msg("Withdrawal is currently disabled")]
+
+    #[msg("fund: withdrawal request not completed yet")]
+    FundWithdrawalNotCompletedYet,
+
+    #[msg("fund: withdrawal reserved sol is exhausted")]
+    FundWithdrawalReservedSOLExhausted,
+
+    #[msg("fund: withdrawal is currently disabled")]
     FundWithdrawalDisabled,
-    #[msg("Withdrawal request already started processing")]
-    FundWithdrawalAlreadyInProgress,
-    #[msg("Signature verification failed")]
-    SigVerificationFailed,
-    #[msg("Calculation failed due to overflow/underflow")]
-    CalculationFailure,
-    #[msg("Token pricing source not provided")]
+
+    #[msg("fund: withdrawal request is already in progress")]
+    FundWithdrawalRequestAlreadyInProgress,
+
+    #[msg("fund: token pricing source is not found")]
     FundTokenPricingSourceNotFound,
-    #[msg("Invalid reward type")]
-    RewardInvalidRewardType,
-    #[msg("Already existing reward pool")]
+
+    #[msg("operator: job unmet threshold")]
+    OperatorJobUnmetThreshold,
+
+    #[msg("reward: invalid token transfer args")]
+    RewardInvalidTransferArgs,
+
+    #[msg("reward: already existing holder")]
+    RewardAlreadyExistingHolder,
+
+    #[msg("reward: already existing reward")]
+    RewardAlreadyExistingReward,
+
+    #[msg("reward: already existing pool")]
     RewardAlreadyExistingPool,
-    #[msg("Reward pool not found")]
+
+    #[msg("reward: pool not found")]
     RewardPoolNotFound,
-    #[msg("Reward pool is already closed")]
-    RewardPoolAlreadyClosed,
-    #[msg("Invalid reward pool configuration")]
+
+    #[msg("reward: pool is closed")]
+    RewardPoolClosed,
+
+    #[msg("reward: invalid pool configuration")]
     RewardInvalidPoolConfiguration,
-    #[msg("Invalid reward pool access")]
+
+    #[msg("reward: invalid reward pool access")]
     RewardInvalidPoolAccess,
-    #[msg("Invalid accounting")]
-    RewardInvalidAccountSize,
-    #[msg("Invalid accounting")]
-    RewardInvalidAccounting,
-    #[msg("Invalid amount or contribution accrual rate")]
+
+    #[msg("reward: unmet account size reallocation")]
+    RewardUnmetAccountRealloc,
+
+    #[msg("reward: incorrect accounting exception")]
+    RewardAccountingException,
+
+    #[msg("reward: invalid amount or contribution accrual rate")]
     RewardInvalidAllocatedAmountDelta,
-    #[msg("Cannot find stale settlement block")]
-    RewardStaleSettlementBlockDoesNotExist,
-    #[msg("Invalid settlement block height")]
+
+    #[msg("reward: stale settlement block not exist")]
+    RewardStaleSettlementBlockNotExist,
+
+    #[msg("reward: invalid settlement block height")]
     RewardInvalidSettlementBlockHeight,
-    #[msg("Invalid settlement block contribution")]
+
+    #[msg("reward: invalid settlement block contribution")]
     RewardInvalidSettlementBlockContribution,
-    #[msg("Sum of user settled amount cannot exceed total amount")]
+
+    #[msg("reward: sum of user settled amount cannot exceed total amount")]
     RewardInvalidTotalUserSettledAmount,
-    #[msg("Sum of user settled contribution cannot exceed total contribution")]
+
+    #[msg("reward: sum of user settled contribution cannot exceed total contribution")]
     RewardInvalidTotalUserSettledContribution,
 }

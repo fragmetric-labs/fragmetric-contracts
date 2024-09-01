@@ -1,5 +1,5 @@
 mod fund_manager_updated_reward_pool;
-mod operator_ran;
+mod operator_processed_job;
 mod user_canceled_withdrawal_request_from_fund;
 mod user_deposited_sol_to_fund;
 mod user_deposited_token_to_fund;
@@ -10,7 +10,7 @@ mod user_updated_reward_pool;
 mod user_withdrew_sol_from_fund;
 
 pub use fund_manager_updated_reward_pool::*;
-pub use operator_ran::*;
+pub use operator_processed_job::*;
 pub use user_canceled_withdrawal_request_from_fund::*;
 pub use user_deposited_sol_to_fund::*;
 pub use user_deposited_token_to_fund::*;

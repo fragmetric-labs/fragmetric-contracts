@@ -9,224 +9,225 @@ mod instructions;
 
 use instructions::*;
 
-declare_id!(constants::PROGRAM_ID);
+#[cfg(feature = "mainnet")]
+declare_id!("fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3");
+#[cfg(not(feature = "mainnet"))]
+declare_id!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 
 #[program]
 pub mod restaking {
     use super::*;
 
-    pub fn log_message(ctx: Context<LogMessage>, message: String) -> Result<()> {
-        LogMessage::log_message(ctx, message)
+    /** AdminEmptyContext **/
+    pub fn log_message(ctx: Context<AdminEmptyContext>, message: String) -> Result<()> {
+        AdminEmptyContext::log_message(ctx, message)
     }
 
-    pub fn fund_initialize(ctx: Context<FundInitialize>) -> Result<()> {
-        FundInitialize::initialize_fund(ctx)
+
+    /** AdminFundContext **/
+    pub fn admin_initialize_fund_accounts_if_needed(ctx: Context<AdminFundContext>) -> Result<()> {
+        AdminFundContext::initialize_fund_accounts_if_needed(ctx)
     }
 
-    pub fn fund_initialize_supported_token(
-        ctx: Context<FundInitializeSupportedToken>,
+    pub fn admin_transfer_receipt_token_mint_authority(ctx: Context<AdminFundContext>) -> Result<()> {
+        AdminFundContext::transfer_receipt_token_mint_authority(ctx)
+    }
+
+
+    /** AdminReceiptTokenMintContext **/
+    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    pub fn admin_initialize_receipt_token_mint_extra_account_meta_list(
+        ctx: Context<AdminReceiptTokenMintContext>,
     ) -> Result<()> {
-        FundInitializeSupportedToken::initialize_supported_token(ctx)
+        AdminReceiptTokenMintContext::initialize_extra_account_meta_list(ctx)
     }
 
-    pub fn fund_update_sol_capacity_amount(
-        ctx: Context<FundUpdate>,
+    pub fn admin_update_receipt_token_mint_extra_account_meta_list(
+        ctx: Context<AdminReceiptTokenMintContext>,
+    ) -> Result<()> {
+        AdminReceiptTokenMintContext::update_extra_account_meta_list(ctx)
+    }
+
+
+    /** AdminRewardContext **/
+    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardContext>) -> Result<()> {
+        AdminRewardContext::initialize_reward_account_if_needed(ctx)
+    }
+
+    pub fn admin_realloc_reward_account_if_needed(ctx: Context<AdminRewardContext>, required_size: Option<u32>, assert: bool) -> Result<()> {
+        AdminRewardContext::realloc_reward_account_if_needed(ctx, required_size, assert)
+    }
+
+    pub fn admin_update_reward_pools(ctx: Context<AdminRewardContext>) -> Result<()> {
+        AdminRewardContext::update_reward_pools(ctx)
+    }
+
+
+    /** FundManagerFundContext **/
+    pub fn fund_manager_update_sol_capacity_amount(
+        ctx: Context<FundManagerFundContext>,
         capacity_amount: u64,
     ) -> Result<()> {
-        FundUpdate::update_sol_capacity_amount(ctx, capacity_amount)
+        FundManagerFundContext::update_sol_capacity_amount(ctx, capacity_amount)
     }
 
-    pub fn fund_add_supported_token(
-        ctx: Context<FundAddSupportedToken>,
-        capacity_amount: u64,
-        pricing_source: modules::fund::TokenPricingSource,
-    ) -> Result<()> {
-        FundAddSupportedToken::add_supported_token(ctx, capacity_amount, pricing_source)
-    }
-
-    pub fn fund_update_supported_token(
-        ctx: Context<FundUpdate>,
+    pub fn fund_manager_update_supported_token_capacity_amount(
+        ctx: Context<FundManagerFundContext>,
         token: Pubkey,
         capacity_amount: u64,
     ) -> Result<()> {
-        FundUpdate::update_supported_token(ctx, token, capacity_amount)
+        FundManagerFundContext::update_supported_token_capacity_amount(ctx, token, capacity_amount)
     }
 
-    pub fn fund_update_sol_withdrawal_fee_rate(
-        ctx: Context<FundUpdate>,
+    pub fn fund_manager_update_withdrawal_enabled_flag(
+        ctx: Context<FundManagerFundContext>,
+        enabled: bool,
+    ) -> Result<()> {
+        FundManagerFundContext::update_withdrawal_enabled_flag(ctx, enabled)
+    }
+
+    pub fn fund_manager_update_sol_withdrawal_fee_rate(
+        ctx: Context<FundManagerFundContext>,
         sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        FundUpdate::update_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
+        FundManagerFundContext::update_sol_withdrawal_fee_rate(ctx, sol_withdrawal_fee_rate)
     }
 
-    pub fn fund_update_withdrawal_enabled_flag(ctx: Context<FundUpdate>, flag: bool) -> Result<()> {
-        FundUpdate::update_withdrawal_enabled_flag(ctx, flag)
-    }
-
-    pub fn fund_update_batch_processing_threshold(
-        ctx: Context<FundUpdate>,
+    pub fn fund_manager_update_batch_processing_threshold(
+        ctx: Context<FundManagerFundContext>,
         amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
-        FundUpdate::update_batch_processing_threshold(ctx, amount, duration)
+        FundManagerFundContext::update_batch_processing_threshold(ctx, amount, duration)
     }
 
-    pub fn fund_update_price(ctx: Context<FundUpdatePrice>) -> Result<()> {
-        FundUpdatePrice::update_price(ctx)
-    }
 
-    pub fn fund_initialize_user_accounts(ctx: Context<FundInitializeUserAccounts>) -> Result<()> {
-        FundInitializeUserAccounts::initialize_user_accounts(ctx)
-    }
-
-    pub fn fund_deposit_sol(
-        ctx: Context<FundDepositSOL>,
-        amount: u64,
-        metadata: Option<modules::fund::DepositMetadata>,
+    /** FundManagerFundSupportedTokenContext **/
+    pub fn fund_manager_add_supported_token(
+        ctx: Context<FundManagerFundSupportedTokenContext>,
+        capacity_amount: u64,
+        pricing_source: modules::fund::TokenPricingSource,
     ) -> Result<()> {
-        FundDepositSOL::deposit_sol(ctx, amount, metadata)
+        FundManagerFundSupportedTokenContext::add_supported_token(ctx, capacity_amount, pricing_source)
     }
 
-    pub fn fund_deposit_token(
-        ctx: Context<FundDepositToken>,
-        amount: u64,
-        metadata: Option<modules::fund::DepositMetadata>,
+
+    /** FundManagerRewardContext **/
+    pub fn fund_manager_add_reward(
+        ctx: Context<FundManagerRewardContext>,
+        name: String,
+        description: String,
+        reward_type: modules::reward::RewardType,
     ) -> Result<()> {
-        FundDepositToken::deposit_token(ctx, amount, metadata)
+        FundManagerRewardContext::add_reward(ctx, name, description, reward_type)
     }
 
-    pub fn fund_request_withdrawal(
-        ctx: Context<FundRequestWithdrawal>,
-        receipt_token_amount: u64,
-    ) -> Result<()> {
-        FundRequestWithdrawal::request_withdrawal(ctx, receipt_token_amount)
-    }
-
-    pub fn fund_cancel_withdrawal_request(
-        ctx: Context<FundCancelWithdrawalRequest>,
-        request_id: u64,
-    ) -> Result<()> {
-        FundCancelWithdrawalRequest::cancel_withdrawal_request(ctx, request_id)
-    }
-
-    pub fn fund_withdraw(ctx: Context<FundWithdraw>, request_id: u64) -> Result<()> {
-        FundWithdraw::withdraw(ctx, request_id)
-    }
-
-    pub fn operator_run_if_needed(ctx: Context<OperatorRunIfNeeded>) -> Result<()> {
-        OperatorRunIfNeeded::operator_run_if_needed(ctx)
-    }
-
-    pub fn operator_run(ctx: Context<OperatorRun>) -> Result<()> {
-        OperatorRun::operator_run(ctx)
-    }
-
-    pub fn reward_add_holder(
-        ctx: Context<AddRewardPoolHolderContext>,
+    pub fn fund_manager_add_reward_pool_holder(
+        ctx: Context<FundManagerRewardContext>,
         name: String,
         description: String,
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
-        AddRewardPoolHolderContext::add_reward_pool_holder(ctx, name, description, pubkeys)
+        FundManagerRewardContext::add_reward_pool_holder(ctx, name, description, pubkeys)
     }
 
-    pub fn reward_add_reward(
-        ctx: Context<AddRewardContext>,
-        name: String,
-        description: String,
-        reward_type: crate::modules::reward::RewardType,
-    ) -> Result<()> {
-        AddRewardContext::add_reward(ctx, name, description, reward_type)
-    }
-
-    pub fn reward_add_reward_pool(
-        ctx: Context<AddRewardPoolContext>,
+    pub fn fund_manager_add_reward_pool(
+        ctx: Context<FundManagerRewardContext>,
         name: String,
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
-        AddRewardPoolContext::add_reward_pool(
-            ctx,
-            name,
-            holder_id,
-            custom_contribution_accrual_rate_enabled,
-        )
+        FundManagerRewardContext::add_reward_pool(ctx, name, holder_id, custom_contribution_accrual_rate_enabled)
     }
 
-    pub fn reward_claim_user_rewards(
-        ctx: Context<RewardClaimUserRewards>,
-        reward_pool_id: u8,
-        reward_id: u8,
-    ) -> Result<()> {
-        RewardClaimUserRewards::claim_user_rewards(ctx, reward_pool_id, reward_id)
-    }
-
-    pub fn reward_close_reward_pool(
-        ctx: Context<RewardCloseRewardPool>,
+    pub fn fund_manager_close_reward_pool(
+        ctx: Context<FundManagerRewardContext>,
         reward_pool_id: u8,
     ) -> Result<()> {
-        RewardCloseRewardPool::close_reward_pool(ctx, reward_pool_id)
+        FundManagerRewardContext::close_reward_pool(ctx, reward_pool_id)
     }
 
-    pub fn reward_initialize(ctx: Context<RewardInitialize>) -> Result<()> {
-        RewardInitialize::initialize_reward(ctx)
-    }
-
-    pub fn reward_realloc_if_needed(ctx: Context<RewardEnsure>, required_size: Option<u32>, assert: bool) -> Result<()> {
-        RewardEnsure::realloc_if_needed(ctx, required_size, assert)
-    }
-
-    pub fn reward_settle(
-        ctx: Context<RewardSettle>,
+    pub fn fund_manager_settle_reward(
+        ctx: Context<FundManagerRewardContext>,
         reward_pool_id: u8,
         reward_id: u8,
         amount: u64,
     ) -> Result<()> {
-        RewardSettle::settle_reward(ctx, reward_pool_id, reward_id, amount)
+        FundManagerRewardContext::settle_reward(ctx, reward_pool_id, reward_id, amount)
     }
 
-    pub fn reward_update_reward_pools(ctx: Context<RewardUpdateRewardPools>) -> Result<()> {
-        RewardUpdateRewardPools::update_reward_pools(ctx)
+
+    /** OperatorFundContext **/
+    pub fn operator_process_fund_withdrawal_job(ctx: Context<OperatorFundContext>, forced: bool) -> Result<()> {
+        OperatorFundContext::process_fund_withdrawal_job(ctx, forced)
     }
 
-    pub fn reward_update_user_reward_pools(
-        ctx: Context<RewardUpdateUserRewardPools>,
-    ) -> Result<()> {
-        RewardUpdateUserRewardPools::update_user_reward_pools(ctx)
+
+    /** UserFundContext **/
+    pub fn user_initialize_user_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
+        UserFundContext::initialize_user_accounts_if_needed(ctx)
     }
 
-    pub fn token_initialize_payer_account(ctx: Context<TokenInitializePayerAccount>) -> Result<()> {
-        TokenInitializePayerAccount::initialize_payer_account(ctx)
+    pub fn user_update_prices(ctx: Context<UserFundContext>) -> Result<()> {
+        UserFundContext::update_prices(ctx)
     }
 
-    pub fn token_add_payer_account_lamports(
-        ctx: Context<TokenInitializePayerAccount>,
+    pub fn user_deposit_sol(
+        ctx: Context<UserFundContext>,
         amount: u64,
+        metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        TokenInitializePayerAccount::add_payer_account_lamports(ctx, amount)
+        UserFundContext::deposit_sol(ctx, amount, metadata)
     }
 
-    pub fn token_set_receipt_token_mint_authority(
-        ctx: Context<TokenSetReceiptTokenMintAuthority>,
+    pub fn user_request_withdrawal(
+        ctx: Context<UserFundContext>,
+        receipt_token_amount: u64,
     ) -> Result<()> {
-        TokenSetReceiptTokenMintAuthority::set_receipt_token_mint_authority(ctx)
+        UserFundContext::request_withdrawal(ctx, receipt_token_amount)
     }
 
-    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
-    pub fn token_initialize_extra_account_meta_list(
-        ctx: Context<TokenInitializeExtraAccountMetaList>,
+    pub fn user_cancel_withdrawal_request(
+        ctx: Context<UserFundContext>,
+        request_id: u64,
     ) -> Result<()> {
-        TokenInitializeExtraAccountMetaList::initialize_extra_account_meta_list(ctx)
+        UserFundContext::cancel_withdrawal_request(ctx, request_id)
     }
 
-    pub fn token_update_extra_account_meta_list(
-        ctx: Context<TokenInitializeExtraAccountMetaList>,
-    ) -> Result<()> {
-        TokenInitializeExtraAccountMetaList::update_extra_account_meta_list(ctx)
+    pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
+        UserFundContext::withdraw(ctx, request_id)
     }
 
+
+    /** UserFundSupportedTokenContext **/
+    pub fn user_deposit_supported_token(
+        ctx: Context<UserFundSupportedTokenContext>,
+        amount: u64,
+        metadata: Option<modules::fund::DepositMetadata>,
+    ) -> Result<()> {
+        UserFundSupportedTokenContext::deposit_supported_token(ctx, amount, metadata)
+    }
+
+
+    /** UserRewardContext **/
+    pub fn user_update_reward_pools(
+        ctx: Context<UserRewardContext>,
+    ) -> Result<()> {
+        UserRewardContext::update_user_reward_pools(ctx)
+    }
+
+    pub fn user_claim_rewards(
+        ctx: Context<UserRewardContext>,
+        reward_pool_id: u8,
+        reward_id: u8,
+    ) -> Result<()> {
+        UserRewardContext::claim_rewards(ctx, reward_pool_id, reward_id)
+    }
+
+
+    /** UserReceiptTokenTransferContext **/
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(ctx: Context<TokenTransferHook>, amount: u64) -> Result<()> {
-        TokenTransferHook::transfer_hook(ctx, amount)
+    pub fn token_transfer_hook(ctx: Context<UserReceiptTokenTransferContext>, amount: u64) -> Result<()> {
+        UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
 }

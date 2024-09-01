@@ -29,7 +29,7 @@ impl TokenAllocatedAmount {
     pub fn total_contribution_accrual_rate(&self) -> Result<u64> {
         self.records.iter().try_fold(0u64, |sum, record| {
             sum.checked_add(record.total_contribution_accrual_rate()?)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })
     }
 }
@@ -48,6 +48,6 @@ impl TokenAllocatedAmountRecord {
     pub fn total_contribution_accrual_rate(&self) -> Result<u64> {
         self.amount
             .checked_mul(self.contribution_accrual_rate as u64)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }

@@ -25,7 +25,8 @@ $ solana-keygen new -o ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8
     mkdir -p ./target/deploy && ln -s ../../tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json ./target/deploy/restaking-keypair.json
 ```
 
-And update corresponding public keys in `programs/restaking/src/constants.rs` file.
+Then update corresponding public keys in `./programs/restaking/src/constants.rs` file.
+And program id declaration in `./programs/restaking/src/lib.rs` file.
 ```
 $ echo "FRAGSOL_MINT_ADDRESS = $(solana -k ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json address)" && \
     echo "ADMIN_PUBKEY = $(solana -k ./tests/restaking/keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json address)" && \
@@ -33,8 +34,7 @@ $ echo "FRAGSOL_MINT_ADDRESS = $(solana -k ./tests/restaking/keypairs/mint_frags
     echo "PROGRAM_ID = $(solana -k ./tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json address)"
 ```
 
-
-2. Run E2E test
+## 3. Run E2E test
 
 You can configure test sequence by manipulating `./tests/restaking/restaking.ts`. The command below runs e2e test against that sequence.
 ```

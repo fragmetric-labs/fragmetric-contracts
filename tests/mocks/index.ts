@@ -5,12 +5,7 @@ import * as anchor from "@coral-xyz/anchor";
 const changeMintAuthority = (newMintAuthority: anchor.web3.PublicKey, mintFilePath: string) => {
     // Load the mint file and parse JSON
     let mintRaw = fs.readFileSync(mintFilePath, "utf8");
-    let mint = JSON.parse(mintRaw, (key, value) => {
-        if (typeof value === 'number') {
-            return BigInt(value);
-        }
-        return value;
-    });
+    let mint = JSON.parse(mintRaw);
     let data = Uint8Array.from(Buffer.from(mint["account"]["data"][0], "base64"));
     let newMintAuthorityBytes = newMintAuthority.toBytes();
 
@@ -24,12 +19,7 @@ const changeMintAuthority = (newMintAuthority: anchor.web3.PublicKey, mintFilePa
 
     // Write the updated JSON back to the file
     // console.log(mintFilePath, mint)
-    fs.writeFileSync(mintFilePath, JSON.stringify(mint, (key, value) => {
-        if (typeof value == 'bigint') {
-            return value.toString();
-        }
-        return value;
-    }, 0));
+    fs.writeFileSync(mintFilePath, JSON.stringify(mint, null, 0));
 }
 
 export {

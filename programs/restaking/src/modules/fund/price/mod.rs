@@ -3,14 +3,14 @@ mod source;
 use source::*;
 use anchor_lang::prelude::*;
 use crate::{errors::ErrorCode};
-use crate::modules::fund::{Fund, SupportedTokenInfo, TokenPricingSource};
+use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
 
 impl SupportedTokenInfo {
     /// Simply it returns 10^token_decimals.
     fn token_lamports_per_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn calculate_sol_from_tokens(&self, token_amount: u64) -> Result<u64> {
@@ -19,11 +19,11 @@ impl SupportedTokenInfo {
             self.price,
             self.token_lamports_per_token()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 
-impl Fund {
+impl FundAccount {
     pub fn update_token_prices(&mut self, sources: &[&AccountInfo]) -> Result<()> {
         for token in &mut self.supported_tokens {
             let token_lamports_per_token = token.token_lamports_per_token()?;
@@ -47,33 +47,20 @@ impl Fund {
         Ok(())
     }
 
-    pub fn receipt_token_price(
+    pub fn receipt_token_sol_value_per_token(
         &self,
-        decimals: u8,
+        receipt_token_decimals: u8,
         receipt_token_total_supply: u64,
     ) -> Result<u64> {
-        self.calculate_sol_from_receipt_tokens(
+        self.receipt_token_sol_value_for(
             10u64
-                .checked_pow(decimals as u32)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+                .checked_pow(receipt_token_decimals as u32)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
             receipt_token_total_supply,
         )
     }
 
-    pub fn calculate_sol_from_receipt_tokens(
-        &self,
-        receipt_token_amount: u64,
-        receipt_token_total_supply: u64,
-    ) -> Result<u64> {
-        crate::utils::proportional_amount(
-            receipt_token_amount,
-            self.total_sol_value()?,
-            receipt_token_total_supply,
-        )
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
-    }
-
-    pub fn calculate_receipt_tokens_from_sol(
+    pub fn receipt_token_mint_amount_for(
         &self,
         sol_amount: u64,
         receipt_token_total_supply: u64,
@@ -81,18 +68,31 @@ impl Fund {
         crate::utils::proportional_amount(
             sol_amount,
             receipt_token_total_supply,
-            self.total_sol_value()?,
+            self.assets_total_sol_value()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
-    pub fn total_sol_value(&self) -> Result<u64> {
-        // TODO: need to add the sum(operating sol/tokens) after supported_protocols add
+    pub fn receipt_token_sol_value_for(
+        &self,
+        receipt_token_amount: u64,
+        receipt_token_total_supply: u64,
+    ) -> Result<u64> {
+        crate::utils::proportional_amount(
+            receipt_token_amount,
+            self.assets_total_sol_value()?,
+            receipt_token_total_supply,
+        )
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    pub fn assets_total_sol_value(&self) -> Result<u64> {
+        // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
         self.supported_tokens
             .iter()
             .try_fold(self.sol_operation_reserved_amount, |sum, token| {
                 sum.checked_add(token.calculate_sol_from_tokens(token.operation_reserved_amount)?)
-                    .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
             })
     }
 }

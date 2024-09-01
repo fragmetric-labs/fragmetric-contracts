@@ -1,13 +1,15 @@
 mod allocated_amount;
-mod reward_pool;
+mod reward_account;
 mod reward_settlement;
-mod user_reward_pool;
+mod user_reward_account;
 mod user_reward_settlement;
+mod metadata;
 
+pub use metadata::*;
 pub use allocated_amount::*;
-pub use reward_pool::*;
+pub use reward_account::*;
 pub use reward_settlement::*;
-pub use user_reward_pool::*;
+pub use user_reward_account::*;
 pub use user_reward_settlement::*;
 
 pub(super) const REWARD_METADATA_NAME_MAX_LEN: usize = 16;

@@ -3,35 +3,57 @@ use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 
 impl RewardAccount {
-    pub fn add_holder(&mut self, mut holder: Holder) {
+    pub fn add_holder(&mut self, mut holder: Holder) -> Result<()> {
+        if self.holders.iter().any(|p| {
+            p.name == holder.name
+        }) {
+            err!(ErrorCode::RewardAlreadyExistingHolder)?
+        }
         holder.id = self.holders.len() as u8;
         self.holders.push(holder);
-    }
-
-    pub fn add_reward(&mut self, mut reward: Reward) {
-        reward.id = self.rewards.len() as u8;
-        self.rewards.push(reward);
-    }
-
-    pub fn add_reward_pool(&mut self, mut reward_pool: RewardPool) {
-        reward_pool.id = self.reward_pools.len() as u8;
-        self.reward_pools.push(reward_pool);
-    }
-
-    pub fn check_pool_does_not_exist(
-        &self,
-        holder_id: Option<u8>,
-        custom_contribution_accrual_rate_enabled: bool,
-    ) -> Result<()> {
-        if self.reward_pools.iter().any(|p| {
-                p.holder_id == holder_id
-                && p.custom_contribution_accrual_rate_enabled
-                    == custom_contribution_accrual_rate_enabled
-        }) {
-            err!(ErrorCode::RewardAlreadyExistingPool)?;
-        }
 
         Ok(())
+    }
+
+    pub fn add_reward(&mut self, mut reward: Reward) -> Result<()> {
+        if self.rewards.iter().any(|p| {
+            p.name == reward.name
+        }) {
+            err!(ErrorCode::RewardAlreadyExistingReward)?
+        }
+        reward.id = self.rewards.len() as u8;
+        self.rewards.push(reward);
+
+        Ok(())
+    }
+
+    pub fn add_reward_pool(&mut self, mut reward_pool: RewardPool) -> Result<u8> {
+        if let Some(id) = reward_pool.holder_id {
+            require_gt!(self.holders.len(), id as usize);
+        }
+
+        if self.reward_pools.iter().any(|p| {
+            (
+                p.holder_id == reward_pool.holder_id
+                    && p.custom_contribution_accrual_rate_enabled == reward_pool.custom_contribution_accrual_rate_enabled
+            )
+                || p.name == reward_pool.name
+        }) {
+            err!(ErrorCode::RewardAlreadyExistingPool)?
+        }
+
+        reward_pool.id = self.reward_pools.len() as u8;
+        let reward_pool_id = reward_pool.id;
+
+        self.reward_pools.push(reward_pool);
+
+        Ok(reward_pool_id)
+    }
+
+    pub fn close_reward_pool(&mut self, reward_pool_id: u8, current_slot: u64) -> Result<()> {
+        self
+            .reward_pool_mut(reward_pool_id)?
+            .close(current_slot)
     }
 
     pub fn update_reward_pools(&mut self, current_slot: u64) -> Result<()> {
@@ -60,7 +82,7 @@ impl RewardAccount {
         Option<UserRewardAccountUpdateInfo>,
     )> {
         if from.is_none() && to.is_none() || to.is_none() && contribution_accrual_rate.is_some() {
-            err!(ErrorCode::TokenInvalidTransferArgs)?;
+            err!(ErrorCode::RewardInvalidTransferArgs)?
         }
 
         let mut from_user_update: Option<UserRewardAccountUpdateInfo> = None;
@@ -130,7 +152,7 @@ impl RewardAccount {
         receipt_token_mint: &Pubkey,
     ) -> Result<Vec<&mut RewardPool>> {
         if self.receipt_token_mint != receipt_token_mint.key() {
-            return Err(ErrorCode::RewardInvalidPoolAccess)?
+            return Err(ErrorCode::RewardInvalidPoolAccess)?;
         }
 
         // split into base / holder-specific pools
@@ -141,7 +163,7 @@ impl RewardAccount {
 
         // base pool should exist at least one
         if base.is_empty() {
-            err!(ErrorCode::RewardInvalidPoolConfiguration)?;
+            err!(ErrorCode::RewardInvalidPoolConfiguration)?
         }
 
         // first try to find within holder specific pools
@@ -170,17 +192,17 @@ impl RewardPool {
     pub fn update_contribution(&mut self, current_slot: u64) -> Result<()> {
         let elapsed_slot = current_slot
             .checked_sub(self.updated_slot)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution_accrual_rate = self
             .token_allocated_amount
             .total_contribution_accrual_rate()?;
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.contribution = self
             .contribution
             .checked_add(total_contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.updated_slot = current_slot;
 
         Ok(())
@@ -192,7 +214,7 @@ impl RewardPool {
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         if self.closed_slot.is_some() {
-            err!(ErrorCode::RewardPoolAlreadyClosed)?;
+            err!(ErrorCode::RewardPoolClosed)?
         }
 
         // First update contribution
@@ -206,20 +228,21 @@ impl RewardPool {
         }
     }
 
-    pub fn close(&mut self, current_slot: u64) -> Result<()> {
+    fn close(&mut self, current_slot: u64) -> Result<()> {
         if self.closed_slot.is_some() {
-            err!(ErrorCode::RewardPoolAlreadyClosed)?;
+            err!(ErrorCode::RewardPoolClosed)?
         }
 
-        // First update contribution
+        // update contribution as last
         self.update_contribution(current_slot)?;
         self.closed_slot = Some(current_slot);
+
         Ok(())
     }
 }
 
 impl UserRewardAccount {
-    pub fn backfill_not_existing_pools(&mut self, reward_pools: &[RewardPool]) {
+    fn backfill_not_existing_pools(&mut self, reward_pools: &[RewardPool]) {
         let user_pool_length = self.user_reward_pools.len();
         for (i, reward_pool) in reward_pools.iter().enumerate().skip(user_pool_length) {
             self.user_reward_pools
@@ -232,6 +255,8 @@ impl UserRewardAccount {
         reward_pools: &mut [RewardPool],
         current_slot: u64,
     ) -> Result<()> {
+        self.backfill_not_existing_pools(reward_pools);
+
         self.user_reward_pools
             .iter_mut()
             .zip(reward_pools.iter_mut())
@@ -282,7 +307,7 @@ impl UserRewardPool {
                     // case 1: ...updated...[starting...ending)...
                     (block.block_height() as u128)
                         .checked_mul(total_contribution_accrual_rate as u128)
-                        .ok_or_else(|| error!(ErrorCode::CalculationFailure))?
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
                 } else if last_updated_slot <= block.ending_slot {
                     // case 2: ...[starting...updated...ending)...
                     //
@@ -297,10 +322,10 @@ impl UserRewardPool {
                         last_contribution - user_reward_settlement.settled_contribution; // SAFE: contribution always monotonically increase
                     let second_half = ((block.ending_slot - last_updated_slot) as u128)
                         .checked_mul(total_contribution_accrual_rate as u128)
-                        .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                     first_half
                         .checked_add(second_half)
-                        .ok_or_else(|| error!(ErrorCode::CalculationFailure))?
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
                 } else {
                     // case 3: [starting...ending)...updated...
                     //
@@ -319,9 +344,9 @@ impl UserRewardPool {
                             user_block_settled_contribution
                                 .checked_mul(block.amount as u128)
                                 .and_then(|x| x.checked_div(block_contribution))
-                                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?,
+                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
                         )
-                        .map_err(|_| error!(ErrorCode::CalculationFailure))
+                            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
                     })
                     .transpose()?
                     .unwrap_or_default();
@@ -362,15 +387,15 @@ impl UserRewardPool {
     ) -> Result<()> {
         let elapsed_slot = current_slot
             .checked_sub(self.updated_slot)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         self.contribution = self
             .contribution
             .checked_add(total_contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.updated_slot = current_slot;
 
         Ok(())
@@ -395,7 +420,7 @@ impl TokenAllocatedAmount {
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         let total_amount_orig = deltas.iter().try_fold(0u64, |sum, delta| {
             sum.checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })?;
 
         let mut effective_deltas = vec![];
@@ -410,10 +435,10 @@ impl TokenAllocatedAmount {
         // Accounting: check total amount before and after
         let total_amount_effective = effective_deltas.iter().try_fold(0u64, |sum, delta| {
             sum.checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })?;
         if total_amount_orig != total_amount_effective {
-            err!(ErrorCode::RewardInvalidAccounting)?;
+            err!(ErrorCode::RewardAccountingException)?
         }
 
         Ok(effective_deltas)
@@ -433,7 +458,7 @@ impl TokenAllocatedAmount {
             existing_record.amount = existing_record
                 .amount
                 .checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         } else {
             self.records.push(TokenAllocatedAmountRecord {
                 amount: delta.amount,
@@ -444,7 +469,7 @@ impl TokenAllocatedAmount {
         self.total_amount = self
             .total_amount
             .checked_add(delta.amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(delta)
     }
@@ -458,7 +483,7 @@ impl TokenAllocatedAmount {
         self.total_amount = self
             .total_amount
             .checked_sub(delta.amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         let mut deltas = vec![];
         if delta.contribution_accrual_rate.is_some_and(|r| r != 100) {
@@ -470,7 +495,7 @@ impl TokenAllocatedAmount {
             record.amount = record
                 .amount
                 .checked_sub(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
             deltas.push(delta);
         } else {
             let mut remaining_delta_amount = delta.amount;
@@ -513,7 +538,7 @@ impl TokenAllocatedAmountDelta {
                 .is_some_and(|rate| !(100..200).contains(&rate))
         };
         if !self.is_positive || is_contribution_accrual_rate_valid() {
-            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?;
+            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?
         }
 
         Ok(())
@@ -521,7 +546,7 @@ impl TokenAllocatedAmountDelta {
 
     fn check_valid_subtraction(&self) -> Result<()> {
         if self.is_positive {
-            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?;
+            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?
         }
 
         Ok(())

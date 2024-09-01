@@ -1,73 +1,7 @@
-use anchor_lang::prelude::*;
-
-use crate::modules::fund::*;
-
-impl Fund {
-    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-            self.withdrawal_status = Default::default();
-        }
-    }
-}
-
-impl ReceiptTokenLockAuthority {
-    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-        }
-    }
-}
-
-impl SupportedTokenAuthority {
-    pub fn initialize_if_needed(
-        &mut self,
-        bump: u8,
-        receipt_token_mint: Pubkey,
-        supported_token_mint: Pubkey,
-    ) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-            self.supported_token_mint = supported_token_mint;
-        }
-    }
-}
-
-impl ReceiptTokenMintAuthority {
-    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-        }
-    }
-}
-
-impl UserReceipt {
-    pub fn initialize_if_needed(
-        &mut self,
-        bump: u8,
-        receipt_token_mint: Pubkey,
-        user: Pubkey,
-    ) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-            self.user = user;
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use anchor_lang::prelude::*;
+    use crate::modules::fund::FundAccount;
 
     #[test]
     fn test_initialize() {
@@ -77,7 +11,7 @@ mod tests {
         let batch_processing_threshold_amount = 10;
         let batch_processing_threshold_duration = 10;
 
-        let mut fund = Fund {
+        let mut fund = FundAccount {
             data_version: 0,
             bump: 0,
             receipt_token_mint: Pubkey::default(),

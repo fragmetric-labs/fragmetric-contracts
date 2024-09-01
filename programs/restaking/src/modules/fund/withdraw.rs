@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
-use crate::modules::fund::{BatchWithdrawal, ReservedFund, UserReceipt, WithdrawalRequest, WithdrawalStatus};
+use crate::modules::fund::{BatchWithdrawal, ReservedFund, UserFundAccount, WithdrawalRequest, WithdrawalStatus};
 
 impl BatchWithdrawal {
     fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
@@ -8,7 +8,7 @@ impl BatchWithdrawal {
         self.receipt_token_to_process = self
             .receipt_token_to_process
             .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -18,7 +18,7 @@ impl BatchWithdrawal {
         self.receipt_token_to_process = self
             .receipt_token_to_process
             .checked_sub(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -39,11 +39,11 @@ impl BatchWithdrawal {
         self.receipt_token_to_process = self
             .receipt_token_to_process
             .checked_sub(receipt_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.receipt_token_being_processed = self
             .receipt_token_being_processed
             .checked_add(receipt_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -57,15 +57,15 @@ impl BatchWithdrawal {
         self.receipt_token_being_processed = self
             .receipt_token_being_processed
             .checked_sub(receipt_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.receipt_token_processed = self
             .receipt_token_processed
             .checked_add(receipt_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.sol_reserved = self
             .sol_reserved
             .checked_add(sol_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -77,15 +77,15 @@ impl ReservedFund {
         self.total_receipt_token_processed = self
             .total_receipt_token_processed
             .checked_add(batch.receipt_token_processed as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.total_sol_reserved = self
             .total_sol_reserved
             .checked_add(batch.sol_reserved as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.sol_remaining = self
             .sol_remaining
             .checked_add(batch.sol_reserved)
-            .ok_or_else(|| error!(ErrorCode::CalculationFailure))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -94,7 +94,7 @@ impl ReservedFund {
         self.sol_remaining = self
             .sol_remaining
             .checked_sub(amount)
-            .ok_or_else(|| error!(ErrorCode::FundNotEnoughReservedSol))?;
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhausted))?;
 
         Ok(())
     }
@@ -128,7 +128,7 @@ impl WithdrawalStatus {
             self.sol_withdrawal_fee_rate as u64,
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
-        .ok_or_else(|| error!(ErrorCode::CalculationFailure))
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn withdraw(&mut self, amount: u64) -> Result<()> {
@@ -145,7 +145,7 @@ impl WithdrawalStatus {
 
     pub fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
         if batch_id < self.pending_batch_withdrawal.batch_id {
-            err!(ErrorCode::FundWithdrawalAlreadyInProgress)?
+            err!(ErrorCode::FundWithdrawalRequestAlreadyInProgress)?
         }
 
         Ok(())
@@ -153,7 +153,7 @@ impl WithdrawalStatus {
 
     pub fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
-            err!(ErrorCode::FundWithdrawalNotCompleted)?
+            err!(ErrorCode::FundWithdrawalNotCompletedYet)?
         }
 
         Ok(())
@@ -163,7 +163,7 @@ impl WithdrawalStatus {
     pub fn start_processing_pending_batch_withdrawal(&mut self) -> Result<()> {
         let batch_id = self.next_batch_id;
         self.next_batch_id += 1;
-        let new = BatchWithdrawal::empty(batch_id);
+        let new = BatchWithdrawal::new(batch_id);
 
         let mut old = std::mem::replace(&mut self.pending_batch_withdrawal, new);
         old.start_batch_processing()?;
@@ -206,10 +206,10 @@ impl WithdrawalStatus {
     }
 }
 
-impl UserReceipt {
+impl UserFundAccount {
     pub fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         if self.withdrawal_requests.len() == Self::MAX_WITHDRAWAL_REQUESTS_SIZE {
-            err!(ErrorCode::FundExceedsMaxWithdrawalRequestSize)?;
+            err!(ErrorCode::FundExceededMaxWithdrawalRequestSizePerUser)?;
         }
 
         self.withdrawal_requests.push(request);

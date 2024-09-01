@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use crate::modules::fund::FundAccountInfo;
 
 #[event]
-pub struct UserUpdatedFundPrice {
-    pub receipt_token_mint: Pubkey,
+pub struct OperatorProcessedJob {
     pub fund_account: FundAccountInfo,
 }

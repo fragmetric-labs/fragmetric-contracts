@@ -164,6 +164,6 @@ impl SplStakePool {
 
     fn calculate_lamports_from_pool_tokens(&self, pool_tokens: u64) -> Result<u64> {
         crate::utils::proportional_amount(pool_tokens, self.total_lamports, self.pool_token_supply)
-            .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationFailure))
+            .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
     }
 }

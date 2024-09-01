@@ -1,17 +1,17 @@
 use anchor_lang::prelude::*;
-use crate::modules::fund::{FundInfo, UserReceipt};
+use crate::modules::fund::{FundAccountInfo, UserFundAccount};
 
 #[event]
 pub struct UserWithdrewSOLFromFund {
-    pub user: Pubkey,
-    pub user_receipt: UserReceipt,
-
-    pub request_id: u64,
     pub receipt_token_mint: Pubkey,
-    pub receipt_token_amount: u64,
+    pub fund_account: FundAccountInfo,
+    pub request_id: u64,
 
-    pub sol_withdraw_amount: u64,
-    pub sol_fee_amount: u64,
+    pub user_fund_account: UserFundAccount,
+    pub user: Pubkey,
 
-    pub fund_info: FundInfo,
+    pub burnt_receipt_token_amount: u64,
+    pub withdrawn_sol_amount: u64,
+    pub deducted_sol_fee_amount: u64,
+
 }

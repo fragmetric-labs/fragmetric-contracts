@@ -182,7 +182,7 @@ impl MarinadeStakePool {
             self.total_value_staked_lamports(),
             self.msol_supply,
         )
-        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationFailure))
+        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
     }
 
     fn total_value_staked_lamports(&self) -> u64 {

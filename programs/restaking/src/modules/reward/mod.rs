@@ -1,5 +1,4 @@
 mod structs;
-mod initialize;
 mod settle;
 mod update;
 

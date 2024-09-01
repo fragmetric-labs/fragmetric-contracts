@@ -119,7 +119,7 @@ export const deposit_token = describe("deposit_token", () => {
             userInfTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 payer,
-                restaking.tokenMint_inf.address,
+                restaking.tokenMint_INF.address,
                 user.publicKey,
                 false,
                 undefined,
@@ -157,7 +157,7 @@ export const deposit_token = describe("deposit_token", () => {
                     [],
                 ),
                 spl.createMintToCheckedInstruction(
-                    restaking.tokenMint_inf.address,
+                    restaking.tokenMint_INF.address,
                     userInfTokenAccount.address,
                     payer.publicKey,
                     amount.toNumber(),

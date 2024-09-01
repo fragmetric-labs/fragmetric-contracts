@@ -32,11 +32,11 @@ export let tokenMintAddress2: anchor.web3.PublicKey;
 export let tokenMintAddress_bSOL: anchor.web3.PublicKey;
 export let tokenMintAddress_mSOL: anchor.web3.PublicKey;
 export let tokenMintAddress_jitoSOL: anchor.web3.PublicKey;
-export let tokenMintAddress_inf: anchor.web3.PublicKey;
+export let tokenMintAddress_INF: anchor.web3.PublicKey;
 export let tokenMint_bSOL: spl.Mint;
 export let tokenMint_mSOL: spl.Mint;
 export let tokenMint_jitoSOL: spl.Mint;
-export let tokenMint_inf: spl.Mint;
+export let tokenMint_INF: spl.Mint;
 export let tokenMintAuthorityKeypair_all: anchor.web3.Keypair;
 export let stakePoolAddress_bSOL: anchor.web3.PublicKey;
 export let stakePoolAddress_mSOL: anchor.web3.PublicKey;
@@ -70,15 +70,14 @@ export const initialize = describe("Initialize program accounts", () => {
     stakePoolAddress_mSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/mSOL_stake_pool_address.json"));
     tokenMintAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_mint_address.json"));
     stakePoolAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_stake_pool_adress.json"));
-    tokenMintAddress_inf = new anchor.web3.PublicKey(require("../mocks/mainnet/INF_mint_address.json"));
-    tokenMintAuthorityKeypair_all = wallet.payer;
+    tokenMintAddress_INF = new anchor.web3.PublicKey(require("../mocks/mainnet/INF_mint_address.json"));
 
-    // should reset validator once changed
-    const tokenMintAuthorityPublicKey_all = tokenMintAuthorityKeypair_all.publicKey;
-    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/bSOL_mint.json");
-    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/jitoSOL_mint.json");
-    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/mSOL_mint.json");
-    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
+    tokenMintAuthorityKeypair_all = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/mainnet/all_mint_authority.json")));
+    // const tokenMintAuthorityPublicKey_all = tokenMintAuthorityKeypair_all.publicKey;
+    // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/bSOL_mint.json");
+    // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/jitoSOL_mint.json");
+    // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/mSOL_mint.json");
+    // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
 
     before("Prepare program accounts initialization", async () => {
         fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
@@ -111,7 +110,7 @@ export const initialize = describe("Initialize program accounts", () => {
             program.programId
         );
         [fragSOLSupportedTokenAuthorityAddress_inf] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_inf.toBuffer()],
+            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_INF.toBuffer()],
             program.programId
         );
         [fragSOLFundAddress] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -164,7 +163,7 @@ export const initialize = describe("Initialize program accounts", () => {
 
         const mintTx = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.createAccount({
-                fromPubkey: adminKeypair.publicKey,
+                fromPubkey: wallet.payer.publicKey,
                 newAccountPubkey: fragSOLTokenMintKeypair.publicKey,
                 lamports: lamports,
                 space: mintLen,
@@ -213,7 +212,7 @@ export const initialize = describe("Initialize program accounts", () => {
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             mintTx,
-            [adminKeypair, fragSOLTokenMintKeypair],
+            [wallet.payer, adminKeypair, fragSOLTokenMintKeypair],
         );
 
         const fragSOLTokenMint = await spl.getMint(
@@ -244,205 +243,175 @@ export const initialize = describe("Initialize program accounts", () => {
             program.provider.connection,
             tokenMintAddress_jitoSOL,
         );
-        tokenMint_inf = await spl.getMint(
+        tokenMint_INF = await spl.getMint(
             program.provider.connection,
-            tokenMintAddress_inf,
+            tokenMintAddress_INF,
         );
 
         expect(tokenMint_bSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
         expect(tokenMint_mSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
         expect(tokenMint_jitoSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
-        expect(tokenMint_inf.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
+        expect(tokenMint_INF.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
     });
 
     it("Initialize fund, reward accounts and configure token mint", async function () {
-        const solWithdrawalFeeRate = 10;
-        const solCap = new anchor.BN(1_000_000_000 * 10000);
-        const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
-        const tokenPricingSource1 = {
-            "splStakePool": {
-                address: stakePoolAddress_bSOL,
-            }
-        };
-        const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
-        const tokenPricingSource2 = {
-            "marinadeStakePool": {
-                address: stakePoolAddress_mSOL,
-            }
-        };
 
-        const rewardName = "FPoint";
-        const rewardDescription = "FPoint is good";
-        const rewardType = {
-            "point": {
-                decimals: 4,
-            }
-        };
-
-        const batchProcessingThresholdAmount = new anchor.BN(0);
-        const batchProcessingThresholdDuration = new anchor.BN(0);
-        
-        // initializes
-        const initializeFundIx = await program.methods
-            .fundInitialize()
-            .instruction();
-        const updateSolCapacityAmountIx = await program.methods
-            .fundUpdateSolCapacityAmount(solCap)
-            .instruction();
-        const updateSolWithdrawalFeeRateIx = await program.methods
-            .fundUpdateSolWithdrawalFeeRate(solWithdrawalFeeRate)
-            .instruction();
-        const updateWithdrawalEnabledFlagIx = await program.methods
-            .fundUpdateWithdrawalEnabledFlag(true)
-            .instruction();
-        const updateBatchProcessingThresholdIx = await program.methods
-            .fundUpdateBatchProcessingThreshold(
-                batchProcessingThresholdAmount,
-                batchProcessingThresholdDuration,
-            )
-            .instruction();
-        const initializeSupportedTokenIx = async (
-            supportedTokenMint: anchor.web3.PublicKey,
-            tokenProgram: anchor.web3.PublicKey
-        ) => {
-            return await program.methods
-                .fundInitializeSupportedToken()
-                .accounts({
-                    supportedTokenMint,
-                    tokenProgram,
-                })
-                .instruction();
-        };
-        const addSupportedTokenIx = async(
-            supportedTokenMint: anchor.web3.PublicKey,
-            tokenProgram: anchor.web3.PublicKey,
-            capacityAmount: anchor.BN,
-            pricingSource,
-        ) => {
-            return await program.methods
-                .fundAddSupportedToken(
-                    capacityAmount,
-                    pricingSource,
-                )
-                .accounts({
-                    supportedTokenMint,
-                    tokenProgram,
-                })
-                .instruction();
-        };
-        const initializeRewardIx = await program.methods
-            .rewardInitialize()
-            .accounts({ rewardAccount: fragSOLRewardAddress })
-            .instruction();
-        const reallocIfNeededRewardIx = await program.methods
-            .rewardReallocIfNeeded(null, false)
-            .accounts({ rewardAccount: fragSOLRewardAddress })
-            .instruction();
-        const reallocIfNeededRewardWithAssertionIx = await program.methods
-            .rewardReallocIfNeeded(null, true)
-            .accounts({ rewardAccount: fragSOLRewardAddress })
-            .instruction();
-
-        const addRewardIx = async (
-            rewardName: string,
-            rewardDescription: string,
-            rewardType,
-            rewardTokenMint?: anchor.web3.PublicKey,
-        ) => {
-            if (rewardTokenMint == null) {
-                rewardTokenMint = program.programId;
-            }
-            return await program.methods
-                .rewardAddReward(
-                    rewardName,
-                    rewardDescription,
-                    rewardType,
-                )
-                .accounts({
-                    rewardTokenMint,
-                })
-                .instruction();
-        };
-        const addRewardPoolIx = async (
-            name: string,
-            customContributionAccrualRateEnabled: boolean,
-            receiptTokenMint: anchor.web3.PublicKey,
-        ) => {
-            return await program.methods
-                .rewardAddRewardPool(
-                    name,
-                    null,
-                    customContributionAccrualRateEnabled,
-                )
-                .accounts({
-                    receiptTokenMint: receiptTokenMint,
-                })
-                .instruction();
-        };
-        const initializeExtraAccountMetaListIx = await program.methods
-            .tokenInitializeExtraAccountMetaList()
-            .accounts({
-                payer: adminKeypair.publicKey,
-            })
-            .instruction();
-        const initializePayerAccountIx = await program.methods
-            .tokenInitializePayerAccount()
-            .instruction();
-        const addPayerAccountLamportsIx = await program.methods
-            .tokenAddPayerAccountLamports(new anchor.BN(10_000_000_000))
-            .instruction();
-
-        const tx1 = new anchor.web3.Transaction().add(
-            initializeFundIx,
-            updateSolCapacityAmountIx,
-            updateSolWithdrawalFeeRateIx,
-            updateWithdrawalEnabledFlagIx,
-            updateBatchProcessingThresholdIx,
-            await initializeSupportedTokenIx(tokenMint_bSOL.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(tokenMint_mSOL.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(tokenMint_jitoSOL.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(tokenMint_inf.address, spl.TOKEN_PROGRAM_ID),
-            await addSupportedTokenIx(tokenMint_bSOL.address, spl.TOKEN_PROGRAM_ID, tokenCap1, tokenPricingSource1),
-            await addSupportedTokenIx(tokenMint_mSOL.address, spl.TOKEN_PROGRAM_ID, tokenCap2, tokenPricingSource2),
-        );
+        // initialization of fund and reward accounts by admin
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
-            tx1,
-            [wallet.payer],
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
+                    program.methods
+                        .fundInitialize()
+                        .accounts({ receiptTokenMintAccount: fragSOLTokenMintKeypair.publicKey })
+                        .instruction(),
+                    program.methods
+                        .rewardInitialize()
+                        .accounts({ receiptTokenMintAccount: fragSOLTokenMintKeypair.publicKey })
+                        .instruction(),
+                    ...[false, false, true].map(asserted => program.methods
+                        .rewardReallocIfNeeded(null, asserted)
+                        .accounts({ receiptTokenMintAccount: fragSOLTokenMintKeypair.publicKey })
+                        .instruction()),
+                    program.methods
+                        .tokenInitializeExtraAccountMetaList()
+                        .accounts({
+                            payer: wallet.payer.publicKey,
+                        })
+                        .instruction(),
+                    program.methods
+                        .tokenSetReceiptTokenMintAuthority()
+                        .accounts({})
+                        .signers([])
+                        .instruction(),
+                    program.methods
+                        .tokenInitializePayerAccount()
+                        .instruction(),
+                    program.methods
+                        .tokenAddPayerAccountLamports(new anchor.BN(10_000_000_000))
+                        .instruction(),
+                ])
+            ),
+            [wallet.payer, adminKeypair],
         );
 
-        const tx2 = new anchor.web3.Transaction().add(
-            initializeRewardIx,
-            reallocIfNeededRewardIx,
-            reallocIfNeededRewardIx,
-            reallocIfNeededRewardIx,
-            reallocIfNeededRewardIx,
-            reallocIfNeededRewardWithAssertionIx,
-            await addRewardIx(rewardName, rewardDescription, rewardType),
-            await addRewardPoolIx("fragmetricBase", false, fragSOLTokenMintKeypair.publicKey),
-            await addRewardPoolIx("fragmetricBonus", true, fragSOLTokenMintKeypair.publicKey),
-        )
+        // configuration by fund manager
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
-            tx2,
-            [wallet.payer],
-        );
-
-        const tx3 = new anchor.web3.Transaction().add(
-            initializeExtraAccountMetaListIx,
-            initializePayerAccountIx,
-            // set receipt token mint authority to pda
-            await program.methods
-                .tokenSetReceiptTokenMintAuthority()
-                .accounts({})
-                .signers([])
-                .instruction(),
-            addPayerAccountLamportsIx,
-        );
-        await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            tx3,
-            [adminKeypair],
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
+                    program.methods
+                        .fundUpdateSolCapacityAmount(new anchor.BN(1_000_000_000 * 10000))
+                        .instruction(),
+                    program.methods
+                        .fundUpdateSolWithdrawalFeeRate(10)
+                        .instruction(),
+                    program.methods
+                        .fundUpdateWithdrawalEnabledFlag(true)
+                        .instruction(),
+                    program.methods
+                        .fundUpdateBatchProcessingThreshold(
+                            new anchor.BN(0), // batchProcessingThresholdAmount
+                            new anchor.BN(0), // batchProcessingThresholdDuration
+                        )
+                        .instruction(),
+                    ...[
+                        {
+                            supportedTokenMint: tokenMint_mSOL.address,
+                            supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
+                            capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
+                            pricingSource: {
+                                marinadeStakePool: {
+                                    address: stakePoolAddress_mSOL,
+                                }
+                            },
+                        },
+                        {
+                            supportedTokenMint: tokenMint_bSOL.address,
+                            supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
+                            capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
+                            pricingSource: {
+                                splStakePool: {
+                                    address: stakePoolAddress_bSOL,
+                                }
+                            },
+                        },
+                        // TODO: not implemented yet
+                        // {
+                        //     supportedTokenMint: tokenMint_jitoSOL.address,
+                        //     supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
+                        //     capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
+                        //     pricingSource: {
+                        //         "splStakePool": {
+                        //             address: stakePoolAddress_jitoSOL,
+                        //         }
+                        //     },
+                        // },
+                        // TODO: not implemented yet
+                        // {
+                        //     supportedTokenMint: tokenMint_INF.address,
+                        //     supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
+                        //     capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
+                        //     pricingSource: {
+                        //         "infStakePool": {
+                        //             address: stakePoolAddress_INF,
+                        //         }
+                        //     },
+                        // },
+                    ].map(def =>
+                        program.methods
+                            .fundAddSupportedToken(
+                                def.capacity,
+                                def.pricingSource as any,
+                            )
+                            .accounts({
+                                supportedTokenMint: def.supportedTokenMint,
+                                supportedTokenProgram: def.supportedTokenProgram,
+                            })
+                            .instruction()
+                    ),
+                    ...[
+                        {
+                            name: "fPoint",
+                            description: "Point for fToken airdrop from Fragmetric.",
+                            type: {
+                                "point": {
+                                    decimals: 4,
+                                }
+                            },
+                            tokenMint: null as anchor.web3.PublicKey | null,
+                        },
+                    ].map(def => program.methods
+                        .rewardAddReward(def.name, def.description, def.type)
+                        .accounts({ rewardTokenMint: def.tokenMint })
+                        .instruction()
+                    ),
+                    ...[
+                        {
+                            name: "fragmetric_base",
+                            holderId: null,
+                            customContributionAccrualRateEnabled: false,
+                        },
+                        {
+                            name: "fragmetric_bonus",
+                            holderId: null,
+                            customContributionAccrualRateEnabled: true,
+                        },
+                    ].map(def =>
+                        program.methods
+                            .rewardAddRewardPool(
+                                def.name,
+                                def.holderId,
+                                def.customContributionAccrualRateEnabled,
+                            )
+                            .accounts({
+                                receiptTokenMint: fragSOLTokenMintKeypair.publicKey,
+                            })
+                            .instruction()
+                    ),
+                ]),
+            ),
+            [wallet.payer, fundManagerKeypair],
         );
 
         // check fund initialized correctly
@@ -450,114 +419,16 @@ export const initialize = describe("Initialize program accounts", () => {
 
         // expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint1.toString());
         expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint_bSOL.address.toString());
-        expect(tokensInitialized[0].capacityAmount.toNumber()).to.eq(tokenCap1.toNumber());
         expect(tokensInitialized[0].operationReservedAmount.toNumber()).to.eq(0);
 
         // expect(tokensInitialized[1].mint.toString()).to.eq(tokenMint2.toString());
         expect(tokensInitialized[1].mint.toString()).to.eq(tokenMint_mSOL.address.toString());
-        expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
 
         const rewardInitialized = await program.account.rewardAccount.fetch(fragSOLRewardAddress);
-        
         expect(rewardInitialized.dataVersion).to.equal(1);
+
         const receiptTokenMintAccount = await spl.getMint(program.provider.connection, fragSOLTokenMintKeypair.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
         expect(receiptTokenMintAccount.mintAuthority.toString()).to.equal(fragSOLTokenMintAuthorityAddress.toString());
-    });
-
-    // Devnet only
-    it("Initialize for devnet", async function () {
-        if (!utils.isDevnet(program.provider.connection)) {
-            this.skip();
-        }
-
-        const solWithdrawalFeeRate = 10;
-        const solCap = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
-        const tokenCap1 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
-        const tokenPricingSource1 = {
-            "splStakePool": {
-                address: stakePoolAddress_bSOL,
-            }
-        };
-        const tokenCap2 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
-        const tokenPricingSource2 = {
-            "marinadeStakePool": {
-                address: stakePoolAddress_mSOL,
-            }
-        };
-        const tokenCap3 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
-        // const tokenPricingSource3 = {
-        //     "splStakePool": {
-        //         address: jitoSOLStakePoolPublicKey,
-        //     }
-        // };
-
-        const batchProcessingThresholdAmount = new anchor.BN(10000);
-        const batchProcessingThresholdDuration = new anchor.BN(600);
-
-        const tx = new anchor.web3.Transaction().add(
-            // initializes
-            await program.methods
-                .fundInitialize()
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateSolCapacityAmount(solCap)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateSolWithdrawalFeeRate(solWithdrawalFeeRate)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateBatchProcessingThreshold(
-                    batchProcessingThresholdAmount,
-                    batchProcessingThresholdDuration
-                )
-                .accounts({})
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundUpdateWithdrawalEnabledFlag(true)
-                .accounts({})
-                .signers([])
-                .instruction(),
-            // initialize extra account meta list (this will be needed for Mainnet Beta)
-            // await program.methods
-            //     .tokenInitializeExtraAccountMetaList()
-            //     .accounts({
-            //         payer: mintOwner.publicKey,
-            //     })
-            //     .signers([mintOwner.payer])
-            //     .instruction(),
-
-            // add supported tokens (bSOL, mSOL)
-            await program.methods
-                .fundAddSupportedToken(tokenCap1, tokenPricingSource1)
-                .accounts({
-                    supportedTokenMint: tokenMintAddress_bSOL,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([])
-                .instruction(),
-            await program.methods
-                .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
-                .accounts({
-                    supportedTokenMint: tokenMintAddress_mSOL,
-                    tokenProgram: spl.TOKEN_PROGRAM_ID,
-                })
-                .signers([])
-                .instruction(),
-        );
-        const txSig = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            tx,
-            [adminKeypair],
-            { commitment: "confirmed" },
-        );
-        console.log(`initialize txSig: ${txSig}`);
     });
 });
