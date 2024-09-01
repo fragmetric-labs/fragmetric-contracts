@@ -14,14 +14,10 @@ declare_id!("fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3");
 #[cfg(not(feature = "mainnet"))]
 declare_id!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 
+
 #[program]
 pub mod restaking {
     use super::*;
-
-    /** AdminEmptyContext **/
-    pub fn log_message(ctx: Context<AdminEmptyContext>, message: String) -> Result<()> {
-        AdminEmptyContext::log_message(ctx, message)
-    }
 
 
     /** AdminFundContext **/
@@ -29,12 +25,12 @@ pub mod restaking {
         AdminFundContext::initialize_fund_accounts_if_needed(ctx)
     }
 
-    pub fn admin_transfer_receipt_token_mint_authority(ctx: Context<AdminFundContext>) -> Result<()> {
-        AdminFundContext::transfer_receipt_token_mint_authority(ctx)
-    }
-
 
     /** AdminReceiptTokenMintContext **/
+    pub fn admin_transfer_receipt_token_mint_authority(ctx: Context<AdminReceiptTokenMintContext>) -> Result<()> {
+        AdminReceiptTokenMintContext::transfer_receipt_token_mint_authority(ctx)
+    }
+
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn admin_initialize_receipt_token_mint_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintContext>,
@@ -49,11 +45,12 @@ pub mod restaking {
     }
 
 
-    /** AdminRewardContext **/
-    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardContext>) -> Result<()> {
-        AdminRewardContext::initialize_reward_account_if_needed(ctx)
+    /** AdminRewardInitialContext **/
+    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+        AdminRewardInitialContext::initialize_reward_account_if_needed(ctx)
     }
 
+    /** AdminRewardContext **/
     pub fn admin_realloc_reward_account_if_needed(ctx: Context<AdminRewardContext>, required_size: Option<u32>, assert: bool) -> Result<()> {
         AdminRewardContext::realloc_reward_account_if_needed(ctx, required_size, assert)
     }
@@ -157,19 +154,25 @@ pub mod restaking {
     }
 
 
+    /** OperatorEmptyContext **/
+    pub fn operator_log_message(ctx: Context<OperatorEmptyContext>, message: String) -> Result<()> {
+        OperatorEmptyContext::log_message(ctx, message)
+    }
+
+
     /** OperatorFundContext **/
     pub fn operator_process_fund_withdrawal_job(ctx: Context<OperatorFundContext>, forced: bool) -> Result<()> {
         OperatorFundContext::process_fund_withdrawal_job(ctx, forced)
+    }
+
+    pub fn operator_update_prices(ctx: Context<OperatorFundContext>) -> Result<()> {
+        OperatorFundContext::update_prices(ctx)
     }
 
 
     /** UserFundContext **/
     pub fn user_initialize_user_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
         UserFundContext::initialize_user_accounts_if_needed(ctx)
-    }
-
-    pub fn user_update_prices(ctx: Context<UserFundContext>) -> Result<()> {
-        UserFundContext::update_prices(ctx)
     }
 
     pub fn user_deposit_sol(

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::{token_2022::Token2022, token_interface::{Mint, TokenAccount}};
 
 use crate::constants::*;
-use crate::events::OperatorProcessedJob;
+use crate::events::{OperatorProcessedJob, OperatorUpdatedFundPrice};
 use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::modules::operator::FundWithdrawalJob;
@@ -72,6 +72,27 @@ impl<'info> OperatorFundContext<'info> {
             .process()?;
 
         emit!(OperatorProcessedJob {
+            fund_account: FundAccountInfo::new(
+                &ctx.accounts.fund_account,
+                receipt_token_price,
+                receipt_token_total_supply
+            ),
+        });
+
+        Ok(())
+    }
+
+    pub fn update_prices(ctx: Context<Self>) -> Result<()> {
+        ctx.accounts.fund_account.update_token_prices(&[
+            ctx.accounts.token_pricing_source_0.as_ref(),
+            ctx.accounts.token_pricing_source_1.as_ref(),
+        ])?;
+        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let receipt_token_price = ctx.accounts.fund_account
+            .receipt_token_sol_value_per_token(ctx.accounts.receipt_token_mint.decimals, receipt_token_total_supply)?;
+
+        emit!(OperatorUpdatedFundPrice {
+            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             fund_account: FundAccountInfo::new(
                 &ctx.accounts.fund_account,
                 receipt_token_price,

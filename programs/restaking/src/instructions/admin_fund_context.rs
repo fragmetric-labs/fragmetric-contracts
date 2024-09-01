@@ -1,17 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{token_2022::Token2022, token_interface::{Mint, TokenAccount}};
-use anchor_spl::token_2022::{set_authority, SetAuthority};
-use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
+
 use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority, ReceiptTokenMintAuthority};
+use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 
 #[derive(Accounts)]
 pub struct AdminFundContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
@@ -20,15 +19,6 @@ pub struct AdminFundContext<'info> {
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        init_if_needed,
-        payer = payer,
-        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + ReceiptTokenMintAuthority::INIT_SPACE,
-    )]
-    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     #[account(
         init_if_needed,
@@ -76,29 +66,7 @@ impl<'info> AdminFundContext<'info> {
                 ctx.bumps.receipt_token_lock_authority,
                 receipt_token_mint_key,
             );
-        ctx.accounts
-            .receipt_token_mint_authority
-            .initialize_if_needed(
-                ctx.bumps.receipt_token_mint_authority,
-                receipt_token_mint_key,
-            );
 
         Ok(())
-    }
-
-    pub fn transfer_receipt_token_mint_authority(ctx: Context<Self>) -> Result<()> {
-        let set_authority_cpi_ctx = CpiContext::new(
-            ctx.accounts.receipt_token_program.to_account_info(),
-            SetAuthority {
-                current_authority: ctx.accounts.admin.to_account_info(),
-                account_or_mint: ctx.accounts.receipt_token_mint.to_account_info(),
-            },
-        );
-
-        set_authority(
-            set_authority_cpi_ctx,
-            AuthorityType::MintTokens,
-            Some(ctx.accounts.receipt_token_mint_authority.key()),
-        )
     }
 }

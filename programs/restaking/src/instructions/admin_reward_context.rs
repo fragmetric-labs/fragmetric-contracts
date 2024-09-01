@@ -3,8 +3,43 @@ use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::modules::common::{PDASignerSeeds};
+use crate::modules::common::PDASignerSeeds;
 use crate::modules::reward::RewardAccount;
+
+#[derive(Accounts)]
+pub struct AdminRewardInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init_if_needed,
+        space = 10 * 1024, // eventually desired size is: 8 + RewardAccount::INIT_SPACE
+        payer = payer,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+}
+
+impl<'info> AdminRewardInitialContext<'info> {
+    pub fn initialize_reward_account_if_needed(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+        ctx.accounts.reward_account.initialize_if_needed(
+            ctx.bumps.reward_account,
+            ctx.accounts.receipt_token_mint.key(),
+        );
+
+        Ok(())
+    }
+}
+
 
 #[derive(Accounts)]
 pub struct AdminRewardContext<'info> {
@@ -20,25 +55,14 @@ pub struct AdminRewardContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init_if_needed,
-        payer = payer,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 10 * 1024, // eventually desired size is: 8 + RewardAccount::INIT_SPACE
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
     )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 }
 
 impl<'info> AdminRewardContext<'info> {
-    pub fn initialize_reward_account_if_needed(ctx: Context<AdminRewardContext>) -> Result<()> {
-        ctx.accounts.reward_account.initialize_if_needed(
-            ctx.bumps.reward_account,
-            ctx.accounts.receipt_token_mint.key(),
-        );
-
-        Ok(())
-    }
-
     pub fn realloc_reward_account_if_needed(ctx: Context<Self>, desired_size: Option<u32>, asserted: bool) -> Result<()> {
         let current_size = ctx.accounts.reward_account.to_account_info().data_len();
         let min_required_size = RewardAccount::INIT_SPACE;
@@ -63,12 +87,12 @@ impl<'info> AdminRewardContext<'info> {
             if required_lamports > 0 {
                 solana_program::program::invoke(
                     &solana_program::system_instruction::transfer(
-                        &ctx.accounts.admin.key(),
+                        &ctx.accounts.payer.key(),
                         &ctx.accounts.reward_account.to_account_info().key(),
                         required_lamports,
                     ),
                     &[
-                        ctx.accounts.admin.to_account_info(),
+                        ctx.accounts.payer.to_account_info(),
                         ctx.accounts.reward_account.to_account_info(),
                         ctx.accounts.system_program.to_account_info(),
                     ],
@@ -77,7 +101,7 @@ impl<'info> AdminRewardContext<'info> {
                 let cpi_context = CpiContext::new(
                     ctx.accounts.system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
-                        from: ctx.accounts.admin.to_account_info(),
+                        from: ctx.accounts.payer.to_account_info(),
                         to: ctx.accounts.reward_account.to_account_info(),
                     },
                 );

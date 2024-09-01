@@ -3,7 +3,7 @@ use anchor_lang::{system_program, solana_program::sysvar::instructions as instru
 use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{Mint, TokenAccount}};
 
 use crate::constants::*;
-use crate::events::{UserCanceledWithdrawalRequestFromFund, UserDepositedSOLToFund, UserRequestedWithdrawalFromFund, UserUpdatedFundPrice, UserUpdatedRewardPool, UserWithdrewSOLFromFund};
+use crate::events::{UserCanceledWithdrawalRequestFromFund, UserDepositedSOLToFund, UserRequestedWithdrawalFromFund, UserUpdatedRewardPool, UserWithdrewSOLFromFund};
 use crate::errors::ErrorCode;
 use crate::modules::common::*;
 use crate::modules::fund::{DepositMetadata, FundAccount, FundAccountInfo, ReceiptTokenLockAuthority, ReceiptTokenMintAuthority, UserFundAccount};
@@ -122,27 +122,6 @@ impl<'info> UserFundContext<'info> {
                 ctx.accounts.receipt_token_mint.key(),
                 ctx.accounts.user.key(),
             );
-        Ok(())
-    }
-
-    pub fn update_prices(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.fund_account.update_token_prices(&[
-            ctx.accounts.token_pricing_source_0.as_ref(),
-            ctx.accounts.token_pricing_source_1.as_ref(),
-        ])?;
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let receipt_token_price = ctx.accounts.fund_account
-            .receipt_token_sol_value_per_token(ctx.accounts.receipt_token_mint.decimals, receipt_token_total_supply)?;
-
-        emit!(UserUpdatedFundPrice {
-            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::new(
-                &ctx.accounts.fund_account,
-                receipt_token_price,
-                receipt_token_total_supply
-            ),
-        });
-
         Ok(())
     }
 

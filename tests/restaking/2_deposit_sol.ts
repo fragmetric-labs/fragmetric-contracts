@@ -8,12 +8,12 @@ import { before } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
+import { adminKeypair } from './1_initialize';
 
 export const deposit_sol = describe("deposit_sol", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
     const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
     const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
     console.log(`Payer(user1.json) key: ${payer.publicKey}`);
@@ -27,7 +27,7 @@ export const deposit_sol = describe("deposit_sol", () => {
             await utils.requestAirdrop(program.provider, user, 10);
     
             // check the balance
-            const adminBal = await program.provider.connection.getBalance(admin.publicKey);
+            const adminBal = await program.provider.connection.getBalance(adminKeypair.publicKey);
             console.log(`Admin SOL balance: ${adminBal}`);
             const payerBal = await program.provider.connection.getBalance(payer.publicKey);
             console.log(`Payer SOL balance: ${payerBal}`);
@@ -39,10 +39,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
     it("Update price", async () => {
         const updatePriceTx = await program.methods
-            .fundUpdatePrice()
-            .accounts({
-                user: admin.publicKey,
-            })
+            .operatorUpdatePrices()
             .rpc({commitment: "confirmed"});
 
         // parse event
@@ -50,8 +47,8 @@ export const deposit_sol = describe("deposit_sol", () => {
         // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {
-            expect(event.data.fundInfo.receiptTokenPrice.toNumber()).to.be.equal(1_000_000_000);
-            console.log(`Receipt token price: ${event.data.fundInfo.receiptTokenPrice}`);
+            expect(event.data.fundAccount.receiptTokenPrice.toNumber()).to.be.equal(1_000_000_000);
+            console.log(`Receipt token price: ${event.data.fundAccount.receiptTokenPrice}`);
         }
     });
 
@@ -66,25 +63,24 @@ export const deposit_sol = describe("deposit_sol", () => {
         const fundBal_bef = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
         console.log(`fund balance before deposit:`, fundBal_bef);
 
-        const depositSolTx = new anchor.web3.Transaction().add(
-            await program.methods
-                .fundInitializeUserAccounts()
-                .accounts({
-                    user: user.publicKey,
-                })
-                .signers([user])
-                .instruction(),
-            await program.methods
-                .fundDepositSol(amount, null)
-                .accounts({
-                    user: user.publicKey,
-                })
-                .signers([])
-                .instruction(),
-        );
         const depositSolTxSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
-            depositSolTx,
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
+                    program.methods
+                        .userInitializeUserAccountsIfNeeded()
+                        .accounts({
+                            user: user.publicKey,
+                        })
+                        .instruction(),
+                    program.methods
+                        .userDepositSol(amount, null)
+                        .accounts({
+                            user: user.publicKey,
+                        })
+                        .instruction(),
+                ]),
+            ),
             [user],
             { commitment: "confirmed" },
         );
@@ -101,8 +97,8 @@ export const deposit_sol = describe("deposit_sol", () => {
         console.log(`fund balance after deposit:`, fundBal_aft);
         expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
 
-        // check the sol_amount_in has accumulated
-        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
+        // check the solOperationReservedAmount has accumulated
+        let fundData = await program.account.fundAccount.fetch(restaking.fragSOLFundAddress);
         console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
         expect(fundData.solOperationReservedAmount.toNumber()).to.eq(amount.toNumber());
 
@@ -166,15 +162,15 @@ export const deposit_sol = describe("deposit_sol", () => {
         expect(decodedData.walletProvider).to.equal(payload.walletProvider);
         expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
 
-        const signature = ed25519.Sign(encodedData, Buffer.from(admin.payer.secretKey));
+        const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
         const tx = new anchor.web3.Transaction().add(
             anchor.web3.Ed25519Program.createInstructionWithPublicKey({
-                publicKey: admin.publicKey.toBytes(),
+                publicKey: adminKeypair.publicKey.toBytes(),
                 message: encodedData,
                 signature: signature,
             }),
             await program.methods
-                .fundDepositSol(
+                .userDepositSol(
                     amount,
                     payload,
                 )
@@ -197,7 +193,7 @@ export const deposit_sol = describe("deposit_sol", () => {
         expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
 
         // check the sol_amount_in has accumulated
-        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
+        let fundData = await program.account.fundAccount.fetch(restaking.fragSOLFundAddress);
         console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
         expect(fundData.solOperationReservedAmount.toNumber()).to.eq(2 * amount.toNumber());
 

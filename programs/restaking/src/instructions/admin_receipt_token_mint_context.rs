@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_2022::{set_authority, SetAuthority, Token2022};
+use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
 use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
@@ -7,7 +9,7 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::{FundAccount, UserFundAccount};
+use crate::modules::fund::{FundAccount, ReceiptTokenMintAuthority, UserFundAccount};
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
 
 #[derive(Accounts)]
@@ -15,13 +17,24 @@ pub struct AdminReceiptTokenMintContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(address = ADMIN_PUBKEY)]
-    admin: Signer<'info>,
+    #[account(mut, address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + ReceiptTokenMintAuthority::INIT_SPACE,
+    )]
+    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     /// CHECK: ExtraAccountaMetaList Account, must use these seeds
     #[account(
@@ -37,10 +50,32 @@ pub struct AdminReceiptTokenMintContext<'info> {
 }
 
 impl<'info> AdminReceiptTokenMintContext<'info> {
+    pub fn transfer_receipt_token_mint_authority(ctx: Context<Self>) -> Result<()> {
+        ctx.accounts
+            .receipt_token_mint_authority
+            .initialize_if_needed(
+                ctx.bumps.receipt_token_mint_authority,
+                ctx.accounts.receipt_token_mint.key(),
+            );
+
+        let set_authority_cpi_ctx = CpiContext::new(
+            ctx.accounts.receipt_token_program.to_account_info(),
+            SetAuthority {
+                current_authority: ctx.accounts.admin.to_account_info(),
+                account_or_mint: ctx.accounts.receipt_token_mint.to_account_info(),
+            },
+        );
+
+        set_authority(
+            set_authority_cpi_ctx,
+            AuthorityType::MintTokens,
+            Some(ctx.accounts.receipt_token_mint_authority.key()),
+        )
+    }
+
     pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
         let extra_account_metas = Self::extra_account_metas()?;
 
-        // initialize ExtraAccountMetaList account with extra accounts
         ExtraAccountMetaList::init::<ExecuteInstruction>(
             &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
             &extra_account_metas,

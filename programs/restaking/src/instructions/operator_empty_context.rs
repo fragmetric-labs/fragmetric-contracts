@@ -1,14 +1,11 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::ADMIN_PUBKEY;
 
 #[derive(Accounts)]
-pub struct AdminEmptyContext<'info> {
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
+pub struct OperatorEmptyContext {
 }
 
-impl<'info> AdminEmptyContext<'info> {
+impl OperatorEmptyContext {
     pub fn log_message(_ctx: Context<Self>, message: String) -> Result<()> {
         msg!("{}", message);
         Ok(())
