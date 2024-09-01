@@ -3,190 +3,160 @@ import * as spl from "@solana/spl-token";
 import { Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import type { TokenMetadata } from "@solana/spl-token-metadata";
-import { createInitializeInstruction, createUpdateFieldInstruction, pack } from "@solana/spl-token-metadata";
+import * as splTokenMetadata from "@solana/spl-token-metadata";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as fs from "fs";
-import * as utils from "../utils/utils";
+import * as utils from "../utils";
 
-export let receiptTokenMint: anchor.web3.Keypair;
-// program accounts
-export let fund_pda: anchor.web3.PublicKey;
-export let reward_pda: anchor.web3.PublicKey;
-export let receipt_token_lock_authority_pda: anchor.web3.PublicKey;
-export let receipt_token_mint_authority_pda: anchor.web3.PublicKey;
-export let bSOL_token_authority_pda: anchor.web3.PublicKey;
-export let mSOL_token_authority_pda: anchor.web3.PublicKey;
-export let jitoSOL_token_authority_pda: anchor.web3.PublicKey;
-export let inf_token_authority_pda: anchor.web3.PublicKey;
-export let receipt_token_lock_account_pda: anchor.web3.PublicKey;
+export let wallet: anchor.Wallet;
+export let adminKeypair: anchor.web3.Keypair;
+export let fundManagerKeypair: anchor.web3.Keypair;
+export let fragSOLTokenMintMetadata: TokenMetadata;
+export let fragSOLTokenMintKeypair: anchor.web3.Keypair;
+export let fragSOLFundAddress: anchor.web3.PublicKey;
+export let fragSOLRewardAddress: anchor.web3.PublicKey;
+export let fragSOLTokenLockAuthorityAddress: anchor.web3.PublicKey;
+export let fragSOLTokenMintAuthorityAddress: anchor.web3.PublicKey;
+export let fragSOLTokenLockAddress: anchor.web3.PublicKey;
+export let fragSOLSupportedTokenAuthorityAddress_bSOL: anchor.web3.PublicKey;
+export let fragSOLSupportedTokenAuthorityAddress_mSOL: anchor.web3.PublicKey;
+export let fragSOLSupportedTokenAuthorityAddress_jitoSOL: anchor.web3.PublicKey;
+export let fragSOLSupportedTokenAuthorityAddress_inf: anchor.web3.PublicKey;
 
-// for devnet
-export let tokenMint1: anchor.web3.PublicKey;
-export let tokenMint2: anchor.web3.PublicKey;
+// for devnet // TODO: remove...
+export let tokenMintAddress1: anchor.web3.PublicKey;
+export let tokenMintAddress2: anchor.web3.PublicKey;
+
 // for localnet
-export let bSOLMintPublicKey: anchor.web3.PublicKey;
-export let mSOLMintPublicKey: anchor.web3.PublicKey;
-export let jitoSOLMintPublicKey: anchor.web3.PublicKey;
-export let infMintPublicKey: anchor.web3.PublicKey;
-export let bSOLMint: spl.Mint;
-export let mSOLMint: spl.Mint;
-export let jitoSOLMint: spl.Mint;
-export let infMint: spl.Mint;
-export let bSOLStakePoolPublicKey: anchor.web3.PublicKey;
-export let mSOLStakePoolPublicKey: anchor.web3.PublicKey;
-export let jitoSOLStakePoolPublicKey: anchor.web3.PublicKey;
+export let tokenMintAddress_bSOL: anchor.web3.PublicKey;
+export let tokenMintAddress_mSOL: anchor.web3.PublicKey;
+export let tokenMintAddress_jitoSOL: anchor.web3.PublicKey;
+export let tokenMintAddress_inf: anchor.web3.PublicKey;
+export let tokenMint_bSOL: spl.Mint;
+export let tokenMint_mSOL: spl.Mint;
+export let tokenMint_jitoSOL: spl.Mint;
+export let tokenMint_inf: spl.Mint;
+export let tokenMintAuthorityKeypair_all: anchor.web3.Keypair;
+export let stakePoolAddress_bSOL: anchor.web3.PublicKey;
+export let stakePoolAddress_mSOL: anchor.web3.PublicKey;
+export let stakePoolAddress_jitoSOL: anchor.web3.PublicKey;
 
-export const initialize = describe("initialize everything", () => {
+export const initialize = describe("Initialize program accounts", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
-    console.log(`programId:     ${program.programId}`);
-    console.log(`rpcEndpoint:   ${program.provider.connection.rpcEndpoint}`)
+    wallet = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
+    adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json")));
+    fundManagerKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json")));
 
-    const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-    const mintOwner = admin;
-    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
-    console.log(`Payer(user1.json) key: ${payer.publicKey}`);
-
-    let receiptTokenMintMetadata: TokenMetadata;
-
-    // Localnet
-    before("Sol airdrop to payer", async () => {
-        if (utils.isLocalnet(program.provider.connection)) {
-            await utils.requestAirdrop(program.provider, payer, 10);
-            console.log("======= Sol airdrop to payer =======");
-        }
+    console.log({
+        programId: program.programId.toString(),
+        rpcEndpoint: program.provider.connection.rpcEndpoint,
+        walletPublicKey: wallet.publicKey.toString(),
+        fundManagerPublicKey: fundManagerKeypair.publicKey.toString(),
+        adminPublicKey: adminKeypair.publicKey.toString(),
     });
 
-    before("Prepare mainnet token mint/stake pool accounts for localnet", async () => {
-        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/bSOL_mint.json");
-        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/mSOL_mint.json");
-        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/JitoSOL_mint.json");
-        // util.changeMintAuthority(payer.publicKey.toString(), "./tests/restaking/clones/mainnet/INF_mint.json");
-        bSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/bSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        bSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/devnet/addresses/bSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
-        mSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        mSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/mSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
-        jitoSOLMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        jitoSOLStakePoolPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/JitoSOL_stake_pool", {encoding: "utf8"}).replace(/"/g, ''));
-        infMintPublicKey = new anchor.web3.PublicKey(fs.readFileSync("./tests/restaking/lsts/mainnet/addresses/INF_mint", {encoding: "utf8"}).replace(/"/g, ''));
-        console.log("======= Prepare mainnet token mint accounts for localnet =======");
-    });
+    if (utils.isLocalnet(program.provider.connection)) {
+        before("Airdrop SOL to payer", async () => {
+            await utils.requestAirdrop(program.provider, wallet.payer, 10);
+        });
+    }
 
-    before("Prepare program accounts", async () => {
-        receiptTokenMint = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./fragsolMint.json")));
-        receiptTokenMintMetadata = {
-            mint: receiptTokenMint.publicKey,
+    // Set supported tokens' mint, stake pool accounts
+    tokenMintAddress_bSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/bSOL_mint_address.json"));
+    stakePoolAddress_bSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/bSOL_stake_pool_address.json"));
+    tokenMintAddress_mSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/mSOL_mint_address.json"));
+    stakePoolAddress_mSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/mSOL_stake_pool_address.json"));
+    tokenMintAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_mint_address.json"));
+    stakePoolAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_stake_pool_adress.json"));
+    tokenMintAddress_inf = new anchor.web3.PublicKey(require("../mocks/mainnet/INF_mint_address.json"));
+    tokenMintAuthorityKeypair_all = wallet.payer;
+
+    // should reset validator once changed
+    const tokenMintAuthorityPublicKey_all = tokenMintAuthorityKeypair_all.publicKey;
+    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/bSOL_mint.json");
+    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/jitoSOL_mint.json");
+    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/mSOL_mint.json");
+    require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
+
+    before("Prepare program accounts initialization", async () => {
+        fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
+        fragSOLTokenMintMetadata = {
+            mint: fragSOLTokenMintKeypair.publicKey,
             name: "fragSOL",
-            symbol: "FRAGSOL",
+            symbol: "FragSOL",
             uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmdTSAPXn8dT2mnS2rxMouedauhjzJeYA74Hmez5P3ZEgE",
             additionalMetadata: [["description", "Fragmetric Liquid Restaking Token"]],
-            updateAuthority: mintOwner.publicKey,
+            updateAuthority: adminKeypair.publicKey,
         };
-        [receipt_token_lock_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_lock_authority"), receiptTokenMint.publicKey.toBuffer()],
+        [fragSOLTokenLockAuthorityAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt_token_lock_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
         );
-        [receipt_token_mint_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_mint_authority"), receiptTokenMint.publicKey.toBuffer()],
+        [fragSOLTokenMintAuthorityAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt_token_mint_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
         );
-        [bSOL_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("supported_token_authority"), receiptTokenMint.publicKey.toBuffer(), bSOLMintPublicKey.toBuffer()],
+        [fragSOLSupportedTokenAuthorityAddress_bSOL] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_bSOL.toBuffer()],
             program.programId
         );
-        [mSOL_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("supported_token_authority"), receiptTokenMint.publicKey.toBuffer(), mSOLMintPublicKey.toBuffer()],
+        [fragSOLSupportedTokenAuthorityAddress_mSOL] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_mSOL.toBuffer()],
             program.programId
         );
-        [jitoSOL_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("supported_token_authority"), receiptTokenMint.publicKey.toBuffer(), jitoSOLMintPublicKey.toBuffer()],
+        [fragSOLSupportedTokenAuthorityAddress_jitoSOL] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_jitoSOL.toBuffer()],
             program.programId
         );
-        [inf_token_authority_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("supported_token_authority"), receiptTokenMint.publicKey.toBuffer(), infMintPublicKey.toBuffer()],
+        [fragSOLSupportedTokenAuthorityAddress_inf] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("supported_token_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer(), tokenMintAddress_inf.toBuffer()],
             program.programId
         );
-        [fund_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("fund"), receiptTokenMint.publicKey.toBuffer()],
+        [fragSOLFundAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("fund"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
         );
-        [receipt_token_lock_account_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("receipt_token_lock"), receiptTokenMint.publicKey.toBuffer()],
+        [fragSOLTokenLockAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt_token_lock"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
         );
-        [reward_pda] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("reward"), receiptTokenMint.publicKey.toBuffer()],
+        [fragSOLRewardAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("reward"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
         );
 
         // NEED TO CHECK: receiptTokenMint == createMint result account
-        console.log(`admin                              = ${admin.publicKey}`);
-        console.log(`receiptTokenMint                   = ${receiptTokenMint.publicKey}`);
-        console.log(`fund_pda                           = ${fund_pda}`);
-        console.log(`reward account                     = ${reward_pda}`);
-        console.log(`receipt_token_lock_authority_pda   = ${receipt_token_lock_authority_pda}`);
-        console.log(`receipt_token_mint_authority_pda   = ${receipt_token_mint_authority_pda}`);
-        console.log(`bSOL_token_authority_pda           = ${bSOL_token_authority_pda}`);
-        console.log(`mSOL_token_authority_pda           = ${mSOL_token_authority_pda}`);
-        console.log(`jitoSOL_token_authority_pda        = ${jitoSOL_token_authority_pda}`);
-        console.log(`inf_token_authority_pda            = ${inf_token_authority_pda}`);
-        console.log(`receipt_token_lock_account_pda     = ${receipt_token_lock_account_pda}`);
-        console.log("======= Prepare program accounts =======");
+        console.log({
+            fragSOLTokenMintPublicKey: fragSOLTokenMintKeypair.publicKey.toString(),
+            fragSOLTokenMintMetadata,
+            fragSOLFundAddress: fragSOLFundAddress.toString(),
+            fragSOLRewardAddress: fragSOLRewardAddress.toString(),
+            fragSOLTokenLockAddress: fragSOLTokenLockAddress.toString(),
+            fragSOLTokenLockAuthorityAddress: fragSOLTokenLockAuthorityAddress.toString(),
+            fragSOLTokenMintAuthorityAddress: fragSOLTokenMintAuthorityAddress.toString(),
+            fragSOLSupportedTokenAuthorityAddress_bSOL: fragSOLSupportedTokenAuthorityAddress_bSOL.toString(),
+            fragSOLSupportedTokenAuthorityAddress_mSOL: fragSOLSupportedTokenAuthorityAddress_mSOL.toString(),
+            fragSOLSupportedTokenAuthorityAddress_jitoSOL: fragSOLSupportedTokenAuthorityAddress_jitoSOL.toString(),
+            fragSOLSupportedTokenAuthorityAddress_inf: fragSOLSupportedTokenAuthorityAddress_inf.toString(),
+        });
     });
 
-    // Devnet only
-    it.skip("Create test token mint accounts for initialize", async function () {
-        if (!utils.isDevnet(program.provider.connection)) {
-            this.skip();
-        }
-
-        tokenMint1 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
-        tokenMint2 = await spl.createMint(
-            program.provider.connection,
-            payer,
-            payer.publicKey,
-            payer.publicKey,
-            9,
-            undefined,
-            undefined,
-            TOKEN_2022_PROGRAM_ID
-        );
-    });
-
-    // NEED ONLY ONCE AT OFF-CHAIN
-    it.skip("Make fragSOL token metadata file - needed only once", async () => {
-        const receiptTokenMintMetadataJson = {
-            name: receiptTokenMintMetadata.name,
-            symbol: receiptTokenMintMetadata.symbol,
-            description: receiptTokenMintMetadata.additionalMetadata[0][1],
+    it("Populate fragSOL token metadata file to upload to IPFS", async () => {
+        console.log(JSON.stringify({
+            name: fragSOLTokenMintMetadata.name,
+            symbol: fragSOLTokenMintMetadata.symbol,
+            description: fragSOLTokenMintMetadata.additionalMetadata[0][1],
             image: "https://quicknode.quicknode-ipfs.com/ipfs/QmayYcry2mJGHmcYMn1mqiqxR9kkQXtE3uBEzR9y84vQVL",
             // attributes: [],
-        };
-        fs.writeFileSync("./tests/restaking/fragSOLMetadata.json", JSON.stringify(receiptTokenMintMetadataJson, null, 0));
+        }, null, 2));
     });
 
-    // Localnet only: Already created in devnet
-    it("Create receipt token mint with Transfer Hook extension", async function () {
-        if (!utils.isLocalnet(program.provider.connection)) {
-            this.skip();
-        }
-
+    it("Create fragSOL token mint with Transfer Hook extension", async function () {
         // generate keypair to use as address for the transfer-hook enabled mint account
         const decimals = 9;
-
-        const metadataSize = pack(receiptTokenMintMetadata).length;
-
+        const metadataSize = splTokenMetadata.pack(fragSOLTokenMintMetadata).length;
         const extensions = [spl.ExtensionType.TransferHook, spl.ExtensionType.MetadataPointer];
         const mintLen = spl.getMintLen(extensions);
         const metadataExtensionLen = spl.TYPE_SIZE + spl.LENGTH_SIZE;
@@ -194,107 +164,110 @@ export const initialize = describe("initialize everything", () => {
 
         const mintTx = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.createAccount({
-                fromPubkey: mintOwner.publicKey,
-                newAccountPubkey: receiptTokenMint.publicKey,
+                fromPubkey: adminKeypair.publicKey,
+                newAccountPubkey: fragSOLTokenMintKeypair.publicKey,
                 lamports: lamports,
                 space: mintLen,
                 programId: TOKEN_2022_PROGRAM_ID,
             }),
             spl.createInitializeTransferHookInstruction(
-                receiptTokenMint.publicKey,
-                mintOwner.publicKey,
+                fragSOLTokenMintKeypair.publicKey,
+                adminKeypair.publicKey,
                 program.programId,
                 TOKEN_2022_PROGRAM_ID,
             ),
             spl.createInitializeMetadataPointerInstruction(
-                receiptTokenMint.publicKey,
-                mintOwner.publicKey,
-                receiptTokenMint.publicKey,
+                fragSOLTokenMintKeypair.publicKey,
+                adminKeypair.publicKey,
+                fragSOLTokenMintKeypair.publicKey,
                 spl.TOKEN_2022_PROGRAM_ID,
             ),
             spl.createInitializeMintInstruction(
-                receiptTokenMint.publicKey,
+                fragSOLTokenMintKeypair.publicKey,
                 decimals,
-                mintOwner.publicKey,
-                null, // TODO: freeze authority to be null
+                adminKeypair.publicKey,
+                null, // freeze authority to be null
                 spl.TOKEN_2022_PROGRAM_ID,
             ),
-            createInitializeInstruction({
+            splTokenMetadata.createInitializeInstruction({
                 programId: spl.TOKEN_2022_PROGRAM_ID,
-                mint: receiptTokenMint.publicKey,
-                metadata: receiptTokenMint.publicKey,
-                name: receiptTokenMintMetadata.name,
-                symbol: receiptTokenMintMetadata.symbol,
-                uri: receiptTokenMintMetadata.uri,
-                mintAuthority: mintOwner.publicKey, // receipt_token_mint_authority_pda -> need signature
-                updateAuthority: receiptTokenMintMetadata.updateAuthority,
+                mint: fragSOLTokenMintKeypair.publicKey,
+                metadata: fragSOLTokenMintKeypair.publicKey,
+                name: fragSOLTokenMintMetadata.name,
+                symbol: fragSOLTokenMintMetadata.symbol,
+                uri: fragSOLTokenMintMetadata.uri,
+                mintAuthority: adminKeypair.publicKey,
+                updateAuthority: fragSOLTokenMintMetadata.updateAuthority,
             }),
-            createUpdateFieldInstruction({
-                programId: spl.TOKEN_2022_PROGRAM_ID,
-                metadata: receiptTokenMint.publicKey,
-                updateAuthority: receiptTokenMintMetadata.updateAuthority,
-                field: receiptTokenMintMetadata.additionalMetadata[0][0],
-                value: receiptTokenMintMetadata.additionalMetadata[0][1],
-            }),
+            ...fragSOLTokenMintMetadata.additionalMetadata
+                .map(([field, value]) =>
+                    splTokenMetadata.createUpdateFieldInstruction({
+                        programId: spl.TOKEN_2022_PROGRAM_ID,
+                        metadata: fragSOLTokenMintKeypair.publicKey,
+                        updateAuthority: fragSOLTokenMintMetadata.updateAuthority,
+                        field,
+                        value,
+                    }),
+                ),
         );
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             mintTx,
-            [mintOwner.payer, receiptTokenMint],
+            [adminKeypair, fragSOLTokenMintKeypair],
         );
 
-        const receiptTokenMintAccount = await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
-        expect(receiptTokenMintAccount.address.toString()).to.equal(receiptTokenMint.publicKey.toString());
-        // expect(receiptTokenMintAccount.freezeAuthority.toString()).to.equal(mintOwner.publicKey.toString());
+        const fragSOLTokenMint = await spl.getMint(
+            program.provider.connection,
+            fragSOLTokenMintKeypair.publicKey,
+            undefined,
+            TOKEN_2022_PROGRAM_ID,
+        );
+        expect(fragSOLTokenMint.address.toString()).to.equal(fragSOLTokenMintKeypair.publicKey.toString());
+        expect(fragSOLTokenMint.mintAuthority.toString()).to.equal(adminKeypair.publicKey.toString()); // shall be transferred to a PDA
+        expect(fragSOLTokenMint.freezeAuthority).to.null;
     });
 
-    // Localnet only
-    it("Set mainnet token mint accounts for initialize", async function () {
+    it("Mock supported token mints for localnet", async function () {
         if (!utils.isLocalnet(program.provider.connection)) {
             this.skip();
         }
 
-        bSOLMint = await spl.getMint(
+        tokenMint_bSOL = await spl.getMint(
             program.provider.connection,
-            bSOLMintPublicKey,
+            tokenMintAddress_bSOL,
         );
-        mSOLMint = await spl.getMint(
+        tokenMint_mSOL = await spl.getMint(
             program.provider.connection,
-            mSOLMintPublicKey,
+            tokenMintAddress_mSOL,
         );
-        jitoSOLMint = await spl.getMint(
+        tokenMint_jitoSOL = await spl.getMint(
             program.provider.connection,
-            jitoSOLMintPublicKey,
+            tokenMintAddress_jitoSOL,
         );
-        infMint = await spl.getMint(
+        tokenMint_inf = await spl.getMint(
             program.provider.connection,
-            infMintPublicKey,
+            tokenMintAddress_inf,
         );
 
-        expect(bSOLMint.mintAuthority.toString()).to.equal(payer.publicKey.toString());
-        expect(mSOLMint.mintAuthority.toString()).to.equal(payer.publicKey.toString());
-        expect(jitoSOLMint.mintAuthority.toString()).to.equal(payer.publicKey.toString());
-        expect(infMint.mintAuthority.toString()).to.equal(payer.publicKey.toString());
+        expect(tokenMint_bSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
+        expect(tokenMint_mSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
+        expect(tokenMint_jitoSOL.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
+        expect(tokenMint_inf.mintAuthority.toString()).to.equal(tokenMintAuthorityKeypair_all.publicKey.toString());
     });
 
-    // Localnet only
-    it("Initialize fund, extraAccountMetaList and mint authority", async function () {
-        if (!utils.isLocalnet(program.provider.connection)) {
-            this.skip();
-        }
-
+    it("Initialize fund, reward accounts and configure token mint", async function () {
         const solWithdrawalFeeRate = 10;
         const solCap = new anchor.BN(1_000_000_000 * 10000);
         const tokenCap1 = new anchor.BN(1_000_000_000 * 1000);
         const tokenPricingSource1 = {
             "splStakePool": {
-                address: bSOLStakePoolPublicKey,
+                address: stakePoolAddress_bSOL,
             }
         };
         const tokenCap2 = new anchor.BN(1_000_000_000 * 2000);
         const tokenPricingSource2 = {
             "marinadeStakePool": {
-                address: mSOLStakePoolPublicKey,
+                address: stakePoolAddress_mSOL,
             }
         };
 
@@ -359,15 +332,15 @@ export const initialize = describe("initialize everything", () => {
         };
         const initializeRewardIx = await program.methods
             .rewardInitialize()
-            .accounts({ rewardAccount: reward_pda })
+            .accounts({ rewardAccount: fragSOLRewardAddress })
             .instruction();
         const reallocIfNeededRewardIx = await program.methods
             .rewardReallocIfNeeded(null, false)
-            .accounts({ rewardAccount: reward_pda })
+            .accounts({ rewardAccount: fragSOLRewardAddress })
             .instruction();
         const reallocIfNeededRewardWithAssertionIx = await program.methods
             .rewardReallocIfNeeded(null, true)
-            .accounts({ rewardAccount: reward_pda })
+            .accounts({ rewardAccount: fragSOLRewardAddress })
             .instruction();
 
         const addRewardIx = async (
@@ -409,7 +382,7 @@ export const initialize = describe("initialize everything", () => {
         const initializeExtraAccountMetaListIx = await program.methods
             .tokenInitializeExtraAccountMetaList()
             .accounts({
-                payer: admin.publicKey,
+                payer: adminKeypair.publicKey,
             })
             .instruction();
         const initializePayerAccountIx = await program.methods
@@ -425,17 +398,17 @@ export const initialize = describe("initialize everything", () => {
             updateSolWithdrawalFeeRateIx,
             updateWithdrawalEnabledFlagIx,
             updateBatchProcessingThresholdIx,
-            await initializeSupportedTokenIx(bSOLMint.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(mSOLMint.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(jitoSOLMint.address, spl.TOKEN_PROGRAM_ID),
-            await initializeSupportedTokenIx(infMint.address, spl.TOKEN_PROGRAM_ID),
-            await addSupportedTokenIx(bSOLMint.address, spl.TOKEN_PROGRAM_ID, tokenCap1, tokenPricingSource1),
-            await addSupportedTokenIx(mSOLMint.address, spl.TOKEN_PROGRAM_ID, tokenCap2, tokenPricingSource2),
+            await initializeSupportedTokenIx(tokenMint_bSOL.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(tokenMint_mSOL.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(tokenMint_jitoSOL.address, spl.TOKEN_PROGRAM_ID),
+            await initializeSupportedTokenIx(tokenMint_inf.address, spl.TOKEN_PROGRAM_ID),
+            await addSupportedTokenIx(tokenMint_bSOL.address, spl.TOKEN_PROGRAM_ID, tokenCap1, tokenPricingSource1),
+            await addSupportedTokenIx(tokenMint_mSOL.address, spl.TOKEN_PROGRAM_ID, tokenCap2, tokenPricingSource2),
         );
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx1,
-            [admin.payer],
+            [wallet.payer],
         );
 
         const tx2 = new anchor.web3.Transaction().add(
@@ -446,13 +419,13 @@ export const initialize = describe("initialize everything", () => {
             reallocIfNeededRewardIx,
             reallocIfNeededRewardWithAssertionIx,
             await addRewardIx(rewardName, rewardDescription, rewardType),
-            await addRewardPoolIx("fragmetricBase", false, receiptTokenMint.publicKey),
-            await addRewardPoolIx("fragmetricBonus", true, receiptTokenMint.publicKey),
+            await addRewardPoolIx("fragmetricBase", false, fragSOLTokenMintKeypair.publicKey),
+            await addRewardPoolIx("fragmetricBonus", true, fragSOLTokenMintKeypair.publicKey),
         )
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx2,
-            [admin.payer],
+            [wallet.payer],
         );
 
         const tx3 = new anchor.web3.Transaction().add(
@@ -469,27 +442,27 @@ export const initialize = describe("initialize everything", () => {
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx3,
-            [admin.payer],
+            [adminKeypair],
         );
 
         // check fund initialized correctly
-        const tokensInitialized = (await program.account.fund.fetch(fund_pda)).supportedTokens;
+        const tokensInitialized = (await program.account.fund.fetch(fragSOLFundAddress)).supportedTokens;
 
         // expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint1.toString());
-        expect(tokensInitialized[0].mint.toString()).to.eq(bSOLMint.address.toString());
+        expect(tokensInitialized[0].mint.toString()).to.eq(tokenMint_bSOL.address.toString());
         expect(tokensInitialized[0].capacityAmount.toNumber()).to.eq(tokenCap1.toNumber());
         expect(tokensInitialized[0].operationReservedAmount.toNumber()).to.eq(0);
 
         // expect(tokensInitialized[1].mint.toString()).to.eq(tokenMint2.toString());
-        expect(tokensInitialized[1].mint.toString()).to.eq(mSOLMint.address.toString());
+        expect(tokensInitialized[1].mint.toString()).to.eq(tokenMint_mSOL.address.toString());
         expect(tokensInitialized[1].capacityAmount.toNumber()).to.equal(tokenCap2.toNumber());
         expect(tokensInitialized[1].operationReservedAmount.toNumber()).to.eq(0);
 
-        const rewardInitialized = await program.account.rewardAccount.fetch(reward_pda);
+        const rewardInitialized = await program.account.rewardAccount.fetch(fragSOLRewardAddress);
         
         expect(rewardInitialized.dataVersion).to.equal(1);
-        const receiptTokenMintAccount = await spl.getMint(program.provider.connection, receiptTokenMint.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
-        expect(receiptTokenMintAccount.mintAuthority.toString()).to.equal(receipt_token_mint_authority_pda.toString());
+        const receiptTokenMintAccount = await spl.getMint(program.provider.connection, fragSOLTokenMintKeypair.publicKey, undefined, TOKEN_2022_PROGRAM_ID);
+        expect(receiptTokenMintAccount.mintAuthority.toString()).to.equal(fragSOLTokenMintAuthorityAddress.toString());
     });
 
     // Devnet only
@@ -503,13 +476,13 @@ export const initialize = describe("initialize everything", () => {
         const tokenCap1 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
         const tokenPricingSource1 = {
             "splStakePool": {
-                address: bSOLStakePoolPublicKey,
+                address: stakePoolAddress_bSOL,
             }
         };
         const tokenCap2 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
         const tokenPricingSource2 = {
             "marinadeStakePool": {
-                address: mSOLStakePoolPublicKey,
+                address: stakePoolAddress_mSOL,
             }
         };
         const tokenCap3 = new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000));
@@ -560,11 +533,12 @@ export const initialize = describe("initialize everything", () => {
             //     })
             //     .signers([mintOwner.payer])
             //     .instruction(),
+
             // add supported tokens (bSOL, mSOL)
             await program.methods
                 .fundAddSupportedToken(tokenCap1, tokenPricingSource1)
                 .accounts({
-                    supportedTokenMint: bSOLMintPublicKey,
+                    supportedTokenMint: tokenMintAddress_bSOL,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -572,7 +546,7 @@ export const initialize = describe("initialize everything", () => {
             await program.methods
                 .fundAddSupportedToken(tokenCap2, tokenPricingSource2)
                 .accounts({
-                    supportedTokenMint: mSOLMintPublicKey,
+                    supportedTokenMint: tokenMintAddress_mSOL,
                     tokenProgram: spl.TOKEN_PROGRAM_ID,
                 })
                 .signers([])
@@ -581,7 +555,7 @@ export const initialize = describe("initialize everything", () => {
         const txSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
             tx,
-            [admin.payer],
+            [adminKeypair],
             { commitment: "confirmed" },
         );
         console.log(`initialize txSig: ${txSig}`);

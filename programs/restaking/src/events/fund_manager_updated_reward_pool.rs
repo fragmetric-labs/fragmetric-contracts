@@ -2,14 +2,14 @@ use anchor_lang::prelude::*;
 use crate::modules::reward::{Holder, Reward, RewardAccount};
 
 #[event]
-pub struct AdminUpdatedRewardPool {
+pub struct FundManagerUpdatedRewardPool {
     pub receipt_token_mint: Pubkey,
     pub holders: Vec<Holder>,
     pub rewards: Vec<Reward>,
     pub updated_reward_pool_ids: Vec<u8>,
 }
 
-impl AdminUpdatedRewardPool {
+impl FundManagerUpdatedRewardPool {
     pub fn new_from_reward_account(
         reward_account: &RewardAccount,
         updated_reward_pool_ids: Vec<u8>,

@@ -7,7 +7,7 @@ import * as chai from 'chai';
 import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as utils from "../utils/utils";
+import * as utils from "../utils";
 import * as ed25519 from "ed25519";
 import * as restaking from "./1_initialize";
 
@@ -18,8 +18,8 @@ export const deposit_token = describe("deposit_token", () => {
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
     const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
-    const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
+    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
+    const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
     console.log(`Payer(user1.json) key: ${payer.publicKey}`);
     console.log(`User(user2.json) key: ${user.publicKey}`);
 
@@ -57,7 +57,7 @@ export const deposit_token = describe("deposit_token", () => {
             userToken1Account = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 user,
-                restaking.tokenMint1,
+                restaking.tokenMintAddress1,
                 user.publicKey,
                 false,
                 undefined,
@@ -70,7 +70,7 @@ export const deposit_token = describe("deposit_token", () => {
             await spl.mintToChecked(
                 program.provider.connection,
                 payer, // payer를 depositor로 설정하면 missing signature 에러남
-                restaking.tokenMint1,
+                restaking.tokenMintAddress1,
                 userToken1Account.address,
                 payer.publicKey,
                 amount.toNumber(),
@@ -92,7 +92,7 @@ export const deposit_token = describe("deposit_token", () => {
             userBSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 payer,
-                restaking.bSOLMint.address,
+                restaking.tokenMint_bSOL.address,
                 user.publicKey,
                 false,
                 undefined,
@@ -101,7 +101,7 @@ export const deposit_token = describe("deposit_token", () => {
             userMSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 payer,
-                restaking.mSOLMint.address,
+                restaking.tokenMint_mSOL.address,
                 user.publicKey,
                 false,
                 undefined,
@@ -110,7 +110,7 @@ export const deposit_token = describe("deposit_token", () => {
             userJitoSOLTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 payer,
-                restaking.jitoSOLMint.address,
+                restaking.tokenMint_jitoSOL.address,
                 user.publicKey,
                 false,
                 undefined,
@@ -119,7 +119,7 @@ export const deposit_token = describe("deposit_token", () => {
             userInfTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
                 program.provider.connection,
                 payer,
-                restaking.infMint.address,
+                restaking.tokenMint_inf.address,
                 user.publicKey,
                 false,
                 undefined,
@@ -133,7 +133,7 @@ export const deposit_token = describe("deposit_token", () => {
             // mint tokens to user
             const mintTokensTx = new anchor.web3.Transaction().add(
                 spl.createMintToCheckedInstruction(
-                    restaking.bSOLMint.address,
+                    restaking.tokenMint_bSOL.address,
                     userBSOLTokenAccount.address,
                     payer.publicKey,
                     amount.toNumber(),
@@ -141,7 +141,7 @@ export const deposit_token = describe("deposit_token", () => {
                     [],
                 ),
                 spl.createMintToCheckedInstruction(
-                    restaking.mSOLMint.address,
+                    restaking.tokenMint_mSOL.address,
                     userMSOLTokenAccount.address,
                     payer.publicKey,
                     amount.toNumber(),
@@ -149,7 +149,7 @@ export const deposit_token = describe("deposit_token", () => {
                     [],
                 ),
                 spl.createMintToCheckedInstruction(
-                    restaking.jitoSOLMint.address,
+                    restaking.tokenMint_jitoSOL.address,
                     userJitoSOLTokenAccount.address,
                     payer.publicKey,
                     amount.toNumber(),
@@ -157,7 +157,7 @@ export const deposit_token = describe("deposit_token", () => {
                     [],
                 ),
                 spl.createMintToCheckedInstruction(
-                    restaking.infMint.address,
+                    restaking.tokenMint_inf.address,
                     userInfTokenAccount.address,
                     payer.publicKey,
                     amount.toNumber(),
@@ -181,21 +181,21 @@ export const deposit_token = describe("deposit_token", () => {
             this.skip();
         }
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`token balance before deposit: ${tokenAmountIn_bef}`);
 
         await program.methods
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                supportedTokenMint: restaking.tokenMint1,
+                supportedTokenMint: restaking.tokenMintAddress1,
                 userSupportedTokenAccount: userToken1Account.address,
             })
             .signers([user])
             .rpc({ commitment: "confirmed" });
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_aft - tokenAmountIn_bef).to.equal(amount.toNumber());
     });
@@ -212,7 +212,7 @@ export const deposit_token = describe("deposit_token", () => {
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                supportedTokenMint: restaking.bSOLMint.address,
+                supportedTokenMint: restaking.tokenMint_bSOL.address,
                 userSupportedTokenAccount: userBSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -234,7 +234,7 @@ export const deposit_token = describe("deposit_token", () => {
             .fundDepositToken(amount, null)
             .accounts({
                 user: user.publicKey,
-                supportedTokenMint: restaking.mSOLMint.address,
+                supportedTokenMint: restaking.tokenMint_mSOL.address,
                 userSupportedTokenAccount: userMSOLTokenAccount.address,
                 // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -253,13 +253,13 @@ export const deposit_token = describe("deposit_token", () => {
         expect(depositEvent.data.contributionAccrualRate).to.be.null;
     
         // check the price of tokens
-        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
         console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,
@@ -287,7 +287,7 @@ export const deposit_token = describe("deposit_token", () => {
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            restaking.tokenMint1,
+            restaking.tokenMintAddress1,
             userToken1Account.address,
             payer.publicKey,
             amount.toNumber(),
@@ -297,7 +297,7 @@ export const deposit_token = describe("deposit_token", () => {
             TOKEN_2022_PROGRAM_ID,
         );
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
@@ -305,7 +305,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    supportedTokenMint: restaking.tokenMint1,
+                    supportedTokenMint: restaking.tokenMintAddress1,
                     userSupportedTokenAccount: userToken1Account.address,
                 })
                 .signers([user])
@@ -313,7 +313,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
@@ -331,7 +331,7 @@ export const deposit_token = describe("deposit_token", () => {
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            restaking.bSOLMint.address,
+            restaking.tokenMint_bSOL.address,
             userBSOLTokenAccount.address,
             payer.publicKey,
             amount.toNumber(),
@@ -340,7 +340,7 @@ export const deposit_token = describe("deposit_token", () => {
             undefined,
         );
 
-        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
+        const tokenAmountIn_bef = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance before deposit: ${tokenAmountIn_bef}`);
 
         expect(
@@ -348,7 +348,7 @@ export const deposit_token = describe("deposit_token", () => {
                 .fundDepositToken(amount, null)
                 .accounts({
                     user: user.publicKey,
-                    supportedTokenMint: restaking.bSOLMint.address,
+                    supportedTokenMint: restaking.tokenMint_bSOL.address,
                     userSupportedTokenAccount: userBSOLTokenAccount.address,
                 })
                 .signers([user])
@@ -356,7 +356,7 @@ export const deposit_token = describe("deposit_token", () => {
           ).to.eventually.throw('ExceedsTokenCap');
 
         // check if token's amount_in increased correctly
-        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount;
+        const tokenAmountIn_aft = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount;
         console.log(`fund token balance after deposit: ${tokenAmountIn_aft}`);
         expect(tokenAmountIn_bef.toNumber()).to.equal(tokenAmountIn_aft.toNumber());
     });
@@ -373,7 +373,7 @@ export const deposit_token = describe("deposit_token", () => {
         await spl.mintToChecked(
             program.provider.connection,
             payer,
-            restaking.bSOLMint.address,
+            restaking.tokenMint_bSOL.address,
             userBSOLTokenAccount.address,
             payer.publicKey,
             amount.toNumber(),
@@ -384,7 +384,7 @@ export const deposit_token = describe("deposit_token", () => {
         const userBSOLBal = await getTokenBalance(program.provider.connection, userBSOLTokenAccount.address);
         console.log(`user bSOL balance:`, userBSOLBal);
 
-        const fundBSOLBal_bef = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
+        const fundBSOLBal_bef = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`fund bSOL balance before deposit:`, fundBSOLBal_bef);
 
         const payload = {
@@ -412,7 +412,7 @@ export const deposit_token = describe("deposit_token", () => {
                 )
                 .accounts({
                     user: user.publicKey,
-                    supportedTokenMint: restaking.bSOLMint.address,
+                    supportedTokenMint: restaking.tokenMint_bSOL.address,
                     userSupportedTokenAccount: userBSOLTokenAccount.address,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     depositTokenProgram: spl.TOKEN_PROGRAM_ID,
@@ -427,7 +427,7 @@ export const deposit_token = describe("deposit_token", () => {
             { commitment: "confirmed" },
         );
 
-        const fundBSOLBal_aft = (await program.account.fund.fetch(restaking.fund_pda)).supportedTokens[0].operationReservedAmount.toNumber();
+        const fundBSOLBal_aft = (await program.account.fund.fetch(restaking.fragSOLFundAddress)).supportedTokens[0].operationReservedAmount.toNumber();
         console.log(`fund bSOL balance after deposit:`, fundBSOLBal_aft);
         expect(fundBSOLBal_aft - fundBSOLBal_bef).to.equal(amount.toNumber());
 
@@ -445,13 +445,13 @@ export const deposit_token = describe("deposit_token", () => {
         console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
 
         // check the price of tokens
-        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
         console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
         console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,

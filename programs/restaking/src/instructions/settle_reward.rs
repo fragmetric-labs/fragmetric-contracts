@@ -2,14 +2,14 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::events::AdminUpdatedRewardPool;
+use crate::events::FundManagerUpdatedRewardPool;
 use crate::modules::common::PDASignerSeeds;
 use crate::modules::reward::RewardAccount;
 
 #[derive(Accounts)]
 pub struct RewardSettle<'info> {
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -42,7 +42,7 @@ impl<'info> RewardSettle<'info> {
             .reward_pool_mut(reward_pool_id)?
             .settle_reward(reward_id, amount, current_slot)?;
 
-        emit!(AdminUpdatedRewardPool::new_from_reward_account(
+        emit!(FundManagerUpdatedRewardPool::new_from_reward_account(
             &ctx.accounts.reward_account,
             vec![reward_pool_id],
         ));

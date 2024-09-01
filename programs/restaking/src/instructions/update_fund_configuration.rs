@@ -8,8 +8,8 @@ use crate::modules::fund::Fund;
 
 #[derive(Accounts)]
 pub struct FundUpdate<'info> {
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
 
     #[account(
         mut,

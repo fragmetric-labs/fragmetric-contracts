@@ -4,7 +4,7 @@ import { Program } from "@coral-xyz/anchor";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as utils from "../utils/utils";
+import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 
 export const transfer_hook = describe("transfer_hook", () => {
@@ -12,10 +12,10 @@ export const transfer_hook = describe("transfer_hook", () => {
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
     const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
+    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
     const mintOwner = payer;
-    const user2 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
-    const user3 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user3.json")));
+    const user2 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
+    const user3 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user3.json")));
     console.log(`Payer(user1.json) key: ${payer.publicKey}`);
     console.log(`User2(user2.json) key: ${user2.publicKey}`);
     console.log(`User3(user3.json) key: ${user3.publicKey}`);
@@ -45,19 +45,19 @@ export const transfer_hook = describe("transfer_hook", () => {
 
     before("Prepare program accounts", async () => {
         user2ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user2.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,
         );
         user3ReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user3.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,
         );
         [extraAccountMetaList, ] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("extra-account-metas"), restaking.receiptTokenMint.publicKey.toBuffer()],
+            [Buffer.from("extra-account-metas"), restaking.fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId,
         );
         console.log(`user2 receipt token account    = ${user2ReceiptTokenAccount}`);
@@ -93,7 +93,7 @@ export const transfer_hook = describe("transfer_hook", () => {
         await spl.createAccount(
             program.provider.connection,
             payer,
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user3.publicKey,
             null,
             null,
@@ -156,7 +156,7 @@ export const transfer_hook = describe("transfer_hook", () => {
         const transferHookIx = await spl.createTransferCheckedWithTransferHookInstruction(
             program.provider.connection,
             user2ReceiptTokenAccount,
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user3ReceiptTokenAccount,
             user2.publicKey,
             BigInt(amountToTransfer.toString()),

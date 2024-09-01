@@ -5,7 +5,7 @@ import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as utils from "../utils/utils";
+import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
 
@@ -14,8 +14,8 @@ export const deposit_sol = describe("deposit_sol", () => {
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
     const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
-    const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
+    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
+    const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
     console.log(`Payer(user1.json) key: ${payer.publicKey}`);
     console.log(`User(user2.json) key: ${user.publicKey}`);
 
@@ -63,7 +63,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         let amount = new anchor.BN(1_000_000_000);
 
-        const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
+        const fundBal_bef = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
         console.log(`fund balance before deposit:`, fundBal_bef);
 
         const depositSolTx = new anchor.web3.Transaction().add(
@@ -97,12 +97,12 @@ export const deposit_sol = describe("deposit_sol", () => {
         //     .signers([user])
         //     .rpc({ commitment: "confirmed" });
 
-        const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
+        const fundBal_aft = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
         console.log(`fund balance after deposit:`, fundBal_aft);
         expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
 
         // check the sol_amount_in has accumulated
-        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
         console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
         expect(fundData.solOperationReservedAmount.toNumber()).to.eq(amount.toNumber());
 
@@ -112,7 +112,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,
@@ -152,7 +152,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         let amount = new anchor.BN(1_000_000_000);
 
-        const fundBal_bef = await program.provider.connection.getBalance(restaking.fund_pda);
+        const fundBal_bef = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
         console.log(`fund balance before deposit:`, fundBal_bef);
 
         const payload = {
@@ -192,12 +192,12 @@ export const deposit_sol = describe("deposit_sol", () => {
             { commitment: "confirmed" },
         );
 
-        const fundBal_aft = await program.provider.connection.getBalance(restaking.fund_pda);
+        const fundBal_aft = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
         console.log(`fund balance after deposit:`, fundBal_aft);
         expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
 
         // check the sol_amount_in has accumulated
-        let fundData = await program.account.fund.fetch(restaking.fund_pda);
+        let fundData = await program.account.fund.fetch(restaking.fragSOLFundAddress);
         console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
         expect(fundData.solOperationReservedAmount.toNumber()).to.eq(2 * amount.toNumber());
 
@@ -207,7 +207,7 @@ export const deposit_sol = describe("deposit_sol", () => {
 
         // check receipt token balance of user
         const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.receiptTokenMint.publicKey,
+            restaking.fragSOLTokenMintKeypair.publicKey,
             user.publicKey,
             false,
             TOKEN_2022_PROGRAM_ID,

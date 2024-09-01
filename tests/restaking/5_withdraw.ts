@@ -7,9 +7,9 @@ import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as utils from "../utils/utils";
+import * as utils from "../utils";
 import * as restaking from "./1_initialize";
-import {receipt_token_lock_account_pda} from "./1_initialize";
+import {fragSOLTokenLockAddress} from "./1_initialize";
 
 chai.use(chaiAsPromised);
 
@@ -18,8 +18,8 @@ export const withdraw = describe("withdraw", () => {
   const program = anchor.workspace.Restaking as Program<Restaking>;
 
   const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-  const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user1.json")));
-  const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../user2.json")));
+  const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
+  const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
   console.log(`Payer(user1.json) key: ${payer.publicKey}`);
   console.log(`User(user2.json) key: ${user.publicKey}`);
 
@@ -45,7 +45,7 @@ export const withdraw = describe("withdraw", () => {
 
   before("Prepare program accounts", async () => {
     userReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
-      restaking.receiptTokenMint.publicKey,
+      restaking.fragSOLTokenMintKeypair.publicKey,
       user.publicKey,
       false,
       TOKEN_2022_PROGRAM_ID,
@@ -91,7 +91,7 @@ export const withdraw = describe("withdraw", () => {
   it("Request withdrawal", async () => {
     const lockAccountBalanceBefore = (await spl.getAccount(
         program.provider.connection,
-        receipt_token_lock_account_pda,
+        fragSOLTokenLockAddress,
         undefined,
         TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -115,7 +115,7 @@ export const withdraw = describe("withdraw", () => {
         .rpc();
     }
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fund_pda))
+    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(3);
 
@@ -131,7 +131,7 @@ export const withdraw = describe("withdraw", () => {
 
     const lockAccountBalanceAfter = (await spl.getAccount(
         program.provider.connection,
-        receipt_token_lock_account_pda,
+        fragSOLTokenLockAddress,
         undefined,
         TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -141,7 +141,7 @@ export const withdraw = describe("withdraw", () => {
   it("Cancel withdrawal request", async () => {
     const lockAccountBalanceBefore = (await spl.getAccount(
         program.provider.connection,
-        receipt_token_lock_account_pda,
+        fragSOLTokenLockAddress,
         undefined,
         TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -163,7 +163,7 @@ export const withdraw = describe("withdraw", () => {
       .signers([user])
       .rpc();
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fund_pda))
+    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(2);
 
@@ -189,7 +189,7 @@ export const withdraw = describe("withdraw", () => {
 
     const lockAccountBalanceAfter = (await spl.getAccount(
         program.provider.connection,
-        receipt_token_lock_account_pda,
+        fragSOLTokenLockAddress,
         undefined,
         TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -199,7 +199,7 @@ export const withdraw = describe("withdraw", () => {
   it("Process all withdrawals", async () => {
     await program.methods.operatorRun().accounts({}).signers([]).rpc();
 
-    const fund = await program.account.fund.fetch(restaking.fund_pda)
+    const fund = await program.account.fund.fetch(restaking.fragSOLFundAddress)
     const withdrawalStatus = fund.withdrawalStatus;
     expect(withdrawalStatus.lastCompletedBatchId.toNumber()).to.equal(1);
 
@@ -209,7 +209,7 @@ export const withdraw = describe("withdraw", () => {
 
     const lockAccountBalanceAfter = (await spl.getAccount(
         program.provider.connection,
-        receipt_token_lock_account_pda,
+        fragSOLTokenLockAddress,
         undefined,
         TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -236,7 +236,7 @@ export const withdraw = describe("withdraw", () => {
     );
     expect(balanceAfter - balanceBefore).to.equal(amount - fee);
 
-    const reservedFund = (await program.account.fund.fetch(restaking.fund_pda))
+    const reservedFund = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.reservedFund;
     expect(reservedFund.solRemaining.toNumber()).to.equal(amount + fee);
   });
