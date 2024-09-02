@@ -12,24 +12,29 @@ $ npm install
 ```
 
 ## 2. Test Guide
-1. You have to prepare 2 accounts before running test.
-- receipt token mint account
-- reward account
-
-You just can generate any keypair with below cli command.
+1. Generate placeholder keypairs with below commands.
 ```
-# admin account
+# payer wallet account
 $ solana-keygen new -o ./id.json
 
-# global accounts
-$ solana-keygen new -o ./tests/restaking/fragsolMint.json
-$ solana-keygen new -o ./tests/restaking/rewardAccount.json
+# program global accounts
+$ solana-keygen new -o ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json && \
+    solana-keygen new -o ./tests/restaking/keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json && \
+    solana-keygen new -o ./tests/restaking/keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json && \
+    solana-keygen new -o ./tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json && \
+    mkdir -p ./target/deploy && ln -s ../../tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json ./target/deploy/restaking-keypair.json
 ```
 
-And update `ADMIN_PUBKEY, FRAGSOL_MINT_ADDRESS, REWARD_ACCOUNT_ADDRESS` public keys in `programs/restaking/src/constants.rs` file.
+Then update corresponding public keys in `./programs/restaking/src/constants.rs` file.
+And program id declaration in `./programs/restaking/src/lib.rs` file.
+```
+$ echo "FRAGSOL_MINT_ADDRESS = $(solana -k ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json address)" && \
+    echo "ADMIN_PUBKEY = $(solana -k ./tests/restaking/keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json address)" && \
+    echo "FUND_MANAGER_PUBKEY = $(solana -k ./tests/restaking/keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json address)" && \
+    echo "PROGRAM_ID = $(solana -k ./tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json address)"
+```
 
-
-2. Run E2E test
+## 3. Run E2E test
 
 You can configure test sequence by manipulating `./tests/restaking/restaking.ts`. The command below runs e2e test against that sequence.
 ```
