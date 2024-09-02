@@ -9,7 +9,7 @@ pub struct FundAccount {
     pub data_version: u8,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
-    #[max_len(10)]
+    #[max_len(16)]
     pub supported_tokens: Vec<SupportedTokenInfo>,
     pub sol_capacity_amount: u64,
     pub sol_accumulated_deposit_amount: u64,

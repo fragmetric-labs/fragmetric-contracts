@@ -9,7 +9,7 @@ import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
-import {fragSOLTokenLockAddress} from "./1_initialize";
+import {fragSOLTokenLockAddress, adminKeypair, wallet, stakePoolAccounts, fundManagerKeypair} from "./1_initialize";
 
 chai.use(chaiAsPromised);
 
@@ -17,13 +17,10 @@ export const withdraw = describe("withdraw", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.Restaking as Program<Restaking>;
 
-  const admin = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-  const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
   const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
-  console.log(`Payer(user1.json) key: ${payer.publicKey}`);
   console.log(`User(user2.json) key: ${user.publicKey}`);
 
-  let userReceiptTokenAccount: anchor.web3.PublicKey;
+  let userFundAccount: anchor.web3.PublicKey;
 
   const amount = 1_000_000_000;
 
@@ -33,10 +30,6 @@ export const withdraw = describe("withdraw", () => {
       await utils.requestAirdrop(program.provider, user, 10);
 
       // check the balance
-      const adminBal = await program.provider.connection.getBalance(admin.publicKey);
-      console.log(`Admin SOL balance: ${adminBal}`);
-      const payerBal = await program.provider.connection.getBalance(payer.publicKey);
-      console.log(`Payer SOL balance: ${payerBal}`);
       const userBal = await program.provider.connection.getBalance(user.publicKey);
       console.log(`User SOL balance: ${userBal}`);
       console.log("======= Sol airdrop to user =======");
@@ -44,13 +37,13 @@ export const withdraw = describe("withdraw", () => {
   });
 
   before("Prepare program accounts", async () => {
-    userReceiptTokenAccount = spl.getAssociatedTokenAddressSync(
+    userFundAccount = spl.getAssociatedTokenAddressSync(
       restaking.fragSOLTokenMintKeypair.publicKey,
       user.publicKey,
       false,
       TOKEN_2022_PROGRAM_ID,
     );
-    console.log(`user receipt token account = ${userReceiptTokenAccount}`);
+    console.log(`user receipt token account = ${userFundAccount}`);
     console.log("======= Prepare program accounts =======");
   });
 
@@ -59,16 +52,17 @@ export const withdraw = describe("withdraw", () => {
 
     const depositSolTx = new anchor.web3.Transaction().add(
       await program.methods
-        .fundInitializeUserAccounts()
+        .userUpdateAccountsIfNeeded()
         .accounts({
           user: user.publicKey,
         })
         .instruction(),
       await program.methods
-        .fundDepositSol(amount, null)
+        .userDepositSol(amount, null)
         .accounts({
           user: user.publicKey,
         })
+        .remainingAccounts(stakePoolAccounts)
         .instruction(),
     );
     await anchor.web3.sendAndConfirmTransaction(
@@ -80,7 +74,7 @@ export const withdraw = describe("withdraw", () => {
 
     const userReceiptTokenBalance = (await spl.getAccount(
       program.provider.connection,
-      userReceiptTokenAccount,
+      userFundAccount,
       undefined,
       TOKEN_2022_PROGRAM_ID,
     )).amount;
@@ -99,7 +93,7 @@ export const withdraw = describe("withdraw", () => {
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
-        userReceiptTokenAccount,
+        userFundAccount,
         undefined,
         TOKEN_2022_PROGRAM_ID
       )
@@ -107,7 +101,7 @@ export const withdraw = describe("withdraw", () => {
 
     for (let i = 0; i < 3; i++) {
       await program.methods
-        .fundRequestWithdrawal(new anchor.BN(amount))
+        .userRequestWithdrawal(new anchor.BN(amount))
         .accounts({
           user: user.publicKey,
         })
@@ -115,14 +109,14 @@ export const withdraw = describe("withdraw", () => {
         .rpc();
     }
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
+    const pendingBatchWithdrawal = (await program.account.fundAccount.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(3);
 
     const balanceAfter = (
       await spl.getAccount(
         program.provider.connection,
-        userReceiptTokenAccount,
+        userFundAccount,
         undefined,
         TOKEN_2022_PROGRAM_ID
       )
@@ -149,28 +143,28 @@ export const withdraw = describe("withdraw", () => {
     const balanceBefore = (
       await spl.getAccount(
         program.provider.connection,
-        userReceiptTokenAccount,
+        userFundAccount,
         undefined,
         TOKEN_2022_PROGRAM_ID
       )
     ).amount;
 
     await program.methods
-      .fundCancelWithdrawalRequest(new anchor.BN(2))
+      .userCancelWithdrawalRequest(new anchor.BN(2))
       .accounts({
         user: user.publicKey,
       })
       .signers([user])
       .rpc();
 
-    const pendingBatchWithdrawal = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
+    const pendingBatchWithdrawal = (await program.account.fundAccount.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.pendingBatchWithdrawal;
     expect(pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).to.equal(2);
 
     const balanceAfter = (
       await spl.getAccount(
         program.provider.connection,
-        userReceiptTokenAccount,
+        userFundAccount,
         undefined,
         TOKEN_2022_PROGRAM_ID
       )
@@ -179,7 +173,7 @@ export const withdraw = describe("withdraw", () => {
 
     expect(
       program.methods
-        .fundCancelWithdrawalRequest(new anchor.BN(2))
+        .userCancelWithdrawalRequest(new anchor.BN(2))
         .accounts({
           user: user.publicKey,
         })
@@ -197,11 +191,29 @@ export const withdraw = describe("withdraw", () => {
   });
 
   it("Process all withdrawals", async () => {
-    await program.methods.operatorRun().accounts({}).signers([]).rpc();
+    await program.methods.operatorProcessFundWithdrawalJob(
+        false,
+    )
+        .remainingAccounts(stakePoolAccounts)
+        .accounts({}).signers([]).rpc(); // should succeed
 
-    const fund = await program.account.fund.fetch(restaking.fragSOLFundAddress)
+    expect(program.methods.operatorProcessFundWithdrawalJob(
+        true, // forced, just after
+    )
+        .remainingAccounts(stakePoolAccounts)
+        .accounts({}).signers([]).rpc()).eventually.throw('OperatorJobUnmetThresholdError');
+
+    await program.methods.operatorProcessFundWithdrawalJob(
+        true, // forced by admin?
+    )
+        .remainingAccounts(stakePoolAccounts)
+        .accounts({
+          operator: adminKeypair.publicKey,
+        }).signers([adminKeypair]).rpc(); // should succeed
+
+    const fund = await program.account.fundAccount.fetch(restaking.fragSOLFundAddress)
     const withdrawalStatus = fund.withdrawalStatus;
-    expect(withdrawalStatus.lastCompletedBatchId.toNumber()).to.equal(1);
+    expect(withdrawalStatus.lastCompletedBatchId.toNumber()).to.equal(2);
 
     const reservedFund = withdrawalStatus.reservedFund;
     expect(reservedFund.numCompletedWithdrawalRequests.toNumber()).to.equal(2);
@@ -224,10 +236,11 @@ export const withdraw = describe("withdraw", () => {
     );
 
     await program.methods
-      .fundWithdraw(new anchor.BN(3))
+      .userWithdraw(new anchor.BN(3))
       .accounts({
         user: user.publicKey,
       })
+      .remainingAccounts(stakePoolAccounts)
       .signers([user])
       .rpc();
 
@@ -236,35 +249,51 @@ export const withdraw = describe("withdraw", () => {
     );
     expect(balanceAfter - balanceBefore).to.equal(amount - fee);
 
-    const reservedFund = (await program.account.fund.fetch(restaking.fragSOLFundAddress))
+    const reservedFund = (await program.account.fundAccount.fetch(restaking.fragSOLFundAddress))
       .withdrawalStatus.reservedFund;
     expect(reservedFund.solRemaining.toNumber()).to.equal(amount + fee);
   });
 
   it("Block withdrawal", async () => {
     await program.methods
-      .fundUpdateWithdrawalEnabledFlag(false)
-      .accounts({})
+      .fundManagerUpdateWithdrawalEnabledFlag(false)
+      .signers([fundManagerKeypair])
       .rpc();
 
     expect(
       program.methods
-        .fundRequestWithdrawal(new anchor.BN(amount))
+        .userRequestWithdrawal(new anchor.BN(amount))
         .accounts({
           user: user.publicKey,
         })
+        .remainingAccounts(stakePoolAccounts)
         .signers([user])
         .rpc()
     ).to.eventually.throw("FundWithdrawalDisabled");
 
     expect(
       program.methods
-        .fundWithdraw(new anchor.BN(1))
+        .userRequestWithdrawal(new anchor.BN(1))
         .accounts({
           user: user.publicKey,
         })
+        .remainingAccounts(stakePoolAccounts)
         .signers([user])
         .rpc()
     ).to.eventually.throw("FundWithdrawalDisabled");
+
+    await program.methods
+        .fundManagerUpdateWithdrawalEnabledFlag(true)
+        .signers([fundManagerKeypair])
+        .rpc();
+
+    await program.methods
+        .userRequestWithdrawal(new anchor.BN(1))
+        .accounts({
+          user: user.publicKey,
+        })
+        .remainingAccounts(stakePoolAccounts)
+        .signers([user])
+        .rpc()
   });
 });

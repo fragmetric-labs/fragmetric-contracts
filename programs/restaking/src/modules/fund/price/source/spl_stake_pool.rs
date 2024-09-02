@@ -156,11 +156,7 @@ impl TokenPriceCalculator for SplStakePool {
 }
 
 impl SplStakePool {
-    const PROGRAM_ID: Pubkey = Pubkey::new_from_array([
-        6u8, 129u8, 78u8, 212u8, 202u8, 246u8, 138u8, 23u8, 70u8, 114u8, 253u8, 172u8, 134u8, 3u8,
-        26u8, 99u8, 232u8, 78u8, 161u8, 94u8, 250u8, 29u8, 68u8, 183u8, 34u8, 147u8, 246u8, 219u8,
-        219u8, 0u8, 22u8, 80u8,
-    ]);
+    pub const PROGRAM_ID: Pubkey = pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
 
     fn calculate_lamports_from_pool_tokens(&self, pool_tokens: u64) -> Result<u64> {
         crate::utils::proportional_amount(pool_tokens, self.total_lamports, self.pool_token_supply)

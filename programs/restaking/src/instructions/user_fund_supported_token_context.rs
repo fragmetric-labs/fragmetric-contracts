@@ -104,17 +104,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
-    pub instruction_sysvar: Option<UncheckedAccount<'info>>,
-
-    // TODO: use address lookup table!
-    #[account(address = BSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_0: UncheckedAccount<'info>,
-
-    // TODO: use address lookup table!
-    #[account(address = MSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_1: UncheckedAccount<'info>,
+    pub instruction_sysvar: UncheckedAccount<'info>,
 }
 
 impl<'info> UserFundSupportedTokenContext<'info> {
@@ -126,7 +116,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         // verify metadata signature if given
         if let Some(metadata) = &metadata {
             verify_preceding_ed25519_instruction(
-                ctx.accounts.instruction_sysvar.as_ref(),
+                &ctx.accounts.instruction_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
         }

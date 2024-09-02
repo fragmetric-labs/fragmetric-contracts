@@ -22,16 +22,16 @@ pub struct AdminRewardInitialContext<'info> {
 
     #[account(
         init,
-        space = 10 * 1024,
         payer = payer,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
+        space = 10 * 1024,
     )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
 }
 
 impl<'info> AdminRewardInitialContext<'info> {
-    pub fn initialize_reward_account(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+    pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
         let current_size = ctx.accounts.reward_account.to_account_info().data_len();
         ctx.accounts.reward_account.initialize_if_needed(
             ctx.bumps.reward_account,
@@ -66,7 +66,7 @@ pub struct AdminRewardContext<'info> {
 }
 
 impl<'info> AdminRewardContext<'info> {
-    pub fn initialize_reward_account_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+    pub fn update_accounts_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
         let current_account_size = ctx.accounts.reward_account.to_account_info().data_len();
         let min_account_size = RewardAccount::INIT_SPACE + 8;
         let target_account_size = if let Some(desired_size) = desired_account_size {

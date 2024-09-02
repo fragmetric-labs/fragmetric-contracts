@@ -40,23 +40,11 @@ pub struct OperatorFundContext<'info> {
         has_one = receipt_token_mint,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
-
-    // TODO: use address lookup table!
-    #[account(address = BSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_0: UncheckedAccount<'info>,
-
-    // TODO: use address lookup table!
-    #[account(address = MSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_1: UncheckedAccount<'info>,
 }
 
 impl<'info> OperatorFundContext<'info> {
-    pub fn process_fund_withdrawal_job(
-        ctx: Context<'_, '_, '_, 'info, Self>,
-        forced: bool,
-    ) -> Result<()> {
+    pub fn process_fund_withdrawal_job(ctx: Context<'_, '_, '_, 'info, Self>, forced: bool) -> Result<()>
+    {
         if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
             FundWithdrawalJob::check_threshold(&ctx.accounts.fund_account.withdrawal_status)?;
         }
@@ -83,12 +71,15 @@ impl<'info> OperatorFundContext<'info> {
     }
 
     pub fn update_prices(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts
-            .fund_account
+        ctx.accounts.fund_account
             .update_token_prices(ctx.remaining_accounts)?;
+
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let receipt_token_price = ctx.accounts.fund_account
-            .receipt_token_sol_value_per_token(ctx.accounts.receipt_token_mint.decimals, receipt_token_total_supply)?;
+            .receipt_token_sol_value_per_token(
+                ctx.accounts.receipt_token_mint.decimals,
+                receipt_token_total_supply,
+            )?;
 
         emit!(OperatorUpdatedFundPrice {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),

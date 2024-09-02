@@ -5,8 +5,9 @@ use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 
+// will be used only once
 #[derive(Accounts)]
-pub struct AdminFundContext<'info> {
+pub struct AdminFundInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -21,7 +22,7 @@ pub struct AdminFundContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump,
@@ -30,7 +31,7 @@ pub struct AdminFundContext<'info> {
     pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         token::mint = receipt_token_mint,
         token::authority = receipt_token_lock_authority,
@@ -41,17 +42,17 @@ pub struct AdminFundContext<'info> {
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()], // fund + <any receipt token mint account>
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
         space = 8 + FundAccount::INIT_SPACE,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
 }
 
-impl<'info> AdminFundContext<'info> {
-    pub fn initialize_fund_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
+impl<'info> AdminFundInitialContext<'info> {
+    pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
 
         ctx.accounts
@@ -70,3 +71,4 @@ impl<'info> AdminFundContext<'info> {
         Ok(())
     }
 }
+

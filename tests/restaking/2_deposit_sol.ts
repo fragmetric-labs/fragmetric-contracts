@@ -8,7 +8,7 @@ import { before } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
-import { adminKeypair } from './1_initialize';
+import {adminKeypair, stakePoolAccounts} from './1_initialize';
 
 export const deposit_sol = describe("deposit_sol", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -40,6 +40,7 @@ export const deposit_sol = describe("deposit_sol", () => {
     it("Update price", async () => {
         const updatePriceTx = await program.methods
             .operatorUpdatePrices()
+            .remainingAccounts(stakePoolAccounts)
             .rpc({commitment: "confirmed"});
 
         // parse event
@@ -68,7 +69,7 @@ export const deposit_sol = describe("deposit_sol", () => {
             new anchor.web3.Transaction().add(
                 ...await Promise.all([
                     program.methods
-                        .userInitializeUserAccountsIfNeeded()
+                        .userUpdateAccountsIfNeeded()
                         .accounts({
                             user: user.publicKey,
                         })
@@ -78,6 +79,7 @@ export const deposit_sol = describe("deposit_sol", () => {
                         .accounts({
                             user: user.publicKey,
                         })
+                        .remainingAccounts(stakePoolAccounts)
                         .instruction(),
                 ]),
             ),
@@ -132,12 +134,12 @@ export const deposit_sol = describe("deposit_sol", () => {
         const depositEvent = events.next().value as anchor.Event;
         expect(depositEvent.data.walletProvider).to.be.null;
         expect(depositEvent.data.contributionAccrualRate).to.be.null;
-        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+        expect(depositEvent.data.userFundAccount.receiptTokenAmount.toString()).to.be.equal(
             userReceiptTokenAccount.amount.toString()
         )
         console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
         console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
-        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
+        console.log(`receipt token balance:`, depositEvent.data.userFundAccount.receiptTokenAmount.toNumber());
     });
 
     // Localnet test
@@ -178,6 +180,7 @@ export const deposit_sol = describe("deposit_sol", () => {
                     user: user.publicKey,
                     // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 })
+                .remainingAccounts(stakePoolAccounts)
                 .signers([user])
                 .instruction()
         );
@@ -227,11 +230,11 @@ export const deposit_sol = describe("deposit_sol", () => {
         const depositEvent = events.next().value as anchor.Event;
         expect(depositEvent.data.walletProvider).to.equal(payload.walletProvider);
         expect(depositEvent.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-        expect(depositEvent.data.userReceipt.receiptTokenAmount.toString()).to.be.equal(
+        expect(depositEvent.data.userFundAccount.receiptTokenAmount.toString()).to.be.equal(
             userReceiptTokenAccount.amount.toString()
         )
         console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
         console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
-        console.log(`receipt token balance:`, depositEvent.data.userReceipt.receiptTokenAmount.toNumber());
+        console.log(`receipt token balance:`, depositEvent.data.userFundAccount.receiptTokenAmount.toNumber());
     });
 });

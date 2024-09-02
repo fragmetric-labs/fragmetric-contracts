@@ -20,7 +20,7 @@ pub struct UserFundContext<'info> {
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -92,21 +92,11 @@ pub struct UserFundContext<'info> {
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
-    pub instructions_sysvar: Option<UncheckedAccount<'info>>,
-
-    // TODO: use address lookup table!
-    #[account(address = BSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_0: UncheckedAccount<'info>,
-
-    // TODO: use address lookup table!
-    #[account(address = MSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_1: UncheckedAccount<'info>,
+    pub instructions_sysvar: UncheckedAccount<'info>,
 }
 
 impl<'info> UserFundContext<'info> {
-    pub fn initialize_user_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
+    pub fn update_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
         // Initialize
         ctx.accounts
             .user_fund_account
@@ -133,7 +123,7 @@ impl<'info> UserFundContext<'info> {
         // verify metadata signature if given
         if let Some(metadata) = &metadata {
             verify_preceding_ed25519_instruction(
-                ctx.accounts.instructions_sysvar.as_ref(),
+                &ctx.accounts.instructions_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
         }

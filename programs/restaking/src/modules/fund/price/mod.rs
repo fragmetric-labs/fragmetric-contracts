@@ -1,7 +1,8 @@
-mod source;
+pub(super) mod source;
+
+use anchor_lang::prelude::*;
 
 use source::*;
-use anchor_lang::prelude::*;
 use crate::{errors::ErrorCode};
 use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
 

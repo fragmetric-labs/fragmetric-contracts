@@ -21,23 +21,19 @@ pub mod restaking {
 
 
     /** AdminFundContext **/
-    pub fn admin_initialize_fund_accounts_if_needed(ctx: Context<AdminFundContext>) -> Result<()> {
-        AdminFundContext::initialize_fund_accounts_if_needed(ctx)
+    pub fn admin_initialize_fund_accounts(ctx: Context<AdminFundInitialContext>) -> Result<()> {
+        AdminFundInitialContext::initialize_accounts(ctx)
     }
 
+    /** AdminReceiptTokenMintInitialContext **/
+    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    pub fn admin_initialize_receipt_token_mint_authority_and_extra_account_meta_list(
+        ctx: Context<AdminReceiptTokenMintInitialContext>,
+    ) -> Result<()> {
+        AdminReceiptTokenMintInitialContext::initialize_mint_authority_and_extra_account_meta_list(ctx)
+    }
 
     /** AdminReceiptTokenMintContext **/
-    pub fn admin_transfer_receipt_token_mint_authority(ctx: Context<AdminReceiptTokenMintContext>) -> Result<()> {
-        AdminReceiptTokenMintContext::transfer_receipt_token_mint_authority(ctx)
-    }
-
-    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
-    pub fn admin_initialize_receipt_token_mint_extra_account_meta_list(
-        ctx: Context<AdminReceiptTokenMintContext>,
-    ) -> Result<()> {
-        AdminReceiptTokenMintContext::initialize_extra_account_meta_list(ctx)
-    }
-
     pub fn admin_update_receipt_token_mint_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintContext>,
     ) -> Result<()> {
@@ -46,13 +42,13 @@ pub mod restaking {
 
 
     /** AdminRewardInitialContext **/
-    pub fn admin_initialize_reward_account(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
-        AdminRewardInitialContext::initialize_reward_account(ctx)
+    pub fn admin_initialize_reward_accounts(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+        AdminRewardInitialContext::initialize_accounts(ctx)
     }
 
     /** AdminRewardContext **/
-    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardContext>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
-        AdminRewardContext::initialize_reward_account_if_needed(ctx, desired_account_size, initialize)
+    pub fn admin_update_reward_accounts_if_needed(ctx: Context<AdminRewardContext>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+        AdminRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
     }
 
     pub fn admin_update_reward_pools(ctx: Context<AdminRewardContext>) -> Result<()> {
@@ -171,8 +167,8 @@ pub mod restaking {
 
 
     /** UserFundContext **/
-    pub fn user_initialize_user_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
-        UserFundContext::initialize_user_accounts_if_needed(ctx)
+    pub fn user_update_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
+        UserFundContext::update_accounts_if_needed(ctx)
     }
 
     pub fn user_deposit_sol(

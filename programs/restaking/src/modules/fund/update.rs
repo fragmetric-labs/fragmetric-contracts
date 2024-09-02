@@ -79,8 +79,9 @@ impl UserFundAccount {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{BSOL_STAKE_POOL_ADDRESS, MSOL_STAKE_POOL_ADDRESS};
+    // use crate::constants::{BSOL_STAKE_POOL_ADDRESS, MSOL_STAKE_POOL_ADDRESS};
     use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
+    use crate::modules::fund::price::source;
     use super::*;
 
     #[test]
@@ -105,7 +106,7 @@ mod tests {
             operation_reserved_amount: 1_000_000_000,
             price: 0,
             pricing_source: TokenPricingSource::SPLStakePool {
-                address: Pubkey::new_unique(),
+                address: Default::default(),
             },
             _reserved: [0; 128],
         };
@@ -116,8 +117,8 @@ mod tests {
             accumulated_deposit_amount: 0,
             operation_reserved_amount: 2_000_000_000,
             price: 0,
-            pricing_source: TokenPricingSource::SPLStakePool {
-                address: Pubkey::new_unique(),
+            pricing_source: TokenPricingSource::MarinadeStakePool {
+                address: Default::default(),
             },
             _reserved: [0; 128],
         };
@@ -127,22 +128,22 @@ mod tests {
         let mut dummy_data2: [u8; 0] = [];
         let pricing_sources = &[
             AccountInfo::new(
-                &BSOL_STAKE_POOL_ADDRESS,
+                &source::SplStakePool::PROGRAM_ID,
                 false,
                 false,
                 &mut dummy_lamports,
                 &mut dummy_data,
-                &BSOL_STAKE_POOL_ADDRESS,
+                &source::SplStakePool::PROGRAM_ID,
                 false,
                 0,
             ),
             AccountInfo::new(
-                &MSOL_STAKE_POOL_ADDRESS,
+                &source::MarinadeStakePool::PROGRAM_ID,
                 false,
                 false,
                 &mut dummy_lamports2,
                 &mut dummy_data2,
-                &MSOL_STAKE_POOL_ADDRESS,
+                &source::MarinadeStakePool::PROGRAM_ID,
                 false,
                 0,
             ),

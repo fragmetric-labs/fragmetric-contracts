@@ -24,11 +24,6 @@ export let fragSOLSupportedTokenAuthorityAddress_mSOL: anchor.web3.PublicKey;
 export let fragSOLSupportedTokenAuthorityAddress_jitoSOL: anchor.web3.PublicKey;
 export let fragSOLSupportedTokenAuthorityAddress_inf: anchor.web3.PublicKey;
 
-// for devnet // TODO: remove...?
-export let tokenMintAddress1: anchor.web3.PublicKey;
-export let tokenMintAddress2: anchor.web3.PublicKey;
-
-// for localnet
 export let tokenMintAddress_bSOL: anchor.web3.PublicKey;
 export let tokenMintAddress_mSOL: anchor.web3.PublicKey;
 export let tokenMintAddress_jitoSOL: anchor.web3.PublicKey;
@@ -41,6 +36,7 @@ export let tokenMintAuthorityKeypair_all: anchor.web3.Keypair;
 export let stakePoolAddress_bSOL: anchor.web3.PublicKey;
 export let stakePoolAddress_mSOL: anchor.web3.PublicKey;
 export let stakePoolAddress_jitoSOL: anchor.web3.PublicKey;
+export let stakePoolAccounts: anchor.web3.AccountMeta[];
 
 export const initialize = describe("Initialize program accounts", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -65,11 +61,28 @@ export const initialize = describe("Initialize program accounts", () => {
 
     // Set supported tokens' mint, stake pool accounts
     tokenMintAddress_bSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/bSOL_mint_address.json"));
-    stakePoolAddress_bSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/bSOL_stake_pool_address.json"));
+    stakePoolAddress_bSOL = new anchor.web3.PublicKey(require("../mocks/devnet/bSOL_stake_pool_address.json"));
     tokenMintAddress_mSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/mSOL_mint_address.json"));
     stakePoolAddress_mSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/mSOL_stake_pool_address.json"));
     tokenMintAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_mint_address.json"));
     stakePoolAddress_jitoSOL = new anchor.web3.PublicKey(require("../mocks/mainnet/jitoSOL_stake_pool_adress.json"));
+    stakePoolAccounts = [
+        {
+            pubkey: stakePoolAddress_mSOL,
+            isSigner: false,
+            isWritable: false,
+        },
+        {
+            pubkey: stakePoolAddress_bSOL,
+            isSigner: false,
+            isWritable: false,
+        },
+        {
+            pubkey: stakePoolAddress_jitoSOL,
+            isSigner: false,
+            isWritable: false,
+        },
+    ];
     tokenMintAddress_INF = new anchor.web3.PublicKey(require("../mocks/mainnet/INF_mint_address.json"));
 
     tokenMintAuthorityKeypair_all = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/mainnet/all_mint_authority.json")));
@@ -81,14 +94,14 @@ export const initialize = describe("Initialize program accounts", () => {
 
     before("Prepare program accounts initialization", async () => {
         fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
-        fragSOLTokenMintMetadata = {
+        fragSOLTokenMintMetadata = fragSOLTokenMintMetadata = {
             mint: fragSOLTokenMintKeypair.publicKey,
-            name: "fragSOL",
-            symbol: "FragSOL",
-            uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmdTSAPXn8dT2mnS2rxMouedauhjzJeYA74Hmez5P3ZEgE",
-            additionalMetadata: [["description", "Fragmetric Liquid Restaking Token"]],
+            name: "Fragmetric Restaked SOL",
+            symbol: "fragSOL",
+            uri: "https://quicknode.quicknode-ipfs.com/ipfs/Qme3xQUAKmtQHVu1hihKeBHuDW35zFPYfZdV6avEW6yRq1",
+            additionalMetadata: [["description", "fragSOL is Solana's first native LRT that provides optimized restaking rewards."]],
             updateAuthority: adminKeypair.publicKey,
-        };
+        };;
         [fragSOLTokenLockAuthorityAddress] = anchor.web3.PublicKey.findProgramAddressSync(
             [Buffer.from("receipt_token_lock_authority"), fragSOLTokenMintKeypair.publicKey.toBuffer()],
             program.programId
@@ -155,18 +168,17 @@ export const initialize = describe("Initialize program accounts", () => {
     it("Create fragSOL token mint with Transfer Hook extension", async function () {
         // generate keypair to use as address for the transfer-hook enabled mint account
         const decimals = 9;
-        const metadataSize = splTokenMetadata.pack(fragSOLTokenMintMetadata).length;
-        const extensions = [spl.ExtensionType.TransferHook, spl.ExtensionType.MetadataPointer];
-        const mintLen = spl.getMintLen(extensions);
-        const metadataExtensionLen = spl.TYPE_SIZE + spl.LENGTH_SIZE;
-        const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(mintLen + metadataExtensionLen + metadataSize);
+        const mintInitialSize = spl.getMintLen([spl.ExtensionType.TransferHook, spl.ExtensionType.MetadataPointer]);
+        const mintMetadataExtensionSize = (spl.TYPE_SIZE + spl.LENGTH_SIZE) + splTokenMetadata.pack(fragSOLTokenMintMetadata).length;
+        const mintTotalSize = mintInitialSize + mintMetadataExtensionSize;
+        const lamports = await program.provider.connection.getMinimumBalanceForRentExemption(mintTotalSize);
 
         const mintTx = new anchor.web3.Transaction().add(
             anchor.web3.SystemProgram.createAccount({
                 fromPubkey: wallet.payer.publicKey,
                 newAccountPubkey: fragSOLTokenMintKeypair.publicKey,
                 lamports: lamports,
-                space: mintLen,
+                space: mintInitialSize,
                 programId: TOKEN_2022_PROGRAM_ID,
             }),
             spl.createInitializeTransferHookInstruction(
@@ -262,25 +274,26 @@ export const initialize = describe("Initialize program accounts", () => {
             new anchor.web3.Transaction().add(
                 ...await Promise.all([
                     program.methods
-                        .adminInitializeFundAccountsIfNeeded()
+                        .adminInitializeFundAccounts()
                         .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
                     program.methods
-                        .adminInitializeRewardAccount()
+                        .adminInitializeRewardAccounts()
                         .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
                     ...new Array(3).fill(null).map((_, index, arr) =>
                         program.methods
-                            .adminInitializeRewardAccountIfNeeded(null, index == arr.length - 1)
+                            .adminUpdateRewardAccountsIfNeeded(null, index == arr.length - 1)
                             .accounts({ payer: wallet.payer.publicKey })
                             .instruction()
                     ),
                     program.methods
-                        .adminInitializeReceiptTokenMintExtraAccountMetaList()
+                        .adminInitializeReceiptTokenMintAuthorityAndExtraAccountMetaList()
                         .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
                     program.methods
-                        .adminTransferReceiptTokenMintAuthority()
+                        .adminUpdateReceiptTokenMintExtraAccountMetaList()
+                        .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
                 ])
             ),
@@ -328,17 +341,16 @@ export const initialize = describe("Initialize program accounts", () => {
                                 }
                             },
                         },
-                        // TODO: not implemented yet
-                        // {
-                        //     supportedTokenMint: tokenMint_jitoSOL.address,
-                        //     supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
-                        //     capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
-                        //     pricingSource: {
-                        //         "splStakePool": {
-                        //             address: stakePoolAddress_jitoSOL,
-                        //         }
-                        //     },
-                        // },
+                        {
+                            supportedTokenMint: tokenMint_jitoSOL.address,
+                            supportedTokenProgram: spl.TOKEN_PROGRAM_ID,
+                            capacity: new anchor.BN(1_000_000_000).mul(new anchor.BN(1_000_000_000)),
+                            pricingSource: {
+                                "splStakePool": {
+                                    address: stakePoolAddress_jitoSOL,
+                                }
+                            },
+                        },
                         // TODO: not implemented yet
                         // {
                         //     supportedTokenMint: tokenMint_INF.address,
@@ -360,8 +372,19 @@ export const initialize = describe("Initialize program accounts", () => {
                                 supportedTokenMint: def.supportedTokenMint,
                                 supportedTokenProgram: def.supportedTokenProgram,
                             })
+                            .remainingAccounts(stakePoolAccounts)
                             .instruction()
                     ),
+                ]),
+            ),
+            [wallet.payer, fundManagerKeypair],
+        );
+
+        // configuration of reward by fund manager
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
                     ...[
                         {
                             name: "fPoint",
@@ -381,7 +404,7 @@ export const initialize = describe("Initialize program accounts", () => {
                                     mint: tokenMintAddress_bSOL,
                                 }
                             },
-                            tokenMint: null as anchor.web3.PublicKey | null,
+                            tokenMint: null as anchor.web3.PublicKey | null, // TODO: add token mint and program
                         },
                     ].map(def => program.methods
                         .fundManagerAddReward(def.name, def.description, def.type)
@@ -414,7 +437,7 @@ export const initialize = describe("Initialize program accounts", () => {
                             })
                             .instruction()
                     ),
-                ]),
+                ])
             ),
             [wallet.payer, fundManagerKeypair],
         );

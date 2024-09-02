@@ -31,7 +31,7 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
     pub supported_token_program: Interface<'info, TokenInterface>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
         bump,
@@ -40,7 +40,7 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
     pub fund_supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = payer,
         token::mint = supported_token_mint,
         token::authority = fund_supported_token_authority,
@@ -49,17 +49,6 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
         bump,
     )]
     pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
-
-    // TODO: use address lookup table!
-    #[account(address = BSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_0: UncheckedAccount<'info>,
-
-    // TODO: use address lookup table!
-    #[account(address = MSOL_STAKE_POOL_ADDRESS)]
-    /// CHECK: will be checked and deserialized when needed
-    pub token_pricing_source_1: UncheckedAccount<'info>,
-
 }
 
 impl<'info> FundManagerFundSupportedTokenContext<'info> {
@@ -68,7 +57,6 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
-
         ctx.accounts
             .fund_supported_token_authority
             .initialize_if_needed(
@@ -76,13 +64,14 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
                 ctx.accounts.receipt_token_mint.key(),
                 ctx.accounts.supported_token_mint.key(),
             );
-        ctx.accounts.fund_account.add_supported_token(
-            ctx.accounts.supported_token_mint.key(),
-            ctx.accounts.supported_token_mint.decimals,
-            capacity_amount,
-            pricing_source,
-            ctx.remaining_accounts,
-        )?;
+        ctx.accounts.fund_account
+            .add_supported_token(
+                ctx.accounts.supported_token_mint.key(),
+                ctx.accounts.supported_token_mint.decimals,
+                capacity_amount,
+                pricing_source,
+                ctx.remaining_accounts,
+            )?;
 
         Ok(())
     }

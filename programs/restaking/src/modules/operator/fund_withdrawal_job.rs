@@ -10,7 +10,7 @@ pub struct FundWithdrawalJob<'a, 'info: 'a> {
     receipt_token_program: &'a Program<'info, Token2022>,
     receipt_token_lock_authority: &'a mut Account<'info, ReceiptTokenLockAuthority>,
     receipt_token_lock_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-    fund_account: &'a mut FundAccount,
+    fund_account: &'a mut Account<'info, FundAccount>,
     pricing_sources: &'a [AccountInfo<'info>],
 }
 
@@ -38,7 +38,7 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
         receipt_token_program: &'a Program<'info, Token2022>,
         receipt_token_lock_authority: &'a mut Account<'info, ReceiptTokenLockAuthority>,
         receipt_token_lock_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-        fund_account: &'a mut FundAccount,
+        fund_account: &'a mut Account<'info, FundAccount>,
         pricing_sources: &'a [AccountInfo<'info>],
     ) -> Self {
         Self {

@@ -170,11 +170,7 @@ impl TokenPriceCalculator for MarinadeStakePool {
 }
 
 impl MarinadeStakePool {
-    const PROGRAM_ID: Pubkey = Pubkey::new_from_array([
-        5u8, 69u8, 227u8, 101u8, 190u8, 242u8, 113u8, 173u8, 117u8, 53u8, 3u8, 103u8, 86u8, 93u8,
-        164u8, 13u8, 163u8, 54u8, 220u8, 28u8, 135u8, 155u8, 177u8, 84u8, 138u8, 122u8, 252u8,
-        197u8, 90u8, 169u8, 57u8, 30u8,
-    ]);
+    pub const PROGRAM_ID: Pubkey = pubkey!("MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD");
 
     fn msol_to_sol(&self, msol_amount: u64) -> Result<u64> {
         crate::utils::proportional_amount(
