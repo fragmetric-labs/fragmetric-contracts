@@ -53,7 +53,10 @@ pub struct OperatorFundContext<'info> {
 }
 
 impl<'info> OperatorFundContext<'info> {
-    pub fn process_fund_withdrawal_job(ctx: Context<Self>, forced: bool) -> Result<()> {
+    pub fn process_fund_withdrawal_job(
+        ctx: Context<'_, '_, '_, 'info, Self>,
+        forced: bool,
+    ) -> Result<()> {
         if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
             FundWithdrawalJob::check_threshold(&ctx.accounts.fund_account.withdrawal_status)?;
         }
@@ -64,10 +67,7 @@ impl<'info> OperatorFundContext<'info> {
             &mut ctx.accounts.receipt_token_lock_authority,
             &mut ctx.accounts.receipt_token_lock_account,
             &mut ctx.accounts.fund_account,
-            &[
-                ctx.accounts.token_pricing_source_0.as_ref(),
-                ctx.accounts.token_pricing_source_1.as_ref(),
-            ],
+            ctx.remaining_accounts,
         )
             .process()?;
 
@@ -83,10 +83,9 @@ impl<'info> OperatorFundContext<'info> {
     }
 
     pub fn update_prices(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.fund_account.update_token_prices(&[
-            ctx.accounts.token_pricing_source_0.as_ref(),
-            ctx.accounts.token_pricing_source_1.as_ref(),
-        ])?;
+        ctx.accounts
+            .fund_account
+            .update_token_prices(ctx.remaining_accounts)?;
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let receipt_token_price = ctx.accounts.fund_account
             .receipt_token_sol_value_per_token(ctx.accounts.receipt_token_mint.decimals, receipt_token_total_supply)?;

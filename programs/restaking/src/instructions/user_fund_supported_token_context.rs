@@ -138,10 +138,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         require_gte!(ctx.accounts.user_supported_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
-        ctx.accounts.fund_account.update_token_prices(&[
-            ctx.accounts.token_pricing_source_0.as_ref(),
-            ctx.accounts.token_pricing_source_1.as_ref(),
-        ])?;
+        ctx.accounts.fund_account.update_token_prices(ctx.remaining_accounts)?;
 
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let supported_token_mint = ctx.accounts.supported_token_mint.key();

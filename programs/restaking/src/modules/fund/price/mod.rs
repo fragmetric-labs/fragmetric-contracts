@@ -24,7 +24,7 @@ impl SupportedTokenInfo {
 }
 
 impl FundAccount {
-    pub fn update_token_prices(&mut self, sources: &[&AccountInfo]) -> Result<()> {
+    pub fn update_token_prices(&mut self, sources: &[AccountInfo]) -> Result<()> {
         for token in &mut self.supported_tokens {
             let token_lamports_per_token = token.token_lamports_per_token()?;
             match &token.pricing_source {
@@ -98,7 +98,7 @@ impl FundAccount {
 }
 
 fn find_token_pricing_source_by_key<'a, 'info: 'a>(
-    sources: &[&'a AccountInfo<'info>],
+    sources: &'a [AccountInfo<'info>],
     key: &Pubkey,
 ) -> Result<&'a AccountInfo<'info>> {
     Ok(sources

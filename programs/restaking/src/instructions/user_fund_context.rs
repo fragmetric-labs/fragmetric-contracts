@@ -146,12 +146,8 @@ impl<'info> UserFundContext<'info> {
 
         // Step 1: Calculate mint amount
         let fund = &mut ctx.accounts.fund_account;
-        let pricing_sources = [
-            ctx.accounts.token_pricing_source_0.as_ref(),
-            ctx.accounts.token_pricing_source_1.as_ref(),
-        ];
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        fund.update_token_prices(&pricing_sources)?;
+        fund.update_token_prices(ctx.remaining_accounts)?;
         let receipt_token_mint_amount = fund.receipt_token_mint_amount_for(
             amount,
             receipt_token_total_supply,
@@ -442,11 +438,7 @@ impl<'info> UserFundContext<'info> {
         require_gt!(fund.withdrawal_status.next_request_id, request_id);
 
         // Step 1: Update price
-        let sources = [
-            ctx.accounts.token_pricing_source_0.as_ref(),
-            ctx.accounts.token_pricing_source_1.as_ref(),
-        ];
-        fund.update_token_prices(&sources)?;
+        fund.update_token_prices(ctx.remaining_accounts)?;
 
         // Step 2: Complete withdrawal request
         fund.withdrawal_status.check_withdrawal_enabled()?;

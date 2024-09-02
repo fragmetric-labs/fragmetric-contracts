@@ -161,7 +161,7 @@ pub mod restaking {
 
 
     /** OperatorFundContext **/
-    pub fn operator_process_fund_withdrawal_job(ctx: Context<OperatorFundContext>, forced: bool) -> Result<()> {
+    pub fn operator_process_fund_withdrawal_job<'info>(ctx: Context<'_, '_, '_, 'info, OperatorFundContext<'info>>, forced: bool) -> Result<()> {
         OperatorFundContext::process_fund_withdrawal_job(ctx, forced)
     }
 

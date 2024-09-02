@@ -76,18 +76,13 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
                 ctx.accounts.receipt_token_mint.key(),
                 ctx.accounts.supported_token_mint.key(),
             );
-        ctx.accounts
-            .fund_account
-            .add_supported_token(
-                ctx.accounts.supported_token_mint.key(),
-                ctx.accounts.supported_token_mint.decimals,
-                capacity_amount,
-                pricing_source,
-                &[
-                    ctx.accounts.token_pricing_source_0.as_ref(),
-                    ctx.accounts.token_pricing_source_1.as_ref(),
-                ]
-            )?;
+        ctx.accounts.fund_account.add_supported_token(
+            ctx.accounts.supported_token_mint.key(),
+            ctx.accounts.supported_token_mint.decimals,
+            capacity_amount,
+            pricing_source,
+            ctx.remaining_accounts,
+        )?;
 
         Ok(())
     }

@@ -30,7 +30,7 @@ impl FundAccount {
         decimals: u8,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
-        pricing_sources: &[&AccountInfo],
+        pricing_sources: &[AccountInfo],
     ) -> Result<()> {
         if self.supported_tokens.iter().any(|info| info.mint == mint) {
             err!(ErrorCode::FundAlreadySupportedTokenError)?
@@ -126,7 +126,7 @@ mod tests {
         let mut dummy_lamports2 = 0u64;
         let mut dummy_data2: [u8; 0] = [];
         let pricing_sources = &[
-            &AccountInfo::new(
+            AccountInfo::new(
                 &BSOL_STAKE_POOL_ADDRESS,
                 false,
                 false,
@@ -136,7 +136,7 @@ mod tests {
                 false,
                 0,
             ),
-            &AccountInfo::new(
+            AccountInfo::new(
                 &MSOL_STAKE_POOL_ADDRESS,
                 false,
                 false,
