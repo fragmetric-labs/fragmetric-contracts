@@ -4,12 +4,6 @@
 resolution = true
 skip-lint = false
 
-[programs.devnet]
-restaking = "fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e"
-
-[programs.localnet]
-restaking = "fragfP1Z2DXiXNuDYaaCnbGvusMP1DNQswAqTwMuY6e"
-
 [registry]
 url = "https://api.apr.dev"
 
@@ -18,48 +12,49 @@ cluster = "Localnet"
 wallet = "./id.json"
 
 [scripts]
-set-dev-wallet = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq .wallet | jq -c fromjson > id.json && [ -s ./id.json ] && echo \"encrypt_dev/wallet data copied to ./id.json\""
-set-devnet-restaking-program-keypair = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq .restakingProgramKeypair | jq -c fromjson > ./programs/restaking/id.json && [ -s ./programs/restaking/id.json ] && echo \"encrypt_dev/restakingProgramKeypair data copied to ./programs/restaking/id.json\""
-set-mainnet-restaking-program-keypair = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_prd --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq .restakingProgramKeypair | jq -c fromjson > ./programs/restaking/mainnet-id.json && [ -s ./programs/restaking/mainnet-id.json ] && echo \"encrypt_prd/restakingProgramKeypair data copied to ./programs/restaking/mainnet-id.json\""
-
+init-keypairs = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $value > $key; done"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-test-restaking = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/restaking.ts"
 
 [test.validator]
+url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
 bind_address = "0.0.0.0"
-url = "https://api.mainnet-beta.solana.com"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-# mock mainnet bSOL mint
+
+# mock mainnet bSOL mint to localnet
 [[test.validator.account]]
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-filename = "tests/restaking/lsts/mainnet/clones/bSOL_mint.json"
+filename = "tests/mocks/mainnet/bSOL_mint.json"
 
-# clone devnet bSOL stake pool
+# mock devnet bSOL stake pool to localnet
 [[test.validator.account]]
 address = "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
-filename = "tests/restaking/lsts/devnet/clones/bSOL_stake_pool.json"
+filename = "tests/mocks/devnet/bSOL_stake_pool.json"
 
-# mock mainnet mSOL mint
+# clone mainnet bSOL stake pool to localnet
+[[test.validator.clone]]
+address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+
+# mock mainnet mSOL mint to localnet
 [[test.validator.account]]
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-filename = "tests/restaking/lsts/mainnet/clones/mSOL_mint.json"
+filename = "tests/mocks/mainnet/mSOL_mint.json"
 
-# clone mainnet mSOL stake pool
+# clone mainnet mSOL stake pool to localnet
 [[test.validator.clone]]
 address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
 
-# mock mainnet JitoSOL mint
+# mock mainnet jitoSOL mint to localnet
 [[test.validator.account]]
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-filename = "tests/restaking/lsts/mainnet/clones/JitoSOL_mint.json"
+filename = "tests/mocks/mainnet/jitoSOL_mint.json"
 
-# clone mainnet JitoSOL stake pool
+# clone mainnet jitoSOL stake pool to localnet
 [[test.validator.clone]]
 address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
 
-# mock mainnet INF mint
+# mock mainnet INF mint to localnet
 [[test.validator.account]]
 address = "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
-filename = "tests/restaking/lsts/mainnet/clones/INF_mint.json"
+filename = "tests/mocks/mainnet/INF_mint.json"
