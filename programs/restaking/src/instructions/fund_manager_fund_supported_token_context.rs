@@ -37,18 +37,18 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
         bump,
         space = 8 + SupportedTokenAuthority::INIT_SPACE,
     )]
-    pub fund_supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
+    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
     #[account(
         init,
         payer = payer,
         token::mint = supported_token_mint,
-        token::authority = fund_supported_token_authority,
+        token::authority = supported_token_authority,
         token::token_program = supported_token_program,
         seeds = [SupportedTokenAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
         bump,
     )]
-    pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's lst token account
+    pub supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
 impl<'info> FundManagerFundSupportedTokenContext<'info> {
@@ -58,15 +58,17 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
         ctx.accounts
-            .fund_supported_token_authority
+            .supported_token_authority
             .initialize_if_needed(
-                ctx.bumps.fund_supported_token_authority,
+                ctx.bumps.supported_token_authority,
                 ctx.accounts.receipt_token_mint.key(),
                 ctx.accounts.supported_token_mint.key(),
             );
+
         ctx.accounts.fund_account
             .add_supported_token(
                 ctx.accounts.supported_token_mint.key(),
+                ctx.accounts.supported_token_program.key.key(),
                 ctx.accounts.supported_token_mint.decimals,
                 capacity_amount,
                 pricing_source,

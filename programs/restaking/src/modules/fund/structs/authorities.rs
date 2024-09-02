@@ -78,7 +78,6 @@ impl SupportedTokenAuthority {
             self.receipt_token_mint = receipt_token_mint;
             self.supported_token_mint = supported_token_mint;
         }
-        // msg!("data_version={}, bump={}, mint={}", self.data_version, bump, supported_token_mint);
     }
 }
 

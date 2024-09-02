@@ -27,6 +27,7 @@ impl FundAccount {
     pub fn add_supported_token(
         &mut self,
         mint: Pubkey,
+        program: Pubkey,
         decimals: u8,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
@@ -37,6 +38,7 @@ impl FundAccount {
         }
         let token_info = SupportedTokenInfo::new(
             mint,
+            program,
             decimals,
             capacity_amount,
             pricing_source
@@ -100,6 +102,7 @@ mod tests {
 
         let token1 = SupportedTokenInfo {
             mint: Pubkey::new_unique(),
+            program: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 1000,
             accumulated_deposit_amount: 0,
@@ -112,6 +115,7 @@ mod tests {
         };
         let token2 = SupportedTokenInfo {
             mint: Pubkey::new_unique(),
+            program: Pubkey::new_unique(),
             decimals: 9,
             capacity_amount: 1_000_000_000 * 2000,
             accumulated_deposit_amount: 0,
@@ -152,6 +156,7 @@ mod tests {
         token1_update.capacity_amount = 1_000_000_000 * 3000;
         fund.add_supported_token(
             token1.mint,
+            token1.program,
             token2.decimals,
             token1.capacity_amount,
             token1.pricing_source,
@@ -159,6 +164,7 @@ mod tests {
         ).unwrap();
         fund.add_supported_token(
             token2.mint,
+            token2.program,
             token2.decimals,
             token2.capacity_amount,
             token2.pricing_source,

@@ -62,6 +62,7 @@ impl FundAccount {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedTokenInfo {
     pub mint: Pubkey,
+    pub program: Pubkey,
     pub decimals: u8,
     pub capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
@@ -73,13 +74,15 @@ pub struct SupportedTokenInfo {
 
 impl SupportedTokenInfo {
     pub fn new(
-        supported_token_mint: Pubkey,
+        mint: Pubkey,
+        program: Pubkey,
         decimals: u8,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
     ) -> Self {
         Self {
-            mint: supported_token_mint,
+            mint,
+            program,
             decimals,
             capacity_amount,
             accumulated_deposit_amount: 0,

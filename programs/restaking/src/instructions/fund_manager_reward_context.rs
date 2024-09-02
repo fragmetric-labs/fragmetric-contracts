@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenInterface};
 
 use crate::constants::*;
 use crate::events::FundManagerUpdatedRewardPool;
@@ -21,26 +21,14 @@ pub struct FundManagerRewardContext<'info> {
         has_one = receipt_token_mint,
     )]
     pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    // to optionally validate add_reward payload
+    // #[account(mint::token_program = reward_token_program)]
+    // pub reward_token_mint: Option<Box<InterfaceAccount<'info, Mint>>>,
+    // pub reward_token_program: Option<Interface<'info, TokenInterface>>,
 }
 
 impl<'info> FundManagerRewardContext<'info> {
-    pub fn add_reward(
-        ctx: Context<Self>,
-        name: String,
-        description: String,
-        reward_type: RewardType,
-    ) -> Result<()> {
-        let reward = Reward::new(name, description, reward_type)?;
-        ctx.accounts.reward_account.add_reward(reward)?;
-
-        emit!(FundManagerUpdatedRewardPool::new(
-            &ctx.accounts.reward_account,
-            vec![]
-        ));
-
-        Ok(())
-    }
-
     pub fn add_reward_pool_holder(
         ctx: Context<Self>,
         name: String,
@@ -93,6 +81,59 @@ impl<'info> FundManagerRewardContext<'info> {
         emit!(FundManagerUpdatedRewardPool::new(
             &ctx.accounts.reward_account,
             vec![reward_pool_id],
+        ));
+
+        Ok(())
+    }
+}
+
+
+#[derive(Accounts)]
+pub struct FundManagerRewardDistributionContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.bump,
+        has_one = receipt_token_mint,
+    )]
+    pub reward_account: Box<Account<'info, RewardAccount>>,
+
+    #[account(mint::token_program = reward_token_program)]
+    pub reward_token_mint: Option<Box<InterfaceAccount<'info, Mint>>>,
+    pub reward_token_program: Option<Interface<'info, TokenInterface>>,
+}
+impl<'info> FundManagerRewardDistributionContext<'info> {
+    pub fn add_reward(
+        ctx: Context<Self>,
+        name: String,
+        description: String,
+        reward_type: RewardType,
+    ) -> Result<()> {
+
+        if let RewardType::Token { mint, program, decimals } = reward_type {
+            let mint_account = ctx.accounts.reward_token_mint.as_ref().unwrap();
+            let program_account = ctx.accounts.reward_token_program.as_ref().unwrap();
+            require_keys_eq!(mint, mint_account.key());
+            require_keys_eq!(program, program_account.key());
+            require_eq!(decimals, mint_account.decimals);
+        }
+
+        let reward = Reward::new(
+            name,
+            description,
+            reward_type,
+        )?;
+        ctx.accounts.reward_account.add_reward(reward)?;
+
+        emit!(FundManagerUpdatedRewardPool::new(
+            &ctx.accounts.reward_account,
+            vec![]
         ));
 
         Ok(())

@@ -8,7 +8,7 @@ import { before } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
-import {adminKeypair, stakePoolAccounts} from './1_initialize';
+import {adminKeypair, fundManagerKeypair, stakePoolAccounts, wallet} from './1_initialize';
 
 export const deposit_sol = describe("deposit_sol", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -37,14 +37,42 @@ export const deposit_sol = describe("deposit_sol", () => {
         }
     });
 
+    it("Zeroing fPoint reward", async () => {
+        await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
+                    program.methods
+                        .fundManagerSettleReward(0, 0, new anchor.BN(0))
+                        .accounts({
+                            rewardTokenMint: program.programId,
+                            rewardTokenProgram: program.programId,
+                        })
+                        .instruction(),
+                ]),
+            ),
+            [wallet.payer, fundManagerKeypair],
+        );
+    });
+
     it("Update price", async () => {
-        const updatePriceTx = await program.methods
-            .operatorUpdatePrices()
-            .remainingAccounts(stakePoolAccounts)
-            .rpc({commitment: "confirmed"});
+        const updatePriceTxSig = await anchor.web3.sendAndConfirmTransaction(
+            program.provider.connection,
+            new anchor.web3.Transaction().add(
+                ...await Promise.all([
+                    program.methods
+                        .operatorUpdatePrices()
+                        .accounts({ operator: wallet.publicKey })
+                        .remainingAccounts(stakePoolAccounts)
+                        .instruction(),
+                ]),
+            ),
+            [wallet.payer],
+        );
 
         // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(updatePriceTx, "confirmed");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const committedTx = await program.provider.connection.getParsedTransaction(updatePriceTxSig, "confirmed");
         // console.log(`committedTx:`, committedTx);
         const events = eventParser.parseLogs(committedTx.meta.logMessages);
         for (const event of events) {

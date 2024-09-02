@@ -66,6 +66,6 @@ impl Reward {
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub enum RewardType {
     Point { decimals: u8 },
-    Token { mint: Pubkey, decimals: u8 },
+    Token { mint: Pubkey, program: Pubkey, decimals: u8 },
     SOL,
 }

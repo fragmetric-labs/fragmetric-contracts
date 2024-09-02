@@ -106,15 +106,6 @@ pub mod restaking {
 
 
     /** FundManagerRewardContext **/
-    pub fn fund_manager_add_reward(
-        ctx: Context<FundManagerRewardContext>,
-        name: String,
-        description: String,
-        reward_type: modules::reward::RewardType,
-    ) -> Result<()> {
-        FundManagerRewardContext::add_reward(ctx, name, description, reward_type)
-    }
-
     pub fn fund_manager_add_reward_pool_holder(
         ctx: Context<FundManagerRewardContext>,
         name: String,
@@ -140,13 +131,24 @@ pub mod restaking {
         FundManagerRewardContext::close_reward_pool(ctx, reward_pool_id)
     }
 
+
+    /** FundManagerRewardDistributionContext **/
+    pub fn fund_manager_add_reward(
+        ctx: Context<FundManagerRewardDistributionContext>,
+        name: String,
+        description: String,
+        reward_type: modules::reward::RewardType,
+    ) -> Result<()> {
+        FundManagerRewardDistributionContext::add_reward(ctx, name, description, reward_type)
+    }
+
     pub fn fund_manager_settle_reward(
-        ctx: Context<FundManagerRewardContext>,
+        ctx: Context<FundManagerRewardDistributionContext>,
         reward_pool_id: u8,
         reward_id: u8,
         amount: u64,
     ) -> Result<()> {
-        FundManagerRewardContext::settle_reward(ctx, reward_pool_id, reward_id, amount)
+        FundManagerRewardDistributionContext::settle_reward(ctx, reward_pool_id, reward_id, amount)
     }
 
 

@@ -390,25 +390,30 @@ export const initialize = describe("Initialize program accounts", () => {
                             name: "fPoint",
                             description: "Point for fToken airdrop from Fragmetric.",
                             type: {
-                                "point": {
+                                point: {
                                     decimals: 4,
                                 }
                             },
-                            tokenMint: null as anchor.web3.PublicKey | null,
+                            tokenMint: null,
+                            tokenProgram: null,
                         },
                         {
                             name: "bSOL",
                             description: "blablabla.",
                             type: {
-                                "token": {
+                                token: {
                                     mint: tokenMintAddress_bSOL,
+                                    program: spl.TOKEN_PROGRAM_ID,
+                                    decimals: 9,
                                 }
                             },
-                            tokenMint: null as anchor.web3.PublicKey | null, // TODO: add token mint and program
                         },
                     ].map(def => program.methods
                         .fundManagerAddReward(def.name, def.description, def.type)
-                        .accounts({ rewardTokenMint: def.tokenMint })
+                        .accounts({
+                            rewardTokenMint: def.type.token?.mint ?? program.programId,
+                            rewardTokenProgram: def.type.token?.program ?? program.programId,
+                        })
                         .instruction()
                     ),
                     program.methods
