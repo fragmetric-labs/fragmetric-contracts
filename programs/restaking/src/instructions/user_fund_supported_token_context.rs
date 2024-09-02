@@ -212,7 +212,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             amount,
             ctx.accounts.supported_token_mint.decimals,
         )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn cpi_mint_token_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
@@ -229,7 +229,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
                     .as_ref()]),
                 amount,
             )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn mock_transfer_hook_from_fund_to_user(

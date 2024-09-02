@@ -9,7 +9,7 @@ impl SupportedTokenInfo {
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         if self.capacity_amount < new_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededTokenCapacityAmount)?
+            err!(ErrorCode::FundExceededTokenCapacityAmountError)?
         }
 
         self.accumulated_deposit_amount = new_accumulated_deposit_amount;
@@ -29,7 +29,7 @@ impl FundAccount {
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         if self.sol_capacity_amount < new_sol_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededSOLCapacityAmount)?
+            err!(ErrorCode::FundExceededSOLCapacityAmountError)?
         }
 
         self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;

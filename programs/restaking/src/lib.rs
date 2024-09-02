@@ -46,13 +46,13 @@ pub mod restaking {
 
 
     /** AdminRewardInitialContext **/
-    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
-        AdminRewardInitialContext::initialize_reward_account_if_needed(ctx)
+    pub fn admin_initialize_reward_account(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+        AdminRewardInitialContext::initialize_reward_account(ctx)
     }
 
     /** AdminRewardContext **/
-    pub fn admin_realloc_reward_account_if_needed(ctx: Context<AdminRewardContext>, required_size: Option<u32>, assert: bool) -> Result<()> {
-        AdminRewardContext::realloc_reward_account_if_needed(ctx, required_size, assert)
+    pub fn admin_initialize_reward_account_if_needed(ctx: Context<AdminRewardContext>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+        AdminRewardContext::initialize_reward_account_if_needed(ctx, desired_account_size, initialize)
     }
 
     pub fn admin_update_reward_pools(ctx: Context<AdminRewardContext>) -> Result<()> {

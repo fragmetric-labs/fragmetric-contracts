@@ -208,7 +208,7 @@ impl<'info> UserFundContext<'info> {
         );
 
         system_program::transfer(sol_transfer_cpi_ctx, amount)
-            .map_err(|_| error!(ErrorCode::FundSOLTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundSOLTransferFailedException))
     }
 
     fn mock_transfer_hook_from_fund_to_user(
@@ -298,7 +298,7 @@ impl<'info> UserFundContext<'info> {
                 None,
                 amount,
             )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn cpi_mint_token_to_fund(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
@@ -315,7 +315,7 @@ impl<'info> UserFundContext<'info> {
                     .as_ref()]),
                 amount,
             )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn mock_transfer_hook_from_user_to_null(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
@@ -392,7 +392,7 @@ impl<'info> UserFundContext<'info> {
                     .as_ref()]),
                 amount,
             )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn cpi_mint_token_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
@@ -409,7 +409,7 @@ impl<'info> UserFundContext<'info> {
                     .as_ref()]),
                 amount,
             )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailed))
+            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
     fn mock_transfer_hook_from_null_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {

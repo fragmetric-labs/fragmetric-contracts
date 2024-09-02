@@ -7,7 +7,7 @@ impl RewardAccount {
         if self.holders.iter().any(|p| {
             p.name == holder.name
         }) {
-            err!(ErrorCode::RewardAlreadyExistingHolder)?
+            err!(ErrorCode::RewardAlreadyExistingHolderError)?
         }
         holder.id = self.holders.len() as u8;
         self.holders.push(holder);
@@ -19,7 +19,7 @@ impl RewardAccount {
         if self.rewards.iter().any(|p| {
             p.name == reward.name
         }) {
-            err!(ErrorCode::RewardAlreadyExistingReward)?
+            err!(ErrorCode::RewardAlreadyExistingRewardError)?
         }
         reward.id = self.rewards.len() as u8;
         self.rewards.push(reward);
@@ -39,7 +39,7 @@ impl RewardAccount {
             )
                 || p.name == reward_pool.name
         }) {
-            err!(ErrorCode::RewardAlreadyExistingPool)?
+            err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }
 
         reward_pool.id = self.reward_pools.len() as u8;
@@ -82,7 +82,7 @@ impl RewardAccount {
         Option<UserRewardAccountUpdateInfo>,
     )> {
         if from.is_none() && to.is_none() || to.is_none() && contribution_accrual_rate.is_some() {
-            err!(ErrorCode::RewardInvalidTransferArgs)?
+            err!(ErrorCode::RewardInvalidTransferArgsException)?
         }
 
         let mut from_user_update: Option<UserRewardAccountUpdateInfo> = None;
@@ -152,7 +152,7 @@ impl RewardAccount {
         receipt_token_mint: &Pubkey,
     ) -> Result<Vec<&mut RewardPool>> {
         if self.receipt_token_mint != receipt_token_mint.key() {
-            return Err(ErrorCode::RewardInvalidPoolAccess)?;
+            return Err(ErrorCode::RewardInvalidPoolAccessException)?;
         }
 
         // split into base / holder-specific pools
@@ -163,7 +163,7 @@ impl RewardAccount {
 
         // base pool should exist at least one
         if base.is_empty() {
-            err!(ErrorCode::RewardInvalidPoolConfiguration)?
+            err!(ErrorCode::RewardInvalidPoolConfigurationException)?
         }
 
         // first try to find within holder specific pools
@@ -214,7 +214,7 @@ impl RewardPool {
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         if self.closed_slot.is_some() {
-            err!(ErrorCode::RewardPoolClosed)?
+            err!(ErrorCode::RewardPoolClosedError)?
         }
 
         // First update contribution
@@ -230,7 +230,7 @@ impl RewardPool {
 
     fn close(&mut self, current_slot: u64) -> Result<()> {
         if self.closed_slot.is_some() {
-            err!(ErrorCode::RewardPoolClosed)?
+            err!(ErrorCode::RewardPoolClosedError)?
         }
 
         // update contribution as last
@@ -438,7 +438,7 @@ impl TokenAllocatedAmount {
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })?;
         if total_amount_orig != total_amount_effective {
-            err!(ErrorCode::RewardAccountingException)?
+            err!(ErrorCode::RewardInvalidAccountingException)?
         }
 
         Ok(effective_deltas)
@@ -491,7 +491,7 @@ impl TokenAllocatedAmount {
                 .records
                 .iter_mut()
                 .find(|r| r.contribution_accrual_rate == delta.contribution_accrual_rate.unwrap())
-                .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDelta))?;
+                .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
             record.amount = record
                 .amount
                 .checked_sub(delta.amount)
@@ -538,7 +538,7 @@ impl TokenAllocatedAmountDelta {
                 .is_some_and(|rate| !(100..200).contains(&rate))
         };
         if !self.is_positive || is_contribution_accrual_rate_valid() {
-            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?
+            err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
         }
 
         Ok(())
@@ -546,7 +546,7 @@ impl TokenAllocatedAmountDelta {
 
     fn check_valid_subtraction(&self) -> Result<()> {
         if self.is_positive {
-            err!(ErrorCode::RewardInvalidAllocatedAmountDelta)?
+            err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
         }
 
         Ok(())

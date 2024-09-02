@@ -48,14 +48,14 @@ impl FundAccount {
         self.supported_tokens
             .iter()
             .find(|info| info.mint == token)
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedToken))
+            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
     pub fn supported_token_mut(&mut self, token: Pubkey) -> Result<&mut SupportedTokenInfo> {
         self.supported_tokens
             .iter_mut()
             .find(|info| info.mint == token)
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedToken))
+            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 }
 

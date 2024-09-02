@@ -28,7 +28,7 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
         }
 
         if !threshold_satisfied {
-            err!(ErrorCode::OperatorJobUnmetThreshold)?
+            err!(ErrorCode::OperatorJobUnmetThresholdError)?
         }
         Ok(())
     }
@@ -99,7 +99,7 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
         fund_account.sol_operation_reserved_amount = fund_account
             .sol_operation_reserved_amount
             .checked_sub(total_sol_reserved_amount)
-            .ok_or_else(|| error!(ErrorCode::FundOperationReservedSOLExhausted))?;
+            .ok_or_else(|| error!(ErrorCode::FundOperationReservedSOLExhaustedException))?;
 
         self.call_burn_token_cpi(receipt_token_amount_to_burn)?;
         let fund = &mut self.fund_account;

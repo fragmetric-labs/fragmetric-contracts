@@ -266,12 +266,12 @@ export const initialize = describe("Initialize program accounts", () => {
                         .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
                     program.methods
-                        .adminInitializeRewardAccountIfNeeded()
+                        .adminInitializeRewardAccount()
                         .accounts({ payer: wallet.payer.publicKey })
                         .instruction(),
-                    ...[false, false, true].map(asserted =>
+                    ...new Array(3).fill(null).map((_, index, arr) =>
                         program.methods
-                            .adminReallocRewardAccountIfNeeded(null, asserted)
+                            .adminInitializeRewardAccountIfNeeded(null, index == arr.length - 1)
                             .accounts({ payer: wallet.payer.publicKey })
                             .instruction()
                     ),

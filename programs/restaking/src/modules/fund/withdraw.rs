@@ -94,7 +94,7 @@ impl ReservedFund {
         self.sol_remaining = self
             .sol_remaining
             .checked_sub(amount)
-            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhausted))?;
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
 
         Ok(())
     }
@@ -137,7 +137,7 @@ impl WithdrawalStatus {
 
     pub fn check_withdrawal_enabled(&self) -> Result<()> {
         if !self.withdrawal_enabled_flag {
-            err!(ErrorCode::FundWithdrawalDisabled)?
+            err!(ErrorCode::FundWithdrawalDisabledError)?
         }
 
         Ok(())
@@ -145,7 +145,7 @@ impl WithdrawalStatus {
 
     pub fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
         if batch_id < self.pending_batch_withdrawal.batch_id {
-            err!(ErrorCode::FundWithdrawalRequestAlreadyInProgress)?
+            err!(ErrorCode::FundProcessingWithdrawalRequestError)?
         }
 
         Ok(())
@@ -153,7 +153,7 @@ impl WithdrawalStatus {
 
     pub fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
         if batch_id > self.last_completed_batch_id {
-            err!(ErrorCode::FundWithdrawalNotCompletedYet)?
+            err!(ErrorCode::FundPendingWithdrawalRequestError)?
         }
 
         Ok(())
@@ -209,7 +209,7 @@ impl WithdrawalStatus {
 impl UserFundAccount {
     pub fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         if self.withdrawal_requests.len() == Self::MAX_WITHDRAWAL_REQUESTS_SIZE {
-            err!(ErrorCode::FundExceededMaxWithdrawalRequestSizePerUser)?;
+            err!(ErrorCode::FundExceededMaxWithdrawalRequestError)?;
         }
 
         self.withdrawal_requests.push(request);
@@ -221,7 +221,7 @@ impl UserFundAccount {
         let index = self
             .withdrawal_requests
             .binary_search_by_key(&request_id, |req| req.request_id)
-            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFound))?;
+            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
     }
 }

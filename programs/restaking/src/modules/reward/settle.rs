@@ -23,7 +23,7 @@ impl RewardPool {
         current_slot: u64,
     ) -> Result<()> {
         if self.closed_slot.is_some() {
-            err!(ErrorCode::RewardPoolClosed)?;
+            err!(ErrorCode::RewardPoolClosedError)?;
         }
 
         // First update contribution
@@ -56,7 +56,7 @@ impl RewardSettlement {
         if self.settlement_blocks.len() == REWARD_SETTLEMENT_BLOCK_MAX_LEN
             && self.clear_stale_settlement_blocks()? == 0
         {
-            err!(ErrorCode::RewardStaleSettlementBlockNotExist)?
+            err!(ErrorCode::RewardStaleSettlementBlockNotExistError)?
         }
 
         let starting_slot = self.settlement_blocks_last_slot;
@@ -64,7 +64,7 @@ impl RewardSettlement {
 
         // Prevent settlement block with non-positive block height
         if starting_slot >= ending_slot {
-            err!(ErrorCode::RewardInvalidSettlementBlockHeight)?
+            err!(ErrorCode::RewardInvalidSettlementBlockHeightException)?
         }
 
         let starting_reward_pool_contribution =
@@ -73,7 +73,7 @@ impl RewardSettlement {
 
         // Prevent settlement block with negative block contribution
         if starting_reward_pool_contribution > ending_reward_pool_contribution {
-            err!(ErrorCode::RewardInvalidSettlementBlockContribution)?
+            err!(ErrorCode::RewardInvalidSettlementBlockContributionException)?
         }
 
         let settlement_block = RewardSettlementBlock::new(
@@ -151,11 +151,11 @@ impl RewardSettlementBlock {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         if self.user_settled_amount > self.amount {
-            err!(ErrorCode::RewardInvalidTotalUserSettledAmount)?
+            err!(ErrorCode::RewardInvalidTotalUserSettledAmountException)?
         }
 
         if self.user_settled_contribution > self.block_contribution() {
-            err!(ErrorCode::RewardInvalidTotalUserSettledContribution)?
+            err!(ErrorCode::RewardInvalidTotalUserSettledContributionException)?
         }
 
         Ok(())

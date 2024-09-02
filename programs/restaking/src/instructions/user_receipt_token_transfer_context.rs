@@ -102,7 +102,7 @@ impl<'info> UserReceiptTokenTransferContext<'info> {
 
 
         /* token transfer is temporarily disabled */
-        err!(ErrorCode::TokenNotTransferable)?;
+        err!(ErrorCode::TokenNotTransferableError)?;
 
         let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
         emit!(UserTransferredReceiptToken {
@@ -134,7 +134,7 @@ impl<'info> UserReceiptTokenTransferContext<'info> {
         let account_extension = account.get_extension_mut::<TransferHookAccount>()?;
 
         if !bool::from(account_extension.transferring) {
-            err!(ErrorCode::TokenNotTransferring)?
+            err!(ErrorCode::TokenNotTransferringException)?
         }
 
         Ok(())

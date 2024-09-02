@@ -8,7 +8,7 @@ use crate::errors::ErrorCode;
 /// Verify serialized Ed25519Program instruction data with ADMIN_PUBKEY
 pub fn verify_preceding_ed25519_instruction(instructions_sysvar: Option<&UncheckedAccount>, payload: &[u8]) -> Result<()> {
     let instructions = instructions_sysvar
-        .ok_or_else(|| error!(ErrorCode::SignatureVerificationFailed))?;
+        .ok_or_else(|| error!(ErrorCode::InvalidSignatureError))?;
 
     // load prev instruction
     let current_ix_index: usize = instructions::load_current_index_checked(instructions)?.into();
@@ -20,7 +20,7 @@ pub fn verify_preceding_ed25519_instruction(instructions_sysvar: Option<&Uncheck
     // https://github.com/solana-labs/solana-web3.js/blob/master/src/ed25519-program.ts#L33
     // "Deserializing" byte slices
     let expected_payload_size =
-        u16::try_from(payload.len()).map_err(|_| error!(ErrorCode::SignatureVerificationFailed))?;
+        u16::try_from(payload.len()).map_err(|_| error!(ErrorCode::InvalidSignatureError))?;
 
     // check_data_len
     let actual = ix.data.len();
@@ -31,7 +31,7 @@ pub fn verify_preceding_ed25519_instruction(instructions_sysvar: Option<&Uncheck
         //     actual,
         //     expected
         // );
-        err!(ErrorCode::SignatureVerificationFailed)?
+        err!(ErrorCode::InvalidSignatureError)?
     }
 
     // check_data_header
@@ -46,43 +46,43 @@ pub fn verify_preceding_ed25519_instruction(instructions_sysvar: Option<&Uncheck
     let payload_size = u16::from_le_bytes([header[12], header[13]]);
     let payload_instruction_index = u16::from_le_bytes([header[14], header[15]]);
 
-    require_eq!(num_signatures, 1, ErrorCode::SignatureVerificationFailed);
-    require_eq!(padding, 0, ErrorCode::SignatureVerificationFailed);
-    require_eq!(signature_offset, 48, ErrorCode::SignatureVerificationFailed);
+    require_eq!(num_signatures, 1, ErrorCode::InvalidSignatureError);
+    require_eq!(padding, 0, ErrorCode::InvalidSignatureError);
+    require_eq!(signature_offset, 48, ErrorCode::InvalidSignatureError);
     require_eq!(
             signature_instruction_index,
             u16::MAX,
-            ErrorCode::SignatureVerificationFailed
+            ErrorCode::InvalidSignatureError
         );
-    require_eq!(public_key_offset, 16, ErrorCode::SignatureVerificationFailed);
+    require_eq!(public_key_offset, 16, ErrorCode::InvalidSignatureError);
     require_eq!(
             public_key_instruction_index,
             u16::MAX,
-            ErrorCode::SignatureVerificationFailed
+            ErrorCode::InvalidSignatureError
         );
-    require_eq!(payload_offset, 112, ErrorCode::SignatureVerificationFailed);
+    require_eq!(payload_offset, 112, ErrorCode::InvalidSignatureError);
     require_eq!(
             payload_size,
             expected_payload_size,
-            ErrorCode::SignatureVerificationFailed
+            ErrorCode::InvalidSignatureError
         );
     require_eq!(
             payload_instruction_index,
             u16::MAX,
-            ErrorCode::SignatureVerificationFailed
+            ErrorCode::InvalidSignatureError
         );
 
     // check_data_pubkey
     let data_pubkey = &ix.data[16..48];
     if data_pubkey != ADMIN_PUBKEY.to_bytes() {
         // msg!("Data pubkey mismatch");
-        err!(ErrorCode::SignatureVerificationFailed)?
+        err!(ErrorCode::InvalidSignatureError)?
     }
 
     let data_payload = &ix.data[112..];
     if data_payload != payload {
         // msg!("Data payload mismatch");
-        err!(ErrorCode::SignatureVerificationFailed)?
+        err!(ErrorCode::InvalidSignatureError)?
     }
 
     Ok(())

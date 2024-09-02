@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
 use crate::modules::reward::RewardAccount;
 
+// will be used only once
 #[derive(Accounts)]
 pub struct AdminRewardInitialContext<'info> {
     #[account(mut)]
@@ -20,8 +21,8 @@ pub struct AdminRewardInitialContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init_if_needed,
-        space = 10 * 1024, // eventually desired size is: 8 + RewardAccount::INIT_SPACE
+        init,
+        space = 10 * 1024,
         payer = payer,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
@@ -30,10 +31,12 @@ pub struct AdminRewardInitialContext<'info> {
 }
 
 impl<'info> AdminRewardInitialContext<'info> {
-    pub fn initialize_reward_account_if_needed(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+    pub fn initialize_reward_account(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
+        let current_size = ctx.accounts.reward_account.to_account_info().data_len();
         ctx.accounts.reward_account.initialize_if_needed(
             ctx.bumps.reward_account,
             ctx.accounts.receipt_token_mint.key(),
+            current_size as u32,
         );
 
         Ok(())
@@ -63,25 +66,25 @@ pub struct AdminRewardContext<'info> {
 }
 
 impl<'info> AdminRewardContext<'info> {
-    pub fn realloc_reward_account_if_needed(ctx: Context<Self>, desired_size: Option<u32>, asserted: bool) -> Result<()> {
-        let current_size = ctx.accounts.reward_account.to_account_info().data_len();
-        let min_required_size = RewardAccount::INIT_SPACE;
-        let target_size = if let Some(desired_size) = desired_size {
-            if desired_size as usize > min_required_size {
+    pub fn initialize_reward_account_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+        let current_account_size = ctx.accounts.reward_account.to_account_info().data_len();
+        let min_account_size = RewardAccount::INIT_SPACE + 8;
+        let target_account_size = if let Some(desired_size) = desired_account_size {
+            if desired_size as usize > min_account_size {
                 desired_size as usize
             } else {
-                min_required_size
+                min_account_size
             }
         } else {
-            min_required_size
+            min_account_size
         };
-        let remaining_increase = target_size.saturating_sub(current_size);
+        let required_realloc_size = target_account_size.saturating_sub(current_account_size);
 
-        msg!("reward account size: current={}, target={}, remaining={}", current_size, target_size, target_size - current_size);
+        msg!("reward account size: current={}, target={}, required={}", current_account_size, target_account_size, required_realloc_size);
 
-        if remaining_increase > 0 {
+        if required_realloc_size > 0 {
             let rent = Rent::get()?;
-            let required_lamports = rent.minimum_balance(target_size).saturating_sub(
+            let required_lamports = rent.minimum_balance(target_account_size).saturating_sub(
                 ctx.accounts.reward_account.to_account_info().lamports(),
             );
             if required_lamports > 0 {
@@ -110,18 +113,28 @@ impl<'info> AdminRewardContext<'info> {
             }
 
             let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
-            let increase = if remaining_increase > max_increase {
-                if asserted {
-                    return Err(crate::errors::ErrorCode::RewardUnmetAccountRealloc)?
+            let increase = if required_realloc_size > max_increase {
+                if initialize {
+                    return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?
                 }
                 max_increase
             } else {
-                remaining_increase
+                required_realloc_size
             };
 
-            let new_size = ctx.accounts.reward_account.to_account_info().data_len() + increase;
-            ctx.accounts.reward_account.to_account_info().realloc(new_size, false)?;
-            msg!("reward account reallocated: current={}, target={}, remaining={}", new_size, target_size, target_size - new_size);
+            let new_account_size = ctx.accounts.reward_account.to_account_info().data_len() + increase;
+            ctx.accounts.reward_account.to_account_info().realloc(new_account_size, false)?;
+            msg!("reward account reallocated: current={}, target={}, required={}", new_account_size, target_account_size, target_account_size - new_account_size);
+
+            if initialize {
+                let bump = ctx.accounts.reward_account.bump;
+                ctx.accounts.reward_account
+                    .initialize_if_needed(
+                        bump,
+                        ctx.accounts.receipt_token_mint.key(),
+                        new_account_size as u32,
+                    );
+            }
         }
 
         Ok(())

@@ -5,7 +5,7 @@ import { transfer_hook } from "./restaking/4_transfer_hook";
 import { withdraw } from "./restaking/5_withdraw";
 
 initialize;
-deposit_sol;
+// deposit_sol;
 // deposit_token;
 // transfer_hook;
 // withdraw;

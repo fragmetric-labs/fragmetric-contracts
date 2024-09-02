@@ -104,5 +104,5 @@ fn find_token_pricing_source_by_key<'a, 'info: 'a>(
     Ok(sources
         .iter()
         .find(|account| account.key == key)
-        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFound))?)
+        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?)
 }
