@@ -14,7 +14,5 @@ mainnet-id.json
 
 keypairs/**/*
 !keypairs/.gitkeep
-!keypairs/script/
-!keypairs/script/**/*
 !keypairs/restaking/
 !keypairs/restaking/.gitkeep

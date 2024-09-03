@@ -1,0 +1,1 @@
+export type WORKSPACE_PROGRAM_NAME = 'restaking';
