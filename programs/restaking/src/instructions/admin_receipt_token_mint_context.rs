@@ -17,7 +17,7 @@ pub struct AdminReceiptTokenMintInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(mut, address = ADMIN_PUBKEY)]
+    #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
