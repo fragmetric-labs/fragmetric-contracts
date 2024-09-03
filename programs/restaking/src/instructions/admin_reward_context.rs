@@ -58,6 +58,7 @@ pub struct AdminRewardContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
+        mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.bump,
         has_one = receipt_token_mint,
