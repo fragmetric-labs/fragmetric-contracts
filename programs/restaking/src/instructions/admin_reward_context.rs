@@ -88,19 +88,6 @@ impl<'info> AdminRewardContext<'info> {
                 ctx.accounts.reward_account.to_account_info().lamports(),
             );
             if required_lamports > 0 {
-                solana_program::program::invoke(
-                    &solana_program::system_instruction::transfer(
-                        &ctx.accounts.payer.key(),
-                        &ctx.accounts.reward_account.to_account_info().key(),
-                        required_lamports,
-                    ),
-                    &[
-                        ctx.accounts.payer.to_account_info(),
-                        ctx.accounts.reward_account.to_account_info(),
-                        ctx.accounts.system_program.to_account_info(),
-                    ],
-                )?;
-
                 let cpi_context = CpiContext::new(
                     ctx.accounts.system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
