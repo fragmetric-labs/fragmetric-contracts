@@ -42,8 +42,8 @@ export const initialize = describe("Initialize program accounts", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
     wallet = (program.provider as anchor.AnchorProvider).wallet as anchor.Wallet;
-    adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json")));
-    fundManagerKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json")));
+    adminKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json")));
+    fundManagerKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json")));
 
     console.log({
         programId: program.programId.toString(),
@@ -93,7 +93,7 @@ export const initialize = describe("Initialize program accounts", () => {
     // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
 
     before("Prepare program accounts initialization", async () => {
-        fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("./keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
+        fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
         fragSOLTokenMintMetadata = fragSOLTokenMintMetadata = {
             mint: fragSOLTokenMintKeypair.publicKey,
             name: "Fragmetric Restaked SOL",

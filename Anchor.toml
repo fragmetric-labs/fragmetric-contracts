@@ -8,11 +8,11 @@ skip-lint = false
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
-wallet = "./id.json"
+cluster = "localnet"
+wallet = "./keypairs/wallet.json"
 
 [scripts]
-init-keypairs = "(which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $value > $key; done"
+init-keypairs = "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $value > $key; done"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [test.validator]

@@ -10,8 +10,11 @@ test-ledger
 
 # keypairs
 id.json
-tests/restaking/keypairs/**/*
-!tests/restaking/keypairs/.gitkeep
+mainnet-id.json
 
-# repl
-**/.ipynb_checkpoints/**/*
+keypairs/**/*
+!keypairs/.gitkeep
+!keypairs/script/
+!keypairs/script/**/*
+!keypairs/restaking/
+!keypairs/restaking/.gitkeep
