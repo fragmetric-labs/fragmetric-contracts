@@ -1,31 +1,32 @@
 import * as anchor from '@coral-xyz/anchor';
-import {getLogger, LOG_PAD_LARGE, LOG_PAD_SMALL} from './logger';
-import {KeypairLoader} from './keypair_loader';
+import {getLogger} from './logger';
+import {Keychain} from './keychain';
 import {Restaking} from '../../target/types/restaking';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {AnchorError} from "@coral-xyz/anchor";
+import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes/index';
 
-const logger = getLogger('anchor');
+const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
 export type AnchorPlaygroundConfig<IDL extends anchor.Idl, KEYS extends string> = {
     provider: anchor.Provider,
     idl: IDL,
-    keypairs: KeypairLoader<KEYS>,
+    keychain: Keychain<KEYS>,
 };
 
 export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     public readonly programName: WORKSPACE_PROGRAM_NAME;
-    public readonly keypairs: KeypairLoader<KEYS>;
+    public readonly keychain: Keychain<KEYS>;
     protected readonly provider: anchor.Provider;
     protected readonly program: anchor.Program<IDL>;
     protected readonly eventParser: anchor.EventParser;
 
 
     constructor(args: AnchorPlaygroundConfig<IDL, KEYS>) {
-        let {idl, keypairs, provider} = args;
-        this.programName = keypairs.programName;
+        let {idl, keychain, provider} = args;
+        this.programName = keychain.programName;
         this.provider = provider;
-        this.keypairs = keypairs;
+        this.keychain = keychain;
 
         logger.notice(`initializing ${this.programName} playground`);
 
@@ -35,7 +36,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             throw new Error('program name and idl not matched');
         }
 
-        const programAddress = keypairs.programKeypair.publicKey.toString();
+        const programAddress = keychain.programKeypair.publicKey.toString();
         if (!programAddress) {
             throw new Error(`program keypair not initialized for ${this.programName}`);
         }
@@ -52,27 +53,65 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
     public async run(args: {
         instructions: Promise<anchor.web3.TransactionInstruction>[],
-        signers: anchor.web3.Signer[],
+        signers?: anchor.web3.Signer[],
+        signerNames?: KEYS[],
     }) {
         let txSig: string | null = null;
         try {
-            let {instructions, signers} = args;
-            txSig = await anchor.web3.sendAndConfirmTransaction(
-                this.provider.connection,
-                new anchor.web3.Transaction().add(
+            // prepare instructions
+            let {instructions, signers = [], signerNames = []} = args;
+            const tx = new anchor.web3.Transaction()
+                .add(
                     ...await Promise.all(instructions)
-                ),
-                signers,
+                );
+
+            // set recent block hash
+            const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+
+            // sign with wallet to pay fee
+            tx.recentBlockhash = blockhash;
+            tx.feePayer = this.keychain.wallet.publicKey;
+            signers.push(this.keychain.wallet);
+
+            // sign from keypair loader
+            for (const keypairName of signerNames) {
+                const { local, ledger } = await this.keychain.signTransaction(keypairName, tx);
+                if (local) {
+                    signers.push(local);
+                    logger.debug(keypairName.padEnd(LOG_PAD_LARGE), `${local.publicKey.toString()}`)
+                } else if (ledger) {
+                    tx.addSignature(ledger.publicKey, ledger.signature);
+                    logger.debug(keypairName.padEnd(LOG_PAD_LARGE), `${ledger.publicKey.toString()}`)
+                }
+            }
+            tx.partialSign(...signers);
+
+            // send transaction
+            txSig = bs58.encode(tx.signature);
+            await anchor.web3.sendAndConfirmRawTransaction(
+                this.provider.connection,
+                tx.serialize(),
+                {
+                    abortSignal: undefined,
+                    lastValidBlockHeight,
+                    blockhash,
+                    signature: txSig,
+                },
+                {
+                    skipPreflight: false,
+                    commitment: 'confirmed',
+                }
             );
 
-            const tx = await this.connection.getParsedTransaction(txSig, 'confirmed');
-            logger.info(`run succeeded:`.padEnd(LOG_PAD_LARGE), txSig);
+            // get result and parse events and errors
+            const txResult = await this.connection.getParsedTransaction(txSig, 'confirmed');
+            logger.info(`transaction succeeded:`.padEnd(LOG_PAD_LARGE), txSig);
             return {
-                event: this.eventParser.parseLogs(tx.meta.logMessages, true),
-                error: AnchorError.parse(tx.meta.logMessages),
+                event: this.eventParser.parseLogs(txResult.meta.logMessages, true),
+                error: AnchorError.parse(txResult.meta.logMessages),
             };
         } catch (err) {
-            logger.warn(`run failed`.padEnd(LOG_PAD_LARGE), txSig);
+            logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig);
             return {
                 event: null,
                 error: err,
@@ -81,7 +120,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 
     public get wallet() {
-        return this.keypairs.wallet;
+        return this.keychain.wallet;
     }
 
     public get walletAddress() {
@@ -105,7 +144,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 }
 
-KeypairLoader.create({
+Keychain.create({
     program: 'restaking',
     newKeypairDir: './keypairs/restaking',
     wallet: './keypairs/wallet.json',
@@ -113,28 +152,33 @@ KeypairLoader.create({
         'PROGRAM': './keypairs/restaking/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json',
         'FRAGSOL_MINT': './keypairs/restaking/fragsol_mint_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json',
         'ADMIN': './keypairs/restaking/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json',
-        'FUND_MANAGER': './keypairs/restaking/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json',
-        // 'FUND_MANAGER': `ledger://44'/501'/0'`,
+        // 'FUND_MANAGER': './keypairs/restaking/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json',
+        'FUND_MANAGER': `ledger://44'/501'/0'`,
     },
 })
-    .then(async (keypairs) => {
+    .then((keychain) => {
         const playground = new AnchorPlayground({
             provider: new anchor.AnchorProvider(
                 new anchor.web3.Connection('http://127.0.0.1:8899'),
-                new anchor.Wallet(keypairs.wallet),
+                new anchor.Wallet(keychain.wallet),
             ),
             idl: require('../../target/idl/restaking.json') as Restaking,
-            keypairs,
+            keychain,
         });
-        const result = await playground.run({
+        return playground.run({
             instructions: [
                 playground.methods
-                    .adminInitializeFundAccounts()
-                    .accounts({payer: playground.walletAddress})
+                    .fundManagerSettleReward(0, 0, new anchor.BN(1000))
+                    .accounts({
+                        rewardTokenMint: keychain.wallet.publicKey,
+                        rewardTokenProgram: keychain.wallet.publicKey,
+                    })
                     .instruction(),
             ],
-            signers: [playground.wallet, playground.keypairs.keypair('ADMIN')],
+            signerNames: ['FUND_MANAGER'],
         });
+    })
+    .then((result) => {
         console.log(result);
     })
     .catch(err => {

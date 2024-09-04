@@ -2,11 +2,13 @@ import fs from "fs";
 import path from "path";
 import readline from 'readline';
 import * as web3 from "@solana/web3.js";
-import {KeypairLedgerAdapter} from "./keypair_ledger_adapter";
+import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
-import {getLogger, LOG_PAD_SMALL} from "./logger";
+import {getLogger} from "./logger";
+import {Buffer} from "buffer";
+import {SignaturePubkeyPair} from "@solana/web3.js";
 
-const logger = getLogger('keypair');
+const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
 type AskYesNo = (question: string) => Promise<boolean>;
 
@@ -25,7 +27,6 @@ function defaultAskYesNo(question: string) {
 }
 
 const PROGRAM_KEYPAIR_NAME = 'PROGRAM';
-type PROGRAM_KEYPAIR_NAME_TYPE = 'PROGRAM';
 const LEDGER_PATH_PREFIX = 'ledger://';
 
 type KeypairLoaderConfig<KEYS extends string> = {
@@ -44,24 +45,50 @@ type KeypairMap = {
     ledger: Map<string, { bip32Path: string, publicKey: web3.PublicKey }>;
 };
 
-export class KeypairLoader<KEYS extends string> {
+export class Keychain<KEYS extends string> {
     public get programKeypair(): web3.Keypair {
         return this.keypairs.local.get(PROGRAM_KEYPAIR_NAME) ?? null;
     }
 
-    public keypair(name: Exclude<KEYS, PROGRAM_KEYPAIR_NAME_TYPE>): web3.Keypair | null {
+    public getKeypair(name: KEYS): web3.Keypair | null {
         return this.keypairs.local.get(name);
     }
 
-    public publicKey(name: Exclude<KEYS, PROGRAM_KEYPAIR_NAME_TYPE>): web3.PublicKey | null {
+    public getPublicKey(name: KEYS): web3.PublicKey | null {
         return this.keypairs.local.get(name)?.publicKey ??
             this.keypairs.ledger.get(name)?.publicKey ??
             null;
     }
 
-    // public sign(name: string): web3.Keypair | null {
-    //     return this.programKeyPairMaps.get(program)?.ledger.get(keypairName);
-    // }
+    public async signTransaction(name: KEYS, tx: web3.Transaction): Promise<{ local?: web3.Keypair, ledger?: web3.SignaturePubkeyPair }> {
+        try {
+            if (this.keypairs.local.has(name)) {
+                const keypair = this.keypairs.local.get(name);
+                return {
+                    local: keypair,
+                };
+
+            } else if (this.keypairs.ledger.has(name)) {
+                const keypair = this.keypairs.ledger.get(name);
+                const txBuffer = tx.serializeMessage();
+
+                return {
+                    ledger: {
+                        publicKey: keypair.publicKey,
+                        signature: await Keychain.ledgerAdapter.getSignature(
+                            keypair.bip32Path,
+                            txBuffer,
+                        ),
+                    },
+                };
+            } else {
+                throw new Error(`keypair not found in keychain`);
+            }
+        } catch (err) {
+            logger.error(name.padEnd(LOG_PAD_LARGE), `signing failed`);
+            throw err;
+        }
+    }
 
 
     public static readKeypairSecretFile(path: string): web3.Keypair {
@@ -78,16 +105,16 @@ export class KeypairLoader<KEYS extends string> {
         fs.writeFileSync(path, JSON.stringify(Buffer.from(keyPair.secretKey.buffer).toJSON().data));
     }
 
-    public static async create<KEYS extends string>(args: KeypairLoaderConfig<KEYS>): Promise<KeypairLoader<KEYS>> {
+    public static async create<KEYS extends string>(args: KeypairLoaderConfig<KEYS>): Promise<Keychain<KEYS>> {
         let {wallet: walletArg, newKeypairDir = './', program} = args;
         let wallet: web3.Keypair;
         if (walletArg === undefined) {
             wallet = web3.Keypair.generate();
             logger.info(`generated local wallet`);
             const saveFilePath = path.join(newKeypairDir, `wallet_${wallet.publicKey.toString()}.json`);
-            KeypairLoader.writeKeypairSecretFile(saveFilePath, wallet);
+            Keychain.writeKeypairSecretFile(saveFilePath, wallet);
         } else if (typeof walletArg == 'string') {
-            wallet = KeypairLoader.readKeypairSecretFile(walletArg);
+            wallet = Keychain.readKeypairSecretFile(walletArg);
             logger.debug(`loaded local wallet`);
         } else {
             wallet = walletArg;
@@ -95,11 +122,11 @@ export class KeypairLoader<KEYS extends string> {
         }
         logger.info(`WALLET`.padEnd(LOG_PAD_SMALL), wallet.publicKey.toString());
 
-        const keypairs = await KeypairLoader.initializeKeypairs(args);
-        return new KeypairLoader(args.program, wallet, keypairs);
+        const keypairs = await Keychain.initializeKeypairs(args);
+        return new Keychain(args.program, wallet, keypairs);
     }
 
-    private static ledgerAdapter: KeypairLedgerAdapter | null = null;
+    static ledgerAdapter: KeychainLedgerAdapter | null = null;
 
     private constructor(
         public readonly programName: WORKSPACE_PROGRAM_NAME,
@@ -117,8 +144,8 @@ export class KeypairLoader<KEYS extends string> {
             ledger: new Map(),
         };
 
-        if (!KeypairLoader.ledgerAdapter && Object.values(keypairs).some(k => (k as string | null)?.startsWith(LEDGER_PATH_PREFIX))) {
-            KeypairLoader.ledgerAdapter = await KeypairLedgerAdapter.create();
+        if (!Keychain.ledgerAdapter && Object.values(keypairs).some(k => (k as string | null)?.startsWith(LEDGER_PATH_PREFIX))) {
+            Keychain.ledgerAdapter = await KeychainLedgerAdapter.create();
         }
 
         logger.notice(`loading ${program} program keypairs`);
@@ -130,10 +157,10 @@ export class KeypairLoader<KEYS extends string> {
                     const bip32Path = keypairSecretPath.substring(LEDGER_PATH_PREFIX.length);
                     keypairMap.ledger.set(keypairName, {
                         bip32Path,
-                        publicKey: await KeypairLoader.ledgerAdapter.getPublicKey(bip32Path),
+                        publicKey: await Keychain.ledgerAdapter.getPublicKey(bip32Path),
                     });
                 } else {
-                    keypairMap.local.set(keypairName, KeypairLoader.readKeypairSecretFile(keypairSecretPath));
+                    keypairMap.local.set(keypairName, Keychain.readKeypairSecretFile(keypairSecretPath));
                 }
             } else {
                 keypairMap.local.set(keypairName, web3.Keypair.generate());
@@ -152,14 +179,14 @@ export class KeypairLoader<KEYS extends string> {
         }
 
         logger.notice(`applying keypairs to ${program} program source code and build dir:`);
-        await KeypairLoader.applyKeypairsToWorkspace(program, keypairMap, newLocalKeypairKEYS.size > 0 ? askYesNo : null);
+        await Keychain.applyKeypairsToWorkspace(program, keypairMap, newLocalKeypairKEYS.size > 0 ? askYesNo : null);
 
         logger.notice(`loaded ${program} program keypairs' pubkey:`)
         for (const [name, keypair] of keypairMap.local.entries()) {
             logger.info(`${name}`.padEnd(LOG_PAD_SMALL), keypair.publicKey.toString());
             if (newLocalKeypairKEYS.has(name)) {
                 const saveFilePath = path.join(newKeypairDir, `local_${name.toLowerCase()}_${keypair.publicKey.toString()}.json`);
-                KeypairLoader.writeKeypairSecretFile(saveFilePath, keypair);
+                Keychain.writeKeypairSecretFile(saveFilePath, keypair);
             }
         }
         for (const [name, keypair] of keypairMap.ledger.entries()) {
@@ -215,8 +242,8 @@ export class KeypairLoader<KEYS extends string> {
         const programKeyPair = keypairMap.local.get(PROGRAM_KEYPAIR_NAME);
         logger.debug(`checking ${programKeyPairPath}`);
 
-        if (!fs.existsSync(programKeyPairPath) || KeypairLoader.readKeypairSecretFile(programKeyPairPath)?.secretKey.toString() != programKeyPair.secretKey.toString()) {
-            KeypairLoader.writeKeypairSecretFile(programKeyPairPath, programKeyPair);
+        if (!fs.existsSync(programKeyPairPath) || Keychain.readKeypairSecretFile(programKeyPairPath)?.secretKey.toString() != programKeyPair.secretKey.toString()) {
+            Keychain.writeKeypairSecretFile(programKeyPairPath, programKeyPair);
             logger.info(`replaced ${programKeypairName}`);
         }
     }

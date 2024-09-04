@@ -5,9 +5,9 @@ use anchor_lang::prelude::*;
 #[cfg(feature = "mainnet")]
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84");
 #[cfg(feature = "devnet")]
-pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX");
+pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2");
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
-pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX"/**/);
+pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"/**/);
 
 // privileged for non-financial operations and scheduled tasks
 #[cfg(feature = "mainnet")]

@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@ledgerhq/hw-app-solana": "^7.2.2",
-    "@ledgerhq/hw-transport-node-hid-noevents": "^6.30.3",
+    "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.3",
     "@solana/spl-token": "^0.4.8",
     "@types/bn.js": "^5.1.0",
     "@types/chai": "^4.3.16",
