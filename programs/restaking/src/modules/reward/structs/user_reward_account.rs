@@ -191,18 +191,20 @@ impl UserRewardPool {
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct UserRewardAccountUpdateInfo {
+    pub data_version: u16,
     pub user: Pubkey,
     pub updated_user_reward_pools: Vec<UserRewardPoolInfo>,
 }
 
 impl UserRewardAccountUpdateInfo {
     pub fn new_from_user_reward_pool(
-        user: Pubkey,
-        user_reward_pool: Vec<UserRewardPoolInfo>,
+        user_reward_account: &UserRewardAccount,
+        updated_user_reward_pools: Vec<UserRewardPoolInfo>,
     ) -> Self {
         Self {
-            user,
-            updated_user_reward_pools: user_reward_pool,
+            user: user_reward_account.user,
+            data_version: user_reward_account.data_version,
+            updated_user_reward_pools,
         }
     }
 }

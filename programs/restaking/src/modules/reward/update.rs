@@ -143,7 +143,7 @@ impl RewardAccount {
             }
 
             from_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
-                from.user,
+                &from,
                 from_user_updated_reward_pools_info,
             ));
         }
@@ -172,7 +172,7 @@ impl RewardAccount {
             }
 
             to_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
-                to.user,
+                &to,
                 to_user_updated_reward_pools_info,
             ));
         }

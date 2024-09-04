@@ -75,6 +75,10 @@ impl RewardAccount {
         // }
     }
 
+    pub fn data_version(&self) -> u16 {
+        self.data_version
+    }
+
     pub fn allocate_new_holder(&mut self) -> Result<&mut Holder> {
         require_gt!(
             self.max_holders,
