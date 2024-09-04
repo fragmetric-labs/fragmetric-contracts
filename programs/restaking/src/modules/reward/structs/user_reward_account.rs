@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{errors::ErrorCode, modules::common::PDASignerSeeds};
+use crate::{errors::ErrorCode, modules::common::*};
 
 use super::*;
 
@@ -39,6 +39,16 @@ impl PDASignerSeeds<4> for UserRewardAccount {
 
     fn bump_ref(&self) -> &u8 {
         &self.bump
+    }
+}
+
+impl ZeroCopyHeader for UserRewardAccount {
+    fn data_version_offset() -> usize {
+        0
+    }
+
+    fn bump_offset() -> usize {
+        2
     }
 }
 
