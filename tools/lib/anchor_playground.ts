@@ -1,7 +1,6 @@
 import * as anchor from '@coral-xyz/anchor';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
-import {Restaking} from '../../target/types/restaking';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {AnchorError} from "@coral-xyz/anchor";
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes/index';
@@ -143,47 +142,3 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.program.account;
     }
 }
-
-Keychain.create({
-    program: 'restaking',
-    newKeypairDir: './keypairs/restaking',
-    wallet: './keypairs/wallet.json',
-    keypairs: {
-        'PROGRAM': './keypairs/restaking/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json',
-        'FRAGSOL_MINT': './keypairs/restaking/fragsol_mint_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json',
-        'ADMIN': './keypairs/restaking/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json',
-        // 'FUND_MANAGER': './keypairs/restaking/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json',
-        'FUND_MANAGER': `ledger://44'/501'/0'`,
-    },
-})
-    .then((keychain) => {
-        const playground = new AnchorPlayground({
-            provider: new anchor.AnchorProvider(
-                new anchor.web3.Connection('http://127.0.0.1:8899'),
-                new anchor.Wallet(keychain.wallet),
-            ),
-            idl: require('../../target/idl/restaking.json') as Restaking,
-            keychain,
-        });
-        return playground.run({
-            instructions: [
-                playground.methods
-                    .fundManagerSettleReward(0, 0, new anchor.BN(1000))
-                    .accounts({
-                        rewardTokenMint: keychain.wallet.publicKey,
-                        rewardTokenProgram: keychain.wallet.publicKey,
-                    })
-                    .instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-    })
-    .then((result) => {
-        console.log(result);
-    })
-    .catch(err => {
-        console.error(err);
-    })
-    .finally(() => {
-        process.exit(0);
-    });

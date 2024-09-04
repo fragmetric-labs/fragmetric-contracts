@@ -3,11 +3,11 @@ use anchor_lang::prelude::*;
 
 // privileged for financial operations and fund configuration (ledger in mainnet)
 #[cfg(feature = "mainnet")]
-pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84");
+pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"); // ledger-o3
 #[cfg(feature = "devnet")]
-pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2");
+pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"); // ledger-e1
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
-pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"/**/);
+pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"/**/);
 
 // privileged for non-financial operations and scheduled tasks
 #[cfg(feature = "mainnet")]
@@ -15,7 +15,7 @@ pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9J
 #[cfg(feature = "devnet")]
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP");
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
-pub const ADMIN_PUBKEY: Pubkey = pubkey!(/*local:ADMIN*/"fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"/**/);
+pub const ADMIN_PUBKEY: Pubkey = pubkey!(/*local:ADMIN*/"9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"/**/);
 
 
 #[cfg(any(feature = "mainnet", feature="devnet"))]
@@ -23,7 +23,7 @@ pub const ADMIN_PUBKEY: Pubkey = pubkey!(/*local:ADMIN*/"fragkamrANLvuZYQPcmPsCA
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo");
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
 #[constant]
-pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:FRAGSOL_MINT*/"FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo"/**/);
+pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:FRAGSOL_MINT*/"Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"/**/);
 
 
 /**

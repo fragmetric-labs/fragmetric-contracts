@@ -1,12 +1,13 @@
 {
+  "mocha": {
+    "node-option": ["import=tsx"]
+  },
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
-  "dependencies": {
-    "@coral-xyz/anchor": "^0.30.0"
-  },
   "devDependencies": {
+    "@coral-xyz/anchor": "^0.30.0",
     "@ledgerhq/hw-app-solana": "^7.2.2",
     "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.3",
     "@solana/spl-token": "^0.4.8",

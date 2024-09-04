@@ -1,12 +1,12 @@
 import fs from "fs";
 import path from "path";
 import readline from 'readline';
+import {exec, spawnSync} from "node:child_process";
 import * as web3 from "@solana/web3.js";
 import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
 import {Buffer} from "buffer";
-import {SignaturePubkeyPair} from "@solana/web3.js";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
@@ -29,8 +29,10 @@ function defaultAskYesNo(question: string) {
 const PROGRAM_KEYPAIR_NAME = 'PROGRAM';
 const LEDGER_PATH_PREFIX = 'ledger://';
 
-type KeypairLoaderConfig<KEYS extends string> = {
+export type KeychainConfig<KEYS extends string> = {
     program: WORKSPACE_PROGRAM_NAME,
+    // default is 'anchor build -p target-program'
+    buildCommand?: string;
     // give existing local keypair path or instance, or give null to generate new one.
     wallet: web3.Keypair | string | null,
     // give existing local keypair file 'file://secret-file-path' or 'ledger://BIP32-path' to use Ledger, any undefined keypair will be generated newly.
@@ -101,11 +103,11 @@ export class Keychain<KEYS extends string> {
     }
 
     public static writeKeypairSecretFile(path: string, keyPair: web3.Keypair) {
-        logger.notice(`>> ${path}`);
+        logger.notice(`writing ${path}`);
         fs.writeFileSync(path, JSON.stringify(Buffer.from(keyPair.secretKey.buffer).toJSON().data));
     }
 
-    public static async create<KEYS extends string>(args: KeypairLoaderConfig<KEYS>): Promise<Keychain<KEYS>> {
+    public static async create<KEYS extends string>(args: KeychainConfig<KEYS>): Promise<Keychain<KEYS>> {
         let {wallet: walletArg, newKeypairDir = './', program} = args;
         let wallet: web3.Keypair;
         if (walletArg === undefined) {
@@ -135,8 +137,11 @@ export class Keychain<KEYS extends string> {
     ) {
     }
 
-    private static async initializeKeypairs<KEYS extends string>(args: KeypairLoaderConfig<KEYS>): Promise<KeypairMap> {
-        let {program, keypairs, newKeypairDir = './', askYesNo = defaultAskYesNo} = args;
+    private static async initializeKeypairs<KEYS extends string>(args: KeychainConfig<KEYS>): Promise<KeypairMap> {
+        let {program, keypairs, newKeypairDir = './', buildCommand, askYesNo = defaultAskYesNo} = args;
+        if (!buildCommand) {
+            buildCommand = `anchor build -p ${program}`;
+        }
 
         const newLocalKeypairKEYS = new Set<string>();
         const keypairMap: KeypairMap = {
@@ -178,8 +183,8 @@ export class Keychain<KEYS extends string> {
             logger.info(`generated local keypairs (${newLocalKeypairKEYS.size}):`, Array.from(newLocalKeypairKEYS.values()).join(', '));
         }
 
-        logger.notice(`applying keypairs to ${program} program source code and build dir:`);
-        await Keychain.applyKeypairsToWorkspace(program, keypairMap, newLocalKeypairKEYS.size > 0 ? askYesNo : null);
+        logger.notice(`applying keypairs to ${program} program workspace:`);
+        await Keychain.applyKeypairsToWorkspace(program, keypairMap, newLocalKeypairKEYS.size > 0, buildCommand, askYesNo);
 
         logger.notice(`loaded ${program} program keypairs' pubkey:`)
         for (const [name, keypair] of keypairMap.local.entries()) {
@@ -196,23 +201,24 @@ export class Keychain<KEYS extends string> {
         return keypairMap;
     }
 
-    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, keypairMap: KeypairMap, askYesNo: AskYesNo | false) {
-        if (askYesNo) { // or new ledger public keys
-            if (!await askYesNo(`[?] Applying newly generated keypairs will replace existing code and file, do you want to continue?`)) {
-                logger.debug(`exit without updates...`);
-                throw new Error('keypair loading canceled');
+    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, keypairMap: KeypairMap, hasNewLocalKeypair: boolean, buildCommand: string, askYesNo: AskYesNo | false) {
+        if (askYesNo && hasNewLocalKeypair) {
+            if (!await askYesNo(`[?] Applying new keypairs will update workspace code and file, continue?`)) {
+                logger.debug(`exit without workspace updates...`);
+                throw new Error('workspace update rejected');
             }
         }
 
         // update program public key in source code
         const keypairKEYS = [...keypairMap.local.keys(), ...keypairMap.ledger.keys()];
         const programSrcDir = path.join(__dirname, '../../programs', program, 'src');
+        let fileUpdated: string[] = [];
         for (const fileName of ['lib.rs', 'constants.rs']) {
             const filePath = path.join(programSrcDir, fileName);
             let fileSource = fs.readFileSync(filePath).toString();
             logger.debug(`checking ${filePath}`);
 
-            let fileUpdated = 0;
+            let updated = 0;
             for (const keypairName of keypairKEYS) {
                 const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
 
@@ -221,15 +227,16 @@ export class Keychain<KEYS extends string> {
                     const target = `/*local:${keypairName}*/"${publicKey.toString()}"/**/`;
                     for (const match of matches) {
                         if (match != target) {
-                            fileUpdated++;
+                            updated++;
                             fileSource = fileSource.replace(match, target);
                             logger.info(`replaced a line starting with`.padEnd(LOG_PAD_SMALL), `/*local:${keypairName}*/...`);
                         }
                     }
                 }
             }
-            if (fileUpdated > 0) {
+            if (updated > 0) {
                 fs.writeFileSync(filePath, fileSource);
+                fileUpdated.push(filePath);
             }
         }
 
@@ -244,7 +251,33 @@ export class Keychain<KEYS extends string> {
 
         if (!fs.existsSync(programKeyPairPath) || Keychain.readKeypairSecretFile(programKeyPairPath)?.secretKey.toString() != programKeyPair.secretKey.toString()) {
             Keychain.writeKeypairSecretFile(programKeyPairPath, programKeyPair);
+            fileUpdated.push(programKeyPairPath);
             logger.info(`replaced ${programKeypairName}`);
+        }
+
+        if (fileUpdated.length > 0) {
+            logger.notice(`rebuild ${program} program workspace:`);
+            try {
+                if (!askYesNo || await askYesNo(`[?] running "${buildCommand}" to reflect workspace changes, continue?`)) {
+                    await new Promise<void>((resolve, reject) => {
+                        const buildProcess = exec(buildCommand);
+                        buildProcess.stdout.pipe(process.stdout);
+                        buildProcess.stderr.pipe(process.stderr);
+                        buildProcess.on('exit', (exitCode) => {
+                            if (exitCode == 0) {
+                                resolve();
+                            } else {
+                                reject(new Error('failed to run build command'));
+                            }
+                        });
+                    })
+                } else {
+                    throw new Error('workspace updated but rebuild rejected');
+                }
+            } catch (err) {
+                fs.unlinkSync(programKeyPairPath); // remove build keypair to re-trigger build later
+                throw err;
+            }
         }
     }
 }

@@ -13,6 +13,6 @@ id.json
 mainnet-id.json
 
 keypairs/**/*
-!keypairs/.gitkeep
+!keypairs/shared_*
 !keypairs/restaking/
-!keypairs/restaking/.gitkeep
+!keypairs/restaking/shared_*

@@ -8,6 +8,7 @@ import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils";
+import {RestakingPlayground} from "../../tools/restaking/playground";
 
 export let wallet: anchor.Wallet;
 export let adminKeypair: anchor.web3.Keypair;
@@ -93,6 +94,10 @@ export const initialize = describe("Initialize program accounts", () => {
     // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
 
     before("Prepare program accounts initialization", async () => {
+        const playground = await RestakingPlayground.env();
+
+        console.log("new wallet", (program.provider as anchor.AnchorProvider).wallet.publicKey.toString());
+
         fragSOLTokenMintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../../keypairs/restaking/fragsol_mint_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json")));
         fragSOLTokenMintMetadata = fragSOLTokenMintMetadata = {
             mint: fragSOLTokenMintKeypair.publicKey,

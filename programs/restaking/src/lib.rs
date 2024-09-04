@@ -14,7 +14,7 @@ declare_id!("fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3");
 #[cfg(feature = "devnet")]
 declare_id!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
-declare_id!(/*local:PROGRAM*/"frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ"/**/);
+declare_id!(/*local:PROGRAM*/"4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5"/**/);
 
 
 #[program]
