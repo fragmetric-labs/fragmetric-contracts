@@ -49,10 +49,6 @@ impl PDASignerSeeds<3> for RewardAccount {
 }
 
 impl ZeroCopyHeader for RewardAccount {
-    fn data_version_offset() -> usize {
-        0
-    }
-
     fn bump_offset() -> usize {
         2
     }
@@ -121,7 +117,7 @@ impl RewardAccount {
         Ok(pool)
     }
 
-    /// Auxillary method to breaks down the ownership over its fields
+    /// Auxillary method to breaks down a mutable borrow into separate borrows over fields
     fn array_refs_mut(&mut self) -> (&mut [Holder], &mut [Reward], &mut [RewardPool]) {
         let holders_mut = &mut self.holders_1[..self.num_holders as usize];
         let rewards_mut = &mut self.rewards_1[..self.num_rewards as usize];
@@ -129,7 +125,7 @@ impl RewardAccount {
         (holders_mut, rewards_mut, reward_pools_mut)
     }
 
-    /// Auxillary method to break down ownership over its fields
+    /// Auxillary method to breaks down a mutable borrow into separate borrows over fields
     /// TODO Do not expose array slice type to public
     pub fn holders_ref_and_reward_pools_iter_mut(
         &mut self,

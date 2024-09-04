@@ -12,10 +12,8 @@ use anchor_spl::{
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::events::{UserTransferredReceiptToken};
-use crate::modules::common::*;
-use crate::modules::fund::{FundAccount, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::events::UserTransferredReceiptToken;
+use crate::modules::{common::*, fund::*, reward::*};
 
 // Order of accounts matters for this struct.
 // The first 4 accounts are the accounts required for token transfer (source, mint, destination, owner)
@@ -74,10 +72,10 @@ pub struct UserReceiptTokenTransferContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump,
-        has_one = receipt_token_mint,
+        bump = reward_account.bump()?,
+        // DO NOT Use has_one constraint, since reward_account is not safe yet
     )]
-    pub reward_account: Box<Account<'info, RewardAccount>>,
+    pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
         mut,
@@ -99,7 +97,6 @@ pub struct UserReceiptTokenTransferContext<'info> {
 impl<'info> UserReceiptTokenTransferContext<'info> {
     pub fn handle_transfer(ctx: Context<Self>, amount: u64) -> Result<()> {
         Self::assert_is_transferring(&ctx)?;
-
 
         /* token transfer is temporarily disabled */
         err!(ErrorCode::TokenNotTransferableError)?;

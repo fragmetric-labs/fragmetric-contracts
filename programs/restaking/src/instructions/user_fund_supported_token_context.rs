@@ -88,19 +88,19 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump,
+        bump = reward_account.bump()?,
         has_one = receipt_token_mint,
     )]
-    pub reward_account: Box<Account<'info, RewardAccount>>,
+    pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserRewardAccount::INIT_SPACE,
+        bump = user_reward_account.bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
     )]
-    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
@@ -228,15 +228,15 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         let contribution_accrual_rate =
             contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
-        let (from_user_update, to_user_update) = ctx
-            .accounts
-            .reward_account
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
+        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let (from_user_update, to_user_update) = reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
                 amount,
                 contribution_accrual_rate,
                 None,
-                Some(&mut ctx.accounts.user_reward_account),
+                Some(&mut user_reward_account),
                 current_slot,
             )?;
 

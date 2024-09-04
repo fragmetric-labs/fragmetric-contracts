@@ -145,7 +145,7 @@ pub mod restaking {
     pub fn fund_manager_settle_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         reward_pool_id: u8,
-        reward_id: u8,
+        reward_id: u16,
         amount: u64,
     ) -> Result<()> {
         FundManagerRewardDistributionContext::settle_reward(ctx, reward_pool_id, reward_id, amount)
@@ -207,6 +207,14 @@ pub mod restaking {
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
         UserFundSupportedTokenContext::deposit_supported_token(ctx, amount, metadata)
+    }
+
+
+    /** UserRewardInitialContext */
+    pub fn user_initialize_reward_pools(
+        ctx: Context<UserRewardInitialContext>,
+    ) -> Result<()> {
+        UserRewardInitialContext::initialize_accounts(ctx)
     }
 
 

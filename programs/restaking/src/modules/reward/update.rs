@@ -66,7 +66,7 @@ impl RewardAccount {
             holder_id,
             custom_contribution_accrual_rate_enabled,
             current_slot,
-        );
+        )?;
 
         Ok(reward_pool.id())
     }
@@ -220,7 +220,7 @@ impl RewardAccount {
 
 impl RewardPool {
     /// Updates the contribution of the pool into recent value.
-    pub fn update_contribution(&mut self, current_slot: u64) -> Result<()> {
+    pub(super) fn update_contribution(&mut self, current_slot: u64) -> Result<()> {
         let elapsed_slot = current_slot
             .checked_sub(self.updated_slot())
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;

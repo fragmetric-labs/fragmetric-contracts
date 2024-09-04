@@ -3,11 +3,9 @@ use anchor_lang::{system_program, solana_program::sysvar::instructions as instru
 use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{Mint, TokenAccount}};
 
 use crate::constants::*;
-use crate::events::{UserCanceledWithdrawalRequestFromFund, UserDepositedSOLToFund, UserRequestedWithdrawalFromFund, UserUpdatedRewardPool, UserWithdrewSOLFromFund};
+use crate::events::*;
 use crate::errors::ErrorCode;
-use crate::modules::common::*;
-use crate::modules::fund::{DepositMetadata, FundAccount, FundAccountInfo, ReceiptTokenLockAuthority, ReceiptTokenMintAuthority, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::modules::{common::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct UserFundContext<'info> {
@@ -76,19 +74,19 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump,
+        bump = reward_account.bump()?,
         has_one = receipt_token_mint,
     )]
-    pub reward_account: Box<Account<'info, RewardAccount>>,
+    pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserRewardAccount::INIT_SPACE,
+        bump = user_reward_account.bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
     )]
-    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
@@ -105,13 +103,7 @@ impl<'info> UserFundContext<'info> {
                 ctx.accounts.receipt_token_mint.key(),
                 ctx.accounts.user.key(),
             );
-        ctx.accounts
-            .user_reward_account
-            .initialize_if_needed(
-                ctx.bumps.user_reward_account,
-                ctx.accounts.receipt_token_mint.key(),
-                ctx.accounts.user.key(),
-            );
+
         Ok(())
     }
 
@@ -206,15 +198,15 @@ impl<'info> UserFundContext<'info> {
         let contribution_accrual_rate =
             contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
-        let (from_user_update, to_user_update) = ctx
-            .accounts
-            .reward_account
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
+        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let (from_user_update, to_user_update) = reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
                 amount,
                 contribution_accrual_rate,
                 None,
-                Some(&mut ctx.accounts.user_reward_account),
+                Some(&mut user_reward_account),
                 current_slot,
             )?;
 
@@ -306,14 +298,14 @@ impl<'info> UserFundContext<'info> {
 
     fn mock_transfer_hook_from_user_to_null(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let (from_user_update, to_user_update) = ctx
-            .accounts
-            .reward_account
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
+        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let (from_user_update, to_user_update) = reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
                 amount,
                 None,
-                Some(&mut ctx.accounts.user_reward_account),
+                Some(&mut user_reward_account),
                 None,
                 current_slot,
             )?;
@@ -342,7 +334,7 @@ impl<'info> UserFundContext<'info> {
         withdrawal_status.remove_withdrawal_request(request.receipt_token_amount)?;
 
         // Step 2: Unlock receipt token
-        Self::cpi_burn_token(&mut ctx, request.receipt_token_amount)?;
+        Self::cpi_burn_token_from_fund(&mut ctx, request.receipt_token_amount)?;
         Self::cpi_mint_token_to_user(&mut ctx, request.receipt_token_amount)?;
         Self::mock_transfer_hook_from_null_to_user(&mut ctx, request.receipt_token_amount)?;
 
@@ -364,7 +356,7 @@ impl<'info> UserFundContext<'info> {
         Ok(())
     }
 
-    fn cpi_burn_token(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+    fn cpi_burn_token_from_fund(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         ctx.accounts
             .receipt_token_program
             .burn_token_cpi(
@@ -400,15 +392,15 @@ impl<'info> UserFundContext<'info> {
 
     fn mock_transfer_hook_from_null_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let (from_user_update, to_user_update) = ctx
-            .accounts
-            .reward_account
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
+        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let (from_user_update, to_user_update) = reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
                 amount,
                 None,
                 None,
-                Some(&mut ctx.accounts.user_reward_account),
+                Some(&mut user_reward_account),
                 current_slot,
             )?;
 

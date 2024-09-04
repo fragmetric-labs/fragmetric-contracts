@@ -43,10 +43,6 @@ impl PDASignerSeeds<4> for UserRewardAccount {
 }
 
 impl ZeroCopyHeader for UserRewardAccount {
-    fn data_version_offset() -> usize {
-        0
-    }
-
     fn bump_offset() -> usize {
         2
     }
