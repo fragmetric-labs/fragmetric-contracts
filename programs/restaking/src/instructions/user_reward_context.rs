@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
+use crate::events::UserUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
 
 // will be used only once
@@ -20,27 +22,16 @@ pub struct UserRewardInitialContext<'info> {
         payer = user,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump,
-        // (when size > 10KB)
-        // space = 10 * 1024,
-        space = 8 + std::mem::size_of::<UserRewardAccount>(),
+        space = std::cmp::min(8 + std::mem::size_of::<UserRewardAccount>(), 10 * 1024),
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
 impl<'info> UserRewardInitialContext<'info> {
     pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
-        // (when size > 10KB)
-        // ctx.accounts
-        //     .user_reward_account
-        //     .init_without_load(ctx.bumps.user_reward_account)
-
-        let mut user_reward_account = ctx.accounts.user_reward_account.load_init()?;
-        user_reward_account.update_if_needed(
-            ctx.bumps.user_reward_account,
-            ctx.accounts.receipt_token_mint.key(),
-            ctx.accounts.user.key(),
-        );
-        Ok(())
+        ctx.accounts
+            .user_reward_account
+            .init_without_load(ctx.bumps.user_reward_account)
     }
 }
 
@@ -66,38 +57,98 @@ pub struct UserRewardContext<'info> {
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.bump()?,
-        // (when size > 10KB) DO NOT Use has_one constraint, since reward_account is not safe yet
-        has_one = receipt_token_mint,
-        has_one = user
+        // DO NOT Use has_one constraint, since reward_account is not safe yet
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
 impl<'info> UserRewardContext<'info> {
-    // (when size > 10KB)
-    // pub fn update_accounts_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
-    //     todo!();
-    // }
+    pub fn update_accounts_if_needed(
+        ctx: Context<Self>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()> {
+        let user_reward_account = ctx.accounts.user_reward_account.as_ref();
 
-    // (when size > 10KB)
-    // fn check_has_one_constraint(&self) -> Result<()> {
-    //     require_keys_eq!(
-    //         self.user_reward_account.load()?.receipt_token_mint,
-    //         self.receipt_token_mint.key(),
-    //         anchor_lang::error::ErrorCode::ConstraintHasOne,
-    //     );
-    //     require_keys_eq!(
-    //         self.user_reward_account.load()?.user,
-    //         self.user.key(),
-    //         anchor_lang::error::ErrorCode::ConstraintHasOne,
-    //     );
+        let current_account_size = user_reward_account.data_len();
+        let min_account_size = 8 + std::mem::size_of::<UserRewardAccount>();
+        let target_account_size = desired_account_size
+            .map(|desired_size| std::cmp::max(desired_size as usize, min_account_size))
+            .unwrap_or(min_account_size);
+        let required_realloc_size = target_account_size.saturating_sub(current_account_size);
 
-    //     Ok(())
-    // }
+        msg!(
+            "reward account size: current={}, target={}, required={}",
+            current_account_size,
+            target_account_size,
+            required_realloc_size
+        );
+
+        if required_realloc_size > 0 {
+            let rent = Rent::get()?;
+            let current_lamports = user_reward_account.lamports();
+            let minimum_lamports = rent.minimum_balance(target_account_size);
+            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
+            if required_lamports > 0 {
+                let cpi_context = CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: ctx.accounts.user.to_account_info(),
+                        to: user_reward_account.clone(),
+                    },
+                );
+                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
+                msg!("reward account lamports: added={}", required_lamports);
+            }
+
+            let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
+            let increase = std::cmp::min(required_realloc_size, max_increase);
+            if increase < required_realloc_size && initialize {
+                return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?;
+            }
+
+            let new_account_size = current_account_size + increase;
+            user_reward_account.realloc(new_account_size, false)?;
+            msg!(
+                "reward account reallocated: current={}, target={}, required={}",
+                new_account_size,
+                target_account_size,
+                target_account_size - new_account_size
+            );
+        }
+
+        if initialize {
+            let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+            let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
+            let bump = ctx.accounts.user_reward_account.bump()?;
+            user_reward_account.update_if_needed(bump, receipt_token_mint, ctx.accounts.user.key());
+
+            emit!(UserUpdatedRewardPool::new_from_initialize(
+                receipt_token_mint,
+                &user_reward_account
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn check_has_one_constraints(&self) -> Result<()> {
+        require_keys_eq!(
+            self.user_reward_account.load()?.receipt_token_mint,
+            self.receipt_token_mint.key(),
+            anchor_lang::error::ErrorCode::ConstraintHasOne,
+        );
+        require_keys_eq!(
+            self.user_reward_account.load()?.user,
+            self.user.key(),
+            anchor_lang::error::ErrorCode::ConstraintHasOne,
+        );
+
+        Ok(())
+    }
 
     pub fn update_user_reward_pools(ctx: Context<Self>) -> Result<()> {
-        // (when size > 10KB)
-        // ctx.accounts.check_has_one_constraint()?;
+        ctx.accounts.check_has_one_constraints()?;
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
@@ -108,6 +159,8 @@ impl<'info> UserRewardContext<'info> {
 
     #[allow(unused_variables)]
     pub fn claim_rewards(ctx: Context<Self>, reward_pool_id: u8, reward_id: u8) -> Result<()> {
+        ctx.accounts.check_has_one_constraints()?;
+
         unimplemented!()
     }
 }

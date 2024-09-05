@@ -208,7 +208,7 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new(
+        emit!(UserUpdatedRewardPool::new_from_transfer(
             ctx.accounts.receipt_token_mint.key(),
             from_user_update,
             to_user_update
@@ -308,7 +308,7 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new(
+        emit!(UserUpdatedRewardPool::new_from_transfer(
             ctx.accounts.receipt_token_mint.key(),
             from_user_update,
             to_user_update
@@ -402,7 +402,7 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new(
+        emit!(UserUpdatedRewardPool::new_from_transfer(
             ctx.accounts.receipt_token_mint.key(),
             from_user_update,
             to_user_update

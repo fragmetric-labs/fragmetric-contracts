@@ -91,7 +91,7 @@ impl<'info> AdminRewardContext<'info> {
                     ctx.accounts.system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
                         from: ctx.accounts.payer.to_account_info(),
-                        to: ctx.accounts.reward_account.to_account_info(),
+                        to: reward_account.clone(),
                     },
                 );
                 anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
@@ -125,7 +125,7 @@ impl<'info> AdminRewardContext<'info> {
         Ok(())
     }
 
-    fn check_has_one_constraint(&self) -> Result<()> {
+    fn check_has_one_constraints(&self) -> Result<()> {
         require_keys_eq!(
             self.reward_account.load()?.receipt_token_mint,
             self.receipt_token_mint.key(),
@@ -136,7 +136,7 @@ impl<'info> AdminRewardContext<'info> {
     }
 
     pub fn update_reward_pools(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.check_has_one_constraint()?;
+        ctx.accounts.check_has_one_constraints()?;
 
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;

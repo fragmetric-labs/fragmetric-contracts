@@ -194,7 +194,15 @@ pub struct UserRewardAccountUpdateInfo {
 }
 
 impl UserRewardAccountUpdateInfo {
-    pub fn new_from_user_reward_pool(
+    pub fn empty(user_reward_account: &UserRewardAccount) -> Self {
+        Self {
+            user: user_reward_account.user,
+            data_version: user_reward_account.data_version,
+            updated_user_reward_pools: vec![],
+        }
+    }
+
+    pub fn new(
         user_reward_account: &UserRewardAccount,
         updated_user_reward_pools: Vec<UserRewardPoolInfo>,
     ) -> Self {

@@ -257,10 +257,9 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminReceiptTokenMintInitialContext
+    // UserRewardInitialContext
     ////////////////////////////////////////////
 
-    /** UserRewardInitialContext */
     pub fn user_initialize_reward_pools(ctx: Context<UserRewardInitialContext>) -> Result<()> {
         UserRewardInitialContext::initialize_accounts(ctx)
     }
@@ -268,6 +267,14 @@ pub mod restaking {
     ////////////////////////////////////////////
     // UserRewardContext
     ////////////////////////////////////////////
+
+    pub fn user_update_reward_accounts_if_needed(
+        ctx: Context<UserRewardContext>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()> {
+        UserRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
+    }
 
     pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
         UserRewardContext::update_user_reward_pools(ctx)

@@ -142,7 +142,7 @@ impl RewardAccount {
                 reward_pool.update(effective_deltas, current_slot)?;
             }
 
-            from_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
+            from_user_update = Some(UserRewardAccountUpdateInfo::new(
                 from,
                 from_user_updated_reward_pools_info,
             ));
@@ -171,7 +171,7 @@ impl RewardAccount {
                 reward_pool.update(effective_deltas, current_slot)?;
             }
 
-            to_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
+            to_user_update = Some(UserRewardAccountUpdateInfo::new(
                 to,
                 to_user_updated_reward_pools_info,
             ));
