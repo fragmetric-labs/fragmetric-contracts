@@ -62,7 +62,7 @@ impl Holder {
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
         self.num_pubkeys = pubkeys.len() as u8;
-        self.pubkeys_1[..pubkeys.len()].copy_from_slice(&pubkeys);
+        self.pubkeys_1[..pubkeys.len()].copy_from_slice(pubkeys);
 
         Ok(())
     }
@@ -230,6 +230,7 @@ pub enum RewardType {
         program: Pubkey,
         decimals: u8,
     },
+    #[allow(clippy::upper_case_acronyms)]
     SOL,
 }
 

@@ -31,7 +31,9 @@ pub struct AdminRewardInitialContext<'info> {
 
 impl<'info> AdminRewardInitialContext<'info> {
     pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.reward_account.init_without_load(ctx.bumps.reward_account)
+        ctx.accounts
+            .reward_account
+            .init_without_load(ctx.bumps.reward_account)
     }
 }
 
@@ -58,7 +60,11 @@ pub struct AdminRewardContext<'info> {
 }
 
 impl<'info> AdminRewardContext<'info> {
-    pub fn update_accounts_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+    pub fn update_accounts_if_needed(
+        ctx: Context<Self>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()> {
         let reward_account = ctx.accounts.reward_account.as_ref();
 
         let current_account_size = reward_account.data_len();
@@ -68,7 +74,12 @@ impl<'info> AdminRewardContext<'info> {
             .unwrap_or(min_account_size);
         let required_realloc_size = target_account_size.saturating_sub(current_account_size);
 
-        msg!("reward account size: current={}, target={}, required={}", current_account_size, target_account_size, required_realloc_size);
+        msg!(
+            "reward account size: current={}, target={}, required={}",
+            current_account_size,
+            target_account_size,
+            required_realloc_size
+        );
 
         if required_realloc_size > 0 {
             let rent = Rent::get()?;
@@ -95,11 +106,19 @@ impl<'info> AdminRewardContext<'info> {
 
             let new_account_size = current_account_size + increase;
             reward_account.realloc(new_account_size, false)?;
-            msg!("reward account reallocated: current={}, target={}, required={}", new_account_size, target_account_size, target_account_size - new_account_size);
+            msg!(
+                "reward account reallocated: current={}, target={}, required={}",
+                new_account_size,
+                target_account_size,
+                target_account_size - new_account_size
+            );
 
             if initialize {
                 let bump = ctx.accounts.reward_account.bump()?;
-                ctx.accounts.reward_account.load_mut()?.update_if_needed(bump, ctx.accounts.receipt_token_mint.key());
+                ctx.accounts
+                    .reward_account
+                    .load_mut()?
+                    .update_if_needed(bump, ctx.accounts.receipt_token_mint.key());
             }
         }
 

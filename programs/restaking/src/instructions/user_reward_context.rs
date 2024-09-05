@@ -33,7 +33,11 @@ impl<'info> UserRewardInitialContext<'info> {
         // ctx.accounts.user_reward_account.init_without_load(ctx.bumps.user_reward_account)
 
         let mut user_reward_account = ctx.accounts.user_reward_account.load_init()?;
-        user_reward_account.update_if_needed(ctx.bumps.user_reward_account, ctx.accounts.receipt_token_mint.key(), ctx.accounts.user.key());
+        user_reward_account.update_if_needed(
+            ctx.bumps.user_reward_account,
+            ctx.accounts.receipt_token_mint.key(),
+            ctx.accounts.user.key(),
+        );
         Ok(())
     }
 }
@@ -67,7 +71,7 @@ pub struct UserRewardContext<'info> {
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
-impl<'info>  UserRewardContext<'info> {
+impl<'info> UserRewardContext<'info> {
     // (when size > 10KB)
     // pub fn update_accounts_if_needed(ctx: Context<Self>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
     //     todo!();

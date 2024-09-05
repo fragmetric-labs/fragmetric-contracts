@@ -103,7 +103,7 @@ impl<'info> UserReceiptTokenTransferContext<'info> {
 
         let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
         emit!(UserTransferredReceiptToken {
-            receipt_token_mint: receipt_token_mint,
+            receipt_token_mint,
             transferred_receipt_token_amount: amount,
             source_receipt_token_account: ctx.accounts.source_receipt_token_account.key(),
             source: ctx.accounts.source_receipt_token_account.owner,

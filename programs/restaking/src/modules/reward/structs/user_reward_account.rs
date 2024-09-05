@@ -8,6 +8,7 @@ use super::*;
 #[constant]
 /// ## Version History
 /// * v_1: Initial Version
+#[allow(dead_code)]
 pub const USER_REWARD_ACCOUNT_CURRENT_VERSION: u16 = 1;
 const USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
 

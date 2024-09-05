@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+
 use crate::modules::reward::UserRewardAccountUpdateInfo;
 
 #[event]
@@ -20,4 +21,3 @@ impl UserUpdatedRewardPool {
         }
     }
 }
-

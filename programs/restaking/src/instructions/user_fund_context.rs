@@ -1,10 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_lang::{system_program, solana_program::sysvar::instructions as instructions_sysvar};
-use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{Mint, TokenAccount}};
+use anchor_lang::{solana_program::sysvar::instructions as instructions_sysvar, system_program};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
-use crate::events::*;
 use crate::errors::ErrorCode;
+use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
 
 #[derive(Accounts)]
@@ -96,13 +98,11 @@ pub struct UserFundContext<'info> {
 impl<'info> UserFundContext<'info> {
     pub fn update_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
         // Initialize
-        ctx.accounts
-            .user_fund_account
-            .initialize_if_needed(
-                ctx.bumps.user_fund_account,
-                ctx.accounts.receipt_token_mint.key(),
-                ctx.accounts.user.key(),
-            );
+        ctx.accounts.user_fund_account.initialize_if_needed(
+            ctx.bumps.user_fund_account,
+            ctx.accounts.receipt_token_mint.key(),
+            ctx.accounts.user.key(),
+        );
 
         Ok(())
     }
@@ -130,10 +130,8 @@ impl<'info> UserFundContext<'info> {
         let fund = &mut ctx.accounts.fund_account;
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         fund.update_token_prices(ctx.remaining_accounts)?;
-        let receipt_token_mint_amount = fund.receipt_token_mint_amount_for(
-            amount,
-            receipt_token_total_supply,
-        )?;
+        let receipt_token_mint_amount =
+            fund.receipt_token_mint_amount_for(amount, receipt_token_total_supply)?;
         let receipt_token_price = fund.receipt_token_sol_value_per_token(
             ctx.accounts.receipt_token_mint.decimals,
             receipt_token_total_supply,
@@ -450,7 +448,9 @@ impl<'info> UserFundContext<'info> {
 
         // Step 4: Withdraw
         fund.withdrawal_status.withdraw(sol_withdraw_amount)?;
-        ctx.accounts.fund_account.sub_lamports(sol_withdraw_amount)?;
+        ctx.accounts
+            .fund_account
+            .sub_lamports(sol_withdraw_amount)?;
         ctx.accounts.user.add_lamports(sol_withdraw_amount)?;
 
         emit!(UserWithdrewSOLFromFund {

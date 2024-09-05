@@ -33,10 +33,7 @@ impl<'info> FundManagerRewardContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_holder(name, description, pubkeys)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            vec![],
-        )?);
+        emit!(FundManagerUpdatedRewardPool::new(&reward_account, vec![],)?);
 
         Ok(())
     }
@@ -49,7 +46,12 @@ impl<'info> FundManagerRewardContext<'info> {
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        let reward_pool_id = reward_account.add_reward_pool(name, holder_id, custom_contribution_accrual_rate_enabled, current_slot)?;
+        let reward_pool_id = reward_account.add_reward_pool(
+            name,
+            holder_id,
+            custom_contribution_accrual_rate_enabled,
+            current_slot,
+        )?;
 
         emit!(FundManagerUpdatedRewardPool::new(
             &reward_account,
@@ -59,10 +61,7 @@ impl<'info> FundManagerRewardContext<'info> {
         Ok(())
     }
 
-    pub fn close_reward_pool(
-        ctx: Context<Self>,
-        reward_pool_id: u8,
-    ) -> Result<()> {
+    pub fn close_reward_pool(ctx: Context<Self>, reward_pool_id: u8) -> Result<()> {
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.close_reward_pool(reward_pool_id, current_slot)?;
@@ -104,21 +103,39 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
         description: String,
         reward_type: RewardType,
     ) -> Result<()> {
-        if let RewardType::Token { mint, program, decimals } = reward_type {
-            let mint_account = ctx.accounts.reward_token_mint.as_ref().ok_or_else(|| error!(ErrorCode::RewardInvalidRewardType))?;
-            let program_account = ctx.accounts.reward_token_program.as_ref().ok_or_else(|| error!(ErrorCode::RewardInvalidRewardType))?;
+        if let RewardType::Token {
+            mint,
+            program,
+            decimals,
+        } = reward_type
+        {
+            let mint_account = ctx
+                .accounts
+                .reward_token_mint
+                .as_ref()
+                .ok_or_else(|| error!(ErrorCode::RewardInvalidRewardType))?;
+            let program_account = ctx
+                .accounts
+                .reward_token_program
+                .as_ref()
+                .ok_or_else(|| error!(ErrorCode::RewardInvalidRewardType))?;
             require_keys_eq!(mint, mint_account.key(), ErrorCode::RewardInvalidRewardType);
-            require_keys_eq!(program, program_account.key(), ErrorCode::RewardInvalidRewardType);
-            require_eq!(decimals, mint_account.decimals, ErrorCode::RewardInvalidRewardType);
+            require_keys_eq!(
+                program,
+                program_account.key(),
+                ErrorCode::RewardInvalidRewardType
+            );
+            require_eq!(
+                decimals,
+                mint_account.decimals,
+                ErrorCode::RewardInvalidRewardType
+            );
         }
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_reward(name, description, reward_type)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            vec![]
-        )?);
+        emit!(FundManagerUpdatedRewardPool::new(&reward_account, vec![])?);
 
         Ok(())
     }
@@ -130,8 +147,7 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
         amount: u64,
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts
-            .reward_account.load_mut()?;
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.settle_reward(reward_pool_id, reward_id, amount, current_slot)?;
 
         emit!(FundManagerUpdatedRewardPool::new(

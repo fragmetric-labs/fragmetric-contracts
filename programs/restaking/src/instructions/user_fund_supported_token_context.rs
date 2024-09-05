@@ -1,12 +1,14 @@
 use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructions_sysvar};
-use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked}};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{
+    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
+};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::events::{UserDepositedTokenToFund, UserUpdatedRewardPool};
-use crate::modules::common::*;
-use crate::modules::fund::{DepositMetadata, FundAccount, FundAccountInfo, ReceiptTokenMintAuthority, SupportedTokenAuthority, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::events::*;
+use crate::modules::{common::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct UserFundSupportedTokenContext<'info> {
@@ -128,25 +130,36 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         require_gte!(ctx.accounts.user_supported_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
-        ctx.accounts.fund_account.update_token_prices(ctx.remaining_accounts)?;
+        ctx.accounts
+            .fund_account
+            .update_token_prices(ctx.remaining_accounts)?;
 
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let supported_token_mint = ctx.accounts.supported_token_mint.key();
-        let supported_token = ctx.accounts.fund_account.supported_token(supported_token_mint)?;
+        let supported_token = ctx
+            .accounts
+            .fund_account
+            .supported_token(supported_token_mint)?;
 
         let token_amount_to_sol_value = supported_token.calculate_sol_from_tokens(amount)?;
-        let receipt_token_mint_amount = ctx.accounts.fund_account.receipt_token_mint_amount_for(
-            token_amount_to_sol_value,
-            receipt_token_total_supply,
-        )?;
-        let receipt_token_price = ctx.accounts.fund_account.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
-        )?;
+        let receipt_token_mint_amount = ctx
+            .accounts
+            .fund_account
+            .receipt_token_mint_amount_for(token_amount_to_sol_value, receipt_token_total_supply)?;
+        let receipt_token_price = ctx
+            .accounts
+            .fund_account
+            .receipt_token_sol_value_per_token(
+                ctx.accounts.receipt_token_mint.decimals,
+                receipt_token_total_supply,
+            )?;
 
         // Step 2: Deposit Token
         Self::cpi_transfer_token_to_fund(&ctx, amount)?;
-        ctx.accounts.fund_account.supported_token_mut(supported_token_mint)?.deposit_token(amount)?;
+        ctx.accounts
+            .fund_account
+            .supported_token_mut(supported_token_mint)?
+            .deposit_token(amount)?;
 
         // Step 3: Mint receipt token
         Self::cpi_mint_token_to_user(&mut ctx, receipt_token_mint_amount)?;

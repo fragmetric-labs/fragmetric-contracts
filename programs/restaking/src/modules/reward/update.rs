@@ -88,7 +88,7 @@ impl RewardAccount {
         Ok(())
     }
 
-    pub fn update_user_reward_pools<'a>(
+    pub fn update_user_reward_pools(
         &mut self,
         user: &mut UserRewardAccount,
         current_slot: u64,
@@ -143,7 +143,7 @@ impl RewardAccount {
             }
 
             from_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
-                &from,
+                from,
                 from_user_updated_reward_pools_info,
             ));
         }
@@ -172,7 +172,7 @@ impl RewardAccount {
             }
 
             to_user_update = Some(UserRewardAccountUpdateInfo::new_from_user_reward_pool(
-                &to,
+                to,
                 to_user_updated_reward_pools_info,
             ));
         }
