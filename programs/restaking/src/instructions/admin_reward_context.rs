@@ -112,14 +112,14 @@ impl<'info> AdminRewardContext<'info> {
                 target_account_size,
                 target_account_size - new_account_size
             );
+        }
 
-            if initialize {
-                let bump = ctx.accounts.reward_account.bump()?;
-                ctx.accounts
-                    .reward_account
-                    .load_mut()?
-                    .update_if_needed(bump, ctx.accounts.receipt_token_mint.key());
-            }
+        if initialize {
+            let bump = ctx.accounts.reward_account.bump()?;
+            ctx.accounts
+                .reward_account
+                .load_mut()?
+                .update_if_needed(bump, ctx.accounts.receipt_token_mint.key());
         }
 
         Ok(())

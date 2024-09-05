@@ -30,7 +30,9 @@ pub struct UserRewardInitialContext<'info> {
 impl<'info> UserRewardInitialContext<'info> {
     pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
         // (when size > 10KB)
-        // ctx.accounts.user_reward_account.init_without_load(ctx.bumps.user_reward_account)
+        // ctx.accounts
+        //     .user_reward_account
+        //     .init_without_load(ctx.bumps.user_reward_account)
 
         let mut user_reward_account = ctx.accounts.user_reward_account.load_init()?;
         user_reward_account.update_if_needed(
