@@ -1,9 +1,10 @@
-pub(super) mod source;
-
 use anchor_lang::prelude::*;
 
+pub(super) mod source;
+
 use source::*;
-use crate::{errors::ErrorCode};
+
+use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
 
 impl SupportedTokenInfo {
@@ -20,7 +21,7 @@ impl SupportedTokenInfo {
             self.price,
             self.token_lamports_per_token()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 
@@ -71,7 +72,7 @@ impl FundAccount {
             receipt_token_total_supply,
             self.assets_total_sol_value()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn receipt_token_sol_value_for(
@@ -84,7 +85,7 @@ impl FundAccount {
             self.assets_total_sol_value()?,
             receipt_token_total_supply,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn assets_total_sol_value(&self) -> Result<u64> {
@@ -102,8 +103,8 @@ fn find_token_pricing_source_by_key<'a, 'info: 'a>(
     sources: &'a [AccountInfo<'info>],
     key: &Pubkey,
 ) -> Result<&'a AccountInfo<'info>> {
-    Ok(sources
+    sources
         .iter()
         .find(|account| account.key == key)
-        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?)
+        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))
 }

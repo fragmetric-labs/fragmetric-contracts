@@ -14,6 +14,9 @@ pub enum ErrorCode {
     #[msg("calculation arithmetic exception")]
     CalculationArithmeticException,
 
+    #[msg("decode invalid utf-8 format exception")]
+    DecodeInvalidUtf8FormatException,
+
     #[msg("fund: cannot apply invalid update")]
     FundInvalidUpdateError,
 
@@ -65,6 +68,15 @@ pub enum ErrorCode {
     #[msg("reward: invalid token transfer args")]
     RewardInvalidTransferArgsException,
 
+    #[msg("reward: invalid metadata name length")]
+    RewardInvalidMetadataNameLengthError,
+
+    #[msg("reward: invalid metadata description length")]
+    RewardInvalidMetadataDescriptionLengthError,
+
+    #[msg("reward: invalid reward type")]
+    RewardInvalidRewardType,
+
     #[msg("reward: already existing holder")]
     RewardAlreadyExistingHolderError,
 
@@ -74,8 +86,17 @@ pub enum ErrorCode {
     #[msg("reward: already existing pool")]
     RewardAlreadyExistingPoolError,
 
+    #[msg("reward: holder not found")]
+    RewardHolderNotFoundError,
+
+    #[msg("reward: reward not found")]
+    RewardNotFoundError,
+
     #[msg("reward: pool not found")]
     RewardPoolNotFoundError,
+
+    #[msg("reward: user pool not found")]
+    RewardUserPoolNotFoundError,
 
     #[msg("reward: pool is closed")]
     RewardPoolClosedError,
@@ -94,6 +115,27 @@ pub enum ErrorCode {
 
     #[msg("reward: invalid amount or contribution accrual rate")]
     RewardInvalidAllocatedAmountDeltaException,
+
+    #[msg("reward: exceeded max holders")]
+    RewardExceededMaxHoldersException,
+
+    #[msg("reward: exceeded max rewards")]
+    RewardExceededMaxRewardsException,
+
+    #[msg("reward: exceeded max reward pools")]
+    RewardExceededMaxRewardPoolsException,
+
+    #[msg("reward: exceeded max user reward pools")]
+    RewardExceededMaxUserRewardPoolsException,
+
+    #[msg("reward: exceeded max pubkeys per holder")]
+    RewardExceededMaxHolderPubkeysException,
+
+    #[msg("reward: exceeded max token allocated amount record")]
+    RewardExceededMaxTokenAllocatedAmountRecordException,
+
+    #[msg("reward: exceeded max reward settlements per pool")]
+    RewardExceededMaxRewardSettlementException,
 
     #[msg("reward: stale settlement block not exist")]
     RewardStaleSettlementBlockNotExistError,

@@ -1,14 +1,18 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::reward::*;
+
+use super::*;
 
 impl RewardAccount {
-    pub fn settle_reward(&mut self, reward_pool_id: u8, reward_id: u8, amount: u64, current_slot: u64) -> Result<()> {
-        require_gt!(
-            self.rewards.len(),
-            reward_id as usize
-        );
+    pub fn settle_reward(
+        &mut self,
+        reward_pool_id: u8,
+        reward_id: u16,
+        amount: u64,
+        current_slot: u64,
+    ) -> Result<()> {
+        require_gt!(self.num_rewards, reward_id, ErrorCode::RewardNotFoundError);
 
         self.reward_pool_mut(reward_pool_id)?
             .settle_reward(reward_id, amount, current_slot)
@@ -16,13 +20,8 @@ impl RewardAccount {
 }
 
 impl RewardPool {
-    fn settle_reward(
-        &mut self,
-        reward_id: u8,
-        amount: u64,
-        current_slot: u64,
-    ) -> Result<()> {
-        if self.closed_slot.is_some() {
+    fn settle_reward(&mut self, reward_id: u16, amount: u64, current_slot: u64) -> Result<()> {
+        if self.is_closed() {
             err!(ErrorCode::RewardPoolClosedError)?;
         }
 
@@ -30,19 +29,23 @@ impl RewardPool {
         self.update_contribution(current_slot)?;
 
         // Find settlement and settle
-        if let Some(settlement) = self
-            .reward_settlements
-            .iter_mut()
-            .find(|s| s.reward_id == reward_id)
-        {
-            settlement.settle_reward(amount, self.contribution, current_slot)
+        let current_reward_pool_contribution = self.contribution();
+        let settlement = if let Some(settlement) = self.reward_settlement_mut(reward_id) {
+            settlement
         } else {
-            let mut settlement =
-                RewardSettlement::new(reward_id, self.id, self.initial_slot, current_slot);
-            settlement.settle_reward(amount, self.contribution, current_slot)?;
-            self.reward_settlements.push(settlement);
-            Ok(())
-        }
+            let reward_pool_id = self.id();
+            let reward_pool_initial_slot = self.initial_slot();
+            let settlement = self.allocate_new_reward_settlement()?;
+            settlement.initialize(
+                reward_id,
+                reward_pool_id,
+                reward_pool_initial_slot,
+                current_slot,
+            );
+            settlement
+        };
+
+        settlement.settle_reward(amount, current_reward_pool_contribution, current_slot)
     }
 }
 
@@ -53,68 +56,40 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        if self.settlement_blocks.len() == REWARD_SETTLEMENT_BLOCK_MAX_LEN
-            && self.clear_stale_settlement_blocks()? == 0
-        {
-            err!(ErrorCode::RewardStaleSettlementBlockNotExistError)?
-        }
-
-        let starting_slot = self.settlement_blocks_last_slot;
-        let ending_slot = current_slot;
-
-        // Prevent settlement block with non-positive block height
-        if starting_slot >= ending_slot {
-            err!(ErrorCode::RewardInvalidSettlementBlockHeightException)?
-        }
-
         let starting_reward_pool_contribution =
-            self.settlement_blocks_last_reward_pool_contribution;
-        let ending_reward_pool_contribution = current_reward_pool_contribution;
-
-        // Prevent settlement block with negative block contribution
-        if starting_reward_pool_contribution > ending_reward_pool_contribution {
-            err!(ErrorCode::RewardInvalidSettlementBlockContributionException)?
-        }
-
-        let settlement_block = RewardSettlementBlock::new(
-            amount,
+            self.settlement_blocks_last_reward_pool_contribution();
+        let starting_slot = self.settlement_blocks_last_slot();
+        let block = self.allocate_new_settlement_block()?;
+        block.initialize(
             starting_reward_pool_contribution,
             starting_slot,
-            ending_reward_pool_contribution,
-            ending_slot,
-        );
-        self.settlement_blocks.push(settlement_block);
-        self.settlement_blocks_last_slot = current_slot;
-        self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
-        self.settled_amount = self
-            .settled_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            current_reward_pool_contribution,
+            current_slot,
+        )?;
+        block.add_amount(amount)?;
+
+        self.set_settlement_blocks_last_slot(current_slot);
+        self.set_settlement_blocks_last_reward_pool_contribution(current_reward_pool_contribution);
+        self.add_settled_amount(amount)?;
 
         Ok(())
     }
 
     pub(super) fn clear_stale_settlement_blocks(&mut self) -> Result<usize> {
-        let mut cleared = 0;
-        let mut iter = std::mem::take(&mut self.settlement_blocks)
-            .into_iter()
-            .peekable();
-        while let Some(block) = iter.peek() {
+        let mut num_cleared = 0;
+
+        while let Some(block) = self.first_settlement_block() {
             if block.is_stale() {
-                // first()
-                let block = iter.next().unwrap(); // pop()
-                cleared += 1;
-                self.remaining_amount = self
-                    .remaining_amount
-                    .checked_add(block.remaining_amount()?)
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                let remaining_amount = block.remaining_amount()?;
+                self.pop_settlement_block();
+                num_cleared += 1;
+                self.add_remaining_amount(remaining_amount)?;
             } else {
                 break;
             }
         }
-        self.settlement_blocks = iter.collect();
 
-        Ok(cleared)
+        Ok(num_cleared)
     }
 }
 
@@ -125,15 +100,9 @@ impl UserRewardSettlement {
         contribution: u128,
         settled_slot: u64,
     ) -> Result<()> {
-        self.settled_amount = self
-            .settled_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.settled_contribution = self
-            .settled_contribution
-            .checked_add(contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.settled_slot = settled_slot;
+        self.add_settled_amount(amount)?;
+        self.add_settled_contribution(contribution)?;
+        self.update_settled_slot(settled_slot);
 
         Ok(())
     }
@@ -141,22 +110,8 @@ impl UserRewardSettlement {
 
 impl RewardSettlementBlock {
     pub(super) fn settle_user_reward(&mut self, amount: u64, contribution: u128) -> Result<()> {
-        self.user_settled_amount = self
-            .user_settled_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.user_settled_contribution = self
-            .user_settled_contribution
-            .checked_add(contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        if self.user_settled_amount > self.amount {
-            err!(ErrorCode::RewardInvalidTotalUserSettledAmountException)?
-        }
-
-        if self.user_settled_contribution > self.block_contribution() {
-            err!(ErrorCode::RewardInvalidTotalUserSettledContributionException)?
-        }
+        self.add_user_settled_amount(amount)?;
+        self.add_user_settled_contribution(contribution)?;
 
         Ok(())
     }

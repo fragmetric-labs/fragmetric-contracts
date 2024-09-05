@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    token_2022::Token2022,
+    token_2022::{mint_to, MintTo, Token2022},
     token_interface::{burn, Burn, Mint, TokenAccount},
 };
-use anchor_spl::token_2022::{mint_to, MintTo};
 
 pub trait TokenProgramExt<'info>
 where
