@@ -7,9 +7,9 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v66: Initial Version (Data Size = 342064 ~= 335KB)
+/// * v34: Initial Version (Data Size = 342064 ~= 335KB)
 #[allow(dead_code)]
-pub const REWARD_ACCOUNT_CURRENT_VERSION: u16 = 66;
+pub const REWARD_ACCOUNT_CURRENT_VERSION: u16 = 34;
 const REWARD_ACCOUNT_HOLDERS_MAX_LEN_1: usize = 4;
 const REWARD_ACCOUNT_REWARDS_MAX_LEN_1: usize = 16;
 const REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;

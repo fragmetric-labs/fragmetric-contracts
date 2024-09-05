@@ -7,6 +7,7 @@ import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
 import {Buffer} from "buffer";
+import {Key} from "node:readline";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 

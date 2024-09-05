@@ -1,4 +1,5 @@
 {
+  "license": "",
   "mocha": {
     "node-option": ["import=tsx"]
   },
