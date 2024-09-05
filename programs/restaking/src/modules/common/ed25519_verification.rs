@@ -2,14 +2,17 @@ use anchor_lang::{
     prelude::*,
     solana_program::{ed25519_program, sysvar::instructions},
 };
-use crate::constants::ADMIN_PUBKEY;
-use crate::errors::ErrorCode;
+
+use crate::{constants::ADMIN_PUBKEY, errors::ErrorCode};
 
 /// Verify serialized Ed25519Program instruction data with ADMIN_PUBKEY
-pub fn verify_preceding_ed25519_instruction(instructions_sysvar: &UncheckedAccount, payload: &[u8]) -> Result<()> {
-
+pub fn verify_preceding_ed25519_instruction(
+    instructions_sysvar: &UncheckedAccount,
+    payload: &[u8],
+) -> Result<()> {
     // load prev instruction
-    let current_ix_index: usize = instructions::load_current_index_checked(instructions_sysvar)?.into();
+    let current_ix_index: usize =
+        instructions::load_current_index_checked(instructions_sysvar)?.into();
     let ix = instructions::load_instruction_at_checked(current_ix_index - 1, instructions_sysvar)?;
     require_eq!(ix.program_id, ed25519_program::ID);
     require_eq!(ix.accounts.len(), 0);
@@ -48,27 +51,27 @@ pub fn verify_preceding_ed25519_instruction(instructions_sysvar: &UncheckedAccou
     require_eq!(padding, 0, ErrorCode::InvalidSignatureError);
     require_eq!(signature_offset, 48, ErrorCode::InvalidSignatureError);
     require_eq!(
-            signature_instruction_index,
-            u16::MAX,
-            ErrorCode::InvalidSignatureError
-        );
+        signature_instruction_index,
+        u16::MAX,
+        ErrorCode::InvalidSignatureError
+    );
     require_eq!(public_key_offset, 16, ErrorCode::InvalidSignatureError);
     require_eq!(
-            public_key_instruction_index,
-            u16::MAX,
-            ErrorCode::InvalidSignatureError
-        );
+        public_key_instruction_index,
+        u16::MAX,
+        ErrorCode::InvalidSignatureError
+    );
     require_eq!(payload_offset, 112, ErrorCode::InvalidSignatureError);
     require_eq!(
-            payload_size,
-            expected_payload_size,
-            ErrorCode::InvalidSignatureError
-        );
+        payload_size,
+        expected_payload_size,
+        ErrorCode::InvalidSignatureError
+    );
     require_eq!(
-            payload_instruction_index,
-            u16::MAX,
-            ErrorCode::InvalidSignatureError
-        );
+        payload_instruction_index,
+        u16::MAX,
+        ErrorCode::InvalidSignatureError
+    );
 
     // check_data_pubkey
     let data_pubkey = &ix.data[16..48];

@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(dead_code)]
 use anchor_lang::prelude::*;
 
 // privileged for financial operations and fund configuration (ledger in mainnet)

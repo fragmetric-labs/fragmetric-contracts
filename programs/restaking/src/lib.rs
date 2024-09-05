@@ -3,8 +3,9 @@ use anchor_lang::prelude::*;
 pub(crate) mod constants;
 pub(crate) mod errors;
 pub(crate) mod events;
-pub(crate) mod utils;
 pub(crate) mod modules;
+pub(crate) mod utils;
+
 mod instructions;
 
 use instructions::*;
@@ -16,40 +17,58 @@ declare_id!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 #[cfg(not(all(feature = "mainnet", feature="devnet")))]
 declare_id!(/*local:PROGRAM*/"4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5"/**/);
 
-
 #[program]
 pub mod restaking {
     use super::*;
 
+    ////////////////////////////////////////////
+    // AdminFundContext
+    ////////////////////////////////////////////
 
-    /** AdminFundContext **/
     pub fn admin_initialize_fund_accounts(ctx: Context<AdminFundInitialContext>) -> Result<()> {
         AdminFundInitialContext::initialize_accounts(ctx)
     }
 
-    /** AdminReceiptTokenMintInitialContext **/
+    ////////////////////////////////////////////
+    // AdminReceiptTokenMintInitialContext
+    ////////////////////////////////////////////
+
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn admin_initialize_receipt_token_mint_authority_and_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintInitialContext>,
     ) -> Result<()> {
-        AdminReceiptTokenMintInitialContext::initialize_mint_authority_and_extra_account_meta_list(ctx)
+        AdminReceiptTokenMintInitialContext::initialize_mint_authority_and_extra_account_meta_list(
+            ctx,
+        )
     }
 
-    /** AdminReceiptTokenMintContext **/
+    ////////////////////////////////////////////
+    // AdminReceiptTokenMintContext
+    ////////////////////////////////////////////
+
     pub fn admin_update_receipt_token_mint_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintContext>,
     ) -> Result<()> {
         AdminReceiptTokenMintContext::update_extra_account_meta_list(ctx)
     }
 
+    ////////////////////////////////////////////
+    // AdminRewardInitialContext
+    ////////////////////////////////////////////
 
-    /** AdminRewardInitialContext **/
     pub fn admin_initialize_reward_accounts(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
         AdminRewardInitialContext::initialize_accounts(ctx)
     }
 
-    /** AdminRewardContext **/
-    pub fn admin_update_reward_accounts_if_needed(ctx: Context<AdminRewardContext>, desired_account_size: Option<u32>, initialize: bool) -> Result<()> {
+    ////////////////////////////////////////////
+    // AdminRewardContext
+    ////////////////////////////////////////////
+
+    pub fn admin_update_reward_accounts_if_needed(
+        ctx: Context<AdminRewardContext>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()> {
         AdminRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
     }
 
@@ -57,8 +76,10 @@ pub mod restaking {
         AdminRewardContext::update_reward_pools(ctx)
     }
 
+    ////////////////////////////////////////////
+    // FundManagerFundContext
+    ////////////////////////////////////////////
 
-    /** FundManagerFundContext **/
     pub fn fund_manager_update_sol_capacity_amount(
         ctx: Context<FundManagerFundContext>,
         capacity_amount: u64,
@@ -96,18 +117,26 @@ pub mod restaking {
         FundManagerFundContext::update_batch_processing_threshold(ctx, amount, duration)
     }
 
+    ////////////////////////////////////////////
+    // FundManagerFundSupportedTokenContext
+    ////////////////////////////////////////////
 
-    /** FundManagerFundSupportedTokenContext **/
     pub fn fund_manager_add_supported_token(
         ctx: Context<FundManagerFundSupportedTokenContext>,
         capacity_amount: u64,
         pricing_source: modules::fund::TokenPricingSource,
     ) -> Result<()> {
-        FundManagerFundSupportedTokenContext::add_supported_token(ctx, capacity_amount, pricing_source)
+        FundManagerFundSupportedTokenContext::add_supported_token(
+            ctx,
+            capacity_amount,
+            pricing_source,
+        )
     }
 
+    ////////////////////////////////////////////
+    // FundManagerRewardContext
+    ////////////////////////////////////////////
 
-    /** FundManagerRewardContext **/
     pub fn fund_manager_add_reward_pool_holder(
         ctx: Context<FundManagerRewardContext>,
         name: String,
@@ -123,7 +152,12 @@ pub mod restaking {
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
-        FundManagerRewardContext::add_reward_pool(ctx, name, holder_id, custom_contribution_accrual_rate_enabled)
+        FundManagerRewardContext::add_reward_pool(
+            ctx,
+            name,
+            holder_id,
+            custom_contribution_accrual_rate_enabled,
+        )
     }
 
     pub fn fund_manager_close_reward_pool(
@@ -133,8 +167,10 @@ pub mod restaking {
         FundManagerRewardContext::close_reward_pool(ctx, reward_pool_id)
     }
 
+    ////////////////////////////////////////////
+    // FundManagerRewardDistributionContext
+    ////////////////////////////////////////////
 
-    /** FundManagerRewardDistributionContext **/
     pub fn fund_manager_add_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         name: String,
@@ -147,21 +183,28 @@ pub mod restaking {
     pub fn fund_manager_settle_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         reward_pool_id: u8,
-        reward_id: u8,
+        reward_id: u16,
         amount: u64,
     ) -> Result<()> {
         FundManagerRewardDistributionContext::settle_reward(ctx, reward_pool_id, reward_id, amount)
     }
 
+    ////////////////////////////////////////////
+    // OperatorEmptyContext
+    ////////////////////////////////////////////
 
-    /** OperatorEmptyContext **/
     pub fn operator_log_message(ctx: Context<OperatorEmptyContext>, message: String) -> Result<()> {
         OperatorEmptyContext::log_message(ctx, message)
     }
 
+    ////////////////////////////////////////////
+    // OperatorFundContext
+    ////////////////////////////////////////////
 
-    /** OperatorFundContext **/
-    pub fn operator_process_fund_withdrawal_job<'info>(ctx: Context<'_, '_, '_, 'info, OperatorFundContext<'info>>, forced: bool) -> Result<()> {
+    pub fn operator_process_fund_withdrawal_job<'info>(
+        ctx: Context<'_, '_, '_, 'info, OperatorFundContext<'info>>,
+        forced: bool,
+    ) -> Result<()> {
         OperatorFundContext::process_fund_withdrawal_job(ctx, forced)
     }
 
@@ -169,8 +212,10 @@ pub mod restaking {
         OperatorFundContext::update_prices(ctx)
     }
 
+    ////////////////////////////////////////////
+    // UserFundContext
+    ////////////////////////////////////////////
 
-    /** UserFundContext **/
     pub fn user_update_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
         UserFundContext::update_accounts_if_needed(ctx)
     }
@@ -201,8 +246,10 @@ pub mod restaking {
         UserFundContext::withdraw(ctx, request_id)
     }
 
+    ////////////////////////////////////////////
+    // UserFundSupportedTokenContext
+    ////////////////////////////////////////////
 
-    /** UserFundSupportedTokenContext **/
     pub fn user_deposit_supported_token(
         ctx: Context<UserFundSupportedTokenContext>,
         amount: u64,
@@ -211,11 +258,27 @@ pub mod restaking {
         UserFundSupportedTokenContext::deposit_supported_token(ctx, amount, metadata)
     }
 
+    ////////////////////////////////////////////
+    // UserRewardInitialContext
+    ////////////////////////////////////////////
 
-    /** UserRewardContext **/
-    pub fn user_update_reward_pools(
+    pub fn user_initialize_reward_pools(ctx: Context<UserRewardInitialContext>) -> Result<()> {
+        UserRewardInitialContext::initialize_accounts(ctx)
+    }
+
+    ////////////////////////////////////////////
+    // UserRewardContext
+    ////////////////////////////////////////////
+
+    pub fn user_update_reward_accounts_if_needed(
         ctx: Context<UserRewardContext>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
     ) -> Result<()> {
+        UserRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
+    }
+
+    pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
         UserRewardContext::update_user_reward_pools(ctx)
     }
 
@@ -227,10 +290,15 @@ pub mod restaking {
         UserRewardContext::claim_rewards(ctx, reward_pool_id, reward_id)
     }
 
+    ////////////////////////////////////////////
+    // UserReceiptTokenTransferContext
+    ////////////////////////////////////////////
 
-    /** UserReceiptTokenTransferContext **/
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(ctx: Context<UserReceiptTokenTransferContext>, amount: u64) -> Result<()> {
+    pub fn token_transfer_hook(
+        ctx: Context<UserReceiptTokenTransferContext>,
+        amount: u64,
+    ) -> Result<()> {
         UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
 }
