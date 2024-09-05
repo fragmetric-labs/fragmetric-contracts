@@ -2,27 +2,24 @@
 use anchor_lang::prelude::*;
 
 // privileged for financial operations and fund configuration (ledger in mainnet)
-#[cfg(feature = "mainnet")]
+#[cfg(not(any(feature = "local", feature = "devnet")))]
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"); // ledger-o3
-#[cfg(feature = "devnet")]
+#[cfg(all(not(feature = "local"), feature = "devnet"))]
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"); // ledger-e1
-#[cfg(not(all(feature = "mainnet", feature="devnet")))]
+#[cfg(feature = "local")]
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"/**/);
 
 // privileged for non-financial operations and scheduled tasks
-#[cfg(feature = "mainnet")]
+#[cfg(not(any(feature = "local", feature = "devnet")))]
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby");
-#[cfg(feature = "devnet")]
+#[cfg(all(not(feature = "local"), feature = "devnet"))]
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP");
-#[cfg(not(all(feature = "mainnet", feature="devnet")))]
+#[cfg(feature = "local")]
 pub const ADMIN_PUBKEY: Pubkey = pubkey!(/*local:ADMIN*/"9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"/**/);
 
-
-#[cfg(any(feature = "mainnet", feature="devnet"))]
-#[constant]
+#[cfg(not(feature = "local"))]
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo");
-#[cfg(not(all(feature = "mainnet", feature="devnet")))]
-#[constant]
+#[cfg(feature = "local")]
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:FRAGSOL_MINT*/"Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"/**/);
 
 

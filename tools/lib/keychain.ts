@@ -139,7 +139,7 @@ export class Keychain<KEYS extends string> {
     private static async initializeKeypairs<KEYS extends string>(args: KeychainConfig<KEYS>): Promise<KeypairMap> {
         let {program, keypairs, newKeypairDir = './', buildCommand, askYesNo = defaultAskYesNo} = args;
         if (!buildCommand) {
-            buildCommand = `anchor build -p ${program}`;
+            buildCommand = `anchor build -p ${program} -- --features local`;
         }
 
         const newLocalKeypairKEYS = new Set<string>();
