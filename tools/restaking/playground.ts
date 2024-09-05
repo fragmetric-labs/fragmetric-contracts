@@ -3,34 +3,19 @@ import {AnchorPlayground, AnchorPlaygroundConfig, getLogger, Keychain} from "../
 import * as anchor from "@coral-xyz/anchor";
 import {getKeychain, KEYCHAIN_KEYS} from "./keychain";
 
-
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
-    public static local() {
-        return getKeychain('local')
-            .then(keychain =>
-                new RestakingPlayground({
-                    keychain,
-                    provider: new anchor.AnchorProvider(
-                        new anchor.web3.Connection('http://127.0.0.1:8899'),
-                        new anchor.Wallet(keychain.wallet),
-                    ),
-                }),
-            );
-    }
-
-    public static env() {
+    // The term "local" in this context doesn't necessarily refer to the localnet.
+    // It can also be applied in devnet or mainnet environments while utilizing existing local keypairs.
+    // and a different Anchor provider. This allows for flexibility in testing across various networks.
+    public static local(provider?: anchor.AnchorProvider) {
         return getKeychain('local')
             .then(keychain => {
-                const provider = anchor.AnchorProvider.env();
-                if (provider.wallet.publicKey.toString() != keychain.wallet.publicKey.toString()) {
-                    // TODO: ... set wallet here.. and then rewrite tests while extending this.
-                    // and then create a runbook
-                    console.log('SHOULD OVERRDIE');
-                    Object.assign(provider, {wallet: new anchor.Wallet(keychain.wallet)});
-                }
                 return new RestakingPlayground({
                     keychain,
-                    provider,
+                    provider: new anchor.AnchorProvider(
+                        provider?.connection ?? new anchor.web3.Connection('http://0.0.0.0:8899'),
+                        new anchor.Wallet(keychain.wallet),
+                    ),
                 })
             });
     }
@@ -41,7 +26,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 new RestakingPlayground({
                     keychain,
                     provider: new anchor.AnchorProvider(
-                        new anchor.web3.Connection('https://api.devnet.solana.com'),
+                        new anchor.web3.Connection(anchor.web3.clusterApiUrl('devnet')),
                         new anchor.Wallet(keychain.wallet),
                     ),
                 }),
@@ -54,7 +39,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 new RestakingPlayground({
                     keychain,
                     provider: new anchor.AnchorProvider(
-                        new anchor.web3.Connection('https://api.mainnet-beta.solana.com'),
+                        new anchor.web3.Connection(anchor.web3.clusterApiUrl('mainnet-beta')),
                         new anchor.Wallet(keychain.wallet),
                     ),
                 }),
@@ -67,6 +52,71 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             keychain: args.keychain,
             idl: require('../../target/idl/restaking.json') as Restaking,
         });
+    }
+
+    public async tryAirdropToMockAccounts() {
+        await Promise.all(
+            [
+                this.tryAirdrop(this.keychain.wallet.publicKey),
+                this.tryAirdrop(this.keychain.getPublicKey('MOCK_USER1')),
+                this.tryAirdrop(this.keychain.getPublicKey('MOCK_USER2')),
+                this.tryAirdrop(this.keychain.getPublicKey('MOCK_USER3')),
+            ]
+        );
+    }
+
+    public get pricingSourceAccounts(): anchor.web3.AccountMeta[] {
+        if (this.isMaybeMainnetBeta) {
+            return [
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('mainnetBsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('mainnetJitosolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('mainnetMsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+            ];
+        } else if (this.isMaybeDevnet) {
+            return [
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('devnetBsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('devnetMsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+            ];
+        } else {
+            // would be cloned to local-test-validator
+            return [
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('devnetBsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('mainnetMsolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+                {
+                    pubkey: new anchor.web3.PublicKey(this.getConstant('mainnetJitosolStakePoolAddress')),
+                    isSigner: false,
+                    isWritable: false,
+                },
+            ];
+        }
     }
 }
 

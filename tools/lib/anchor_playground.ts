@@ -20,7 +20,6 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     protected readonly program: anchor.Program<IDL>;
     protected readonly eventParser: anchor.EventParser;
 
-
     constructor(args: AnchorPlaygroundConfig<IDL, KEYS>) {
         let {idl, keychain, provider} = args;
         this.programName = keychain.programName;
@@ -141,4 +140,55 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     public get account(): anchor.AccountNamespace<IDL> {
         return this.program.account;
     }
+
+    public async tryAirdrop(account: anchor.web3.PublicKey, sol = 1) {
+        let [txSig, { blockhash, lastValidBlockHeight }] = await Promise.all([
+            this.connection.requestAirdrop(
+                account,
+                sol * anchor.web3.LAMPORTS_PER_SOL
+            ),
+            this.connection.getLatestBlockhash(),
+        ]);
+        await this.connection.confirmTransaction({
+            abortSignal: undefined,
+            lastValidBlockHeight,
+            blockhash,
+            signature: txSig,
+        });
+        const balance = await this.connection.getBalance(account);
+        logger.debug(`${account.toString()} SOL balance:`.padEnd(LOG_PAD_LARGE), balance.toLocaleString());
+    }
+
+    public get isMaybeLocalnet(): boolean {
+        const endpoint = this.connection.rpcEndpoint;
+        return endpoint.startsWith('http://') && endpoint.endsWith('8899');
+    }
+
+    public get isMaybeDevnet(): boolean {
+        return this.connection.rpcEndpoint == anchor.web3.clusterApiUrl('devnet');
+    }
+
+    public get isMaybeMainnetBeta(): boolean {
+        return this.connection.rpcEndpoint == anchor.web3.clusterApiUrl("mainnet-beta");
+    }
+
+    public getConstant(name: ExtractConstantNames<IDL>): string | null {
+        return this.program.idl.constants?.find(a => a.name == name)?.value ?? null;
+    }
 }
+
+type ExtractAccountNames<T extends anchor.Idl> = T['accounts'] extends Array<infer U>
+    ? U extends { name: infer N }
+        ? N extends string
+            ? N
+            : never
+        : never
+    : never;
+
+type ExtractConstantNames<T extends anchor.Idl> = T['constants'] extends Array<infer U>
+    ? U extends { name: infer N }
+        ? N extends string
+            ? N
+            : never
+        : never
+    : never;

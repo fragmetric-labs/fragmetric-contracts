@@ -1,10 +1,16 @@
-import {Keychain, KeychainConfig} from "../lib";
+import {Keychain, KeychainConfig} from '../lib';
 
 const keypairs = {
     'PROGRAM': './keypairs/restaking/shared_local_program_4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5.json',
     'FRAGSOL_MINT': './keypairs/restaking/shared_local_fragsol_mint_Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD.json',
     'ADMIN': './keypairs/restaking/shared_local_admin_9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL.json',
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
+
+    // fixtures for local test
+    'MOCK_ALL_MINT_AUTHORITY': './tests/mocks/mainnet/all_mint_authority.json',
+    'MOCK_USER1': './tests/mocks/user1.json',
+    'MOCK_USER2': './tests/mocks/user2.json',
+    'MOCK_USER3': './tests/mocks/user3.json',
 };
 
 const local: KeychainConfig<keyof (typeof keypairs)> = {
@@ -42,14 +48,6 @@ export type KEYCHAIN_ENV = 'local'|'devnet'|'mainnet';
 export type KEYCHAIN_KEYS = keyof (typeof keypairs);
 
 export function getKeychain(env: KEYCHAIN_ENV) {
-    const config = (() => {
-        if (env == 'mainnet') {
-            return mainnet;
-        } else if (env == 'devnet') {
-            return devnet;
-        } else {
-            return local;
-        }
-    })();
+    const config = env == 'mainnet' ? mainnet : (env == 'devnet' ? devnet : local);
     return Keychain.create(config);
 }

@@ -7,7 +7,6 @@ import * as splTokenMetadata from "@solana/spl-token-metadata";
 import { expect } from "chai";
 import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
-import * as utils from "../utils";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
 export let wallet: anchor.Wallet;
@@ -94,7 +93,7 @@ export const initialize = describe("Initialize program accounts", () => {
     // require("../mocks").changeMintAuthority(tokenMintAuthorityPublicKey_all, "./tests/mocks/mainnet/INF_mint.json");
 
     before("Prepare program accounts initialization", async () => {
-        const playground = await RestakingPlayground.env();
+        const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
         console.log("new wallet", (program.provider as anchor.AnchorProvider).wallet.publicKey.toString());
 

@@ -9,7 +9,7 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "./keypairs/wallet.json"
+wallet = "./keypairs/shared_wallet_GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF.json"
 
 [scripts]
 init-keypairs = "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $value > $key; done"
@@ -27,34 +27,30 @@ rpc_port = 8899
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
 filename = "tests/mocks/mainnet/bSOL_mint.json"
 
-# mock devnet bSOL stake pool to localnet
+# mock mainnet jitoSOL mint to localnet
 [[test.validator.account]]
-address = "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
-filename = "tests/mocks/devnet/bSOL_stake_pool.json"
-
-# clone mainnet bSOL stake pool to localnet
-[[test.validator.clone]]
-address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+filename = "tests/mocks/mainnet/jitoSOL_mint.json"
 
 # mock mainnet mSOL mint to localnet
 [[test.validator.account]]
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
 filename = "tests/mocks/mainnet/mSOL_mint.json"
 
-# clone mainnet mSOL stake pool to localnet
-[[test.validator.clone]]
-address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
-
-# mock mainnet jitoSOL mint to localnet
-[[test.validator.account]]
-address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-filename = "tests/mocks/mainnet/jitoSOL_mint.json"
-
-# clone mainnet jitoSOL stake pool to localnet
-[[test.validator.clone]]
-address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-
 # mock mainnet INF mint to localnet
 [[test.validator.account]]
 address = "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
 filename = "tests/mocks/mainnet/INF_mint.json"
+
+# mock devnet bSOL stake pool to localnet
+[[test.validator.account]]
+address = "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
+filename = "tests/mocks/devnet/bSOL_stake_pool.json"
+
+# clone mainnet mSOL stake pool to localnet
+[[test.validator.clone]]
+address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
+
+# clone mainnet jitoSOL stake pool to localnet
+[[test.validator.clone]]
+address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"

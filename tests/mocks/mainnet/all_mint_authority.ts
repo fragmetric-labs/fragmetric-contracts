@@ -21,7 +21,3 @@ const changeMintAuthority = (newMintAuthority: anchor.web3.PublicKey, mintFilePa
     // console.log(mintFilePath, mint)
     fs.writeFileSync(mintFilePath, JSON.stringify(mint, null, 0));
 }
-
-export {
-    changeMintAuthority,
-}

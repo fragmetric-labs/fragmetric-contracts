@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import readline from 'readline';
-import {exec, spawnSync} from "node:child_process";
+import {exec} from "node:child_process";
 import * as web3 from "@solana/web3.js";
 import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
@@ -91,7 +91,6 @@ export class Keychain<KEYS extends string> {
             throw err;
         }
     }
-
 
     public static readKeypairSecretFile(path: string): web3.Keypair {
         try {
