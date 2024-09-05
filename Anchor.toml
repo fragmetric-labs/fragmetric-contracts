@@ -21,7 +21,6 @@ bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-
 # mock mainnet bSOL mint to localnet
 [[test.validator.account]]
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"

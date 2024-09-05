@@ -139,7 +139,7 @@ export class Keychain<KEYS extends string> {
     private static async initializeKeypairs<KEYS extends string>(args: KeychainConfig<KEYS>): Promise<KeypairMap> {
         let {program, keypairs, newKeypairDir = './', buildCommand, askYesNo = defaultAskYesNo} = args;
         if (!buildCommand) {
-            buildCommand = `anchor build -p ${program} -- --features local`;
+            buildCommand = `anchor build -p ${program}`;
         }
 
         const newLocalKeypairKEYS = new Set<string>();
@@ -212,7 +212,7 @@ export class Keychain<KEYS extends string> {
         const keypairKEYS = [...keypairMap.local.keys(), ...keypairMap.ledger.keys()];
         const programSrcDir = path.join(__dirname, '../../programs', program, 'src');
         let fileUpdated: string[] = [];
-        for (const fileName of ['lib.rs', 'constants.rs']) {
+        for (const fileName of ['constants/local.rs']) {
             const filePath = path.join(programSrcDir, fileName);
             let fileSource = fs.readFileSync(filePath).toString();
             logger.debug(`checking ${filePath}`);
