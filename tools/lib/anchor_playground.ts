@@ -50,7 +50,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 
     public async run(args: {
-        instructions: Promise<anchor.web3.TransactionInstruction>[],
+        instructions: (Promise<anchor.web3.TransactionInstruction> | anchor.web3.TransactionInstruction)[],
         signers?: anchor.web3.Signer[],
         signerNames?: KEYS[],
     }) {
@@ -76,10 +76,10 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 const { local, ledger } = await this.keychain.signTransaction(keypairName, tx);
                 if (local) {
                     signers.push(local);
-                    logger.debug(keypairName.padEnd(LOG_PAD_LARGE), `${local.publicKey.toString()}`)
+                    logger.debug(`${keypairName} (signer)`.padEnd(LOG_PAD_LARGE), `${local.publicKey.toString()}`)
                 } else if (ledger) {
                     tx.addSignature(ledger.publicKey, ledger.signature);
-                    logger.debug(keypairName.padEnd(LOG_PAD_LARGE), `${ledger.publicKey.toString()}`)
+                    logger.debug(`${keypairName} (signer)`.padEnd(LOG_PAD_LARGE), `${ledger.publicKey.toString()}`)
                 }
             }
             tx.partialSign(...signers);
@@ -103,17 +103,14 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
             // get result and parse events and errors
             const txResult = await this.connection.getParsedTransaction(txSig, 'confirmed');
-            logger.info(`transaction succeeded:`.padEnd(LOG_PAD_LARGE), txSig);
+            logger.info(`transaction confirmed:`.padEnd(LOG_PAD_LARGE), txSig);
             return {
                 event: this.eventParser.parseLogs(txResult.meta.logMessages, true),
-                error: AnchorError.parse(txResult.meta.logMessages),
+                error: AnchorError.parse(txResult.meta.logMessages) ?? null,
             };
         } catch (err) {
             logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig);
-            return {
-                event: null,
-                error: err,
-            };
+            throw err;
         }
     }
 
@@ -172,9 +169,24 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.connection.rpcEndpoint == anchor.web3.clusterApiUrl("mainnet-beta");
     }
 
-    public getConstant(name: ExtractConstantNames<IDL>): string | null {
-        return this.program.idl.constants?.find(a => a.name == name)?.value ?? null;
+    public getConstant(name: ExtractConstantNames<IDL>): string {
+        return this.program.idl.constants.find(a => a.name == name).value;
     }
+
+    public getConstantAsPublicKey(name: ExtractConstantNames<IDL>): anchor.web3.PublicKey {
+        return new anchor.web3.PublicKey(this.getConstant(name));
+    }
+
+    public static binToString(buf: Uint8Array | number[]) {
+        const codes = [];
+        for (let v of buf) {
+            if (v == 0) break;
+            codes.push(v);
+        }
+        return String.fromCharCode.apply(null, codes)
+    }
+
+    public readonly binToString = AnchorPlayground.binToString;
 }
 
 type ExtractAccountNames<T extends anchor.Idl> = T['accounts'] extends Array<infer U>
