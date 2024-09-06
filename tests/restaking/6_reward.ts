@@ -9,6 +9,8 @@ import { Restaking } from "../../target/types/restaking";
 import { before, Context } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
+import { Restaking } from "../../target/types/restaking";
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 chai.use(chaiAsPromised);
 
@@ -48,81 +50,51 @@ enum RewardType {
     SOL,
 };
 
-export const reward = describe("Reward", () => {
-    anchor.setProvider(anchor.AnchorProvider.env());
+export const reward = describe("Reward", async function () {
+    const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
+
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
-    const user2 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
-    const user3 = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user3.json")));
+    const user1 = playground.keychain.getKeypair("MOCK_USER1");
+    const user2 = playground.keychain.getKeypair("MOCK_USER2");
+    console.log(`User1(user1.json) key: ${user1.publicKey}`);
     console.log(`User2(user2.json) key: ${user2.publicKey}`);
-    console.log(`User3(user3.json) key: ${user3.publicKey}`);
 
+    let user1RewardAddress: anchor.web3.PublicKey;
     let user2RewardAddress: anchor.web3.PublicKey;
-    let user3RewardAddress: anchor.web3.PublicKey;
 
-    if (utils.isLocalnet(program.provider.connection)) {
-        before("Airdrop SOL to payer", async () => {
-            await utils.requestAirdrop(program.provider, user2, 1000);
-            await utils.requestAirdrop(program.provider, user3, 1000);
-        });
+    it("May airdrop SOL to mock accounts", async () => {
+        await playground.tryAirdropToMockAccounts();
+    });
 
-        before("Prepare accounts", async () => {
-            [user2RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
-                [Buffer.from("user_reward"), restaking.fragSOLTokenMintKeypair.publicKey.toBuffer(), user2.publicKey.toBuffer()],
-                program.programId,
-            );
-            [user3RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
-                [Buffer.from("user_reward"), restaking.fragSOLTokenMintKeypair.publicKey.toBuffer(), user3.publicKey.toBuffer()],
-                program.programId,
-            );
-            console.log(`user2RewardAddress = ${user2RewardAddress}`);
-            console.log(`user3RewardAddress = ${user3RewardAddress}`);
-            console.log("======= Prepared Accounts =======");
-        });
-    }
+    before("Prepare accounts", async () => {
+        [user1RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("user_reward"), playground.knownAddress.fragSOLTokenMint.toBuffer(), user1.publicKey.toBuffer()],
+            playground.programId,
+        );
+        [user2RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("user_reward"), playground.knownAddress.fragSOLTokenMint.toBuffer(), user2.publicKey.toBuffer()],
+            playground.programId,
+        );
+        console.log(`user1RewardAddress = ${user1RewardAddress}`);
+        console.log(`user2RewardAddress = ${user2RewardAddress}`);
+        console.log("======= Prepared Accounts =======");
+    });
 
-    it("user2 deposited to mint 100 fragSOL", async function () {
-        if (!utils.isLocalnet(program.provider.connection)) {
-            this.skip();
-        }
-
+    it("user1 deposited to mint 100 fragSOL", async function () {
         let amount = new anchor.BN(1_000_000_000 * 100);
 
-        const depositSOLTxSig = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            new anchor.web3.Transaction().add(
-                ...await Promise.all([
-                    program.methods
-                        .userUpdateAccountsIfNeeded()
-                        .accounts({
-                            user: user2.publicKey,
-                        })
-                        .instruction(),
-                    program.methods
-                        .userDepositSol(amount, null)
-                        .accounts({
-                            user: user2.publicKey,
-                        })
-                        .remainingAccounts(restaking.stakePoolAccounts)
-                        .instruction(),
-                ]),
-            ),
-            [user2],
-            { commitment: "confirmed" },
-        );
+        await playground.runUserInitializeRewardPools("MOCK_USER1");
+        const { fragSOLReward } = await playground.runDepositSol("MOCK_USER1", amount, null);
 
-        await checkRewardAccount(program, restaking.fragSOLRewardAddress);
-        await checkUserRewardAccount(program, "user2", user2RewardAddress);
+        await checkRewardAccount(playground, playground.knownAddress.fragSOLReward);
+        await checkUserRewardAccount(playground, "user1", user1RewardAddress);
     });
 
     let skipCounts = [9, 9, 19];
-    for (let a = 0; a < 3; a++) {
-        it(`[after ${skipCounts[a]+1} slots] just update after delay`, async function () {
-            if (!utils.isLocalnet(program.provider.connection)) {
-                this.skip();
-            }
-    
-            await utils.skipSlots(program, restaking.wallet.payer, skipCounts[a]);
+    for (let i = 0; i < 3; i++) {
+        it(`[after ${skipCounts[i]+1} slots] just update after delay`, async function () {
+            await playground.skipSlots(playground.wallet, skipCounts[i]);
         
             await anchor.web3.sendAndConfirmTransaction(
                 program.provider.connection,
@@ -581,13 +553,13 @@ export const reward = describe("Reward", () => {
     });
 });
 
-const checkRewardAccount = async (program: anchor.Program<Restaking>, rewardAccountAddress: anchor.web3.PublicKey) => {
-    const rewardAccount = await program.account.rewardAccount.fetch(rewardAccountAddress);
+const checkRewardAccount = async (playground: RestakingPlayground, rewardAccountAddress: anchor.web3.PublicKey) => {
+    const rewardAccount = await playground.account.rewardAccount.fetch(rewardAccountAddress);
 
-    for (let i = 0; i < rewardAccount.rewardPools.length; i++) {
-        const rewardPool = rewardAccount.rewardPools[i];
+    for (let i = 0; i < rewardAccount.rewardPools1.length; i++) {
+        const rewardPool = rewardAccount.rewardPools1[i];
 
-        console.log(`[RewardAccount..RewardPool=${i}] after update: tokenAllocatedAmount=${rewardPool.tokenAllocatedAmount.totalAmount.toNumber() / TOKEN_DENOMINATOR}, contribution=${rewardPool.contribution.toNumber() / CONTRIBUTION_DENOMINATOR}, customContributionAccrualRateEnabled=${rewardPool.customContributionAccrualRateEnabled}, contributionUpdatedSlot=${rewardPool.updatedSlot}`);
+        console.log(`[RewardAccount..RewardPool=${i}] after update: tokenAllocatedAmount=${rewardPool.tokenAllocatedAmount.totalAmount.toNumber() / TOKEN_DENOMINATOR}, contribution=${rewardPool.contribution.toNumber() / CONTRIBUTION_DENOMINATOR}, rewardPoolBitmap (0: custum contribution accrual rate enables, 1: is closed, 2: has holder)=${rewardPool.rewardPoolBitmap}, contributionUpdatedSlot=${rewardPool.updatedSlot}`);
     }
 }
 
@@ -637,11 +609,11 @@ const checkRewardAccountSettlements = async (program: anchor.Program<Restaking>,
     }
 }
 
-const checkUserRewardAccount = async (program: anchor.Program<Restaking>, userName: string, userRewardAccountAddress: anchor.web3.PublicKey) => {
-    const userRewardAccount = await program.account.userRewardAccount.fetch(userRewardAccountAddress);
+const checkUserRewardAccount = async (playground: RestakingPlayground, userName: string, userRewardAccountAddress: anchor.web3.PublicKey) => {
+    const userRewardAccount = await playground.account.userRewardAccount.fetch(userRewardAccountAddress);
 
-    for (let i = 0; i < userRewardAccount.userRewardPools.length; i++) {
-        const userRewardPool = userRewardAccount.userRewardPools[i];
+    for (let i = 0; i < userRewardAccount.userRewardPools1.length; i++) {
+        const userRewardPool = userRewardAccount.userRewardPools1[i];
 
         console.log(`[UserRewardAccount=${userName}..UserRewardPool=${i}] after update: tokenAllocatedAmount=${userRewardPool.tokenAllocatedAmount.totalAmount.toNumber() / TOKEN_DENOMINATOR}, contribution=${userRewardPool.contribution.toNumber() / CONTRIBUTION_DENOMINATOR}, updatedSlot=${userRewardPool.updatedSlot}`);
     }

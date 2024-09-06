@@ -231,6 +231,22 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         })
     }
 
+    public async skipSlots(signer: anchor.web3.Keypair, skip: number) {
+        let currentSlot = await this.program.provider.connection.getSlot();
+        logger.debug(`BEFORE skip slots, current slot: ${currentSlot}`);
+    
+        for (let i = 0; i < skip; i++) {
+            await this.program.methods
+                .emptyIx()
+                .accounts({})
+                .signers([signer])
+                .rpc();
+        }
+    
+        currentSlot = await this.program.provider.connection.getSlot();
+        logger.debug(`AFTER skip slots, current slot: ${currentSlot}`);
+    }
+
     public async runInitializeFragSOLTokenMint() {
         const metadata: splTokenMetadata.TokenMetadata = {
             mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
@@ -543,4 +559,56 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         return { event, error, fragSOLReward, rewardPool, reward };
     }
+
+    public async runUserInitializeRewardPools(payer: KEYCHAIN_KEYS) {
+        await this.run({
+            instructions: [
+                this.program.methods
+                    .userInitializeRewardPools()
+                    .accounts({
+                        user: this.keychain.getPublicKey(payer),
+                    })
+                    .instruction(),
+                this.program.methods
+                    .userUpdateRewardAccountsIfNeeded(null, true)
+                    .accounts({
+                        user: this.keychain.getPublicKey(payer),
+                    })
+                    .instruction(),
+                this.program.methods
+                    .userUpdateAccountsIfNeeded()
+                    .accounts({
+                        user: this.keychain.getPublicKey(payer),
+                    })
+                    .instruction(),
+            ],
+            signerNames: [payer],
+        });
+
+        logger.info(`configured ${payer} reward account`);
+    }
+
+    public async runDepositSol(payer: KEYCHAIN_KEYS, amount: anchor.BN, metadata?: Metadata) {
+        const { event, error } = await this.run({
+            instructions: [
+                this.program.methods
+                    .userDepositSol(amount, metadata)
+                    .accounts({
+                        user: this.keychain.getPublicKey(payer),
+                    })
+                    .remainingAccounts(this.getPricingSourceAccounts())
+                    .instruction(),
+            ],
+            signerNames: [payer],
+        });
+
+        logger.info(`configured fragSOL reward pools and reward`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
+        const fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        return { event, error, fragSOLReward };
+    }
+}
+
+type Metadata = {
+    walletProvider: string,
+    contributionAccrualRate: number,
 }
