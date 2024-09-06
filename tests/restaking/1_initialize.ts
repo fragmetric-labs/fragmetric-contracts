@@ -6,7 +6,7 @@ import {RestakingPlayground} from "../../tools/restaking/playground";
 export const initialize = describe("Initialize program accounts", async function() {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
-    it("may airdrop to mock accounts", async () => {
+    it("May airdrop SOL to mock accounts", async () => {
         await playground.tryAirdropToMockAccounts();
     });
 
@@ -80,5 +80,19 @@ export const initialize = describe("Initialize program accounts", async function
             const pool = fragSOLReward.rewardPools1[i++];
             expect(playground.binToString(pool.name)).to.eq(v.name.toString());
         }
+    });
+
+    it("Should settle fPoint reward (zeroing)", async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // wait for few slot elapsed
+        const { fragSOLReward, reward, rewardPool } = await playground.runSettleFragSOLReward({
+            poolName: 'bonus',
+            rewardName: 'fPoint',
+            amount: new anchor.BN(0),
+        });
+        expect(fragSOLReward.rewardPools1[rewardPool.id].numRewardSettlements).eq(1);
+        expect(fragSOLReward.rewardPools1[rewardPool.id].rewardSettlements1[0].rewardId).eq(reward.id);
+        expect(fragSOLReward.rewardPools1[rewardPool.id].rewardSettlements1[0].rewardPoolId).eq(rewardPool.id);
+        expect(fragSOLReward.rewardPools1[rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(1);
+        expect(fragSOLReward.rewardPools1[rewardPool.id].rewardSettlements1[0].settledAmount.toNumber()).eq(0);
     });
 });

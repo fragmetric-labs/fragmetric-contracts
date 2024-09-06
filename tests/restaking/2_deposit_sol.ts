@@ -1,41 +1,14 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { EventParser, Program } from "@coral-xyz/anchor";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
-import { Restaking } from "../../target/types/restaking";
 import { before } from "mocha";
 import * as utils from "../utils";
 import * as restaking from "./1_initialize";
 import * as ed25519 from "ed25519";
-import {adminKeypair, fundManagerKeypair, stakePoolAccounts, wallet} from './1_initialize';
+import {RestakingPlayground} from "../../tools/restaking/playground";
 
-export const deposit_sol = describe("deposit_sol", () => {
-    anchor.setProvider(anchor.AnchorProvider.env());
-    const program = anchor.workspace.Restaking as Program<Restaking>;
-
-    const payer = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user1.json")));
-    const user = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(require("../mocks/user2.json")));
-    console.log(`Payer(user1.json) key: ${payer.publicKey}`);
-    console.log(`User(user2.json) key: ${user.publicKey}`);
-
-    const eventParser = new EventParser(program.programId, program.coder);
-
-    // Localnet only
-    before("Sol airdrop to user", async () => {
-        if (utils.isLocalnet(program.provider.connection)) {
-            await utils.requestAirdrop(program.provider, user, 10);
-    
-            // check the balance
-            const adminBal = await program.provider.connection.getBalance(adminKeypair.publicKey);
-            console.log(`Admin SOL balance: ${adminBal}`);
-            const payerBal = await program.provider.connection.getBalance(payer.publicKey);
-            console.log(`Payer SOL balance: ${payerBal}`);
-            const userBal = await program.provider.connection.getBalance(user.publicKey);
-            console.log(`User SOL balance: ${userBal}`);
-            console.log("======= Sol airdrop to user =======");
-        }
-    });
+export const deposit_sol = describe("User can deposit SOL to mint fragSOL", async () => {
+    const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
     it("Zeroing fPoint reward", async () => {
         await anchor.web3.sendAndConfirmTransaction(

@@ -176,6 +176,17 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     public getConstantAsPublicKey(name: ExtractConstantNames<IDL>): anchor.web3.PublicKey {
         return new anchor.web3.PublicKey(this.getConstant(name));
     }
+
+    public static binToString(buf: Uint8Array | number[]) {
+        const codes = [];
+        for (let v of buf) {
+            if (v == 0) break;
+            codes.push(v);
+        }
+        return String.fromCharCode.apply(null, codes)
+    }
+
+    public readonly binToString = AnchorPlayground.binToString;
 }
 
 type ExtractAccountNames<T extends anchor.Idl> = T['accounts'] extends Array<infer U>

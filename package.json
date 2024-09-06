@@ -1,5 +1,5 @@
 {
-  "license": "",
+  "license": "MIT",
   "mocha": {
     "node-option": ["import=tsx"]
   },
