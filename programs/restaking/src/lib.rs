@@ -294,4 +294,13 @@ pub mod restaking {
     ) -> Result<()> {
         UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
+
+    // for test
+    pub fn empty_ix(_ctx: Context<EmptyIx>) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct EmptyIx {
 }
