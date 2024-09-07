@@ -11,6 +11,9 @@ const keypairs = {
     'MOCK_USER1': './tests/mocks/user1.json',
     'MOCK_USER2': './tests/mocks/user2.json',
     'MOCK_USER3': './tests/mocks/user3.json',
+    'MOCK_USER4': './tests/mocks/user4.json',
+    'MOCK_USER5': './tests/mocks/user5.json',
+    'MOCK_USER6': './tests/mocks/user6.json',
 };
 
 const local: KeychainConfig<keyof (typeof keypairs)> = {

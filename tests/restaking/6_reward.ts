@@ -53,39 +53,13 @@ enum RewardType {
 export const reward = describe("Reward", async function () {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
-    const program = anchor.workspace.Restaking as Program<Restaking>;
-
-    const user1 = playground.keychain.getKeypair("MOCK_USER1");
-    const user2 = playground.keychain.getKeypair("MOCK_USER2");
-    console.log(`User1(user1.json) key: ${user1.publicKey}`);
-    console.log(`User2(user2.json) key: ${user2.publicKey}`);
-
-    let user1RewardAddress: anchor.web3.PublicKey;
-    let user2RewardAddress: anchor.web3.PublicKey;
-
     it("May airdrop SOL to mock accounts", async () => {
         await playground.tryAirdropToMockAccounts();
     });
 
-    before("Prepare accounts", async () => {
-        [user1RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("user_reward"), playground.knownAddress.fragSOLTokenMint.toBuffer(), user1.publicKey.toBuffer()],
-            playground.programId,
-        );
-        [user2RewardAddress,] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("user_reward"), playground.knownAddress.fragSOLTokenMint.toBuffer(), user2.publicKey.toBuffer()],
-            playground.programId,
-        );
-        console.log(`user1RewardAddress = ${user1RewardAddress}`);
-        console.log(`user2RewardAddress = ${user2RewardAddress}`);
-        console.log("======= Prepared Accounts =======");
-    });
-
     it("user1 deposited to mint 100 fragSOL", async function () {
-        let amount = new anchor.BN(1_000_000_000 * 100);
-
-        await playground.runUserInitializeRewardAccounts("MOCK_USER1");
-        const { fragSOLReward } = await playground.runDepositSol("MOCK_USER1", amount, null);
+        const amount = new anchor.BN(1_000_000_000 * 100);
+        const { fragSOLReward } = await playground.runUserDepositSOL(, amount, null);
 
         await checkRewardAccount(playground, playground.knownAddress.fragSOLReward);
         await checkUserRewardAccount(playground, "user1", user1RewardAddress);

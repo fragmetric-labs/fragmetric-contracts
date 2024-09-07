@@ -60,6 +60,7 @@ impl<'info> OperatorFundContext<'info> {
             .process()?;
 
         emit!(OperatorProcessedJob {
+            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             fund_account: FundAccountInfo::new(
                 &ctx.accounts.fund_account,
                 receipt_token_price,

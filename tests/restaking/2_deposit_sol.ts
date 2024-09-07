@@ -1,241 +1,97 @@
 import * as anchor from "@coral-xyz/anchor";
-import * as spl from "@solana/spl-token";
 import { expect } from "chai";
-import { before } from "mocha";
-import * as utils from "../utils";
-import * as restaking from "./1_initialize";
-import * as ed25519 from "ed25519";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
 export const deposit_sol = describe("User can deposit SOL to mint fragSOL", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
+    const user1 = playground.keychain.getKeypair('MOCK_USER1');
+    const user2 = playground.keychain.getKeypair('MOCK_USER2');
 
-    it("Zeroing fPoint reward", async () => {
-        await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            new anchor.web3.Transaction().add(
-                ...await Promise.all([
-                    program.methods
-                        .fundManagerSettleReward(0, 0, new anchor.BN(0))
-                        .accounts({
-                            rewardTokenMint: program.programId,
-                            rewardTokenProgram: program.programId,
-                        })
-                        .instruction(),
-                ]),
-            ),
-            [wallet.payer, fundManagerKeypair],
-        );
+    it("try airdrop SOL to mock accounts", async function () {
+        if (!playground.isMaybeLocalnet) return this.skip();
+
+        await Promise.all([
+            playground.tryAirdrop(user1.publicKey, 100),
+            playground.tryAirdrop(user2.publicKey, 100),
+        ]);
+
+        await playground.sleep(1); // ...block hash not found?
     });
 
-    it("Update price", async () => {
-        const updatePriceTxSig = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            new anchor.web3.Transaction().add(
-                ...await Promise.all([
-                    program.methods
-                        .operatorUpdatePrices()
-                        .accounts({ operator: wallet.publicKey })
-                        .remainingAccounts(stakePoolAccounts)
-                        .instruction(),
-                ]),
-            ),
-            [wallet.payer],
-        );
+    it("user1 deposits 10 SOL without metadata to mint fragSOL", async function () {
+        const res0 = await playground.runOperatorUpdatePrices();
+        expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
+        expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
 
-        // parse event
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const committedTx = await program.provider.connection.getParsedTransaction(updatePriceTxSig, "confirmed");
-        // console.log(`committedTx:`, committedTx);
-        const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        for (const event of events) {
-            expect(event.data.fundAccount.receiptTokenPrice.toNumber()).to.be.equal(1_000_000_000);
-            console.log(`Receipt token price: ${event.data.fundAccount.receiptTokenPrice}`);
-        }
+        const amount = new anchor.BN(10 * anchor.web3.LAMPORTS_PER_SOL);
+        const res1 = await playground.runUserDepositSOL(user1, amount, null);
+
+        expect(res1.fragSOLFund.solOperationReservedAmount.toString()).eq(amount.toString());
+        expect(res1.fragSOLFundBalance.toNumber()).greaterThan(amount.toNumber());
+        expect(res1.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
+
+        expect(res1.fragSOLUserFund.user.toString()).eq(user1.publicKey.toString());
+        expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString());
+
+        expect(res1.event.userDepositedSolToFund.walletProvider).null;
+        expect(res1.event.userDepositedSolToFund.contributionAccrualRate).null;
+        expect(res1.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString())
+        expect(res1.event.userUpdatedRewardPool.updates.length).eq(1);
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
+
+        const res2 = await playground.runOperatorUpdatePrices();
+        expect(res2.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toString()).eq((amount.div(new anchor.BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new anchor.BN(10 ** 9))).toString());
+        expect(res2.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
     });
 
-    // Localnet test
-    it("Deposit SOL with no metadata", async function () {
-        if (!utils.isLocalnet(program.provider.connection)) {
-            this.skip();
-        }
+    it("user2 deposits 5 + 5 SOL with metadata to mint fragSOL", async function () {
+        const res0 = await playground.runOperatorUpdatePrices();
 
-        let amount = new anchor.BN(1_000_000_000);
+        const amount1 = new anchor.BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const depositMetadata1 = playground.asType<'depositMetadata'>({
+            walletProvider: "BACKPACK",
+            contributionAccrualRate: 130,
+        });
+        const res1 = await playground.runUserDepositSOL(user2, amount1, depositMetadata1);
 
-        const fundBal_bef = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
-        console.log(`fund balance before deposit:`, fundBal_bef);
+        expect(res1.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount1.toString());
+        expect(res1.event.userDepositedSolToFund.walletProvider).eq(depositMetadata1.walletProvider);
+        expect(res1.event.userDepositedSolToFund.contributionAccrualRate.toString()).eq(depositMetadata1.contributionAccrualRate.toString());
+        expect(res1.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString())
 
-        const depositSolTxSig = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            new anchor.web3.Transaction().add(
-                ...await Promise.all([
-                    program.methods
-                        .userUpdateAccountsIfNeeded()
-                        .accounts({
-                            user: user.publicKey,
-                        })
-                        .instruction(),
-                    program.methods
-                        .userDepositSol(amount, null)
-                        .accounts({
-                            user: user.publicKey,
-                        })
-                        .remainingAccounts(stakePoolAccounts)
-                        .instruction(),
-                ]),
-            ),
-            [user],
-            { commitment: "confirmed" },
-        );
+        expect(res1.event.userUpdatedRewardPool.updates.length).eq(1);
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
+        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
 
-        // const depositSolTx = await program.methods
-        //     .fundDepositSol(amount, null)
-        //     .accounts({
-        //         user: user.publicKey,
-        //     })
-        //     .signers([user])
-        //     .rpc({ commitment: "confirmed" });
+        const amount2 = new anchor.BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const depositMetadata2 = playground.asType<'depositMetadata'>({
+            walletProvider: "FRONTPACK",
+            contributionAccrualRate: 110,
+        });
+        const res2 = await playground.runUserDepositSOL(user2, amount2, depositMetadata2);
 
-        const fundBal_aft = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
-        console.log(`fund balance after deposit:`, fundBal_aft);
-        expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
+        expect(res2.fragSOLFundBalance.sub(res1.fragSOLFundBalance).toString()).eq(amount2.toString());
+        expect(res2.event.userDepositedSolToFund.walletProvider).eq(depositMetadata2.walletProvider);
+        expect(res2.event.userDepositedSolToFund.contributionAccrualRate.toString()).eq(depositMetadata2.contributionAccrualRate.toString());
+        expect(res2.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res2.fragSOLUserTokenAccount.amount.toString())
 
-        // check the solOperationReservedAmount has accumulated
-        let fundData = await program.account.fundAccount.fetch(restaking.fragSOLFundAddress);
-        console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
-        expect(fundData.solOperationReservedAmount.toNumber()).to.eq(amount.toNumber());
-
-        // check the price of tokens
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
-
-        // check receipt token balance of user
-        const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.fragSOLTokenMintKeypair.publicKey,
-            user.publicKey,
-            false,
-            TOKEN_2022_PROGRAM_ID,
-        );
-        const userReceiptTokenAccount = await spl.getAccount(
-            program.provider.connection,
-            userReceiptTokenAccountAddress,
-            undefined,
-            TOKEN_2022_PROGRAM_ID,
-        );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
-        console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
-
-        // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTxSig, "confirmed");
-        const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        const rewardEvent = events.next().value as anchor.Event;
-        expect(rewardEvent.data.updates.length).to.equal(1);
-        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
-
-        const depositEvent = events.next().value as anchor.Event;
-        expect(depositEvent.data.walletProvider).to.be.null;
-        expect(depositEvent.data.contributionAccrualRate).to.be.null;
-        expect(depositEvent.data.userFundAccount.receiptTokenAmount.toString()).to.be.equal(
-            userReceiptTokenAccount.amount.toString()
-        )
-        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
-        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
-        console.log(`receipt token balance:`, depositEvent.data.userFundAccount.receiptTokenAmount.toNumber());
+        expect(res2.event.userUpdatedRewardPool.updates.length).eq(1);
+        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
+        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
+        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.numRecords).eq(1); // base pool has no custom accrual rate
+        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
+        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.numRecords).eq(2);
     });
 
-    // Localnet test
-    it("Deposit SOL with metadata - should pass signature verification", async function () {
-        if (!utils.isLocalnet(program.provider.connection)) {
-            this.skip();
-        }
-
-        let amount = new anchor.BN(1_000_000_000);
-
-        const fundBal_bef = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
-        console.log(`fund balance before deposit:`, fundBal_bef);
-
-        const payload = {
-            walletProvider: "backpack",
-            contributionAccrualRate: 1.3,
-        };
-        const programBorshCoder = new anchor.BorshCoder(program.idl);
-        let depositMetadataType = program.idl.types.find(v => v.name == "depositMetadata");
-        let encodedData = programBorshCoder.types.encode(depositMetadataType.name, payload);
-        let decodedData = programBorshCoder.types.decode(depositMetadataType.name, encodedData);
-        expect(decodedData.walletProvider).to.equal(payload.walletProvider);
-        expect(decodedData.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-
-        const signature = ed25519.Sign(encodedData, Buffer.from(adminKeypair.secretKey));
-        const tx = new anchor.web3.Transaction().add(
-            anchor.web3.Ed25519Program.createInstructionWithPublicKey({
-                publicKey: adminKeypair.publicKey.toBytes(),
-                message: encodedData,
-                signature: signature,
-            }),
-            await program.methods
-                .userDepositSol(
-                    amount,
-                    payload,
-                )
-                .accounts({
-                    user: user.publicKey,
-                    // instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-                })
-                .remainingAccounts(stakePoolAccounts)
-                .signers([user])
-                .instruction()
-        );
-        const depositSolTx = await anchor.web3.sendAndConfirmTransaction(
-            program.provider.connection,
-            tx,
-            [user],
-            { commitment: "confirmed" },
-        );
-
-        const fundBal_aft = await program.provider.connection.getBalance(restaking.fragSOLFundAddress);
-        console.log(`fund balance after deposit:`, fundBal_aft);
-        expect(fundBal_aft - fundBal_bef).to.equal(amount.toNumber());
-
-        // check the sol_amount_in has accumulated
-        let fundData = await program.account.fundAccount.fetch(restaking.fragSOLFundAddress);
-        console.log(`total sol operation reserved amount in Fund:`, fundData.solOperationReservedAmount.toNumber());
-        expect(fundData.solOperationReservedAmount.toNumber()).to.eq(2 * amount.toNumber());
-
-        // check the price of tokens
-        console.log(`bSOL price     = ${fundData.supportedTokens[0].price}`);
-        console.log(`mSOL price     = ${fundData.supportedTokens[1].price}`);
-
-        // check receipt token balance of user
-        const userReceiptTokenAccountAddress = spl.getAssociatedTokenAddressSync(
-            restaking.fragSOLTokenMintKeypair.publicKey,
-            user.publicKey,
-            false,
-            TOKEN_2022_PROGRAM_ID,
-        );
-        const userReceiptTokenAccount = await spl.getAccount(
-            program.provider.connection,
-            userReceiptTokenAccountAddress,
-            undefined,
-            TOKEN_2022_PROGRAM_ID,
-        );
-        console.log(`user associatedToken address:`, userReceiptTokenAccountAddress.toBase58());
-        console.log(`receipt token balance = ${userReceiptTokenAccount.amount}`);
-
-        // parse event
-        const committedTx = await program.provider.connection.getParsedTransaction(depositSolTx, "confirmed");
-        const events = eventParser.parseLogs(committedTx.meta.logMessages);
-        const rewardEvent = events.next().value as anchor.Event;
-        expect(rewardEvent.data.updates.length).to.equal(1);
-        expect(rewardEvent.data.updates[0].updatedUserRewardPools.length).to.equal(2);
-
-        const depositEvent = events.next().value as anchor.Event;
-        expect(depositEvent.data.walletProvider).to.equal(payload.walletProvider);
-        expect(depositEvent.data.contributionAccrualRate.toPrecision(2)).to.equal(payload.contributionAccrualRate.toString());
-        expect(depositEvent.data.userFundAccount.receiptTokenAmount.toString()).to.be.equal(
-            userReceiptTokenAccount.amount.toString()
-        )
-        console.log(`Wallet provider: ${depositEvent.data.walletProvider}`);
-        console.log(`contribution accrual rate: ${depositEvent.data.contributionAccrualRate}`);
-        console.log(`receipt token balance:`, depositEvent.data.userFundAccount.receiptTokenAmount.toNumber());
+    it("user2 cannot cheat metadata", async function () {
+        const amount1 = new anchor.BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const depositMetadata1 = playground.asType<'depositMetadata'>({
+            walletProvider: "MYPACK",
+            contributionAccrualRate: 200,
+        });
+        expect(playground.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).eventually.throw('InvalidSignatureError');
     });
 });

@@ -235,11 +235,9 @@ impl<'info> UserFundSupportedTokenContext<'info> {
     fn mock_transfer_hook_from_fund_to_user(
         ctx: &mut Context<Self>,
         amount: u64,
-        contribution_accrual_rate: Option<f32>,
+        contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let contribution_accrual_rate =
-            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;

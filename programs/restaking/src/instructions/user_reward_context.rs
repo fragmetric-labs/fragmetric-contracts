@@ -3,7 +3,7 @@ use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::events::UserUpdatedRewardPool;
+// use crate::events::UserUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
 
 // will be used only once
@@ -78,7 +78,7 @@ impl<'info> UserRewardContext<'info> {
         let required_realloc_size = target_account_size.saturating_sub(current_account_size);
 
         msg!(
-            "reward account size: current={}, target={}, required={}",
+            "user reward account size: current={}, target={}, required={}",
             current_account_size,
             target_account_size,
             required_realloc_size
@@ -98,19 +98,19 @@ impl<'info> UserRewardContext<'info> {
                     },
                 );
                 anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
-                msg!("reward account lamports: added={}", required_lamports);
+                msg!("user reward account lamports: added={}", required_lamports);
             }
 
             let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
             let increase = std::cmp::min(required_realloc_size, max_increase);
-            if increase < required_realloc_size && initialize {
+            let new_account_size = current_account_size + increase;
+            if new_account_size < target_account_size && initialize {
                 return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?;
             }
 
-            let new_account_size = current_account_size + increase;
             user_reward_account.realloc(new_account_size, false)?;
             msg!(
-                "reward account reallocated: current={}, target={}, required={}",
+                "user reward account reallocated: current={}, target={}, required={}",
                 new_account_size,
                 target_account_size,
                 target_account_size - new_account_size
@@ -118,15 +118,17 @@ impl<'info> UserRewardContext<'info> {
         }
 
         if initialize {
-            let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
             let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
             let bump = ctx.accounts.user_reward_account.bump()?;
+            let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+
             user_reward_account.update_if_needed(bump, receipt_token_mint, ctx.accounts.user.key());
 
-            emit!(UserUpdatedRewardPool::new_from_initialize(
-                receipt_token_mint,
-                &user_reward_account
-            ));
+            // CHECK: won't emit empty event here for following deposit ix events' sake.
+            // emit!(UserUpdatedRewardPool::new_from_initialize(
+            //     receipt_token_mint,
+            //     &user_reward_account,
+            // ));
         }
 
         Ok(())

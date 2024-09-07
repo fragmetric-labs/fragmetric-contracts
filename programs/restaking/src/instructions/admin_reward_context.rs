@@ -100,11 +100,11 @@ impl<'info> AdminRewardContext<'info> {
 
             let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
             let increase = std::cmp::min(required_realloc_size, max_increase);
-            if increase < required_realloc_size && initialize {
+            let new_account_size = current_account_size + increase;
+            if new_account_size < target_account_size && initialize {
                 return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?;
             }
 
-            let new_account_size = current_account_size + increase;
             reward_account.realloc(new_account_size, false)?;
             msg!(
                 "reward account reallocated: current={}, target={}, required={}",
