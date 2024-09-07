@@ -209,8 +209,8 @@ pub mod restaking {
     // UserFundContext
     ////////////////////////////////////////////
 
-    pub fn user_update_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
-        UserFundContext::update_accounts_if_needed(ctx)
+    pub fn user_update_fund_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
+        UserFundContext::update_fund_accounts_if_needed(ctx)
     }
 
     pub fn user_deposit_sol(
@@ -255,7 +255,7 @@ pub mod restaking {
     // UserRewardInitialContext
     ////////////////////////////////////////////
 
-    pub fn user_initialize_reward_pools(ctx: Context<UserRewardInitialContext>) -> Result<()> {
+    pub fn user_initialize_reward_accounts(ctx: Context<UserRewardInitialContext>) -> Result<()> {
         UserRewardInitialContext::initialize_accounts(ctx)
     }
 

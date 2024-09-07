@@ -96,7 +96,7 @@ pub struct UserFundContext<'info> {
 }
 
 impl<'info> UserFundContext<'info> {
-    pub fn update_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
+    pub fn update_fund_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
         // Initialize
         ctx.accounts.user_fund_account.initialize_if_needed(
             ctx.bumps.user_fund_account,
