@@ -44,10 +44,14 @@ const mainnet: KeychainConfig<keyof (typeof keypairs)> = {
     },
 };
 
-export type KEYCHAIN_ENV = 'local'|'devnet'|'mainnet';
+const envs = {local, devnet, mainnet};
+export type KEYCHAIN_ENV = keyof (typeof envs);
 export type KEYCHAIN_KEYS = keyof (typeof keypairs);
 
 export function getKeychain(env: KEYCHAIN_ENV) {
-    const config = env == 'mainnet' ? mainnet : (env == 'devnet' ? devnet : local);
+    const config = envs[env];
+    if (!config) {
+        throw new Error(`invalid keychain env: ${env}`);
+    }
     return Keychain.create(config);
 }

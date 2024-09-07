@@ -5,17 +5,33 @@ This repository contains the full business logic of Fragmetric on-chain programs
 # Guide
 ## 1. Developer Configuration
 
-- Install `solana-cli`, `anchor-cli 0.30.1` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
-- For testing:
+- Install `solana-cli` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
+- Install `anchor-cli (v0.30.1)` 
 ```
-# install testing tool dependencies:
+# instead of using AVM, install from latest git rev to pick a fix for `anchor idl build -- CARGO_ARGS`.
+$ cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --rev 1c0b2132ec4713343f9c672479721f432ccbf904 --force
+
+# check proper CLI has been installed
+$ anchor idl build --help
+Generates the IDL for the program using the compilation method
+
+Usage: anchor idl build [OPTIONS] [-- <CARGO_ARGS>...]
+
+Arguments:
+  [CARGO_ARGS]...  Arguments to pass to the underlying `cargo test` command
+...
+```
+
+- Initialize testing tools:
+```
+# install node packages
 $ yarn
 
-# install program keypair to ./target/deploy/ dir:
-$ tsx tools/restaking/keychain_init_local.ts
-
-# if cannot find 'tsx' binary, add below PATH to your shell profile:
+# add below PATH to your shell profile:
 export PATH=$PATH:/usr/local/lib/node_modules/node/bin:./node_modules/.bin
+
+# to sync program keypair to ./target/deploy/ dir:
+$ anchor run sync-keypairs -- local
 ```
 
 ## 2. Run E2E Test
@@ -37,7 +53,6 @@ $ anchor test --skip-local-validator --skip-deploy --run ./tests/restaking/2_dep
 
 ## 3. Build Artifacts
 ```
-$ anchor idl build -p restaking
-
+$ anchor run sync-keypairs -- local|devnet|mainnet
 $ anchor build -p restaking -- --features devnet|mainnet
 ```

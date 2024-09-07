@@ -8,23 +8,15 @@ import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
 import {Buffer} from "buffer";
 import {Key} from "node:readline";
+import {askOnce} from "./repl";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
 type AskYesNo = (question: string) => Promise<boolean>;
 
 function defaultAskYesNo(question: string) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    return new Promise<boolean>((resolve) => {
-        rl.question(`${question} (y/n): `, (answer: string) => {
-            const normalizedAnswer = answer.trim().toLowerCase();
-            resolve(normalizedAnswer === 'y' || normalizedAnswer === 'yes');
-            rl.close();
-        });
-    });
+    return askOnce(`${question} (y/n)`)
+        .then(answer => answer == 'y' || answer == 'yes');
 }
 
 const PROGRAM_KEYPAIR_NAME = 'PROGRAM';
