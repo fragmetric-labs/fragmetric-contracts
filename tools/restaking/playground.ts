@@ -560,29 +560,73 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLReward, rewardPool, reward };
     }
 
-    public async runUserInitializeRewardPools(payer: KEYCHAIN_KEYS) {
+    private async runUpdateUserFragSOLRewardAccount(user: anchor.web3.Keypair, batchSize = 35) {
+        const address = // TODO..
+        const currentVersion = await this.account.userRewardAccount
+            .fetch(this.knownAddress.fragSOLReward)
+            .then(a => a.dataVersion)
+            .catch(err => 0);
+
+        const targetVersion = parseInt(this.getConstant('rewardAccountCurrentVersion'));
+        const instructions = [
+            ...(currentVersion == 0 ? [
+                this.program.methods
+                    .adminInitializeRewardAccounts()
+                    .accounts({ payer: this.wallet.publicKey })
+                    .instruction()
+            ] : []),
+            ...new Array(targetVersion - currentVersion)
+                .fill(null)
+                .map((_, index, arr) =>
+                    this.program.methods
+                        .adminUpdateRewardAccountsIfNeeded(null, index == arr.length - 1)
+                        .accounts({ payer: this.wallet.publicKey })
+                        .instruction()
+                ),
+        ];
+        if (instructions.length > 0) {
+            for (let i=0; i<instructions.length/batchSize; i++) {
+                const batchedInstructions = [];
+                for (let j=i*batchSize; j<instructions.length && batchedInstructions.length < batchSize; j++) {
+                    batchedInstructions.push(instructions[j]);
+                }
+                logger.debug(`running batched instructions`.padEnd(LOG_PAD_LARGE), `${i*batchSize + batchedInstructions.length}/${instructions.length}`);
+                await this.run({
+                    instructions: batchedInstructions,
+                    signerNames: ['ADMIN'],
+                });
+            }
+        }
+
+        const fragSOLRewardAccount = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        logger.info(`updated reward account version from=${currentVersion}, to=${fragSOLRewardAccount.dataVersion}, target=${targetVersion}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
+
+        return { fragSOLRewardAccount };
+    }
+
+    public async runUpdateUserFragSOLFundAndRewardAccounts(user: anchor.web3.Keypair) {
         await this.run({
             instructions: [
                 this.program.methods
-                    .userInitializeRewardPools()
+                    .userInitializeRewardAccounts()
                     .accounts({
-                        user: this.keychain.getPublicKey(payer),
+                        user: user.publicKey,
                     })
                     .instruction(),
                 this.program.methods
                     .userUpdateRewardAccountsIfNeeded(null, true)
                     .accounts({
-                        user: this.keychain.getPublicKey(payer),
+                        user: user.publicKey,
                     })
                     .instruction(),
                 this.program.methods
-                    .userUpdateAccountsIfNeeded()
+                    .userUpdateFundAccountsIfNeeded()
                     .accounts({
-                        user: this.keychain.getPublicKey(payer),
+                        user: user.publicKey,
                     })
                     .instruction(),
             ],
-            signerNames: [payer],
+            signers: [user],
         });
 
         logger.info(`configured ${payer} reward account`);

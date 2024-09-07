@@ -84,7 +84,7 @@ export const reward = describe("Reward", async function () {
     it("user1 deposited to mint 100 fragSOL", async function () {
         let amount = new anchor.BN(1_000_000_000 * 100);
 
-        await playground.runUserInitializeRewardPools("MOCK_USER1");
+        await playground.runUserInitializeRewardAccounts("MOCK_USER1");
         const { fragSOLReward } = await playground.runDepositSol("MOCK_USER1", amount, null);
 
         await checkRewardAccount(playground, playground.knownAddress.fragSOLReward);
