@@ -12,6 +12,6 @@ process.on('unhandledRejection', (err) => {
 require('./restaking/1_initialize');
 // require('./restaking/2_deposit_sol');
 // require('./restaking/3_deposit_token');
-require('./restaking/4_withdraw');
-// require('./restaking/5_transfer_hook');
+// require('./restaking/4_withdraw');
+require('./restaking/5_transfer_hook');
 // require('./restaking/6_reward');

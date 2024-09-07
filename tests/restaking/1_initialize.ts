@@ -5,7 +5,7 @@ import * as spl from "@solana/spl-token";
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
-describe("initialize", async function() {
+describe("initialize", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
     it("create fragSOL token mint with Transfer Hook extension", async function() {
@@ -40,6 +40,7 @@ describe("initialize", async function() {
         expect(res0.fragSOLFundAccount.dataVersion).gt(0);
         expect(res0.fragSOLRewardAccount.dataVersion).eq(parseInt(playground.getConstant('rewardAccountCurrentVersion')));
         expect(res0.fragSOLMint.mintAuthority.toString()).eq(playground.knownAddress.fragSOLTokenMintAuthority.toString());
+        expect(res0.fragSOLExtraAccountMetasAccount.length).eq(6);
     });
 
     it("initialize fund and supported tokens configuration", async function() {

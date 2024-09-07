@@ -76,6 +76,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             [Buffer.from('receipt_token_lock'), fragSOLTokenMintBuf],
             this.programId
         );
+        const fragSOLExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragSOLTokenMint, this.programId);
         const [fragSOLFund] = web3.PublicKey.findProgramAddressSync(
             [Buffer.from('fund'), fragSOLTokenMintBuf],
             this.programId
@@ -124,6 +125,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLTokenMint,
             fragSOLTokenLock,
             fragSOLFund,
+            fragSOLExtraAccountMetasAccount,
             fragSOLUserFund,
             fragSOLUserTokenAccount,
             fragSOLReward,
@@ -463,17 +465,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signerNames: ['ADMIN'],
         });
-        const fragSOLMint = await spl.getMint(
-            this.connection,
-            this.knownAddress.fragSOLTokenMint,
-            undefined,
-            spl.TOKEN_2022_PROGRAM_ID,
-        );
+        const [
+            fragSOLMint,
+            fragSOLExtraAccountMetasAccount,
+        ] = await Promise.all([
+            spl.getMint(
+                this.connection,
+                this.knownAddress.fragSOLTokenMint,
+                undefined,
+                spl.TOKEN_2022_PROGRAM_ID,
+            ),
+            this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId))
+                .then(acc => spl.getExtraAccountMetas(acc)),
+        ]);
         logger.notice(`transferred fragSOL mint authority to the PDA`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMintAuthority.toString());
 
         return {
             fragSOLFundAccount,
             fragSOLRewardAccount,
+            fragSOLExtraAccountMetasAccount,
             fragSOLMint,
         };
     }
