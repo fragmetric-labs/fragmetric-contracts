@@ -23,7 +23,7 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
                 Some(x) if (current_time - x) > withdrawal_status.batch_processing_threshold_duration
             );
 
-        if withdrawal_status.pending_batch_withdrawal .receipt_token_to_process > withdrawal_status.batch_processing_threshold_amount {
+        if withdrawal_status.pending_batch_withdrawal.receipt_token_to_process > withdrawal_status.batch_processing_threshold_amount {
             threshold_satisfied = true;
         }
 

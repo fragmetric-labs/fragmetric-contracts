@@ -6,6 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
+use crate::errors::ErrorCode::FundWithdrawalRequestNotFoundError;
 use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
 
@@ -320,7 +321,7 @@ impl<'info> UserFundContext<'info> {
         let withdrawal_status = &mut ctx.accounts.fund_account.withdrawal_status;
 
         // Verify
-        require_gt!(withdrawal_status.next_request_id, request_id);
+        require_gt!(withdrawal_status.next_request_id, request_id, FundWithdrawalRequestNotFoundError);
 
         // Step 1: Cancel withdrawal request
         let request = ctx

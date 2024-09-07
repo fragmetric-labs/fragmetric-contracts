@@ -12,7 +12,7 @@ import chaiAsPromised from "chai-as-promised";
 
 chai.use(chaiAsPromised);
 
-export const transfer_hook = describe("transfer_hook", () => {
+describe("transfer_hook", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const program = anchor.workspace.Restaking as Program<Restaking>;
 
@@ -67,7 +67,7 @@ export const transfer_hook = describe("transfer_hook", () => {
     })
 
     before("Deposit SOL to mint receipt token", async () => {
-        let amount = new anchor.BN(1_000_000_000);
+        let amount = new BN(1_000_000_000);
         
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,

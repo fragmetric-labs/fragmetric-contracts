@@ -50,7 +50,7 @@ enum RewardType {
     SOL,
 };
 
-export const reward = describe("Reward", async function () {
+describe("Reward", async function () {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
     it("May airdrop SOL to mock accounts", async () => {
@@ -58,7 +58,7 @@ export const reward = describe("Reward", async function () {
     });
 
     it("user1 deposited to mint 100 fragSOL", async function () {
-        const amount = new anchor.BN(1_000_000_000 * 100);
+        const amount = new BN(1_000_000_000 * 100);
         const { fragSOLReward } = await playground.runUserDepositSOL(, amount, null);
 
         await checkRewardAccount(playground, playground.knownAddress.fragSOLReward);
@@ -103,7 +103,7 @@ export const reward = describe("Reward", async function () {
             this.skip();
         }
 
-        let amount = new anchor.BN(1_000_000_000 * 200);
+        let amount = new BN(1_000_000_000 * 200);
 
         const depositSOLTxSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
@@ -138,7 +138,7 @@ export const reward = describe("Reward", async function () {
 
         await utils.skipSlots(program, restaking.wallet.payer, 9);
 
-        let amount = new anchor.BN(1_000_000_000 * 100);
+        let amount = new BN(1_000_000_000 * 100);
 
         const depositSOLTxSig = await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
@@ -215,7 +215,7 @@ export const reward = describe("Reward", async function () {
 
         const rewardAccount = await program.account.rewardAccount.fetch(restaking.fragSOLRewardAddress);
 
-        let dropAmount = new anchor.BN(rewardAccount.rewardPools[0].contribution.toNumber() * 2);
+        let dropAmount = new BN(rewardAccount.rewardPools[0].contribution.toNumber() * 2);
         console.log(`dropAmount: ${dropAmount.toNumber() / CONTRIBUTION_DENOMINATOR}`);
 
         await anchor.web3.sendAndConfirmTransaction(
@@ -282,7 +282,7 @@ export const reward = describe("Reward", async function () {
 
         await utils.skipSlots(program, restaking.wallet.payer, 9);
 
-        let dropAmount = new anchor.BN(0);
+        let dropAmount = new BN(0);
 
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
@@ -391,7 +391,7 @@ export const reward = describe("Reward", async function () {
 
         await utils.skipSlots(program, restaking.wallet.payer, 9);
 
-        let amount = new anchor.BN(1_000_000_000 * 100);
+        let amount = new BN(1_000_000_000 * 100);
 
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,
@@ -475,7 +475,7 @@ export const reward = describe("Reward", async function () {
         let user2RewardSettlementsBefore = await checkUserRewardAccountSettlements(program, "user2", user2RewardAddress, restaking.fragSOLRewardAddress);
         let user3RewardSettlementsBefore = await checkUserRewardAccountSettlements(program, "user3", user3RewardAddress, restaking.fragSOLRewardAddress);
 
-        let dropAmount = new anchor.BN(1_000_000_000 * 1000);
+        let dropAmount = new BN(1_000_000_000 * 1000);
 
         await anchor.web3.sendAndConfirmTransaction(
             program.provider.connection,

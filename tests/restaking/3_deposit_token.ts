@@ -1,16 +1,14 @@
 import * as anchor from "@coral-xyz/anchor";
+import { BN } from '@coral-xyz/anchor';
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
-export const deposit_token = describe("deposit_token", async () => {
+describe("deposit_token", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
     const user3 = playground.keychain.getKeypair('MOCK_USER3');
     const user4 = playground.keychain.getKeypair('MOCK_USER4');
-    const initialSupportedTokenAmount = 100_000;
 
     it("try airdrop SOL and supported tokens to mock accounts", async function () {
-        if (!playground.isMaybeLocalnet) return this.skip();
-
         await Promise.all([
             playground.tryAirdrop(user3.publicKey, 100),
             playground.tryAirdrop(user4.publicKey, 100),
@@ -19,8 +17,8 @@ export const deposit_token = describe("deposit_token", async () => {
         await playground.sleep(1); // ...block hash not found?
 
         await Promise.all([
-            playground.tryAirdropSupportedTokens(user3.publicKey, initialSupportedTokenAmount),
-            playground.tryAirdropSupportedTokens(user4.publicKey, initialSupportedTokenAmount),
+            playground.tryAirdropSupportedTokens(user3.publicKey, 100_000),
+            playground.tryAirdropSupportedTokens(user4.publicKey, 100_000),
         ]);
 
         await playground.sleep(1);
@@ -33,11 +31,12 @@ export const deposit_token = describe("deposit_token", async () => {
         const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice;
 
         const decimals = 10 ** 9;
-        const amount = new anchor.BN(10 * decimals);
+        const amount = new BN(10 * decimals);
         const symbol = 'bSOL';
+        const initialTokenAmount = new BN((await playground.getUserSupportedTokenAccount(user3.publicKey, symbol)).amount.toString());
         const res1 = await playground.runUserDepositSupportedToken(user3, symbol, amount, null);
 
-        expect(new anchor.BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new anchor.BN(initialSupportedTokenAmount * decimals).sub(amount).toString());
+        expect(new BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new BN(initialTokenAmount).sub(amount).toString());
         expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.toString()).eq(amount.toString());
         const fragSOLPrice1 = res1.event.userDepositedSupportedTokenToFund.fundAccount.receiptTokenPrice;
 
@@ -54,7 +53,7 @@ export const deposit_token = describe("deposit_token", async () => {
 
     it("user3 fails to deposit too many tokens", async function () {
         const decimals = 10 ** 9;
-        const amount = new anchor.BN((10 ** 4) * decimals);
+        const amount = new BN((10 ** 4) * decimals);
         const symbol = 'bSOL';
         await expect(playground.runUserDepositSupportedToken(user3, symbol, amount, null)).rejectedWith('FundExceededTokenCapacityAmountError');
     });
@@ -64,7 +63,7 @@ export const deposit_token = describe("deposit_token", async () => {
 
         const symbol = 'bSOL';
         const decimals = 10 ** 9;
-        const amount1 = new anchor.BN(6 * decimals);
+        const amount1 = new BN(6 * decimals);
         const depositMetadata1 = playground.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
@@ -82,7 +81,7 @@ export const deposit_token = describe("deposit_token", async () => {
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.toString());
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.toString());
 
-        const amount2 = new anchor.BN(4 * decimals);
+        const amount2 = new BN(4 * decimals);
         const depositMetadata2 = playground.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,

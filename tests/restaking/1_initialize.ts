@@ -1,10 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
+import { BN } from '@coral-xyz/anchor';;
 // @ts-ignore
 import * as spl from "@solana/spl-token";
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
-export const initialize = describe("initialize", async function() {
+describe("initialize", async function() {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
     it("create fragSOL token mint with Transfer Hook extension", async function() {
@@ -14,9 +15,7 @@ export const initialize = describe("initialize", async function() {
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
-    it("mock supported token mints in localnet", async function() {
-        if (!playground.isMaybeLocalnet) return this.skip();
-
+    it("mock supported token mints", async function() {
         const tokenMint_bSOL = await spl.getMint(
             playground.connection,
             playground.supportedTokenMetadata.bSOL.mint,
@@ -83,7 +82,7 @@ export const initialize = describe("initialize", async function() {
         const res0 = await playground.runFundManagerSettleReward({
             poolName: 'bonus',
             rewardName: 'fPoint',
-            amount: new anchor.BN(0),
+            amount: new BN(0),
         });
         expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].numRewardSettlements).eq(1);
         expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardId).eq(res0.reward.id);
