@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::modules::fund::{FundAccountInfo, UserFundAccount};
 
 #[event]
-pub struct UserDepositedTokenToFund {
+pub struct UserDepositedSupportedTokenToFund {
     pub receipt_token_mint: Pubkey,
     pub fund_account: FundAccountInfo,
 

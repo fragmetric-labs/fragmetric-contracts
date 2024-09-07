@@ -164,7 +164,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             signature: txSig,
         });
         const balance = new anchor.BN(await this.connection.getBalance(account));
-        logger.debug(`SOL balance (airdropped): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
+        logger.debug(`SOL airdropped (+${sol}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
     }
 
     public get isMaybeLocalnet(): boolean {

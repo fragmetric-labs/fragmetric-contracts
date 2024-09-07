@@ -4,7 +4,7 @@ import * as spl from "@solana/spl-token";
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
-export const initialize = describe("Initialize program accounts", async function() {
+export const initialize = describe("initialize", async function() {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
 
     it("create fragSOL token mint with Transfer Hook extension", async function() {

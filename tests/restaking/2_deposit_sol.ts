@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 
-export const deposit_sol = describe("User can deposit SOL to mint fragSOL", async () => {
+export const deposit_sol = describe("deposit_sol", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
     const user1 = playground.keychain.getKeypair('MOCK_USER1');
     const user2 = playground.keychain.getKeypair('MOCK_USER2');
@@ -18,7 +18,7 @@ export const deposit_sol = describe("User can deposit SOL to mint fragSOL", asyn
         await playground.sleep(1); // ...block hash not found?
     });
 
-    it("user1 deposits 10 SOL without metadata to mint fragSOL", async function () {
+    it("user1 deposits SOL without metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
         expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
@@ -46,10 +46,10 @@ export const deposit_sol = describe("User can deposit SOL to mint fragSOL", asyn
         expect(res2.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
     });
 
-    it("user2 deposits 5 + 5 SOL with metadata to mint fragSOL", async function () {
+    it("user2 deposits SOL with metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
 
-        const amount1 = new anchor.BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const amount1 = new anchor.BN(6 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata1 = playground.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
@@ -66,7 +66,7 @@ export const deposit_sol = describe("User can deposit SOL to mint fragSOL", asyn
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
 
-        const amount2 = new anchor.BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const amount2 = new anchor.BN(4 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata2 = playground.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
@@ -92,6 +92,6 @@ export const deposit_sol = describe("User can deposit SOL to mint fragSOL", asyn
             walletProvider: "MYPACK",
             contributionAccrualRate: 200,
         });
-        expect(playground.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).eventually.throw('InvalidSignatureError');
+        await expect(playground.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).rejectedWith('InvalidSignatureError');
     });
 });

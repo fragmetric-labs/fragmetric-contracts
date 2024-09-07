@@ -175,7 +175,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             .user_fund_account
             .set_receipt_token_amount(receipt_token_account_total_amount);
 
-        emit!(UserDepositedTokenToFund {
+        emit!(UserDepositedSupportedTokenToFund {
             user: ctx.accounts.user.key(),
             user_receipt_token_account: ctx.accounts.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),
