@@ -2,13 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from '@coral-xyz/anchor';
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
+import {step} from "mocha-steps";
 
 describe("deposit_token", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
     const user3 = playground.keychain.getKeypair('MOCK_USER3');
     const user4 = playground.keychain.getKeypair('MOCK_USER4');
 
-    it("try airdrop SOL and supported tokens to mock accounts", async function () {
+    step("try airdrop SOL and supported tokens to mock accounts", async function () {
         await Promise.all([
             playground.tryAirdrop(user3.publicKey, 100),
             playground.tryAirdrop(user4.publicKey, 100),
@@ -24,7 +25,7 @@ describe("deposit_token", async () => {
         await playground.sleep(1);
     });
 
-    it("user3 deposits supported token without metadata to mint fragSOL", async function () {
+    step("user3 deposits supported token without metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
         expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
@@ -51,14 +52,14 @@ describe("deposit_token", async () => {
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
     });
 
-    it("user3 fails to deposit too many tokens", async function () {
+    step("user3 fails to deposit too many tokens", async function () {
         const decimals = 10 ** 9;
         const amount = new BN((10 ** 4) * decimals);
         const symbol = 'bSOL';
         await expect(playground.runUserDepositSupportedToken(user3, symbol, amount, null)).rejectedWith('FundExceededTokenCapacityAmountError');
     });
 
-    it("user4 deposits supported token with metadata to mint fragSOL", async function () {
+    step("user4 deposits supported token with metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
 
         const symbol = 'bSOL';

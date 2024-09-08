@@ -2,13 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from '@coral-xyz/anchor';
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
+import {step} from "mocha-steps";
 
 describe("deposit_sol", async () => {
     const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
     const user1 = playground.keychain.getKeypair('MOCK_USER1');
     const user2 = playground.keychain.getKeypair('MOCK_USER2');
 
-    it("try airdrop SOL to mock accounts", async function () {
+    step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
             playground.tryAirdrop(user1.publicKey, 100),
             playground.tryAirdrop(user2.publicKey, 100),
@@ -17,7 +18,7 @@ describe("deposit_sol", async () => {
         await playground.sleep(1); // ...block hash not found?
     });
 
-    it("user1 deposits SOL without metadata to mint fragSOL", async function () {
+    step("user1 deposits SOL without metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
         expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
@@ -45,7 +46,7 @@ describe("deposit_sol", async () => {
         expect(res2.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
     });
 
-    it("user2 deposits SOL with metadata to mint fragSOL", async function () {
+    step("user2 deposits SOL with metadata to mint fragSOL", async function () {
         const res0 = await playground.runOperatorUpdatePrices();
 
         const amount1 = new BN(6 * anchor.web3.LAMPORTS_PER_SOL);
@@ -85,7 +86,7 @@ describe("deposit_sol", async () => {
         expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.numRecords).eq(2);
     });
 
-    it("user2 cannot cheat metadata", async function () {
+    step("user2 cannot cheat metadata", async function () {
         const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata1 = playground.asType<'depositMetadata'>({
             walletProvider: "MYPACK",

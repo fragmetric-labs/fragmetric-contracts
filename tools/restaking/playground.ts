@@ -138,6 +138,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
+    public readonly fragSOLDecimals = 9;
+
     public get supportedTokenMetadata() {
         if (this._supportedTokenMetadata) return this._supportedTokenMetadata;
         return this._supportedTokenMetadata = this._getSupportedTokenMetadata();
@@ -327,7 +329,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }, null, 0);
         logger.debug(`fragSOL metadata file:\n> ${metadata.uri}\n> ${fileForMetadataURI}`);
 
-        const decimals = 9;
         const mintInitialSize = spl.getMintLen([spl.ExtensionType.TransferHook, spl.ExtensionType.MetadataPointer]);
         const mintMetadataExtensionSize = (spl.TYPE_SIZE + spl.LENGTH_SIZE) + splTokenMetadata.pack(metadata).length;
         const mintTotalSize = mintInitialSize + mintMetadataExtensionSize;
@@ -356,7 +357,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ),
                 spl.createInitializeMintInstruction(
                     this.knownAddress.fragSOLTokenMint,
-                    decimals,
+                    this.fragSOLDecimals,
                     this.keychain.getPublicKey('ADMIN'),
                     null, // freeze authority to be null
                     spl.TOKEN_2022_PROGRAM_ID,
@@ -437,7 +438,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { fragSOLRewardAccount };
     }
 
-    public async runAdminInitializeFundAndRewardAccounts() {
+    public async runAdminInitializeFundAndRewardAccountsAndMint() {
         await this.run({
             instructions: [
                 this.program.methods
@@ -492,7 +493,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const { event, error } = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerUpdateSolCapacityAmount(new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000))) // TODO: set number
+                    .fundManagerUpdateSolCapacityAmount(new BN(web3.LAMPORTS_PER_SOL).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000))) // TODO: set number
                     .instruction(),
                 this.program.methods
                     .fundManagerUpdateSolWithdrawalFeeRate(10) // 1 fee rate = 1bps = 0.01%
@@ -715,7 +716,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public lamportsToFragSOL(lamports: BN): string {
-        return super.lamportsToX(lamports, 9, 'fragSOL');
+        return super.lamportsToX(lamports, this.fragSOLDecimals, 'fragSOL');
     }
 
     public async runOperatorUpdatePrices() {
@@ -944,5 +945,28 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
 
         return { event, error, fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount };
+    }
+
+    public async runTransfer(source: web3.Keypair, destination: web3.PublicKey, amount: BN) {
+        const { event, error } = await this.run({
+            instructions: [
+                spl.createTransferCheckedWithTransferHookInstruction(
+                    this.connection,
+                    this.knownAddress.fragSOLUserTokenAccount(source.publicKey),
+                    this.knownAddress.fragSOLTokenMint,
+                    this.knownAddress.fragSOLUserTokenAccount(destination),
+                    source.publicKey,
+                    BigInt(amount.toString()),
+                    this.fragSOLDecimals,
+                    [],
+                    'confirmed',
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+            ],
+            signers: [source],
+            events: ['userTransferredReceiptToken', 'userUpdatedRewardPool']
+        });
+
+        return { event, error };
     }
 }

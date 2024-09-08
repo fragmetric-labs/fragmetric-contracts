@@ -2,13 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from '@coral-xyz/anchor';
 import { expect } from "chai";
 import {RestakingPlayground} from "../../tools/restaking/playground";
+import {step} from "mocha-steps";
 
 describe("withdraw", async () => {
   const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
   const user5 = playground.keychain.getKeypair('MOCK_USER5');
   const user6 = playground.keychain.getKeypair('MOCK_USER6');
 
-  it("try airdrop SOL to mock accounts", async function () {
+  step("try airdrop SOL to mock accounts", async function () {
     await Promise.all([
       playground.tryAirdrop(user5.publicKey, 100),
       playground.tryAirdrop(user6.publicKey, 100),
@@ -21,7 +22,7 @@ describe("withdraw", async () => {
   const amountFragSOLWithdrawalEach = new BN((10**9) * 4);
   const withdrawalRequestedSize = 4;
 
-  it("user5 deposits and withdraws", async function () {
+  step("user5 deposits and withdraws", async function () {
     const res0 = await playground.runOperatorUpdatePrices();
 
     expect(res0.fragSOLFund.withdrawalStatus.numWithdrawalRequestsInProgress.toNumber()).eq(0);
@@ -56,7 +57,7 @@ describe("withdraw", async () => {
     expect(res2.fragSOLFund.withdrawalStatus.pendingBatchWithdrawal.receiptTokenToProcess.sub(res1.fragSOLFund.withdrawalStatus.pendingBatchWithdrawal.receiptTokenToProcess).toString()).eq(amountFragSOLWithdrawalTotal.toString());
   });
 
-  it("user5 cancels withdrawal request", async () => {
+  step("user5 cancels withdrawal request", async () => {
     const res0 = await playground.runOperatorUpdatePrices();
     expect(res0.fragSOLFund.withdrawalStatus.pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).eq(withdrawalRequestedSize);
 
@@ -78,7 +79,7 @@ describe("withdraw", async () => {
     await expect(playground.runUserCancelWithdrawalRequest(user6, new BN(2))).rejectedWith("FundWithdrawalRequestNotFoundError");
   });
 
-  it("user5 (operator) processes queued withdrawals", async () => {
+  step("user5 (operator) processes queued withdrawals", async () => {
     const res1 = await playground.runOperatorProcessFundWithdrawalJob(user5);
 
     expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
@@ -102,7 +103,7 @@ describe("withdraw", async () => {
     expect(res2.fragSOLLockAccount.amount.toString()).eq('0');
   });
 
-  it("user5 can withdraw SOL", async () => {
+  step("user5 can withdraw SOL", async () => {
     const balance0 = await playground.connection.getBalance(user5.publicKey);
     const res1 = await playground.runUserWithdraw(user5, new BN(2));
     const balance1 = await playground.connection.getBalance(user5.publicKey);
@@ -119,7 +120,7 @@ describe("withdraw", async () => {
         .eq(amountFragSOLWithdrawalEach.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), 'in this test, fragSOL unit price is still 1SOL')
   });
 
-  it("user5 cannot withdraw when withdrawal is disabled", async () => {
+  step("user5 cannot withdraw when withdrawal is disabled", async () => {
     await playground.run({
       instructions: [
           playground.methods
