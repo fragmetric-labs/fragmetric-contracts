@@ -20,34 +20,34 @@ function printUserRewardAccount(alias: string, account: IdlAccounts<Restaking>['
 }
 
 describe("reward", async function () {
-    const playground = await restakingPlayground;
-    const userA = playground.keychain.getKeypair('MOCK_USER9');
-    const userB = playground.keychain.getKeypair('MOCK_USER10');
+    const restaking = await restakingPlayground;
+    const userA = restaking.keychain.getKeypair('MOCK_USER9');
+    const userB = restaking.keychain.getKeypair('MOCK_USER10');
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
-            playground.tryAirdrop(userA.publicKey, 1_000),
-            playground.tryAirdrop(userB.publicKey, 1_000),
+            restaking.tryAirdrop(userA.publicKey, 1_000),
+            restaking.tryAirdrop(userB.publicKey, 1_000),
         ]);
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
     });
 
     step("rewards are settled based on the contribution proportion", async function () {
-        const a1 = await playground.runUserDepositSOL(userA, new BN(100 * (10 ** playground.fragSOLDecimals)), null);
+        const a1 = await restaking.runUserDepositSOL(userA, new BN(100 * (10 ** restaking.fragSOLDecimals)), null);
 
         expect(a1.fragSOLUserReward.userRewardPools1[0].contribution.toNumber()).eq(0);
         expect(a1.fragSOLUserReward.userRewardPools1[1].contribution.toNumber()).eq(0);
         printUserRewardAccount('A', a1.fragSOLUserReward);
 
-        await playground.sleep(1);
-        const b2 = await playground.runUserDepositSOL(userB, new BN(200 * (10 ** playground.fragSOLDecimals)), null);
+        await restaking.sleep(1);
+        const b2 = await restaking.runUserDepositSOL(userB, new BN(200 * (10 ** restaking.fragSOLDecimals)), null);
         printUserRewardAccount('B', b2.fragSOLUserReward);
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
         const [a3, b3] = await Promise.all([
-            playground.runUserDepositSOL(userA, new BN(300 * (10 ** playground.fragSOLDecimals)), null),
-            playground.runUserUpdateRewardPools(userB),
+            restaking.runUserDepositSOL(userA, new BN(300 * (10 ** restaking.fragSOLDecimals)), null),
+            restaking.runUserUpdateRewardPools(userB),
         ]);
         printUserRewardAccount('A', a3.fragSOLUserReward);
         printUserRewardAccount('B', b3.fragSOLUserReward);
@@ -56,10 +56,10 @@ describe("reward", async function () {
         expect(a3.fragSOLUserReward.userRewardPools1[1].contribution.toString(), 'a')
             .eq(b3.fragSOLUserReward.userRewardPools1[1].contribution.toString(), 'b');
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
         const [a4, b4] = await Promise.all([
-            playground.runUserUpdateRewardPools(userA),
-            playground.runUserUpdateRewardPools(userB),
+            restaking.runUserUpdateRewardPools(userA),
+            restaking.runUserUpdateRewardPools(userB),
         ]);
         printUserRewardAccount('A', a4.fragSOLUserReward);
         printUserRewardAccount('B', b4.fragSOLUserReward);
@@ -67,9 +67,9 @@ describe("reward", async function () {
             .eq(b4.fragSOLUserReward.userRewardPools1[1].contribution.mul(new BN(3)).toString(), 'B contrib = 200(2slot)'); // 400
 
         // drop fPoint in approximately(time flies) 1:1 ratio to total contribution; contribution(11) has 2 + 5 more decimals than fPoint(4)
-        const r4 = await playground.runOperatorUpdateRewardPools();
+        const r4 = await restaking.runOperatorUpdateRewardPools();
         const s5Amount = r4.fragSOLReward.rewardPools1[1].contribution.div(new BN(10 ** (2 + 5)));
-        const s5 = await playground.runFundManagerSettleReward({
+        const s5 = await restaking.runFundManagerSettleReward({
             poolName: 'bonus',
             rewardName: 'fPoint',
             amount: s5Amount,
@@ -78,10 +78,10 @@ describe("reward", async function () {
         const r4Block = r4Settle.settlementBlocks[r4Settle.settlementBlocksTail - 1];
         expect(r4Block.amount.toString()).eq(s5Amount.toString(), 'c');
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
         const [a6, b6] = await Promise.all([
-            playground.runUserUpdateRewardPools(userA),
-            playground.runUserUpdateRewardPools(userB),
+            restaking.runUserUpdateRewardPools(userA),
+            restaking.runUserUpdateRewardPools(userB),
         ]);
         printUserRewardAccount('A', a6.fragSOLUserReward);
         printUserRewardAccount('B', b6.fragSOLUserReward);
@@ -102,7 +102,7 @@ describe("reward", async function () {
 
     step("rewards can be settled with custom contribution accrual rate enabled", async function () {
         // starts with A: 400, B: 200
-        const b1 = await playground.runUserDepositSOL(userB, new BN(200 * (10 ** playground.fragSOLDecimals)), {
+        const b1 = await restaking.runUserDepositSOL(userB, new BN(200 * (10 ** restaking.fragSOLDecimals)), {
             walletProvider: 'STIMPACK',
             contributionAccrualRate: 150,
         });
@@ -110,42 +110,42 @@ describe("reward", async function () {
 
         // flush contributions of all pools by settling zero rewards.
         await Promise.all([
-            playground.runFundManagerSettleReward({
+            restaking.runFundManagerSettleReward({
                 poolName: 'base',
                 rewardName: 'fPoint',
                 amount: new BN(0),
             }),
-            playground.runFundManagerSettleReward({
+            restaking.runFundManagerSettleReward({
                 poolName: 'bonus',
                 rewardName: 'fPoint',
                 amount: new BN(0),
             }),
         ]);
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
         const [a3, b3] = await Promise.all([
-            playground.runUserUpdateRewardPools(userA),
-            playground.runUserUpdateRewardPools(userB),
+            restaking.runUserUpdateRewardPools(userA),
+            restaking.runUserUpdateRewardPools(userB),
         ]);
         printUserRewardAccount('A', a3.fragSOLUserReward);
         printUserRewardAccount('B', b3.fragSOLUserReward);
 
         // drop fPoint in approximately(time flies) 2:1 ratio to total contribution; contribution(11) has 2 + 5 more decimals than fPoint(4)
-        const r3 = await playground.runOperatorUpdateRewardPools();
+        const r3 = await restaking.runOperatorUpdateRewardPools();
         const s4Amount = r3.fragSOLReward.rewardPools1[1].contribution.mul(new BN(2)).div(new BN(10 ** (2 + 5)));
         await Promise.all([
-            playground.runFundManagerSettleReward({
+            restaking.runFundManagerSettleReward({
                 poolName: 'base',
                 rewardName: 'fPoint',
                 amount: s4Amount,
             }),
-            playground.runFundManagerSettleReward({
+            restaking.runFundManagerSettleReward({
                 poolName: 'bonus',
                 rewardName: 'fPoint',
                 amount: s4Amount,
             }),
         ]);
-        const r5 = await playground.runOperatorUpdateRewardPools();
+        const r5 = await restaking.runOperatorUpdateRewardPools();
         const base5 = r5.fragSOLReward.rewardPools1[0];
         const bonus5 = r5.fragSOLReward.rewardPools1[1];
 
@@ -157,8 +157,8 @@ describe("reward", async function () {
 
         // now check users' settlements
         const [a6, b6] = await Promise.all([
-            playground.runUserUpdateRewardPools(userA),
-            playground.runUserUpdateRewardPools(userB),
+            restaking.runUserUpdateRewardPools(userA),
+            restaking.runUserUpdateRewardPools(userB),
         ]);
 
         // new base pool settled amounts are same; A: 400, B: 400 => A:B = 1:1

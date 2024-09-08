@@ -32,27 +32,46 @@ export PATH=$PATH:/usr/local/lib/node_modules/node/bin:./node_modules/.bin
 
 # to sync program keypair to ./target/deploy/ dir:
 $ anchor run sync-keypairs -- local
+
+# for authorized engineers:
+$ anchor run download-keypairs
 ```
+
 
 ## 2. Run E2E Test
 
-### For all test suites
 ```
 $ anchor test -p restaking
 ```
 
-### For specific test suite
-```
-$ anchor test --detach -p restaking --run ./tests/restaking/1_initialize.ts
-# ... and keep the local test validator from 1_initialize test suite
-
-$ anchor test --skip-local-validator --skip-deploy --run ./tests/restaking/2_deposit_sol.ts
-
-# ... and more as you want 
-```
 
 ## 3. Build Artifacts
 ```
-$ anchor run sync-keypairs -- local|devnet|mainnet
 $ anchor build -p restaking -- --features devnet|mainnet
+```
+
+
+## 4. REPL for operation and testing
+
+### Basic usage
+```
+$ tsx tools/restaking/repl_entrypoint.ts
+[?] select target environment (local/devnet/mainnet): local
+[7:04:17 PM] [keychain] loaded local wallet
+
+...
+
+[!] Type 'restaking.' and press TAB to start...
+http://0.0.0.0:8899 >
+```
+
+### Easy local testing
+```
+# test-validator will be still running after initialization test done.
+$ JUST_INIT=1 anchor test --detach -p restaking
+...
+
+# now connect to test-validator
+$ tsx tools/restaking/repl_entrypoint.ts -- local
+...
 ```

@@ -7,54 +7,34 @@ import * as splTokenMetadata from '@solana/spl-token-metadata';
 import * as spl from '@solana/spl-token';
 import {AnchorPlayground, AnchorPlaygroundConfig, getLogger} from '../lib';
 import {Restaking} from '../../target/types/restaking';
-import {getKeychain, KEYCHAIN_KEYS} from './keychain';
+import {getKeychain, KEYCHAIN_ENV, KEYCHAIN_KEYS} from './keychain';
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 import * as ed25519 from "ed25519";
 
 const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('restaking');
 
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
-    // The term "local" in this context doesn't necessarily refer to the localnet.
+    // The term "local" in the "KEYCHAIN_ENV" context doesn't necessarily refer to the localnet.
     // It can also be applied in devnet or mainnet environments while utilizing existing local keypairs.
     // and a different Anchor provider. This allows for flexibility in testing across various networks.
-    public static local(provider?: anchor.AnchorProvider) {
-        return getKeychain('local')
+    public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, 'provider'>) {
+        return getKeychain(env)
             .then(keychain => {
                 return new RestakingPlayground({
                     keychain,
                     provider: new anchor.AnchorProvider(
-                        provider?.connection ?? new web3.Connection('http://0.0.0.0:8899'),
+                        args?.provider?.connection ?? new web3.Connection(RestakingPlayground.clusterURL[env]),
                         new anchor.Wallet(keychain.wallet),
                     ),
                 })
             });
     }
 
-    public static devnet(args: Pick<AnchorPlaygroundConfig<Restaking, any>, 'provider'>) {
-        return getKeychain('devnet')
-            .then(keychain =>
-                new RestakingPlayground({
-                    keychain,
-                    provider: new anchor.AnchorProvider(
-                        new web3.Connection(web3.clusterApiUrl('devnet')),
-                        new anchor.Wallet(keychain.wallet),
-                    ),
-                }),
-            );
-    }
-
-    public static mainnet(args: Pick<AnchorPlaygroundConfig<Restaking, any>, 'provider'>) {
-        return getKeychain('mainnet')
-            .then(keychain =>
-                new RestakingPlayground({
-                    keychain,
-                    provider: new anchor.AnchorProvider(
-                        new web3.Connection(web3.clusterApiUrl('mainnet-beta')),
-                        new anchor.Wallet(keychain.wallet),
-                    ),
-                }),
-            );
-    }
+    private static readonly clusterURL: {[env in KEYCHAIN_ENV]: string} = {
+        local: 'http://0.0.0.0:8899',
+        devnet: web3.clusterApiUrl('devnet'),
+        mainnet: web3.clusterApiUrl('mainnet-beta'),
+    };
 
     private constructor(args: Pick<AnchorPlaygroundConfig<Restaking, any>, 'provider'|'keychain'>) {
         super({

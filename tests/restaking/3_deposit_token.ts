@@ -5,28 +5,28 @@ import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
 
 describe("deposit_token", async () => {
-    const playground = await restakingPlayground;
-    const user3 = playground.keychain.getKeypair('MOCK_USER3');
-    const user4 = playground.keychain.getKeypair('MOCK_USER4');
+    const restaking = await restakingPlayground;
+    const user3 = restaking.keychain.getKeypair('MOCK_USER3');
+    const user4 = restaking.keychain.getKeypair('MOCK_USER4');
 
     step("try airdrop SOL and supported tokens to mock accounts", async function () {
         await Promise.all([
-            playground.tryAirdrop(user3.publicKey, 100),
-            playground.tryAirdrop(user4.publicKey, 100),
+            restaking.tryAirdrop(user3.publicKey, 100),
+            restaking.tryAirdrop(user4.publicKey, 100),
         ]);
 
-        await playground.sleep(1); // ...block hash not found?
+        await restaking.sleep(1); // ...block hash not found?
 
         await Promise.all([
-            playground.tryAirdropSupportedTokens(user3.publicKey, 100_000),
-            playground.tryAirdropSupportedTokens(user4.publicKey, 100_000),
+            restaking.tryAirdropSupportedTokens(user3.publicKey, 100_000),
+            restaking.tryAirdropSupportedTokens(user4.publicKey, 100_000),
         ]);
 
-        await playground.sleep(1);
+        await restaking.sleep(1);
     });
 
     step("user3 deposits supported token without metadata to mint fragSOL", async function () {
-        const res0 = await playground.runOperatorUpdatePrices();
+        const res0 = await restaking.runOperatorUpdatePrices();
         expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
         const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice;
@@ -34,8 +34,8 @@ describe("deposit_token", async () => {
         const decimals = 10 ** 9;
         const amount = new BN(10 * decimals);
         const symbol = 'bSOL';
-        const initialTokenAmount = new BN((await playground.getUserSupportedTokenAccount(user3.publicKey, symbol)).amount.toString());
-        const res1 = await playground.runUserDepositSupportedToken(user3, symbol, amount, null);
+        const initialTokenAmount = new BN((await restaking.getUserSupportedTokenAccount(user3.publicKey, symbol)).amount.toString());
+        const res1 = await restaking.runUserDepositSupportedToken(user3, symbol, amount, null);
 
         expect(new BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new BN(initialTokenAmount).sub(amount).toString());
         expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.toString()).eq(amount.toString());
@@ -56,20 +56,20 @@ describe("deposit_token", async () => {
         const decimals = 10 ** 9;
         const amount = new BN((10 ** 4) * decimals);
         const symbol = 'bSOL';
-        await expect(playground.runUserDepositSupportedToken(user3, symbol, amount, null)).rejectedWith('FundExceededTokenCapacityAmountError');
+        await expect(restaking.runUserDepositSupportedToken(user3, symbol, amount, null)).rejectedWith('FundExceededTokenCapacityAmountError');
     });
 
     step("user4 deposits supported token with metadata to mint fragSOL", async function () {
-        const res0 = await playground.runOperatorUpdatePrices();
+        const res0 = await restaking.runOperatorUpdatePrices();
 
         const symbol = 'bSOL';
         const decimals = 10 ** 9;
         const amount1 = new BN(6 * decimals);
-        const depositMetadata1 = playground.asType<'depositMetadata'>({
+        const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
         });
-        const res1 = await playground.runUserDepositSupportedToken(user4, symbol, amount1, depositMetadata1);
+        const res1 = await restaking.runUserDepositSupportedToken(user4, symbol, amount1, depositMetadata1);
         const mintedAmount1 = res1.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
 
         expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res0.fragSOLFund.supportedTokens[0].operationReservedAmount).toString()).eq(amount1.toString());
@@ -83,11 +83,11 @@ describe("deposit_token", async () => {
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.toString());
 
         const amount2 = new BN(4 * decimals);
-        const depositMetadata2 = playground.asType<'depositMetadata'>({
+        const depositMetadata2 = restaking.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
         });
-        const res2 = await playground.runUserDepositSupportedToken(user4, symbol, amount2, depositMetadata2);
+        const res2 = await restaking.runUserDepositSupportedToken(user4, symbol, amount2, depositMetadata2);
         const mintedAmount2 = res2.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
 
         expect(res2.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res1.fragSOLFund.supportedTokens[0].operationReservedAmount).toString(), 'added reserved token amount').eq(amount2.toString(), 'deposited token amount');

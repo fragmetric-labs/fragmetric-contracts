@@ -1,15 +1,15 @@
-import { getKeychain, KEYCHAIN_ENV } from './keychain';
+import {getKeychain, KEYCHAIN_ENV} from './keychain';
 import {askOnce} from "../lib/repl";
 
 if (process.argv.length > 2) {
-    syncKeypairs(process.argv[process.argv.length-1] as KEYCHAIN_ENV);
+    run(process.argv[process.argv.length - 1] as KEYCHAIN_ENV);
 } else {
     askOnce<KEYCHAIN_ENV>(`[?] select target environment (local/devnet/mainnet): `).then(env => {
-        syncKeypairs(env);
+        run(env);
     });
 }
 
-function syncKeypairs(env: KEYCHAIN_ENV) {
+function run(env: KEYCHAIN_ENV) {
     getKeychain(env)
         .catch(err => {
             console.error(err);

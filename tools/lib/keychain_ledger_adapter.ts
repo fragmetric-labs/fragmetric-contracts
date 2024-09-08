@@ -19,7 +19,7 @@ export class KeychainLedgerAdapter {
             let timeoutId = setTimeout(() => {
                 subscription?.unsubscribe();
                 reject(new Error('finding ledger timed out'));
-            }, 5000);
+            }, 3000);
             subscription = Transport.listen({
                 next: event => {
                     found = true;
