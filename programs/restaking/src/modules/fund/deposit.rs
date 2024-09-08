@@ -45,5 +45,5 @@ impl FundAccount {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct DepositMetadata {
     pub wallet_provider: String,
-    pub contribution_accrual_rate: f32,
+    pub contribution_accrual_rate: u8, // 100 is 1.0
 }

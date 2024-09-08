@@ -5,38 +5,73 @@ This repository contains the full business logic of Fragmetric on-chain programs
 # Guide
 ## 1. Developer Configuration
 
-- Install `solana-cli`, `anchor-cli 0.30.1` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
-- Install testing tool dependencies.
+- Install `solana-cli` with this [reference](https://solana.com/developers/guides/getstarted/setup-local-development).
+- Install `anchor-cli (v0.30.1)` 
 ```
-$ npm install
+# instead of using AVM, install from latest git rev to pick a fix for `anchor idl build -- CARGO_ARGS`.
+$ cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --rev 1c0b2132ec4713343f9c672479721f432ccbf904 --force
+
+# check proper CLI has been installed
+$ anchor idl build --help
+Generates the IDL for the program using the compilation method
+
+Usage: anchor idl build [OPTIONS] [-- <CARGO_ARGS>...]
+
+Arguments:
+  [CARGO_ARGS]...  Arguments to pass to the underlying `cargo test` command
+...
 ```
 
-## 2. Test Guide
-1. Generate placeholder keypairs with below commands.
+- Initialize testing tools:
 ```
-# payer wallet account
-$ solana-keygen new -o ./id.json
+# install node packages
+$ yarn
 
-# program global accounts
-$ solana-keygen new -o ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json && \
-    solana-keygen new -o ./tests/restaking/keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json && \
-    solana-keygen new -o ./tests/restaking/keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json && \
-    solana-keygen new -o ./tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json && \
-    mkdir -p ./target/deploy && ln -s ../../tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json ./target/deploy/restaking-keypair.json
-```
+# add below PATH to your shell profile:
+export PATH=$PATH:/usr/local/lib/node_modules/node/bin:./node_modules/.bin
 
-Then update corresponding public keys in `./programs/restaking/src/constants.rs` file.
-And program id declaration in `./programs/restaking/src/lib.rs` file.
-```
-$ echo "FRAGSOL_MINT_ADDRESS = $(solana -k ./tests/restaking/keypairs/mint_fragsol_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json address)" && \
-    echo "ADMIN_PUBKEY = $(solana -k ./tests/restaking/keypairs/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json address)" && \
-    echo "FUND_MANAGER_PUBKEY = $(solana -k ./tests/restaking/keypairs/devnet_fund_manager_fragHx7xwt9tXZEHv2bNo3hGTtcHP9geWkqc2Ka6FeX.json address)" && \
-    echo "PROGRAM_ID = $(solana -k ./tests/restaking/keypairs/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json address)"
+# to sync program keypair to ./target/deploy/ dir:
+$ anchor run sync-keypairs -- local
+
+# for authorized engineers:
+$ anchor run download-keypairs
 ```
 
-## 3. Run E2E test
 
-You can configure test sequence by manipulating `./tests/restaking/restaking.ts`. The command below runs e2e test against that sequence.
+## 2. Run E2E Test
+
 ```
 $ anchor test -p restaking
+```
+
+
+## 3. Build Artifacts
+```
+$ anchor build -p restaking -- --features devnet|mainnet
+```
+
+
+## 4. REPL for operation and testing
+
+### Basic usage
+```
+$ tsx tools/restaking/repl_entrypoint.ts
+[?] select target environment (local/devnet/mainnet): local
+[7:04:17 PM] [keychain] loaded local wallet
+
+...
+
+[!] Type 'restaking.' and press TAB to start...
+http://0.0.0.0:8899 >
+```
+
+### Easy local testing
+```
+# test-validator will be still running after initialization test done.
+$ JUST_INIT=1 anchor test --detach -p restaking
+...
+
+# now connect to test-validator
+$ tsx tools/restaking/repl_entrypoint.ts -- local
+...
 ```

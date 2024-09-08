@@ -1,12 +1,14 @@
 use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructions_sysvar};
-use anchor_spl::{associated_token::AssociatedToken, token_2022::Token2022, token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked}};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{
+    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
+};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::events::{UserDepositedTokenToFund, UserUpdatedRewardPool};
-use crate::modules::common::*;
-use crate::modules::fund::{DepositMetadata, FundAccount, FundAccountInfo, ReceiptTokenMintAuthority, SupportedTokenAuthority, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::events::*;
+use crate::modules::{common::*, fund::*, reward::*};
 
 #[derive(Accounts)]
 pub struct UserFundSupportedTokenContext<'info> {
@@ -88,19 +90,19 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump,
+        bump = reward_account.bump()?,
         has_one = receipt_token_mint,
     )]
-    pub reward_account: Box<Account<'info, RewardAccount>>,
+    pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserRewardAccount::INIT_SPACE,
+        bump = user_reward_account.bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
     )]
-    pub user_reward_account: Box<Account<'info, UserRewardAccount>>,
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
@@ -128,25 +130,36 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         require_gte!(ctx.accounts.user_supported_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
-        ctx.accounts.fund_account.update_token_prices(ctx.remaining_accounts)?;
+        ctx.accounts
+            .fund_account
+            .update_token_prices(ctx.remaining_accounts)?;
 
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let supported_token_mint = ctx.accounts.supported_token_mint.key();
-        let supported_token = ctx.accounts.fund_account.supported_token(supported_token_mint)?;
+        let supported_token = ctx
+            .accounts
+            .fund_account
+            .supported_token(supported_token_mint)?;
 
         let token_amount_to_sol_value = supported_token.calculate_sol_from_tokens(amount)?;
-        let receipt_token_mint_amount = ctx.accounts.fund_account.receipt_token_mint_amount_for(
-            token_amount_to_sol_value,
-            receipt_token_total_supply,
-        )?;
-        let receipt_token_price = ctx.accounts.fund_account.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
-        )?;
+        let receipt_token_mint_amount = ctx
+            .accounts
+            .fund_account
+            .receipt_token_mint_amount_for(token_amount_to_sol_value, receipt_token_total_supply)?;
+        let receipt_token_price = ctx
+            .accounts
+            .fund_account
+            .receipt_token_sol_value_per_token(
+                ctx.accounts.receipt_token_mint.decimals,
+                receipt_token_total_supply,
+            )?;
 
         // Step 2: Deposit Token
         Self::cpi_transfer_token_to_fund(&ctx, amount)?;
-        ctx.accounts.fund_account.supported_token_mut(supported_token_mint)?.deposit_token(amount)?;
+        ctx.accounts
+            .fund_account
+            .supported_token_mut(supported_token_mint)?
+            .deposit_token(amount)?;
 
         // Step 3: Mint receipt token
         Self::cpi_mint_token_to_user(&mut ctx, receipt_token_mint_amount)?;
@@ -162,7 +175,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             .user_fund_account
             .set_receipt_token_amount(receipt_token_account_total_amount);
 
-        emit!(UserDepositedTokenToFund {
+        emit!(UserDepositedSupportedTokenToFund {
             user: ctx.accounts.user.key(),
             user_receipt_token_account: ctx.accounts.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),
@@ -222,28 +235,25 @@ impl<'info> UserFundSupportedTokenContext<'info> {
     fn mock_transfer_hook_from_fund_to_user(
         ctx: &mut Context<Self>,
         amount: u64,
-        contribution_accrual_rate: Option<f32>,
+        contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let contribution_accrual_rate =
-            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
-        let (from_user_update, to_user_update) = ctx
-            .accounts
-            .reward_account
+        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
+        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let (from_user_update, to_user_update) = reward_account
             .update_reward_pools_token_allocation(
                 ctx.accounts.receipt_token_mint.key(),
                 amount,
                 contribution_accrual_rate,
                 None,
-                Some(&mut ctx.accounts.user_reward_account),
+                Some(&mut user_reward_account),
                 current_slot,
             )?;
 
         emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update,
-            to_user_update
+            from_user_update.into_iter().chain(to_user_update).collect(),
         ));
 
         Ok(())

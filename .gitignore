@@ -10,4 +10,9 @@ test-ledger
 
 # keypairs
 id.json
-tests/restaking/keypairs/**/*
+mainnet-id.json
+
+keypairs/**/*
+!keypairs/shared_*
+!keypairs/restaking/
+!keypairs/restaking/shared_*

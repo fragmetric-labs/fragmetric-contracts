@@ -1,20 +1,22 @@
+mod fund_manager_updated_fund;
 mod fund_manager_updated_reward_pool;
 mod operator_processed_job;
 mod operator_updated_fund_price;
 mod user_canceled_withdrawal_request_from_fund;
 mod user_deposited_sol_to_fund;
-mod user_deposited_token_to_fund;
+mod user_deposited_supported_token_to_fund;
 mod user_requested_withdrawal_from_fund;
 mod user_transferred_receipt_token;
 mod user_updated_reward_pool;
 mod user_withdrew_sol_from_fund;
 
+pub use fund_manager_updated_fund::*;
 pub use fund_manager_updated_reward_pool::*;
 pub use operator_processed_job::*;
 pub use operator_updated_fund_price::*;
 pub use user_canceled_withdrawal_request_from_fund::*;
 pub use user_deposited_sol_to_fund::*;
-pub use user_deposited_token_to_fund::*;
+pub use user_deposited_supported_token_to_fund::*;
 pub use user_requested_withdrawal_from_fund::*;
 pub use user_transferred_receipt_token::*;
 pub use user_updated_reward_pool::*;

@@ -1,5 +1,5 @@
-mod structs;
 mod settle;
+mod structs;
 mod update;
 
 pub use structs::*;
