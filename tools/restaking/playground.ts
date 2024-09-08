@@ -727,16 +727,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return super.lamportsToX(lamports, this.fragSOLDecimals, 'fragSOL');
     }
 
-    public async runOperatorUpdatePrices() {
+    public async runOperatorUpdatePrices(operator: web3.Keypair = this.wallet) {
         const { event, error } = await this.run({
             instructions: [
                 this.program.methods
                     .operatorUpdatePrices()
-                    .accounts({ operator: this.wallet.publicKey })
+                    .accounts({ operator: operator.publicKey })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             events: ['operatorUpdatedFundPrice'],
+            signers: [operator],
         });
         const [
             fragSOLFund,
@@ -775,6 +776,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.program.methods
                     .userDepositSupportedToken(amount, depositMetadata)
                     .accounts({
+                        // @ts-ignore: wtf?
                         user: user.publicKey,
                         supportedTokenMint: supportedToken.mint,
                         supportedTokenProgram: supportedToken.program,
@@ -886,7 +888,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount };
     }
 
-    public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair, forced: boolean = false) {
+    public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.wallet, forced: boolean = false) {
         const { event, error } = await this.run({
             instructions: [
                 this.program.methods
@@ -989,10 +991,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [user],
-            events: ['userUpdatedRewardPool']
+            // events: ['userUpdatedRewardPool'], // won't emit it for such void update requests
         });
 
-        logger.notice(`user manually updated reward pool:`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.notice(`user manually updated user reward pool:`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         const [
             fragSOLUserReward,
         ] = await Promise.all([
@@ -1000,5 +1002,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
 
         return { event, error, fragSOLUserReward };
+    }
+
+    public async runOperatorUpdateRewardPools(operator: web3.Keypair = this.wallet) {
+        const { event, error } = await this.run({
+            instructions: [
+                this.program.methods
+                    .operatorUpdateRewardPools()
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .instruction(),
+            ],
+            signers: [operator],
+            // events: ['operatorUpdatedRewardPool'], // won't emit it for such void update requests
+        });
+
+        logger.notice(`operator manually updated global reward pool:`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        const [
+            fragSOLReward,
+        ] = await Promise.all([
+            this.getFragSOLRewardAccount(),
+        ]);
+
+        return { event, error, fragSOLReward };
     }
 }

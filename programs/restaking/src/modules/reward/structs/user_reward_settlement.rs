@@ -50,4 +50,8 @@ impl UserRewardSettlement {
     pub fn update_settled_slot(&mut self, settled_slot: u64) {
         self.settled_slot = settled_slot;
     }
+
+    pub fn settled_slot(&self) -> u64 {
+        self.settled_slot
+    }
 }

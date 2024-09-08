@@ -1,13 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 // @ts-ignore
 import * as spl from "@solana/spl-token";
-import {RestakingPlayground} from "../../tools/restaking/playground";
 import {BN} from "@coral-xyz/anchor";
 import {expect} from "chai";
 import {step} from "mocha-steps";
+import {restakingPlayground} from "../restaking";
 
-describe("transfer_hook", async function() {
-    const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
+describe("transfer_hook", async function () {
+    const playground = await restakingPlayground;
     const user7 = playground.keychain.getKeypair('MOCK_USER7');
     const user8 = playground.keychain.getKeypair('MOCK_USER8');
 
@@ -21,20 +21,20 @@ describe("transfer_hook", async function() {
     });
 
     const amountDepositedEach = new BN((10 ** playground.fragSOLDecimals) * 10);
-    step("user7 deposit SOL to mint fragSOL and create accounts", async function() {
+    step("user7 deposit SOL to mint fragSOL and create accounts", async function () {
         await playground.runUserDepositSOL(user7, amountDepositedEach, null);
     });
 
-    step("transfer fails from client-side SDK when dest PDA is not created yet", async function() {
+    step("transfer fails from client-side SDK when dest PDA is not created yet", async function () {
         // ref: node_modules/@solana/spl-token/lib/cjs/extensions/transferHook/seeds.js
         await expect(playground.runTransfer(user7, user8.publicKey, amountDepositedEach)).rejectedWith(spl.TokenTransferHookAccountDataNotFound);
     });
 
-    step("user8 deposit SOL to mint fragSOL and create accounts", async function() {
+    step("user8 deposit SOL to mint fragSOL and create accounts", async function () {
         await playground.runUserDepositSOL(user8, amountDepositedEach, null);
     });
 
-    step("transfer blocked from onchain-side for now", async function() {
+    step("transfer blocked from onchain-side for now", async function () {
         await expect(playground.runTransfer(user7, user8.publicKey, amountDepositedEach)).rejectedWith('TokenNotTransferableError');
     });
 });

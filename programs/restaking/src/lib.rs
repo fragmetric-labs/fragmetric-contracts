@@ -65,10 +65,6 @@ pub mod restaking {
         AdminRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
     }
 
-    pub fn admin_update_reward_pools(ctx: Context<AdminRewardContext>) -> Result<()> {
-        AdminRewardContext::update_reward_pools(ctx)
-    }
-
     ////////////////////////////////////////////
     // FundManagerFundContext
     ////////////////////////////////////////////
@@ -203,6 +199,14 @@ pub mod restaking {
 
     pub fn operator_update_prices(ctx: Context<OperatorFundContext>) -> Result<()> {
         OperatorFundContext::update_prices(ctx)
+    }
+
+    ////////////////////////////////////////////
+    // OperatorRewardContext
+    ////////////////////////////////////////////
+
+    pub fn operator_update_reward_pools(ctx: Context<OperatorRewardContext>) -> Result<()> {
+        OperatorRewardContext::update_reward_pools(ctx)
     }
 
     ////////////////////////////////////////////

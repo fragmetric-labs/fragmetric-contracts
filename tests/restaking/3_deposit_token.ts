@@ -1,11 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
-import { BN } from '@coral-xyz/anchor';
-import { expect } from "chai";
-import {RestakingPlayground} from "../../tools/restaking/playground";
+import {BN} from '@coral-xyz/anchor';
+import {expect} from "chai";
 import {step} from "mocha-steps";
+import {restakingPlayground} from "../restaking";
 
 describe("deposit_token", async () => {
-    const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
+    const playground = await restakingPlayground;
     const user3 = playground.keychain.getKeypair('MOCK_USER3');
     const user4 = playground.keychain.getKeypair('MOCK_USER4');
 

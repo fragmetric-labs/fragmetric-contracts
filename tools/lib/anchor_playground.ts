@@ -112,12 +112,10 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 error: AnchorError.parse(txResult.meta.logMessages) ?? null,
             }
 
-            if (args.events?.length) {
-                return {
-                    ...result,
-                    event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
-                };
-            }
+            return {
+                ...result,
+                event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
+            };
 
         } catch (err) {
             logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig ? (txSig.substring(0, 40) + ' ...') : null);
@@ -192,9 +190,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return value;
     }
 
-    private parseEvents<K extends ExtractEventNames<IDL>>(logMessages: string[], eventNames: K[]) {
+    private parseEvents<K extends ExtractEventNames<IDL>>(logMessages: string[], eventNames: K[] = []) {
         const events: {[k in K]: IdlEvents<IDL>[k]} = {} as any;
         const required = new Set(eventNames);
+        const found = new Set();
+        const ignored = new Set();
 
         const it = this.eventParser.parseLogs(logMessages, false) as unknown as Generator<anchor.Event<IDL['events'][number]>>;
         while (true) {
@@ -203,11 +203,19 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             if (!name) break;
             if (required.has(name)) {
                 events[name] = event.value.data;
-                required.delete(name);
+                found.add(name);
+            } else {
+                ignored.add(name);
             }
         }
-        if (required.size > 0) {
-            throw new Error(`event not found: ${Array.from(required.values()).join(', ')}`);
+        if (required.size != found.size) {
+            const notFound = new Set();
+            required.forEach(elem => notFound.add(elem));
+            found.forEach(elem => notFound.delete(elem));
+            throw new Error(`event not found: ${Array.from(notFound.values()).join(', ')}`);
+        }
+        if (ignored.size > 0) {
+            logger.fatal(`event ignored: ${Array.from(ignored.values()).join(', ')}`)
         }
         return events;
     }

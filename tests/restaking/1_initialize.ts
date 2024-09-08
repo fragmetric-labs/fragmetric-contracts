@@ -1,22 +1,21 @@
-import * as anchor from "@coral-xyz/anchor";
-import { BN } from '@coral-xyz/anchor';;
+import {BN} from '@coral-xyz/anchor';
 // @ts-ignore
 import * as spl from "@solana/spl-token";
-import { expect } from "chai";
-import {RestakingPlayground} from "../../tools/restaking/playground";
+import {expect} from "chai";
 import {step} from "mocha-steps";
+import {restakingPlayground} from "../restaking";
 
 describe("initialize", async () => {
-    const playground = await RestakingPlayground.local(anchor.AnchorProvider.env());
+    const playground = await restakingPlayground;
 
-    step("create fragSOL token mint with extensions", async function() {
+    step("create fragSOL token mint with extensions", async function () {
         const res0 = await playground.runAdminInitializeTokenMint();
         expect(res0.fragSOLMint.address.toString()).eq(playground.knownAddress.fragSOLTokenMint.toString());
         expect(res0.fragSOLMint.mintAuthority.toString()).eq(playground.keychain.getKeypair('ADMIN').publicKey.toString()); // shall be transferred to a PDA below
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
-    step("mock supported token mints", async function() {
+    step("mock supported token mints", async function () {
         const tokenMint_bSOL = await spl.getMint(
             playground.connection,
             playground.supportedTokenMetadata.bSOL.mint,
@@ -35,7 +34,7 @@ describe("initialize", async () => {
         expect(tokenMint_jitoSOL.mintAuthority.toString()).eq(playground.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
     });
 
-    step("initialize fund, reward accounts, token extensions and transfer token mint authority to PDA", async function() {
+    step("initialize fund, reward accounts, token extensions and transfer token mint authority to PDA", async function () {
         const res0 = await playground.runAdminInitializeFundAndRewardAccountsAndMint();
 
         expect(res0.fragSOLFundAccount.dataVersion).gt(0);
@@ -44,7 +43,7 @@ describe("initialize", async () => {
         expect(res0.fragSOLExtraAccountMetasAccount.length).eq(6);
     });
 
-    step("initialize fund and supported tokens configuration", async function() {
+    step("initialize fund and supported tokens configuration", async function () {
         const res0 = await playground.runFundManagerInitializeFundConfigurations();
 
         expect(res0.fragSOLFund.supportedTokens.length).eq(Object.values(playground.supportedTokenMetadata).length);
@@ -58,7 +57,7 @@ describe("initialize", async () => {
         }
     });
 
-    step("initialize reward pools and rewards", async function() {
+    step("initialize reward pools and rewards", async function () {
         const res0 = await playground.runFundManagerInitializeRewardPools();
 
         expect(res0.fragSOLReward.dataVersion).eq(parseInt(playground.getConstant('rewardAccountCurrentVersion')));

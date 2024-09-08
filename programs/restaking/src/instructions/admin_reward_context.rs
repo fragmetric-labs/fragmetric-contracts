@@ -124,22 +124,4 @@ impl<'info> AdminRewardContext<'info> {
 
         Ok(())
     }
-
-    fn check_has_one_constraints(&self) -> Result<()> {
-        require_keys_eq!(
-            self.reward_account.load()?.receipt_token_mint,
-            self.receipt_token_mint.key(),
-            anchor_lang::error::ErrorCode::ConstraintHasOne,
-        );
-
-        Ok(())
-    }
-
-    pub fn update_reward_pools(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.check_has_one_constraints()?;
-
-        let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        reward_account.update_reward_pools(current_slot)
-    }
 }
