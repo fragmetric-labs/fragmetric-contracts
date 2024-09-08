@@ -100,11 +100,11 @@ impl<'info> AdminRewardContext<'info> {
 
             let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
             let increase = std::cmp::min(required_realloc_size, max_increase);
-            if increase < required_realloc_size && initialize {
+            let new_account_size = current_account_size + increase;
+            if new_account_size < target_account_size && initialize {
                 return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?;
             }
 
-            let new_account_size = current_account_size + increase;
             reward_account.realloc(new_account_size, false)?;
             msg!(
                 "reward account reallocated: current={}, target={}, required={}",
@@ -123,23 +123,5 @@ impl<'info> AdminRewardContext<'info> {
         }
 
         Ok(())
-    }
-
-    fn check_has_one_constraints(&self) -> Result<()> {
-        require_keys_eq!(
-            self.reward_account.load()?.receipt_token_mint,
-            self.receipt_token_mint.key(),
-            anchor_lang::error::ErrorCode::ConstraintHasOne,
-        );
-
-        Ok(())
-    }
-
-    pub fn update_reward_pools(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.check_has_one_constraints()?;
-
-        let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        reward_account.update_reward_pools(current_slot)
     }
 }

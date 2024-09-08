@@ -234,3 +234,15 @@ impl From<&UserRewardPool> for UserRewardPoolInfo {
         }
     }
 }
+
+impl From<&mut UserRewardPool> for UserRewardPoolInfo {
+    fn from(value: &mut UserRewardPool) -> Self {
+        Self {
+            token_allocated_amount: value.token_allocated_amount,
+            contribution: value.contribution,
+            updated_slot: value.updated_slot,
+            reward_pool_id: value.reward_pool_id,
+            reward_settlements: value.reward_settlements_ref().to_vec(),
+        }
+    }
+}

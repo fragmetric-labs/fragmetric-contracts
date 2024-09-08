@@ -1,16 +1,29 @@
-import { initialize } from "./restaking/1_initialize";
-// import { deposit_sol } from "./restaking/2_deposit_sol";
-// import { deposit_token } from "./restaking/3_deposit_token";
-// import { transfer_hook } from "./restaking/4_transfer_hook";
-// import { withdraw } from "./restaking/5_withdraw";
+import * as chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import {RestakingPlayground} from "../tools/restaking/playground";
+import * as anchor from "@coral-xyz/anchor";
 
-initialize;
-// deposit_sol;
-// deposit_token;
-// transfer_hook;
-// withdraw;
+export const restakingPlayground = RestakingPlayground.create('local', {
+    provider: anchor.AnchorProvider.env(),
+});
 
+chai.use(chaiAsPromised);
 process.on('unhandledRejection', (err) => {
     console.error(err);
     process.exit(1);
-})
+});
+
+console.log(process.env);
+
+/** define test suites here **/
+
+require('./restaking/1_initialize');
+
+if (!process.env.JUST_INIT) {
+    require('./restaking/2_deposit_sol');
+    require('./restaking/3_deposit_token');
+    require('./restaking/4_withdraw');
+    require('./restaking/5_transfer_hook');
+    require('./restaking/6_reward');
+}
+

@@ -8,23 +8,15 @@ import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
 import {Buffer} from "buffer";
 import {Key} from "node:readline";
+import {askOnce} from "./repl";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
 type AskYesNo = (question: string) => Promise<boolean>;
 
 function defaultAskYesNo(question: string) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    return new Promise<boolean>((resolve) => {
-        rl.question(`${question} (y/n): `, (answer: string) => {
-            const normalizedAnswer = answer.trim().toLowerCase();
-            resolve(normalizedAnswer === 'y' || normalizedAnswer === 'yes');
-            rl.close();
-        });
-    });
+    return askOnce(`${question} (y/n)`)
+        .then(answer => answer == 'y' || answer == 'yes');
 }
 
 const PROGRAM_KEYPAIR_NAME = 'PROGRAM';
@@ -78,10 +70,10 @@ export class Keychain<KEYS extends string> {
                 return {
                     ledger: {
                         publicKey: keypair.publicKey,
-                        signature: await Keychain.ledgerAdapter.getSignature(
+                        signature: Keychain.ledgerAdapter ? await Keychain.ledgerAdapter.getSignature(
                             keypair.bip32Path,
                             txBuffer,
-                        ),
+                        ) : Buffer.alloc(0),
                     },
                 };
             } else {
@@ -128,7 +120,7 @@ export class Keychain<KEYS extends string> {
         return new Keychain(args.program, wallet, keypairs);
     }
 
-    static ledgerAdapter: KeychainLedgerAdapter | null = null;
+    static ledgerAdapter: KeychainLedgerAdapter | void = null;
 
     private constructor(
         public readonly programName: WORKSPACE_PROGRAM_NAME,
@@ -150,19 +142,25 @@ export class Keychain<KEYS extends string> {
         };
 
         if (!Keychain.ledgerAdapter && Object.values(keypairs).some(k => (k as string | null)?.startsWith(LEDGER_PATH_PREFIX))) {
-            Keychain.ledgerAdapter = await KeychainLedgerAdapter.create();
+            Keychain.ledgerAdapter = await KeychainLedgerAdapter.create().catch(async (err) => {
+                if (await askYesNo('[?] failed to initialize ledger connection, ignore and continue?')) {
+                    Keychain.ledgerAdapter = null;
+                } else {
+                    throw err;
+                }
+            });
         }
 
         logger.notice(`loading ${program} program keypairs`);
         for (let [k, v] of Object.entries(keypairs)) {
             let keypairName = k.toUpperCase().trim().replace(' ', '_');
-            let keypairSecretPath = v as string | null;
+            let keypairSecretPath = v as (string | null);
             if (keypairSecretPath) {
                 if (keypairSecretPath.startsWith(LEDGER_PATH_PREFIX)) {
                     const bip32Path = keypairSecretPath.substring(LEDGER_PATH_PREFIX.length);
                     keypairMap.ledger.set(keypairName, {
                         bip32Path,
-                        publicKey: await Keychain.ledgerAdapter.getPublicKey(bip32Path),
+                        publicKey: Keychain.ledgerAdapter ? await Keychain.ledgerAdapter.getPublicKey(bip32Path) : web3.PublicKey.default,
                     });
                 } else {
                     keypairMap.local.set(keypairName, Keychain.readKeypairSecretFile(keypairSecretPath));

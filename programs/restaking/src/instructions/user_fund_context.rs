@@ -6,6 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
+use crate::errors::ErrorCode::FundWithdrawalRequestNotFoundError;
 use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
 
@@ -96,7 +97,7 @@ pub struct UserFundContext<'info> {
 }
 
 impl<'info> UserFundContext<'info> {
-    pub fn update_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
+    pub fn update_fund_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
         // Initialize
         ctx.accounts.user_fund_account.initialize_if_needed(
             ctx.bumps.user_fund_account,
@@ -190,11 +191,9 @@ impl<'info> UserFundContext<'info> {
     fn mock_transfer_hook_from_fund_to_user(
         ctx: &mut Context<Self>,
         amount: u64,
-        contribution_accrual_rate: Option<f32>,
+        contribution_accrual_rate: Option<u8>, // 100 -> 1.0
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let contribution_accrual_rate =
-            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
@@ -208,14 +207,14 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new_from_transfer(
+        emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update,
-            to_user_update
+            from_user_update.into_iter().chain(to_user_update).collect(),
         ));
 
         Ok(())
     }
+
 
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
         // Verify
@@ -308,10 +307,9 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new_from_transfer(
+        emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update,
-            to_user_update
+            from_user_update.into_iter().chain(to_user_update).collect(),
         ));
 
         Ok(())
@@ -321,7 +319,7 @@ impl<'info> UserFundContext<'info> {
         let withdrawal_status = &mut ctx.accounts.fund_account.withdrawal_status;
 
         // Verify
-        require_gt!(withdrawal_status.next_request_id, request_id);
+        require_gt!(withdrawal_status.next_request_id, request_id, FundWithdrawalRequestNotFoundError);
 
         // Step 1: Cancel withdrawal request
         let request = ctx
@@ -402,10 +400,9 @@ impl<'info> UserFundContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new_from_transfer(
+        emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update,
-            to_user_update
+            from_user_update.into_iter().chain(to_user_update).collect(),
         ));
 
         Ok(())

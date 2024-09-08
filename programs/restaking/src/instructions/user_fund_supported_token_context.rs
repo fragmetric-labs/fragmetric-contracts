@@ -175,7 +175,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             .user_fund_account
             .set_receipt_token_amount(receipt_token_account_total_amount);
 
-        emit!(UserDepositedTokenToFund {
+        emit!(UserDepositedSupportedTokenToFund {
             user: ctx.accounts.user.key(),
             user_receipt_token_account: ctx.accounts.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),
@@ -235,11 +235,9 @@ impl<'info> UserFundSupportedTokenContext<'info> {
     fn mock_transfer_hook_from_fund_to_user(
         ctx: &mut Context<Self>,
         amount: u64,
-        contribution_accrual_rate: Option<f32>,
+        contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let contribution_accrual_rate =
-            contribution_accrual_rate.map(|float| (100f32 * float).round() as u8);
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
@@ -253,10 +251,9 @@ impl<'info> UserFundSupportedTokenContext<'info> {
                 current_slot,
             )?;
 
-        emit!(UserUpdatedRewardPool::new_from_transfer(
+        emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update,
-            to_user_update
+            from_user_update.into_iter().chain(to_user_update).collect(),
         ));
 
         Ok(())

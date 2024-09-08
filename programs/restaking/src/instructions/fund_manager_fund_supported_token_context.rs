@@ -2,8 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
+use crate::events::FundManagerUpdatedFund;
 use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::{FundAccount, SupportedTokenAuthority, TokenPricingSource};
+use crate::modules::fund::{FundAccount, FundAccountInfo, SupportedTokenAuthority, TokenPricingSource};
 
 #[derive(Accounts)]
 pub struct FundManagerFundSupportedTokenContext<'info> {
@@ -74,6 +75,22 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
                 pricing_source,
                 ctx.remaining_accounts,
             )?;
+
+        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
+        let receipt_token_price = ctx.accounts.fund_account
+            .receipt_token_sol_value_per_token(
+                ctx.accounts.receipt_token_mint.decimals,
+                receipt_token_total_supply,
+            )?;
+
+        emit!(FundManagerUpdatedFund {
+            receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
+            fund_account: FundAccountInfo::new(
+                &ctx.accounts.fund_account,
+                receipt_token_price,
+                receipt_token_total_supply
+            ),
+        });
 
         Ok(())
     }

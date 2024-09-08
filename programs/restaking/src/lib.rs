@@ -65,10 +65,6 @@ pub mod restaking {
         AdminRewardContext::update_accounts_if_needed(ctx, desired_account_size, initialize)
     }
 
-    pub fn admin_update_reward_pools(ctx: Context<AdminRewardContext>) -> Result<()> {
-        AdminRewardContext::update_reward_pools(ctx)
-    }
-
     ////////////////////////////////////////////
     // FundManagerFundContext
     ////////////////////////////////////////////
@@ -206,11 +202,19 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // OperatorRewardContext
+    ////////////////////////////////////////////
+
+    pub fn operator_update_reward_pools(ctx: Context<OperatorRewardContext>) -> Result<()> {
+        OperatorRewardContext::update_reward_pools(ctx)
+    }
+
+    ////////////////////////////////////////////
     // UserFundContext
     ////////////////////////////////////////////
 
-    pub fn user_update_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
-        UserFundContext::update_accounts_if_needed(ctx)
+    pub fn user_update_fund_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
+        UserFundContext::update_fund_accounts_if_needed(ctx)
     }
 
     pub fn user_deposit_sol(
@@ -255,7 +259,7 @@ pub mod restaking {
     // UserRewardInitialContext
     ////////////////////////////////////////////
 
-    pub fn user_initialize_reward_pools(ctx: Context<UserRewardInitialContext>) -> Result<()> {
+    pub fn user_initialize_reward_accounts(ctx: Context<UserRewardInitialContext>) -> Result<()> {
         UserRewardInitialContext::initialize_accounts(ctx)
     }
 
@@ -294,4 +298,13 @@ pub mod restaking {
     ) -> Result<()> {
         UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
+
+    // for test
+    pub fn empty_ix(_ctx: Context<EmptyIx>) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct EmptyIx {
 }

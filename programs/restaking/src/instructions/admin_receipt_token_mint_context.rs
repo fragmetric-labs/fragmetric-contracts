@@ -36,7 +36,7 @@ pub struct AdminReceiptTokenMintInitialContext<'info> {
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
-    /// CHECK: ExtraAccountaMetaList Account, must use these seeds
+    /// CHECK: ExtraAccountMetaList Account, must use these seeds
     #[account(
         init,
         payer = payer,
@@ -106,7 +106,7 @@ pub struct AdminReceiptTokenMintContext<'info> {
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
-    /// CHECK: ExtraAccountaMetaList Account, must use these seeds
+    /// CHECK: ExtraAccountMetaList Account, must use these seeds
     #[account(
         mut,
         seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],

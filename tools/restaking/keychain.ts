@@ -11,6 +11,13 @@ const keypairs = {
     'MOCK_USER1': './tests/mocks/user1.json',
     'MOCK_USER2': './tests/mocks/user2.json',
     'MOCK_USER3': './tests/mocks/user3.json',
+    'MOCK_USER4': './tests/mocks/user4.json',
+    'MOCK_USER5': './tests/mocks/user5.json',
+    'MOCK_USER6': './tests/mocks/user6.json',
+    'MOCK_USER7': './tests/mocks/user7.json',
+    'MOCK_USER8': './tests/mocks/user8.json',
+    'MOCK_USER9': './tests/mocks/user9.json',
+    'MOCK_USER10': './tests/mocks/user10.json',
 };
 
 const local: KeychainConfig<keyof (typeof keypairs)> = {
@@ -44,10 +51,14 @@ const mainnet: KeychainConfig<keyof (typeof keypairs)> = {
     },
 };
 
-export type KEYCHAIN_ENV = 'local'|'devnet'|'mainnet';
+const envs = {local, devnet, mainnet};
+export type KEYCHAIN_ENV = keyof (typeof envs);
 export type KEYCHAIN_KEYS = keyof (typeof keypairs);
 
 export function getKeychain(env: KEYCHAIN_ENV) {
-    const config = env == 'mainnet' ? mainnet : (env == 'devnet' ? devnet : local);
+    const config = envs[env];
+    if (!config) {
+        throw new Error(`invalid keychain env: ${env}`);
+    }
     return Keychain.create(config);
 }

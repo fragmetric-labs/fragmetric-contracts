@@ -4,6 +4,9 @@ use anchor_lang::{constant, declare_id, pubkey};
 declare_id!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 
 #[constant]
+pub const TARGET: &str = "devnet";
+
+#[constant]
 pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP");
 
 #[constant]

@@ -2,8 +2,9 @@ import * as anchor from '@coral-xyz/anchor';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
-import {AnchorError} from "@coral-xyz/anchor";
+import {AnchorError, IdlEvents} from "@coral-xyz/anchor";
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes/index';
+import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
@@ -49,10 +50,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         logger.info(`loaded program ${this.programName}:`.padEnd(LOG_PAD_LARGE), programAddress);
     }
 
-    public async run(args: {
+    public async run<EVENTS extends ExtractEventNames<IDL>>(args: {
         instructions: (Promise<anchor.web3.TransactionInstruction> | anchor.web3.TransactionInstruction)[],
         signers?: anchor.web3.Signer[],
         signerNames?: KEYS[],
+        events?: EVENTS[],
     }) {
         let txSig: string | null = null;
         try {
@@ -103,13 +105,20 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
             // get result and parse events and errors
             const txResult = await this.connection.getParsedTransaction(txSig, 'confirmed');
-            logger.info(`transaction confirmed:`.padEnd(LOG_PAD_LARGE), txSig);
-            return {
-                event: this.eventParser.parseLogs(txResult.meta.logMessages, true),
+            logger.info(`transaction confirmed:`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
+
+            const result = {
+                txSig,
                 error: AnchorError.parse(txResult.meta.logMessages) ?? null,
+            }
+
+            return {
+                ...result,
+                event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
             };
+
         } catch (err) {
-            logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig);
+            logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig ? (txSig.substring(0, 40) + ' ...') : null);
             throw err;
         }
     }
@@ -138,7 +147,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.program.account;
     }
 
-    public async tryAirdrop(account: anchor.web3.PublicKey, sol = 1) {
+    public async tryAirdrop(account: anchor.web3.PublicKey, sol = 100) {
         let [txSig, { blockhash, lastValidBlockHeight }] = await Promise.all([
             this.connection.requestAirdrop(
                 account,
@@ -152,8 +161,8 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             blockhash,
             signature: txSig,
         });
-        const balance = await this.connection.getBalance(account);
-        logger.debug(`${account.toString()} SOL balance:`.padEnd(LOG_PAD_LARGE), balance.toLocaleString());
+        const balance = new anchor.BN(await this.connection.getBalance(account));
+        logger.debug(`SOL airdropped (+${sol}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
     }
 
     public get isMaybeLocalnet(): boolean {
@@ -177,6 +186,40 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return new anchor.web3.PublicKey(this.getConstant(name));
     }
 
+    public asType<K extends ExtractTypeNames<IDL>>(value: IdlTypes<IDL>[K]) {
+        return value;
+    }
+
+    private parseEvents<K extends ExtractEventNames<IDL>>(logMessages: string[], eventNames: K[] = []) {
+        const events: {[k in K]: IdlEvents<IDL>[k]} = {} as any;
+        const required = new Set(eventNames);
+        const found = new Set();
+        const ignored = new Set();
+
+        const it = this.eventParser.parseLogs(logMessages, false) as unknown as Generator<anchor.Event<IDL['events'][number]>>;
+        while (true) {
+            const event = it.next();
+            const name = event?.value?.name;
+            if (!name) break;
+            if (required.has(name)) {
+                events[name] = event.value.data;
+                found.add(name);
+            } else {
+                ignored.add(name);
+            }
+        }
+        if (required.size != found.size) {
+            const notFound = new Set();
+            required.forEach(elem => notFound.add(elem));
+            found.forEach(elem => notFound.delete(elem));
+            throw new Error(`event not found: ${Array.from(notFound.values()).join(', ')}`);
+        }
+        if (ignored.size > 0) {
+            logger.fatal(`event ignored: ${Array.from(ignored.values()).join(', ')}`)
+        }
+        return events;
+    }
+
     public static binToString(buf: Uint8Array | number[]) {
         const codes = [];
         for (let v of buf) {
@@ -185,11 +228,42 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         }
         return String.fromCharCode.apply(null, codes)
     }
-
     public readonly binToString = AnchorPlayground.binToString;
+
+    public static binIsEmpty(buf: Uint8Array | number[]) {
+        return buf.every(v => v == 0);
+    }
+    public readonly binIsEmpty = AnchorPlayground.binIsEmpty;
+
+    public lamportsToSOL(lamports: anchor.BN): string {
+        return this.lamportsToX(lamports, 9, 'SOL');
+    }
+
+    public lamportsToX(lamports: anchor.BN, decimals: number, symbol: string): string {
+        const unit = lamports.div(new anchor.BN(10 ** decimals));
+        const remainder = lamports.mod(new anchor.BN(10 ** decimals));
+        return `${unit.toString()}.${remainder.toString().padStart(decimals, '0')} ${symbol}`;
+    }
+
+    // it returns over-slept number of slots, zero means it slept as much as requested duration exactly.
+    public async sleep(slotDuration: number): Promise<number> {
+        const started = (await this.connection.getSlot('confirmed'));
+        const target = started + slotDuration;
+
+        return new Promise(resolve => {
+            let intervalID = setInterval(async () => {
+                const ended = await this.connection.getSlot('confirmed');
+                if (target <= ended) {
+                    clearInterval(intervalID);
+                    resolve(ended - target);
+                    logger.debug(`slept for ${ended - started} slots, started=${started}, ended=${ended}, requested=${target}`);
+                }
+            }, 200);
+        });
+    }
 }
 
-type ExtractAccountNames<T extends anchor.Idl> = T['accounts'] extends Array<infer U>
+export type ExtractEventNames<T extends anchor.Idl> = T['events'] extends Array<infer U>
     ? U extends { name: infer N }
         ? N extends string
             ? N
@@ -197,7 +271,15 @@ type ExtractAccountNames<T extends anchor.Idl> = T['accounts'] extends Array<inf
         : never
     : never;
 
-type ExtractConstantNames<T extends anchor.Idl> = T['constants'] extends Array<infer U>
+export type ExtractTypeNames<T extends anchor.Idl> = T['types'] extends Array<infer U>
+    ? U extends { name: infer N }
+        ? N extends string
+            ? N
+            : never
+        : never
+    : never;
+
+export type ExtractConstantNames<T extends anchor.Idl> = T['constants'] extends Array<infer U>
     ? U extends { name: infer N }
         ? N extends string
             ? N
