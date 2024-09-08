@@ -92,15 +92,25 @@ impl RewardAccount {
         &mut self,
         user: &mut UserRewardAccount,
         current_slot: u64,
-    ) -> Result<()> {
+    ) -> Result<UserRewardAccountUpdateInfo> {
         user.backfill_not_existing_pools(self.reward_pools_iter())?;
+
+        let mut user_updated_reward_pools_info: Vec<UserRewardPoolInfo> = vec![];
 
         user.user_reward_pools_iter_mut()
             .zip(self.reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {
                 user_reward_pool.update(reward_pool, vec![], current_slot)?;
-                Result::Ok(())
-            })
+                user_updated_reward_pools_info.push(UserRewardPoolInfo::from(user_reward_pool));
+                Ok::<(), Error>(())
+            })?;
+
+        Ok(
+            UserRewardAccountUpdateInfo::new(
+                user,
+                user_updated_reward_pools_info,
+            )
+        )
     }
 
     pub fn update_reward_pools_token_allocation(

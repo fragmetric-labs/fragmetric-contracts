@@ -42,7 +42,7 @@ describe("deposit_sol", async () => {
         expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
 
         const res2 = await playground.runOperatorUpdatePrices();
-        expect(res2.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toString()).eq((amount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** 9))).toString());
+        expect(res2.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toString()).eq((amount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** playground.fragSOLDecimals))).toString());
         expect(res2.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
     });
 

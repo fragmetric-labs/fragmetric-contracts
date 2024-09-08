@@ -1,4 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
+// @ts-ignore
 import * as spl from "@solana/spl-token";
 import {RestakingPlayground} from "../../tools/restaking/playground";
 import {BN} from "@coral-xyz/anchor";
@@ -19,7 +20,7 @@ describe("transfer_hook", async function() {
         await playground.sleep(1); // ...block hash not found?
     });
 
-    const amountDepositedEach = new BN((10 ** 9) * 10);
+    const amountDepositedEach = new BN((10 ** playground.fragSOLDecimals) * 10);
     step("user7 deposit SOL to mint fragSOL and create accounts", async function() {
         await playground.runUserDepositSOL(user7, amountDepositedEach, null);
     });

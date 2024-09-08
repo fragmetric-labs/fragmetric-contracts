@@ -3,6 +3,7 @@ use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
+use crate::events::UserUpdatedRewardPool;
 // use crate::events::UserUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
 
@@ -156,7 +157,13 @@ impl<'info> UserRewardContext<'info> {
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
         let current_slot = Clock::get()?.slot;
 
-        reward_account.update_user_reward_pools(&mut user_reward_account, current_slot)
+        let update = reward_account.update_user_reward_pools(&mut user_reward_account, current_slot)?;
+        emit!(UserUpdatedRewardPool::new(
+            ctx.accounts.receipt_token_mint.key(),
+            vec![update],
+        ));
+
+        Ok(())
     }
 
     #[allow(unused_variables)]

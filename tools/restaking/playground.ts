@@ -295,6 +295,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getFragSOLRewardAccount() {
+        return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+    }
+
+    public getFragSOLFundAccount() {
+        return this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
+    }
+
     public async skipSlots(signer: web3.Keypair, skip: number) {
         let currentSlot = await this.program.provider.connection.getSlot();
         logger.debug(`BEFORE skip slots, current slot: ${currentSlot}`);
@@ -603,7 +611,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLReward };
     }
 
-    public async runFundManagerSettleReward(args: {poolName: string, rewardName: string, amount: BN}) {
+    public async runFundManagerSettleReward(args: {poolName: (typeof this.rewardPoolsMetadata)[number]['name'], rewardName: (typeof this.rewardsMetadata)[number]['name'], amount: BN}) {
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
         let rewardPool = fragSOLReward.rewardPools1.find(r => this.binToString(r.name) == args.poolName);
         let reward = fragSOLReward.rewards1.find(r => this.binToString(r.name) == args.rewardName);
@@ -968,5 +976,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         return { event, error };
+    }
+
+    public async runUserUpdateRewardPools(user: web3.Keypair) {
+        const { event, error } = await this.run({
+            instructions: [
+                this.program.methods
+                    .userUpdateRewardPools()
+                    .accounts({
+                        user: user.publicKey,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userUpdatedRewardPool']
+        });
+
+        logger.notice(`user manually updated reward pool:`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        const [
+            fragSOLUserReward,
+        ] = await Promise.all([
+            this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
+        ]);
+
+        return { event, error, fragSOLUserReward };
     }
 }
