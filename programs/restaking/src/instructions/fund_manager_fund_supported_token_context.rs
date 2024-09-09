@@ -3,11 +3,10 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::events::FundManagerUpdatedFund;
-use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::{FundAccount, FundAccountInfo, SupportedTokenAuthority, TokenPricingSource};
+use crate::modules::{common::PDASignerSeeds, fund::*};
 
 #[derive(Accounts)]
-pub struct FundManagerFundSupportedTokenContext<'info> {
+pub struct FundManagerFundSupportedTokenAuthorityInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -15,6 +14,80 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
     pub fund_manager: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
+        bump,
+        space = 8 + SupportedTokenAuthority::INIT_SPACE,
+    )]
+    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
+}
+
+impl<'info> FundManagerFundSupportedTokenAuthorityInitialContext<'info> {
+    pub fn initialize_supported_token_authority(ctx: Context<Self>) -> Result<()> {
+        ctx.accounts.supported_token_authority.initialize_if_needed(
+            ctx.bumps.supported_token_authority,
+            ctx.accounts.receipt_token_mint.key(),
+            ctx.accounts.supported_token_mint.key(),
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct FundManagerFundSupportedTokenAccountInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub supported_token_program: Interface<'info, TokenInterface>,
+
+    #[account(
+        mut,
+        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
+        bump = supported_token_authority.bump,
+    )]
+    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
+
+    #[account(
+        init,
+        payer = payer,
+        token::mint = supported_token_mint,
+        token::authority = supported_token_authority,
+        token::token_program = supported_token_program,
+        seeds = [SupportedTokenAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+
+impl<'info> FundManagerFundSupportedTokenAccountInitialContext<'info> {
+    pub fn intialize_supported_token_account(_ctx: Context<Self>) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct FundManagerFundSupportedTokenContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -32,17 +105,13 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
     pub supported_token_program: Interface<'info, TokenInterface>,
 
     #[account(
-        init,
-        payer = payer,
+        mut,
         seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
-        bump,
-        space = 8 + SupportedTokenAuthority::INIT_SPACE,
+        bump = supported_token_authority.bump,
     )]
     pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
     #[account(
-        init,
-        payer = payer,
         token::mint = supported_token_mint,
         token::authority = supported_token_authority,
         token::token_program = supported_token_program,
@@ -58,26 +127,19 @@ impl<'info> FundManagerFundSupportedTokenContext<'info> {
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        ctx.accounts
-            .supported_token_authority
-            .initialize_if_needed(
-                ctx.bumps.supported_token_authority,
-                ctx.accounts.receipt_token_mint.key(),
-                ctx.accounts.supported_token_mint.key(),
-            );
-
-        ctx.accounts.fund_account
-            .add_supported_token(
-                ctx.accounts.supported_token_mint.key(),
-                ctx.accounts.supported_token_program.key.key(),
-                ctx.accounts.supported_token_mint.decimals,
-                capacity_amount,
-                pricing_source,
-                ctx.remaining_accounts,
-            )?;
+        ctx.accounts.fund_account.add_supported_token(
+            ctx.accounts.supported_token_mint.key(),
+            ctx.accounts.supported_token_program.key.key(),
+            ctx.accounts.supported_token_mint.decimals,
+            capacity_amount,
+            pricing_source,
+            ctx.remaining_accounts,
+        )?;
 
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let receipt_token_price = ctx.accounts.fund_account
+        let receipt_token_price = ctx
+            .accounts
+            .fund_account
             .receipt_token_sol_value_per_token(
                 ctx.accounts.receipt_token_mint.decimals,
                 receipt_token_total_supply,

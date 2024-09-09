@@ -1,5 +1,4 @@
 use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructions_sysvar};
-use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{
     transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
@@ -14,10 +13,6 @@ use crate::modules::{common::*, fund::*, reward::*};
 pub struct UserFundSupportedTokenContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub receipt_token_program: Program<'info, Token2022>,
 
@@ -34,8 +29,7 @@ pub struct UserFundSupportedTokenContext<'info> {
     pub receipt_token_mint_authority: Box<Account<'info, ReceiptTokenMintAuthority>>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
@@ -79,11 +73,9 @@ pub struct UserFundSupportedTokenContext<'info> {
     pub fund_account: Box<Account<'info, FundAccount>>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserFundAccount::INIT_SPACE,
+        bump = user_fund_account.bump,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 

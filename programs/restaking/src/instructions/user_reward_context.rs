@@ -28,7 +28,7 @@ pub struct UserRewardInitialContext<'info> {
 }
 
 impl<'info> UserRewardInitialContext<'info> {
-    pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
+    pub fn initialize_reward_account(ctx: Context<Self>) -> Result<()> {
         ctx.accounts
             .user_reward_account
             .init_without_load(ctx.bumps.user_reward_account)

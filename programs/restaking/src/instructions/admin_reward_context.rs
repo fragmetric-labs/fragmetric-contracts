@@ -7,7 +7,7 @@ use crate::modules::{common::*, reward::*};
 
 // will be used only once
 #[derive(Accounts)]
-pub struct AdminRewardInitialContext<'info> {
+pub struct AdminRewardAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -29,8 +29,8 @@ pub struct AdminRewardInitialContext<'info> {
     pub reward_account: AccountLoader<'info, RewardAccount>,
 }
 
-impl<'info> AdminRewardInitialContext<'info> {
-    pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
+impl<'info> AdminRewardAccountInitialContext<'info> {
+    pub fn initialize_reward_account(ctx: Context<Self>) -> Result<()> {
         ctx.accounts
             .reward_account
             .init_without_load(ctx.bumps.reward_account)

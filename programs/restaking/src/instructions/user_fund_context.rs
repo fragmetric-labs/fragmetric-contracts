@@ -11,7 +11,7 @@ use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
 
 #[derive(Accounts)]
-pub struct UserFundContext<'info> {
+pub struct UserFundReceiptTokenAccountInitialContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -19,6 +19,98 @@ pub struct UserFundContext<'info> {
 
     pub associated_token_program: Program<'info, AssociatedToken>,
 
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = user,
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+
+impl<'info> UserFundReceiptTokenAccountInitialContext<'info> {
+    pub fn initialize_receipt_token_account(_ctx: Context<Self>) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct UserFundAccountInitialContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = user,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump,
+        space = 8 + UserFundAccount::INIT_SPACE,
+    )]
+    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+}
+
+impl<'info> UserFundAccountInitialContext<'info> {
+    pub fn initialize_fund_account(ctx: Context<Self>) -> Result<()> {
+        ctx.accounts.user_fund_account.initialize_if_needed(
+            ctx.bumps.user_fund_account,
+            ctx.accounts.receipt_token_mint.key(),
+            ctx.accounts.user.key(),
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct UserFundUpdateContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_fund_account.bump,
+    )]
+    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+}
+
+impl<'info> UserFundUpdateContext<'info> {
+    pub fn update_fund_account_if_needed(ctx: Context<Self>) -> Result<()> {
+        let bump = ctx.accounts.user_fund_account.bump;
+        ctx.accounts.user_fund_account.initialize_if_needed(
+            bump,
+            ctx.accounts.receipt_token_mint.key(),
+            ctx.accounts.user.key(),
+        );
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct UserFundContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    // pub associated_token_program: Program<'info, AssociatedToken>,
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
@@ -49,8 +141,7 @@ pub struct UserFundContext<'info> {
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
@@ -66,11 +157,9 @@ pub struct UserFundContext<'info> {
     pub fund_account: Box<Account<'info, FundAccount>>,
 
     #[account(
-        init_if_needed,
-        payer = user,
+        mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserFundAccount::INIT_SPACE,
+        bump = user_fund_account.bump,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 
@@ -97,17 +186,6 @@ pub struct UserFundContext<'info> {
 }
 
 impl<'info> UserFundContext<'info> {
-    pub fn update_fund_accounts_if_needed(ctx: Context<Self>) -> Result<()> {
-        // Initialize
-        ctx.accounts.user_fund_account.initialize_if_needed(
-            ctx.bumps.user_fund_account,
-            ctx.accounts.receipt_token_mint.key(),
-            ctx.accounts.user.key(),
-        );
-
-        Ok(())
-    }
-
     pub fn deposit_sol(
         mut ctx: Context<Self>,
         amount: u64,
@@ -215,7 +293,6 @@ impl<'info> UserFundContext<'info> {
         Ok(())
     }
 
-
     pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
         // Verify
         require_gte!(
@@ -319,7 +396,11 @@ impl<'info> UserFundContext<'info> {
         let withdrawal_status = &mut ctx.accounts.fund_account.withdrawal_status;
 
         // Verify
-        require_gt!(withdrawal_status.next_request_id, request_id, FundWithdrawalRequestNotFoundError);
+        require_gt!(
+            withdrawal_status.next_request_id,
+            request_id,
+            FundWithdrawalRequestNotFoundError
+        );
 
         // Step 1: Cancel withdrawal request
         let request = ctx

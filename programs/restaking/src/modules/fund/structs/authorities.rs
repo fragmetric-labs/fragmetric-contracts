@@ -5,7 +5,7 @@ use crate::modules::common::PDASignerSeeds;
 #[account]
 #[derive(InitSpace)]
 pub struct ReceiptTokenLockAuthority {
-    pub data_version: u8,
+    data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
 }
@@ -41,7 +41,7 @@ impl ReceiptTokenLockAuthority {
 #[account]
 #[derive(InitSpace)]
 pub struct SupportedTokenAuthority {
-    pub data_version: u8,
+    data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     pub supported_token_mint: Pubkey,
@@ -85,7 +85,7 @@ impl SupportedTokenAuthority {
 #[account]
 #[derive(InitSpace)]
 pub struct ReceiptTokenMintAuthority {
-    pub data_version: u8,
+    data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
 }
