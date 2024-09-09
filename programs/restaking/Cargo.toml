@@ -1,6 +1,6 @@
 [package]
 name = "restaking"
-version = "0.2.0"
+version = "0.2.1"
 description = "Created with Anchor"
 edition = "2021"
 
@@ -23,7 +23,7 @@ devnet = []
 mainnet = []
 
 [dependencies]
-anchor-lang = { version = "0.30.1", features = ["init-if-needed", "interface-instructions"] }
+anchor-lang = { version = "0.30.1", features = ["interface-instructions"] }
 anchor-spl = "0.30.1"
 bytemuck = { version = "1.17.1", features = ["derive"] }
 #pyth-solana-receiver-sdk = "0.2.0"

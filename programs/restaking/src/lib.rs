@@ -5,6 +5,7 @@ pub(crate) mod errors;
 pub(crate) mod events;
 pub(crate) mod modules;
 pub(crate) mod utils;
+
 mod instructions;
 
 use constants::*;
@@ -15,22 +16,44 @@ pub mod restaking {
     use super::*;
 
     ////////////////////////////////////////////
-    // AdminFundContext
+    // AdminFundInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_fund_accounts(ctx: Context<AdminFundInitialContext>) -> Result<()> {
-        AdminFundInitialContext::initialize_accounts(ctx)
+    pub fn admin_initialize_receipt_token_lock_authority(
+        ctx: Context<AdminFundReceiptTokenLockAuthorityInitialContext>,
+    ) -> Result<()> {
+        AdminFundReceiptTokenLockAuthorityInitialContext::initialize_receipt_token_lock_authority(
+            ctx,
+        )
+    }
+
+    pub fn admin_initialize_receipt_token_lock_account(
+        ctx: Context<AdminFundReceiptTokenLockAccountInitialContext>,
+    ) -> Result<()> {
+        AdminFundReceiptTokenLockAccountInitialContext::initialize_receipt_token_lock_account(ctx)
+    }
+
+    pub fn admin_initialize_fund_account(
+        ctx: Context<AdminFundAccountInitialContext>,
+    ) -> Result<()> {
+        AdminFundAccountInitialContext::initialize_fund_account(ctx)
     }
 
     ////////////////////////////////////////////
     // AdminReceiptTokenMintInitialContext
     ////////////////////////////////////////////
 
-    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
-    pub fn admin_initialize_receipt_token_mint_authority_and_extra_account_meta_list(
-        ctx: Context<AdminReceiptTokenMintInitialContext>,
+    pub fn admin_initialize_receipt_token_mint_authority(
+        ctx: Context<AdminReceiptTokenMintAuthorityInitialContext>,
     ) -> Result<()> {
-        AdminReceiptTokenMintInitialContext::initialize_mint_authority_and_extra_account_meta_list(
+        AdminReceiptTokenMintAuthorityInitialContext::initialize_mint_authority(ctx)
+    }
+
+    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    pub fn admin_initialize_receipt_token_mint_extra_account_meta_list(
+        ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
+    ) -> Result<()> {
+        AdminReceiptTokenMintExtraAccountMetaListInitialContext::initialize_extra_account_meta_list(
             ctx,
         )
     }
@@ -49,8 +72,10 @@ pub mod restaking {
     // AdminRewardInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_reward_accounts(ctx: Context<AdminRewardInitialContext>) -> Result<()> {
-        AdminRewardInitialContext::initialize_accounts(ctx)
+    pub fn admin_initialize_reward_account(
+        ctx: Context<AdminRewardAccountInitialContext>,
+    ) -> Result<()> {
+        AdminRewardAccountInitialContext::initialize_reward_account(ctx)
     }
 
     ////////////////////////////////////////////
@@ -104,6 +129,24 @@ pub mod restaking {
         duration: Option<i64>,
     ) -> Result<()> {
         FundManagerFundContext::update_batch_processing_threshold(ctx, amount, duration)
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerFundSupportedTokenInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_supported_token_authority(
+        ctx: Context<FundManagerFundSupportedTokenAuthorityInitialContext>,
+    ) -> Result<()> {
+        FundManagerFundSupportedTokenAuthorityInitialContext::initialize_supported_token_authority(
+            ctx,
+        )
+    }
+
+    pub fn fund_manager_initialize_supported_token_account(
+        ctx: Context<FundManagerFundSupportedTokenAccountInitialContext>,
+    ) -> Result<()> {
+        FundManagerFundSupportedTokenAccountInitialContext::intialize_supported_token_account(ctx)
     }
 
     ////////////////////////////////////////////
@@ -210,12 +253,30 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundContext
+    // UserFundInitialContext
     ////////////////////////////////////////////
 
-    pub fn user_update_fund_accounts_if_needed(ctx: Context<UserFundContext>) -> Result<()> {
-        UserFundContext::update_fund_accounts_if_needed(ctx)
+    pub fn user_initialize_receipt_token_account(
+        ctx: Context<UserFundReceiptTokenAccountInitialContext>,
+    ) -> Result<()> {
+        UserFundReceiptTokenAccountInitialContext::initialize_receipt_token_account(ctx)
     }
+
+    pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
+        UserFundAccountInitialContext::initialize_fund_account(ctx)
+    }
+
+    ////////////////////////////////////////////
+    // UserFundUpdateContext
+    ////////////////////////////////////////////
+
+    pub fn user_update_fund_account_if_needed(ctx: Context<UserFundUpdateContext>) -> Result<()> {
+        UserFundUpdateContext::update_fund_account_if_needed(ctx)
+    }
+
+    ////////////////////////////////////////////
+    // UserFundContext
+    ////////////////////////////////////////////
 
     pub fn user_deposit_sol(
         ctx: Context<UserFundContext>,
@@ -259,8 +320,8 @@ pub mod restaking {
     // UserRewardInitialContext
     ////////////////////////////////////////////
 
-    pub fn user_initialize_reward_accounts(ctx: Context<UserRewardInitialContext>) -> Result<()> {
-        UserRewardInitialContext::initialize_accounts(ctx)
+    pub fn user_initialize_reward_account(ctx: Context<UserRewardInitialContext>) -> Result<()> {
+        UserRewardInitialContext::initialize_reward_account(ctx)
     }
 
     ////////////////////////////////////////////
@@ -298,13 +359,4 @@ pub mod restaking {
     ) -> Result<()> {
         UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
-
-    // for test
-    pub fn empty_ix(_ctx: Context<EmptyIx>) -> Result<()> {
-        Ok(())
-    }
-}
-
-#[derive(Accounts)]
-pub struct EmptyIx {
 }

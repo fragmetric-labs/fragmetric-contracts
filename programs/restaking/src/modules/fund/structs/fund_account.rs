@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::common::PDASignerSeeds;
 use crate::errors::ErrorCode;
+use crate::modules::common::PDASignerSeeds;
 
 #[account]
 #[derive(InitSpace)]
 pub struct FundAccount {
-    pub data_version: u8,
+    pub data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(16)]

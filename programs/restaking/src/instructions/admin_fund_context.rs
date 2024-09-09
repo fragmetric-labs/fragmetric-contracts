@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::Token2022, token_interface::{Mint, TokenAccount}};
+use anchor_spl::{
+    token_2022::Token2022,
+    token_interface::{Mint, TokenAccount},
+};
 
 use crate::constants::*;
 use crate::modules::common::PDASignerSeeds;
@@ -7,7 +10,45 @@ use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 
 // will be used only once
 #[derive(Accounts)]
-pub struct AdminFundInitialContext<'info> {
+pub struct AdminFundReceiptTokenLockAuthorityInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + ReceiptTokenLockAuthority::INIT_SPACE,
+    )]
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
+}
+
+impl<'info> AdminFundReceiptTokenLockAuthorityInitialContext<'info> {
+    pub fn initialize_receipt_token_lock_authority(
+        ctx: Context<AdminFundReceiptTokenLockAuthorityInitialContext>,
+    ) -> Result<()> {
+        ctx.accounts
+            .receipt_token_lock_authority
+            .initialize_if_needed(
+                ctx.bumps.receipt_token_lock_authority,
+                ctx.accounts.receipt_token_mint.key(),
+            );
+        Ok(())
+    }
+}
+
+// will be used only once
+#[derive(Accounts)]
+pub struct AdminFundReceiptTokenLockAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -22,11 +63,8 @@ pub struct AdminFundInitialContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        init,
-        payer = payer,
         seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + ReceiptTokenLockAuthority::INIT_SPACE,
+        bump = receipt_token_lock_authority.bump,
     )]
     pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
 
@@ -40,6 +78,27 @@ pub struct AdminFundInitialContext<'info> {
         bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+
+impl<'info> AdminFundReceiptTokenLockAccountInitialContext<'info> {
+    pub fn initialize_receipt_token_lock_account(_ctx: Context<Self>) -> Result<()> {
+        Ok(())
+    }
+}
+
+// will be used only once
+#[derive(Accounts)]
+pub struct AdminFundAccountInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
@@ -51,24 +110,14 @@ pub struct AdminFundInitialContext<'info> {
     pub fund_account: Box<Account<'info, FundAccount>>,
 }
 
-impl<'info> AdminFundInitialContext<'info> {
-    pub fn initialize_accounts(ctx: Context<Self>) -> Result<()> {
+impl<'info> AdminFundAccountInitialContext<'info> {
+    pub fn initialize_fund_account(ctx: Context<Self>) -> Result<()> {
         let receipt_token_mint_key = ctx.accounts.receipt_token_mint.key();
 
         ctx.accounts
             .fund_account
-            .initialize_if_needed(
-                ctx.bumps.fund_account,
-                receipt_token_mint_key,
-            );
-        ctx.accounts
-            .receipt_token_lock_authority
-            .initialize_if_needed(
-                ctx.bumps.receipt_token_lock_authority,
-                receipt_token_mint_key,
-            );
+            .initialize_if_needed(ctx.bumps.fund_account, receipt_token_mint_key);
 
         Ok(())
     }
 }
-
