@@ -283,22 +283,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
     }
 
-    public async skipSlots(signer: web3.Keypair, skip: number) {
-        let currentSlot = await this.program.provider.connection.getSlot();
-        logger.debug(`BEFORE skip slots, current slot: ${currentSlot}`);
-    
-        for (let i = 0; i < skip; i++) {
-            await this.program.methods
-                .emptyIx()
-                .accounts({})
-                .signers([signer])
-                .rpc();
-        }
-    
-        currentSlot = await this.program.provider.connection.getSlot();
-        logger.debug(`AFTER skip slots, current slot: ${currentSlot}`);
-    }
-
     public async runAdminInitializeTokenMint() {
         const metadata: splTokenMetadata.TokenMetadata = {
             mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
@@ -376,7 +360,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLMint = await spl.getMint(
             this.connection,
             this.knownAddress.fragSOLTokenMint,
-            undefined,
+            "confirmed",
             spl.TOKEN_2022_PROGRAM_ID,
         );
         logger.notice('fragSOL token mint created with extensions'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMint.toString());
@@ -393,7 +377,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const instructions = [
             ...(currentVersion == 0 ? [
                     this.program.methods
-                        .adminInitializeRewardAccounts()
+                        .adminInitializeRewardAccount()
                         .accounts({ payer: this.wallet.publicKey })
                         .instruction()
             ] : []),
@@ -430,7 +414,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 this.program.methods
-                    .adminInitializeFundAccounts()
+                    .adminInitializeReceiptTokenLockAuthority()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+                this.program.methods
+                    .adminInitializeReceiptTokenLockAccount()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+                this.program.methods
+                    .adminInitializeFundAccount()
                     .accounts({payer: this.wallet.publicKey})
                     .instruction(),
             ],
@@ -444,7 +436,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 this.program.methods
-                    .adminInitializeReceiptTokenMintAuthorityAndExtraAccountMetaList()
+                    .adminInitializeReceiptTokenMintAuthority()
+                    .accounts({ payer: this.wallet.publicKey })
+                    .instruction(),
+                this.program.methods
+                    .adminInitializeReceiptTokenMintExtraAccountMetaList()
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
                 this.program.methods
@@ -461,7 +457,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.getMint(
                 this.connection,
                 this.knownAddress.fragSOLTokenMint,
-                undefined,
+                "confirmed",
                 spl.TOKEN_2022_PROGRAM_ID,
             ),
             this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId))
@@ -495,18 +491,35 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         new BN(10), // batchProcessingThresholdDuration (seconds)
                     )
                     .instruction(),
-                ...Object.values(this.supportedTokenMetadata).map(v => {
-                    return this.program.methods
-                        .fundManagerAddSupportedToken(
-                            v.capacity,
-                            v.pricingSource,
-                        )
-                        .accounts({
-                            supportedTokenMint: v.mint,
-                            supportedTokenProgram: v.program,
-                        })
-                        .remainingAccounts(this.pricingSourceAccounts)
-                        .instruction();
+                ...Object.values(this.supportedTokenMetadata).flatMap(v => {
+                    return [
+                        this.program.methods
+                            .fundManagerInitializeSupportedTokenAuthority()
+                            .accounts({
+                                payer: this.wallet.publicKey,
+                                supportedTokenMint: v.mint,
+                            })
+                            .instruction(),
+                        this.program.methods
+                            .fundManagerInitializeSupportedTokenAccount()
+                            .accounts({
+                                payer: this.wallet.publicKey,
+                                supportedTokenMint: v.mint,
+                                supportedTokenProgram: v.program,
+                            })
+                            .instruction(),
+                        this.program.methods
+                            .fundManagerAddSupportedToken(
+                                v.capacity,
+                                v.pricingSource,
+                            )
+                            .accounts({
+                                supportedTokenMint: v.mint,
+                                supportedTokenProgram: v.program,
+                            })
+                            .remainingAccounts(this.pricingSourceAccounts)
+                            .instruction(),
+                        ];
                 }),
             ],
             signerNames: ['FUND_MANAGER'],
@@ -622,20 +635,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     private async getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user: web3.Keypair) {
         const fragSOLUserRewardAddress = this.knownAddress.fragSOLUserReward(user.publicKey);
-        const currentVersion = await this.account.userRewardAccount
+        const fragSOLUserFundAddress = this.knownAddress.fragSOLUserFund(user.publicKey);
+        const currentRewardVersion = await this.account.userRewardAccount
             .fetch(fragSOLUserRewardAddress)
             .then(a => a.dataVersion)
             .catch(err => 0);
+        const currentFundVersion = await this.account.userFundAccount
+            .fetch(fragSOLUserFundAddress)
+            .then(a => a.dataVersion)
+            .catch(err => 0);
 
-        const targetVersion = parseInt(this.getConstant('userRewardAccountCurrentVersion'));
+        const targetRewardVersion = parseInt(this.getConstant('userRewardAccountCurrentVersion'));
         return [
-            ...(currentVersion == 0 ? [
+            ...(currentRewardVersion == 0 ? [
                 this.program.methods
-                    .userInitializeRewardAccounts()
+                    .userInitializeRewardAccount()
                     .accounts({user: user.publicKey})
                     .instruction()
             ] : []),
-            ...new Array(targetVersion - currentVersion)
+            ...new Array(targetRewardVersion - currentRewardVersion)
                 .fill(null)
                 .map((_, index, arr) =>
                     this.program.methods
@@ -643,12 +661,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         .accounts({user: user.publicKey})
                         .instruction()
                 ),
-            this.program.methods
-                .userUpdateFundAccountsIfNeeded()
-                .accounts({
-                    user: user.publicKey,
-                })
-                .instruction(),
+            ...(currentFundVersion == 0 ? [
+                this.program.methods
+                    .userInitializeFundAccount()
+                    .accounts({user: user.publicKey})
+                    .instruction(),
+                this.program.methods
+                    .userInitializeReceiptTokenAccount()
+                    .accounts({
+                        user: user.publicKey,
+                    })
+                    .instruction(),
+            ] : [
+                this.program.methods
+                    .userUpdateFundAccountIfNeeded()
+                    .accounts({user: user.publicKey})
+                    .instruction()
+            ]),
         ];
     }
 

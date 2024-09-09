@@ -8,12 +8,11 @@ use spl_tlv_account_resolution::{
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::constants::*;
-use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::{FundAccount, ReceiptTokenMintAuthority, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::modules::{common::*, fund::*, reward::*};
 
+// will be used only once
 #[derive(Accounts)]
-pub struct AdminReceiptTokenMintInitialContext<'info> {
+pub struct AdminReceiptTokenMintAuthorityInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -35,32 +34,10 @@ pub struct AdminReceiptTokenMintInitialContext<'info> {
         space = 8 + ReceiptTokenMintAuthority::INIT_SPACE,
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
-
-    /// CHECK: ExtraAccountMetaList Account, must use these seeds
-    #[account(
-        init,
-        payer = payer,
-        seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
-        bump,
-        space = ExtraAccountMetaList::size_of(
-            extra_account_metas()?.len() + 2, // 2 is reserved space
-        )?,
-    )]
-    pub extra_account_meta_list: UncheckedAccount<'info>,
 }
 
-impl<'info> AdminReceiptTokenMintInitialContext<'info> {
-    pub fn initialize_mint_authority_and_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
-
-        // initialize_extra_account_meta_list
-        let extra_account_metas = extra_account_metas()?;
-
-        ExtraAccountMetaList::init::<ExecuteInstruction>(
-            &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
-            &extra_account_metas,
-        )?;
-
-        // transfer_receipt_token_mint_authority
+impl<'info> AdminReceiptTokenMintAuthorityInitialContext<'info> {
+    pub fn initialize_mint_authority(ctx: Context<Self>) -> Result<()> {
         ctx.accounts
             .receipt_token_mint_authority
             .initialize_if_needed(
@@ -81,6 +58,46 @@ impl<'info> AdminReceiptTokenMintInitialContext<'info> {
             AuthorityType::MintTokens,
             Some(ctx.accounts.receipt_token_mint_authority.key()),
         )
+    }
+}
+
+// will be used only once
+#[derive(Accounts)]
+pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    /// CHECK: ExtraAccountMetaList Account, must use these seeds
+    #[account(
+        init,
+        payer = payer,
+        seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
+        bump,
+        space = ExtraAccountMetaList::size_of(
+            extra_account_metas()?.len() + 2, // 2 is reserved space
+        )?,
+    )]
+    pub extra_account_meta_list: UncheckedAccount<'info>,
+}
+
+impl<'info> AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
+    pub fn initialize_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
+        let extra_account_metas = extra_account_metas()?;
+
+        ExtraAccountMetaList::init::<ExecuteInstruction>(
+            &mut ctx.accounts.extra_account_meta_list.try_borrow_mut_data()?,
+            &extra_account_metas,
+        )?;
+
+        Ok(())
     }
 }
 
@@ -115,7 +132,7 @@ pub struct AdminReceiptTokenMintContext<'info> {
     pub extra_account_meta_list: UncheckedAccount<'info>,
 }
 
-impl <'info> AdminReceiptTokenMintContext<'info> {
+impl<'info> AdminReceiptTokenMintContext<'info> {
     pub fn update_extra_account_meta_list(ctx: Context<Self>) -> Result<()> {
         let extra_account_metas = extra_account_metas()?;
 

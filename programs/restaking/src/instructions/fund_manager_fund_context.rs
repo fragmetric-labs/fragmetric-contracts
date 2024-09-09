@@ -2,8 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::modules::common::PDASignerSeeds;
-use crate::modules::fund::FundAccount;
+use crate::modules::{common::PDASignerSeeds, fund::FundAccount};
 
 #[derive(Accounts)]
 pub struct FundManagerFundContext<'info> {
@@ -24,7 +23,8 @@ pub struct FundManagerFundContext<'info> {
 
 impl<'info> FundManagerFundContext<'info> {
     pub fn update_sol_capacity_amount(ctx: Context<Self>, capacity_amount: u64) -> Result<()> {
-        ctx.accounts.fund_account
+        ctx.accounts
+            .fund_account
             .set_sol_capacity_amount(capacity_amount)?;
 
         Ok(())

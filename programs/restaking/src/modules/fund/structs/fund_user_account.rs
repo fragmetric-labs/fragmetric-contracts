@@ -7,7 +7,7 @@ const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
 #[account]
 #[derive(InitSpace)]
 pub struct UserFundAccount {
-    pub data_version: u8,
+    data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
@@ -39,12 +39,7 @@ impl PDASignerSeeds<4> for UserFundAccount {
 impl UserFundAccount {
     pub const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = MAX_WITHDRAWAL_REQUESTS_SIZE;
 
-    pub fn initialize_if_needed(
-        &mut self,
-        bump: u8,
-        receipt_token_mint: Pubkey,
-        user: Pubkey,
-    ) {
+    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -53,7 +48,11 @@ impl UserFundAccount {
         }
     }
 
-    pub fn placeholder(user: Pubkey, receipt_token_mint: Pubkey, receipt_token_amount: u64) -> Self {
+    pub fn placeholder(
+        user: Pubkey,
+        receipt_token_mint: Pubkey,
+        receipt_token_amount: u64,
+    ) -> Self {
         Self {
             data_version: 0,
             bump: 0,
