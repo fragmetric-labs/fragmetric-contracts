@@ -13,8 +13,6 @@ process.on('unhandledRejection', (err) => {
     process.exit(1);
 });
 
-console.log(process.env);
-
 /** define test suites here **/
 
 require('./restaking/1_initialize');
