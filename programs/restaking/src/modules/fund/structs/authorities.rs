@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::common::PDASignerSeeds;
+use crate::utils::PDASeeds;
 
 #[account]
 #[derive(InitSpace)]
@@ -10,15 +10,11 @@ pub struct ReceiptTokenLockAuthority {
     pub receipt_token_mint: Pubkey,
 }
 
-impl PDASignerSeeds<3> for ReceiptTokenLockAuthority {
+impl PDASeeds<2> for ReceiptTokenLockAuthority {
     const SEED: &'static [u8] = b"receipt_token_lock_authority";
 
-    fn signer_seeds(&self) -> [&[u8]; 3] {
-        [
-            Self::SEED,
-            self.receipt_token_mint.as_ref(),
-            self.bump_as_slice(),
-        ]
+    fn seeds(&self) -> [&[u8]; 2] {
+        [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
     fn bump_ref(&self) -> &u8 {
@@ -47,15 +43,14 @@ pub struct SupportedTokenAuthority {
     pub supported_token_mint: Pubkey,
 }
 
-impl PDASignerSeeds<4> for SupportedTokenAuthority {
+impl PDASeeds<3> for SupportedTokenAuthority {
     const SEED: &'static [u8] = b"supported_token_authority";
 
-    fn signer_seeds(&self) -> [&[u8]; 4] {
+    fn seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
             self.supported_token_mint.as_ref(),
-            self.bump_as_slice(),
         ]
     }
 
@@ -90,15 +85,11 @@ pub struct ReceiptTokenMintAuthority {
     pub receipt_token_mint: Pubkey,
 }
 
-impl PDASignerSeeds<3> for ReceiptTokenMintAuthority {
+impl PDASeeds<2> for ReceiptTokenMintAuthority {
     const SEED: &'static [u8] = b"receipt_token_mint_authority";
 
-    fn signer_seeds(&self) -> [&[u8]; 3] {
-        [
-            Self::SEED,
-            self.receipt_token_mint.as_ref(),
-            self.bump_as_slice(),
-        ]
+    fn seeds(&self) -> [&[u8]; 2] {
+        [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
     fn bump_ref(&self) -> &u8 {

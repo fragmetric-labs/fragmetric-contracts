@@ -4,6 +4,7 @@ use anchor_lang::{prelude::*, Discriminator};
 use super::TokenPriceCalculator;
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 pub struct MarinadeStakePool {
     msol_mint: Pubkey,
     admin_authority: Pubkey,
@@ -62,16 +63,19 @@ pub struct MarinadeStakePool {
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct Fee {
     basis_points: u32,
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct FeeCents {
     bp_cents: u32,
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct LiqPool {
     lp_mint: Pubkey,
     lp_mint_authority_bump_seed: u8,
@@ -94,6 +98,7 @@ struct LiqPool {
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct StakeSystem {
     stake_list: List,
     //pub last_update_epoch: u64,
@@ -114,6 +119,7 @@ struct StakeSystem {
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct ValidatorSystem {
     validator_list: List,
     manager_authority: Pubkey,
@@ -125,6 +131,7 @@ struct ValidatorSystem {
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
 struct List {
     account: Pubkey,
     item_size: u32,
@@ -141,6 +148,21 @@ impl Discriminator for MarinadeStakePool {
 impl Owner for MarinadeStakePool {
     fn owner() -> Pubkey {
         Self::PROGRAM_ID
+    }
+}
+
+#[cfg(test)]
+impl AccountSerialize for MarinadeStakePool {
+    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        if writer.write_all(&Self::DISCRIMINATOR).is_err() {
+            return Err(ErrorCode::AccountDidNotSerialize.into());
+        }
+
+        if AnchorSerialize::serialize(self, writer).is_err() {
+            return Err(ErrorCode::AccountDidNotSerialize.into());
+        }
+
+        Ok(())
     }
 }
 
@@ -194,5 +216,31 @@ impl MarinadeStakePool {
 
     fn total_cooling_down(&self) -> u64 {
         self.stake_system.delayed_unstake_cooling_down + self.emergency_cooling_down
+    }
+
+    #[cfg(test)]
+    /// 1 Token = 1.2 SOL
+    pub fn dummy_pricing_source_account_info<'a>(
+        lamports: &'a mut u64,
+        data: &'a mut [u8],
+    ) -> AccountInfo<'a> {
+        const DUMMY_PUBKEY: Pubkey = pubkey!("dummyMarinadePoo1PricingSourceAccount1nfo11");
+
+        let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();
+        this.msol_supply = 1_000_000;
+        this.available_reserve_balance = 1_200_000;
+        let mut writer = unsafe { &mut *(data as *mut [u8]) };
+        this.try_serialize(&mut writer).unwrap();
+
+        AccountInfo::new(
+            &DUMMY_PUBKEY,
+            false,
+            false,
+            lamports,
+            data,
+            &Self::PROGRAM_ID,
+            false,
+            0,
+        )
     }
 }

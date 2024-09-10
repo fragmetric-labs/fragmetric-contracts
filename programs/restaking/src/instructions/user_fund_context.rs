@@ -6,9 +6,9 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::errors::ErrorCode::FundWithdrawalRequestNotFoundError;
 use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct UserFundReceiptTokenAccountInitialContext<'info> {
@@ -187,10 +187,13 @@ pub struct UserFundContext<'info> {
 
 impl<'info> UserFundContext<'info> {
     pub fn deposit_sol(
-        mut ctx: Context<Self>,
+        ctx: Context<Self>,
         amount: u64,
         metadata: Option<DepositMetadata>,
     ) -> Result<()> {
+        let fund = &mut ctx.accounts.fund_account;
+        let receipt_token_mint = &ctx.accounts.receipt_token_mint;
+
         // verify metadata signature if given
         if let Some(metadata) = &metadata {
             verify_preceding_ed25519_instruction(
@@ -206,33 +209,25 @@ impl<'info> UserFundContext<'info> {
         require_gte!(ctx.accounts.user.lamports(), amount);
 
         // Step 1: Calculate mint amount
-        let fund = &mut ctx.accounts.fund_account;
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         fund.update_token_prices(ctx.remaining_accounts)?;
+
         let receipt_token_mint_amount =
-            fund.receipt_token_mint_amount_for(amount, receipt_token_total_supply)?;
+            fund.receipt_token_mint_amount_for(amount, receipt_token_mint.supply)?;
         let receipt_token_price = fund.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
+            receipt_token_mint.decimals,
+            receipt_token_mint.supply,
         )?;
 
         // Step 2: Deposit SOL
-        Self::cpi_transfer_sol_to_fund(&ctx, amount)?;
-        ctx.accounts.fund_account.deposit_sol(amount)?;
+        fund.deposit_sol(amount)?;
+        ctx.accounts.cpi_transfer_sol_to_fund(amount)?;
 
         // Step 3: Mint receipt token
-        Self::cpi_mint_token_to_user(&mut ctx, receipt_token_mint_amount)?;
-        Self::mock_transfer_hook_from_fund_to_user(
-            &mut ctx,
-            receipt_token_mint_amount,
-            contribution_accrual_rate,
-        )?;
-
-        // Step 4: Update user_receipt's receipt_token_amount
-        let receipt_token_account_total_amount = ctx.accounts.user_receipt_token_account.amount;
         ctx.accounts
-            .user_fund_account
-            .set_receipt_token_amount(receipt_token_account_total_amount);
+            .cpi_mint_token_to_user(receipt_token_mint_amount)?;
+        ctx.accounts
+            .mock_transfer_hook_from_fund_to_user(amount, contribution_accrual_rate)?;
+        ctx.accounts.update_user_receipt_token_amount();
 
         emit!(UserDepositedSOLToFund {
             user: ctx.accounts.user.key(),
@@ -246,19 +241,19 @@ impl<'info> UserFundContext<'info> {
             fund_account: FundAccountInfo::new(
                 ctx.accounts.fund_account.as_ref(),
                 receipt_token_price,
-                receipt_token_total_supply
+                ctx.accounts.receipt_token_mint.supply,
             ),
         });
 
         Ok(())
     }
 
-    fn cpi_transfer_sol_to_fund(ctx: &Context<Self>, amount: u64) -> Result<()> {
+    fn cpi_transfer_sol_to_fund(&self, amount: u64) -> Result<()> {
         let sol_transfer_cpi_ctx = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
+            self.system_program.to_account_info(),
             system_program::Transfer {
-                from: ctx.accounts.user.to_account_info(),
-                to: ctx.accounts.fund_account.to_account_info(),
+                from: self.user.to_account_info(),
+                to: self.fund_account.to_account_info(),
             },
         );
 
@@ -267,16 +262,16 @@ impl<'info> UserFundContext<'info> {
     }
 
     fn mock_transfer_hook_from_fund_to_user(
-        ctx: &mut Context<Self>,
+        &mut self,
         amount: u64,
         contribution_accrual_rate: Option<u8>, // 100 -> 1.0
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
 
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let mut reward_account = self.reward_account.load_mut()?;
+        let mut user_reward_account = self.user_reward_account.load_mut()?;
         reward_account.update_reward_pools_token_allocation(
-            ctx.accounts.receipt_token_mint.key(),
+            self.receipt_token_mint.key(),
             amount,
             contribution_accrual_rate,
             None,
@@ -285,14 +280,23 @@ impl<'info> UserFundContext<'info> {
         )?;
 
         emit!(UserUpdatedRewardPool::new(
-            ctx.accounts.receipt_token_mint.key(),
-            vec![ctx.accounts.user_reward_account.key()],
+            self.receipt_token_mint.key(),
+            vec![self.user_reward_account.key()],
         ));
 
         Ok(())
     }
 
-    pub fn request_withdrawal(mut ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+    fn update_user_receipt_token_amount(&mut self) {
+        let receipt_token_account_total_amount = self.user_receipt_token_account.amount;
+        self.user_fund_account
+            .set_receipt_token_amount(receipt_token_account_total_amount);
+    }
+
+    pub fn request_withdrawal(ctx: Context<Self>, receipt_token_amount: u64) -> Result<()> {
+        let user_fund_account = &mut ctx.accounts.user_fund_account;
+        let withdrawal_status = &mut ctx.accounts.fund_account.withdrawal_status;
+
         // Verify
         require_gte!(
             ctx.accounts.user_receipt_token_account.amount,
@@ -300,31 +304,18 @@ impl<'info> UserFundContext<'info> {
         );
 
         // Step 1: Create withdrawal request
-        ctx.accounts
-            .fund_account
-            .withdrawal_status
-            .check_withdrawal_enabled()?;
-        let withdrawal_request = ctx
-            .accounts
-            .fund_account
-            .withdrawal_status
-            .create_withdrawal_request(receipt_token_amount)?;
+        let withdrawal_request =
+            user_fund_account.create_withdrawal_request(withdrawal_status, receipt_token_amount)?;
         let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
-        ctx.accounts
-            .user_fund_account
-            .push_withdrawal_request(withdrawal_request)?;
 
         // Step 2: Lock receipt token
-        Self::cpi_burn_token_from_user(&mut ctx, receipt_token_amount)?;
-        Self::cpi_mint_token_to_fund(&mut ctx, receipt_token_amount)?;
-        Self::mock_transfer_hook_from_user_to_null(&mut ctx, receipt_token_amount)?;
-
-        // Step 3: Update user_receipt's receipt_token_amount
-        let receipt_token_account_total_amount = ctx.accounts.user_receipt_token_account.amount;
         ctx.accounts
-            .user_fund_account
-            .set_receipt_token_amount(receipt_token_account_total_amount);
+            .cpi_burn_token_from_user(receipt_token_amount)?;
+        ctx.accounts.cpi_mint_token_to_fund(receipt_token_amount)?;
+        ctx.accounts.update_user_receipt_token_amount();
+        ctx.accounts
+            .mock_transfer_hook_from_user_to_null(receipt_token_amount)?;
 
         emit!(UserRequestedWithdrawalFromFund {
             user: ctx.accounts.user.key(),
@@ -339,42 +330,36 @@ impl<'info> UserFundContext<'info> {
         Ok(())
     }
 
-    fn cpi_burn_token_from_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts
-            .receipt_token_program
+    fn cpi_burn_token_from_user(&mut self, amount: u64) -> Result<()> {
+        self.receipt_token_program
             .burn_token_cpi(
-                &mut ctx.accounts.receipt_token_mint,
-                &mut ctx.accounts.user_receipt_token_account,
-                ctx.accounts.user.to_account_info(),
+                &mut self.receipt_token_mint,
+                &mut self.user_receipt_token_account,
+                self.user.to_account_info(),
                 None,
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
-    fn cpi_mint_token_to_fund(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts
-            .receipt_token_program
+    fn cpi_mint_token_to_fund(&mut self, amount: u64) -> Result<()> {
+        self.receipt_token_program
             .mint_token_cpi(
-                &mut ctx.accounts.receipt_token_mint,
-                &mut ctx.accounts.receipt_token_lock_account,
-                ctx.accounts.receipt_token_mint_authority.to_account_info(),
-                Some(&[ctx
-                    .accounts
-                    .receipt_token_mint_authority
-                    .signer_seeds()
-                    .as_ref()]),
+                &mut self.receipt_token_mint,
+                &mut self.receipt_token_lock_account,
+                self.receipt_token_mint_authority.to_account_info(),
+                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
-    fn mock_transfer_hook_from_user_to_null(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+    fn mock_transfer_hook_from_user_to_null(&mut self, amount: u64) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let mut reward_account = self.reward_account.load_mut()?;
+        let mut user_reward_account = self.user_reward_account.load_mut()?;
         reward_account.update_reward_pools_token_allocation(
-            ctx.accounts.receipt_token_mint.key(),
+            self.receipt_token_mint.key(),
             amount,
             None,
             Some(&mut user_reward_account),
@@ -383,41 +368,35 @@ impl<'info> UserFundContext<'info> {
         )?;
 
         emit!(UserUpdatedRewardPool::new(
-            ctx.accounts.receipt_token_mint.key(),
-            vec![ctx.accounts.user_reward_account.key()],
+            self.receipt_token_mint.key(),
+            vec![self.user_reward_account.key()],
         ));
 
         Ok(())
     }
 
-    pub fn cancel_withdrawal_request(mut ctx: Context<Self>, request_id: u64) -> Result<()> {
+    pub fn cancel_withdrawal_request(ctx: Context<Self>, request_id: u64) -> Result<()> {
+        let user_fund_account = &mut ctx.accounts.user_fund_account;
         let withdrawal_status = &mut ctx.accounts.fund_account.withdrawal_status;
 
         // Verify
         require_gt!(
             withdrawal_status.next_request_id,
             request_id,
-            FundWithdrawalRequestNotFoundError
+            ErrorCode::FundWithdrawalRequestNotFoundError,
         );
 
         // Step 1: Cancel withdrawal request
-        let request = ctx
-            .accounts
-            .user_fund_account
-            .pop_withdrawal_request(request_id)?;
-        withdrawal_status.check_batch_processing_not_started(request.batch_id)?;
-        withdrawal_status.remove_withdrawal_request(request.receipt_token_amount)?;
+        let request = user_fund_account.cancel_withdrawal_request(withdrawal_status, request_id)?;
 
         // Step 2: Unlock receipt token
-        Self::cpi_burn_token_from_fund(&mut ctx, request.receipt_token_amount)?;
-        Self::cpi_mint_token_to_user(&mut ctx, request.receipt_token_amount)?;
-        Self::mock_transfer_hook_from_null_to_user(&mut ctx, request.receipt_token_amount)?;
-
-        // Step 3: Update user_receipt's receipt_token_amount
-        let receipt_token_account_total_amount = ctx.accounts.user_receipt_token_account.amount;
         ctx.accounts
-            .user_fund_account
-            .set_receipt_token_amount(receipt_token_account_total_amount);
+            .cpi_burn_token_from_fund(request.receipt_token_amount)?;
+        ctx.accounts
+            .cpi_mint_token_to_user(request.receipt_token_amount)?;
+        ctx.accounts.update_user_receipt_token_amount();
+        ctx.accounts
+            .mock_transfer_hook_from_null_to_user(request.receipt_token_amount)?;
 
         emit!(UserCanceledWithdrawalRequestFromFund {
             user: ctx.accounts.user.key(),
@@ -431,46 +410,36 @@ impl<'info> UserFundContext<'info> {
         Ok(())
     }
 
-    fn cpi_burn_token_from_fund(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts
-            .receipt_token_program
+    fn cpi_burn_token_from_fund(&mut self, amount: u64) -> Result<()> {
+        self.receipt_token_program
             .burn_token_cpi(
-                &mut ctx.accounts.receipt_token_mint,
-                &mut ctx.accounts.receipt_token_lock_account,
-                ctx.accounts.receipt_token_lock_authority.to_account_info(),
-                Some(&[ctx
-                    .accounts
-                    .receipt_token_lock_authority
-                    .signer_seeds()
-                    .as_ref()]),
+                &mut self.receipt_token_mint,
+                &mut self.receipt_token_lock_account,
+                self.receipt_token_lock_authority.to_account_info(),
+                Some(&[self.receipt_token_lock_authority.signer_seeds().as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
-    fn cpi_mint_token_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts
-            .receipt_token_program
+    fn cpi_mint_token_to_user(&mut self, amount: u64) -> Result<()> {
+        self.receipt_token_program
             .mint_token_cpi(
-                &mut ctx.accounts.receipt_token_mint,
-                &mut ctx.accounts.user_receipt_token_account,
-                ctx.accounts.receipt_token_mint_authority.to_account_info(),
-                Some(&[ctx
-                    .accounts
-                    .receipt_token_mint_authority
-                    .signer_seeds()
-                    .as_ref()]),
+                &mut self.receipt_token_mint,
+                &mut self.user_receipt_token_account,
+                self.receipt_token_mint_authority.to_account_info(),
+                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
     }
 
-    fn mock_transfer_hook_from_null_to_user(ctx: &mut Context<Self>, amount: u64) -> Result<()> {
+    fn mock_transfer_hook_from_null_to_user(&mut self, amount: u64) -> Result<()> {
         let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
+        let mut reward_account = self.reward_account.load_mut()?;
+        let mut user_reward_account = self.user_reward_account.load_mut()?;
         reward_account.update_reward_pools_token_allocation(
-            ctx.accounts.receipt_token_mint.key(),
+            self.receipt_token_mint.key(),
             amount,
             None,
             None,
@@ -479,8 +448,8 @@ impl<'info> UserFundContext<'info> {
         )?;
 
         emit!(UserUpdatedRewardPool::new(
-            ctx.accounts.receipt_token_mint.key(),
-            vec![ctx.accounts.user_reward_account.key()],
+            self.receipt_token_mint.key(),
+            vec![self.user_reward_account.key()],
         ));
 
         Ok(())
@@ -488,32 +457,24 @@ impl<'info> UserFundContext<'info> {
 
     pub fn withdraw(ctx: Context<Self>, request_id: u64) -> Result<()> {
         let fund = &mut ctx.accounts.fund_account;
+        let user_fund_account = &mut ctx.accounts.user_fund_account;
+        let receipt_token_mint = &ctx.accounts.receipt_token_mint;
 
         // Verify
         require_gt!(fund.withdrawal_status.next_request_id, request_id);
 
-        // Step 1: Update price
+        // Step 1: Complete withdrawal request
+        let request = user_fund_account
+            .pop_completed_withdrawal_request(&mut fund.withdrawal_status, request_id)?;
+
+        // Step 2: Calculate withdraw amount
         fund.update_token_prices(ctx.remaining_accounts)?;
-
-        // Step 2: Complete withdrawal request
-        fund.withdrawal_status.check_withdrawal_enabled()?;
-        let request = ctx
-            .accounts
-            .user_fund_account
-            .pop_withdrawal_request(request_id)?;
-        fund.withdrawal_status
-            .check_batch_processing_completed(request.batch_id)?;
-
-        // Step 3: Calculate withdraw amount
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let receipt_token_price = fund.receipt_token_sol_value_per_token(
             ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
+            receipt_token_mint.supply,
         )?;
-        let sol_amount = fund.receipt_token_sol_value_for(
-            request.receipt_token_amount,
-            receipt_token_total_supply,
-        )?;
+        let sol_amount = fund
+            .receipt_token_sol_value_for(request.receipt_token_amount, receipt_token_mint.supply)?;
         let sol_fee_amount = fund
             .withdrawal_status
             .calculate_sol_withdrawal_fee(sol_amount)?;
@@ -521,7 +482,7 @@ impl<'info> UserFundContext<'info> {
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        // Step 4: Withdraw
+        // Step 3: Withdraw
         fund.withdrawal_status.withdraw(sol_withdraw_amount)?;
         ctx.accounts
             .fund_account
@@ -533,7 +494,7 @@ impl<'info> UserFundContext<'info> {
             fund_account: FundAccountInfo::new(
                 ctx.accounts.fund_account.as_ref(),
                 receipt_token_price,
-                receipt_token_total_supply
+                receipt_token_mint.supply
             ),
             request_id,
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),

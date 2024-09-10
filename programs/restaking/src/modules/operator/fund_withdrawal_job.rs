@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::Token2022, token_interface::{Mint, TokenAccount}};
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::modules::common::*;
-use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority, WithdrawalStatus};
+use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
+use crate::utils::PDASeeds;
 
-pub struct FundWithdrawalJob<'a, 'info: 'a> {
+pub struct FundWithdrawalJob<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
     receipt_token_lock_authority: &'a mut Account<'info, ReceiptTokenLockAuthority>,
@@ -14,16 +16,21 @@ pub struct FundWithdrawalJob<'a, 'info: 'a> {
     pricing_sources: &'a [AccountInfo<'info>],
 }
 
-impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
-    pub fn check_threshold(withdrawal_status: &'a WithdrawalStatus) -> Result<()> {
+impl<'a, 'info> FundWithdrawalJob<'a, 'info> {
+    pub fn check_threshold(&self) -> Result<()> {
+        let withdrawal_status = &self.fund_account.withdrawal_status;
         let current_time = crate::utils::timestamp_now()?;
 
-        let mut threshold_satisfied = matches!(
-                withdrawal_status.last_batch_processing_started_at,
-                Some(x) if (current_time - x) > withdrawal_status.batch_processing_threshold_duration
-            );
+        let mut threshold_satisfied = match withdrawal_status.last_batch_processing_started_at {
+            Some(x) => current_time - x > withdrawal_status.batch_processing_threshold_duration,
+            None => true,
+        };
 
-        if withdrawal_status.pending_batch_withdrawal.receipt_token_to_process > withdrawal_status.batch_processing_threshold_amount {
+        if withdrawal_status
+            .pending_batch_withdrawal
+            .receipt_token_to_process
+            > withdrawal_status.batch_processing_threshold_amount
+        {
             threshold_satisfied = true;
         }
 
@@ -54,14 +61,17 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
     pub fn process(&mut self) -> Result<(u64, u64)> {
         let fund_account = &mut self.fund_account;
 
-        fund_account.withdrawal_status
+        fund_account
+            .withdrawal_status
             .start_processing_pending_batch_withdrawal()?;
         fund_account.update_token_prices(self.pricing_sources)?;
 
         let total_sol_value_in_fund = fund_account.assets_total_sol_value()?;
         let receipt_token_total_supply = self.receipt_token_mint.supply;
-        let receipt_token_price =
-            fund_account.receipt_token_sol_value_per_token(self.receipt_token_mint.decimals, receipt_token_total_supply)?;
+        let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
+            self.receipt_token_mint.decimals,
+            receipt_token_total_supply,
+        )?;
 
         let mut receipt_token_amount_to_burn: u64 = 0;
         for batch in &mut fund_account.withdrawal_status.batch_withdrawals_in_progress {
@@ -90,7 +100,7 @@ impl<'a, 'info: 'a> FundWithdrawalJob<'a, 'info> {
                 total_sol_value_in_fund,
                 receipt_token_total_supply,
             )
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
             total_sol_reserved_amount = total_sol_reserved_amount
                 .checked_add(sol_reserved_amount)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;

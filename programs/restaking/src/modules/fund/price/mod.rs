@@ -99,7 +99,7 @@ impl FundAccount {
     }
 }
 
-fn find_token_pricing_source_by_key<'a, 'info: 'a>(
+fn find_token_pricing_source_by_key<'a, 'info>(
     sources: &'a [AccountInfo<'info>],
     key: &Pubkey,
 ) -> Result<&'a AccountInfo<'info>> {
@@ -107,4 +107,56 @@ fn find_token_pricing_source_by_key<'a, 'info: 'a>(
         .iter()
         .find(|account| account.key == key)
         .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_price() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize_if_needed(0, Pubkey::new_unique());
+
+        let mut dummy_lamports = 0u64;
+        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
+        let mut dummy_lamports2 = 0u64;
+        let mut dummy_data2 = [0u8; 8 + MarinadeStakePool::INIT_SPACE];
+        let pricing_sources = &[
+            // 1 Token = 1.4 SOL
+            SplStakePool::dummy_pricing_source_account_info(&mut dummy_lamports, &mut dummy_data),
+            // 1 Token = 1.2 SOL
+            MarinadeStakePool::dummy_pricing_source_account_info(
+                &mut dummy_lamports2,
+                &mut dummy_data2,
+            ),
+        ];
+        let token1 = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
+        let token2 =
+            SupportedTokenInfo::dummy_marinade_stake_pool_token_info(pricing_sources[1].key());
+
+        fund.add_supported_token(
+            token1.mint,
+            token1.program,
+            token1.decimals,
+            token1.capacity_amount,
+            token1.pricing_source,
+            pricing_sources,
+        )
+        .unwrap();
+        fund.add_supported_token(
+            token2.mint,
+            token2.program,
+            token2.decimals,
+            token2.capacity_amount,
+            token2.pricing_source,
+            pricing_sources,
+        )
+        .unwrap();
+
+        fund.update_token_prices(pricing_sources).unwrap();
+
+        assert_eq!(fund.supported_tokens[0].price, 1_400_000_000);
+        assert_eq!(fund.supported_tokens[1].price, 1_200_000_000);
+    }
 }

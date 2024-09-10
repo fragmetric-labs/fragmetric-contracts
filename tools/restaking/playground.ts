@@ -44,6 +44,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    public BN(x: number | string | number[] | Uint8Array | Buffer | BN): BN {
+        return new BN(x)
+    }
+
     public get initializeSteps() {
         if (this._initializeSteps) return this._initializeSteps;
         return this._initializeSteps = this._getInitializeSteps();
@@ -429,9 +433,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminUpdateRewardAccounts(batchSize = 35) {
-        const currentVersion = await this.account.rewardAccount
-            .fetch(this.knownAddress.fragSOLReward)
-            .then(a => a.dataVersion)
+        const currentVersion = await this.connection.getAccountInfo(this.knownAddress.fragSOLReward)
+            .then(a => a.data.readInt16LE(8))
             .catch(err => 0);
 
         const targetVersion = parseInt(this.getConstant('rewardAccountCurrentVersion'));

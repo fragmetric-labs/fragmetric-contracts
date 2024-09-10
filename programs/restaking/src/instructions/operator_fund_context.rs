@@ -1,11 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token_2022::Token2022, token_interface::{Mint, TokenAccount}};
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::events::{OperatorProcessedJob, OperatorUpdatedFundPrice};
-use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::modules::operator::FundWithdrawalJob;
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct OperatorFundContext<'info> {
@@ -43,21 +44,24 @@ pub struct OperatorFundContext<'info> {
 }
 
 impl<'info> OperatorFundContext<'info> {
-    pub fn process_fund_withdrawal_job(ctx: Context<'_, '_, '_, 'info, Self>, forced: bool) -> Result<()>
-    {
-        if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
-            FundWithdrawalJob::check_threshold(&ctx.accounts.fund_account.withdrawal_status)?;
-        }
-
-        let (receipt_token_price, receipt_token_total_supply) = FundWithdrawalJob::new(
+    pub fn process_fund_withdrawal_job(
+        ctx: Context<'_, '_, '_, 'info, Self>,
+        forced: bool,
+    ) -> Result<()> {
+        let mut job = FundWithdrawalJob::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.receipt_token_lock_authority,
             &mut ctx.accounts.receipt_token_lock_account,
             &mut ctx.accounts.fund_account,
             ctx.remaining_accounts,
-        )
-            .process()?;
+        );
+
+        if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
+            job.check_threshold()?;
+        }
+
+        let (receipt_token_price, receipt_token_total_supply) = job.process()?;
 
         emit!(OperatorProcessedJob {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
@@ -72,11 +76,14 @@ impl<'info> OperatorFundContext<'info> {
     }
 
     pub fn update_prices(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.fund_account
+        ctx.accounts
+            .fund_account
             .update_token_prices(ctx.remaining_accounts)?;
 
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let receipt_token_price = ctx.accounts.fund_account
+        let receipt_token_price = ctx
+            .accounts
+            .fund_account
             .receipt_token_sol_value_per_token(
                 ctx.accounts.receipt_token_mint.decimals,
                 receipt_token_total_supply,

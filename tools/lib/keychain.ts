@@ -222,11 +222,11 @@ export class Keychain<KEYS extends string> {
                 const filePath = path.join(programSrcDir, fileName);
                 let fileSource = fs.readFileSync(filePath).toString();
                 logger.debug(`checking ${filePath}`);
-    
+
                 let updated = 0;
                 for (const keypairName of keypairKEYS) {
                     const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
-    
+
                     if (matches) {
                         const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
                         const target = `/*local:${keypairName}*/"${publicKey.toString()}"/**/`;

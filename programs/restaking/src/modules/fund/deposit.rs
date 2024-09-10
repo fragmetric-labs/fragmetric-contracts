@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+
 use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, SupportedTokenInfo};
 
@@ -46,4 +47,60 @@ impl FundAccount {
 pub struct DepositMetadata {
     pub wallet_provider: String,
     pub contribution_accrual_rate: u8, // 100 is 1.0
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::modules::fund::price::source::*;
+
+    use super::*;
+
+    #[test]
+    fn test_deposit_sol() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize_if_needed(0, Pubkey::new_unique());
+        fund.set_sol_capacity_amount(100_000).unwrap();
+
+        assert_eq!(fund.sol_operation_reserved_amount, 0);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 0);
+
+        fund.deposit_sol(100_000).unwrap();
+        assert_eq!(fund.sol_operation_reserved_amount, 100_000);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 100_000);
+
+        fund.deposit_sol(100_000).unwrap_err();
+    }
+
+    #[test]
+    fn test_deposit_token() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize_if_needed(0, Pubkey::new_unique());
+
+        let mut dummy_lamports = 0u64;
+        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
+        let pricing_sources = &[SplStakePool::dummy_pricing_source_account_info(
+            &mut dummy_lamports,
+            &mut dummy_data,
+        )];
+        let token = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
+
+        fund.add_supported_token(
+            token.mint,
+            token.program,
+            token.decimals,
+            1_000,
+            token.pricing_source,
+            pricing_sources,
+        )
+        .unwrap();
+
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
+
+        fund.supported_tokens[0].deposit_token(1_000).unwrap();
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
+
+        fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
+    }
 }

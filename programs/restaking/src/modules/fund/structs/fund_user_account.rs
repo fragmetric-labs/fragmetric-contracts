@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::common::PDASignerSeeds;
+use crate::utils::PDASeeds;
 
 const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
 
@@ -19,15 +19,14 @@ pub struct UserFundAccount {
     pub withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
-impl PDASignerSeeds<4> for UserFundAccount {
+impl PDASeeds<3> for UserFundAccount {
     const SEED: &'static [u8] = b"user_fund";
 
-    fn signer_seeds(&self) -> [&[u8]; 4] {
+    fn seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
             self.user.as_ref(),
-            self.bump_as_slice(),
         ]
     }
 

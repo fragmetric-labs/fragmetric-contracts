@@ -4,7 +4,8 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::FundManagerUpdatedRewardPool;
-use crate::modules::{common::*, reward::*};
+use crate::modules::reward::*;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct FundManagerRewardContext<'info> {
@@ -33,10 +34,10 @@ impl<'info> FundManagerRewardContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_holder(name, description, pubkeys)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            ctx.accounts.reward_account.key(),
-        )?);
+        emit!(FundManagerUpdatedRewardPool {
+            receipt_token_mint: reward_account.receipt_token_mint,
+            reward_account_address: ctx.accounts.reward_account.key(),
+        });
 
         Ok(())
     }
@@ -56,10 +57,10 @@ impl<'info> FundManagerRewardContext<'info> {
             current_slot,
         )?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            ctx.accounts.reward_account.key(),
-        )?);
+        emit!(FundManagerUpdatedRewardPool {
+            receipt_token_mint: reward_account.receipt_token_mint,
+            reward_account_address: ctx.accounts.reward_account.key(),
+        });
 
         Ok(())
     }
@@ -69,10 +70,10 @@ impl<'info> FundManagerRewardContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.close_reward_pool(reward_pool_id, current_slot)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            ctx.accounts.reward_account.key(),
-        )?);
+        emit!(FundManagerUpdatedRewardPool {
+            receipt_token_mint: reward_account.receipt_token_mint,
+            reward_account_address: ctx.accounts.reward_account.key(),
+        });
 
         Ok(())
     }
@@ -138,10 +139,10 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_reward(name, description, reward_type)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            ctx.accounts.reward_account.key(),
-        )?);
+        emit!(FundManagerUpdatedRewardPool {
+            receipt_token_mint: reward_account.receipt_token_mint,
+            reward_account_address: ctx.accounts.reward_account.key(),
+        });
 
         Ok(())
     }
@@ -156,10 +157,10 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.settle_reward(reward_pool_id, reward_id, amount, current_slot)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(
-            &reward_account,
-            ctx.accounts.reward_account.key(),
-        )?);
+        emit!(FundManagerUpdatedRewardPool {
+            receipt_token_mint: reward_account.receipt_token_mint,
+            reward_account_address: ctx.accounts.reward_account.key(),
+        });
 
         Ok(())
     }
