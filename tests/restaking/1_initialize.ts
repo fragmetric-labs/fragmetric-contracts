@@ -50,7 +50,7 @@ describe("initialize", async () => {
         const {
             fragSOLMint,
             fragSOLExtraAccountMetasAccount,
-        } = await restaking.runAdminInitializeMint();
+        } = await restaking.runAdminTransferMintAuthority();
 
         expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLTokenMintAuthority.toString());
         expect(fragSOLExtraAccountMetasAccount.length).eq(6);

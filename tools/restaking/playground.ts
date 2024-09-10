@@ -44,6 +44,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    public get initializeSteps() {
+        if (this._initializeSteps) return this._initializeSteps;
+        return this._initializeSteps = this._getInitializeSteps();
+    }
+    private _initializeSteps: ReturnType<typeof this._getInitializeSteps>;
+    private _getInitializeSteps() {
+        return [
+            () => this.runAdminInitializeTokenMint(),
+            () => this.runAdminInitializeFundAccounts,
+            () => this.runAdminUpdateRewardAccounts,
+            () => this.runAdminTransferMintAuthority,
+            () => this.runFundManagerInitializeFundConfigurations,
+            () => this.runFundManagerInitializeRewardPools,
+            () => this.runFundManagerSettleReward({
+                poolName: 'bonus',
+                rewardName: 'fPoint',
+                amount: new BN(0),
+            }),
+        ]
+    }
+
     public get knownAddress() {
         if (this._knownAddress) return this._knownAddress;
         return this._knownAddress = this._getKnownAddress();
@@ -434,7 +455,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { fragSOLFundAccount };
     }
 
-    public async runAdminInitializeMint() {
+    public async runAdminTransferMintAuthority() {
         await this.run({
             instructions: [
                 this.program.methods
