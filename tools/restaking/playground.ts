@@ -92,7 +92,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.programId
         )[0];
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) => web3.PublicKey.findProgramAddressSync(
-            [Buffer.from('supported_token_account'), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
+            [Buffer.from('supported_token'), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
             this.programId
         );
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) => spl.getAssociatedTokenAddressSync(
@@ -410,7 +410,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { fragSOLRewardAccount };
     }
 
-    public async runAdminInitializeFundAndRewardAccountsAndMint() {
+    public async runAdminInitializeFundAccounts() {
         await this.run({
             instructions: [
                 this.program.methods
@@ -431,8 +431,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
         logger.notice('fragSOL fund account created'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
-        const { fragSOLRewardAccount } = await this.runAdminUpdateRewardAccounts();
+        return { fragSOLFundAccount };
+    }
 
+    public async runAdminInitializeMint() {
         await this.run({
             instructions: [
                 this.program.methods
@@ -465,12 +467,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
         logger.notice(`transferred fragSOL mint authority to the PDA`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMintAuthority.toString());
 
-        return {
-            fragSOLFundAccount,
-            fragSOLRewardAccount,
-            fragSOLExtraAccountMetasAccount,
-            fragSOLMint,
-        };
+        return { fragSOLMint, fragSOLExtraAccountMetasAccount };
     }
 
     public async runFundManagerInitializeFundConfigurations() {
