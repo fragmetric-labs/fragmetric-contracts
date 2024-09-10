@@ -22,6 +22,7 @@ const keypairs = {
 
 const local: KeychainConfig<keyof (typeof keypairs)> = {
     program: 'restaking',
+    cluster: "local",
     newKeypairDir: './keypairs/restaking',
     wallet: './keypairs/shared_wallet_GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF.json',
     keypairs: keypairs,
@@ -29,6 +30,7 @@ const local: KeychainConfig<keyof (typeof keypairs)> = {
 
 const devnet: KeychainConfig<keyof (typeof keypairs)> = {
     ...local,
+    cluster: "devnet",
     wallet: './keypairs/wallet.json',
     keypairs: {
         ...keypairs,
@@ -41,6 +43,7 @@ const devnet: KeychainConfig<keyof (typeof keypairs)> = {
 
 const mainnet: KeychainConfig<keyof (typeof keypairs)> = {
     ...local,
+    cluster: "mainnet",
     wallet: './keypairs/wallet.json',
     keypairs: {
         ...keypairs,

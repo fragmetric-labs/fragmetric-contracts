@@ -13,6 +13,7 @@ import {askOnce} from "./repl";
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
 type AskYesNo = (question: string) => Promise<boolean>;
+type Cluster = "local" | "devnet" | "mainnet";
 
 function defaultAskYesNo(question: string) {
     return askOnce(`${question} (y/n)`)
@@ -24,6 +25,7 @@ const LEDGER_PATH_PREFIX = 'ledger://';
 
 export type KeychainConfig<KEYS extends string> = {
     program: WORKSPACE_PROGRAM_NAME,
+    cluster: Cluster,
     // default is 'anchor build -p target-program'
     buildCommand?: string;
     // give existing local keypair path or instance, or give null to generate new one.
@@ -130,9 +132,12 @@ export class Keychain<KEYS extends string> {
     }
 
     private static async initializeKeypairs<KEYS extends string>(args: KeychainConfig<KEYS>): Promise<KeypairMap> {
-        let {program, keypairs, newKeypairDir = './', buildCommand, askYesNo = defaultAskYesNo} = args;
+        let {program, cluster, keypairs, newKeypairDir = './', buildCommand, askYesNo = defaultAskYesNo} = args;
         if (!buildCommand) {
             buildCommand = `anchor build -p ${program}`;
+            if (!(cluster == "local")) {
+                buildCommand = `${buildCommand} -- --features ${cluster}`
+            }
         }
 
         const newLocalKeypairKEYS = new Set<string>();
@@ -182,7 +187,7 @@ export class Keychain<KEYS extends string> {
         }
 
         logger.notice(`applying keypairs to ${program} program workspace:`);
-        await Keychain.applyKeypairsToWorkspace(program, keypairMap, newLocalKeypairKEYS.size > 0, buildCommand, askYesNo);
+        await Keychain.applyKeypairsToWorkspace(program, cluster, keypairMap, newLocalKeypairKEYS.size > 0, buildCommand, askYesNo);
 
         logger.notice(`loaded ${program} program keypairs' pubkey:`)
         for (const [name, keypair] of keypairMap.local.entries()) {
@@ -199,7 +204,7 @@ export class Keychain<KEYS extends string> {
         return keypairMap;
     }
 
-    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, keypairMap: KeypairMap, hasNewLocalKeypair: boolean, buildCommand: string, askYesNo: AskYesNo | false) {
+    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, cluster: Cluster, keypairMap: KeypairMap, hasNewLocalKeypair: boolean, buildCommand: string, askYesNo: AskYesNo | false) {
         if (askYesNo && hasNewLocalKeypair) {
             if (!await askYesNo(`[?] Applying new keypairs will update workspace code and file, continue?`)) {
                 logger.debug(`exit without workspace updates...`);
@@ -207,34 +212,37 @@ export class Keychain<KEYS extends string> {
             }
         }
 
-        // update program public key in source code
-        const keypairKEYS = [...keypairMap.local.keys(), ...keypairMap.ledger.keys()];
-        const programSrcDir = path.join(__dirname, '../../programs', program, 'src');
         let fileUpdated: string[] = [];
-        for (const fileName of ['constants/local.rs']) {
-            const filePath = path.join(programSrcDir, fileName);
-            let fileSource = fs.readFileSync(filePath).toString();
-            logger.debug(`checking ${filePath}`);
 
-            let updated = 0;
-            for (const keypairName of keypairKEYS) {
-                const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
-
-                if (matches) {
-                    const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
-                    const target = `/*local:${keypairName}*/"${publicKey.toString()}"/**/`;
-                    for (const match of matches) {
-                        if (match != target) {
-                            updated++;
-                            fileSource = fileSource.replace(match, target);
-                            logger.info(`replaced a line starting with`.padEnd(LOG_PAD_SMALL), `/*local:${keypairName}*/...`);
+        // update program public key in source code
+        if (cluster == "local") {
+            const keypairKEYS = [...keypairMap.local.keys(), ...keypairMap.ledger.keys()];
+            const programSrcDir = path.join(__dirname, '../../programs', program, 'src');
+            for (const fileName of ['constants/local.rs']) {
+                const filePath = path.join(programSrcDir, fileName);
+                let fileSource = fs.readFileSync(filePath).toString();
+                logger.debug(`checking ${filePath}`);
+    
+                let updated = 0;
+                for (const keypairName of keypairKEYS) {
+                    const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
+    
+                    if (matches) {
+                        const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
+                        const target = `/*local:${keypairName}*/"${publicKey.toString()}"/**/`;
+                        for (const match of matches) {
+                            if (match != target) {
+                                updated++;
+                                fileSource = fileSource.replace(match, target);
+                                logger.info(`replaced a line starting with`.padEnd(LOG_PAD_SMALL), `/*local:${keypairName}*/...`);
+                            }
                         }
                     }
                 }
-            }
-            if (updated > 0) {
-                fs.writeFileSync(filePath, fileSource);
-                fileUpdated.push(filePath);
+                if (updated > 0) {
+                    fs.writeFileSync(filePath, fileSource);
+                    fileUpdated.push(filePath);
+                }
             }
         }
 
