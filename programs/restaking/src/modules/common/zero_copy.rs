@@ -2,13 +2,15 @@ use anchor_lang::{prelude::*, ZeroCopy};
 
 /// Zero-copy account that has header (data-version, bump).
 pub trait ZeroCopyHeader: ZeroCopy + Owner {
+    // /// Offset of data_version (16bit)
+    // fn data_version_offset() -> usize;
     /// Offset of bump (8bit)
     fn bump_offset() -> usize;
 }
 
 /// A trait for account loader to perform operation without load.
 pub trait ZeroCopyWithoutLoad {
-    /// Checks if we are initializing this account and sets bump, without loading.
+    /// Checks if we are initializing this account and then sets bump, without loading.
     /// Should only be called once, when the account is being initialized.
     fn init_without_load(&mut self, bump: u8) -> Result<()>;
     // /// Reads data version without loading.
@@ -32,8 +34,13 @@ impl<'info, T: ZeroCopyHeader> ZeroCopyWithoutLoad for AccountLoader<'info, T> {
             return Err(ErrorCode::AccountDiscriminatorAlreadySet.into());
         }
 
-        // Sets bump.
+        // Safety Check
         let offset = 8 + T::bump_offset();
+        if data.len() < offset + 1 {
+            return Err(ErrorCode::ConstraintSpace.into());
+        }
+
+        // Sets bump.
         data[offset] = bump;
 
         Ok(())
@@ -41,8 +48,14 @@ impl<'info, T: ZeroCopyHeader> ZeroCopyWithoutLoad for AccountLoader<'info, T> {
 
     // fn data_version(&self) -> Result<u16> {
     //     let data = self.as_ref().try_borrow_data()?;
-    //     let mut disc_bytes = [0u8; 2];
     //     let offset = 8 + T::data_version_offset();
+
+    //     // Safety Check
+    //     if data.len() < offset + 2 {
+    //         return Err(ErrorCode::ConstraintSpace.into());
+    //     }
+
+    //     let mut disc_bytes = [0u8; 2];
     //     disc_bytes.copy_from_slice(&data[offset..offset + 2]);
     //     Ok(u16::from_le_bytes(disc_bytes))
     // }
@@ -50,6 +63,12 @@ impl<'info, T: ZeroCopyHeader> ZeroCopyWithoutLoad for AccountLoader<'info, T> {
     fn bump(&self) -> Result<u8> {
         let data = self.as_ref().try_borrow_data()?;
         let offset = 8 + T::bump_offset();
+
+        // Safety Check
+        if data.len() < offset + 1 {
+            return Err(ErrorCode::ConstraintSpace.into());
+        }
+
         Ok(data[offset])
     }
 }
