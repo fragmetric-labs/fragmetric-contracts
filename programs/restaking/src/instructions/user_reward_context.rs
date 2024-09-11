@@ -3,7 +3,7 @@ use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-// use crate::events::UserUpdatedRewardPool;
+use crate::events::UserUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
 
 // will be used only once
@@ -124,11 +124,10 @@ impl<'info> UserRewardContext<'info> {
 
             user_reward_account.update_if_needed(bump, receipt_token_mint, ctx.accounts.user.key());
 
-            // CHECK: won't emit empty event here for following deposit ix events' sake.
-            // emit!(UserUpdatedRewardPool::new_from_initialize(
-            //     receipt_token_mint,
-            //     &user_reward_account,
-            // ));
+            emit!(UserUpdatedRewardPool::new_from_initialize(
+                receipt_token_mint,
+                ctx.accounts.user_reward_account.key(),
+            ));
         }
 
         Ok(())

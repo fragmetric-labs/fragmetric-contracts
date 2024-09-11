@@ -128,6 +128,7 @@ describe("withdraw", async () => {
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
+            events: ['fundManagerUpdatedFund'],
         });
 
         await expect(restaking.runUserWithdraw(user5, new BN(4))).rejectedWith('FundWithdrawalDisabledError');
@@ -139,6 +140,7 @@ describe("withdraw", async () => {
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
+            events: ['fundManagerUpdatedFund'],
         });
 
         const res2 = await restaking.runUserWithdraw(user5, new BN(4));

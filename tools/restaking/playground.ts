@@ -296,6 +296,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getUserFragSOLRewardAccount(user: web3.PublicKey) {
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user))
+    }
+
     public getFragSOLRewardAccount() {
         return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
     }
@@ -1078,7 +1082,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            // events: ['operatorUpdatedRewardPool'], // won't emit it for such void update requests
+            events: ['operatorUpdatedRewardPools'], // won't emit it for such void update requests
         });
 
         logger.notice(`operator manually updated global reward pool:`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());

@@ -36,10 +36,11 @@ describe("deposit_sol", async () => {
         expect(res1.event.userDepositedSolToFund.walletProvider).null;
         expect(res1.event.userDepositedSolToFund.contributionAccrualRate).null;
         expect(res1.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString())
-        expect(res1.event.userUpdatedRewardPool.updates.length).eq(1);
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
+        
+        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user1.publicKey);
+        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
+        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
 
         const res2 = await restaking.runOperatorUpdatePrices();
         expect(res2.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toString()).eq((amount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** restaking.fragSOLDecimals))).toString());
@@ -61,10 +62,10 @@ describe("deposit_sol", async () => {
         expect(res1.event.userDepositedSolToFund.contributionAccrualRate.toString()).eq(depositMetadata1.contributionAccrualRate.toString());
         expect(res1.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString())
 
-        expect(res1.event.userUpdatedRewardPool.updates.length).eq(1);
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
-        expect(res1.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
+        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user2.publicKey);
+        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
+        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.toString());
 
         const amount2 = new BN(4 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
@@ -78,12 +79,12 @@ describe("deposit_sol", async () => {
         expect(res2.event.userDepositedSolToFund.contributionAccrualRate.toString()).eq(depositMetadata2.contributionAccrualRate.toString());
         expect(res2.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res2.fragSOLUserTokenAccount.amount.toString())
 
-        expect(res2.event.userUpdatedRewardPool.updates.length).eq(1);
-        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools.length).eq(2);
-        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
-        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[0].tokenAllocatedAmount.numRecords).eq(1); // base pool has no custom accrual rate
-        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
-        expect(res2.event.userUpdatedRewardPool.updates[0].updatedUserRewardPools[1].tokenAllocatedAmount.numRecords).eq(2);
+        expect(res2.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        const userRewardAccount2 = await restaking.getUserFragSOLRewardAccount(user2.publicKey);
+        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
+        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.numRecords).eq(1); // base pool has no custom accrual rate
+        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount1.add(amount2).toString());
+        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.numRecords).eq(2);
     });
 
     step("user2 cannot cheat metadata", async function () {
