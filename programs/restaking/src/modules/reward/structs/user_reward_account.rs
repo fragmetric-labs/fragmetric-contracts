@@ -166,12 +166,6 @@ impl UserRewardPool {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn reward_settlements_ref(&self) -> &[UserRewardSettlement] {
-        &self.reward_settlements_1[..self.num_reward_settlements as usize]
-    }
-
-    /// How to integrate multiple fields into a single array slice or whatever...
-    /// You may change the return type if needed
     fn reward_settlements_mut(&mut self) -> &mut [UserRewardSettlement] {
         &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
     }
@@ -183,66 +177,5 @@ impl UserRewardPool {
     pub fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut UserRewardSettlement> {
         self.reward_settlements_iter_mut()
             .find(|s| s.reward_id() == reward_id)
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct UserRewardAccountUpdateInfo {
-    pub data_version: u16,
-    pub user: Pubkey,
-    pub updated_user_reward_pools: Vec<UserRewardPoolInfo>,
-}
-
-impl UserRewardAccountUpdateInfo {
-    pub fn empty(user_reward_account: &UserRewardAccount) -> Self {
-        Self {
-            user: user_reward_account.user,
-            data_version: user_reward_account.data_version,
-            updated_user_reward_pools: vec![],
-        }
-    }
-
-    pub fn new(
-        user_reward_account: &UserRewardAccount,
-        updated_user_reward_pools: Vec<UserRewardPoolInfo>,
-    ) -> Self {
-        Self {
-            user: user_reward_account.user,
-            data_version: user_reward_account.data_version,
-            updated_user_reward_pools,
-        }
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct UserRewardPoolInfo {
-    pub token_allocated_amount: TokenAllocatedAmount,
-    pub contribution: u128,
-    pub updated_slot: u64,
-    pub reward_pool_id: u8,
-    pub reward_settlements: Vec<UserRewardSettlement>,
-}
-
-impl From<&UserRewardPool> for UserRewardPoolInfo {
-    fn from(value: &UserRewardPool) -> Self {
-        Self {
-            token_allocated_amount: value.token_allocated_amount,
-            contribution: value.contribution,
-            updated_slot: value.updated_slot,
-            reward_pool_id: value.reward_pool_id,
-            reward_settlements: value.reward_settlements_ref().to_vec(),
-        }
-    }
-}
-
-impl From<&mut UserRewardPool> for UserRewardPoolInfo {
-    fn from(value: &mut UserRewardPool) -> Self {
-        Self {
-            token_allocated_amount: value.token_allocated_amount,
-            contribution: value.contribution,
-            updated_slot: value.updated_slot,
-            reward_pool_id: value.reward_pool_id,
-            reward_settlements: value.reward_settlements_ref().to_vec(),
-        }
     }
 }

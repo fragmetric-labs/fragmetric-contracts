@@ -153,70 +153,28 @@ impl Reward {
         crate::utils::from_utf8_trim_null(&self.description)
     }
 
-    fn reward_type(&self) -> Result<RewardType> {
-        let reward_type = match self.reward_type_discriminant {
-            // Point
-            0 => RewardType::Point {
-                decimals: self.decimals,
-            },
-            // Token
-            1 => RewardType::Token {
-                mint: self.token_mint,
-                program: self.token_program,
-                decimals: self.decimals,
-            },
-            // SOL
-            2 => RewardType::SOL,
-            // Unknown
-            _ => {
-                return Err(ErrorCode::RewardInvalidRewardType)?;
-            }
-        };
+    // fn reward_type(&self) -> Result<RewardType> {
+    //     let reward_type = match self.reward_type_discriminant {
+    //         // Point
+    //         0 => RewardType::Point {
+    //             decimals: self.decimals,
+    //         },
+    //         // Token
+    //         1 => RewardType::Token {
+    //             mint: self.token_mint,
+    //             program: self.token_program,
+    //             decimals: self.decimals,
+    //         },
+    //         // SOL
+    //         2 => RewardType::SOL,
+    //         // Unknown
+    //         _ => {
+    //             return Err(ErrorCode::RewardInvalidRewardType)?;
+    //         }
+    //     };
 
-        Ok(reward_type)
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct HolderInfo {
-    pub id: u8,
-    pub name: String,
-    pub description: String,
-    pub pubkeys: Vec<Pubkey>,
-}
-
-impl TryFrom<&Holder> for HolderInfo {
-    type Error = Error;
-
-    fn try_from(value: &Holder) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            id: value.id,
-            name: value.name()?,
-            description: value.description()?,
-            pubkeys: value.pubkeys_ref().to_vec(),
-        })
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct RewardInfo {
-    id: u16,
-    name: String,
-    description: String,
-    reward_type: RewardType,
-}
-
-impl TryFrom<&Reward> for RewardInfo {
-    type Error = Error;
-
-    fn try_from(value: &Reward) -> std::result::Result<Self, Self::Error> {
-        Ok(Self {
-            id: value.id,
-            name: value.name()?,
-            description: value.description()?,
-            reward_type: value.reward_type()?,
-        })
-    }
+    //     Ok(reward_type)
+    // }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize)]

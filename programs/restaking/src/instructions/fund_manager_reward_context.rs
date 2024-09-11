@@ -33,7 +33,10 @@ impl<'info> FundManagerRewardContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_holder(name, description, pubkeys)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(&reward_account, vec![],)?);
+        emit!(FundManagerUpdatedRewardPool::new(
+            &reward_account,
+            ctx.accounts.reward_account.key(),
+        )?);
 
         Ok(())
     }
@@ -46,7 +49,7 @@ impl<'info> FundManagerRewardContext<'info> {
     ) -> Result<()> {
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        let reward_pool_id = reward_account.add_reward_pool(
+        reward_account.add_reward_pool(
             name,
             holder_id,
             custom_contribution_accrual_rate_enabled,
@@ -55,7 +58,7 @@ impl<'info> FundManagerRewardContext<'info> {
 
         emit!(FundManagerUpdatedRewardPool::new(
             &reward_account,
-            vec![reward_pool_id],
+            ctx.accounts.reward_account.key(),
         )?);
 
         Ok(())
@@ -68,7 +71,7 @@ impl<'info> FundManagerRewardContext<'info> {
 
         emit!(FundManagerUpdatedRewardPool::new(
             &reward_account,
-            vec![reward_pool_id],
+            ctx.accounts.reward_account.key(),
         )?);
 
         Ok(())
@@ -135,7 +138,10 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.add_reward(name, description, reward_type)?;
 
-        emit!(FundManagerUpdatedRewardPool::new(&reward_account, vec![])?);
+        emit!(FundManagerUpdatedRewardPool::new(
+            &reward_account,
+            ctx.accounts.reward_account.key(),
+        )?);
 
         Ok(())
     }
@@ -152,7 +158,7 @@ impl<'info> FundManagerRewardDistributionContext<'info> {
 
         emit!(FundManagerUpdatedRewardPool::new(
             &reward_account,
-            vec![reward_pool_id],
+            ctx.accounts.reward_account.key(),
         )?);
 
         Ok(())
