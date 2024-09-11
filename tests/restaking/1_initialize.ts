@@ -15,6 +15,10 @@ describe("initialize", async () => {
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
+    // step("update fragSOL token metadata", async function () {
+    //     await restaking.runAdminUpdateTokenMetadata();
+    // });
+
     step("mock supported token mints", async function () {
         const tokenMint_bSOL = await spl.getMint(
             restaking.connection,

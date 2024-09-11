@@ -309,7 +309,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
             name: 'Fragmetric Restaked SOL',
             symbol: 'fragSOL',
-            uri: 'https://quicknode.quicknode-ipfs.com/ipfs/Qme3xQUAKmtQHVu1hihKeBHuDW35zFPYfZdV6avEW6yRq1',
+            uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw',
             additionalMetadata: [['description', `fragSOL is Solana's first native LRT that provides optimized restaking rewards.`]],
             updateAuthority: this.keychain.getPublicKey('ADMIN'),
         };
@@ -317,7 +317,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             name: metadata.name,
             symbol: metadata.symbol,
             description: metadata.additionalMetadata[0][1],
-            image: 'https://quicknode.quicknode-ipfs.com/ipfs/QmayYcry2mJGHmcYMn1mqiqxR9kkQXtE3uBEzR9y84vQVL',
+            image: 'https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png',
             // attributes: [],
         }, null, 0);
         logger.debug(`fragSOL metadata file:\n> ${metadata.uri}\n> ${fileForMetadataURI}`);
@@ -386,6 +386,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         logger.notice('fragSOL token mint created with extensions'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMint.toString());
         return { fragSOLMint };
+    }
+
+    public async runAdminUpdateTokenMetadata() {
+        const fragSOLTokenMetadataAddress = this.knownAddress.fragSOLTokenMint;
+
+        let tokenMetadata = await spl.getTokenMetadata(this.connection, fragSOLTokenMetadataAddress, undefined, spl.TOKEN_2022_PROGRAM_ID);
+        logger.debug(`current token metadata:\n> ${JSON.stringify(tokenMetadata, null, 0)}`);
+
+        const updatedFileForMetadataURI = JSON.stringify({
+            name: tokenMetadata.name,
+            symbol: tokenMetadata.symbol,
+            description: tokenMetadata.additionalMetadata[0][1],
+            image: 'https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png',
+            // attributes: [],
+        }, null, 0);
+        logger.debug(`fragSOL metadata file:\n> ${updatedFileForMetadataURI}`);
+
+        const updatedMetadataUri = "https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw";
+        const updatedMetadata = spl.updateTokenMetadata(tokenMetadata, splTokenMetadata.Field.Uri, updatedMetadataUri);
+        logger.debug(`will update token metadata:\n> ${JSON.stringify(updatedMetadata, null, 0)}`);
+
+        await this.run({
+            instructions: [
+                splTokenMetadata.createUpdateFieldInstruction({
+                    programId: spl.TOKEN_2022_PROGRAM_ID,
+                    metadata: this.knownAddress.fragSOLTokenMint,
+                    updateAuthority: tokenMetadata.updateAuthority,
+                    field: splTokenMetadata.Field.Uri,
+                    value: updatedMetadataUri,
+                }),
+            ],
+            signerNames: ['ADMIN'],
+        });
+
+        tokenMetadata = await spl.getTokenMetadata(this.connection, fragSOLTokenMetadataAddress, "confirmed", spl.TOKEN_2022_PROGRAM_ID);
+        logger.notice(`updated token metadata:\n> ${JSON.stringify(tokenMetadata, null, 2)}`);
     }
 
     public async runAdminUpdateRewardAccounts(batchSize = 35) {
