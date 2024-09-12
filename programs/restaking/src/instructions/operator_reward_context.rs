@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
+use crate::events::OperatorUpdatedRewardPools;
 use crate::modules::{common::*, reward::*};
 
 #[derive(Accounts)]
@@ -39,6 +40,13 @@ impl<'info> OperatorRewardContext<'info> {
 
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        reward_account.update_reward_pools(current_slot)
+        reward_account.update_reward_pools(current_slot)?;
+
+        emit!(OperatorUpdatedRewardPools::new(
+            &reward_account,
+            ctx.accounts.reward_account.key()
+        )?);
+
+        Ok(())
     }
 }

@@ -15,6 +15,10 @@ describe("initialize", async () => {
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
+    // step("update fragSOL token metadata", async function () {
+    //     await restaking.runAdminUpdateTokenMetadata();
+    // });
+
     step("mock supported token mints", async function () {
         const tokenMint_bSOL = await spl.getMint(
             restaking.connection,
@@ -34,13 +38,26 @@ describe("initialize", async () => {
         expect(tokenMint_jitoSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
     });
 
-    step("initialize fund, reward accounts, token extensions and transfer token mint authority to PDA", async function () {
-        const res0 = await restaking.runAdminInitializeFundAndRewardAccountsAndMint();
+    step("initialize fund accounts", async () => {
+        const { fragSOLFundAccount } = await restaking.runAdminInitializeFundAccounts();
 
-        expect(res0.fragSOLFundAccount.dataVersion).gt(0);
-        expect(res0.fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
-        expect(res0.fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLTokenMintAuthority.toString());
-        expect(res0.fragSOLExtraAccountMetasAccount.length).eq(6);
+        expect(fragSOLFundAccount.dataVersion).gt(0);
+    })
+
+    step("initialize reward accounts", async () => {
+        const { fragSOLRewardAccount } = await restaking.runAdminUpdateRewardAccounts();
+
+        expect(fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
+    })
+
+    step("transfer token mint authority to PDA", async function () {
+        const {
+            fragSOLMint,
+            fragSOLExtraAccountMetasAccount,
+        } = await restaking.runAdminTransferMintAuthority();
+
+        expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLTokenMintAuthority.toString());
+        expect(fragSOLExtraAccountMetasAccount.length).eq(6);
     });
 
     step("initialize fund and supported tokens configuration", async function () {

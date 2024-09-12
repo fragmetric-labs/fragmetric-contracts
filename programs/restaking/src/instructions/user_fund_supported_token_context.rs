@@ -233,19 +233,18 @@ impl<'info> UserFundSupportedTokenContext<'info> {
 
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         let mut user_reward_account = ctx.accounts.user_reward_account.load_mut()?;
-        let (from_user_update, to_user_update) = reward_account
-            .update_reward_pools_token_allocation(
-                ctx.accounts.receipt_token_mint.key(),
-                amount,
-                contribution_accrual_rate,
-                None,
-                Some(&mut user_reward_account),
-                current_slot,
-            )?;
+        reward_account.update_reward_pools_token_allocation(
+            ctx.accounts.receipt_token_mint.key(),
+            amount,
+            contribution_accrual_rate,
+            None,
+            Some(&mut user_reward_account),
+            current_slot,
+        )?;
 
         emit!(UserUpdatedRewardPool::new(
             ctx.accounts.receipt_token_mint.key(),
-            from_user_update.into_iter().chain(to_user_update).collect(),
+            vec![ctx.accounts.user_reward_account.key()],
         ));
 
         Ok(())

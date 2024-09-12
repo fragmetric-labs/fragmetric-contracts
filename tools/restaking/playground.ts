@@ -44,6 +44,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    public get initializeSteps() {
+        if (this._initializeSteps) return this._initializeSteps;
+        return this._initializeSteps = this._getInitializeSteps();
+    }
+    private _initializeSteps: ReturnType<typeof this._getInitializeSteps>;
+    private _getInitializeSteps() {
+        return [
+            () => this.runAdminInitializeTokenMint(), // 0
+            () => this.runAdminInitializeFundAccounts(), // 1
+            () => this.runAdminUpdateRewardAccounts(), // 2
+            () => this.runAdminTransferMintAuthority(), // 3
+            () => this.runFundManagerInitializeFundConfigurations(), // 4
+            () => this.runFundManagerInitializeRewardPools(), // 5
+            () => this.runFundManagerSettleReward({ // 6
+                poolName: 'bonus',
+                rewardName: 'fPoint',
+                amount: new BN(0),
+            }),
+        ]
+    }
+
     public get knownAddress() {
         if (this._knownAddress) return this._knownAddress;
         return this._knownAddress = this._getKnownAddress();
@@ -92,7 +113,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.programId
         )[0];
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) => web3.PublicKey.findProgramAddressSync(
-            [Buffer.from('supported_token_account'), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
+            [Buffer.from('supported_token'), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
             this.programId
         );
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) => spl.getAssociatedTokenAddressSync(
@@ -165,7 +186,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             address: this.getConstantAsPublicKey('mainnetBsolStakePoolAddress'),
                         },
                     },
-                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000)), // TODO: set number
+                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(0)), // TODO: set number
                     decimals: 9,
                 },
                 jitoSOL: {
@@ -177,7 +198,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             address: this.getConstantAsPublicKey('mainnetJitosolStakePoolAddress'),
                         },
                     },
-                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000)), // TODO: set number
+                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(30_000)), // TODO: set number
                     decimals: 9,
                 },
                 mSOL: {
@@ -275,6 +296,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getUserFragSOLRewardAccount(user: web3.PublicKey) {
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user))
+    }
+
     public getFragSOLRewardAccount() {
         return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
     }
@@ -288,7 +313,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
             name: 'Fragmetric Restaked SOL',
             symbol: 'fragSOL',
-            uri: 'https://quicknode.quicknode-ipfs.com/ipfs/Qme3xQUAKmtQHVu1hihKeBHuDW35zFPYfZdV6avEW6yRq1',
+            uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw',
             additionalMetadata: [['description', `fragSOL is Solana's first native LRT that provides optimized restaking rewards.`]],
             updateAuthority: this.keychain.getPublicKey('ADMIN'),
         };
@@ -296,7 +321,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             name: metadata.name,
             symbol: metadata.symbol,
             description: metadata.additionalMetadata[0][1],
-            image: 'https://quicknode.quicknode-ipfs.com/ipfs/QmayYcry2mJGHmcYMn1mqiqxR9kkQXtE3uBEzR9y84vQVL',
+            image: 'https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png',
             // attributes: [],
         }, null, 0);
         logger.debug(`fragSOL metadata file:\n> ${metadata.uri}\n> ${fileForMetadataURI}`);
@@ -367,6 +392,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { fragSOLMint };
     }
 
+    public async runAdminUpdateTokenMetadata() {
+        const fragSOLTokenMetadataAddress = this.knownAddress.fragSOLTokenMint;
+
+        let tokenMetadata = await spl.getTokenMetadata(this.connection, fragSOLTokenMetadataAddress, undefined, spl.TOKEN_2022_PROGRAM_ID);
+        logger.debug(`current token metadata:\n> ${JSON.stringify(tokenMetadata, null, 0)}`);
+
+        const updatedFileForMetadataURI = JSON.stringify({
+            name: tokenMetadata.name,
+            symbol: tokenMetadata.symbol,
+            description: tokenMetadata.additionalMetadata[0][1],
+            image: 'https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png',
+            // attributes: [],
+        }, null, 0);
+        logger.debug(`fragSOL metadata file:\n> ${updatedFileForMetadataURI}`);
+
+        const updatedMetadataUri = "https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw";
+        const updatedMetadata = spl.updateTokenMetadata(tokenMetadata, splTokenMetadata.Field.Uri, updatedMetadataUri);
+        logger.debug(`will update token metadata:\n> ${JSON.stringify(updatedMetadata, null, 0)}`);
+
+        await this.run({
+            instructions: [
+                splTokenMetadata.createUpdateFieldInstruction({
+                    programId: spl.TOKEN_2022_PROGRAM_ID,
+                    metadata: this.knownAddress.fragSOLTokenMint,
+                    updateAuthority: tokenMetadata.updateAuthority,
+                    field: splTokenMetadata.Field.Uri,
+                    value: updatedMetadataUri,
+                }),
+            ],
+            signerNames: ['ADMIN'],
+        });
+
+        tokenMetadata = await spl.getTokenMetadata(this.connection, fragSOLTokenMetadataAddress, "confirmed", spl.TOKEN_2022_PROGRAM_ID);
+        logger.notice(`updated token metadata:\n> ${JSON.stringify(tokenMetadata, null, 2)}`);
+    }
+
     public async runAdminUpdateRewardAccounts(batchSize = 35) {
         const currentVersion = await this.account.rewardAccount
             .fetch(this.knownAddress.fragSOLReward)
@@ -404,13 +465,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
         }
 
-        const fragSOLRewardAccount = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        const fragSOLRewardAccount = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward, "confirmed");
         logger.notice(`updated reward account version from=${currentVersion}, to=${fragSOLRewardAccount.dataVersion}, target=${targetVersion}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
 
         return { fragSOLRewardAccount };
     }
 
-    public async runAdminInitializeFundAndRewardAccountsAndMint() {
+    public async runAdminInitializeFundAccounts() {
         await this.run({
             instructions: [
                 this.program.methods
@@ -428,11 +489,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signerNames: ['ADMIN'],
         });
-        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
+        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
         logger.notice('fragSOL fund account created'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
-        const { fragSOLRewardAccount } = await this.runAdminUpdateRewardAccounts();
+        return { fragSOLFundAccount };
+    }
 
+    public async runAdminTransferMintAuthority() {
         await this.run({
             instructions: [
                 this.program.methods
@@ -465,19 +528,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
         logger.notice(`transferred fragSOL mint authority to the PDA`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMintAuthority.toString());
 
-        return {
-            fragSOLFundAccount,
-            fragSOLRewardAccount,
-            fragSOLExtraAccountMetasAccount,
-            fragSOLMint,
-        };
+        return { fragSOLMint, fragSOLExtraAccountMetasAccount };
     }
 
     public async runFundManagerInitializeFundConfigurations() {
         const { event, error } = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerUpdateSolCapacityAmount(new BN(web3.LAMPORTS_PER_SOL).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000))) // TODO: set number
+                    .fundManagerUpdateSolCapacityAmount(new BN(web3.LAMPORTS_PER_SOL).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(60_000))) // TODO: set number
                     .instruction(),
                 this.program.methods
                     .fundManagerUpdateSolWithdrawalFeeRate(10) // 1 fee rate = 1bps = 0.01%
@@ -1024,7 +1082,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            // events: ['operatorUpdatedRewardPool'], // won't emit it for such void update requests
+            events: ['operatorUpdatedRewardPools'], // won't emit it for such void update requests
         });
 
         logger.notice(`operator manually updated global reward pool:`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());

@@ -92,25 +92,17 @@ impl RewardAccount {
         &mut self,
         user: &mut UserRewardAccount,
         current_slot: u64,
-    ) -> Result<UserRewardAccountUpdateInfo> {
+    ) -> Result<()> {
         user.backfill_not_existing_pools(self.reward_pools_iter())?;
-
-        let mut user_updated_reward_pools_info: Vec<UserRewardPoolInfo> = vec![];
 
         user.user_reward_pools_iter_mut()
             .zip(self.reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {
                 user_reward_pool.update(reward_pool, vec![], current_slot)?;
-                user_updated_reward_pools_info.push(UserRewardPoolInfo::from(user_reward_pool));
                 Ok::<(), Error>(())
             })?;
 
-        Ok(
-            UserRewardAccountUpdateInfo::new(
-                user,
-                user_updated_reward_pools_info,
-            )
-        )
+        Ok(())
     }
 
     pub fn update_reward_pools_token_allocation(
@@ -121,20 +113,12 @@ impl RewardAccount {
         from: Option<&mut UserRewardAccount>,
         to: Option<&mut UserRewardAccount>,
         current_slot: u64,
-    ) -> Result<(
-        Option<UserRewardAccountUpdateInfo>,
-        Option<UserRewardAccountUpdateInfo>,
-    )> {
+    ) -> Result<()> {
         if from.is_none() && to.is_none() || to.is_none() && contribution_accrual_rate.is_some() {
             err!(ErrorCode::RewardInvalidTransferArgsException)?
         }
 
-        let mut from_user_update: Option<UserRewardAccountUpdateInfo> = None;
-        let mut to_user_update: Option<UserRewardAccountUpdateInfo> = None;
-
         if let Some(from) = from {
-            let mut from_user_updated_reward_pools_info: Vec<UserRewardPoolInfo> = vec![];
-
             // back-fill not existing pools
             from.backfill_not_existing_pools(self.reward_pools_iter())?;
             // find "from user" related reward pools
@@ -148,19 +132,11 @@ impl RewardAccount {
 
                 let effective_deltas =
                     user_reward_pool.update(reward_pool, deltas, current_slot)?;
-                from_user_updated_reward_pools_info.push((&*user_reward_pool).into());
                 reward_pool.update(effective_deltas, current_slot)?;
             }
-
-            from_user_update = Some(UserRewardAccountUpdateInfo::new(
-                from,
-                from_user_updated_reward_pools_info,
-            ));
         }
 
         if let Some(to) = to {
-            let mut to_user_updated_reward_pools_info: Vec<UserRewardPoolInfo> = vec![];
-
             // back-fill not existing pools
             to.backfill_not_existing_pools(self.reward_pools_iter())?;
             // find "to user" related reward pools
@@ -177,17 +153,11 @@ impl RewardAccount {
                 }];
                 let effective_deltas =
                     user_reward_pool.update(reward_pool, deltas, current_slot)?;
-                to_user_updated_reward_pools_info.push((&*user_reward_pool).into());
                 reward_pool.update(effective_deltas, current_slot)?;
             }
-
-            to_user_update = Some(UserRewardAccountUpdateInfo::new(
-                to,
-                to_user_updated_reward_pools_info,
-            ));
         }
 
-        Ok((from_user_update, to_user_update))
+        Ok(())
     }
 
     fn get_related_pools(
