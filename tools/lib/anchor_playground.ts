@@ -109,12 +109,12 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
             const result = {
                 txSig,
-                error: AnchorError.parse(txResult.meta.logMessages) ?? null,
+                error: txResult != null ? AnchorError.parse(txResult.meta.logMessages) : null,
             }
 
             return {
                 ...result,
-                event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
+                event: txResult != null ? this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events) : {} as {[k in EVENTS]: IdlEvents<IDL>[k]},
             };
 
         } catch (err) {

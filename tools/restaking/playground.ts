@@ -51,13 +51,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     private _initializeSteps: ReturnType<typeof this._getInitializeSteps>;
     private _getInitializeSteps() {
         return [
-            () => this.runAdminInitializeTokenMint(),
-            () => this.runAdminInitializeFundAccounts,
-            () => this.runAdminUpdateRewardAccounts,
-            () => this.runAdminTransferMintAuthority,
-            () => this.runFundManagerInitializeFundConfigurations,
-            () => this.runFundManagerInitializeRewardPools,
-            () => this.runFundManagerSettleReward({
+            () => this.runAdminInitializeTokenMint(), // 0
+            () => this.runAdminInitializeFundAccounts(), // 1
+            () => this.runAdminUpdateRewardAccounts(), // 2
+            () => this.runAdminTransferMintAuthority(), // 3
+            () => this.runFundManagerInitializeFundConfigurations(), // 4
+            () => this.runFundManagerInitializeRewardPools(), // 5
+            () => this.runFundManagerSettleReward({ // 6
                 poolName: 'bonus',
                 rewardName: 'fPoint',
                 amount: new BN(0),
@@ -186,7 +186,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             address: this.getConstantAsPublicKey('mainnetBsolStakePoolAddress'),
                         },
                     },
-                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000)), // TODO: set number
+                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(0)), // TODO: set number
                     decimals: 9,
                 },
                 jitoSOL: {
@@ -198,7 +198,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             address: this.getConstantAsPublicKey('mainnetJitosolStakePoolAddress'),
                         },
                     },
-                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000)), // TODO: set number
+                    capacity: new BN(10 ** 9).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(30_000)), // TODO: set number
                     decimals: 9,
                 },
                 mSOL: {
@@ -465,7 +465,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
         }
 
-        const fragSOLRewardAccount = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        const fragSOLRewardAccount = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward, "confirmed");
         logger.notice(`updated reward account version from=${currentVersion}, to=${fragSOLRewardAccount.dataVersion}, target=${targetVersion}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
 
         return { fragSOLRewardAccount };
@@ -489,7 +489,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signerNames: ['ADMIN'],
         });
-        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
+        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
         logger.notice('fragSOL fund account created'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
         return { fragSOLFundAccount };
@@ -535,7 +535,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const { event, error } = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerUpdateSolCapacityAmount(new BN(web3.LAMPORTS_PER_SOL).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(10_000))) // TODO: set number
+                    .fundManagerUpdateSolCapacityAmount(new BN(web3.LAMPORTS_PER_SOL).mul(this.isMaybeLocalnet ? new BN(1_000) : new BN(60_000))) // TODO: set number
                     .instruction(),
                 this.program.methods
                     .fundManagerUpdateSolWithdrawalFeeRate(10) // 1 fee rate = 1bps = 0.01%

@@ -13,7 +13,7 @@ import {askOnce} from "./repl";
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
 
 type AskYesNo = (question: string) => Promise<boolean>;
-type Cluster = "local" | "devnet" | "mainnet";
+type CLUSTER = "local" | "devnet" | "mainnet";
 
 function defaultAskYesNo(question: string) {
     return askOnce(`${question} (y/n)`)
@@ -25,7 +25,7 @@ const LEDGER_PATH_PREFIX = 'ledger://';
 
 export type KeychainConfig<KEYS extends string> = {
     program: WORKSPACE_PROGRAM_NAME,
-    cluster: Cluster,
+    cluster: CLUSTER,
     // default is 'anchor build -p target-program'
     buildCommand?: string;
     // give existing local keypair path or instance, or give null to generate new one.
@@ -204,7 +204,7 @@ export class Keychain<KEYS extends string> {
         return keypairMap;
     }
 
-    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, cluster: Cluster, keypairMap: KeypairMap, hasNewLocalKeypair: boolean, buildCommand: string, askYesNo: AskYesNo | false) {
+    private static async applyKeypairsToWorkspace(program: WORKSPACE_PROGRAM_NAME, cluster: CLUSTER, keypairMap: KeypairMap, hasNewLocalKeypair: boolean, buildCommand: string, askYesNo: AskYesNo | false) {
         if (askYesNo && hasNewLocalKeypair) {
             if (!await askYesNo(`[?] Applying new keypairs will update workspace code and file, continue?`)) {
                 logger.debug(`exit without workspace updates...`);
