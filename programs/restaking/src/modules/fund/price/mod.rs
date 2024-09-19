@@ -99,7 +99,7 @@ impl FundAccount {
     }
 }
 
-fn find_token_pricing_source_by_key<'a, 'info: 'a>(
+fn find_token_pricing_source_by_key<'a, 'info>(
     sources: &'a [AccountInfo<'info>],
     key: &Pubkey,
 ) -> Result<&'a AccountInfo<'info>> {

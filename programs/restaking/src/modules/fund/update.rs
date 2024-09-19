@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource, UserFundAccount, WithdrawalStatus};
+use crate::modules::fund::*;
 
 impl SupportedTokenInfo {
     pub fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -36,13 +36,8 @@ impl FundAccount {
         if self.supported_tokens.iter().any(|info| info.mint == mint) {
             err!(ErrorCode::FundAlreadySupportedTokenError)?
         }
-        let token_info = SupportedTokenInfo::new(
-            mint,
-            program,
-            decimals,
-            capacity_amount,
-            pricing_source
-        );
+        let token_info =
+            SupportedTokenInfo::new(mint, program, decimals, capacity_amount, pricing_source);
         self.supported_tokens.push(token_info);
         self.update_token_prices(pricing_sources)?;
 
@@ -59,11 +54,7 @@ impl WithdrawalStatus {
         self.withdrawal_enabled_flag = flag;
     }
 
-    pub fn set_batch_processing_threshold(
-        &mut self,
-        amount: Option<u64>,
-        duration: Option<i64>,
-    ) {
+    pub fn set_batch_processing_threshold(&mut self, amount: Option<u64>, duration: Option<i64>) {
         if let Some(amount) = amount {
             self.batch_processing_threshold_amount = amount;
         }
@@ -82,23 +73,69 @@ impl UserFundAccount {
 #[cfg(test)]
 mod tests {
     // use crate::constants::{BSOL_STAKE_POOL_ADDRESS, MSOL_STAKE_POOL_ADDRESS};
-    use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
-    use crate::modules::fund::price::source;
     use super::*;
+    use crate::modules::fund::price::source;
+    use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
+
+    #[test]
+    fn test_update_fund() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize_if_needed(0, Pubkey::new_unique());
+
+        assert_eq!(fund.sol_capacity_amount, 0);
+        assert_eq!(fund.withdrawal_status.sol_withdrawal_fee_rate, 0);
+        assert!(fund.withdrawal_status.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal_status.batch_processing_threshold_amount, 0);
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            0
+        );
+
+        let new_sol_capacity_amount = 1_000_000_000 * 60_000;
+        fund.set_sol_capacity_amount(new_sol_capacity_amount)
+            .unwrap();
+        assert_eq!(fund.sol_capacity_amount, new_sol_capacity_amount);
+
+        let new_sol_withdrawal_fee_rate = 20;
+        fund.withdrawal_status
+            .set_sol_withdrawal_fee_rate(new_sol_withdrawal_fee_rate);
+        assert_eq!(
+            fund.withdrawal_status.sol_withdrawal_fee_rate,
+            new_sol_withdrawal_fee_rate
+        );
+
+        fund.withdrawal_status.set_withdrawal_enabled_flag(false);
+        assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+
+        let new_amount = 10;
+        let new_duration = 10;
+        fund.withdrawal_status
+            .set_batch_processing_threshold(Some(new_amount), None);
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            0
+        );
+
+        fund.withdrawal_status
+            .set_batch_processing_threshold(None, Some(new_duration));
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            new_duration
+        );
+    }
 
     #[test]
     fn test_update_token() {
-        let mut fund = FundAccount {
-            data_version: 1,
-            bump: 0,
-            receipt_token_mint: Pubkey::default(),
-            supported_tokens: vec![],
-            sol_capacity_amount: 1_000_000_000 * 10000,
-            sol_accumulated_deposit_amount: 0,
-            sol_operation_reserved_amount: 0,
-            withdrawal_status: Default::default(),
-            _reserved: [0; 1280],
-        };
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize_if_needed(0, Pubkey::new_unique());
 
         let token1 = SupportedTokenInfo {
             mint: Pubkey::new_unique(),
@@ -152,8 +189,7 @@ mod tests {
                 0,
             ),
         ];
-        let mut token1_update = token1.clone();
-        token1_update.capacity_amount = 1_000_000_000 * 3000;
+
         fund.add_supported_token(
             token1.mint,
             token1.program,
@@ -161,7 +197,8 @@ mod tests {
             token1.capacity_amount,
             token1.pricing_source,
             pricing_sources,
-        ).unwrap();
+        )
+        .unwrap();
         fund.add_supported_token(
             token2.mint,
             token2.program,
@@ -169,13 +206,22 @@ mod tests {
             token2.capacity_amount,
             token2.pricing_source,
             pricing_sources,
-        ).unwrap();
-        println!("{:?}", fund.supported_tokens.iter());
+        )
+        .unwrap();
+        assert_eq!(fund.supported_tokens.len(), 2);
+        assert_eq!(
+            fund.supported_tokens[0].capacity_amount,
+            token1.capacity_amount
+        );
 
-        fund.supported_token_mut(token1_update.mint)
+        let new_token1_capacity_amount = 1_000_000_000 * 3000;
+        fund.supported_token_mut(token1.mint)
             .unwrap()
-            .set_capacity_amount(token1_update.capacity_amount)
+            .set_capacity_amount(new_token1_capacity_amount)
             .unwrap();
-        println!("{:?}", fund.supported_tokens.iter());
+        assert_eq!(
+            fund.supported_tokens[0].capacity_amount,
+            new_token1_capacity_amount
+        );
     }
 }

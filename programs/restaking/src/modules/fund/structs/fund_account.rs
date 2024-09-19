@@ -6,7 +6,7 @@ use crate::modules::common::PDASignerSeeds;
 #[account]
 #[derive(InitSpace)]
 pub struct FundAccount {
-    pub data_version: u16,
+    data_version: u16,
     pub bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(16)]
@@ -199,5 +199,76 @@ impl Default for ReservedFund {
             total_sol_reserved: Default::default(),
             _reserved: [0; 64],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl FundAccount {
+        pub fn new_uninitialized() -> Self {
+            Self {
+                data_version: 0,
+                bump: 0,
+                receipt_token_mint: Pubkey::default(),
+                supported_tokens: vec![],
+                sol_capacity_amount: 0,
+                sol_accumulated_deposit_amount: 0,
+                sol_operation_reserved_amount: 0,
+                withdrawal_status: WithdrawalStatus::new_uninitialized(),
+                _reserved: [0; 1280],
+            }
+        }
+    }
+
+    impl WithdrawalStatus {
+        fn new_uninitialized() -> Self {
+            Self {
+                next_batch_id: 0,
+                next_request_id: 0,
+                num_withdrawal_requests_in_progress: 0,
+                last_completed_batch_id: 0,
+                last_batch_processing_started_at: None,
+                last_batch_processing_completed_at: None,
+                sol_withdrawal_fee_rate: 0,
+                withdrawal_enabled_flag: false,
+                batch_processing_threshold_amount: 0,
+                batch_processing_threshold_duration: 0,
+                pending_batch_withdrawal: BatchWithdrawal::new(0),
+                batch_withdrawals_in_progress: vec![],
+                reserved_fund: Default::default(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_initialize_fund_account() {
+        let receipt_token_mint = Pubkey::new_unique();
+        let mut fund = FundAccount::new_uninitialized();
+
+        assert_eq!(fund.withdrawal_status.next_batch_id, 0);
+        assert_eq!(fund.withdrawal_status.next_request_id, 0);
+        assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 0);
+
+        fund.initialize_if_needed(0, receipt_token_mint);
+
+        assert_eq!(fund.withdrawal_status.next_batch_id, 2);
+        assert_eq!(fund.withdrawal_status.next_request_id, 1);
+        assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 1);
+        assert_eq!(
+            fund.withdrawal_status
+                .pending_batch_withdrawal
+                .num_withdrawal_requests,
+            0
+        );
+        assert_eq!(
+            fund.withdrawal_status
+                .pending_batch_withdrawal
+                .receipt_token_to_process,
+            0
+        );
     }
 }
