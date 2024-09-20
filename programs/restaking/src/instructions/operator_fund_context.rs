@@ -48,19 +48,20 @@ impl<'info> OperatorFundContext<'info> {
         ctx: Context<'_, '_, '_, 'info, Self>,
         forced: bool,
     ) -> Result<()> {
-        if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
-            FundWithdrawalJob::check_threshold(&ctx.accounts.fund_account.withdrawal_status)?;
-        }
-
-        let (receipt_token_price, receipt_token_total_supply) = FundWithdrawalJob::new(
+        let mut job = FundWithdrawalJob::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.receipt_token_lock_authority,
             &mut ctx.accounts.receipt_token_lock_account,
             &mut ctx.accounts.fund_account,
             ctx.remaining_accounts,
-        )
-        .process()?;
+        );
+
+        if !(forced && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
+            job.check_threshold()?;
+        }
+
+        let (receipt_token_price, receipt_token_total_supply) = job.process()?;
 
         emit!(OperatorProcessedJob {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),

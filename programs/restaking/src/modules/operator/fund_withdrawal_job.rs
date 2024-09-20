@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::modules::common::*;
-use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority, WithdrawalStatus};
+use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 
 pub struct FundWithdrawalJob<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -16,13 +16,14 @@ pub struct FundWithdrawalJob<'a, 'info> {
 }
 
 impl<'a, 'info> FundWithdrawalJob<'a, 'info> {
-    pub fn check_threshold(withdrawal_status: &'a WithdrawalStatus) -> Result<()> {
+    pub fn check_threshold(&self) -> Result<()> {
+        let withdrawal_status = &self.fund_account.withdrawal_status;
         let current_time = crate::utils::timestamp_now()?;
 
-        let mut threshold_satisfied = matches!(
-            withdrawal_status.last_batch_processing_started_at,
-            Some(x) if (current_time - x) > withdrawal_status.batch_processing_threshold_duration
-        );
+        let mut threshold_satisfied = match withdrawal_status.last_batch_processing_started_at {
+            Some(x) => current_time - x > withdrawal_status.batch_processing_threshold_duration,
+            None => true,
+        };
 
         if withdrawal_status
             .pending_batch_withdrawal
