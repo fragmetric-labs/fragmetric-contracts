@@ -242,6 +242,40 @@ mod tests {
         }
     }
 
+    impl SupportedTokenInfo {
+        pub fn dummy_spl_stake_pool_token_info(spl_stake_pool_address: Pubkey) -> Self {
+            Self {
+                mint: Pubkey::new_unique(),
+                program: Pubkey::default(),
+                decimals: 9,
+                capacity_amount: 0,
+                accumulated_deposit_amount: 0,
+                operation_reserved_amount: 0,
+                price: 0,
+                pricing_source: TokenPricingSource::SPLStakePool {
+                    address: spl_stake_pool_address,
+                },
+                _reserved: [0; 128],
+            }
+        }
+
+        pub fn dummy_marinade_stake_pool_token_info(marinade_stake_pool_address: Pubkey) -> Self {
+            Self {
+                mint: Pubkey::new_unique(),
+                program: Pubkey::default(),
+                decimals: 9,
+                capacity_amount: 0,
+                accumulated_deposit_amount: 0,
+                operation_reserved_amount: 0,
+                price: 0,
+                pricing_source: TokenPricingSource::MarinadeStakePool {
+                    address: marinade_stake_pool_address,
+                },
+                _reserved: [0; 128],
+            }
+        }
+    }
+
     #[test]
     fn test_initialize_fund_account() {
         let receipt_token_mint = Pubkey::new_unique();
@@ -256,7 +290,7 @@ mod tests {
 
         assert_eq!(fund.withdrawal_status.next_batch_id, 2);
         assert_eq!(fund.withdrawal_status.next_request_id, 1);
-        assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+        assert!(fund.withdrawal_status.withdrawal_enabled_flag);
         assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 1);
         assert_eq!(
             fund.withdrawal_status

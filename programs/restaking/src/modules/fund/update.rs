@@ -72,10 +72,9 @@ impl UserFundAccount {
 
 #[cfg(test)]
 mod tests {
-    // use crate::constants::{BSOL_STAKE_POOL_ADDRESS, MSOL_STAKE_POOL_ADDRESS};
+    use crate::modules::fund::price::source::*;
+
     use super::*;
-    use crate::modules::fund::price::source;
-    use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource};
 
     #[test]
     fn test_update_fund() {
@@ -137,63 +136,25 @@ mod tests {
         let mut fund = FundAccount::new_uninitialized();
         fund.initialize_if_needed(0, Pubkey::new_unique());
 
-        let token1 = SupportedTokenInfo {
-            mint: Pubkey::new_unique(),
-            program: Pubkey::new_unique(),
-            decimals: 9,
-            capacity_amount: 1_000_000_000 * 1000,
-            accumulated_deposit_amount: 0,
-            operation_reserved_amount: 1_000_000_000,
-            price: 0,
-            pricing_source: TokenPricingSource::SPLStakePool {
-                address: Default::default(),
-            },
-            _reserved: [0; 128],
-        };
-        let token2 = SupportedTokenInfo {
-            mint: Pubkey::new_unique(),
-            program: Pubkey::new_unique(),
-            decimals: 9,
-            capacity_amount: 1_000_000_000 * 2000,
-            accumulated_deposit_amount: 0,
-            operation_reserved_amount: 2_000_000_000,
-            price: 0,
-            pricing_source: TokenPricingSource::MarinadeStakePool {
-                address: Default::default(),
-            },
-            _reserved: [0; 128],
-        };
         let mut dummy_lamports = 0u64;
-        let mut dummy_data: [u8; 0] = [];
+        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
         let mut dummy_lamports2 = 0u64;
-        let mut dummy_data2: [u8; 0] = [];
+        let mut dummy_data2 = [0u8; 8 + MarinadeStakePool::INIT_SPACE];
         let pricing_sources = &[
-            AccountInfo::new(
-                &source::SplStakePool::PROGRAM_ID,
-                false,
-                false,
-                &mut dummy_lamports,
-                &mut dummy_data,
-                &source::SplStakePool::PROGRAM_ID,
-                false,
-                0,
-            ),
-            AccountInfo::new(
-                &source::MarinadeStakePool::PROGRAM_ID,
-                false,
-                false,
+            SplStakePool::dummy_pricing_source_account_info(&mut dummy_lamports, &mut dummy_data),
+            MarinadeStakePool::dummy_pricing_source_account_info(
                 &mut dummy_lamports2,
                 &mut dummy_data2,
-                &source::MarinadeStakePool::PROGRAM_ID,
-                false,
-                0,
             ),
         ];
+        let token1 = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
+        let token2 =
+            SupportedTokenInfo::dummy_marinade_stake_pool_token_info(pricing_sources[1].key());
 
         fund.add_supported_token(
             token1.mint,
             token1.program,
-            token2.decimals,
+            token1.decimals,
             token1.capacity_amount,
             token1.pricing_source,
             pricing_sources,
