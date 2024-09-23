@@ -154,8 +154,12 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             .deposit_token(amount)?;
 
         // Step 3: Mint receipt token
-        ctx.accounts.cpi_mint_token_to_user(receipt_token_mint_amount)?;
-        ctx.accounts.mock_transfer_hook_from_fund_to_user(receipt_token_mint_amount, contribution_accrual_rate)?;
+        ctx.accounts
+            .cpi_mint_token_to_user(receipt_token_mint_amount)?;
+        ctx.accounts.mock_transfer_hook_from_fund_to_user(
+            receipt_token_mint_amount,
+            contribution_accrual_rate,
+        )?;
 
         // Step 4: Update user_receipt's receipt_token_amount
         let receipt_token_account_total_amount = ctx.accounts.user_receipt_token_account.amount;
@@ -204,16 +208,12 @@ impl<'info> UserFundSupportedTokenContext<'info> {
     }
 
     fn cpi_mint_token_to_user(&mut self, amount: u64) -> Result<()> {
-        self
-            .receipt_token_program
+        self.receipt_token_program
             .mint_token_cpi(
                 &mut self.receipt_token_mint,
                 &mut self.user_receipt_token_account,
                 self.receipt_token_mint_authority.to_account_info(),
-                Some(&[self
-                    .receipt_token_mint_authority
-                    .signer_seeds()
-                    .as_ref()]),
+                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
                 amount,
             )
             .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
