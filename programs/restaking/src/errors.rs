@@ -107,8 +107,8 @@ pub enum ErrorCode {
     #[msg("reward: invalid reward pool access")]
     RewardInvalidPoolAccessException,
 
-    #[msg("reward: unmet account size reallocation")]
-    RewardUnmetAccountReallocError,
+    #[msg("unmet account size reallocation")]
+    AccountUnmetDesiredReallocSizeError,
 
     #[msg("reward: incorrect accounting exception")]
     RewardInvalidAccountingException,

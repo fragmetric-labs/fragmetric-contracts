@@ -72,3 +72,76 @@ impl<'info, T: ZeroCopyHeader> ZeroCopyWithoutLoad for AccountLoader<'info, T> {
         Ok(data[offset])
     }
 }
+
+/// A trait for zero-copy account to realloc size.
+/// It cannot reduce the size.
+pub trait ZeroCopyAccountRealloc<'info> {
+    fn expand_account_size_if_needed(
+        &self,
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()>;
+}
+
+impl<'info, T: ZeroCopyHeader> ZeroCopyAccountRealloc<'info> for AccountLoader<'info, T> {
+    fn expand_account_size_if_needed(
+        &self,
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        desired_account_size: Option<u32>,
+        initialize: bool,
+    ) -> Result<()> {
+        let account_info = self.as_ref();
+
+        let current_account_size = account_info.data_len();
+        let min_account_size = 8 + std::mem::size_of::<T>();
+        let target_account_size = desired_account_size
+            .map(|desired_size| std::cmp::max(desired_size as usize, min_account_size))
+            .unwrap_or(min_account_size);
+        let required_realloc_size = target_account_size.saturating_sub(current_account_size);
+
+        msg!(
+            "realloc account size: current={}, target={}, required={}",
+            current_account_size,
+            target_account_size,
+            required_realloc_size
+        );
+
+        if required_realloc_size > 0 {
+            let rent = Rent::get()?;
+            let current_lamports = account_info.lamports();
+            let minimum_lamports = rent.minimum_balance(target_account_size);
+            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
+            if required_lamports > 0 {
+                let cpi_context = CpiContext::new(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: payer.to_account_info(),
+                        to: account_info.clone(),
+                    },
+                );
+                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
+                msg!("realloc account lamports: added={}", required_lamports);
+            }
+
+            let max_increase = anchor_lang::solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
+            let increase = std::cmp::min(required_realloc_size, max_increase);
+            let new_account_size = current_account_size + increase;
+            if new_account_size < target_account_size && initialize {
+                return Err(crate::errors::ErrorCode::AccountUnmetDesiredReallocSizeError)?;
+            }
+
+            account_info.realloc(new_account_size, false)?;
+            msg!(
+                "account reallocated: current={}, target={}, required={}",
+                new_account_size,
+                target_account_size,
+                target_account_size - new_account_size
+            );
+        }
+
+        Ok(())
+    }
+}
