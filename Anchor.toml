@@ -37,7 +37,7 @@ filename = "tests/mocks/mainnet/jitoSOL_mint.json"
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
 filename = "tests/mocks/mainnet/mSOL_mint.json"
 
-# mock mainnet bSOL stake pool to localnet
+# clone mainnet bSOL stake pool to localnet
 [[test.validator.clone]]
 address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
 
