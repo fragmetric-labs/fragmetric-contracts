@@ -546,7 +546,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.program.methods
                     .fundManagerUpdateBatchProcessingThreshold(
                         new BN(0), // batchProcessingThresholdAmount
-                        new BN(10), // batchProcessingThresholdDuration (seconds)
+                        new BN(60), // batchProcessingThresholdDuration (seconds)
                     )
                     .instruction(),
                 ...Object.values(this.supportedTokenMetadata).flatMap(v => {
