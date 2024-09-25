@@ -107,6 +107,9 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         amount: u64,
         metadata: Option<DepositMetadata>,
     ) -> Result<()> {
+        let fund = &mut ctx.accounts.fund_account;
+        let receipt_token_mint = &ctx.accounts.receipt_token_mint;
+
         // verify metadata signature if given
         if let Some(metadata) = &metadata {
             verify_preceding_ed25519_instruction(
@@ -122,29 +125,18 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         require_gte!(ctx.accounts.user_supported_token_account.amount, amount);
 
         // Step 1: Calculate mint amount
-        ctx.accounts
-            .fund_account
-            .update_token_prices(ctx.remaining_accounts)?;
+        fund.update_token_prices(ctx.remaining_accounts)?;
 
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let supported_token_mint = ctx.accounts.supported_token_mint.key();
-        let supported_token = ctx
-            .accounts
-            .fund_account
-            .supported_token(supported_token_mint)?;
+        let supported_token = fund.supported_token(supported_token_mint)?;
 
         let token_amount_to_sol_value = supported_token.calculate_sol_from_tokens(amount)?;
-        let receipt_token_mint_amount = ctx
-            .accounts
-            .fund_account
-            .receipt_token_mint_amount_for(token_amount_to_sol_value, receipt_token_total_supply)?;
-        let receipt_token_price = ctx
-            .accounts
-            .fund_account
-            .receipt_token_sol_value_per_token(
-                ctx.accounts.receipt_token_mint.decimals,
-                receipt_token_total_supply,
-            )?;
+        let receipt_token_mint_amount = fund
+            .receipt_token_mint_amount_for(token_amount_to_sol_value, receipt_token_mint.supply)?;
+        let receipt_token_price = fund.receipt_token_sol_value_per_token(
+            receipt_token_mint.decimals,
+            receipt_token_mint.supply,
+        )?;
 
         // Step 2: Deposit Token
         ctx.accounts.cpi_transfer_token_to_fund(amount)?;
@@ -156,16 +148,13 @@ impl<'info> UserFundSupportedTokenContext<'info> {
         // Step 3: Mint receipt token
         ctx.accounts
             .cpi_mint_token_to_user(receipt_token_mint_amount)?;
+        ctx.accounts
+            .user_fund_account
+            .set_receipt_token_amount(ctx.accounts.user_receipt_token_account.amount);
         ctx.accounts.mock_transfer_hook_from_fund_to_user(
             receipt_token_mint_amount,
             contribution_accrual_rate,
         )?;
-
-        // Step 4: Update user_receipt's receipt_token_amount
-        let receipt_token_account_total_amount = ctx.accounts.user_receipt_token_account.amount;
-        ctx.accounts
-            .user_fund_account
-            .set_receipt_token_amount(receipt_token_account_total_amount);
 
         emit!(UserDepositedSupportedTokenToFund {
             user: ctx.accounts.user.key(),
@@ -181,7 +170,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
             fund_account: FundAccountInfo::new(
                 &ctx.accounts.fund_account,
                 receipt_token_price,
-                receipt_token_total_supply
+                ctx.accounts.receipt_token_mint.supply,
             ),
         });
 
