@@ -17,7 +17,10 @@ pub trait ToCalculator<T: TokenPriceCalculator + AccountDeserialize + Owner> {
     fn to_calculator_checked(&self) -> Result<T>;
 }
 
-impl<'info, T: TokenPriceCalculator + AccountDeserialize + Owner> ToCalculator<T> for AccountInfo<'info> {
+impl<'info, T> ToCalculator<T> for AccountInfo<'info>
+where
+    T: TokenPriceCalculator + AccountDeserialize + Owner,
+{
     fn to_calculator_checked(&self) -> Result<T> {
         if self.owner == &anchor_lang::solana_program::system_program::ID && self.lamports() == 0 {
             return Err(ErrorCode::AccountNotInitialized.into());

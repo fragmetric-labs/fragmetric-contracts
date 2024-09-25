@@ -8,6 +8,7 @@ use super::TokenPriceCalculator;
 
 #[repr(C)]
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize))]
 pub struct SplStakePool {
     /// Account type, must be StakePool currently
     account_type: AccountType,
@@ -97,6 +98,7 @@ pub struct SplStakePool {
 
 /// Enum representing the account type managed by the program
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize))]
 enum AccountType {
     /// If the account has not been initialized, the enum will be 0
     Uninitialized,
@@ -107,6 +109,7 @@ enum AccountType {
 }
 
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize))]
 struct Lockup {
     /// UnixTimestamp at which this stake will allow withdrawal, unless the
     ///   transaction is signed by the custodian
@@ -119,7 +122,9 @@ struct Lockup {
     custodian: Pubkey,
 }
 
+#[repr(C)]
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize))]
 struct Fee {
     /// denominator of the fee ratio
     denominator: u64,
@@ -127,7 +132,9 @@ struct Fee {
     numerator: u64,
 }
 
+#[repr(C)]
 #[derive(AnchorDeserialize)]
+#[cfg_attr(test, derive(AnchorSerialize))]
 enum FutureEpoch<T> {
     /// Nothing is set
     None,
@@ -140,6 +147,17 @@ enum FutureEpoch<T> {
 impl Owner for SplStakePool {
     fn owner() -> Pubkey {
         Self::PROGRAM_ID
+    }
+}
+
+#[cfg(test)]
+impl AccountSerialize for SplStakePool {
+    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        if AnchorSerialize::serialize(self, writer).is_err() {
+            return Err(ErrorCode::AccountDidNotSerialize.into());
+        }
+
+        Ok(())
     }
 }
 
@@ -161,5 +179,31 @@ impl SplStakePool {
     fn calculate_lamports_from_pool_tokens(&self, pool_tokens: u64) -> Result<u64> {
         crate::utils::proportional_amount(pool_tokens, self.total_lamports, self.pool_token_supply)
             .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
+    }
+
+    #[cfg(test)]
+    /// 1 Token = 1.4 SOL
+    pub fn dummy_pricing_source_account_info<'a>(
+        lamports: &'a mut u64,
+        data: &'a mut [u8],
+    ) -> AccountInfo<'a> {
+        const DUMMY_PUBKEY: Pubkey = pubkey!("dummySp1StakePoo1PricingSourceAccount1nfo11");
+
+        let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();
+        this.pool_token_supply = 1_000_000;
+        this.total_lamports = 1_400_000;
+        let mut writer = unsafe { &mut *(data as *mut [u8]) };
+        this.try_serialize(&mut writer).unwrap();
+
+        AccountInfo::new(
+            &DUMMY_PUBKEY,
+            false,
+            false,
+            lamports,
+            data,
+            &Self::PROGRAM_ID,
+            false,
+            0,
+        )
     }
 }

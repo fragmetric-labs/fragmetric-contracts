@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
@@ -65,54 +64,12 @@ impl<'info> AdminRewardContext<'info> {
         desired_account_size: Option<u32>,
         initialize: bool,
     ) -> Result<()> {
-        let reward_account = ctx.accounts.reward_account.as_ref();
-
-        let current_account_size = reward_account.data_len();
-        let min_account_size = 8 + std::mem::size_of::<RewardAccount>();
-        let target_account_size = desired_account_size
-            .map(|desired_size| std::cmp::max(desired_size as usize, min_account_size))
-            .unwrap_or(min_account_size);
-        let required_realloc_size = target_account_size.saturating_sub(current_account_size);
-
-        msg!(
-            "reward account size: current={}, target={}, required={}",
-            current_account_size,
-            target_account_size,
-            required_realloc_size
-        );
-
-        if required_realloc_size > 0 {
-            let rent = Rent::get()?;
-            let current_lamports = reward_account.lamports();
-            let minimum_lamports = rent.minimum_balance(target_account_size);
-            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
-            if required_lamports > 0 {
-                let cpi_context = CpiContext::new(
-                    ctx.accounts.system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: ctx.accounts.payer.to_account_info(),
-                        to: reward_account.clone(),
-                    },
-                );
-                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
-                msg!("reward account lamports: added={}", required_lamports);
-            }
-
-            let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
-            let increase = std::cmp::min(required_realloc_size, max_increase);
-            let new_account_size = current_account_size + increase;
-            if new_account_size < target_account_size && initialize {
-                return Err(crate::errors::ErrorCode::RewardUnmetAccountReallocError)?;
-            }
-
-            reward_account.realloc(new_account_size, false)?;
-            msg!(
-                "reward account reallocated: current={}, target={}, required={}",
-                new_account_size,
-                target_account_size,
-                target_account_size - new_account_size
-            );
-        }
+        ctx.accounts.reward_account.expand_account_size_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            desired_account_size,
+            initialize,
+        )?;
 
         if initialize {
             let bump = ctx.accounts.reward_account.bump()?;
