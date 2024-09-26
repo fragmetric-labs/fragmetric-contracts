@@ -19,25 +19,13 @@ pub struct OperatorRewardContext<'info> {
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.bump()?,
-        // DO NOT Use has_one constraint, since reward_account is not safe yet
+        has_one = receipt_token_mint,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 }
 
 impl<'info> OperatorRewardContext<'info> {
-    fn check_has_one_constraints(&self) -> Result<()> {
-        require_keys_eq!(
-            self.reward_account.load()?.receipt_token_mint,
-            self.receipt_token_mint.key(),
-            ErrorCode::ConstraintHasOne,
-        );
-
-        Ok(())
-    }
-
     pub fn update_reward_pools(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts.check_has_one_constraints()?;
-
         let current_slot = Clock::get()?.slot;
         let mut reward_account = ctx.accounts.reward_account.load_mut()?;
         reward_account.update_reward_pools(current_slot)?;
