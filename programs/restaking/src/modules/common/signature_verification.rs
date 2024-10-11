@@ -89,11 +89,11 @@ pub fn verify_preceding_ed25519_instruction(
     Ok(())
 }
 
-pub fn verify_expiration(expiration: i64) -> Result<()> {
+pub fn verify_expiration(expiration_timestamp: i64) -> Result<()> {
     let clock = Clock::get()?;
     let current_timestamp = clock.unix_timestamp;
 
-    if current_timestamp > expiration {
+    if current_timestamp > expiration_timestamp {
         err!(ErrorCode::ExpiredSignatureError)?
     }
 
