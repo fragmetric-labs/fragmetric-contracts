@@ -51,9 +51,11 @@ describe("deposit_sol", async () => {
         const res0 = await restaking.runOperatorUpdatePrices();
 
         const amount1 = new BN(6 * anchor.web3.LAMPORTS_PER_SOL);
+        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
+            expirationTimestamp: currentTimestamp,
         });
         const res1 = await restaking.runUserDepositSOL(user2, amount1, depositMetadata1);
 
@@ -71,6 +73,7 @@ describe("deposit_sol", async () => {
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
+            expirationTimestamp: currentTimestamp,
         });
         const res2 = await restaking.runUserDepositSOL(user2, amount2, depositMetadata2);
 
@@ -89,10 +92,23 @@ describe("deposit_sol", async () => {
 
     step("user2 cannot cheat metadata", async function () {
         const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "MYPACK",
             contributionAccrualRate: 200,
+            expirationTimestamp: currentTimestamp,
         });
         await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).rejectedWith('InvalidSignatureError');
+    });
+
+    step("signature verification has to fail when after expiration", async function () {
+        const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
+        const expirationTimestamp = new BN(Math.floor(Date.now() / 1000) - 2); // expired 2 sec ago
+        const depositMetadata1 = restaking.asType<'depositMetadata'>({
+            walletProvider: "BACKPACK",
+            contributionAccrualRate: 130,
+            expirationTimestamp: expirationTimestamp,
+        });
+        await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1)).rejectedWith('6050'); // Simulation error. ExpiredSignatureError's error code is 6050
     });
 });

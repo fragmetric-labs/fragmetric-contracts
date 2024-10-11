@@ -161,7 +161,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             blockhash,
             signature: txSig,
         });
-        const balance = new anchor.BN(await this.connection.getBalance(account));
+        const balance = new anchor.BN((await this.connection.getBalance(account)).toString());
         logger.debug(`SOL airdropped (+${sol}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
     }
 
