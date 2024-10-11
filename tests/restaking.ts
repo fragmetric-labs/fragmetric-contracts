@@ -24,4 +24,3 @@ if (!process.env.JUST_INIT) {
     require('./restaking/5_transfer_hook');
     require('./restaking/6_reward');
 }
-

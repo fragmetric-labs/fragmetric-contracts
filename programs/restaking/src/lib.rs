@@ -40,6 +40,14 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // AdminFundContext
+    ////////////////////////////////////////////
+
+    pub fn admin_update_fund_account(ctx: Context<AdminFundContext>) -> Result<()> {
+        AdminFundContext::update_fund_account(ctx)
+    }
+
+    ////////////////////////////////////////////
     // AdminReceiptTokenMintInitialContext
     ////////////////////////////////////////////
 

@@ -121,3 +121,52 @@ impl<'info> AdminFundAccountInitialContext<'info> {
         Ok(())
     }
 }
+
+#[derive(Accounts)]
+pub struct AdminFundContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_lock_authority.bump,
+        has_one = receipt_token_mint,
+    )]
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
+
+    #[account(
+        mut,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        token::token_program = receipt_token_program,
+        seeds = [ReceiptTokenLockAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.bump,
+        has_one = receipt_token_mint,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+}
+
+impl<'info> AdminFundContext<'info> {
+    pub fn update_fund_account(ctx: Context<Self>) -> Result<()> {
+        let bump = ctx.accounts.fund_account.bump;
+        ctx.accounts
+            .fund_account
+            .initialize_if_needed(bump, ctx.accounts.receipt_token_mint.key());
+        Ok(())
+    }
+}

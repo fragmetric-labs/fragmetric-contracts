@@ -197,6 +197,7 @@ impl<'info> UserFundContext<'info> {
                 &ctx.accounts.instructions_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
+            metadata.verify_expiration()?;
         }
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
@@ -492,11 +493,7 @@ impl<'info> UserFundContext<'info> {
         // Verify
         require_gt!(fund.withdrawal_status.next_request_id, request_id);
 
-        // Step 1: Update price
-        fund.update_token_prices(ctx.remaining_accounts)?;
-
-        // Step 2: Complete withdrawal request
-        fund.withdrawal_status.check_withdrawal_enabled()?;
+        // Step 1: Complete withdrawal request
         let request = ctx
             .accounts
             .user_fund_account
@@ -504,16 +501,11 @@ impl<'info> UserFundContext<'info> {
         fund.withdrawal_status
             .check_batch_processing_completed(request.batch_id)?;
 
-        // Step 3: Calculate withdraw amount
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let receipt_token_price = fund.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
-        )?;
-        let sol_amount = fund.receipt_token_sol_value_for(
-            request.receipt_token_amount,
-            receipt_token_total_supply,
-        )?;
+        // Step 2: Calculate withdraw amount
+        let sol_amount = fund
+            .withdrawal_status
+            .reserved_fund
+            .calculate_sol_amount_for_receipt_token_amount(request.receipt_token_amount)?;
         let sol_fee_amount = fund
             .withdrawal_status
             .calculate_sol_withdrawal_fee(sol_amount)?;
@@ -521,8 +513,12 @@ impl<'info> UserFundContext<'info> {
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        // Step 4: Withdraw
-        fund.withdrawal_status.withdraw(sol_withdraw_amount)?;
+        // Step 3: Withdraw
+        fund.withdrawal_status.withdraw(
+            sol_amount,
+            sol_fee_amount,
+            request.receipt_token_amount,
+        )?;
         ctx.accounts
             .fund_account
             .sub_lamports(sol_withdraw_amount)?;
@@ -532,8 +528,13 @@ impl<'info> UserFundContext<'info> {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             fund_account: FundAccountInfo::new(
                 ctx.accounts.fund_account.as_ref(),
-                receipt_token_price,
-                receipt_token_total_supply
+                ctx.accounts
+                    .fund_account
+                    .receipt_token_sol_value_per_token(
+                        ctx.accounts.receipt_token_mint.decimals,
+                        ctx.accounts.receipt_token_mint.supply,
+                    )?,
+                ctx.accounts.receipt_token_mint.supply,
             ),
             request_id,
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),

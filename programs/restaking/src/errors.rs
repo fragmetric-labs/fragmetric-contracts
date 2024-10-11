@@ -151,4 +151,7 @@ pub enum ErrorCode {
 
     #[msg("reward: sum of user settled contribution cannot exceed total contribution")]
     RewardInvalidTotalUserSettledContributionException,
+
+    #[msg("fund: signature has expired")]
+    FundDepositMetadataSignatureExpiredError,
 }

@@ -64,9 +64,11 @@ describe("deposit_token", async () => {
         const symbol = 'bSOL';
         const decimals = 10 ** 9;
         const amount1 = new BN(6 * decimals);
+        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
+            expiredAt: currentTimestamp,
         });
         const res1 = await restaking.runUserDepositSupportedToken(user4, symbol, amount1, depositMetadata1);
         const mintedAmount1 = res1.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
@@ -85,6 +87,7 @@ describe("deposit_token", async () => {
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
+            expiredAt: currentTimestamp,
         });
         const res2 = await restaking.runUserDepositSupportedToken(user4, symbol, amount2, depositMetadata2);
         const mintedAmount2 = res2.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
