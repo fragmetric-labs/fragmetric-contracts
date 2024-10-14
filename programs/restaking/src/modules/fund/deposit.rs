@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, SupportedTokenInfo};
+use anchor_lang::prelude::*;
 
 impl SupportedTokenInfo {
     pub fn deposit_token(&mut self, amount: u64) -> Result<()> {
@@ -50,13 +50,13 @@ pub struct DepositMetadata {
 }
 
 impl DepositMetadata {
-    pub fn verify_expiration(expired_at: i64) -> Result<()> {
+    pub fn verify_expiration(&self) -> Result<()> {
         let current_timestamp = crate::utils::timestamp_now()?;
-    
-        if current_timestamp > expired_at {
+
+        if current_timestamp > self.expired_at {
             err!(ErrorCode::FundDepositMetadataSignatureExpiredError)?
         }
-    
+
         Ok(())
     }
 }

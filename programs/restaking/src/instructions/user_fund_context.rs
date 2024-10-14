@@ -197,7 +197,7 @@ impl<'info> UserFundContext<'info> {
                 &ctx.accounts.instructions_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
-            DepositMetadata::verify_expiration(metadata.expired_at)?;
+            metadata.verify_expiration()?;
         }
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
