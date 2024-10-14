@@ -113,7 +113,7 @@ impl<'info> UserFundSupportedTokenContext<'info> {
                 &ctx.accounts.instruction_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
-            verify_expiration(metadata.expiration_timestamp)?;
+            DepositMetadata::verify_expiration(metadata.expired_at)?;
         }
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))

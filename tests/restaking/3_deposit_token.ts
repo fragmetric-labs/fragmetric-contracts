@@ -68,7 +68,7 @@ describe("deposit_token", async () => {
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
-            expirationTimestamp: currentTimestamp,
+            expiredAt: currentTimestamp,
         });
         const res1 = await restaking.runUserDepositSupportedToken(user4, symbol, amount1, depositMetadata1);
         const mintedAmount1 = res1.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
@@ -87,7 +87,7 @@ describe("deposit_token", async () => {
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
-            expirationTimestamp: currentTimestamp,
+            expiredAt: currentTimestamp,
         });
         const res2 = await restaking.runUserDepositSupportedToken(user4, symbol, amount2, depositMetadata2);
         const mintedAmount2 = res2.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;

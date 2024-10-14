@@ -105,7 +105,7 @@ describe("reward", async function () {
         const b1 = await restaking.runUserDepositSOL(userB, new BN(200 * (10 ** restaking.fragSOLDecimals)), {
             walletProvider: 'STIMPACK',
             contributionAccrualRate: 150,
-            expirationTimestamp: new BN(Math.floor(Date.now() / 1000)),
+            expiredAt: new BN(Math.floor(Date.now() / 1000)),
         });
         // now A: 400, B: 200 + 200(x1.5)
 

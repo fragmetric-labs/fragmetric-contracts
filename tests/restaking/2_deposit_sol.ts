@@ -55,7 +55,7 @@ describe("deposit_sol", async () => {
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
-            expirationTimestamp: currentTimestamp,
+            expiredAt: currentTimestamp,
         });
         const res1 = await restaking.runUserDepositSOL(user2, amount1, depositMetadata1);
 
@@ -73,7 +73,7 @@ describe("deposit_sol", async () => {
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
-            expirationTimestamp: currentTimestamp,
+            expiredAt: currentTimestamp,
         });
         const res2 = await restaking.runUserDepositSOL(user2, amount2, depositMetadata2);
 
@@ -96,7 +96,7 @@ describe("deposit_sol", async () => {
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "MYPACK",
             contributionAccrualRate: 200,
-            expirationTimestamp: currentTimestamp,
+            expiredAt: currentTimestamp,
         });
         await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).rejectedWith('InvalidSignatureError');
     });
@@ -107,8 +107,8 @@ describe("deposit_sol", async () => {
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
-            expirationTimestamp: expirationTimestamp,
+            expiredAt: expirationTimestamp,
         });
-        await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1)).rejectedWith('6050'); // Simulation error. ExpiredSignatureError's error code is 6050
+        await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1)).rejectedWith('6050'); // Simulation error. FundDepositMetadataSignatureExpiredError's error code is 6050
     });
 });

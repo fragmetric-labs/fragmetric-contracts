@@ -46,5 +46,17 @@ impl FundAccount {
 pub struct DepositMetadata {
     pub wallet_provider: String,
     pub contribution_accrual_rate: u8, // 100 is 1.0
-    pub expiration_timestamp: i64,
+    pub expired_at: i64,
+}
+
+impl DepositMetadata {
+    pub fn verify_expiration(expired_at: i64) -> Result<()> {
+        let current_timestamp = crate::utils::timestamp_now()?;
+    
+        if current_timestamp > expired_at {
+            err!(ErrorCode::FundDepositMetadataSignatureExpiredError)?
+        }
+    
+        Ok(())
+    }
 }
