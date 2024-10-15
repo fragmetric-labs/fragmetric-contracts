@@ -223,12 +223,15 @@ impl ReservedFund {
     }
 
     pub fn send_fee_to_reserve_fund(&mut self, fee: u64) -> Result<()> {
-        self.sol_withdrawal_reserved_amount
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
             .checked_sub(fee)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.sol_fee_income_reserved_amount
+        self.sol_fee_income_reserved_amount = self
+            .sol_fee_income_reserved_amount
             .checked_add(fee)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
         Ok(())
     }
 }
