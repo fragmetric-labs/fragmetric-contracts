@@ -493,11 +493,7 @@ impl<'info> UserFundContext<'info> {
         // Verify
         require_gt!(fund.withdrawal_status.next_request_id, request_id);
 
-        // Step 1: Update price
-        fund.update_token_prices(ctx.remaining_accounts)?;
-
-        // Step 2: Complete withdrawal request
-        fund.withdrawal_status.check_withdrawal_enabled()?;
+        // Step 1: Complete withdrawal request
         let request = ctx
             .accounts
             .user_fund_account
@@ -505,16 +501,17 @@ impl<'info> UserFundContext<'info> {
         fund.withdrawal_status
             .check_batch_processing_completed(request.batch_id)?;
 
-        // Step 3: Calculate withdraw amount
         let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
         let receipt_token_price = fund.receipt_token_sol_value_per_token(
             ctx.accounts.receipt_token_mint.decimals,
             receipt_token_total_supply,
         )?;
-        let sol_amount = fund.receipt_token_sol_value_for(
-            request.receipt_token_amount,
-            receipt_token_total_supply,
-        )?;
+
+        // Step 2: Calculate withdraw amount
+        let sol_amount = fund
+            .withdrawal_status
+            .reserved_fund
+            .calculate_sol_withdraw_amount_without_fee(request.receipt_token_amount)?;
         let sol_fee_amount = fund
             .withdrawal_status
             .calculate_sol_withdrawal_fee(sol_amount)?;
@@ -522,8 +519,14 @@ impl<'info> UserFundContext<'info> {
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
+        // Step 3: Send fee to reserve fund
+        fund.withdrawal_status
+            .reserved_fund
+            .send_fee_to_reserve_fund(sol_fee_amount)?;
+
         // Step 4: Withdraw
-        fund.withdrawal_status.withdraw(sol_withdraw_amount)?;
+        fund.withdrawal_status
+            .withdraw(sol_withdraw_amount, request.receipt_token_amount)?;
         ctx.accounts
             .fund_account
             .sub_lamports(sol_withdraw_amount)?;

@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
+
 use crate::errors::ErrorCode;
-use crate::modules::fund::{BatchWithdrawal, ReservedFund, UserFundAccount, WithdrawalRequest, WithdrawalStatus};
+use crate::modules::fund::{
+    BatchWithdrawal, ReservedFund, UserFundAccount, WithdrawalRequest, WithdrawalStatus,
+};
 
 impl BatchWithdrawal {
     fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
@@ -73,27 +76,30 @@ impl BatchWithdrawal {
 
 impl ReservedFund {
     fn record_completed_batch_withdrawal(&mut self, batch: BatchWithdrawal) -> Result<()> {
-        self.num_completed_withdrawal_requests += batch.num_withdrawal_requests;
-        self.total_receipt_token_processed = self
-            .total_receipt_token_processed
-            .checked_add(batch.receipt_token_processed as u128)
+        self.receipt_token_processed_amount = self
+            .receipt_token_processed_amount
+            .checked_add(batch.receipt_token_processed)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.total_sol_reserved = self
-            .total_sol_reserved
-            .checked_add(batch.sol_reserved as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.sol_remaining = self
-            .sol_remaining
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
             .checked_add(batch.sol_reserved)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
 
-    fn withdraw(&mut self, amount: u64) -> Result<()> {
-        self.sol_remaining = self
-            .sol_remaining
-            .checked_sub(amount)
+    fn withdraw(
+        &mut self,
+        sol_withdraw_amount: u64,
+        burned_receipt_token_amount: u64,
+    ) -> Result<()> {
+        self.receipt_token_processed_amount = self
+            .receipt_token_processed_amount
+            .checked_sub(burned_receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
+            .checked_sub(sol_withdraw_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
 
         Ok(())
@@ -131,8 +137,13 @@ impl WithdrawalStatus {
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
-    pub fn withdraw(&mut self, amount: u64) -> Result<()> {
-        self.reserved_fund.withdraw(amount)
+    pub fn withdraw(
+        &mut self,
+        sol_withdraw_amount: u64,
+        burned_receipt_token_amount: u64,
+    ) -> Result<()> {
+        self.reserved_fund
+            .withdraw(sol_withdraw_amount, burned_receipt_token_amount)
     }
 
     pub fn check_withdrawal_enabled(&self) -> Result<()> {

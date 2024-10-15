@@ -41,6 +41,15 @@ impl FundAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.withdrawal_status = Default::default();
+        } else if self.data_version == 1 {
+            self.data_version = 2;
+            self.withdrawal_status
+                .reserved_fund
+                .sol_withdrawal_reserved_amount = 0;
+            self.withdrawal_status
+                .reserved_fund
+                .receipt_token_processed_amount = 0;
+            self.withdrawal_status.reserved_fund._reserved = [0; 88];
         }
     }
 
@@ -183,21 +192,43 @@ impl BatchWithdrawal {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ReservedFund {
-    pub num_completed_withdrawal_requests: u64,
-    pub sol_remaining: u64,
-    pub total_receipt_token_processed: u128,
-    pub total_sol_reserved: u128,
-    pub _reserved: [u8; 64],
+    pub sol_withdrawal_reserved_amount: u64,
+    pub sol_fee_income_reserved_amount: u64,
+    pub receipt_token_processed_amount: u64,
+    pub _reserved: [u8; 88],
 }
 
 impl Default for ReservedFund {
     fn default() -> Self {
         Self {
-            num_completed_withdrawal_requests: Default::default(),
-            sol_remaining: Default::default(),
-            total_receipt_token_processed: Default::default(),
-            total_sol_reserved: Default::default(),
-            _reserved: [0; 64],
+            sol_withdrawal_reserved_amount: Default::default(),
+            sol_fee_income_reserved_amount: Default::default(),
+            receipt_token_processed_amount: Default::default(),
+            _reserved: [0; 88],
         }
+    }
+}
+
+impl ReservedFund {
+    pub fn calculate_sol_withdraw_amount_without_fee(
+        &self,
+        receipt_token_withdraw_amount: u64,
+    ) -> Result<u64> {
+        crate::utils::proportional_amount(
+            receipt_token_withdraw_amount,
+            self.sol_withdrawal_reserved_amount,
+            self.receipt_token_processed_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    pub fn send_fee_to_reserve_fund(&mut self, fee: u64) -> Result<()> {
+        self.sol_withdrawal_reserved_amount
+            .checked_sub(fee)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_fee_income_reserved_amount
+            .checked_add(fee)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        Ok(())
     }
 }
