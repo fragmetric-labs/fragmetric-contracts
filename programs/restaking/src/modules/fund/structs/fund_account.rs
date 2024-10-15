@@ -210,7 +210,7 @@ impl Default for ReservedFund {
 }
 
 impl ReservedFund {
-    pub fn calculate_sol_withdraw_amount_without_fee(
+    pub fn calculate_sol_amount_for_receipt_token_amount(
         &self,
         receipt_token_withdraw_amount: u64,
     ) -> Result<u64> {
@@ -220,18 +220,5 @@ impl ReservedFund {
             self.receipt_token_processed_amount,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-
-    pub fn send_fee_to_reserve_fund(&mut self, fee: u64) -> Result<()> {
-        self.sol_withdrawal_reserved_amount = self
-            .sol_withdrawal_reserved_amount
-            .checked_sub(fee)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.sol_fee_income_reserved_amount = self
-            .sol_fee_income_reserved_amount
-            .checked_add(fee)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
     }
 }

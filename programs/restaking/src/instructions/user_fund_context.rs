@@ -511,7 +511,7 @@ impl<'info> UserFundContext<'info> {
         let sol_amount = fund
             .withdrawal_status
             .reserved_fund
-            .calculate_sol_withdraw_amount_without_fee(request.receipt_token_amount)?;
+            .calculate_sol_amount_for_receipt_token_amount(request.receipt_token_amount)?;
         let sol_fee_amount = fund
             .withdrawal_status
             .calculate_sol_withdrawal_fee(sol_amount)?;
@@ -519,14 +519,12 @@ impl<'info> UserFundContext<'info> {
             .checked_sub(sol_fee_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        // Step 3: Send fee to reserve fund
-        fund.withdrawal_status
-            .reserved_fund
-            .send_fee_to_reserve_fund(sol_fee_amount)?;
-
-        // Step 4: Withdraw
-        fund.withdrawal_status
-            .withdraw(sol_withdraw_amount, request.receipt_token_amount)?;
+        // Step 3: Withdraw
+        fund.withdrawal_status.withdraw(
+            sol_amount,
+            sol_fee_amount,
+            request.receipt_token_amount,
+        )?;
         ctx.accounts
             .fund_account
             .sub_lamports(sol_withdraw_amount)?;

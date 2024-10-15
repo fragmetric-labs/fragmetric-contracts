@@ -90,7 +90,8 @@ impl ReservedFund {
 
     fn withdraw(
         &mut self,
-        sol_withdraw_amount: u64,
+        sol_amount: u64,
+        sol_fee_amount: u64,
         burned_receipt_token_amount: u64,
     ) -> Result<()> {
         self.receipt_token_processed_amount = self
@@ -99,8 +100,14 @@ impl ReservedFund {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.sol_withdrawal_reserved_amount = self
             .sol_withdrawal_reserved_amount
-            .checked_sub(sol_withdraw_amount)
+            .checked_sub(sol_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
+
+        // send fee to fee income
+        self.sol_fee_income_reserved_amount = self
+            .sol_fee_income_reserved_amount
+            .checked_add(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }
@@ -139,11 +146,12 @@ impl WithdrawalStatus {
 
     pub fn withdraw(
         &mut self,
-        sol_withdraw_amount: u64,
+        sol_amount: u64,
+        sol_fee_amount: u64,
         burned_receipt_token_amount: u64,
     ) -> Result<()> {
         self.reserved_fund
-            .withdraw(sol_withdraw_amount, burned_receipt_token_amount)
+            .withdraw(sol_amount, sol_fee_amount, burned_receipt_token_amount)
     }
 
     pub fn check_withdrawal_enabled(&self) -> Result<()> {
