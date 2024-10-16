@@ -4,6 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::constants::*;
 use crate::events::UserUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
+use crate::utils::PDASeeds;
 
 // will be used only once
 #[derive(Accounts)]

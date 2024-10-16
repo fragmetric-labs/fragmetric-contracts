@@ -4,9 +4,9 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::events::{OperatorProcessedJob, OperatorUpdatedFundPrice};
-use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::modules::operator::FundWithdrawalJob;
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct OperatorFundContext<'info> {

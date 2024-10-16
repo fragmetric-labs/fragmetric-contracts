@@ -4,6 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::constants::*;
 use crate::events::OperatorUpdatedRewardPools;
 use crate::modules::{common::*, reward::*};
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct OperatorRewardContext<'info> {

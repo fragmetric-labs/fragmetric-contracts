@@ -5,8 +5,8 @@ use anchor_spl::{
 };
 
 use crate::constants::*;
-use crate::modules::common::PDASignerSeeds;
 use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
+use crate::utils::PDASeeds;
 
 // will be used only once
 #[derive(Accounts)]

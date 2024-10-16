@@ -3,7 +3,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::events::FundManagerUpdatedFund;
-use crate::modules::{common::PDASignerSeeds, fund::*};
+use crate::modules::fund::*;
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct FundManagerFundSupportedTokenAuthorityInitialContext<'info> {

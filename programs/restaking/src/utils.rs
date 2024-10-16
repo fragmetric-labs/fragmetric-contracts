@@ -3,6 +3,19 @@ use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
 
+pub trait PDASeeds<const N: usize> {
+    const SEED: &'static [u8];
+
+    fn seeds(&self) -> [&[u8]; N];
+    fn bump_ref(&self) -> &u8;
+
+    fn signer_seeds(&self) -> Vec<&[u8]> {
+        let mut signer_seeds = self.seeds().to_vec();
+        signer_seeds.push(std::slice::from_ref(self.bump_ref()));
+        signer_seeds
+    }
+}
+
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns amount.
 pub fn proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {

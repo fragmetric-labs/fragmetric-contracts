@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{errors::ErrorCode, modules::common::*};
+use crate::errors::ErrorCode;
+use crate::modules::common::*;
+use crate::utils::PDASeeds;
 
 use super::*;
 
@@ -26,15 +28,14 @@ pub struct UserRewardAccount {
     user_reward_pools_1: [UserRewardPool; USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
 }
 
-impl PDASignerSeeds<4> for UserRewardAccount {
+impl PDASeeds<3> for UserRewardAccount {
     const SEED: &'static [u8] = b"user_reward";
 
-    fn signer_seeds(&self) -> [&[u8]; 4] {
+    fn seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
             self.user.as_ref(),
-            self.bump_as_slice(),
         ]
     }
 

@@ -6,9 +6,9 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::errors::ErrorCode::FundWithdrawalRequestNotFoundError;
 use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct UserFundReceiptTokenAccountInitialContext<'info> {
@@ -383,7 +383,7 @@ impl<'info> UserFundContext<'info> {
         require_gt!(
             withdrawal_status.next_request_id,
             request_id,
-            FundWithdrawalRequestNotFoundError
+            ErrorCode::FundWithdrawalRequestNotFoundError,
         );
 
         // Step 1: Cancel withdrawal request

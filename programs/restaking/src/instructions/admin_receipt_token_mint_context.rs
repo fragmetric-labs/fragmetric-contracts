@@ -8,7 +8,8 @@ use spl_tlv_account_resolution::{
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::constants::*;
-use crate::modules::{common::*, fund::*, reward::*};
+use crate::modules::{fund::*, reward::*};
+use crate::utils::PDASeeds;
 
 // will be used only once
 #[derive(Accounts)]

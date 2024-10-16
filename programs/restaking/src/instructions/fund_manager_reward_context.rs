@@ -5,6 +5,7 @@ use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::FundManagerUpdatedRewardPool;
 use crate::modules::{common::*, reward::*};
+use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
 pub struct FundManagerRewardContext<'info> {

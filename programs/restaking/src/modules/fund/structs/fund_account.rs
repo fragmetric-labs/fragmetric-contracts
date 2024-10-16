@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::common::PDASignerSeeds;
+use crate::utils::PDASeeds;
 
 #[account]
 #[derive(InitSpace)]
@@ -18,15 +18,11 @@ pub struct FundAccount {
     pub _reserved: [u8; 1280],
 }
 
-impl PDASignerSeeds<3> for FundAccount {
+impl PDASeeds<2> for FundAccount {
     const SEED: &'static [u8] = b"fund";
 
-    fn signer_seeds(&self) -> [&[u8]; 3] {
-        [
-            Self::SEED,
-            self.receipt_token_mint.as_ref(),
-            self.bump_as_slice(),
-        ]
+    fn seeds(&self) -> [&[u8]; 2] {
+        [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
     fn bump_ref(&self) -> &u8 {

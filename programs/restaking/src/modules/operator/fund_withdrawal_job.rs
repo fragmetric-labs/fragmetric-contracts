@@ -5,6 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::errors::ErrorCode;
 use crate::modules::common::*;
 use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
+use crate::utils::PDASeeds;
 
 pub struct FundWithdrawalJob<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
