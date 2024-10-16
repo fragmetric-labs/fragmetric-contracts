@@ -41,7 +41,9 @@ impl FundAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.withdrawal_status = Default::default();
-        } else if self.data_version == 1 {
+        }
+
+        if self.data_version == 1 {
             self.data_version = 2;
             self.withdrawal_status
                 .reserved_fund

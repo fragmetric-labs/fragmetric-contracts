@@ -501,12 +501,6 @@ impl<'info> UserFundContext<'info> {
         fund.withdrawal_status
             .check_batch_processing_completed(request.batch_id)?;
 
-        let receipt_token_total_supply = ctx.accounts.receipt_token_mint.supply;
-        let receipt_token_price = fund.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_total_supply,
-        )?;
-
         // Step 2: Calculate withdraw amount
         let sol_amount = fund
             .withdrawal_status
@@ -534,8 +528,13 @@ impl<'info> UserFundContext<'info> {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             fund_account: FundAccountInfo::new(
                 ctx.accounts.fund_account.as_ref(),
-                receipt_token_price,
-                receipt_token_total_supply
+                ctx.accounts
+                    .fund_account
+                    .receipt_token_sol_value_per_token(
+                        ctx.accounts.receipt_token_mint.decimals,
+                        ctx.accounts.receipt_token_mint.supply,
+                    )?,
+                ctx.accounts.receipt_token_mint.supply,
             ),
             request_id,
             user_fund_account: Clone::clone(&ctx.accounts.user_fund_account),
