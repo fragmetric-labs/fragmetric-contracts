@@ -278,12 +278,12 @@ impl RewardPool {
         self.contribution
     }
 
-    pub fn add_contribution(&mut self, contribution: u128, current_slot: u64) -> Result<()> {
+    pub fn add_contribution(&mut self, contribution: u128, updated_slot: u64) -> Result<()> {
         self.contribution = self
             .contribution
             .checked_add(contribution)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.updated_slot = current_slot;
+        self.updated_slot = updated_slot;
 
         Ok(())
     }
@@ -296,13 +296,17 @@ impl RewardPool {
         self.updated_slot
     }
 
+    pub fn closed_slot(&self) -> Option<u64> {
+        self.is_closed().then(|| self.closed_slot)
+    }
+
     pub fn is_closed(&self) -> bool {
         self.reward_pool_bitmap & Self::IS_CLOSED_BIT > 0
     }
 
-    pub fn set_closed(&mut self, current_slot: u64) {
+    pub fn set_closed(&mut self, closed_slot: u64) {
         self.reward_pool_bitmap |= Self::IS_CLOSED_BIT;
-        self.closed_slot = current_slot;
+        self.closed_slot = closed_slot;
     }
 
     pub fn holder_id(&self) -> Option<u8> {
