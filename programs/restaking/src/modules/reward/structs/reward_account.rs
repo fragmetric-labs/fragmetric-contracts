@@ -2,8 +2,7 @@ use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
-use crate::modules::common::ZeroCopyHeader;
-use crate::utils::PDASeeds;
+use crate::utils::{PDASeeds, ZeroCopyHeader};
 
 use super::*;
 

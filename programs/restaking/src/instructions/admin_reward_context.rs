@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::modules::{common::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::modules::reward::*;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // will be used only once
 #[derive(Accounts)]
@@ -33,7 +33,7 @@ impl<'info> AdminRewardAccountInitialContext<'info> {
     pub fn initialize_reward_account(ctx: Context<Self>) -> Result<()> {
         ctx.accounts
             .reward_account
-            .init_without_load(ctx.bumps.reward_account)
+            .initialize_zero_copy_header(ctx.bumps.reward_account)
     }
 }
 

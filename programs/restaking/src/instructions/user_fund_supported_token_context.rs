@@ -8,7 +8,7 @@ use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::*;
 use crate::modules::{common::*, fund::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct UserFundSupportedTokenContext<'info> {

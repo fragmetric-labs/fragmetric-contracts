@@ -4,8 +4,8 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::FundManagerUpdatedRewardPool;
-use crate::modules::{common::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::modules::reward::*;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct FundManagerRewardContext<'info> {

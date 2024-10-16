@@ -13,8 +13,8 @@ use anchor_spl::{
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::UserTransferredReceiptToken;
-use crate::modules::{common::*, fund::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::modules::{fund::*, reward::*};
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // Order of accounts matters for this struct.
 // The first 4 accounts are the accounts required for token transfer (source, mint, destination, owner)

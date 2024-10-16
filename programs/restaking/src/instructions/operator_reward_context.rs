@@ -3,8 +3,8 @@ use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
 use crate::events::OperatorUpdatedRewardPools;
-use crate::modules::{common::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::modules::reward::*;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct OperatorRewardContext<'info> {

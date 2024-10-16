@@ -3,8 +3,8 @@ use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
 use crate::events::UserUpdatedRewardPool;
-use crate::modules::{common::*, reward::*};
-use crate::utils::PDASeeds;
+use crate::modules::reward::*;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // will be used only once
 #[derive(Accounts)]
@@ -31,7 +31,7 @@ impl<'info> UserRewardInitialContext<'info> {
     pub fn initialize_reward_account(ctx: Context<Self>) -> Result<()> {
         ctx.accounts
             .user_reward_account
-            .init_without_load(ctx.bumps.user_reward_account)
+            .initialize_zero_copy_header(ctx.bumps.user_reward_account)
     }
 }
 
