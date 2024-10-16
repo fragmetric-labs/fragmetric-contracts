@@ -208,17 +208,3 @@ impl Default for ReservedFund {
         }
     }
 }
-
-impl ReservedFund {
-    pub fn calculate_sol_amount_for_receipt_token_amount(
-        &self,
-        receipt_token_withdraw_amount: u64,
-    ) -> Result<u64> {
-        crate::utils::proportional_amount(
-            receipt_token_withdraw_amount,
-            self.sol_withdrawal_reserved_amount,
-            self.receipt_token_processed_amount,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-}
