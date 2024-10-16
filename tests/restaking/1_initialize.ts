@@ -42,6 +42,10 @@ describe("initialize", async () => {
         const { fragSOLFundAccount } = await restaking.runAdminInitializeFundAccounts();
 
         expect(fragSOLFundAccount.dataVersion).gt(0);
+
+        await restaking.runAdminUpdateFundAccounts();
+
+        expect(fragSOLFundAccount.dataVersion).gt(1);
     })
 
     step("initialize reward accounts", async () => {
