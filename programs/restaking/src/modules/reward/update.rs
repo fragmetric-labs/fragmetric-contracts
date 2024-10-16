@@ -77,9 +77,8 @@ impl RewardAccount {
 
     pub fn update_reward_pools(&mut self, current_slot: u64) -> Result<()> {
         for reward_pool in self.reward_pools_iter_mut() {
-            if !reward_pool.is_closed() {
-                reward_pool.update_contribution(current_slot)?;
-            }
+            let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
+            reward_pool.update_contribution(updated_slot)?;
             for reward_settlement in reward_pool.reward_settlements_iter_mut() {
                 reward_settlement.clear_stale_settlement_blocks()?;
             }
@@ -200,8 +199,8 @@ impl RewardAccount {
 
 impl RewardPool {
     /// Updates the contribution of the pool into recent value.
-    pub(super) fn update_contribution(&mut self, current_slot: u64) -> Result<()> {
-        let elapsed_slot = current_slot
+    pub(super) fn update_contribution(&mut self, updated_slot: u64) -> Result<()> {
+        let elapsed_slot = updated_slot
             .checked_sub(self.updated_slot())
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution_accrual_rate = self
@@ -210,7 +209,7 @@ impl RewardPool {
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.add_contribution(total_contribution, current_slot)?;
+        self.add_contribution(total_contribution, updated_slot)?;
 
         Ok(())
     }
@@ -220,12 +219,9 @@ impl RewardPool {
         deltas: Vec<TokenAllocatedAmountDelta>,
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
-        if self.is_closed() {
-            err!(ErrorCode::RewardPoolClosedError)?
-        }
-
         // First update contribution
-        self.update_contribution(current_slot)?;
+        let updated_slot = self.closed_slot().unwrap_or(current_slot);
+        self.update_contribution(updated_slot)?;
 
         // Apply deltas
         if !deltas.is_empty() {
@@ -278,7 +274,8 @@ impl UserRewardPool {
         // First update contribution, but save old data for settlement
         let last_contribution = self.contribution();
         let last_updated_slot = self.updated_slot();
-        self.update_contribution(current_slot, total_contribution_accrual_rate)?;
+        let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
+        self.update_contribution(updated_slot, total_contribution_accrual_rate)?;
 
         // Settle user reward
         let reward_pool_initial_slot = reward_pool.initial_slot();
@@ -375,16 +372,16 @@ impl UserRewardPool {
 
     fn update_contribution(
         &mut self,
-        current_slot: u64,
+        updated_slot: u64,
         total_contribution_accrual_rate: u64, // cached
     ) -> Result<()> {
-        let elapsed_slot = current_slot
+        let elapsed_slot = updated_slot
             .checked_sub(self.updated_slot())
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.add_contribution(total_contribution, current_slot)?;
+        self.add_contribution(total_contribution, updated_slot)?;
 
         Ok(())
     }

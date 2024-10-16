@@ -137,12 +137,13 @@ impl UserRewardPool {
         self.contribution
     }
 
-    pub fn add_contribution(&mut self, contribution: u128, current_slot: u64) -> Result<()> {
+    /// From last updated_slot to new updated_slot
+    pub fn add_contribution(&mut self, contribution: u128, updated_slot: u64) -> Result<()> {
         self.contribution = self
             .contribution
             .checked_add(contribution)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.updated_slot = current_slot;
+        self.updated_slot = updated_slot;
 
         Ok(())
     }
