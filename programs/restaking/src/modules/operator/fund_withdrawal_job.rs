@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_2022;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
-use crate::modules::common::*;
 use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
@@ -121,12 +121,21 @@ impl<'a, 'info> FundWithdrawalJob<'a, 'info> {
     }
 
     fn call_burn_token_cpi(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program.burn_token_cpi(
-            self.receipt_token_mint,
-            self.receipt_token_lock_account,
-            self.receipt_token_lock_authority.to_account_info(),
-            Some(&[self.receipt_token_lock_authority.signer_seeds().as_ref()]),
+        token_2022::burn(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::Burn {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    from: self.receipt_token_lock_account.to_account_info(),
+                    authority: self.receipt_token_lock_authority.to_account_info(),
+                },
+                &[self.receipt_token_lock_authority.signer_seeds().as_ref()],
+            ),
             amount,
-        )
+        )?;
+        self.receipt_token_mint.reload()?;
+        self.receipt_token_lock_account.reload()?;
+
+        Ok(())
     }
 }

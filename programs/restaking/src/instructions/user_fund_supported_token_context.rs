@@ -1,4 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructions_sysvar};
+use anchor_spl::token_2022;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{
     transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
@@ -199,15 +200,23 @@ impl<'info> UserFundSupportedTokenContext<'info> {
     }
 
     fn cpi_mint_token_to_user(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program
-            .mint_token_cpi(
-                &mut self.receipt_token_mint,
-                &mut self.user_receipt_token_account,
-                self.receipt_token_mint_authority.to_account_info(),
-                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
-                amount,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+        token_2022::mint_to(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::MintTo {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    to: self.user_receipt_token_account.to_account_info(),
+                    authority: self.receipt_token_mint_authority.to_account_info(),
+                },
+                &[self.receipt_token_mint_authority.signer_seeds().as_ref()],
+            ),
+            amount,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        self.receipt_token_mint.reload()?;
+        self.user_receipt_token_account.reload()?;
+
+        Ok(())
     }
 
     fn mock_transfer_hook_from_fund_to_user(

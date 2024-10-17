@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::{solana_program::sysvar::instructions as instructions_sysvar, system_program};
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_2022;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
@@ -332,27 +333,42 @@ impl<'info> UserFundContext<'info> {
     }
 
     fn cpi_burn_token_from_user(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program
-            .burn_token_cpi(
-                &mut self.receipt_token_mint,
-                &mut self.user_receipt_token_account,
-                self.user.to_account_info(),
-                None,
-                amount,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+        token_2022::burn(
+            CpiContext::new(
+                self.receipt_token_program.to_account_info(),
+                token_2022::Burn {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    from: self.user_receipt_token_account.to_account_info(),
+                    authority: self.user.to_account_info(),
+                },
+            ),
+            amount,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        self.receipt_token_mint.reload()?;
+        self.user_receipt_token_account.reload()?;
+
+        Ok(())
     }
 
     fn cpi_mint_token_to_fund(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program
-            .mint_token_cpi(
-                &mut self.receipt_token_mint,
-                &mut self.receipt_token_lock_account,
-                self.receipt_token_mint_authority.to_account_info(),
-                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
-                amount,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+        token_2022::mint_to(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::MintTo {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    to: self.receipt_token_lock_account.to_account_info(),
+                    authority: self.receipt_token_mint_authority.to_account_info(),
+                },
+                &[self.receipt_token_mint_authority.signer_seeds().as_ref()],
+            ),
+            amount,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        self.receipt_token_mint.reload()?;
+        self.receipt_token_lock_account.reload()?;
+
+        Ok(())
     }
 
     fn mock_transfer_hook_from_user_to_null(&mut self, amount: u64) -> Result<()> {
@@ -412,27 +428,43 @@ impl<'info> UserFundContext<'info> {
     }
 
     fn cpi_burn_token_from_fund(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program
-            .burn_token_cpi(
-                &mut self.receipt_token_mint,
-                &mut self.receipt_token_lock_account,
-                self.receipt_token_lock_authority.to_account_info(),
-                Some(&[self.receipt_token_lock_authority.signer_seeds().as_ref()]),
-                amount,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+        token_2022::burn(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::Burn {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    from: self.receipt_token_lock_account.to_account_info(),
+                    authority: self.receipt_token_lock_authority.to_account_info(),
+                },
+                &[self.receipt_token_lock_authority.signer_seeds().as_ref()],
+            ),
+            amount,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        self.receipt_token_mint.reload()?;
+        self.receipt_token_lock_account.reload()?;
+
+        Ok(())
     }
 
     fn cpi_mint_token_to_user(&mut self, amount: u64) -> Result<()> {
-        self.receipt_token_program
-            .mint_token_cpi(
-                &mut self.receipt_token_mint,
-                &mut self.user_receipt_token_account,
-                self.receipt_token_mint_authority.to_account_info(),
-                Some(&[self.receipt_token_mint_authority.signer_seeds().as_ref()]),
-                amount,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+        token_2022::mint_to(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::MintTo {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    to: self.user_receipt_token_account.to_account_info(),
+                    authority: self.receipt_token_mint_authority.to_account_info(),
+                },
+                &[self.receipt_token_mint_authority.signer_seeds().as_ref()],
+            ),
+            amount,
+        )
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        self.receipt_token_mint.reload()?;
+        self.user_receipt_token_account.reload()?;
+
+        Ok(())
     }
 
     fn mock_transfer_hook_from_null_to_user(&mut self, amount: u64) -> Result<()> {
