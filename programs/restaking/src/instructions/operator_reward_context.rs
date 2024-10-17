@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::events::OperatorUpdatedRewardPools;
+use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
@@ -19,23 +19,9 @@ pub struct OperatorRewardContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump()?,
+        bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
-}
-
-impl<'info> OperatorRewardContext<'info> {
-    pub fn update_reward_pools(ctx: Context<Self>) -> Result<()> {
-        let current_slot = Clock::get()?.slot;
-        let mut reward_account = ctx.accounts.reward_account.load_mut()?;
-        reward_account.update_reward_pools(current_slot)?;
-
-        emit!(OperatorUpdatedRewardPools::new(
-            &reward_account,
-            ctx.accounts.reward_account.key()
-        )?);
-
-        Ok(())
-    }
 }
