@@ -1,7 +1,6 @@
-use anchor_lang::{
-    prelude::*,
-    solana_program::{ed25519_program, sysvar::instructions},
-};
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::ed25519_program;
+use anchor_lang::solana_program::sysvar::instructions;
 
 use crate::{constants::ADMIN_PUBKEY, errors::ErrorCode};
 

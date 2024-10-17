@@ -8,7 +8,7 @@ use anchor_spl::token_interface::{
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::events::*;
-use crate::modules::{common::*, fund::*, reward::*};
+use crate::modules::{ed25519::*, fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
