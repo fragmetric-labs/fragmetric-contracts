@@ -38,6 +38,17 @@ impl FundAccount {
             self.receipt_token_mint = receipt_token_mint;
             self.withdrawal_status = Default::default();
         }
+
+        if self.data_version == 1 {
+            self.data_version = 2;
+            self.withdrawal_status
+                .reserved_fund
+                .sol_withdrawal_reserved_amount = 0;
+            self.withdrawal_status
+                .reserved_fund
+                .receipt_token_processed_amount = 0;
+            self.withdrawal_status.reserved_fund._reserved = [0; 88];
+        }
     }
 
     pub fn supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
@@ -179,21 +190,19 @@ impl BatchWithdrawal {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ReservedFund {
-    pub num_completed_withdrawal_requests: u64,
-    pub sol_remaining: u64,
-    pub total_receipt_token_processed: u128,
-    pub total_sol_reserved: u128,
-    pub _reserved: [u8; 64],
+    pub sol_withdrawal_reserved_amount: u64,
+    pub sol_fee_income_reserved_amount: u64,
+    pub receipt_token_processed_amount: u64,
+    pub _reserved: [u8; 88],
 }
 
 impl Default for ReservedFund {
     fn default() -> Self {
         Self {
-            num_completed_withdrawal_requests: Default::default(),
-            sol_remaining: Default::default(),
-            total_receipt_token_processed: Default::default(),
-            total_sol_reserved: Default::default(),
-            _reserved: [0; 64],
+            sol_withdrawal_reserved_amount: Default::default(),
+            sol_fee_income_reserved_amount: Default::default(),
+            receipt_token_processed_amount: Default::default(),
+            _reserved: [0; 88],
         }
     }
 }

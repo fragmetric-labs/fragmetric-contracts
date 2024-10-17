@@ -498,6 +498,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { fragSOLFundAccount };
     }
 
+    public async runAdminUpdateFundAccounts() {
+        await this.run({
+            instructions: [
+                this.program.methods
+                    .adminUpdateFundAccount()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+            ],
+            signerNames: ['ADMIN'],
+        })
+    }
+
     public async runAdminTransferMintAuthority() {
         await this.run({
             instructions: [

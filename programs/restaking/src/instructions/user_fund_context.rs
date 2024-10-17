@@ -200,6 +200,7 @@ impl<'info> UserFundContext<'info> {
                 &ctx.accounts.instructions_sysvar,
                 metadata.try_to_vec()?.as_slice(),
             )?;
+            metadata.verify_expiration()?;
         }
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
@@ -468,13 +469,10 @@ impl<'info> UserFundContext<'info> {
             .pop_completed_withdrawal_request(&mut fund.withdrawal_status, request_id)?;
 
         // Step 2: Calculate withdraw amount
-        fund.update_token_prices(ctx.remaining_accounts)?;
-        let receipt_token_price = fund.receipt_token_sol_value_per_token(
-            ctx.accounts.receipt_token_mint.decimals,
-            receipt_token_mint.supply,
-        )?;
         let sol_amount = fund
-            .receipt_token_sol_value_for(request.receipt_token_amount, receipt_token_mint.supply)?;
+            .withdrawal_status
+            .reserved_fund
+            .calculate_sol_amount_for_receipt_token_amount(request.receipt_token_amount)?;
         let sol_fee_amount = fund
             .withdrawal_status
             .calculate_sol_withdrawal_fee(sol_amount)?;
@@ -483,7 +481,11 @@ impl<'info> UserFundContext<'info> {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         // Step 3: Withdraw
-        fund.withdrawal_status.withdraw(sol_withdraw_amount)?;
+        fund.withdrawal_status.withdraw(
+            sol_amount,
+            sol_fee_amount,
+            request.receipt_token_amount,
+        )?;
         ctx.accounts
             .fund_account
             .sub_lamports(sol_withdraw_amount)?;
@@ -493,7 +495,12 @@ impl<'info> UserFundContext<'info> {
             receipt_token_mint: ctx.accounts.receipt_token_mint.key(),
             fund_account: FundAccountInfo::new(
                 ctx.accounts.fund_account.as_ref(),
-                receipt_token_price,
+                ctx.accounts
+                    .fund_account
+                    .receipt_token_sol_value_per_token(
+                        ctx.accounts.receipt_token_mint.decimals,
+                        ctx.accounts.receipt_token_mint.supply,
+                    )?,
                 receipt_token_mint.supply
             ),
             request_id,

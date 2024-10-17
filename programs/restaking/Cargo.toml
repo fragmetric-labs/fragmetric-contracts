@@ -1,7 +1,7 @@
 [package]
 name = "restaking"
-version = "0.2.2"
-description = "Created with Anchor"
+version = "0.2.3"
+description = "Fragmetric Liquid Restaking Token Program"
 edition = "2021"
 
 [lib]
