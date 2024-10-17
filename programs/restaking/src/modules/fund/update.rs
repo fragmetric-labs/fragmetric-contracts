@@ -5,7 +5,7 @@ use crate::modules::fund::{FundAccount, SupportedTokenInfo, TokenPricingSource, 
 
 impl SupportedTokenInfo {
     pub fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
-        if self.capacity_amount < self.accumulated_deposit_amount {
+        if capacity_amount < self.accumulated_deposit_amount {
             err!(ErrorCode::FundInvalidUpdateError)?
         }
         self.capacity_amount = capacity_amount;
@@ -16,7 +16,7 @@ impl SupportedTokenInfo {
 
 impl FundAccount {
     pub fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
-        if self.sol_capacity_amount < self.sol_accumulated_deposit_amount {
+        if capacity_amount < self.sol_accumulated_deposit_amount {
             err!(ErrorCode::FundInvalidUpdateError)?
         }
         self.sol_capacity_amount = capacity_amount;
