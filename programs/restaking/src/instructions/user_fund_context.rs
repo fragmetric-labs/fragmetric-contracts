@@ -227,7 +227,7 @@ impl<'info> UserFundContext<'info> {
         ctx.accounts
             .cpi_mint_token_to_user(receipt_token_mint_amount)?;
         ctx.accounts
-            .mock_transfer_hook_from_fund_to_user(amount, contribution_accrual_rate)?;
+            .mock_transfer_hook_from_fund_to_user(receipt_token_mint_amount, contribution_accrual_rate)?;
         ctx.accounts.update_user_receipt_token_amount();
 
         emit!(UserDepositedSOLToFund {
