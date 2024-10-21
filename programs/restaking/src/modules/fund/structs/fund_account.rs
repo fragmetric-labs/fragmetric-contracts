@@ -3,6 +3,12 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
+#[constant]
+/// ## Version History
+/// * v1: Initial Version
+/// * v2: Change reserve fund structure
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 2;
+
 #[account]
 #[derive(InitSpace)]
 pub struct FundAccount {
@@ -31,7 +37,7 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
-    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+    pub fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -49,6 +55,14 @@ impl FundAccount {
                 .receipt_token_processed_amount = 0;
             self.withdrawal_status.reserved_fund._reserved = [0; 88];
         }
+    }
+
+    pub fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
+        self.initialize(self.bump, receipt_token_mint);
+    }
+
+    pub fn is_latest_version(&self) -> bool {
+        self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
     pub fn supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
@@ -291,7 +305,7 @@ mod tests {
         assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
         assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 0);
 
-        fund.initialize_if_needed(0, receipt_token_mint);
+        fund.initialize(0, receipt_token_mint);
 
         assert_eq!(fund.withdrawal_status.next_batch_id, 2);
         assert_eq!(fund.withdrawal_status.next_request_id, 1);

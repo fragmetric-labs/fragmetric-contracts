@@ -6,7 +6,7 @@ use crate::{constants::ADMIN_PUBKEY, errors::ErrorCode};
 
 /// Verify serialized Ed25519Program instruction data with ADMIN_PUBKEY
 pub fn verify_preceding_ed25519_instruction(
-    instructions_sysvar: &UncheckedAccount,
+    instructions_sysvar: &AccountInfo,
     payload: &[u8],
 ) -> Result<()> {
     // load prev instruction

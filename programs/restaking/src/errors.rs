@@ -157,4 +157,7 @@ pub enum ErrorCode {
 
     #[msg("fund: signature has expired")]
     FundDepositMetadataSignatureExpiredError,
+
+    #[msg("invalid data account version")]
+    InvalidDataVersionError,
 }

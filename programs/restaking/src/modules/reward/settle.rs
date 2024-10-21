@@ -1,8 +1,29 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::events;
 
 use super::*;
+
+pub fn settle_reward(
+    reward_account: &mut AccountLoader<RewardAccount>,
+    receipt_token_mint: Pubkey,
+    reward_pool_id: u8,
+    reward_id: u16,
+    amount: u64,
+    current_slot: u64,
+) -> Result<()> {
+    reward_account
+        .load_mut()?
+        .settle_reward(reward_pool_id, reward_id, amount, current_slot)?;
+
+    emit!(events::FundManagerUpdatedRewardPool {
+        receipt_token_mint,
+        reward_account_address: reward_account.key(),
+    });
+
+    Ok(())
+}
 
 impl RewardAccount {
     pub fn settle_reward(

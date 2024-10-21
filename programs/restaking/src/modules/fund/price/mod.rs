@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn test_update_price() {
         let mut fund = FundAccount::new_uninitialized();
-        fund.initialize_if_needed(0, Pubkey::new_unique());
+        fund.initialize(0, Pubkey::new_unique());
 
         let mut dummy_lamports = 0u64;
         let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
@@ -141,7 +141,6 @@ mod tests {
             token1.decimals,
             token1.capacity_amount,
             token1.pricing_source,
-            pricing_sources,
         )
         .unwrap();
         fund.add_supported_token(
@@ -150,7 +149,6 @@ mod tests {
             token2.decimals,
             token2.capacity_amount,
             token2.pricing_source,
-            pricing_sources,
         )
         .unwrap();
 

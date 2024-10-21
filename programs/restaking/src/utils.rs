@@ -27,7 +27,7 @@ pub trait AccountLoaderExt<'info> {
     /// without enough account data size provided.
     ///
     /// This operation is almost equivalent to [load_init](AccountLoader::load_init),
-    /// but skips bytemuck pointer type casting and accesses directly
+    /// but skips bytemuck's pointer type casting and accesses directly
     /// to byte array using offset.
     fn initialize_zero_copy_header(&mut self, bump: u8) -> Result<()>;
 
@@ -35,8 +35,8 @@ pub trait AccountLoaderExt<'info> {
     /// borsh deserialization or bytemuck type casting.
     fn bump(&self) -> Result<u8>;
 
-    /// Realloc account to add extra amount of data size.
-    /// It can only add max 10KB([`MAX_PERMITTED_DATA_INCREASE`]) at once.
+    /// Realloc account to increase extra amount of data size.
+    /// It will add at most 10KB([`MAX_PERMITTED_DATA_INCREASE`]).
     ///
     /// [`MAX_PERMITTED_DATA_INCREASE`]: solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
     fn expand_account_size_if_needed(

@@ -502,12 +502,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 this.program.methods
-                    .adminUpdateFundAccount()
+                    .adminUpdateFundAccountIfNeeded()
                     .accounts({payer: this.wallet.publicKey})
                     .instruction(),
             ],
             signerNames: ['ADMIN'],
-        })
+        });
+        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
+        logger.notice('fragSOL fund account updated'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+
+        return { fragSOLFundAccount };
     }
 
     public async runAdminTransferMintAuthority() {
@@ -518,11 +522,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
                 this.program.methods
-                    .adminInitializeReceiptTokenMintExtraAccountMetaList()
+                    .adminInitializeExtraAccountMetaList()
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
                 this.program.methods
-                    .adminUpdateReceiptTokenMintExtraAccountMetaList()
+                    .adminUpdateExtraAccountMetaListIfNeeded()
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
             ],

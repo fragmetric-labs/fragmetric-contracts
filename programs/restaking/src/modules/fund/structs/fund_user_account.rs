@@ -38,13 +38,17 @@ impl PDASeeds<3> for UserFundAccount {
 impl UserFundAccount {
     pub const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = MAX_WITHDRAWAL_REQUESTS_SIZE;
 
-    pub fn initialize_if_needed(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
+    pub fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.user = user;
         }
+    }
+
+    pub fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
+        self.initialize(self.bump, receipt_token_mint, user);
     }
 
     pub fn placeholder(
