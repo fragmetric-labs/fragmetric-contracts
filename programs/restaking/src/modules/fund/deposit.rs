@@ -28,16 +28,8 @@ pub fn deposit_sol<'info>(
     metadata: Option<DepositMetadata>,
     current_slot: u64,
 ) -> Result<()> {
-    if let Some(metadata) = &metadata {
-        ed25519::verify_preceding_ed25519_instruction(
-            instructions_sysvar,
-            metadata.try_to_vec()?.as_slice(),
-        )?;
-        metadata.verify_expiration()?;
-    }
-    let (wallet_provider, contribution_accrual_rate) = metadata
-        .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
-        .unzip();
+    let (wallet_provider, contribution_accrual_rate) =
+        verify_deposit_metadata(metadata, instructions_sysvar)?;
 
     fund_account.update_token_prices(pricing_sources)?;
     let receipt_token_mint_amount =
@@ -59,11 +51,6 @@ pub fn deposit_sol<'info>(
 
     transfer_sol_from_user_to_fund(user, fund_account, system_program, sol_amount)?;
 
-    let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
-        receipt_token_mint.decimals,
-        receipt_token_mint.supply,
-    )?;
-
     emit!(events::UserDepositedSOLToFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
@@ -75,7 +62,10 @@ pub fn deposit_sol<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::new(
             fund_account.as_ref(),
-            receipt_token_price,
+            fund_account.receipt_token_sol_value_per_token(
+                receipt_token_mint.decimals,
+                receipt_token_mint.supply,
+            )?,
             receipt_token_mint.supply,
         ),
     });
@@ -104,16 +94,8 @@ pub fn deposit_supported_token<'info>(
     metadata: Option<DepositMetadata>,
     current_slot: u64,
 ) -> Result<()> {
-    if let Some(metadata) = &metadata {
-        ed25519::verify_preceding_ed25519_instruction(
-            instructions_sysvar,
-            metadata.try_to_vec()?.as_slice(),
-        )?;
-        metadata.verify_expiration()?;
-    }
-    let (wallet_provider, contribution_accrual_rate) = metadata
-        .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
-        .unzip();
+    let (wallet_provider, contribution_accrual_rate) =
+        verify_deposit_metadata(metadata, instructions_sysvar)?;
 
     fund_account.update_token_prices(pricing_sources)?;
     let receipt_token_mint_amount = fund_account.receipt_token_mint_amount_for(
@@ -147,11 +129,6 @@ pub fn deposit_supported_token<'info>(
         supported_token_amount,
     )?;
 
-    let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
-        receipt_token_mint.decimals,
-        receipt_token_mint.supply,
-    )?;
-
     emit!(events::UserDepositedSupportedTokenToFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
@@ -165,12 +142,32 @@ pub fn deposit_supported_token<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::new(
             fund_account,
-            receipt_token_price,
+            fund_account.receipt_token_sol_value_per_token(
+                receipt_token_mint.decimals,
+                receipt_token_mint.supply,
+            )?,
             receipt_token_mint.supply,
         ),
     });
 
     Ok(())
+}
+
+/// Returns (wallet_provider, contribution_accrual_rate)
+fn verify_deposit_metadata(
+    metadata: Option<DepositMetadata>,
+    instructions_sysvar: &AccountInfo,
+) -> Result<(Option<String>, Option<u8>)> {
+    if let Some(metadata) = &metadata {
+        ed25519::verify_preceding_ed25519_instruction(
+            instructions_sysvar,
+            metadata.try_to_vec()?.as_slice(),
+        )?;
+        metadata.verify_expiration()?;
+    }
+    Ok(metadata
+        .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
+        .unzip())
 }
 
 fn transfer_sol_from_user_to_fund<'info>(
@@ -260,118 +257,4 @@ fn mint_receipt_token_to_user<'info>(
         contribution_accrual_rate,
         current_slot,
     )
-}
-
-impl SupportedTokenInfo {
-    pub fn deposit_token(&mut self, amount: u64) -> Result<()> {
-        let new_accumulated_deposit_amount = self
-            .accumulated_deposit_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if self.capacity_amount < new_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededTokenCapacityAmountError)?
-        }
-
-        self.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount = self
-            .operation_reserved_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
-    }
-}
-
-impl FundAccount {
-    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
-        let new_sol_accumulated_deposit_amount = self
-            .sol_accumulated_deposit_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if self.sol_capacity_amount < new_sol_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededSOLCapacityAmountError)?
-        }
-
-        self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
-        self.sol_operation_reserved_amount = self
-            .sol_operation_reserved_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
-pub struct DepositMetadata {
-    pub wallet_provider: String,
-    pub contribution_accrual_rate: u8, // 100 is 1.0
-    pub expired_at: i64,
-}
-
-impl DepositMetadata {
-    pub fn verify_expiration(&self) -> Result<()> {
-        let current_timestamp = crate::utils::timestamp_now()?;
-
-        if current_timestamp > self.expired_at {
-            err!(ErrorCode::FundDepositMetadataSignatureExpiredError)?
-        }
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::modules::fund::price::source::*;
-
-    use super::*;
-
-    #[test]
-    fn test_deposit_sol() {
-        let mut fund = FundAccount::new_uninitialized();
-        fund.initialize(0, Pubkey::new_unique());
-        fund.set_sol_capacity_amount(100_000).unwrap();
-
-        assert_eq!(fund.sol_operation_reserved_amount, 0);
-        assert_eq!(fund.sol_accumulated_deposit_amount, 0);
-
-        fund.deposit_sol(100_000).unwrap();
-        assert_eq!(fund.sol_operation_reserved_amount, 100_000);
-        assert_eq!(fund.sol_accumulated_deposit_amount, 100_000);
-
-        fund.deposit_sol(100_000).unwrap_err();
-    }
-
-    #[test]
-    fn test_deposit_token() {
-        let mut fund = FundAccount::new_uninitialized();
-        fund.initialize(0, Pubkey::new_unique());
-
-        let mut dummy_lamports = 0u64;
-        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
-        let pricing_sources = &[SplStakePool::dummy_pricing_source_account_info(
-            &mut dummy_lamports,
-            &mut dummy_data,
-        )];
-        let token = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
-
-        fund.add_supported_token(
-            token.mint,
-            token.program,
-            token.decimals,
-            1_000,
-            token.pricing_source,
-        )
-        .unwrap();
-
-        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
-        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
-
-        fund.supported_tokens[0].deposit_token(1_000).unwrap();
-        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
-        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
-
-        fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
-    }
 }

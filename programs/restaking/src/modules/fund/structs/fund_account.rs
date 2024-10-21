@@ -78,6 +78,51 @@ impl FundAccount {
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
+
+    pub fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
+        if capacity_amount < self.sol_accumulated_deposit_amount {
+            err!(ErrorCode::FundInvalidUpdateError)?
+        }
+        self.sol_capacity_amount = capacity_amount;
+
+        Ok(())
+    }
+
+    pub fn add_supported_token(
+        &mut self,
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
+        capacity_amount: u64,
+        pricing_source: TokenPricingSource,
+    ) -> Result<()> {
+        if self.supported_tokens.iter().any(|info| info.mint == mint) {
+            err!(ErrorCode::FundAlreadySupportedTokenError)?
+        }
+        let token_info =
+            SupportedTokenInfo::new(mint, program, decimals, capacity_amount, pricing_source);
+        self.supported_tokens.push(token_info);
+
+        Ok(())
+    }
+
+    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
+        let new_sol_accumulated_deposit_amount = self
+            .sol_accumulated_deposit_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        if self.sol_capacity_amount < new_sol_accumulated_deposit_amount {
+            err!(ErrorCode::FundExceededSOLCapacityAmountError)?
+        }
+
+        self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
+        self.sol_operation_reserved_amount = self
+            .sol_operation_reserved_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -112,6 +157,33 @@ impl SupportedTokenInfo {
             pricing_source,
             _reserved: [0; 128],
         }
+    }
+
+    pub fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
+        if capacity_amount < self.accumulated_deposit_amount {
+            err!(ErrorCode::FundInvalidUpdateError)?
+        }
+        self.capacity_amount = capacity_amount;
+
+        Ok(())
+    }
+
+    pub fn deposit_token(&mut self, amount: u64) -> Result<()> {
+        let new_accumulated_deposit_amount = self
+            .accumulated_deposit_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        if self.capacity_amount < new_accumulated_deposit_amount {
+            err!(ErrorCode::FundExceededTokenCapacityAmountError)?
+        }
+
+        self.accumulated_deposit_amount = new_accumulated_deposit_amount;
+        self.operation_reserved_amount = self
+            .operation_reserved_amount
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
     }
 }
 
@@ -173,6 +245,137 @@ impl WithdrawalStatus {
     pub fn sol_withdrawal_fee_rate_f32(&self) -> f32 {
         self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
+
+    pub fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
+        self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
+    }
+
+    pub fn set_withdrawal_enabled_flag(&mut self, flag: bool) {
+        self.withdrawal_enabled_flag = flag;
+    }
+
+    pub fn set_batch_processing_threshold(&mut self, amount: Option<u64>, duration: Option<i64>) {
+        if let Some(amount) = amount {
+            self.batch_processing_threshold_amount = amount;
+        }
+        if let Some(duration) = duration {
+            self.batch_processing_threshold_duration = duration;
+        }
+    }
+
+    pub(super) fn issue_new_request_id(&mut self) -> u64 {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+        request_id
+    }
+
+    pub fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {
+        crate::utils::proportional_amount(
+            amount,
+            self.sol_withdrawal_fee_rate as u64,
+            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    pub fn withdraw(
+        &mut self,
+        sol_amount: u64,
+        sol_fee_amount: u64,
+        receipt_token_amount: u64,
+    ) -> Result<()> {
+        self.reserved_fund
+            .withdraw(sol_amount, sol_fee_amount, receipt_token_amount)
+    }
+
+    pub(super) fn check_withdrawal_enabled(&self) -> Result<()> {
+        if !self.withdrawal_enabled_flag {
+            err!(ErrorCode::FundWithdrawalDisabledError)?
+        }
+
+        Ok(())
+    }
+
+    pub fn check_withdrawal_threshold(&self, current_time: i64) -> Result<()> {
+        let mut threshold_satisfied = match self.last_batch_processing_started_at {
+            Some(x) => current_time - x > self.batch_processing_threshold_duration,
+            None => true,
+        };
+
+        if self.pending_batch_withdrawal.receipt_token_to_process
+            > self.batch_processing_threshold_amount
+        {
+            threshold_satisfied = true;
+        }
+
+        if !threshold_satisfied {
+            err!(ErrorCode::OperatorJobUnmetThresholdError)?;
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
+        if batch_id < self.pending_batch_withdrawal.batch_id {
+            err!(ErrorCode::FundProcessingWithdrawalRequestError)?
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
+        if batch_id > self.last_completed_batch_id {
+            err!(ErrorCode::FundPendingWithdrawalRequestError)?
+        }
+
+        Ok(())
+    }
+
+    // Called by operator
+    pub fn start_processing_pending_batch_withdrawal(&mut self) -> Result<()> {
+        let batch_id = self.next_batch_id;
+        self.next_batch_id += 1;
+        let new = BatchWithdrawal::new(batch_id);
+
+        let mut old = std::mem::replace(&mut self.pending_batch_withdrawal, new);
+        old.start_batch_processing()?;
+
+        self.num_withdrawal_requests_in_progress += old.num_withdrawal_requests;
+        self.last_batch_processing_started_at = old.processing_started_at;
+        self.batch_withdrawals_in_progress.push(old);
+
+        Ok(())
+    }
+
+    // Called by operator
+    pub fn end_processing_completed_batch_withdrawals(&mut self) -> Result<()> {
+        let completed_batch_withdrawals = self.pop_completed_batch_withdrawals();
+        if let Some(batch) = completed_batch_withdrawals.last() {
+            self.last_completed_batch_id = batch.batch_id;
+            self.last_batch_processing_completed_at = Some(crate::utils::timestamp_now()?);
+        }
+        for batch in completed_batch_withdrawals {
+            self.reserved_fund
+                .record_completed_batch_withdrawal(batch)?;
+        }
+
+        Ok(())
+    }
+
+    fn pop_completed_batch_withdrawals(&mut self) -> Vec<BatchWithdrawal> {
+        let (completed, remaining) = std::mem::take(&mut self.batch_withdrawals_in_progress)
+            .into_iter()
+            .partition(|batch| {
+                if batch.is_completed() {
+                    self.num_withdrawal_requests_in_progress -= batch.num_withdrawal_requests;
+                    true
+                } else {
+                    false
+                }
+            });
+        self.batch_withdrawals_in_progress = remaining;
+        completed
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -200,6 +403,73 @@ impl BatchWithdrawal {
             _reserved: [0; 32],
         }
     }
+
+    pub(super) fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
+        self.num_withdrawal_requests += 1;
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_add(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+
+    pub(super) fn remove_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
+        self.num_withdrawal_requests -= 1;
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_sub(amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+
+    fn start_batch_processing(&mut self) -> Result<()> {
+        self.processing_started_at = Some(crate::utils::timestamp_now()?);
+        Ok(())
+    }
+
+    fn is_completed(&self) -> bool {
+        self.processing_started_at.is_some()
+            && self.receipt_token_to_process == 0
+            && self.receipt_token_being_processed == 0
+    }
+
+    // Called by operator
+    pub fn record_unstaking_start(&mut self, receipt_token_amount: u64) -> Result<()> {
+        self.receipt_token_to_process = self
+            .receipt_token_to_process
+            .checked_sub(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.receipt_token_being_processed = self
+            .receipt_token_being_processed
+            .checked_add(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+
+    // Called by operator
+    pub fn record_unstaking_end(
+        &mut self,
+        receipt_token_amount: u64,
+        sol_amount: u64,
+    ) -> Result<()> {
+        self.receipt_token_being_processed = self
+            .receipt_token_being_processed
+            .checked_sub(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.receipt_token_processed = self
+            .receipt_token_processed
+            .checked_add(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_reserved = self
+            .sol_reserved
+            .checked_add(sol_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -221,8 +491,80 @@ impl Default for ReservedFund {
     }
 }
 
+impl ReservedFund {
+    fn record_completed_batch_withdrawal(&mut self, batch: BatchWithdrawal) -> Result<()> {
+        self.receipt_token_processed_amount = self
+            .receipt_token_processed_amount
+            .checked_add(batch.receipt_token_processed)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
+            .checked_add(batch.sol_reserved)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+
+    pub fn calculate_sol_amount_for_receipt_token_amount(
+        &self,
+        receipt_token_withdraw_amount: u64,
+    ) -> Result<u64> {
+        crate::utils::proportional_amount(
+            receipt_token_withdraw_amount,
+            self.sol_withdrawal_reserved_amount,
+            self.receipt_token_processed_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    fn withdraw(
+        &mut self,
+        sol_amount: u64,
+        sol_fee_amount: u64,
+        receipt_token_amount: u64,
+    ) -> Result<()> {
+        self.receipt_token_processed_amount = self
+            .receipt_token_processed_amount
+            .checked_sub(receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
+            .checked_sub(sol_amount)
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
+
+        // send fee to fee income
+        self.sol_fee_income_reserved_amount = self
+            .sol_fee_income_reserved_amount
+            .checked_add(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct DepositMetadata {
+    pub wallet_provider: String,
+    pub contribution_accrual_rate: u8, // 100 is 1.0
+    pub expired_at: i64,
+}
+
+impl DepositMetadata {
+    pub fn verify_expiration(&self) -> Result<()> {
+        let current_timestamp = crate::utils::timestamp_now()?;
+
+        if current_timestamp > self.expired_at {
+            err!(ErrorCode::FundDepositMetadataSignatureExpiredError)?
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::modules::fund::price::source::*;
+
     use super::*;
 
     impl FundAccount {
@@ -323,5 +665,161 @@ mod tests {
                 .receipt_token_to_process,
             0
         );
+    }
+
+    #[test]
+    fn test_update_fund() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize(0, Pubkey::new_unique());
+
+        assert_eq!(fund.sol_capacity_amount, 0);
+        assert_eq!(fund.withdrawal_status.sol_withdrawal_fee_rate, 0);
+        assert!(fund.withdrawal_status.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal_status.batch_processing_threshold_amount, 0);
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            0
+        );
+
+        let new_sol_capacity_amount = 1_000_000_000 * 60_000;
+        fund.set_sol_capacity_amount(new_sol_capacity_amount)
+            .unwrap();
+        assert_eq!(fund.sol_capacity_amount, new_sol_capacity_amount);
+
+        let new_sol_withdrawal_fee_rate = 20;
+        fund.withdrawal_status
+            .set_sol_withdrawal_fee_rate(new_sol_withdrawal_fee_rate);
+        assert_eq!(
+            fund.withdrawal_status.sol_withdrawal_fee_rate,
+            new_sol_withdrawal_fee_rate
+        );
+
+        fund.withdrawal_status.set_withdrawal_enabled_flag(false);
+        assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+
+        let new_amount = 10;
+        let new_duration = 10;
+        fund.withdrawal_status
+            .set_batch_processing_threshold(Some(new_amount), None);
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            0
+        );
+
+        fund.withdrawal_status
+            .set_batch_processing_threshold(None, Some(new_duration));
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(
+            fund.withdrawal_status.batch_processing_threshold_duration,
+            new_duration
+        );
+    }
+
+    #[test]
+    fn test_update_token() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize(0, Pubkey::new_unique());
+
+        let mut dummy_lamports = 0u64;
+        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
+        let mut dummy_lamports2 = 0u64;
+        let mut dummy_data2 = [0u8; 8 + MarinadeStakePool::INIT_SPACE];
+        let pricing_sources = &[
+            SplStakePool::dummy_pricing_source_account_info(&mut dummy_lamports, &mut dummy_data),
+            MarinadeStakePool::dummy_pricing_source_account_info(
+                &mut dummy_lamports2,
+                &mut dummy_data2,
+            ),
+        ];
+        let token1 = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
+        let token2 =
+            SupportedTokenInfo::dummy_marinade_stake_pool_token_info(pricing_sources[1].key());
+
+        fund.add_supported_token(
+            token1.mint,
+            token1.program,
+            token1.decimals,
+            token1.capacity_amount,
+            token1.pricing_source,
+        )
+        .unwrap();
+        fund.add_supported_token(
+            token2.mint,
+            token2.program,
+            token2.decimals,
+            token2.capacity_amount,
+            token2.pricing_source,
+        )
+        .unwrap();
+        assert_eq!(fund.supported_tokens.len(), 2);
+        assert_eq!(
+            fund.supported_tokens[0].capacity_amount,
+            token1.capacity_amount
+        );
+
+        let new_token1_capacity_amount = 1_000_000_000 * 3000;
+        fund.supported_token_mut(token1.mint)
+            .unwrap()
+            .set_capacity_amount(new_token1_capacity_amount)
+            .unwrap();
+        assert_eq!(
+            fund.supported_tokens[0].capacity_amount,
+            new_token1_capacity_amount
+        );
+    }
+
+    #[test]
+    fn test_deposit_sol() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize(0, Pubkey::new_unique());
+        fund.set_sol_capacity_amount(100_000).unwrap();
+
+        assert_eq!(fund.sol_operation_reserved_amount, 0);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 0);
+
+        fund.deposit_sol(100_000).unwrap();
+        assert_eq!(fund.sol_operation_reserved_amount, 100_000);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 100_000);
+
+        fund.deposit_sol(100_000).unwrap_err();
+    }
+
+    #[test]
+    fn test_deposit_token() {
+        let mut fund = FundAccount::new_uninitialized();
+        fund.initialize(0, Pubkey::new_unique());
+
+        let mut dummy_lamports = 0u64;
+        let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
+        let pricing_sources = &[SplStakePool::dummy_pricing_source_account_info(
+            &mut dummy_lamports,
+            &mut dummy_data,
+        )];
+        let token = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
+
+        fund.add_supported_token(
+            token.mint,
+            token.program,
+            token.decimals,
+            1_000,
+            token.pricing_source,
+        )
+        .unwrap();
+
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
+
+        fund.supported_tokens[0].deposit_token(1_000).unwrap();
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
+
+        fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
     }
 }

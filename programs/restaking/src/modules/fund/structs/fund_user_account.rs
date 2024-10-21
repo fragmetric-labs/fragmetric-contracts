@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
+use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
+
+use super::*;
 
 const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
 
@@ -65,6 +68,86 @@ impl UserFundAccount {
             _reserved: [0; 32],
             withdrawal_requests: Default::default(),
         }
+    }
+
+    pub fn set_receipt_token_amount(&mut self, total_amount: u64) {
+        self.receipt_token_amount = total_amount;
+    }
+
+    fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
+        if self.withdrawal_requests.len() == Self::MAX_WITHDRAWAL_REQUESTS_SIZE {
+            err!(ErrorCode::FundExceededMaxWithdrawalRequestError)?;
+        }
+
+        self.withdrawal_requests.push(request);
+
+        Ok(())
+    }
+
+    fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
+        let index = self
+            .withdrawal_requests
+            .binary_search_by_key(&request_id, |req| req.request_id)
+            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
+        Ok(self.withdrawal_requests.remove(index))
+    }
+
+    /// Returns (batch_id, request_id)
+    pub fn create_withdrawal_request(
+        &mut self,
+        withdrawal_status: &mut WithdrawalStatus,
+        receipt_token_amount: u64,
+    ) -> Result<(u64, u64)> {
+        withdrawal_status.check_withdrawal_enabled()?;
+
+        let request = WithdrawalRequest::new(
+            withdrawal_status.pending_batch_withdrawal.batch_id,
+            withdrawal_status.issue_new_request_id(),
+            receipt_token_amount,
+        )?;
+        let batch_id = request.batch_id;
+        let request_id = request.request_id;
+
+        self.push_withdrawal_request(request)?;
+        withdrawal_status
+            .pending_batch_withdrawal
+            .add_receipt_token_to_process(receipt_token_amount)?;
+
+        Ok((batch_id, request_id))
+    }
+
+    pub fn cancel_withdrawal_request(
+        &mut self,
+        withdrawal_status: &mut WithdrawalStatus,
+        request_id: u64,
+    ) -> Result<WithdrawalRequest> {
+        if request_id >= withdrawal_status.next_request_id {
+            err!(ErrorCode::FundWithdrawalRequestNotFoundError)?;
+        }
+
+        let request = self.pop_withdrawal_request(request_id)?;
+        withdrawal_status.check_batch_processing_not_started(request.batch_id)?;
+        withdrawal_status
+            .pending_batch_withdrawal
+            .remove_receipt_token_to_process(request.receipt_token_amount)?;
+
+        Ok(request)
+    }
+
+    pub fn pop_completed_withdrawal_request(
+        &mut self,
+        withdrawal_status: &mut WithdrawalStatus,
+        request_id: u64,
+    ) -> Result<WithdrawalRequest> {
+        if request_id >= withdrawal_status.next_request_id {
+            err!(ErrorCode::FundWithdrawalRequestNotFoundError)?;
+        }
+
+        withdrawal_status.check_withdrawal_enabled()?;
+        let request = self.pop_withdrawal_request(request_id)?;
+        withdrawal_status.check_batch_processing_completed(request.batch_id)?;
+
+        Ok(request)
     }
 }
 

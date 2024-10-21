@@ -6,9 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{
-    FundAccount, FundAccountInfo, ReceiptTokenLockAuthority, WithdrawalStatus,
-};
+use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
 pub fn process_fund_withdrawal_job<'a, 'info>(
@@ -108,25 +106,4 @@ pub fn process_fund_withdrawal_job<'a, 'info>(
     });
 
     Ok(())
-}
-
-impl WithdrawalStatus {
-    fn check_withdrawal_threshold(&self, current_time: i64) -> Result<()> {
-        let mut threshold_satisfied = match self.last_batch_processing_started_at {
-            Some(x) => current_time - x > self.batch_processing_threshold_duration,
-            None => true,
-        };
-
-        if self.pending_batch_withdrawal.receipt_token_to_process
-            > self.batch_processing_threshold_amount
-        {
-            threshold_satisfied = true;
-        }
-
-        if !threshold_satisfied {
-            err!(ErrorCode::OperatorJobUnmetThresholdError)?;
-        }
-
-        Ok(())
-    }
 }

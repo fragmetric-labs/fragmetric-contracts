@@ -54,4 +54,17 @@ impl UserRewardSettlement {
     pub fn settled_slot(&self) -> u64 {
         self.settled_slot
     }
+
+    pub fn settle_reward(
+        &mut self,
+        amount: u64,
+        contribution: u128,
+        settled_slot: u64,
+    ) -> Result<()> {
+        self.add_settled_amount(amount)?;
+        self.add_settled_contribution(contribution)?;
+        self.update_settled_slot(settled_slot);
+
+        Ok(())
+    }
 }

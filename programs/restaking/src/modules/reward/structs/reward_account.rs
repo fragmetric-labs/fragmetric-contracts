@@ -118,6 +118,215 @@ impl RewardAccount {
         Ok(pool)
     }
 
+    pub fn settle_reward(
+        &mut self,
+        reward_pool_id: u8,
+        reward_id: u16,
+        amount: u64,
+        current_slot: u64,
+    ) -> Result<()> {
+        require_gt!(self.num_rewards, reward_id, ErrorCode::RewardNotFoundError);
+
+        self.reward_pool_mut(reward_pool_id)?
+            .settle_reward(reward_id, amount, current_slot)
+    }
+
+    pub fn add_holder(
+        &mut self,
+        name: String,
+        description: String,
+        pubkeys: Vec<Pubkey>,
+    ) -> Result<()> {
+        for holder in self.holders_iter() {
+            if holder.name()? == name {
+                err!(ErrorCode::RewardAlreadyExistingHolderError)?;
+            }
+        }
+
+        let holder = self.allocate_new_holder()?;
+        holder.initialize(name, description, &pubkeys)?;
+
+        Ok(())
+    }
+
+    pub fn add_reward(
+        &mut self,
+        name: String,
+        description: String,
+        reward_type: RewardType,
+    ) -> Result<()> {
+        for reward in self.rewards_iter() {
+            if reward.name()? == name {
+                err!(ErrorCode::RewardAlreadyExistingRewardError)?;
+            }
+        }
+
+        let reward = self.allocate_new_reward()?;
+        reward.initialize(name, description, reward_type)?;
+
+        Ok(())
+    }
+
+    pub fn add_reward_pool(
+        &mut self,
+        name: String,
+        holder_id: Option<u8>,
+        custom_contribution_accrual_rate_enabled: bool,
+        current_slot: u64,
+    ) -> Result<()> {
+        if let Some(id) = holder_id {
+            require_gt!(self.num_holders, id, ErrorCode::RewardHolderNotFoundError);
+        }
+
+        if self.reward_pools_iter().any(|p| {
+            (p.holder_id() == holder_id
+                && p.custom_contribution_accrual_rate_enabled()
+                    == custom_contribution_accrual_rate_enabled)
+                || p.name() == Ok(name.clone())
+        }) {
+            err!(ErrorCode::RewardAlreadyExistingPoolError)?
+        }
+
+        let reward_pool = self.allocate_new_reward_pool()?;
+        reward_pool.initialize(
+            name,
+            holder_id,
+            custom_contribution_accrual_rate_enabled,
+            current_slot,
+        )?;
+
+        Ok(())
+    }
+
+    pub fn close_reward_pool(&mut self, reward_pool_id: u8, current_slot: u64) -> Result<()> {
+        let reward_pool = self.reward_pool_mut(reward_pool_id)?;
+        match reward_pool.holder_id() {
+            None => err!(ErrorCode::RewardPoolCloseConditionError)?,
+            Some(_) => reward_pool.close(current_slot),
+        }
+    }
+
+    pub fn update_reward_pools(&mut self, current_slot: u64) -> Result<()> {
+        for reward_pool in self.reward_pools_iter_mut() {
+            let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
+            reward_pool.update_contribution(updated_slot)?;
+            for reward_settlement in reward_pool.reward_settlements_iter_mut() {
+                reward_settlement.clear_stale_settlement_blocks()?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn update_user_reward_pools(
+        &mut self,
+        user: &mut UserRewardAccount,
+        current_slot: u64,
+    ) -> Result<()> {
+        user.backfill_not_existing_pools(self.reward_pools_iter())?;
+
+        user.user_reward_pools_iter_mut()
+            .zip(self.reward_pools_iter_mut())
+            .try_for_each(|(user_reward_pool, reward_pool)| {
+                user_reward_pool.update(reward_pool, vec![], current_slot)?;
+                Ok::<(), Error>(())
+            })?;
+
+        Ok(())
+    }
+
+    pub fn update_reward_pools_token_allocation(
+        &mut self,
+        receipt_token_mint: Pubkey,
+        amount: u64,
+        contribution_accrual_rate: Option<u8>,
+        from: Option<&mut UserRewardAccount>,
+        to: Option<&mut UserRewardAccount>,
+        current_slot: u64,
+    ) -> Result<()> {
+        if from.is_none() && to.is_none() || to.is_none() && contribution_accrual_rate.is_some() {
+            err!(ErrorCode::RewardInvalidTransferArgsException)?
+        }
+
+        if let Some(from) = from {
+            // back-fill not existing pools
+            from.backfill_not_existing_pools(self.reward_pools_iter())?;
+            // find "from user" related reward pools
+            for reward_pool in self.get_related_pools(&from.user, receipt_token_mint)? {
+                let user_reward_pool = from.user_reward_pool_mut(reward_pool.id())?;
+                let deltas = vec![TokenAllocatedAmountDelta {
+                    contribution_accrual_rate: None,
+                    is_positive: false,
+                    amount,
+                }];
+
+                let effective_deltas =
+                    user_reward_pool.update(reward_pool, deltas, current_slot)?;
+                reward_pool.update(effective_deltas, current_slot)?;
+            }
+        }
+
+        if let Some(to) = to {
+            // back-fill not existing pools
+            to.backfill_not_existing_pools(self.reward_pools_iter())?;
+            // find "to user" related reward pools
+            for reward_pool in self.get_related_pools(&to.user, receipt_token_mint)? {
+                let user_reward_pool = to.user_reward_pool_mut(reward_pool.id())?;
+                let effective_contribution_accrual_rate = reward_pool
+                    .custom_contribution_accrual_rate_enabled()
+                    .then_some(contribution_accrual_rate)
+                    .flatten();
+                let deltas = vec![TokenAllocatedAmountDelta {
+                    contribution_accrual_rate: effective_contribution_accrual_rate,
+                    is_positive: true,
+                    amount,
+                }];
+                let effective_deltas =
+                    user_reward_pool.update(reward_pool, deltas, current_slot)?;
+                reward_pool.update(effective_deltas, current_slot)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn get_related_pools(
+        &mut self,
+        user: &Pubkey,
+        receipt_token_mint: Pubkey,
+    ) -> Result<Vec<&mut RewardPool>> {
+        if self.receipt_token_mint != receipt_token_mint {
+            return Err(ErrorCode::RewardInvalidPoolAccessException)?;
+        }
+
+        let (holders_ref, reward_pools) = self.holders_ref_and_reward_pools_iter_mut();
+        // split into base / holder-specific pools
+        let (base, holder_specific) =
+            reward_pools.partition::<Vec<_>, _>(|p| p.holder_id().is_none());
+
+        // base pool should exist at least one
+        if base.is_empty() {
+            err!(ErrorCode::RewardInvalidPoolConfigurationException)?
+        }
+
+        // first try to find within holder specific pools
+        let mut related = holder_specific
+            .into_iter()
+            .filter(|p| {
+                // SAFE: partitioned by `holder_id.is_none()`
+                // SAFE: always checks holder existence when adding reward pool
+                holders_ref[p.holder_id().unwrap() as usize].has_pubkey(user)
+            })
+            .collect::<Vec<_>>();
+
+        // otherwise falls back to base pools
+        if related.is_empty() {
+            related = base;
+        }
+
+        Ok(related)
+    }
+
     /// Auxillary method to breaks down a mutable borrow into separate borrows over fields
     fn array_refs_mut(&mut self) -> (&mut [Holder], &mut [Reward], &mut [RewardPool]) {
         let holders_mut = &mut self.holders_1[..self.num_holders as usize];
@@ -343,5 +552,78 @@ impl RewardPool {
     pub fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
         self.reward_settlements_iter_mut()
             .find(|s| s.reward_id() == reward_id)
+    }
+
+    fn settle_reward(&mut self, reward_id: u16, amount: u64, current_slot: u64) -> Result<()> {
+        if self.is_closed() {
+            err!(ErrorCode::RewardPoolClosedError)?;
+        }
+
+        // First update contribution
+        self.update_contribution(current_slot)?;
+
+        // Find settlement and settle
+        let current_reward_pool_contribution = self.contribution();
+        let settlement = if let Some(settlement) = self.reward_settlement_mut(reward_id) {
+            settlement
+        } else {
+            let reward_pool_id = self.id();
+            let reward_pool_initial_slot = self.initial_slot();
+            let settlement = self.allocate_new_reward_settlement()?;
+            settlement.initialize(
+                reward_id,
+                reward_pool_id,
+                reward_pool_initial_slot,
+                current_slot,
+            );
+            settlement
+        };
+
+        settlement.settle_reward(amount, current_reward_pool_contribution, current_slot)
+    }
+
+    /// Updates the contribution of the pool into recent value.
+    pub(super) fn update_contribution(&mut self, updated_slot: u64) -> Result<()> {
+        let elapsed_slot = updated_slot
+            .checked_sub(self.updated_slot())
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let total_contribution_accrual_rate = self
+            .token_allocated_amount
+            .total_contribution_accrual_rate()?;
+        let total_contribution = (elapsed_slot as u128)
+            .checked_mul(total_contribution_accrual_rate as u128)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.add_contribution(total_contribution, updated_slot)?;
+
+        Ok(())
+    }
+
+    fn update(
+        &mut self,
+        deltas: Vec<TokenAllocatedAmountDelta>,
+        current_slot: u64,
+    ) -> Result<Vec<TokenAllocatedAmountDelta>> {
+        // First update contribution
+        let updated_slot = self.closed_slot().unwrap_or(current_slot);
+        self.update_contribution(updated_slot)?;
+
+        // Apply deltas
+        if !deltas.is_empty() {
+            self.token_allocated_amount.update(deltas)
+        } else {
+            Ok(deltas)
+        }
+    }
+
+    fn close(&mut self, current_slot: u64) -> Result<()> {
+        if self.is_closed() {
+            err!(ErrorCode::RewardPoolClosedError)?
+        }
+
+        // update contribution as last
+        self.update_contribution(current_slot)?;
+        self.set_closed(current_slot);
+
+        Ok(())
     }
 }
