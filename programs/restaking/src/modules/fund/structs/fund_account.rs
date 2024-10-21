@@ -13,7 +13,7 @@ pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 2;
 #[derive(InitSpace)]
 pub struct FundAccount {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(16)]
     pub supported_tokens: Vec<SupportedTokenInfo>,

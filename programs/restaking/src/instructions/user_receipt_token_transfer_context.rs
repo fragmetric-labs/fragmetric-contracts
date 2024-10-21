@@ -49,7 +49,7 @@ pub struct UserReceiptTokenTransferContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.bump,
+        bump = fund_account.bump(),
         has_one = receipt_token_mint,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,

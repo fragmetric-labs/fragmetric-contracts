@@ -16,7 +16,7 @@ const USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
 #[repr(C)]
 pub struct UserRewardAccount {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
     pub num_user_reward_pools: u8,

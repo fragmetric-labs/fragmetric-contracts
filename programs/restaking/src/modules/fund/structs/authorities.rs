@@ -6,7 +6,7 @@ use crate::utils::PDASeeds;
 #[derive(InitSpace)]
 pub struct ReceiptTokenLockAuthority {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
 }
 
@@ -38,7 +38,7 @@ impl ReceiptTokenLockAuthority {
 #[derive(InitSpace)]
 pub struct SupportedTokenAuthority {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
     pub supported_token_mint: Pubkey,
 }
@@ -81,7 +81,7 @@ impl SupportedTokenAuthority {
 #[derive(InitSpace)]
 pub struct ReceiptTokenMintAuthority {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
 }
 

@@ -13,6 +13,10 @@ pub trait PDASeeds<const N: usize> {
         signer_seeds.push(std::slice::from_ref(self.bump_ref()));
         signer_seeds
     }
+
+    fn bump(&self) -> u8 {
+        *self.bump_ref()
+    }
 }
 
 /// Zero-copy account that has header (data-version, bump).

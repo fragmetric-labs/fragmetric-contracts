@@ -21,7 +21,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     #[account(
         seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.bump,
+        bump = receipt_token_mint_authority.bump(),
     )]
     pub receipt_token_mint_authority: Box<Account<'info, ReceiptTokenMintAuthority>>,
 
@@ -37,7 +37,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     #[account(
         seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
-        bump = supported_token_authority.bump,
+        bump = supported_token_authority.bump(),
     )]
     pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
@@ -62,7 +62,7 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.bump,
+        bump = fund_account.bump(),
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
@@ -70,7 +70,7 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.bump,
+        bump = user_fund_account.bump(),
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 

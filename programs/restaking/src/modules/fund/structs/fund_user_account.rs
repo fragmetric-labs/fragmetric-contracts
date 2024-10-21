@@ -8,7 +8,7 @@ const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
 #[derive(InitSpace)]
 pub struct UserFundAccount {
     data_version: u16,
-    pub bump: u8,
+    bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
 
