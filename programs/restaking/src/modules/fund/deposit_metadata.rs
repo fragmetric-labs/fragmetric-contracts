@@ -13,9 +13,11 @@ impl DepositMetadata {
     pub fn verify_expiration(&self) -> Result<()> {
         let current_timestamp = crate::utils::timestamp_now()?;
 
-        if current_timestamp > self.expired_at {
-            err!(ErrorCode::FundDepositMetadataSignatureExpiredError)?
-        }
+        require_gte!(
+            self.expired_at,
+            current_timestamp,
+            ErrorCode::FundDepositMetadataSignatureExpiredError,
+        );
 
         Ok(())
     }

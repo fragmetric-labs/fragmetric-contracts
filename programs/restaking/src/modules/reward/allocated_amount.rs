@@ -101,9 +101,12 @@ impl TokenAllocatedAmount {
             sum.checked_add(delta.amount)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })?;
-        if total_amount_orig != total_amount_effective {
-            err!(ErrorCode::RewardInvalidAccountingException)?
-        }
+
+        require_eq!(
+            total_amount_orig,
+            total_amount_effective,
+            ErrorCode::RewardInvalidAccountingException
+        );
 
         Ok(effective_deltas)
     }

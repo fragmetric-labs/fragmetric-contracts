@@ -81,9 +81,12 @@ impl FundAccount {
     }
 
     pub fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
-        if capacity_amount < self.sol_accumulated_deposit_amount {
-            err!(ErrorCode::FundInvalidUpdateError)?
-        }
+        require_gte!(
+            capacity_amount,
+            self.sol_accumulated_deposit_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
         self.sol_capacity_amount = capacity_amount;
 
         Ok(())
@@ -112,9 +115,12 @@ impl FundAccount {
             .sol_accumulated_deposit_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if self.sol_capacity_amount < new_sol_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededSOLCapacityAmountError)?
-        }
+
+        require_gte!(
+            self.sol_capacity_amount,
+            new_sol_accumulated_deposit_amount,
+            ErrorCode::FundExceededSOLCapacityAmountError
+        );
 
         self.sol_accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
         self.sol_operation_reserved_amount = self
@@ -161,9 +167,12 @@ impl SupportedTokenInfo {
     }
 
     pub fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
-        if capacity_amount < self.accumulated_deposit_amount {
-            err!(ErrorCode::FundInvalidUpdateError)?
-        }
+        require_gte!(
+            capacity_amount,
+            self.accumulated_deposit_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
         self.capacity_amount = capacity_amount;
 
         Ok(())
@@ -174,9 +183,12 @@ impl SupportedTokenInfo {
             .accumulated_deposit_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if self.capacity_amount < new_accumulated_deposit_amount {
-            err!(ErrorCode::FundExceededTokenCapacityAmountError)?
-        }
+
+        require_gte!(
+            self.capacity_amount,
+            new_accumulated_deposit_amount,
+            ErrorCode::FundExceededTokenCapacityAmountError
+        );
 
         self.accumulated_deposit_amount = new_accumulated_deposit_amount;
         self.operation_reserved_amount = self
@@ -310,17 +322,21 @@ impl WithdrawalStatus {
     }
 
     pub(super) fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
-        if batch_id < self.pending_batch_withdrawal.batch_id {
-            err!(ErrorCode::FundProcessingWithdrawalRequestError)?
-        }
+        require_gte!(
+            batch_id,
+            self.pending_batch_withdrawal.batch_id,
+            ErrorCode::FundProcessingWithdrawalRequestError
+        );
 
         Ok(())
     }
 
     pub(super) fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
-        if batch_id > self.last_completed_batch_id {
-            err!(ErrorCode::FundPendingWithdrawalRequestError)?
-        }
+        require_gte!(
+            self.last_completed_batch_id,
+            batch_id,
+            ErrorCode::FundPendingWithdrawalRequestError
+        );
 
         Ok(())
     }

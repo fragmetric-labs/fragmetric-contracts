@@ -75,9 +75,11 @@ impl UserFundAccount {
     }
 
     fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
-        if self.withdrawal_requests.len() == Self::MAX_WITHDRAWAL_REQUESTS_SIZE {
-            err!(ErrorCode::FundExceededMaxWithdrawalRequestError)?;
-        }
+        require_gt!(
+            Self::MAX_WITHDRAWAL_REQUESTS_SIZE,
+            self.withdrawal_requests.len(),
+            ErrorCode::FundExceededMaxWithdrawalRequestError
+        );
 
         self.withdrawal_requests.push(request);
 
@@ -121,9 +123,11 @@ impl UserFundAccount {
         withdrawal_status: &mut WithdrawalStatus,
         request_id: u64,
     ) -> Result<WithdrawalRequest> {
-        if request_id >= withdrawal_status.next_request_id {
-            err!(ErrorCode::FundWithdrawalRequestNotFoundError)?;
-        }
+        require_gt!(
+            withdrawal_status.next_request_id,
+            request_id,
+            ErrorCode::FundWithdrawalRequestNotFoundError
+        );
 
         let request = self.pop_withdrawal_request(request_id)?;
         withdrawal_status.check_batch_processing_not_started(request.batch_id)?;
@@ -139,9 +143,11 @@ impl UserFundAccount {
         withdrawal_status: &mut WithdrawalStatus,
         request_id: u64,
     ) -> Result<WithdrawalRequest> {
-        if request_id >= withdrawal_status.next_request_id {
-            err!(ErrorCode::FundWithdrawalRequestNotFoundError)?;
-        }
+        require_gt!(
+            withdrawal_status.next_request_id,
+            request_id,
+            ErrorCode::FundWithdrawalRequestNotFoundError
+        );
 
         withdrawal_status.check_withdrawal_enabled()?;
         let request = self.pop_withdrawal_request(request_id)?;

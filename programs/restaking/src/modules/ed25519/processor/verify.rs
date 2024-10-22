@@ -23,16 +23,11 @@ pub(in crate::modules) fn verify_preceding_ed25519_instruction(
         u16::try_from(payload.len()).map_err(|_| error!(ErrorCode::InvalidSignatureError))?;
 
     // check_data_len
-    let actual = ix.data.len();
-    let expected = 16 + 64 + 32 + payload.len();
-    if actual != expected {
-        // msg!(
-        //     "Invalid data length: actual {}, expected {}",
-        //     actual,
-        //     expected
-        // );
-        err!(ErrorCode::InvalidSignatureError)?
-    }
+    require_eq!(
+        ix.data.len(),
+        16 + 64 + 32 + payload.len(),
+        ErrorCode::InvalidSignatureError
+    );
 
     // check_data_header
     let header = &ix.data[0..16];
@@ -75,13 +70,11 @@ pub(in crate::modules) fn verify_preceding_ed25519_instruction(
     // check_data_pubkey
     let data_pubkey = &ix.data[16..48];
     if data_pubkey != ADMIN_PUBKEY.to_bytes() {
-        // msg!("Data pubkey mismatch");
         err!(ErrorCode::InvalidSignatureError)?
     }
 
     let data_payload = &ix.data[112..];
     if data_payload != payload {
-        // msg!("Data payload mismatch");
         err!(ErrorCode::InvalidSignatureError)?
     }
 

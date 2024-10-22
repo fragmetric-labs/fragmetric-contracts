@@ -213,14 +213,18 @@ impl RewardSettlementBlock {
         ending_slot: u64,
     ) -> Result<()> {
         // Prevent settlement block with non-positive block height
-        if starting_slot >= ending_slot {
-            err!(ErrorCode::RewardInvalidSettlementBlockHeightException)?
-        }
+        require_gt!(
+            ending_slot,
+            starting_slot,
+            ErrorCode::RewardInvalidSettlementBlockHeightException
+        );
 
         // Prevent settlement block with negative block contribution
-        if starting_reward_pool_contribution > ending_reward_pool_contribution {
-            err!(ErrorCode::RewardInvalidSettlementBlockContributionException)?
-        }
+        require_gte!(
+            ending_reward_pool_contribution,
+            starting_reward_pool_contribution,
+            ErrorCode::RewardInvalidSettlementBlockContributionException
+        );
 
         self.amount = 0;
         self.starting_slot = starting_slot;
@@ -259,9 +263,11 @@ impl RewardSettlementBlock {
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        if self.user_settled_amount > self.amount {
-            err!(ErrorCode::RewardInvalidTotalUserSettledAmountException)?
-        }
+        require_gte!(
+            self.amount,
+            self.user_settled_amount,
+            ErrorCode::RewardInvalidTotalUserSettledAmountException
+        );
 
         Ok(())
     }
@@ -272,9 +278,11 @@ impl RewardSettlementBlock {
                 .checked_add(contribution)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        if self.user_settled_contribution > self.block_contribution() {
-            err!(ErrorCode::RewardInvalidTotalUserSettledContributionException)?
-        }
+        require_gte!(
+            self.block_contribution(),
+            self.user_settled_contribution,
+            ErrorCode::RewardInvalidTotalUserSettledContributionException
+        );
 
         Ok(())
     }

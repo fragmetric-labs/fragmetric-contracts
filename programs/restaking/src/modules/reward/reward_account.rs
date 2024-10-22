@@ -138,9 +138,11 @@ impl RewardAccount {
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
         for holder in self.holders_iter() {
-            if holder.name()? == name {
-                err!(ErrorCode::RewardAlreadyExistingHolderError)?;
-            }
+            require_neq!(
+                holder.name()?,
+                name,
+                ErrorCode::RewardAlreadyExistingHolderError
+            );
         }
 
         let holder = self.allocate_new_holder()?;
@@ -156,9 +158,11 @@ impl RewardAccount {
         reward_type: RewardType,
     ) -> Result<()> {
         for reward in self.rewards_iter() {
-            if reward.name()? == name {
-                err!(ErrorCode::RewardAlreadyExistingRewardError)?;
-            }
+            require_neq!(
+                reward.name()?,
+                name,
+                ErrorCode::RewardAlreadyExistingRewardError
+            );
         }
 
         let reward = self.allocate_new_reward()?;
