@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
+use crate::modules::reward::*;
 use crate::utils::AccountLoaderExt;
-
-use super::*;
 
 pub fn process_initialize_reward_account(
     receipt_token_mint: &InterfaceAccount<Mint>,

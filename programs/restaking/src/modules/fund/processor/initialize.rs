@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use super::*;
+use crate::modules::fund::*;
 
 pub fn process_initialize_receipt_token_lock_authority(
     receipt_token_mint: &InterfaceAccount<Mint>,

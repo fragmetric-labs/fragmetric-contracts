@@ -5,10 +5,9 @@ use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::ed25519;
+use crate::modules::fund::*;
 use crate::modules::reward::{self, RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
-
-use super::*;
 
 pub fn process_deposit_sol<'info>(
     user: &Signer<'info>,

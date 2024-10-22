@@ -3,9 +3,9 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::{events, modules::price::TokenPricingSource};
-
-use super::*;
+use crate::events;
+use crate::modules::fund::*;
+use crate::modules::price::TokenPricingSource;
 
 pub fn process_update_fund_account_if_needed(
     receipt_token_mint: &InterfaceAccount<Mint>,

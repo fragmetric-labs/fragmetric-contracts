@@ -1,15 +1,15 @@
-mod structs;
+mod processor;
 
-mod deposit;
-mod initialize;
-mod transfer;
-mod update;
-mod withdraw;
+pub use processor::*;
 
-pub use structs::*;
+mod authorities;
+mod deposit_metadata;
+mod fund_account;
+mod fund_account_info;
+mod fund_user_account;
 
-pub use deposit::*;
-pub use initialize::*;
-pub(crate) use transfer::*;
-pub use update::*;
-pub use withdraw::*;
+pub use authorities::*;
+pub use deposit_metadata::*;
+pub use fund_account::*;
+pub use fund_account_info::*;
+pub use fund_user_account::*;

@@ -1,16 +1,15 @@
 use anchor_lang::prelude::*;
 use spl_tlv_account_resolution::{account::ExtraAccountMeta, seeds::Seed};
 
+use crate::modules::fund::*;
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
-
-use super::*;
 
 pub(crate) fn extra_account_metas_len() -> Result<usize> {
     Ok(extra_account_metas()?.len())
 }
 
-pub(super) fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
+pub(in crate::modules) fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
     let extra_account_metas = vec![
         // index 5, fund account
         ExtraAccountMeta::new_with_seeds(

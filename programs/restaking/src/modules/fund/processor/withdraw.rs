@@ -4,10 +4,9 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::events;
+use crate::modules::fund::*;
 use crate::modules::reward::{self, RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
-
-use super::*;
 
 pub fn process_request_withdrawal<'info>(
     user: &Signer<'info>,

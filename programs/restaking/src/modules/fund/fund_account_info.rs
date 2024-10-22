@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund::{FundAccount, SupportedTokenInfo};
+use super::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {

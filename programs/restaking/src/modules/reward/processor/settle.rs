@@ -2,8 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::events;
-
-use super::*;
+use crate::modules::reward::*;
 
 pub fn process_settle_reward(
     receipt_token_mint: &InterfaceAccount<Mint>,

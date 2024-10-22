@@ -2,9 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::events;
+use crate::modules::reward::*;
 use crate::utils::AccountLoaderExt;
-
-use super::*;
 
 pub fn process_update_reward_account_if_needed<'info>(
     payer: &Signer<'info>,
