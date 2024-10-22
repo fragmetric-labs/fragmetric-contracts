@@ -44,6 +44,7 @@ pub struct UserRewardContext<'info> {
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.bump()?,
+        has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
@@ -58,11 +59,25 @@ pub struct UserRewardContext<'info> {
 }
 
 impl<'info> UserRewardContext<'info> {
-    pub fn check_user_reward_account_version(&self) -> Result<()> {
+    pub fn check_user_reward_account_constraint(&self) -> Result<()> {
+        let user_reward_account = &*self.user_reward_account.load()?;
+        require_keys_eq!(
+            user_reward_account.receipt_token_mint,
+            self.receipt_token_mint.key(),
+            anchor_lang::error::ErrorCode::ConstraintHasOne,
+        );
+
+        require_keys_eq!(
+            user_reward_account.user,
+            self.user.key(),
+            anchor_lang::error::ErrorCode::ConstraintHasOne,
+        );
+
         require!(
-            self.reward_account.load()?.is_latest_version(),
+            self.user_reward_account.load()?.is_latest_version(),
             ErrorCode::InvalidDataVersionError,
         );
+
         Ok(())
     }
 }

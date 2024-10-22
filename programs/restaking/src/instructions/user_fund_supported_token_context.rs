@@ -22,6 +22,7 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
         bump = receipt_token_mint_authority.bump(),
+        has_one = receipt_token_mint,
     )]
     pub receipt_token_mint_authority: Box<Account<'info, ReceiptTokenMintAuthority>>,
 
@@ -38,6 +39,8 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
         bump = supported_token_authority.bump(),
+        has_one = receipt_token_mint,
+        has_one = supported_token_mint,
     )]
     pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
 
@@ -63,6 +66,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.bump(),
+        has_one = receipt_token_mint,
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
@@ -71,6 +75,8 @@ pub struct UserFundSupportedTokenContext<'info> {
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_fund_account.bump(),
+        has_one = receipt_token_mint,
+        has_one = user,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 
@@ -78,6 +84,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.bump()?,
+        has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
@@ -86,6 +93,8 @@ pub struct UserFundSupportedTokenContext<'info> {
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
         constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,

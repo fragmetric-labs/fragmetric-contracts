@@ -553,7 +553,7 @@ pub mod restaking {
     }
 
     pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
-        ctx.accounts.check_user_reward_account_version()?;
+        ctx.accounts.check_user_reward_account_constraint()?;
         modules::reward::update_user_reward_pools(
             &mut *ctx.accounts.reward_account.load_mut()?,
             &mut *ctx.accounts.user_reward_account.load_mut()?,
@@ -567,7 +567,7 @@ pub mod restaking {
         reward_pool_id: u8,
         reward_id: u8,
     ) -> Result<()> {
-        ctx.accounts.check_user_reward_account_version()?;
+        ctx.accounts.check_user_reward_account_constraint()?;
         modules::reward::claim_rewards()
     }
 
