@@ -6,25 +6,25 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use super::*;
 
-pub fn initialize_receipt_token_lock_authority(
-    receipt_token_lock_authority: &mut ReceiptTokenLockAuthority,
-    receipt_token_mint: Pubkey,
+pub fn process_initialize_receipt_token_lock_authority(
+    receipt_token_mint: &InterfaceAccount<Mint>,
+    receipt_token_lock_authority: &mut Account<ReceiptTokenLockAuthority>,
     bump: u8,
 ) -> Result<()> {
-    receipt_token_lock_authority.initialize(bump, receipt_token_mint);
+    receipt_token_lock_authority.initialize(bump, receipt_token_mint.key());
     Ok(())
 }
 
-pub fn initialize_fund_account(
-    fund_account: &mut FundAccount,
-    receipt_token_mint: Pubkey,
+pub fn process_initialize_fund_account(
+    receipt_token_mint: &InterfaceAccount<Mint>,
+    fund_account: &mut Account<FundAccount>,
     bump: u8,
 ) -> Result<()> {
-    fund_account.initialize(bump, receipt_token_mint);
+    fund_account.initialize(bump, receipt_token_mint.key());
     Ok(())
 }
 
-pub fn initialize_receipt_token_mint_authority<'info>(
+pub fn process_initialize_receipt_token_mint_authority<'info>(
     admin: &Signer<'info>,
     receipt_token_mint: &InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &mut Account<ReceiptTokenMintAuthority>,
@@ -47,7 +47,9 @@ pub fn initialize_receipt_token_mint_authority<'info>(
     )
 }
 
-pub fn initialize_extra_account_meta_list(extra_account_meta_list: &AccountInfo) -> Result<()> {
+pub fn process_initialize_extra_account_meta_list(
+    extra_account_meta_list: &AccountInfo,
+) -> Result<()> {
     ExtraAccountMetaList::init::<ExecuteInstruction>(
         &mut extra_account_meta_list.try_borrow_mut_data()?,
         &extra_account_metas()?,
@@ -55,22 +57,26 @@ pub fn initialize_extra_account_meta_list(extra_account_meta_list: &AccountInfo)
     Ok(())
 }
 
-pub fn initialize_supported_token_authority(
-    supported_token_authority: &mut SupportedTokenAuthority,
-    receipt_token_mint: Pubkey,
-    supported_token_mint: Pubkey,
+pub fn process_initialize_supported_token_authority(
+    receipt_token_mint: &InterfaceAccount<Mint>,
+    supported_token_mint: &InterfaceAccount<Mint>,
+    supported_token_authority: &mut Account<SupportedTokenAuthority>,
     bump: u8,
 ) -> Result<()> {
-    supported_token_authority.initialize(bump, receipt_token_mint, supported_token_mint);
+    supported_token_authority.initialize(
+        bump,
+        receipt_token_mint.key(),
+        supported_token_mint.key(),
+    );
     Ok(())
 }
 
-pub fn initialize_user_fund_account(
-    user_fund_account: &mut UserFundAccount,
-    receipt_token_mint: Pubkey,
-    user: Pubkey,
+pub fn process_initialize_user_fund_account(
+    user: &Signer,
+    receipt_token_mint: &InterfaceAccount<Mint>,
+    user_fund_account: &mut Account<UserFundAccount>,
     bump: u8,
 ) -> Result<()> {
-    user_fund_account.initialize(bump, receipt_token_mint, user);
+    user_fund_account.initialize(bump, receipt_token_mint.key(), user.key());
     Ok(())
 }

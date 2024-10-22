@@ -1,15 +1,16 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 use crate::events;
 use crate::utils::AccountLoaderExt;
 
 use super::*;
 
-pub fn update_reward_account_if_needed<'info>(
+pub fn process_update_reward_account_if_needed<'info>(
     payer: &Signer<'info>,
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &AccountLoader<'info, RewardAccount>,
     system_program: &Program<'info, System>,
-    receipt_token_mint: Pubkey,
     desired_account_size: Option<u32>,
     initialize: bool,
 ) -> Result<()> {
@@ -23,17 +24,17 @@ pub fn update_reward_account_if_needed<'info>(
     if initialize {
         reward_account
             .load_mut()?
-            .update_if_needed(receipt_token_mint);
+            .update_if_needed(receipt_token_mint.key());
     }
 
     Ok(())
 }
 
-pub fn update_user_reward_account_if_needed<'info>(
+pub fn process_update_user_reward_account_if_needed<'info>(
     user: &Signer<'info>,
+    receipt_token_mint: &InterfaceAccount<Mint>,
     user_reward_account: &AccountLoader<'info, UserRewardAccount>,
     system_program: &Program<'info, System>,
-    receipt_token_mint: Pubkey,
     desired_account_size: Option<u32>,
     initialize: bool,
 ) -> Result<()> {
@@ -47,10 +48,10 @@ pub fn update_user_reward_account_if_needed<'info>(
     if initialize {
         user_reward_account
             .load_mut()?
-            .update_if_needed(receipt_token_mint, user.key());
+            .update_if_needed(receipt_token_mint.key(), user.key());
 
         emit!(events::UserUpdatedRewardPool {
-            receipt_token_mint: user_reward_account.load()?.receipt_token_mint,
+            receipt_token_mint: receipt_token_mint.key(),
             updated_user_reward_account_addresses: vec![user_reward_account.key()],
         });
     }
@@ -58,9 +59,9 @@ pub fn update_user_reward_account_if_needed<'info>(
     Ok(())
 }
 
-pub fn add_reward_pool_holder(
+pub fn process_add_reward_pool_holder(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
-    receipt_token_mint: Pubkey,
     name: String,
     description: String,
     pubkeys: Vec<Pubkey>,
@@ -70,16 +71,16 @@ pub fn add_reward_pool_holder(
         .add_holder(name, description, pubkeys)?;
 
     emit!(events::FundManagerUpdatedRewardPool {
-        receipt_token_mint,
+        receipt_token_mint: receipt_token_mint.key(),
         reward_account_address: reward_account.key(),
     });
 
     Ok(())
 }
 
-pub fn add_reward_pool(
+pub fn process_add_reward_pool(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
-    receipt_token_mint: Pubkey,
     name: String,
     holder_id: Option<u8>,
     custom_contribution_accrual_rate_enabled: bool,
@@ -93,16 +94,16 @@ pub fn add_reward_pool(
     )?;
 
     emit!(events::FundManagerUpdatedRewardPool {
-        receipt_token_mint,
+        receipt_token_mint: receipt_token_mint.key(),
         reward_account_address: reward_account.key(),
     });
 
     Ok(())
 }
 
-pub fn close_reward_pool(
+pub fn process_close_reward_pool(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
-    receipt_token_mint: Pubkey,
     reward_pool_id: u8,
     current_slot: u64,
 ) -> Result<()> {
@@ -111,16 +112,16 @@ pub fn close_reward_pool(
         .close_reward_pool(reward_pool_id, current_slot)?;
 
     emit!(events::FundManagerUpdatedRewardPool {
-        receipt_token_mint,
+        receipt_token_mint: receipt_token_mint.key(),
         reward_account_address: reward_account.key(),
     });
 
     Ok(())
 }
 
-pub fn add_reward(
+pub fn process_add_reward(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
-    receipt_token_mint: Pubkey,
     name: String,
     description: String,
     reward_type: RewardType,
@@ -130,14 +131,15 @@ pub fn add_reward(
         .add_reward(name, description, reward_type)?;
 
     emit!(events::FundManagerUpdatedRewardPool {
-        receipt_token_mint,
+        receipt_token_mint: receipt_token_mint.key(),
         reward_account_address: reward_account.key(),
     });
 
     Ok(())
 }
 
-pub fn update_reward_pools(
+pub fn process_update_reward_pools(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
     current_slot: u64,
 ) -> Result<()> {
@@ -146,28 +148,30 @@ pub fn update_reward_pools(
         .update_reward_pools(current_slot)?;
 
     emit!(events::OperatorUpdatedRewardPools {
-        receipt_token_mint: reward_account.load()?.receipt_token_mint,
+        receipt_token_mint: receipt_token_mint.key(),
         reward_account_address: reward_account.key(),
     });
 
     Ok(())
 }
 
-pub fn update_user_reward_pools(
-    reward_account: &mut RewardAccount,
-    user_reward_account: &mut UserRewardAccount,
+pub fn process_update_user_reward_pools(
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     current_slot: u64,
 ) -> Result<()> {
-    reward_account.update_user_reward_pools(user_reward_account, current_slot)
+    reward_account
+        .load_mut()?
+        .update_user_reward_pools(&mut *user_reward_account.load_mut()?, current_slot)
 
     // no events required practically...
     // emit!(UserUpdatedRewardPool::new(
-    //     ctx.accounts.receipt_token_mint.key(),
+    //     receipt_token_mint.key(),
     //     vec![update],
     // ));
 }
 
-pub fn update_reward_pools_token_allocation(
+pub(in crate::modules) fn update_reward_pools_token_allocation(
     reward_account: &mut RewardAccount,
     from: Option<&mut UserRewardAccount>,
     to: Option<&mut UserRewardAccount>,

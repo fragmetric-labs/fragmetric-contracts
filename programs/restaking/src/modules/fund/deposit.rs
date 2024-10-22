@@ -10,16 +10,15 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-pub fn deposit_sol<'info>(
+pub fn process_deposit_sol<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
     fund_account: &mut Account<'info, FundAccount>,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     system_program: &Program<'info, System>,
     receipt_token_program: &Program<'info, Token2022>,
     instructions_sysvar: &AccountInfo,
@@ -42,7 +41,6 @@ pub fn deposit_sol<'info>(
         reward_account,
         user_fund_account,
         user_reward_account,
-        user_reward_account_address,
         receipt_token_program,
         receipt_token_mint_amount,
         contribution_accrual_rate,
@@ -54,7 +52,7 @@ pub fn deposit_sol<'info>(
     emit!(events::UserDepositedSOLToFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
-        user_fund_account: user_fund_account.clone(),
+        user_fund_account: Clone::clone(user_fund_account),
         deposited_sol_amount: sol_amount,
         receipt_token_mint: receipt_token_mint.key(),
         minted_receipt_token_amount: receipt_token_mint_amount,
@@ -73,7 +71,7 @@ pub fn deposit_sol<'info>(
     Ok(())
 }
 
-pub fn deposit_supported_token<'info>(
+pub fn process_deposit_supported_token<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
@@ -81,11 +79,10 @@ pub fn deposit_supported_token<'info>(
     supported_token_mint: &InterfaceAccount<'info, Mint>,
     supported_token_account: &InterfaceAccount<'info, TokenAccount>,
     user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut FundAccount,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    fund_account: &mut Account<FundAccount>,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     receipt_token_program: &Program<'info, Token2022>,
     supported_token_program: &Interface<'info, TokenInterface>,
     instructions_sysvar: &AccountInfo,
@@ -112,7 +109,6 @@ pub fn deposit_supported_token<'info>(
         reward_account,
         user_fund_account,
         user_reward_account,
-        user_reward_account_address,
         receipt_token_program,
         receipt_token_mint_amount,
         contribution_accrual_rate,
@@ -132,7 +128,7 @@ pub fn deposit_supported_token<'info>(
     emit!(events::UserDepositedSupportedTokenToFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
-        user_fund_account: user_fund_account.clone(),
+        user_fund_account: Clone::clone(user_fund_account),
         supported_token_mint: supported_token_mint.key(),
         supported_token_user_account: user_supported_token_account.key(),
         deposited_supported_token_amount: supported_token_amount,
@@ -194,7 +190,7 @@ fn transfer_supported_token_from_user_to_fund<'info>(
     supported_token_mint: &InterfaceAccount<'info, Mint>,
     supported_token_account: &InterfaceAccount<'info, TokenAccount>,
     user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut FundAccount,
+    fund_account: &mut Account<FundAccount>,
     supported_token_program: &Interface<'info, TokenInterface>,
     supported_token_amount: u64,
 ) -> Result<()> {
@@ -221,10 +217,9 @@ fn mint_receipt_token_to_user<'info>(
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     receipt_token_program: &Program<'info, Token2022>,
     receipt_token_mint_amount: u64,
     contribution_accrual_rate: Option<u8>,
@@ -248,10 +243,10 @@ fn mint_receipt_token_to_user<'info>(
     user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
 
     reward::update_reward_pools_token_allocation(
-        reward_account,
+        &mut *reward_account.load_mut()?,
         None,
-        Some(user_reward_account),
-        vec![user_reward_account_address],
+        Some(&mut *user_reward_account.load_mut()?),
+        vec![user_reward_account.key()],
         receipt_token_mint.key(),
         receipt_token_mint_amount,
         contribution_accrual_rate,

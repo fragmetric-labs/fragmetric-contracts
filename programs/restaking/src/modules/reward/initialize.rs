@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 use crate::utils::AccountLoaderExt;
 
 use super::*;
 
-pub fn initialize_reward_account(
+pub fn process_initialize_reward_account(
+    receipt_token_mint: &InterfaceAccount<Mint>,
     reward_account: &mut AccountLoader<RewardAccount>,
-    receipt_token_mint: Pubkey,
     bump: u8,
 ) -> Result<()> {
     if reward_account.as_ref().data_len() < 8 + std::mem::size_of::<RewardAccount>() {
@@ -14,15 +15,15 @@ pub fn initialize_reward_account(
     } else {
         reward_account
             .load_init()?
-            .initialize(bump, receipt_token_mint);
+            .initialize(bump, receipt_token_mint.key());
     }
     Ok(())
 }
 
-pub fn initialize_user_reward_account(
+pub fn process_initialize_user_reward_account(
+    user: &Signer,
+    receipt_token_mint: &InterfaceAccount<Mint>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
-    receipt_token_mint: Pubkey,
-    user: Pubkey,
     bump: u8,
 ) -> Result<()> {
     if user_reward_account.as_ref().data_len() < 8 + std::mem::size_of::<UserRewardAccount>() {
@@ -30,7 +31,7 @@ pub fn initialize_user_reward_account(
     } else {
         user_reward_account
             .load_init()?
-            .initialize(bump, receipt_token_mint, user);
+            .initialize(bump, receipt_token_mint.key(), user.key());
     }
     Ok(())
 }

@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
 
-pub fn claim_rewards() -> Result<()> {
+pub fn process_claim_rewards() -> Result<()> {
     unimplemented!()
 }

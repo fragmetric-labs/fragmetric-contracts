@@ -9,27 +9,28 @@ use crate::events;
 use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
-pub fn process_fund_withdrawal_job<'a, 'info>(
-    fund_account: &'a mut Account<'info, FundAccount>,
-    receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    receipt_token_program: &'a Program<'info, Token2022>,
-    receipt_token_lock_authority: &'a Account<'info, ReceiptTokenLockAuthority>,
-    receipt_token_lock_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-    pricing_sources: &'info [AccountInfo<'info>],
-    operator: Pubkey,
+pub fn process_process_fund_withdrawal_job<'info>(
+    operator: &Signer,
+    receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+    receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
+    receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
+    fund_account: &mut Account<'info, FundAccount>,
+    receipt_token_program: &Program<'info, Token2022>,
+    pricing_sources: &[AccountInfo<'info>],
     forced: bool,
     current_time: i64,
 ) -> Result<()> {
-    if !(forced && operator == ADMIN_PUBKEY) {
+    if !(forced && operator.key() == ADMIN_PUBKEY) {
         fund_account
             .withdrawal_status
             .check_withdrawal_threshold(current_time)?;
     }
 
+    fund_account.update_token_prices(pricing_sources)?;
+
     fund_account
         .withdrawal_status
         .start_processing_pending_batch_withdrawal()?;
-    fund_account.update_token_prices(pricing_sources)?;
 
     let total_sol_value_in_fund = fund_account.assets_total_sol_value()?;
     let receipt_token_total_supply = receipt_token_mint.supply;

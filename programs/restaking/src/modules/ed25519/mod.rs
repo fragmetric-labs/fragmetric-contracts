@@ -5,7 +5,7 @@ use anchor_lang::solana_program::sysvar::instructions;
 use crate::{constants::ADMIN_PUBKEY, errors::ErrorCode};
 
 /// Verify serialized Ed25519Program instruction data with ADMIN_PUBKEY
-pub fn verify_preceding_ed25519_instruction(
+pub(in crate::modules) fn verify_preceding_ed25519_instruction(
     instructions_sysvar: &AccountInfo,
     payload: &[u8],
 ) -> Result<()> {

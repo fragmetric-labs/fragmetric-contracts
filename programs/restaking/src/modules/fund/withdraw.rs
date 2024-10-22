@@ -9,17 +9,16 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-pub fn request_withdrawal<'info>(
+pub fn process_request_withdrawal<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut FundAccount,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    fund_account: &mut Account<FundAccount>,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     receipt_token_program: &Program<'info, Token2022>,
     receipt_token_amount: u64,
     current_slot: u64,
@@ -28,16 +27,15 @@ pub fn request_withdrawal<'info>(
         .create_withdrawal_request(&mut fund_account.withdrawal_status, receipt_token_amount)?;
 
     lock_receipt_token(
-        receipt_token_program,
+        user,
         receipt_token_mint,
         receipt_token_mint_authority,
         receipt_token_lock_account,
-        user,
         user_receipt_token_account,
         reward_account,
         user_fund_account,
         user_reward_account,
-        user_reward_account_address,
+        receipt_token_program,
         receipt_token_amount,
         current_slot,
     )?;
@@ -45,7 +43,7 @@ pub fn request_withdrawal<'info>(
     emit!(events::UserRequestedWithdrawalFromFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
-        user_fund_account: user_fund_account.clone(),
+        user_fund_account: Clone::clone(user_fund_account),
         batch_id,
         request_id,
         receipt_token_mint: receipt_token_mint.key(),
@@ -55,18 +53,17 @@ pub fn request_withdrawal<'info>(
     Ok(())
 }
 
-pub fn cancel_withdrawal_request<'info>(
+pub fn process_cancel_withdrawal_request<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
     receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut FundAccount,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    fund_account: &mut Account<FundAccount>,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
     receipt_token_program: &Program<'info, Token2022>,
     request_id: u64,
     current_slot: u64,
@@ -75,7 +72,6 @@ pub fn cancel_withdrawal_request<'info>(
         .cancel_withdrawal_request(&mut fund_account.withdrawal_status, request_id)?;
 
     unlock_receipt_token(
-        receipt_token_program,
         receipt_token_mint,
         receipt_token_mint_authority,
         receipt_token_lock_account,
@@ -84,7 +80,7 @@ pub fn cancel_withdrawal_request<'info>(
         reward_account,
         user_fund_account,
         user_reward_account,
-        user_reward_account_address,
+        receipt_token_program,
         request.receipt_token_amount,
         current_slot,
     )?;
@@ -92,7 +88,7 @@ pub fn cancel_withdrawal_request<'info>(
     emit!(events::UserCanceledWithdrawalRequestFromFund {
         user: user.key(),
         user_receipt_token_account: user_receipt_token_account.key(),
-        user_fund_account: user_fund_account.clone(),
+        user_fund_account: Clone::clone(user_fund_account),
         request_id,
         receipt_token_mint: receipt_token_mint.key(),
         requested_receipt_token_amount: request.receipt_token_amount,
@@ -101,11 +97,11 @@ pub fn cancel_withdrawal_request<'info>(
     Ok(())
 }
 
-pub fn withdraw(
+pub fn process_withdraw(
     user: &Signer,
     receipt_token_mint: &Mint,
     fund_account: &mut Account<FundAccount>,
-    user_fund_account: &mut UserFundAccount,
+    user_fund_account: &mut Account<UserFundAccount>,
     request_id: u64,
 ) -> Result<()> {
     let request = user_fund_account
@@ -125,7 +121,7 @@ pub fn withdraw(
             receipt_token_mint.supply
         ),
         request_id,
-        user_fund_account: user_fund_account.clone(),
+        user_fund_account: Clone::clone(user_fund_account),
         user: user.key(),
         burnt_receipt_token_amount: request.receipt_token_amount,
         withdrawn_sol_amount: sol_withdraw_amount,
@@ -136,16 +132,15 @@ pub fn withdraw(
 }
 
 fn lock_receipt_token<'info>(
-    receipt_token_program: &Program<'info, Token2022>,
+    user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
-    user: &Signer<'info>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
+    receipt_token_program: &Program<'info, Token2022>,
     receipt_token_amount: u64,
     current_slot: u64,
 ) -> Result<()> {
@@ -182,10 +177,10 @@ fn lock_receipt_token<'info>(
     user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
 
     reward::update_reward_pools_token_allocation(
-        reward_account,
-        Some(user_reward_account),
+        &mut *reward_account.load_mut()?,
+        Some(&mut *user_reward_account.load_mut()?),
         None,
-        vec![user_reward_account_address],
+        vec![user_reward_account.key()],
         receipt_token_mint.key(),
         receipt_token_amount,
         None,
@@ -194,16 +189,15 @@ fn lock_receipt_token<'info>(
 }
 
 fn unlock_receipt_token<'info>(
-    receipt_token_program: &Program<'info, Token2022>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
     receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    reward_account: &mut RewardAccount,
-    user_fund_account: &mut UserFundAccount,
-    user_reward_account: &mut UserRewardAccount,
-    user_reward_account_address: Pubkey,
+    reward_account: &mut AccountLoader<RewardAccount>,
+    user_fund_account: &mut Account<UserFundAccount>,
+    user_reward_account: &mut AccountLoader<UserRewardAccount>,
+    receipt_token_program: &Program<'info, Token2022>,
     receipt_token_amount: u64,
     current_slot: u64,
 ) -> Result<()> {
@@ -241,10 +235,10 @@ fn unlock_receipt_token<'info>(
     user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
 
     reward::update_reward_pools_token_allocation(
-        reward_account,
+        &mut *reward_account.load_mut()?,
         None,
-        Some(user_reward_account),
-        vec![user_reward_account_address],
+        Some(&mut *user_reward_account.load_mut()?),
+        vec![user_reward_account.key()],
         receipt_token_mint.key(),
         receipt_token_amount,
         None,
