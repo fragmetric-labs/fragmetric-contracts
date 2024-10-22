@@ -71,12 +71,8 @@ impl Holder {
         self.id = id;
     }
 
-    pub fn name(&self) -> Result<String> {
-        crate::utils::from_utf8_trim_null(&self.name)
-    }
-
-    pub fn description(&self) -> Result<String> {
-        crate::utils::from_utf8_trim_null(&self.description)
+    pub fn name(&self) -> &[u8] {
+        &self.name
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
@@ -145,12 +141,8 @@ impl Reward {
         self.id = id;
     }
 
-    pub fn name(&self) -> Result<String> {
-        crate::utils::from_utf8_trim_null(&self.name)
-    }
-
-    pub fn description(&self) -> Result<String> {
-        crate::utils::from_utf8_trim_null(&self.description)
+    pub fn name(&self) -> &[u8] {
+        &self.name
     }
 
     // fn reward_type(&self) -> Result<RewardType> {

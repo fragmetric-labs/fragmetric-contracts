@@ -21,13 +21,13 @@ pub fn process_deposit_sol<'info>(
     system_program: &Program<'info, System>,
     receipt_token_program: &Program<'info, Token2022>,
     instructions_sysvar: &AccountInfo,
+    clock: Clock,
     pricing_sources: &'info [AccountInfo<'info>],
     sol_amount: u64,
     metadata: Option<DepositMetadata>,
-    current_slot: u64,
 ) -> Result<()> {
     let (wallet_provider, contribution_accrual_rate) =
-        verify_deposit_metadata(metadata, instructions_sysvar)?;
+        verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 
     fund_account.update_token_prices(pricing_sources)?;
     let receipt_token_mint_amount =
@@ -43,7 +43,7 @@ pub fn process_deposit_sol<'info>(
         receipt_token_program,
         receipt_token_mint_amount,
         contribution_accrual_rate,
-        current_slot,
+        clock.slot,
     )?;
 
     transfer_sol_from_user_to_fund(user, fund_account, system_program, sol_amount)?;
@@ -85,13 +85,13 @@ pub fn process_deposit_supported_token<'info>(
     receipt_token_program: &Program<'info, Token2022>,
     supported_token_program: &Interface<'info, TokenInterface>,
     instructions_sysvar: &AccountInfo,
+    clock: Clock,
     pricing_sources: &'info [AccountInfo<'info>],
     supported_token_amount: u64,
     metadata: Option<DepositMetadata>,
-    current_slot: u64,
 ) -> Result<()> {
     let (wallet_provider, contribution_accrual_rate) =
-        verify_deposit_metadata(metadata, instructions_sysvar)?;
+        verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 
     fund_account.update_token_prices(pricing_sources)?;
     let receipt_token_mint_amount = fund_account.receipt_token_mint_amount_for(
@@ -111,7 +111,7 @@ pub fn process_deposit_supported_token<'info>(
         receipt_token_program,
         receipt_token_mint_amount,
         contribution_accrual_rate,
-        current_slot,
+        clock.slot,
     )?;
 
     transfer_supported_token_from_user_to_fund(
@@ -152,13 +152,14 @@ pub fn process_deposit_supported_token<'info>(
 fn verify_deposit_metadata(
     metadata: Option<DepositMetadata>,
     instructions_sysvar: &AccountInfo,
+    current_time: i64,
 ) -> Result<(Option<String>, Option<u8>)> {
     if let Some(metadata) = &metadata {
         ed25519::verify_preceding_ed25519_instruction(
             instructions_sysvar,
             metadata.try_to_vec()?.as_slice(),
         )?;
-        metadata.verify_expiration()?;
+        metadata.verify_expiration(current_time)?;
     }
     Ok(metadata
         .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))

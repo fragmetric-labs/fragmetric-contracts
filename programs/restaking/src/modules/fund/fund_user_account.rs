@@ -99,6 +99,7 @@ impl UserFundAccount {
         &mut self,
         withdrawal_status: &mut WithdrawalStatus,
         receipt_token_amount: u64,
+        current_time: i64,
     ) -> Result<(u64, u64)> {
         withdrawal_status.check_withdrawal_enabled()?;
 
@@ -106,7 +107,8 @@ impl UserFundAccount {
             withdrawal_status.pending_batch_withdrawal.batch_id,
             withdrawal_status.issue_new_request_id(),
             receipt_token_amount,
-        )?;
+            current_time,
+        );
         let batch_id = request.batch_id;
         let request_id = request.request_id;
 
@@ -167,13 +169,18 @@ pub struct WithdrawalRequest {
 }
 
 impl WithdrawalRequest {
-    pub fn new(batch_id: u64, request_id: u64, receipt_token_amount: u64) -> Result<Self> {
-        Ok(Self {
+    pub fn new(
+        batch_id: u64,
+        request_id: u64,
+        receipt_token_amount: u64,
+        current_time: i64,
+    ) -> Self {
+        Self {
             batch_id,
             request_id,
             receipt_token_amount,
-            created_at: crate::utils::timestamp_now()?,
+            created_at: current_time,
             _reserved: [0; 16],
-        })
+        }
     }
 }

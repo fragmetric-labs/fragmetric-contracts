@@ -1,4 +1,3 @@
-#![allow(unexpected_cfgs)]
 use anchor_lang::solana_program;
 use anchor_lang::{prelude::*, ZeroCopy};
 
@@ -164,24 +163,4 @@ pub fn proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Opt
             .checked_div(denominator as u128)?,
     )
     .ok()
-}
-
-#[cfg(target_os = "solana")]
-pub fn timestamp_now() -> Result<i64> {
-    Ok(Clock::get()?.unix_timestamp)
-}
-
-#[cfg(not(target_os = "solana"))]
-pub fn timestamp_now() -> Result<i64> {
-    Ok(std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64)
-}
-
-/// Truncates null (0x0000) at the end.
-pub fn from_utf8_trim_null(v: &[u8]) -> Result<String> {
-    Ok(std::str::from_utf8(v)
-        .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
-        .replace('\0', ""))
 }

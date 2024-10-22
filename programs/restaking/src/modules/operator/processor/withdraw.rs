@@ -30,7 +30,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
     fund_account
         .withdrawal_status
-        .start_processing_pending_batch_withdrawal()?;
+        .start_processing_pending_batch_withdrawal(current_time)?;
 
     let total_sol_value_in_fund = fund_account.assets_total_sol_value()?;
     let receipt_token_total_supply = receipt_token_mint.supply;
@@ -90,7 +90,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
     fund_account
         .withdrawal_status
-        .end_processing_completed_batch_withdrawals()?;
+        .end_processing_completed_batch_withdrawals(current_time)?;
 
     let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
         receipt_token_mint.decimals,

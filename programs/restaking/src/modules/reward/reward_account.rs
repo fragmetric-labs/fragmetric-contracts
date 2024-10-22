@@ -139,7 +139,7 @@ impl RewardAccount {
     ) -> Result<()> {
         for holder in self.holders_iter() {
             require_neq!(
-                holder.name()?,
+                from_utf8_trim_null(holder.name())?,
                 name,
                 ErrorCode::RewardAlreadyExistingHolderError
             );
@@ -159,7 +159,7 @@ impl RewardAccount {
     ) -> Result<()> {
         for reward in self.rewards_iter() {
             require_neq!(
-                reward.name()?,
+                from_utf8_trim_null(reward.name())?,
                 name,
                 ErrorCode::RewardAlreadyExistingRewardError
             );
@@ -186,7 +186,7 @@ impl RewardAccount {
             (p.holder_id() == holder_id
                 && p.custom_contribution_accrual_rate_enabled()
                     == custom_contribution_accrual_rate_enabled)
-                || p.name() == Ok(name.clone())
+                || from_utf8_trim_null(p.name()).as_ref() == Ok(&name)
         }) {
             err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }
@@ -483,8 +483,8 @@ impl RewardPool {
         self.id = id;
     }
 
-    pub fn name(&self) -> Result<String> {
-        crate::utils::from_utf8_trim_null(&self.name)
+    pub fn name(&self) -> &[u8] {
+        &self.name
     }
 
     pub fn custom_contribution_accrual_rate_enabled(&self) -> bool {
@@ -630,4 +630,11 @@ impl RewardPool {
 
         Ok(())
     }
+}
+
+/// Truncates null (0x0000) at the end.
+fn from_utf8_trim_null(v: &[u8]) -> Result<String> {
+    Ok(std::str::from_utf8(v)
+        .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
+        .replace('\0', ""))
 }

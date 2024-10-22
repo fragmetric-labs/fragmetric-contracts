@@ -19,11 +19,14 @@ pub fn process_request_withdrawal<'info>(
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
     receipt_token_program: &Program<'info, Token2022>,
+    clock: Clock,
     receipt_token_amount: u64,
-    current_slot: u64,
 ) -> Result<()> {
-    let (batch_id, request_id) = user_fund_account
-        .create_withdrawal_request(&mut fund_account.withdrawal_status, receipt_token_amount)?;
+    let (batch_id, request_id) = user_fund_account.create_withdrawal_request(
+        &mut fund_account.withdrawal_status,
+        receipt_token_amount,
+        clock.unix_timestamp,
+    )?;
 
     lock_receipt_token(
         user,
@@ -36,7 +39,7 @@ pub fn process_request_withdrawal<'info>(
         user_reward_account,
         receipt_token_program,
         receipt_token_amount,
-        current_slot,
+        clock.slot,
     )?;
 
     emit!(events::UserRequestedWithdrawalFromFund {

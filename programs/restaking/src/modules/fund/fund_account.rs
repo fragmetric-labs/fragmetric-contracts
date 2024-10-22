@@ -200,6 +200,8 @@ impl SupportedTokenInfo {
     }
 }
 
+const MAX_BATCH_WITHDRAWALS_IN_PROGRESS: usize = 10;
+
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct WithdrawalStatus {
     pub next_batch_id: u64,
@@ -218,7 +220,7 @@ pub struct WithdrawalStatus {
     // Withdrawal Status = PENDING
     pub pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
-    #[max_len(10)]
+    #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
     pub batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
     pub reserved_fund: ReservedFund,
@@ -342,13 +344,19 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    pub fn start_processing_pending_batch_withdrawal(&mut self) -> Result<()> {
+    pub fn start_processing_pending_batch_withdrawal(&mut self, current_time: i64) -> Result<()> {
+        require_gt!(
+            MAX_BATCH_WITHDRAWALS_IN_PROGRESS,
+            self.batch_withdrawals_in_progress.len(),
+            ErrorCode::FundExceededMaxBatchWithdrawalInProgressError
+        );
+
         let batch_id = self.next_batch_id;
         self.next_batch_id += 1;
         let new = BatchWithdrawal::new(batch_id);
 
         let mut old = std::mem::replace(&mut self.pending_batch_withdrawal, new);
-        old.start_batch_processing()?;
+        old.start_batch_processing(current_time);
 
         self.num_withdrawal_requests_in_progress += old.num_withdrawal_requests;
         self.last_batch_processing_started_at = old.processing_started_at;
@@ -358,11 +366,11 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    pub fn end_processing_completed_batch_withdrawals(&mut self) -> Result<()> {
+    pub fn end_processing_completed_batch_withdrawals(&mut self, current_time: i64) -> Result<()> {
         let completed_batch_withdrawals = self.pop_completed_batch_withdrawals();
         if let Some(batch) = completed_batch_withdrawals.last() {
             self.last_completed_batch_id = batch.batch_id;
-            self.last_batch_processing_completed_at = Some(crate::utils::timestamp_now()?);
+            self.last_batch_processing_completed_at = Some(current_time);
         }
         for batch in completed_batch_withdrawals {
             self.reserved_fund
@@ -434,9 +442,8 @@ impl BatchWithdrawal {
         Ok(())
     }
 
-    fn start_batch_processing(&mut self) -> Result<()> {
-        self.processing_started_at = Some(crate::utils::timestamp_now()?);
-        Ok(())
+    fn start_batch_processing(&mut self, current_time: i64) {
+        self.processing_started_at = Some(current_time);
     }
 
     fn is_completed(&self) -> bool {
