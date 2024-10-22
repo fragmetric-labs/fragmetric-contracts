@@ -7,8 +7,7 @@ use anchor_lang::{
 use super::TokenPriceCalculator;
 
 #[repr(C)]
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct SplStakePool {
     /// Account type, must be StakePool currently
     account_type: AccountType,
@@ -97,8 +96,8 @@ pub struct SplStakePool {
 }
 
 /// Enum representing the account type managed by the program
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize))]
+#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 enum AccountType {
     /// If the account has not been initialized, the enum will be 0
     Uninitialized,
@@ -108,8 +107,8 @@ enum AccountType {
     ValidatorList,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize))]
+#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 struct Lockup {
     /// UnixTimestamp at which this stake will allow withdrawal, unless the
     ///   transaction is signed by the custodian
@@ -123,8 +122,7 @@ struct Lockup {
 }
 
 #[repr(C)]
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 struct Fee {
     /// denominator of the fee ratio
     denominator: u64,
@@ -133,8 +131,7 @@ struct Fee {
 }
 
 #[repr(C)]
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 enum FutureEpoch<T> {
     /// Nothing is set
     None,
@@ -150,7 +147,6 @@ impl Owner for SplStakePool {
     }
 }
 
-#[cfg(test)]
 impl AccountSerialize for SplStakePool {
     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
         if AnchorSerialize::serialize(self, writer).is_err() {
@@ -183,10 +179,7 @@ impl SplStakePool {
 
     #[cfg(test)]
     /// 1 Token = 1.4 SOL
-    pub fn dummy_pricing_source_account_info<'a>(
-        lamports: &'a mut u64,
-        data: &'a mut [u8],
-    ) -> AccountInfo<'a> {
+    pub fn placeholder<'a>(lamports: &'a mut u64, data: &'a mut [u8]) -> AccountInfo<'a> {
         const DUMMY_PUBKEY: Pubkey = pubkey!("dummySp1StakePoo1PricingSourceAccount1nfo11");
 
         let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();

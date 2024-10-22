@@ -16,7 +16,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
     receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     fund_account: &mut Account<'info, FundAccount>,
     receipt_token_program: &Program<'info, Token2022>,
-    pricing_sources: &[AccountInfo<'info>],
+    pricing_sources: &'info [AccountInfo<'info>],
     forced: bool,
     current_time: i64,
 ) -> Result<()> {

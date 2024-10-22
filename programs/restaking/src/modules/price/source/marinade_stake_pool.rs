@@ -3,8 +3,8 @@ use anchor_lang::{prelude::*, Discriminator};
 
 use super::TokenPriceCalculator;
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 pub struct MarinadeStakePool {
     msol_mint: Pubkey,
     admin_authority: Pubkey,
@@ -62,20 +62,20 @@ pub struct MarinadeStakePool {
     max_stake_moved_per_epoch: Fee, // % of total_lamports_under_control
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct Fee {
     basis_points: u32,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct FeeCents {
     bp_cents: u32,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct LiqPool {
     lp_mint: Pubkey,
     lp_mint_authority_bump_seed: u8,
@@ -97,8 +97,8 @@ struct LiqPool {
     liquidity_sol_cap: u64,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct StakeSystem {
     stake_list: List,
     //pub last_update_epoch: u64,
@@ -118,8 +118,8 @@ struct StakeSystem {
     extra_stake_delta_runs: u32,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct ValidatorSystem {
     validator_list: List,
     manager_authority: Pubkey,
@@ -130,8 +130,8 @@ struct ValidatorSystem {
     auto_add_validator_enabled: u8,
 }
 
-#[derive(AnchorDeserialize)]
-#[cfg_attr(test, derive(AnchorSerialize, InitSpace))]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[cfg_attr(test, derive(InitSpace))]
 struct List {
     account: Pubkey,
     item_size: u32,
@@ -151,7 +151,6 @@ impl Owner for MarinadeStakePool {
     }
 }
 
-#[cfg(test)]
 impl AccountSerialize for MarinadeStakePool {
     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
         if writer.write_all(&Self::DISCRIMINATOR).is_err() {
@@ -220,10 +219,7 @@ impl MarinadeStakePool {
 
     #[cfg(test)]
     /// 1 Token = 1.2 SOL
-    pub fn dummy_pricing_source_account_info<'a>(
-        lamports: &'a mut u64,
-        data: &'a mut [u8],
-    ) -> AccountInfo<'a> {
+    pub fn placeholder<'a>(lamports: &'a mut u64, data: &'a mut [u8]) -> AccountInfo<'a> {
         const DUMMY_PUBKEY: Pubkey = pubkey!("dummyMarinadePoo1PricingSourceAccount1nfo11");
 
         let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();

@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::events;
+use crate::{events, modules::price::TokenPricingSource};
 
 use super::*;
 
@@ -89,14 +89,14 @@ pub fn process_update_batch_processing_threshold(
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
 
-pub fn process_add_supported_token(
+pub fn process_add_supported_token<'info>(
     receipt_token_mint: &InterfaceAccount<Mint>,
     supported_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
     supported_token_program: &Interface<TokenInterface>,
     capacity_amount: u64,
     pricing_source: TokenPricingSource,
-    pricing_sources: &[AccountInfo],
+    pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
     fund_account.add_supported_token(
         supported_token_mint.key(),
@@ -109,10 +109,10 @@ pub fn process_add_supported_token(
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
 
-pub fn process_update_prices(
+pub fn process_update_prices<'info>(
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
-    pricing_sources: &[AccountInfo],
+    pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
     fund_account.update_token_prices(pricing_sources)?;
 

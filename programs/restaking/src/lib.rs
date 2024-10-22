@@ -219,7 +219,7 @@ pub mod restaking {
     pub fn fund_manager_add_supported_token<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundSupportedTokenContext<'info>>,
         capacity_amount: u64,
-        pricing_source: modules::fund::TokenPricingSource,
+        pricing_source: modules::price::TokenPricingSource,
     ) -> Result<()> {
         modules::fund::process_add_supported_token(
             &ctx.accounts.receipt_token_mint,
