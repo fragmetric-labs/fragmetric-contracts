@@ -22,21 +22,21 @@ pub fn process_process_fund_withdrawal_job<'info>(
 ) -> Result<()> {
     if !(forced && operator.key() == ADMIN_PUBKEY) {
         fund_account
-            .withdrawal_status
+            .withdrawal
             .check_withdrawal_threshold(current_time)?;
     }
 
     fund_account.update_token_prices(pricing_sources)?;
 
     fund_account
-        .withdrawal_status
+        .withdrawal
         .start_processing_pending_batch_withdrawal(current_time)?;
 
     let total_sol_value_in_fund = fund_account.assets_total_sol_value()?;
     let receipt_token_total_supply = receipt_token_mint.supply;
 
     let mut receipt_token_amount_to_burn: u64 = 0;
-    for batch in &mut fund_account.withdrawal_status.batch_withdrawals_in_progress {
+    for batch in &mut fund_account.withdrawal.batch_withdrawals_in_progress {
         let amount = batch.receipt_token_to_process;
         batch.record_unstaking_start(amount)?;
         receipt_token_amount_to_burn = receipt_token_amount_to_burn
@@ -46,7 +46,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
     let mut receipt_token_amount_not_burned = receipt_token_amount_to_burn;
     let mut total_sol_reserved_amount: u64 = 0;
-    for batch in &mut fund_account.withdrawal_status.batch_withdrawals_in_progress {
+    for batch in &mut fund_account.withdrawal.batch_withdrawals_in_progress {
         if receipt_token_amount_not_burned == 0 {
             break;
         }
@@ -89,7 +89,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
     receipt_token_lock_account.reload()?;
 
     fund_account
-        .withdrawal_status
+        .withdrawal
         .end_processing_completed_batch_withdrawals(current_time)?;
 
     let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
@@ -99,7 +99,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account,
             receipt_token_price,
             receipt_token_mint.supply,

@@ -22,8 +22,10 @@ pub fn process_request_withdrawal<'info>(
     clock: Clock,
     receipt_token_amount: u64,
 ) -> Result<()> {
+    fund_account.withdrawal.check_withdrawal_enabled()?;
+
     let (batch_id, request_id) = user_fund_account.create_withdrawal_request(
-        &mut fund_account.withdrawal_status,
+        &mut fund_account.withdrawal,
         receipt_token_amount,
         clock.unix_timestamp,
     )?;
@@ -70,8 +72,8 @@ pub fn process_cancel_withdrawal_request<'info>(
     request_id: u64,
     current_slot: u64,
 ) -> Result<()> {
-    let request = user_fund_account
-        .cancel_withdrawal_request(&mut fund_account.withdrawal_status, request_id)?;
+    let receipt_token_amount =
+        user_fund_account.cancel_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
 
     unlock_receipt_token(
         receipt_token_mint,
@@ -83,7 +85,7 @@ pub fn process_cancel_withdrawal_request<'info>(
         user_fund_account,
         user_reward_account,
         receipt_token_program,
-        request.receipt_token_amount,
+        receipt_token_amount,
         current_slot,
     )?;
 
@@ -93,7 +95,7 @@ pub fn process_cancel_withdrawal_request<'info>(
         user_fund_account: Clone::clone(user_fund_account),
         request_id,
         receipt_token_mint: receipt_token_mint.key(),
-        requested_receipt_token_amount: request.receipt_token_amount,
+        requested_receipt_token_amount: receipt_token_amount,
     });
 
     Ok(())
@@ -106,15 +108,22 @@ pub fn process_withdraw(
     user_fund_account: &mut Account<UserFundAccount>,
     request_id: u64,
 ) -> Result<()> {
-    let request = user_fund_account
-        .pop_completed_withdrawal_request(&mut fund_account.withdrawal_status, request_id)?;
+    let (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount) =
+        user_fund_account.claim_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
 
-    let (sol_withdraw_amount, sol_fee_amount) =
-        transfer_sol_from_fund_to_user(user, fund_account, request.receipt_token_amount)?;
+    // let receipt_token_withdraw_amount = user_fund_account
+    //     .claim_completed_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
+
+    // let (sol_withdraw_amount, sol_fee_amount) = fund_account
+    //     .withdrawal
+    //     .withdraw(receipt_token_withdraw_amount)?;
+
+    fund_account.sub_lamports(sol_withdraw_amount)?;
+    user.add_lamports(sol_withdraw_amount)?;
 
     emit!(events::UserWithdrewSOLFromFund {
         receipt_token_mint: fund_account.receipt_token_mint,
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
             fund_account.receipt_token_sol_value_per_token(
                 receipt_token_mint.decimals,
@@ -125,7 +134,7 @@ pub fn process_withdraw(
         request_id,
         user_fund_account: Clone::clone(user_fund_account),
         user: user.key(),
-        burnt_receipt_token_amount: request.receipt_token_amount,
+        burnt_receipt_token_amount: receipt_token_withdraw_amount,
         withdrawn_sol_amount: sol_withdraw_amount,
         deducted_sol_fee_amount: sol_fee_amount,
     });
@@ -176,7 +185,7 @@ fn lock_receipt_token<'info>(
     receipt_token_mint.reload()?;
     receipt_token_lock_account.reload()?;
     user_receipt_token_account.reload()?;
-    user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
+    user_fund_account.receipt_token_amount = user_receipt_token_account.amount;
 
     reward::update_reward_pools_token_allocation(
         &mut *reward_account.load_mut()?,
@@ -234,7 +243,7 @@ fn unlock_receipt_token<'info>(
     receipt_token_mint.reload()?;
     receipt_token_lock_account.reload()?;
     user_receipt_token_account.reload()?;
-    user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
+    user_fund_account.receipt_token_amount = user_receipt_token_account.amount;
 
     reward::update_reward_pools_token_allocation(
         &mut *reward_account.load_mut()?,
@@ -246,32 +255,4 @@ fn unlock_receipt_token<'info>(
         None,
         current_slot,
     )
-}
-
-/// Returns (sol_transferred_amount, sol_fee_amount)
-fn transfer_sol_from_fund_to_user(
-    user: &Signer,
-    fund_account: &mut Account<FundAccount>,
-    receipt_token_withdraw_amount: u64,
-) -> Result<(u64, u64)> {
-    let sol_amount = fund_account
-        .withdrawal_status
-        .reserved_fund
-        .calculate_sol_amount_for_receipt_token_amount(receipt_token_withdraw_amount)?;
-    let sol_fee_amount = fund_account
-        .withdrawal_status
-        .calculate_sol_withdrawal_fee(sol_amount)?;
-    let sol_transferred_amount = sol_amount
-        .checked_sub(sol_fee_amount)
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-    fund_account.withdrawal_status.withdraw(
-        sol_amount,
-        sol_fee_amount,
-        receipt_token_withdraw_amount,
-    )?;
-    fund_account.sub_lamports(sol_transferred_amount)?;
-    user.add_lamports(sol_transferred_amount)?;
-
-    Ok((sol_transferred_amount, sol_fee_amount))
 }

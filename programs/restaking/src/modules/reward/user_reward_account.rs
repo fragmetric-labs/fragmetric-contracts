@@ -19,8 +19,8 @@ pub struct UserRewardAccount {
     bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
-    pub num_user_reward_pools: u8,
-    pub max_user_reward_pools: u8,
+    num_user_reward_pools: u8,
+    max_user_reward_pools: u8,
     _padding: [u8; 11],
 
     user_reward_pools_1: [UserRewardPool; USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
@@ -49,7 +49,7 @@ impl ZeroCopyHeader for UserRewardAccount {
 }
 
 impl UserRewardAccount {
-    pub fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
+    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -64,7 +64,7 @@ impl UserRewardAccount {
         // }
     }
 
-    pub fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
+    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
         self.initialize(self.bump, receipt_token_mint, user);
     }
 
@@ -72,7 +72,11 @@ impl UserRewardAccount {
         self.data_version == USER_REWARD_ACCOUNT_CURRENT_VERSION
     }
 
-    pub fn allocate_new_user_reward_pool(&mut self) -> Result<&mut UserRewardPool> {
+    fn add_new_user_reward_pool(
+        &mut self,
+        reward_pool_id: u8,
+        reward_pool_initial_slot: u64,
+    ) -> Result<()> {
         require_gt!(
             self.max_user_reward_pools,
             self.num_user_reward_pools,
@@ -80,9 +84,10 @@ impl UserRewardAccount {
         );
 
         let pool = &mut self.user_reward_pools_1[self.num_user_reward_pools as usize];
+        pool.initialize(reward_pool_id, reward_pool_initial_slot);
         self.num_user_reward_pools += 1;
 
-        Ok(pool)
+        Ok(())
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
@@ -91,24 +96,25 @@ impl UserRewardAccount {
         &mut self.user_reward_pools_1
     }
 
-    pub fn user_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut UserRewardPool> {
+    pub(super) fn user_reward_pools_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut UserRewardPool> {
         self.user_reward_pools_mut().iter_mut()
     }
 
-    pub fn user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
+    pub(super) fn user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
         self.user_reward_pools_mut()
             .get_mut(id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardUserPoolNotFoundError))
     }
 
-    pub fn backfill_not_existing_pools<'a>(
+    pub(super) fn backfill_not_existing_pools<'a>(
         &mut self,
         reward_pools: impl Iterator<Item = &'a RewardPool>,
     ) -> Result<()> {
         let num_user_reward_pools = self.num_user_reward_pools;
         for reward_pool in reward_pools.skip(num_user_reward_pools as usize) {
-            let user_reward_pool = self.allocate_new_user_reward_pool()?;
-            user_reward_pool.initialize(reward_pool.id(), reward_pool.initial_slot());
+            self.add_new_user_reward_pool(reward_pool.id(), reward_pool.initial_slot())?;
         }
 
         Ok(())
@@ -121,7 +127,7 @@ const USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct UserRewardPool {
-    pub token_allocated_amount: TokenAllocatedAmount,
+    token_allocated_amount: TokenAllocatedAmount,
     contribution: u128,
     updated_slot: u64,
     reward_pool_id: u8,
@@ -145,7 +151,7 @@ pub struct UserRewardPool {
 // And add new field user_reward_pools_1_ext_v4: [UserRewardPoolExtV4; USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1] to user reward account.
 
 impl UserRewardPool {
-    pub fn initialize(&mut self, reward_pool_id: u8, reward_pool_initial_slot: u64) {
+    fn initialize(&mut self, reward_pool_id: u8, reward_pool_initial_slot: u64) {
         self.token_allocated_amount = TokenAllocatedAmount::zeroed();
         self.contribution = 0;
         self.updated_slot = reward_pool_initial_slot;
@@ -153,26 +159,11 @@ impl UserRewardPool {
         self.num_reward_settlements = 0;
     }
 
-    pub fn contribution(&self) -> u128 {
-        self.contribution
-    }
-
-    /// From last updated_slot to new updated_slot
-    pub fn add_contribution(&mut self, contribution: u128, updated_slot: u64) -> Result<()> {
-        self.contribution = self
-            .contribution
-            .checked_add(contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.updated_slot = updated_slot;
-
-        Ok(())
-    }
-
-    pub fn updated_slot(&self) -> u64 {
-        self.updated_slot
-    }
-
-    pub fn allocate_new_settlement(&mut self) -> Result<&mut UserRewardSettlement> {
+    fn add_new_settlement(
+        &mut self,
+        reward_id: u16,
+        reward_pool_initial_slot: u64,
+    ) -> Result<&mut UserRewardSettlement> {
         require_gt!(
             USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
             self.num_reward_settlements as usize,
@@ -180,6 +171,7 @@ impl UserRewardPool {
         );
 
         let settlement = &mut self.reward_settlements_1[self.num_reward_settlements as usize];
+        settlement.initialize(reward_id, reward_pool_initial_slot);
         self.num_reward_settlements += 1;
 
         Ok(settlement)
@@ -195,12 +187,12 @@ impl UserRewardPool {
         self.reward_settlements_mut().iter_mut()
     }
 
-    pub fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut UserRewardSettlement> {
+    fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut UserRewardSettlement> {
         self.reward_settlements_iter_mut()
             .find(|s| s.reward_id() == reward_id)
     }
 
-    pub fn update(
+    pub(super) fn update(
         &mut self,
         reward_pool: &mut RewardPool,
         deltas: Vec<TokenAllocatedAmountDelta>,
@@ -212,8 +204,8 @@ impl UserRewardPool {
             .total_contribution_accrual_rate()?;
 
         // First update contribution, but save old data for settlement
-        let last_contribution = self.contribution();
-        let last_updated_slot = self.updated_slot();
+        let last_contribution = self.contribution;
+        let last_updated_slot = self.updated_slot;
         let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
         self.update_contribution(updated_slot, total_contribution_accrual_rate)?;
 
@@ -226,10 +218,7 @@ impl UserRewardPool {
             {
                 user_reward_settlement
             } else {
-                let user_reward_settlement = self.allocate_new_settlement()?;
-                user_reward_settlement
-                    .initialize(reward_settlement.reward_id(), reward_pool_initial_slot);
-                user_reward_settlement
+                self.add_new_settlement(reward_settlement.reward_id(), reward_pool_initial_slot)?
             };
 
             for block in reward_settlement.settlement_blocks_iter_mut() {
@@ -307,7 +296,12 @@ impl UserRewardPool {
             }
         }
 
-        self.update_total_allocated_amount(deltas)
+        // Apply deltas
+        if !deltas.is_empty() {
+            self.token_allocated_amount.update(deltas)
+        } else {
+            Ok(deltas)
+        }
     }
 
     fn update_contribution(
@@ -316,24 +310,17 @@ impl UserRewardPool {
         total_contribution_accrual_rate: u64, // cached
     ) -> Result<()> {
         let elapsed_slot = updated_slot
-            .checked_sub(self.updated_slot())
+            .checked_sub(self.updated_slot)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.add_contribution(total_contribution, updated_slot)?;
+        self.contribution = self
+            .contribution
+            .checked_add(total_contribution)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.updated_slot = updated_slot;
 
         Ok(())
-    }
-
-    fn update_total_allocated_amount(
-        &mut self,
-        deltas: Vec<TokenAllocatedAmountDelta>,
-    ) -> Result<Vec<TokenAllocatedAmountDelta>> {
-        if !deltas.is_empty() {
-            self.token_allocated_amount.update(deltas)
-        } else {
-            Ok(deltas)
-        }
     }
 }

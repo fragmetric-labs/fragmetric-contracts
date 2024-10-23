@@ -161,6 +161,9 @@ pub enum ErrorCode {
     #[msg("invalid data account version")]
     InvalidDataVersionError,
 
-    #[msg("fund: exceeded batch withdrawals in progress")]
+    #[msg("fund: exceeded max batch withdrawals in progress")]
     FundExceededMaxBatchWithdrawalInProgressError,
+
+    #[msg("fund: exceeded max supported tokens")]
+    FundExceededMaxSupportedTokensError,
 }

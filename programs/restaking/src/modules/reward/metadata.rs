@@ -37,8 +37,9 @@ pub struct Holder {
 // And add new field holders_1_ext_v2: [HolderExtV2; REWARD_ACCOUNT_HOLDERS_MAX_LEN_1] to reward account.
 
 impl Holder {
-    pub fn initialize(
+    pub(super) fn initialize(
         &mut self,
+        id: u8,
         name: String,
         description: String,
         pubkeys: &[Pubkey],
@@ -59,6 +60,7 @@ impl Holder {
             ErrorCode::RewardExceededMaxHolderPubkeysException
         );
 
+        self.id = id;
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
         self.num_pubkeys = pubkeys.len() as u8;
@@ -67,11 +69,11 @@ impl Holder {
         Ok(())
     }
 
-    pub(super) fn set_id(&mut self, id: u8) {
-        self.id = id;
+    pub(super) fn id(&self) -> u8 {
+        self.id
     }
 
-    pub fn name(&self) -> &[u8] {
+    pub(super) fn name(&self) -> &[u8] {
         &self.name
     }
 
@@ -81,7 +83,7 @@ impl Holder {
         &self.pubkeys_1[..self.num_pubkeys as usize]
     }
 
-    pub fn has_pubkey(&self, key: &Pubkey) -> bool {
+    pub(super) fn has_pubkey(&self, key: &Pubkey) -> bool {
         self.pubkeys_ref().contains(key)
     }
 }
@@ -109,8 +111,9 @@ pub struct Reward {
 }
 
 impl Reward {
-    pub fn initialize(
+    pub(super) fn initialize(
         &mut self,
+        id: u16,
         name: String,
         description: String,
         reward_type: RewardType,
@@ -126,6 +129,7 @@ impl Reward {
             ErrorCode::RewardInvalidMetadataDescriptionLengthError
         );
 
+        self.id = id;
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
         // RewardType
@@ -137,11 +141,7 @@ impl Reward {
         Ok(())
     }
 
-    pub(super) fn set_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    pub fn name(&self) -> &[u8] {
+    pub(super) fn name(&self) -> &[u8] {
         &self.name
     }
 

@@ -4,40 +4,40 @@ use super::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {
-    pub receipt_token_mint: Pubkey,
-    pub receipt_token_price: u64,
-    pub receipt_token_supply_amount: u64,
-    pub supported_tokens: Vec<SupportedTokenInfo>,
-    pub sol_capacity_amount: u64,
-    pub sol_accumulated_deposit_amount: u64,
-    pub sol_operation_reserved_amount: u64,
-    pub sol_withdrawal_reserved_amount: u64,
-    pub sol_withdrawal_fee_rate: f32,
-    pub withdrawal_enabled: bool,
-    pub withdrawal_last_completed_batch_id: u64,
+    receipt_token_mint: Pubkey,
+    receipt_token_price: u64,
+    receipt_token_supply_amount: u64,
+    supported_tokens: Vec<SupportedTokenInfo>,
+    sol_capacity_amount: u64,
+    sol_accumulated_deposit_amount: u64,
+    sol_operation_reserved_amount: u64,
+    sol_withdrawal_reserved_amount: u64,
+    sol_withdrawal_fee_rate: f32,
+    withdrawal_enabled: bool,
+    withdrawal_last_completed_batch_id: u64,
 }
 
 impl FundAccountInfo {
-    pub fn new(
-        fund: &FundAccount,
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn from(
+        fund_account: &FundAccount,
         receipt_token_price: u64,
         receipt_token_supply_amount: u64,
     ) -> Self {
         FundAccountInfo {
-            receipt_token_mint: fund.receipt_token_mint,
+            receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_price,
             receipt_token_supply_amount,
-            supported_tokens: fund.supported_tokens.clone(),
-            sol_capacity_amount: fund.sol_capacity_amount,
-            sol_accumulated_deposit_amount: fund.sol_accumulated_deposit_amount,
-            sol_operation_reserved_amount: fund.sol_operation_reserved_amount,
-            sol_withdrawal_reserved_amount: fund
-                .withdrawal_status
-                .reserved_fund
-                .sol_withdrawal_reserved_amount,
-            sol_withdrawal_fee_rate: fund.withdrawal_status.sol_withdrawal_fee_rate_f32(),
-            withdrawal_enabled: fund.withdrawal_status.withdrawal_enabled_flag,
-            withdrawal_last_completed_batch_id: fund.withdrawal_status.last_completed_batch_id,
+            supported_tokens: fund_account.supported_tokens_iter().cloned().collect(),
+            sol_capacity_amount: fund_account.sol_capacity_amount(),
+            sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount(),
+            sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount(),
+            sol_withdrawal_reserved_amount: fund_account
+                .withdrawal
+                .sol_withdrawal_reserved_amount(),
+            sol_withdrawal_fee_rate: fund_account.withdrawal.sol_withdrawal_fee_rate_as_f32(),
+            withdrawal_enabled: fund_account.withdrawal.withdrawal_enabled_flag(),
+            withdrawal_last_completed_batch_id: fund_account.withdrawal.last_completed_batch_id(),
         }
     }
 }

@@ -60,9 +60,7 @@ pub fn process_update_withdrawal_enabled_flag(
     fund_account: &mut Account<FundAccount>,
     enabled: bool,
 ) -> Result<()> {
-    fund_account
-        .withdrawal_status
-        .set_withdrawal_enabled_flag(enabled);
+    fund_account.withdrawal.set_withdrawal_enabled_flag(enabled);
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
 
@@ -72,7 +70,7 @@ pub fn process_update_sol_withdrawal_fee_rate(
     sol_withdrawal_fee_rate: u16,
 ) -> Result<()> {
     fund_account
-        .withdrawal_status
+        .withdrawal
         .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
@@ -84,7 +82,7 @@ pub fn process_update_batch_processing_threshold(
     duration: Option<i64>,
 ) -> Result<()> {
     fund_account
-        .withdrawal_status
+        .withdrawal
         .set_batch_processing_threshold(amount, duration);
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
@@ -118,7 +116,7 @@ pub fn process_update_prices<'info>(
 
     emit!(events::OperatorUpdatedFundPrice {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account,
             fund_account.receipt_token_sol_value_per_token(
                 receipt_token_mint.decimals,
@@ -143,7 +141,7 @@ fn emit_fund_manager_updated_fund_event(
 
     emit!(events::FundManagerUpdatedFund {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account,
             receipt_token_price,
             receipt_token_mint.supply,

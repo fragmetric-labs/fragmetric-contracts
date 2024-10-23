@@ -10,19 +10,23 @@ use crate::utils::PDASeeds;
 /// * v2: Change reserve fund structure
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
+const MAX_SUPPORTED_TOKENS: usize = 16;
+
 #[account]
 #[derive(InitSpace)]
 pub struct FundAccount {
     data_version: u16,
     bump: u8,
     pub receipt_token_mint: Pubkey,
-    #[max_len(16)]
-    pub supported_tokens: Vec<SupportedTokenInfo>,
-    pub sol_capacity_amount: u64,
-    pub sol_accumulated_deposit_amount: u64,
-    pub sol_operation_reserved_amount: u64,
-    pub withdrawal_status: WithdrawalStatus,
-    pub _reserved: [u8; 1280],
+    #[max_len(MAX_SUPPORTED_TOKENS)]
+    supported_tokens: Vec<SupportedTokenInfo>,
+    sol_capacity_amount: u64,
+    sol_accumulated_deposit_amount: u64,
+    // TODO visibility is currently set to `in crate::modules` due to price module and operator module - change to private and use getter
+    pub(in crate::modules) sol_operation_reserved_amount: u64,
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) withdrawal: WithdrawalStatus,
+    _reserved: [u8; 1280],
 }
 
 impl PDASeeds<2> for FundAccount {
@@ -38,27 +42,23 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
-    pub fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
-            self.withdrawal_status = Default::default();
+            self.withdrawal.initialize();
         }
 
         if self.data_version == 1 {
             self.data_version = 2;
-            self.withdrawal_status
-                .reserved_fund
-                .sol_withdrawal_reserved_amount = 0;
-            self.withdrawal_status
-                .reserved_fund
-                .receipt_token_processed_amount = 0;
-            self.withdrawal_status.reserved_fund._reserved = [0; 88];
+            self.withdrawal.sol_withdrawal_reserved_amount = 0;
+            self.withdrawal.receipt_token_processed_amount = 0;
+            self.withdrawal._reserved = [0; 88];
         }
     }
 
-    pub fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
+    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
         self.initialize(self.bump, receipt_token_mint);
     }
 
@@ -66,21 +66,47 @@ impl FundAccount {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
-    pub fn supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) fn supported_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &SupportedTokenInfo> {
+        self.supported_tokens.iter()
+    }
+
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) fn supported_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut SupportedTokenInfo> {
+        self.supported_tokens.iter_mut()
+    }
+
+    pub(super) fn supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
         self.supported_tokens
             .iter()
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub fn supported_token_mut(&mut self, token: Pubkey) -> Result<&mut SupportedTokenInfo> {
+    pub(super) fn supported_token_mut(&mut self, token: Pubkey) -> Result<&mut SupportedTokenInfo> {
         self.supported_tokens
             .iter_mut()
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
+    pub(super) fn sol_capacity_amount(&self) -> u64 {
+        self.sol_capacity_amount
+    }
+
+    pub(super) fn sol_accumulated_deposit_amount(&self) -> u64 {
+        self.sol_accumulated_deposit_amount
+    }
+
+    pub(super) fn sol_operation_reserved_amount(&self) -> u64 {
+        self.sol_operation_reserved_amount
+    }
+
+    pub(super) fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
         require_gte!(
             capacity_amount,
             self.sol_accumulated_deposit_amount,
@@ -92,7 +118,7 @@ impl FundAccount {
         Ok(())
     }
 
-    pub fn add_supported_token(
+    pub(super) fn add_supported_token(
         &mut self,
         mint: Pubkey,
         program: Pubkey,
@@ -103,6 +129,13 @@ impl FundAccount {
         if self.supported_tokens.iter().any(|info| info.mint == mint) {
             err!(ErrorCode::FundAlreadySupportedTokenError)?
         }
+
+        require_gt!(
+            MAX_SUPPORTED_TOKENS,
+            self.supported_tokens.len(),
+            ErrorCode::FundExceededMaxSupportedTokensError
+        );
+
         let token_info =
             SupportedTokenInfo::new(mint, program, decimals, capacity_amount, pricing_source);
         self.supported_tokens.push(token_info);
@@ -110,7 +143,7 @@ impl FundAccount {
         Ok(())
     }
 
-    pub fn deposit_sol(&mut self, amount: u64) -> Result<()> {
+    pub(super) fn deposit_sol(&mut self, amount: u64) -> Result<()> {
         let new_sol_accumulated_deposit_amount = self
             .sol_accumulated_deposit_amount
             .checked_add(amount)
@@ -134,19 +167,23 @@ impl FundAccount {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedTokenInfo {
-    pub mint: Pubkey,
-    pub program: Pubkey,
-    pub decimals: u8,
-    pub capacity_amount: u64,
-    pub accumulated_deposit_amount: u64,
-    pub operation_reserved_amount: u64,
-    pub price: u64,
-    pub pricing_source: TokenPricingSource,
-    pub _reserved: [u8; 128],
+    mint: Pubkey,
+    program: Pubkey,
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) decimals: u8,
+    capacity_amount: u64,
+    accumulated_deposit_amount: u64,
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) operation_reserved_amount: u64,
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) price: u64,
+    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
+    pub(in crate::modules) pricing_source: TokenPricingSource,
+    _reserved: [u8; 128],
 }
 
 impl SupportedTokenInfo {
-    pub fn new(
+    fn new(
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
@@ -166,7 +203,7 @@ impl SupportedTokenInfo {
         }
     }
 
-    pub fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
+    pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
         require_gte!(
             capacity_amount,
             self.accumulated_deposit_amount,
@@ -178,7 +215,7 @@ impl SupportedTokenInfo {
         Ok(())
     }
 
-    pub fn deposit_token(&mut self, amount: u64) -> Result<()> {
+    pub(super) fn deposit_token(&mut self, amount: u64) -> Result<()> {
         let new_accumulated_deposit_amount = self
             .accumulated_deposit_amount
             .checked_add(amount)
@@ -204,65 +241,84 @@ const MAX_BATCH_WITHDRAWALS_IN_PROGRESS: usize = 10;
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct WithdrawalStatus {
-    pub next_batch_id: u64,
-    pub next_request_id: u64,
+    next_batch_id: u64,
+    next_request_id: u64,
 
-    pub num_withdrawal_requests_in_progress: u64,
-    pub last_completed_batch_id: u64,
-    pub last_batch_processing_started_at: Option<i64>,
-    pub last_batch_processing_completed_at: Option<i64>,
+    num_withdrawal_requests_in_progress: u64,
+    last_completed_batch_id: u64,
+    last_batch_processing_started_at: Option<i64>,
+    last_batch_processing_completed_at: Option<i64>,
 
-    pub sol_withdrawal_fee_rate: u16,
-    pub withdrawal_enabled_flag: bool,
-    pub batch_processing_threshold_amount: u64,
-    pub batch_processing_threshold_duration: i64,
+    sol_withdrawal_fee_rate: u16,
+    withdrawal_enabled_flag: bool,
+    batch_processing_threshold_amount: u64,
+    batch_processing_threshold_duration: i64,
 
     // Withdrawal Status = PENDING
-    pub pending_batch_withdrawal: BatchWithdrawal,
+    pub(super) pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
-    pub batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
+    pub(in crate::modules) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
-    pub reserved_fund: ReservedFund,
-}
-
-impl Default for WithdrawalStatus {
-    fn default() -> Self {
-        Self {
-            next_batch_id: 2,
-            next_request_id: 1,
-            num_withdrawal_requests_in_progress: 0,
-            last_completed_batch_id: 0,
-            last_batch_processing_started_at: None,
-            last_batch_processing_completed_at: None,
-            withdrawal_enabled_flag: true,
-            sol_withdrawal_fee_rate: 0,
-            batch_processing_threshold_amount: 0,
-            batch_processing_threshold_duration: 0,
-            pending_batch_withdrawal: BatchWithdrawal::new(1),
-            batch_withdrawals_in_progress: vec![],
-            reserved_fund: Default::default(),
-        }
-    }
+    sol_withdrawal_reserved_amount: u64,
+    sol_fee_income_reserved_amount: u64,
+    receipt_token_processed_amount: u64,
+    _reserved: [u8; 88],
 }
 
 impl WithdrawalStatus {
-    /// 1 fee rate = 1bps = 0.01%
-    pub const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
+    fn initialize(&mut self) {
+        self.next_batch_id = 2;
+        self.next_request_id = 1;
+        self.num_withdrawal_requests_in_progress = 0;
+        self.last_completed_batch_id = 0;
+        self.last_batch_processing_started_at = None;
+        self.last_batch_processing_completed_at = None;
+        self.withdrawal_enabled_flag = true;
+        self.sol_withdrawal_fee_rate = 0;
+        self.batch_processing_threshold_amount = 0;
+        self.batch_processing_threshold_duration = 0;
+        self.pending_batch_withdrawal = BatchWithdrawal::new(1);
+        self.batch_withdrawals_in_progress = vec![];
+        self.sol_withdrawal_reserved_amount = Default::default();
+        self.sol_fee_income_reserved_amount = Default::default();
+        self.receipt_token_processed_amount = Default::default();
+        self._reserved = [0; 88];
+    }
 
-    pub fn sol_withdrawal_fee_rate_f32(&self) -> f32 {
+    /// 1 fee rate = 1bps = 0.01%
+    const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
+
+    pub(super) fn last_completed_batch_id(&self) -> u64 {
+        self.last_completed_batch_id
+    }
+
+    pub(super) fn sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
         self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
 
-    pub fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
+    pub(super) fn withdrawal_enabled_flag(&self) -> bool {
+        self.withdrawal_enabled_flag
+    }
+
+    pub(super) fn sol_withdrawal_reserved_amount(&self) -> u64 {
+        self.sol_withdrawal_reserved_amount
+    }
+
+    pub(super) fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
         self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
     }
 
-    pub fn set_withdrawal_enabled_flag(&mut self, flag: bool) {
-        self.withdrawal_enabled_flag = flag;
+    pub(super) fn set_withdrawal_enabled_flag(&mut self, enabled: bool) {
+        self.withdrawal_enabled_flag = enabled;
     }
 
-    pub fn set_batch_processing_threshold(&mut self, amount: Option<u64>, duration: Option<i64>) {
+    pub(super) fn set_batch_processing_threshold(
+        &mut self,
+        amount: Option<u64>,
+        duration: Option<i64>,
+    ) {
         if let Some(amount) = amount {
             self.batch_processing_threshold_amount = amount;
         }
@@ -271,29 +327,91 @@ impl WithdrawalStatus {
         }
     }
 
-    pub(super) fn issue_new_request_id(&mut self) -> u64 {
+    pub(super) fn issue_new_withdrawal_request(
+        &mut self,
+        receipt_token_amount: u64,
+        current_time: i64,
+    ) -> Result<WithdrawalRequest> {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
-        request_id
+
+        self.pending_batch_withdrawal
+            .add_receipt_token_to_process(receipt_token_amount)?;
+
+        Ok(WithdrawalRequest::new(
+            self.pending_batch_withdrawal.batch_id,
+            request_id,
+            receipt_token_amount,
+            current_time,
+        ))
     }
 
-    pub fn calculate_sol_withdrawal_fee(&self, amount: u64) -> Result<u64> {
-        crate::utils::proportional_amount(
-            amount,
+    /// Returns receipt_token_amount
+    pub(super) fn remove_withdrawal_request_from_batch(
+        &mut self,
+        request: WithdrawalRequest,
+    ) -> Result<u64> {
+        self.check_request_issued(request.request_id)?;
+
+        require_gte!(
+            request.batch_id,
+            self.pending_batch_withdrawal.batch_id,
+            ErrorCode::FundProcessingWithdrawalRequestError
+        );
+
+        self.pending_batch_withdrawal
+            .remove_receipt_token_to_process(request.receipt_token_amount)?;
+
+        Ok(request.receipt_token_amount)
+    }
+
+    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    pub(super) fn claim_withdrawal_request(
+        &mut self,
+        request: WithdrawalRequest,
+    ) -> Result<(u64, u64, u64)> {
+        self.check_request_issued(request.request_id)?;
+
+        require_gte!(
+            self.last_completed_batch_id,
+            request.batch_id,
+            ErrorCode::FundPendingWithdrawalRequestError
+        );
+
+        let sol_amount = crate::utils::proportional_amount(
+            request.receipt_token_amount,
+            self.sol_withdrawal_reserved_amount,
+            self.receipt_token_processed_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let sol_fee_amount = crate::utils::proportional_amount(
+            sol_amount,
             self.sol_withdrawal_fee_rate as u64,
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let sol_transfer_amount = sol_amount
+            .checked_sub(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-    pub fn withdraw(
-        &mut self,
-        sol_amount: u64,
-        sol_fee_amount: u64,
-        receipt_token_amount: u64,
-    ) -> Result<()> {
-        self.reserved_fund
-            .withdraw(sol_amount, sol_fee_amount, receipt_token_amount)
+        self.receipt_token_processed_amount = self
+            .receipt_token_processed_amount
+            .checked_sub(request.receipt_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.sol_withdrawal_reserved_amount = self
+            .sol_withdrawal_reserved_amount
+            .checked_sub(sol_amount)
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
+        self.sol_fee_income_reserved_amount = self
+            .sol_fee_income_reserved_amount
+            .checked_add(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok((
+            sol_transfer_amount,
+            sol_fee_amount,
+            request.receipt_token_amount,
+        ))
     }
 
     pub(super) fn check_withdrawal_enabled(&self) -> Result<()> {
@@ -304,7 +422,8 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    pub fn check_withdrawal_threshold(&self, current_time: i64) -> Result<()> {
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn check_withdrawal_threshold(&self, current_time: i64) -> Result<()> {
         let mut threshold_satisfied = match self.last_batch_processing_started_at {
             Some(x) => current_time - x > self.batch_processing_threshold_duration,
             None => true,
@@ -323,28 +442,22 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    pub(super) fn check_batch_processing_not_started(&self, batch_id: u64) -> Result<()> {
-        require_gte!(
-            batch_id,
-            self.pending_batch_withdrawal.batch_id,
-            ErrorCode::FundProcessingWithdrawalRequestError
-        );
-
-        Ok(())
-    }
-
-    pub(super) fn check_batch_processing_completed(&self, batch_id: u64) -> Result<()> {
-        require_gte!(
-            self.last_completed_batch_id,
-            batch_id,
-            ErrorCode::FundPendingWithdrawalRequestError
+    fn check_request_issued(&self, request_id: u64) -> Result<()> {
+        require_gt!(
+            self.next_request_id,
+            request_id,
+            ErrorCode::FundWithdrawalRequestNotFoundError
         );
 
         Ok(())
     }
 
     // Called by operator
-    pub fn start_processing_pending_batch_withdrawal(&mut self, current_time: i64) -> Result<()> {
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn start_processing_pending_batch_withdrawal(
+        &mut self,
+        current_time: i64,
+    ) -> Result<()> {
         require_gt!(
             MAX_BATCH_WITHDRAWALS_IN_PROGRESS,
             self.batch_withdrawals_in_progress.len(),
@@ -356,7 +469,7 @@ impl WithdrawalStatus {
         let new = BatchWithdrawal::new(batch_id);
 
         let mut old = std::mem::replace(&mut self.pending_batch_withdrawal, new);
-        old.start_batch_processing(current_time);
+        old.processing_started_at = Some(current_time);
 
         self.num_withdrawal_requests_in_progress += old.num_withdrawal_requests;
         self.last_batch_processing_started_at = old.processing_started_at;
@@ -366,21 +479,32 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    pub fn end_processing_completed_batch_withdrawals(&mut self, current_time: i64) -> Result<()> {
-        let completed_batch_withdrawals = self.pop_completed_batch_withdrawals();
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn end_processing_completed_batch_withdrawals(
+        &mut self,
+        current_time: i64,
+    ) -> Result<()> {
+        let completed_batch_withdrawals = self.pop_completed_batch_withdrawals_from_queue();
         if let Some(batch) = completed_batch_withdrawals.last() {
             self.last_completed_batch_id = batch.batch_id;
             self.last_batch_processing_completed_at = Some(current_time);
         }
+
         for batch in completed_batch_withdrawals {
-            self.reserved_fund
-                .record_completed_batch_withdrawal(batch)?;
+            self.receipt_token_processed_amount = self
+                .receipt_token_processed_amount
+                .checked_add(batch.receipt_token_processed)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            self.sol_withdrawal_reserved_amount = self
+                .sol_withdrawal_reserved_amount
+                .checked_add(batch.sol_reserved)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         }
 
         Ok(())
     }
 
-    fn pop_completed_batch_withdrawals(&mut self) -> Vec<BatchWithdrawal> {
+    fn pop_completed_batch_withdrawals_from_queue(&mut self) -> Vec<BatchWithdrawal> {
         let (completed, remaining) = std::mem::take(&mut self.batch_withdrawals_in_progress)
             .into_iter()
             .partition(|batch| {
@@ -398,18 +522,20 @@ impl WithdrawalStatus {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct BatchWithdrawal {
-    pub batch_id: u64,
-    pub num_withdrawal_requests: u64,
-    pub receipt_token_to_process: u64,
-    pub receipt_token_being_processed: u64,
-    pub receipt_token_processed: u64,
-    pub sol_reserved: u64,
-    pub processing_started_at: Option<i64>,
-    pub _reserved: [u8; 32],
+    batch_id: u64,
+    num_withdrawal_requests: u64,
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
+    pub(in crate::modules) receipt_token_to_process: u64,
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
+    pub(in crate::modules) receipt_token_being_processed: u64,
+    receipt_token_processed: u64,
+    sol_reserved: u64,
+    processing_started_at: Option<i64>,
+    _reserved: [u8; 32],
 }
 
 impl BatchWithdrawal {
-    pub fn new(batch_id: u64) -> Self {
+    fn new(batch_id: u64) -> Self {
         Self {
             batch_id,
             num_withdrawal_requests: 0,
@@ -422,7 +548,7 @@ impl BatchWithdrawal {
         }
     }
 
-    pub(super) fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
+    fn add_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests += 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
@@ -442,10 +568,6 @@ impl BatchWithdrawal {
         Ok(())
     }
 
-    fn start_batch_processing(&mut self, current_time: i64) {
-        self.processing_started_at = Some(current_time);
-    }
-
     fn is_completed(&self) -> bool {
         self.processing_started_at.is_some()
             && self.receipt_token_to_process == 0
@@ -453,7 +575,11 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    pub fn record_unstaking_start(&mut self, receipt_token_amount: u64) -> Result<()> {
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn record_unstaking_start(
+        &mut self,
+        receipt_token_amount: u64,
+    ) -> Result<()> {
         self.receipt_token_to_process = self
             .receipt_token_to_process
             .checked_sub(receipt_token_amount)
@@ -467,7 +593,8 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    pub fn record_unstaking_end(
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn record_unstaking_end(
         &mut self,
         receipt_token_amount: u64,
         sol_amount: u64,
@@ -489,73 +616,32 @@ impl BatchWithdrawal {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct ReservedFund {
-    pub sol_withdrawal_reserved_amount: u64,
-    pub sol_fee_income_reserved_amount: u64,
-    pub receipt_token_processed_amount: u64,
-    pub _reserved: [u8; 88],
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct WithdrawalRequest {
+    batch_id: u64,
+    request_id: u64,
+    receipt_token_amount: u64,
+    created_at: i64,
+    _reserved: [u8; 16],
 }
 
-impl Default for ReservedFund {
-    fn default() -> Self {
+impl WithdrawalRequest {
+    fn new(batch_id: u64, request_id: u64, receipt_token_amount: u64, current_time: i64) -> Self {
         Self {
-            sol_withdrawal_reserved_amount: Default::default(),
-            sol_fee_income_reserved_amount: Default::default(),
-            receipt_token_processed_amount: Default::default(),
-            _reserved: [0; 88],
+            batch_id,
+            request_id,
+            receipt_token_amount,
+            created_at: current_time,
+            _reserved: [0; 16],
         }
     }
-}
 
-impl ReservedFund {
-    fn record_completed_batch_withdrawal(&mut self, batch: BatchWithdrawal) -> Result<()> {
-        self.receipt_token_processed_amount = self
-            .receipt_token_processed_amount
-            .checked_add(batch.receipt_token_processed)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.sol_withdrawal_reserved_amount = self
-            .sol_withdrawal_reserved_amount
-            .checked_add(batch.sol_reserved)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
+    pub(super) fn batch_id(&self) -> u64 {
+        self.batch_id
     }
 
-    pub fn calculate_sol_amount_for_receipt_token_amount(
-        &self,
-        receipt_token_withdraw_amount: u64,
-    ) -> Result<u64> {
-        crate::utils::proportional_amount(
-            receipt_token_withdraw_amount,
-            self.sol_withdrawal_reserved_amount,
-            self.receipt_token_processed_amount,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-
-    fn withdraw(
-        &mut self,
-        sol_amount: u64,
-        sol_fee_amount: u64,
-        receipt_token_amount: u64,
-    ) -> Result<()> {
-        self.receipt_token_processed_amount = self
-            .receipt_token_processed_amount
-            .checked_sub(receipt_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.sol_withdrawal_reserved_amount = self
-            .sol_withdrawal_reserved_amount
-            .checked_sub(sol_amount)
-            .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
-
-        // send fee to fee income
-        self.sol_fee_income_reserved_amount = self
-            .sol_fee_income_reserved_amount
-            .checked_add(sol_fee_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
+    pub(super) fn request_id(&self) -> u64 {
+        self.request_id
     }
 }
 

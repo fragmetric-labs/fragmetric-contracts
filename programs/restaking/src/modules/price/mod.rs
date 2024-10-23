@@ -26,11 +26,12 @@ impl SupportedTokenInfo {
 }
 
 impl FundAccount {
+    // TODO move to fund module
     pub fn update_token_prices<'info>(
         &mut self,
         sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
-        for token in &mut self.supported_tokens {
+        for token in self.supported_tokens_iter_mut() {
             let token_lamports_per_token = token.token_lamports_per_token()?;
             let token_price_calculator = TokenPriceCalculatorFactory
                 .to_calculator_checked(&token.pricing_source, sources)?;
@@ -79,10 +80,10 @@ impl FundAccount {
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
+    // TODO move to fund module
     pub fn assets_total_sol_value(&self) -> Result<u64> {
         // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
-        self.supported_tokens
-            .iter()
+        self.supported_tokens_iter()
             .try_fold(self.sol_operation_reserved_amount, |sum, token| {
                 sum.checked_add(token.calculate_sol_from_tokens(token.operation_reserved_amount)?)
                     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))

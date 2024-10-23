@@ -67,7 +67,7 @@ pub fn process_add_reward_pool_holder(
 ) -> Result<()> {
     reward_account
         .load_mut()?
-        .add_holder(name, description, pubkeys)?;
+        .add_new_holder(name, description, pubkeys)?;
 
     emit!(events::FundManagerUpdatedRewardPool {
         receipt_token_mint: receipt_token_mint.key(),
@@ -85,7 +85,7 @@ pub fn process_add_reward_pool(
     custom_contribution_accrual_rate_enabled: bool,
     current_slot: u64,
 ) -> Result<()> {
-    reward_account.load_mut()?.add_reward_pool(
+    reward_account.load_mut()?.add_new_reward_pool(
         name,
         holder_id,
         custom_contribution_accrual_rate_enabled,
@@ -127,7 +127,7 @@ pub fn process_add_reward(
 ) -> Result<()> {
     reward_account
         .load_mut()?
-        .add_reward(name, description, reward_type)?;
+        .add_new_reward(name, description, reward_type)?;
 
     emit!(events::FundManagerUpdatedRewardPool {
         receipt_token_mint: receipt_token_mint.key(),

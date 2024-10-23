@@ -57,7 +57,7 @@ pub fn process_deposit_sol<'info>(
         minted_receipt_token_amount: receipt_token_mint_amount,
         wallet_provider,
         contribution_accrual_rate,
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
             fund_account.receipt_token_sol_value_per_token(
                 receipt_token_mint.decimals,
@@ -135,7 +135,7 @@ pub fn process_deposit_supported_token<'info>(
         minted_receipt_token_amount: receipt_token_mint_amount,
         wallet_provider,
         contribution_accrual_rate,
-        fund_account: FundAccountInfo::new(
+        fund_account: FundAccountInfo::from(
             fund_account,
             fund_account.receipt_token_sol_value_per_token(
                 receipt_token_mint.decimals,
@@ -161,9 +161,7 @@ fn verify_deposit_metadata(
         )?;
         metadata.verify_expiration(current_time)?;
     }
-    Ok(metadata
-        .map(|metadata| (metadata.wallet_provider, metadata.contribution_accrual_rate))
-        .unzip())
+    Ok(metadata.map(DepositMetadata::split).unzip())
 }
 
 fn transfer_sol_from_user_to_fund<'info>(
@@ -240,7 +238,7 @@ fn mint_receipt_token_to_user<'info>(
     .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
     receipt_token_mint.reload()?;
     user_receipt_token_account.reload()?;
-    user_fund_account.set_receipt_token_amount(user_receipt_token_account.amount);
+    user_fund_account.receipt_token_amount = user_receipt_token_account.amount;
 
     reward::update_reward_pools_token_allocation(
         &mut *reward_account.load_mut()?,
