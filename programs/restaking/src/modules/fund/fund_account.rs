@@ -645,260 +645,138 @@ impl WithdrawalRequest {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     impl FundAccount {
-//         pub fn new_uninitialized() -> Self {
-//             Self {
-//                 data_version: 0,
-//                 bump: 0,
-//                 receipt_token_mint: Pubkey::default(),
-//                 supported_tokens: vec![],
-//                 sol_capacity_amount: 0,
-//                 sol_accumulated_deposit_amount: 0,
-//                 sol_operation_reserved_amount: 0,
-//                 withdrawal_status: WithdrawalStatus::new_uninitialized(),
-//                 _reserved: [0; 1280],
-//             }
-//         }
-//     }
+    fn create_uninitialized_fund_account() -> FundAccount {
+        let buffer = [0u8; 8 + FundAccount::INIT_SPACE];
+        FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap()
+    }
 
-//     impl WithdrawalStatus {
-//         fn new_uninitialized() -> Self {
-//             Self {
-//                 next_batch_id: 0,
-//                 next_request_id: 0,
-//                 num_withdrawal_requests_in_progress: 0,
-//                 last_completed_batch_id: 0,
-//                 last_batch_processing_started_at: None,
-//                 last_batch_processing_completed_at: None,
-//                 sol_withdrawal_fee_rate: 0,
-//                 withdrawal_enabled_flag: false,
-//                 batch_processing_threshold_amount: 0,
-//                 batch_processing_threshold_duration: 0,
-//                 pending_batch_withdrawal: BatchWithdrawal::new(0),
-//                 batch_withdrawals_in_progress: vec![],
-//                 reserved_fund: Default::default(),
-//             }
-//         }
-//     }
+    #[test]
+    fn test_initialize_update_fund_account() {
+        let mut fund = create_uninitialized_fund_account();
+        fund.initialize(0, Pubkey::new_unique());
 
-//     impl SupportedTokenInfo {
-//         pub fn dummy_spl_stake_pool_token_info(spl_stake_pool_address: Pubkey) -> Self {
-//             Self {
-//                 mint: Pubkey::new_unique(),
-//                 program: Pubkey::default(),
-//                 decimals: 9,
-//                 capacity_amount: 0,
-//                 accumulated_deposit_amount: 0,
-//                 operation_reserved_amount: 0,
-//                 price: 0,
-//                 pricing_source: TokenPricingSource::SPLStakePool {
-//                     address: spl_stake_pool_address,
-//                 },
-//                 _reserved: [0; 128],
-//             }
-//         }
+        assert_eq!(fund.sol_capacity_amount, 0);
+        assert_eq!(fund.withdrawal.sol_withdrawal_fee_rate, 0);
+        assert!(fund.withdrawal.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal.batch_processing_threshold_amount, 0);
+        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
 
-//         pub fn dummy_marinade_stake_pool_token_info(marinade_stake_pool_address: Pubkey) -> Self {
-//             Self {
-//                 mint: Pubkey::new_unique(),
-//                 program: Pubkey::default(),
-//                 decimals: 9,
-//                 capacity_amount: 0,
-//                 accumulated_deposit_amount: 0,
-//                 operation_reserved_amount: 0,
-//                 price: 0,
-//                 pricing_source: TokenPricingSource::MarinadeStakePool {
-//                     address: marinade_stake_pool_address,
-//                 },
-//                 _reserved: [0; 128],
-//             }
-//         }
-//     }
+        fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
+        fund.set_sol_capacity_amount(0).unwrap_err();
 
-//     #[test]
-//     fn test_initialize_fund_account() {
-//         let receipt_token_mint = Pubkey::new_unique();
-//         let mut fund = FundAccount::new_uninitialized();
+        let new_amount = 10;
+        let new_duration = 10;
+        fund.withdrawal
+            .set_batch_processing_threshold(Some(new_amount), None);
+        assert_eq!(
+            fund.withdrawal.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
 
-//         assert_eq!(fund.withdrawal_status.next_batch_id, 0);
-//         assert_eq!(fund.withdrawal_status.next_request_id, 0);
-//         assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
-//         assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 0);
+        fund.withdrawal
+            .set_batch_processing_threshold(None, Some(new_duration));
+        assert_eq!(
+            fund.withdrawal.batch_processing_threshold_amount,
+            new_amount
+        );
+        assert_eq!(
+            fund.withdrawal.batch_processing_threshold_duration,
+            new_duration
+        );
+    }
 
-//         fund.initialize(0, receipt_token_mint);
+    #[test]
+    fn test_update_token() {
+        let mut fund = create_uninitialized_fund_account();
+        fund.initialize(0, Pubkey::new_unique());
 
-//         assert_eq!(fund.withdrawal_status.next_batch_id, 2);
-//         assert_eq!(fund.withdrawal_status.next_request_id, 1);
-//         assert!(fund.withdrawal_status.withdrawal_enabled_flag);
-//         assert_eq!(fund.withdrawal_status.pending_batch_withdrawal.batch_id, 1);
-//         assert_eq!(
-//             fund.withdrawal_status
-//                 .pending_batch_withdrawal
-//                 .num_withdrawal_requests,
-//             0
-//         );
-//         assert_eq!(
-//             fund.withdrawal_status
-//                 .pending_batch_withdrawal
-//                 .receipt_token_to_process,
-//             0
-//         );
-//     }
+        let token1 = Pubkey::new_unique();
+        let token2 = Pubkey::new_unique();
 
-//     #[test]
-//     fn test_update_fund() {
-//         let mut fund = FundAccount::new_uninitialized();
-//         fund.initialize(0, Pubkey::new_unique());
+        fund.add_supported_token(
+            token1,
+            Pubkey::default(),
+            9,
+            1_000_000_000,
+            TokenPricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
+        )
+        .unwrap();
+        fund.add_supported_token(
+            token2,
+            Pubkey::default(),
+            9,
+            1_000_000_000,
+            TokenPricingSource::MarinadeStakePool {
+                address: Pubkey::new_unique(),
+            },
+        )
+        .unwrap();
+        fund.add_supported_token(
+            token1,
+            Pubkey::default(),
+            9,
+            1_000_000_000,
+            TokenPricingSource::MarinadeStakePool {
+                address: Pubkey::new_unique(),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(fund.supported_tokens.len(), 2);
+        assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
-//         assert_eq!(fund.sol_capacity_amount, 0);
-//         assert_eq!(fund.withdrawal_status.sol_withdrawal_fee_rate, 0);
-//         assert!(fund.withdrawal_status.withdrawal_enabled_flag);
-//         assert_eq!(fund.withdrawal_status.batch_processing_threshold_amount, 0);
-//         assert_eq!(
-//             fund.withdrawal_status.batch_processing_threshold_duration,
-//             0
-//         );
+        fund.supported_tokens[0].accumulated_deposit_amount = 1_000_000_000;
+        fund.supported_token_mut(token1)
+            .unwrap()
+            .set_capacity_amount(0)
+            .unwrap_err();
+    }
 
-//         let new_sol_capacity_amount = 1_000_000_000 * 60_000;
-//         fund.set_sol_capacity_amount(new_sol_capacity_amount)
-//             .unwrap();
-//         assert_eq!(fund.sol_capacity_amount, new_sol_capacity_amount);
+    #[test]
+    fn test_deposit_sol() {
+        let mut fund = create_uninitialized_fund_account();
+        fund.initialize(0, Pubkey::new_unique());
+        fund.set_sol_capacity_amount(100_000).unwrap();
 
-//         let new_sol_withdrawal_fee_rate = 20;
-//         fund.withdrawal_status
-//             .set_sol_withdrawal_fee_rate(new_sol_withdrawal_fee_rate);
-//         assert_eq!(
-//             fund.withdrawal_status.sol_withdrawal_fee_rate,
-//             new_sol_withdrawal_fee_rate
-//         );
+        assert_eq!(fund.sol_operation_reserved_amount, 0);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 0);
 
-//         fund.withdrawal_status.set_withdrawal_enabled_flag(false);
-//         assert!(!fund.withdrawal_status.withdrawal_enabled_flag);
+        fund.deposit_sol(100_000).unwrap();
+        assert_eq!(fund.sol_operation_reserved_amount, 100_000);
+        assert_eq!(fund.sol_accumulated_deposit_amount, 100_000);
 
-//         let new_amount = 10;
-//         let new_duration = 10;
-//         fund.withdrawal_status
-//             .set_batch_processing_threshold(Some(new_amount), None);
-//         assert_eq!(
-//             fund.withdrawal_status.batch_processing_threshold_amount,
-//             new_amount
-//         );
-//         assert_eq!(
-//             fund.withdrawal_status.batch_processing_threshold_duration,
-//             0
-//         );
+        fund.deposit_sol(100_000).unwrap_err();
+    }
 
-//         fund.withdrawal_status
-//             .set_batch_processing_threshold(None, Some(new_duration));
-//         assert_eq!(
-//             fund.withdrawal_status.batch_processing_threshold_amount,
-//             new_amount
-//         );
-//         assert_eq!(
-//             fund.withdrawal_status.batch_processing_threshold_duration,
-//             new_duration
-//         );
-//     }
+    #[test]
+    fn test_deposit_token() {
+        let mut fund = create_uninitialized_fund_account();
+        fund.initialize(0, Pubkey::new_unique());
 
-//     #[test]
-//     fn test_update_token() {
-//         let mut fund = FundAccount::new_uninitialized();
-//         fund.initialize(0, Pubkey::new_unique());
+        fund.add_supported_token(
+            Pubkey::new_unique(),
+            Pubkey::default(),
+            9,
+            1_000,
+            TokenPricingSource::SPLStakePool {
+                address: Pubkey::new_unique(),
+            },
+        )
+        .unwrap();
 
-//         let mut dummy_lamports = 0u64;
-//         let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
-//         let mut dummy_lamports2 = 0u64;
-//         let mut dummy_data2 = [0u8; 8 + MarinadeStakePool::INIT_SPACE];
-//         let pricing_sources = &[
-//             SplStakePool::placeholder(&mut dummy_lamports, &mut dummy_data),
-//             MarinadeStakePool::placeholder(&mut dummy_lamports2, &mut dummy_data2),
-//         ];
-//         let token1 = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
-//         let token2 =
-//             SupportedTokenInfo::dummy_marinade_stake_pool_token_info(pricing_sources[1].key());
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
 
-//         fund.add_supported_token(
-//             token1.mint,
-//             token1.program,
-//             token1.decimals,
-//             token1.capacity_amount,
-//             token1.pricing_source,
-//         )
-//         .unwrap();
-//         fund.add_supported_token(
-//             token2.mint,
-//             token2.program,
-//             token2.decimals,
-//             token2.capacity_amount,
-//             token2.pricing_source,
-//         )
-//         .unwrap();
-//         assert_eq!(fund.supported_tokens.len(), 2);
-//         assert_eq!(
-//             fund.supported_tokens[0].capacity_amount,
-//             token1.capacity_amount
-//         );
+        fund.supported_tokens[0].deposit_token(1_000).unwrap();
+        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
+        assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
 
-//         let new_token1_capacity_amount = 1_000_000_000 * 3000;
-//         fund.supported_token_mut(token1.mint)
-//             .unwrap()
-//             .set_capacity_amount(new_token1_capacity_amount)
-//             .unwrap();
-//         assert_eq!(
-//             fund.supported_tokens[0].capacity_amount,
-//             new_token1_capacity_amount
-//         );
-//     }
-
-//     #[test]
-//     fn test_deposit_sol() {
-//         let mut fund = FundAccount::new_uninitialized();
-//         fund.initialize(0, Pubkey::new_unique());
-//         fund.set_sol_capacity_amount(100_000).unwrap();
-
-//         assert_eq!(fund.sol_operation_reserved_amount, 0);
-//         assert_eq!(fund.sol_accumulated_deposit_amount, 0);
-
-//         fund.deposit_sol(100_000).unwrap();
-//         assert_eq!(fund.sol_operation_reserved_amount, 100_000);
-//         assert_eq!(fund.sol_accumulated_deposit_amount, 100_000);
-
-//         fund.deposit_sol(100_000).unwrap_err();
-//     }
-
-//     #[test]
-//     fn test_deposit_token() {
-//         let mut fund = FundAccount::new_uninitialized();
-//         fund.initialize(0, Pubkey::new_unique());
-
-//         let mut dummy_lamports = 0u64;
-//         let mut dummy_data = [0u8; std::mem::size_of::<SplStakePool>()];
-//         let pricing_sources = &[SplStakePool::placeholder(
-//             &mut dummy_lamports,
-//             &mut dummy_data,
-//         )];
-//         let token = SupportedTokenInfo::dummy_spl_stake_pool_token_info(pricing_sources[0].key());
-
-//         fund.add_supported_token(
-//             token.mint,
-//             token.program,
-//             token.decimals,
-//             1_000,
-//             token.pricing_source,
-//         )
-//         .unwrap();
-
-//         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
-//         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
-
-//         fund.supported_tokens[0].deposit_token(1_000).unwrap();
-//         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
-//         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
-
-//         fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
-//     }
-// }
+        fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
+    }
+}

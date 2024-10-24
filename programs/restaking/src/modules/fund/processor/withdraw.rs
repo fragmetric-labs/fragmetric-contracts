@@ -111,13 +111,6 @@ pub fn process_withdraw(
     let (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount) =
         user_fund_account.claim_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
 
-    // let receipt_token_withdraw_amount = user_fund_account
-    //     .claim_completed_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
-
-    // let (sol_withdraw_amount, sol_fee_amount) = fund_account
-    //     .withdrawal
-    //     .withdraw(receipt_token_withdraw_amount)?;
-
     fund_account.sub_lamports(sol_withdraw_amount)?;
     user.add_lamports(sol_withdraw_amount)?;
 
