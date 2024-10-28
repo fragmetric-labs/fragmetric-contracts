@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::price::*;
+use crate::modules::pricing::*;
 
 pub(in crate::modules) fn calculate_token_value<'info>(
     accounts: &'info [AccountInfo<'info>],

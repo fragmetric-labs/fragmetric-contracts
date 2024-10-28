@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::price::TokenPricingSource;
+use crate::modules::pricing::TokenPricingSource;
 use crate::utils::PDASeeds;
 
 #[constant]

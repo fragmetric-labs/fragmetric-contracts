@@ -6,7 +6,7 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::*;
-use crate::modules::price::{self, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{self, TokenPricingSource, TokenValue};
 
 pub fn process_update_fund_account_if_needed(
     receipt_token_mint: &InterfaceAccount<Mint>,
@@ -140,7 +140,7 @@ pub(in crate::modules) fn update_prices<'info>(
         )]);
 
         while let Some((source, amount)) = stack.pop() {
-            match price::calculate_token_value(pricing_sources, source, amount)? {
+            match pricing::calculate_token_value(pricing_sources, source, amount)? {
                 TokenValue::SOL(amount) => {
                     sol_value = sol_value
                         .checked_add(amount)
