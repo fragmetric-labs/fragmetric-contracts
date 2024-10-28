@@ -132,6 +132,7 @@ pub(in crate::modules) fn update_prices<'info>(
     pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
     let mut prices = Vec::new();
+    let pricing_source_accounts = pricing::pricing_sources_map(pricing_sources);
     for token in fund_account.supported_tokens_iter() {
         let mut sol_value = 0u64;
         let mut stack = Vec::from([(
@@ -140,7 +141,7 @@ pub(in crate::modules) fn update_prices<'info>(
         )]);
 
         while let Some((source, amount)) = stack.pop() {
-            match pricing::calculate_token_value(pricing_sources, source, amount)? {
+            match pricing::calculate_token_value(&pricing_source_accounts, source, amount)? {
                 TokenValue::SOL(amount) => {
                     sol_value = sol_value
                         .checked_add(amount)
