@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
+use crate::modules::fund::{self, FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
 pub fn process_process_fund_withdrawal_job<'info>(
@@ -26,15 +26,13 @@ pub fn process_process_fund_withdrawal_job<'info>(
             .check_withdrawal_threshold(current_time)?;
     }
 
-    fund_account.update_token_prices(pricing_sources)?;
+    fund::update_prices(fund_account, pricing_sources)?;
 
     fund_account
         .withdrawal
         .start_processing_pending_batch_withdrawal(current_time)?;
 
-    let total_sol_value_in_fund = fund_account.assets_total_sol_value()?;
-    let receipt_token_total_supply = receipt_token_mint.supply;
-
+    let total_sol_value_in_fund = fund_account.total_sol_value()?;
     let mut receipt_token_amount_to_burn: u64 = 0;
     for batch in &mut fund_account.withdrawal.batch_withdrawals_in_progress {
         let amount = batch.receipt_token_to_process;
@@ -60,7 +58,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
         let sol_reserved_amount = crate::utils::proportional_amount(
             receipt_token_amount,
             total_sol_value_in_fund,
-            receipt_token_total_supply,
+            receipt_token_mint.supply,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         total_sol_reserved_amount = total_sol_reserved_amount
@@ -92,10 +90,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
         .withdrawal
         .end_processing_completed_batch_withdrawals(current_time)?;
 
-    let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
-        receipt_token_mint.decimals,
-        receipt_token_mint.supply,
-    )?;
+    let receipt_token_price = fund::receipt_token_price(receipt_token_mint, fund_account)?;
 
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),

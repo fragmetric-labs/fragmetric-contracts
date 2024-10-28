@@ -1,57 +1,35 @@
 use anchor_lang::prelude::*;
 
 mod marinade_stake_pool;
+#[cfg(test)]
+mod mock;
 mod spl_stake_pool;
 
-use marinade_stake_pool::*;
-use spl_stake_pool::*;
+pub(super) use marinade_stake_pool::*;
+#[cfg(test)]
+pub(super) use mock::*;
+pub(super) use spl_stake_pool::*;
 
-use crate::errors::ErrorCode;
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
+pub enum TokenValue {
+    SOL(u64),
+    Tokens(Vec<(Pubkey, u64)>),
+}
 
-/// A type that can calculate the token price with its data.
-pub trait TokenPriceCalculator {
-    fn calculate_token_price(&self, token_amount: u64) -> Result<u64>;
+/// A type that can calculate the value of token with its data.
+pub(super) trait TokenValueCalculator {
+    fn calculate_token_value(&self, amount: u64) -> Result<TokenValue>;
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 #[non_exhaustive]
 pub enum TokenPricingSource {
-    SPLStakePool { address: Pubkey },
-    MarinadeStakePool { address: Pubkey },
-}
-
-pub struct TokenPriceCalculatorFactory;
-
-impl TokenPriceCalculatorFactory {
-    pub fn to_calculator_checked<'info>(
-        &self,
-        source: &TokenPricingSource,
-        accounts: &'info [AccountInfo<'info>],
-    ) -> Result<Box<dyn TokenPriceCalculator>> {
-        match source {
-            TokenPricingSource::SPLStakePool { address } => {
-                let account = self.find_token_pricing_source_by_key(accounts, address)?;
-                Ok(Box::new(
-                    Account::<SplStakePool>::try_from(account)?.into_inner(),
-                ))
-            }
-            TokenPricingSource::MarinadeStakePool { address } => {
-                let account = self.find_token_pricing_source_by_key(accounts, address)?;
-                Ok(Box::new(
-                    Account::<MarinadeStakePool>::try_from(account)?.into_inner(),
-                ))
-            }
-        }
-    }
-
-    fn find_token_pricing_source_by_key<'info>(
-        &self,
-        accounts: &'info [AccountInfo<'info>],
-        key: &Pubkey,
-    ) -> Result<&'info AccountInfo<'info>> {
-        accounts
-            .iter()
-            .find(|account| account.key == key)
-            .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))
-    }
+    SPLStakePool {
+        address: Pubkey,
+    },
+    MarinadeStakePool {
+        address: Pubkey,
+    },
+    #[cfg(test)]
+    Mock,
 }

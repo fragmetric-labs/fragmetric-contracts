@@ -22,7 +22,7 @@ pub struct FundAccount {
     supported_tokens: Vec<SupportedTokenInfo>,
     sol_capacity_amount: u64,
     sol_accumulated_deposit_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to price module and operator module - change to private and use getter
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private and use getter
     pub(in crate::modules) sol_operation_reserved_amount: u64,
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) withdrawal: WithdrawalStatus,
@@ -66,15 +66,11 @@ impl FundAccount {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) fn supported_tokens_iter(
-        &self,
-    ) -> impl Iterator<Item = &SupportedTokenInfo> {
+    pub(super) fn supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
         self.supported_tokens.iter()
     }
 
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) fn supported_tokens_iter_mut(
+    pub(super) fn supported_tokens_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SupportedTokenInfo> {
         self.supported_tokens.iter_mut()
@@ -163,22 +159,29 @@ impl FundAccount {
 
         Ok(())
     }
+
+    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    pub(in crate::modules) fn total_sol_value(&self) -> Result<u64> {
+        // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
+        self.supported_tokens_iter()
+            .try_fold(self.sol_operation_reserved_amount, |sum, token| {
+                sum.checked_add(token.sol_value_for(token.operation_reserved_amount)?)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+            })
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedTokenInfo {
     mint: Pubkey,
     program: Pubkey,
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) decimals: u8,
+    decimals: u8,
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) operation_reserved_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) price: u64,
-    // TODO visibility is currently set to `in crate::modules` due to price module - change to `super`
-    pub(in crate::modules) pricing_source: TokenPricingSource,
+    operation_reserved_amount: u64,
+    /// Price = SOL value for denominated amount of 1 token
+    pub(super) price: u64,
+    pricing_source: TokenPricingSource,
     _reserved: [u8; 128],
 }
 
@@ -201,6 +204,16 @@ impl SupportedTokenInfo {
             pricing_source,
             _reserved: [0; 128],
         }
+    }
+
+    pub(super) fn denominated_amount_per_token(&self) -> Result<u64> {
+        10u64
+            .checked_pow(self.decimals as u32)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    pub(super) fn pricing_source(&self) -> &TokenPricingSource {
+        &self.pricing_source
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -234,6 +247,15 @@ impl SupportedTokenInfo {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
+    }
+
+    pub(super) fn sol_value_for(&self, token_amount: u64) -> Result<u64> {
+        crate::utils::proportional_amount(
+            token_amount,
+            self.price,
+            self.denominated_amount_per_token()?,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 

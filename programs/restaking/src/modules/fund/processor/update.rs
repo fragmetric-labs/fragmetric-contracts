@@ -3,9 +3,10 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
+use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::*;
-use crate::modules::price::TokenPricingSource;
+use crate::modules::price::{self, TokenPricingSource, TokenValue};
 
 pub fn process_update_fund_account_if_needed(
     receipt_token_mint: &InterfaceAccount<Mint>,
@@ -103,7 +104,7 @@ pub fn process_add_supported_token<'info>(
         capacity_amount,
         pricing_source,
     )?;
-    fund_account.update_token_prices(pricing_sources)?;
+    update_prices(fund_account, pricing_sources)?;
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
 
@@ -112,16 +113,13 @@ pub fn process_update_prices<'info>(
     fund_account: &mut Account<FundAccount>,
     pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
-    fund_account.update_token_prices(pricing_sources)?;
+    update_prices(fund_account, pricing_sources)?;
 
     emit!(events::OperatorUpdatedFundPrice {
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            fund_account.receipt_token_sol_value_per_token(
-                receipt_token_mint.decimals,
-                receipt_token_mint.supply,
-            )?,
+            receipt_token_price(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });
@@ -129,21 +127,53 @@ pub fn process_update_prices<'info>(
     Ok(())
 }
 
-/// Receipt token price & supply might be outdated.
+pub(in crate::modules) fn update_prices<'info>(
+    fund_account: &mut Account<FundAccount>,
+    pricing_sources: &'info [AccountInfo<'info>],
+) -> Result<()> {
+    let mut prices = Vec::new();
+    for token in fund_account.supported_tokens_iter() {
+        let mut sol_value = 0u64;
+        let mut stack = Vec::from([(
+            token.pricing_source(),
+            token.denominated_amount_per_token()?,
+        )]);
+
+        while let Some((source, amount)) = stack.pop() {
+            match price::calculate_token_value(pricing_sources, source, amount)? {
+                TokenValue::SOL(amount) => {
+                    sol_value = sol_value
+                        .checked_add(amount)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                }
+                TokenValue::Tokens(values) => {
+                    for (mint, amount) in values {
+                        let source = fund_account.supported_token(mint)?.pricing_source();
+                        stack.push((source, amount));
+                    }
+                }
+            }
+        }
+
+        prices.push(sol_value);
+    }
+
+    for (token, price) in fund_account.supported_tokens_iter_mut().zip(prices) {
+        token.price = price;
+    }
+
+    Ok(())
+}
+
 fn emit_fund_manager_updated_fund_event(
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &Account<FundAccount>,
 ) -> Result<()> {
-    let receipt_token_price = fund_account.receipt_token_sol_value_per_token(
-        receipt_token_mint.decimals,
-        receipt_token_mint.supply,
-    )?;
-
     emit!(events::FundManagerUpdatedFund {
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            receipt_token_price,
+            receipt_token_price(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });

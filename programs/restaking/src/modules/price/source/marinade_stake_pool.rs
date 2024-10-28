@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use anchor_lang::{prelude::*, Discriminator};
 
-use super::TokenPriceCalculator;
+use super::{TokenValue, TokenValueCalculator};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 #[cfg_attr(test, derive(InitSpace))]
@@ -184,14 +184,14 @@ impl AccountDeserialize for MarinadeStakePool {
     }
 }
 
-impl TokenPriceCalculator for MarinadeStakePool {
-    fn calculate_token_price(&self, token_amount: u64) -> Result<u64> {
-        self.msol_to_sol(token_amount)
+impl TokenValueCalculator for MarinadeStakePool {
+    fn calculate_token_value(&self, amount: u64) -> Result<TokenValue> {
+        Ok(TokenValue::SOL(self.msol_to_sol(amount)?))
     }
 }
 
 impl MarinadeStakePool {
-    pub const PROGRAM_ID: Pubkey = pubkey!("MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD");
+    const PROGRAM_ID: Pubkey = pubkey!("MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD");
 
     fn msol_to_sol(&self, msol_amount: u64) -> Result<u64> {
         crate::utils::proportional_amount(
@@ -215,28 +215,5 @@ impl MarinadeStakePool {
 
     fn total_cooling_down(&self) -> u64 {
         self.stake_system.delayed_unstake_cooling_down + self.emergency_cooling_down
-    }
-
-    #[cfg(test)]
-    /// 1 Token = 1.2 SOL
-    pub fn placeholder<'a>(lamports: &'a mut u64, data: &'a mut [u8]) -> AccountInfo<'a> {
-        const DUMMY_PUBKEY: Pubkey = pubkey!("dummyMarinadePoo1PricingSourceAccount1nfo11");
-
-        let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();
-        this.msol_supply = 1_000_000;
-        this.available_reserve_balance = 1_200_000;
-        let mut writer = unsafe { &mut *(data as *mut [u8]) };
-        this.try_serialize(&mut writer).unwrap();
-
-        AccountInfo::new(
-            &DUMMY_PUBKEY,
-            false,
-            false,
-            lamports,
-            data,
-            &Self::PROGRAM_ID,
-            false,
-            0,
-        )
     }
 }

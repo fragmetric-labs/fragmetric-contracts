@@ -27,7 +27,7 @@ pub mod check_account_init_space {
 
     #[test]
     fn check_size() {
-        println!("");
+        println!();
         println!("CHECK_REWARD_ACCOUNT_SIZE {}", CHECK_REWARD_ACCOUNT_SIZE);
         println!("CHECK_REWARD_POOL_SIZE {}", CHECK_REWARD_POOL_SIZE);
         println!(

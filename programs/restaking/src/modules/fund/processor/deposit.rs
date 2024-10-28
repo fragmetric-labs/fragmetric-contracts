@@ -29,9 +29,9 @@ pub fn process_deposit_sol<'info>(
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 
-    fund_account.update_token_prices(pricing_sources)?;
+    update_prices(fund_account, pricing_sources)?;
     let receipt_token_mint_amount =
-        fund_account.receipt_token_mint_amount_for(sol_amount, receipt_token_mint.supply)?;
+        receipt_token_mint_amount_for(receipt_token_mint, fund_account, sol_amount)?;
 
     mint_receipt_token_to_user(
         receipt_token_mint,
@@ -59,10 +59,7 @@ pub fn process_deposit_sol<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
-            fund_account.receipt_token_sol_value_per_token(
-                receipt_token_mint.decimals,
-                receipt_token_mint.supply,
-            )?,
+            receipt_token_price(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });
@@ -93,12 +90,13 @@ pub fn process_deposit_supported_token<'info>(
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 
-    fund_account.update_token_prices(pricing_sources)?;
-    let receipt_token_mint_amount = fund_account.receipt_token_mint_amount_for(
+    update_prices(fund_account, pricing_sources)?;
+    let receipt_token_mint_amount = receipt_token_mint_amount_for(
+        receipt_token_mint,
+        fund_account,
         fund_account
             .supported_token(supported_token_mint.key())?
-            .calculate_sol_from_tokens(supported_token_amount)?,
-        receipt_token_mint.supply,
+            .sol_value_for(supported_token_amount)?,
     )?;
 
     mint_receipt_token_to_user(
@@ -137,10 +135,7 @@ pub fn process_deposit_supported_token<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
             fund_account,
-            fund_account.receipt_token_sol_value_per_token(
-                receipt_token_mint.decimals,
-                receipt_token_mint.supply,
-            )?,
+            receipt_token_price(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });
@@ -209,6 +204,19 @@ fn transfer_supported_token_from_user_to_fund<'info>(
         supported_token_mint.decimals,
     )
     .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))
+}
+
+fn receipt_token_mint_amount_for(
+    receipt_token_mint: &InterfaceAccount<Mint>,
+    fund_account: &Account<FundAccount>,
+    sol_amount: u64,
+) -> Result<u64> {
+    crate::utils::proportional_amount(
+        sol_amount,
+        receipt_token_mint.supply,
+        fund_account.total_sol_value()?,
+    )
+    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
 }
 
 fn mint_receipt_token_to_user<'info>(

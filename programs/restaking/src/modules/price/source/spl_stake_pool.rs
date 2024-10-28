@@ -4,7 +4,7 @@ use anchor_lang::{
     solana_program::clock::{Epoch, UnixTimestamp},
 };
 
-use super::TokenPriceCalculator;
+use super::{TokenValue, TokenValueCalculator};
 
 #[repr(C)]
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -163,40 +163,19 @@ impl AccountDeserialize for SplStakePool {
     }
 }
 
-impl TokenPriceCalculator for SplStakePool {
-    fn calculate_token_price(&self, token_amount: u64) -> Result<u64> {
-        self.calculate_lamports_from_pool_tokens(token_amount)
+impl TokenValueCalculator for SplStakePool {
+    fn calculate_token_value(&self, token_amount: u64) -> Result<TokenValue> {
+        Ok(TokenValue::SOL(
+            self.calculate_lamports_from_pool_tokens(token_amount)?,
+        ))
     }
 }
 
 impl SplStakePool {
-    pub const PROGRAM_ID: Pubkey = pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
+    const PROGRAM_ID: Pubkey = pubkey!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
 
     fn calculate_lamports_from_pool_tokens(&self, pool_tokens: u64) -> Result<u64> {
         crate::utils::proportional_amount(pool_tokens, self.total_lamports, self.pool_token_supply)
             .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
-    }
-
-    #[cfg(test)]
-    /// 1 Token = 1.4 SOL
-    pub fn placeholder<'a>(lamports: &'a mut u64, data: &'a mut [u8]) -> AccountInfo<'a> {
-        const DUMMY_PUBKEY: Pubkey = pubkey!("dummySp1StakePoo1PricingSourceAccount1nfo11");
-
-        let mut this = Self::try_deserialize_unchecked(&mut &*data).unwrap();
-        this.pool_token_supply = 1_000_000;
-        this.total_lamports = 1_400_000;
-        let mut writer = unsafe { &mut *(data as *mut [u8]) };
-        this.try_serialize(&mut writer).unwrap();
-
-        AccountInfo::new(
-            &DUMMY_PUBKEY,
-            false,
-            false,
-            lamports,
-            data,
-            &Self::PROGRAM_ID,
-            false,
-            0,
-        )
     }
 }

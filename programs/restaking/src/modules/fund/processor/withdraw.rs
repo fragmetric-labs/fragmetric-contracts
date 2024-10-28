@@ -103,7 +103,7 @@ pub fn process_cancel_withdrawal_request<'info>(
 
 pub fn process_withdraw(
     user: &Signer,
-    receipt_token_mint: &Mint,
+    receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     request_id: u64,
@@ -118,10 +118,7 @@ pub fn process_withdraw(
         receipt_token_mint: fund_account.receipt_token_mint,
         fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
-            fund_account.receipt_token_sol_value_per_token(
-                receipt_token_mint.decimals,
-                receipt_token_mint.supply,
-            )?,
+            receipt_token_price(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply
         ),
         request_id,
