@@ -61,9 +61,8 @@ pub fn process_deposit_sol<'info>(
         wallet_provider,
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
-            fund_account.as_ref(),
-            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
-            receipt_token_mint.supply,
+            fund_account,
+            receipt_token_mint,
         ),
     });
 
@@ -141,8 +140,7 @@ pub fn process_deposit_supported_token<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
             fund_account,
-            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
-            receipt_token_mint.supply,
+            receipt_token_mint,
         ),
     });
 

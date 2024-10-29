@@ -330,6 +330,21 @@ pub mod restaking {
     // OperatorFundContext
     ////////////////////////////////////////////
 
+    pub fn operator_run<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext2<'info>>,
+    ) -> Result<()> {
+        let clock = Clock::get()?;
+        modules::operator::process_run(
+            &ctx.accounts.operator,
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+            ctx.remaining_accounts,
+            clock.unix_timestamp,
+            clock.slot,
+        )
+    }
+
+    // TODO: deprecate
     pub fn operator_process_fund_withdrawal_job<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         forced: bool,

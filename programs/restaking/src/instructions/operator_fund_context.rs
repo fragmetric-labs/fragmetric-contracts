@@ -7,6 +7,7 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
+// TODO: deprecate
 #[derive(Accounts)]
 pub struct OperatorFundContext<'info> {
     pub operator: Signer<'info>,
@@ -32,6 +33,23 @@ pub struct OperatorFundContext<'info> {
         bump,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>, // fund's fragSOL lock account
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+}
+
+#[derive(Accounts)]
+pub struct OperatorFundContext2<'info> {
+    pub operator: Signer<'info>,
+
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
