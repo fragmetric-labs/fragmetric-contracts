@@ -66,7 +66,7 @@ pub struct UserFundAccountUpdateContext<'info> {
     #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.bump(),
+        bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,
         has_one = user,
     )]
@@ -88,14 +88,14 @@ pub struct UserFundContext<'info> {
 
     #[account(
         seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.bump(),
+        bump = receipt_token_mint_authority.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
 
     #[account(
         seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_lock_authority.bump(),
+        bump = receipt_token_lock_authority.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
@@ -121,7 +121,7 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.bump(),
+        bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
@@ -130,7 +130,7 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.bump(),
+        bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,
         has_one = user,
     )]
@@ -139,7 +139,7 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump()?,
+        bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
@@ -148,7 +148,7 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.bump()?,
+        bump = user_reward_account.get_bump()?,
         has_one = receipt_token_mint,
         has_one = user,
         constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,

@@ -17,9 +17,9 @@ pub struct TokenAllocatedAmount {
 impl TokenAllocatedAmount {
     /// Sum of contribution accrual rate (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    pub(super) fn total_contribution_accrual_rate(&self) -> Result<u64> {
+    pub(super) fn get_total_contribution_accrual_rate(&self) -> Result<u64> {
         self.records.iter().try_fold(0u64, |sum, record| {
-            sum.checked_add(record.total_contribution_accrual_rate()?)
+            sum.checked_add(record.get_total_contribution_accrual_rate()?)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
         })
     }
@@ -40,19 +40,19 @@ impl TokenAllocatedAmount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn records_mut(&mut self) -> &mut [TokenAllocatedAmountRecord] {
+    fn get_records_mut(&mut self) -> &mut [TokenAllocatedAmountRecord] {
         &mut self.records[..self.num_records as usize]
     }
 
-    fn records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
-        self.records_mut().iter_mut()
+    fn get_records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
+        self.get_records_mut().iter_mut()
     }
 
-    fn record_mut(
+    fn get_record_mut(
         &mut self,
         contribution_accrual_rate: u8,
     ) -> Option<&mut TokenAllocatedAmountRecord> {
-        self.records_iter_mut()
+        self.get_records_iter_mut()
             .find(|r| r.contribution_accrual_rate == contribution_accrual_rate)
     }
 
@@ -91,16 +91,16 @@ impl TokenAllocatedAmount {
 
     /// When add amount, rate = null => rate = 1.0
     fn add(&mut self, mut delta: TokenAllocatedAmountDelta) -> Result<TokenAllocatedAmountDelta> {
-        delta.check_valid_addition()?;
+        delta.assert_valid_addition()?;
         delta.set_default_contribution_accrual_rate();
         // SAFE: contribution_accrual_rate is set to default if not exist
         let contribution_accrual_rate = delta.contribution_accrual_rate.unwrap();
 
-        if let Some(existing_record) = self.record_mut(contribution_accrual_rate) {
+        if let Some(existing_record) = self.get_record_mut(contribution_accrual_rate) {
             existing_record.add_amount(delta.amount)?;
         } else {
             self.add_new_record(delta.amount, contribution_accrual_rate)?;
-            self.records_mut()
+            self.get_records_mut()
                 .sort_by_key(|r| r.contribution_accrual_rate);
         }
 
@@ -116,7 +116,7 @@ impl TokenAllocatedAmount {
         &mut self,
         delta: TokenAllocatedAmountDelta,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
-        delta.check_valid_subtraction()?;
+        delta.assert_valid_subtraction()?;
 
         self.total_amount = self
             .total_amount
@@ -127,13 +127,13 @@ impl TokenAllocatedAmount {
         if delta.contribution_accrual_rate.is_some_and(|r| r != 100) {
             let record = self
                 // SAFE: already checked that contribution_accrual_rate exists
-                .record_mut(delta.contribution_accrual_rate.unwrap())
+                .get_record_mut(delta.contribution_accrual_rate.unwrap())
                 .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
             record.sub_amount(delta.amount)?;
             deltas.push(delta);
         } else {
             let mut remaining_delta_amount = delta.amount;
-            for record in self.records_iter_mut() {
+            for record in self.get_records_iter_mut() {
                 if remaining_delta_amount == 0 {
                     break;
                 }
@@ -191,7 +191,7 @@ impl TokenAllocatedAmountRecord {
 
     /// Contribution accrual rate multiplied by amount (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    fn total_contribution_accrual_rate(&self) -> Result<u64> {
+    fn get_total_contribution_accrual_rate(&self) -> Result<u64> {
         self.amount
             .checked_mul(self.contribution_accrual_rate as u64)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
@@ -225,7 +225,7 @@ impl TokenAllocatedAmountDelta {
         }
     }
 
-    fn check_valid_addition(&self) -> Result<()> {
+    fn assert_valid_addition(&self) -> Result<()> {
         let is_contribution_accrual_rate_invalid = || {
             self.contribution_accrual_rate
                 .is_some_and(|rate| !(100..200).contains(&rate))
@@ -237,7 +237,7 @@ impl TokenAllocatedAmountDelta {
         Ok(())
     }
 
-    fn check_valid_subtraction(&self) -> Result<()> {
+    fn assert_valid_subtraction(&self) -> Result<()> {
         if self.is_positive {
             err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
         }

@@ -32,11 +32,11 @@ pub struct FundAccount {
 impl PDASeeds<2> for FundAccount {
     const SEED: &'static [u8] = b"fund";
 
-    fn seeds(&self) -> [&[u8]; 2] {
+    fn get_seeds(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
@@ -66,39 +66,45 @@ impl FundAccount {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
-    pub(super) fn supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
+    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
         self.supported_tokens.iter()
     }
 
-    pub(super) fn supported_tokens_iter_mut(
+    pub(super) fn get_supported_tokens_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SupportedTokenInfo> {
         self.supported_tokens.iter_mut()
     }
 
-    pub(super) fn supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
+    pub(super) fn get_supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
         self.supported_tokens
             .iter()
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn supported_token_mut(&mut self, token: Pubkey) -> Result<&mut SupportedTokenInfo> {
+    pub(super) fn get_supported_token_mut(
+        &mut self,
+        token: Pubkey,
+    ) -> Result<&mut SupportedTokenInfo> {
         self.supported_tokens
             .iter_mut()
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn sol_capacity_amount(&self) -> u64 {
+    #[inline(always)]
+    pub(super) fn get_sol_capacity_amount(&self) -> u64 {
         self.sol_capacity_amount
     }
 
-    pub(super) fn sol_accumulated_deposit_amount(&self) -> u64 {
+    #[inline(always)]
+    pub(super) fn get_sol_accumulated_deposit_amount(&self) -> u64 {
         self.sol_accumulated_deposit_amount
     }
 
-    pub(super) fn sol_operation_reserved_amount(&self) -> u64 {
+    #[inline(always)]
+    pub(super) fn get_sol_operation_reserved_amount(&self) -> u64 {
         self.sol_operation_reserved_amount
     }
 
@@ -161,13 +167,15 @@ impl FundAccount {
     }
 
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
-    pub(in crate::modules) fn total_sol_value(&self) -> Result<u64> {
+    pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
         // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
-        self.supported_tokens_iter()
-            .try_fold(self.sol_operation_reserved_amount, |sum, token| {
-                sum.checked_add(token.sol_value_for(token.operation_reserved_amount)?)
+        self.get_supported_tokens_iter().try_fold(
+            self.sol_operation_reserved_amount,
+            |sum, token| {
+                sum.checked_add(token.get_token_amount_as_sol(token.operation_reserved_amount)?)
                     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-            })
+            },
+        )
     }
 }
 
@@ -206,13 +214,13 @@ impl SupportedTokenInfo {
         }
     }
 
-    pub(super) fn denominated_amount_per_token(&self) -> Result<u64> {
+    pub(super) fn get_denominated_amount_per_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
-    pub(super) fn pricing_source(&self) -> &TokenPricingSource {
+    pub(super) fn get_pricing_source(&self) -> &TokenPricingSource {
         &self.pricing_source
     }
 
@@ -249,11 +257,11 @@ impl SupportedTokenInfo {
         Ok(())
     }
 
-    pub(super) fn sol_value_for(&self, token_amount: u64) -> Result<u64> {
-        crate::utils::proportional_amount(
+    pub(super) fn get_token_amount_as_sol(&self, token_amount: u64) -> Result<u64> {
+        crate::utils::get_proportional_amount(
             token_amount,
             self.price,
-            self.denominated_amount_per_token()?,
+            self.get_denominated_amount_per_token()?,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
@@ -312,19 +320,19 @@ impl WithdrawalStatus {
     /// 1 fee rate = 1bps = 0.01%
     const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
 
-    pub(super) fn last_completed_batch_id(&self) -> u64 {
+    pub(super) fn get_last_completed_batch_id(&self) -> u64 {
         self.last_completed_batch_id
     }
 
-    pub(super) fn sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
+    pub(super) fn get_sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
         self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
 
-    pub(super) fn withdrawal_enabled_flag(&self) -> bool {
+    pub(super) fn get_withdrawal_enabled_flag(&self) -> bool {
         self.withdrawal_enabled_flag
     }
 
-    pub(super) fn sol_withdrawal_reserved_amount(&self) -> u64 {
+    pub(super) fn get_sol_withdrawal_reserved_amount(&self) -> u64 {
         self.sol_withdrawal_reserved_amount
     }
 
@@ -373,7 +381,7 @@ impl WithdrawalStatus {
         &mut self,
         request: WithdrawalRequest,
     ) -> Result<u64> {
-        self.check_request_issued(request.request_id)?;
+        self.assert_request_issued(request.request_id)?;
 
         require_gte!(
             request.batch_id,
@@ -392,7 +400,7 @@ impl WithdrawalStatus {
         &mut self,
         request: WithdrawalRequest,
     ) -> Result<(u64, u64, u64)> {
-        self.check_request_issued(request.request_id)?;
+        self.assert_request_issued(request.request_id)?;
 
         require_gte!(
             self.last_completed_batch_id,
@@ -400,13 +408,13 @@ impl WithdrawalStatus {
             ErrorCode::FundPendingWithdrawalRequestError
         );
 
-        let sol_amount = crate::utils::proportional_amount(
+        let sol_amount = crate::utils::get_proportional_amount(
             request.receipt_token_amount,
             self.sol_withdrawal_reserved_amount,
             self.receipt_token_processed_amount,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let sol_fee_amount = crate::utils::proportional_amount(
+        let sol_fee_amount = crate::utils::get_proportional_amount(
             sol_amount,
             self.sol_withdrawal_fee_rate as u64,
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
@@ -436,7 +444,7 @@ impl WithdrawalStatus {
         ))
     }
 
-    pub(super) fn check_withdrawal_enabled(&self) -> Result<()> {
+    pub(super) fn assert_withdrawal_enabled(&self) -> Result<()> {
         if !self.withdrawal_enabled_flag {
             err!(ErrorCode::FundWithdrawalDisabledError)?
         }
@@ -445,7 +453,7 @@ impl WithdrawalStatus {
     }
 
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
-    pub(in crate::modules) fn check_withdrawal_threshold(
+    pub(in crate::modules) fn assert_withdrawal_threshold_satisfied(
         &self,
         current_timestamp: i64,
     ) -> Result<()> {
@@ -467,7 +475,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    fn check_request_issued(&self, request_id: u64) -> Result<()> {
+    fn assert_request_issued(&self, request_id: u64) -> Result<()> {
         require_gt!(
             self.next_request_id,
             request_id,
@@ -666,11 +674,11 @@ impl WithdrawalRequest {
         }
     }
 
-    pub(super) fn batch_id(&self) -> u64 {
+    pub(super) fn get_batch_id(&self) -> u64 {
         self.batch_id
     }
 
-    pub(super) fn request_id(&self) -> u64 {
+    pub(super) fn get_request_id(&self) -> u64 {
         self.request_id
     }
 }
@@ -762,7 +770,7 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
         fund.supported_tokens[0].accumulated_deposit_amount = 1_000_000_000;
-        fund.supported_token_mut(token1)
+        fund.get_supported_token_mut(token1)
             .unwrap()
             .set_capacity_amount(0)
             .unwrap_err();

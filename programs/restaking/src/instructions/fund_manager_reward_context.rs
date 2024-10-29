@@ -17,7 +17,7 @@ pub struct FundManagerRewardContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump()?,
+        bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
@@ -35,7 +35,7 @@ pub struct FundManagerRewardDistributionContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump()?,
+        bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]

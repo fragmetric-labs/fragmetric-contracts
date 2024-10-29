@@ -47,7 +47,7 @@ impl RewardSettlement {
         self.settlement_blocks_last_reward_pool_contribution = 0;
     }
 
-    pub(super) fn reward_id(&self) -> u16 {
+    pub(super) fn get_reward_id(&self) -> u16 {
         self.reward_id
     }
 
@@ -92,7 +92,7 @@ impl RewardSettlement {
         }
     }
 
-    fn first_settlement_block(&self) -> Option<&RewardSettlementBlock> {
+    fn get_first_settlement_block(&self) -> Option<&RewardSettlementBlock> {
         (!self.is_settlement_blocks_empty())
             .then(|| &self.settlement_blocks[self.settlement_blocks_head as usize])
     }
@@ -102,7 +102,7 @@ impl RewardSettlement {
             || self.settlement_blocks_head > self.settlement_blocks_tail
     }
 
-    pub(super) fn settlement_blocks_iter_mut(
+    pub(super) fn get_settlement_blocks_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlementBlock> {
         if self.is_settlement_blocks_queue_partitioned() {
@@ -144,11 +144,11 @@ impl RewardSettlement {
     pub(super) fn clear_stale_settlement_blocks(&mut self) -> Result<usize> {
         let mut num_cleared = 0;
 
-        while let Some(block) = self.first_settlement_block() {
+        while let Some(block) = self.get_first_settlement_block() {
             if block.is_stale() {
                 self.remaining_amount = self
                     .remaining_amount
-                    .checked_add(block.remaining_amount()?)
+                    .checked_add(block.get_remaining_amount()?)
                     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                 self.pop_settlement_block();
                 num_cleared += 1;
@@ -208,37 +208,37 @@ impl RewardSettlementBlock {
         Ok(())
     }
 
-    pub(super) fn amount(&self) -> u64 {
+    pub(super) fn get_amount(&self) -> u64 {
         self.amount
     }
 
-    pub(super) fn starting_slot(&self) -> u64 {
+    pub(super) fn get_starting_slot(&self) -> u64 {
         self.starting_slot
     }
 
-    pub(super) fn ending_slot(&self) -> u64 {
+    pub(super) fn get_ending_slot(&self) -> u64 {
         self.ending_slot
     }
 
     #[inline(always)]
-    pub(super) fn block_height(&self) -> u64 {
+    pub(super) fn get_block_height(&self) -> u64 {
         // SAFE: slot always monotonically increase
         self.ending_slot - self.starting_slot
     }
 
     #[inline(always)]
-    pub(super) fn block_contribution(&self) -> u128 {
+    pub(super) fn get_block_contribution(&self) -> u128 {
         // SAFE: contribution always monotonically increase
         self.ending_reward_pool_contribution - self.starting_reward_pool_contribution
     }
 
     #[inline(always)]
     fn is_stale(&self) -> bool {
-        self.user_settled_contribution == self.block_contribution()
+        self.user_settled_contribution == self.get_block_contribution()
     }
 
     #[inline(always)]
-    fn remaining_amount(&self) -> Result<u64> {
+    fn get_remaining_amount(&self) -> Result<u64> {
         self.amount
             .checked_sub(self.user_settled_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
@@ -262,7 +262,7 @@ impl RewardSettlementBlock {
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         require_gte!(
-            self.block_contribution(),
+            self.get_block_contribution(),
             self.user_settled_contribution,
             ErrorCode::RewardInvalidTotalUserSettledContributionException
         );

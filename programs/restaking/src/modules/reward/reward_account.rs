@@ -36,17 +36,17 @@ pub struct RewardAccount {
 impl PDASeeds<2> for RewardAccount {
     const SEED: &'static [u8] = b"reward";
 
-    fn seeds(&self) -> [&[u8]; 2] {
+    fn get_seeds(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
 
 impl ZeroCopyHeader for RewardAccount {
-    fn bump_offset() -> usize {
+    fn get_bump_offset() -> usize {
         2
     }
 }
@@ -85,7 +85,7 @@ impl RewardAccount {
     ) -> Result<()> {
         require_gt!(self.num_rewards, reward_id, ErrorCode::RewardNotFoundError);
 
-        self.reward_pool_mut(reward_pool_id)?
+        self.get_reward_pool_mut(reward_pool_id)?
             .settle_reward(reward_id, amount, current_slot)
     }
 
@@ -95,9 +95,9 @@ impl RewardAccount {
         description: String,
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
-        for holder in self.holders_iter() {
+        for holder in self.get_holders_iter() {
             require_neq!(
-                from_utf8_trim_null(holder.name())?,
+                from_utf8_trim_null(holder.get_name())?,
                 name.replace('\0', ""),
                 ErrorCode::RewardAlreadyExistingHolderError
             );
@@ -122,9 +122,9 @@ impl RewardAccount {
         description: String,
         reward_type: RewardType,
     ) -> Result<()> {
-        for reward in self.rewards_iter() {
+        for reward in self.get_rewards_iter() {
             require_neq!(
-                from_utf8_trim_null(reward.name())?,
+                from_utf8_trim_null(reward.get_name())?,
                 name.replace('\0', ""),
                 ErrorCode::RewardAlreadyExistingRewardError
             );
@@ -154,11 +154,11 @@ impl RewardAccount {
             require_gt!(self.num_holders, id, ErrorCode::RewardHolderNotFoundError);
         }
 
-        if self.reward_pools_iter().any(|p| {
-            (p.holder_id() == holder_id
-                && p.custom_contribution_accrual_rate_enabled()
+        if self.get_reward_pools_iter().any(|p| {
+            (p.get_holder_id() == holder_id
+                && p.is_custom_contribution_accrual_rate_enabled()
                     == custom_contribution_accrual_rate_enabled)
-                || from_utf8_trim_null(p.name()) == Ok(name.replace('\0', ""))
+                || from_utf8_trim_null(p.get_name()) == Ok(name.replace('\0', ""))
         }) {
             err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }
@@ -187,20 +187,20 @@ impl RewardAccount {
         reward_pool_id: u8,
         current_slot: u64,
     ) -> Result<()> {
-        let reward_pool = self.reward_pool_mut(reward_pool_id)?;
+        let reward_pool = self.get_reward_pool_mut(reward_pool_id)?;
 
         // Cannot close reward pool without holder
-        match reward_pool.holder_id() {
+        match reward_pool.get_holder_id() {
             Some(_) => reward_pool.close(current_slot),
             None => err!(ErrorCode::RewardPoolCloseConditionError)?,
         }
     }
 
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) -> Result<()> {
-        for reward_pool in self.reward_pools_iter_mut() {
-            let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
+        for reward_pool in self.get_reward_pools_iter_mut() {
+            let updated_slot = reward_pool.get_closed_slot().unwrap_or(current_slot);
             reward_pool.update_contribution(updated_slot)?;
-            for reward_settlement in reward_pool.reward_settlements_iter_mut() {
+            for reward_settlement in reward_pool.get_reward_settlements_iter_mut() {
                 reward_settlement.clear_stale_settlement_blocks()?;
             }
         }
@@ -213,10 +213,10 @@ impl RewardAccount {
         user: &mut UserRewardAccount,
         current_slot: u64,
     ) -> Result<()> {
-        user.backfill_not_existing_pools(self.reward_pools_iter())?;
+        user.backfill_not_existing_pools(self.get_reward_pools_iter())?;
 
-        user.user_reward_pools_iter_mut()
-            .zip(self.reward_pools_iter_mut())
+        user.get_user_reward_pools_iter_mut()
+            .zip(self.get_reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {
                 user_reward_pool.update(reward_pool, vec![], current_slot)?;
                 Ok::<(), Error>(())
@@ -240,10 +240,10 @@ impl RewardAccount {
 
         if let Some(from) = from {
             // back-fill not existing pools
-            from.backfill_not_existing_pools(self.reward_pools_iter())?;
+            from.backfill_not_existing_pools(self.get_reward_pools_iter())?;
             // find "from user" related reward pools
             for reward_pool in self.get_related_pools(&from.user, receipt_token_mint)? {
-                let user_reward_pool = from.user_reward_pool_mut(reward_pool.id())?;
+                let user_reward_pool = from.get_user_reward_pool_mut(reward_pool.get_id())?;
                 let deltas = vec![TokenAllocatedAmountDelta::new_negative(amount)];
 
                 let effective_deltas =
@@ -254,12 +254,12 @@ impl RewardAccount {
 
         if let Some(to) = to {
             // back-fill not existing pools
-            to.backfill_not_existing_pools(self.reward_pools_iter())?;
+            to.backfill_not_existing_pools(self.get_reward_pools_iter())?;
             // find "to user" related reward pools
             for reward_pool in self.get_related_pools(&to.user, receipt_token_mint)? {
-                let user_reward_pool = to.user_reward_pool_mut(reward_pool.id())?;
+                let user_reward_pool = to.get_user_reward_pool_mut(reward_pool.get_id())?;
                 let effective_contribution_accrual_rate = reward_pool
-                    .custom_contribution_accrual_rate_enabled()
+                    .is_custom_contribution_accrual_rate_enabled()
                     .then_some(contribution_accrual_rate)
                     .flatten();
                 let deltas = vec![TokenAllocatedAmountDelta::new_positive(
@@ -285,14 +285,14 @@ impl RewardAccount {
         }
 
         let user_related_holders_ids = self
-            .holders_iter()
-            .filter_map(|holder| holder.has_pubkey(user).then_some(holder.id()))
+            .get_holders_iter()
+            .filter_map(|holder| holder.has_pubkey(user).then_some(holder.get_id()))
             .collect::<Vec<_>>();
 
-        let reward_pools = self.reward_pools_iter_mut();
+        let reward_pools = self.get_reward_pools_iter_mut();
         // split into base / holder-specific pools
         let (base, holder_specific) =
-            reward_pools.partition::<Vec<_>, _>(|p| p.holder_id().is_none());
+            reward_pools.partition::<Vec<_>, _>(|p| p.get_holder_id().is_none());
 
         // base pool should exist at least one
         if base.is_empty() {
@@ -304,7 +304,7 @@ impl RewardAccount {
             .into_iter()
             .filter(|p| {
                 // SAFE: partitioned by `holder_id.is_none()`
-                user_related_holders_ids.contains(&p.holder_id().unwrap())
+                user_related_holders_ids.contains(&p.get_holder_id().unwrap())
             })
             .collect::<Vec<_>>();
 
@@ -318,46 +318,46 @@ impl RewardAccount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn holders_ref(&self) -> &[Holder] {
+    fn get_holders(&self) -> &[Holder] {
         &self.holders_1[..self.num_holders as usize]
     }
 
-    fn holders_iter(&self) -> impl Iterator<Item = &Holder> {
-        self.holders_ref().iter()
+    fn get_holders_iter(&self) -> impl Iterator<Item = &Holder> {
+        self.get_holders().iter()
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn rewards_ref(&self) -> &[Reward] {
+    fn get_rewards(&self) -> &[Reward] {
         &self.rewards_1[..self.num_rewards as usize]
     }
 
-    fn rewards_iter(&self) -> impl Iterator<Item = &Reward> {
-        self.rewards_ref().iter()
+    fn get_rewards_iter(&self) -> impl Iterator<Item = &Reward> {
+        self.get_rewards().iter()
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn reward_pools_ref(&self) -> &[RewardPool] {
+    fn get_reward_pools(&self) -> &[RewardPool] {
         &self.reward_pools_1[..self.num_reward_pools as usize]
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn reward_pools_mut(&mut self) -> &mut [RewardPool] {
+    fn get_reward_pools_mut(&mut self) -> &mut [RewardPool] {
         &mut self.reward_pools_1[..self.num_reward_pools as usize]
     }
 
-    fn reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
-        self.reward_pools_ref().iter()
+    fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
+        self.get_reward_pools().iter()
     }
 
-    fn reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
-        self.reward_pools_mut().iter_mut()
+    fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
+        self.get_reward_pools_mut().iter_mut()
     }
 
-    fn reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
-        self.reward_pools_mut()
+    fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
+        self.get_reward_pools_mut()
             .get_mut(id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
     }
@@ -445,23 +445,23 @@ impl RewardPool {
         Ok(())
     }
 
-    pub(super) fn id(&self) -> u8 {
+    pub(super) fn get_id(&self) -> u8 {
         self.id
     }
 
-    fn name(&self) -> &[u8] {
+    fn get_name(&self) -> &[u8] {
         &self.name
     }
 
-    fn custom_contribution_accrual_rate_enabled(&self) -> bool {
+    fn is_custom_contribution_accrual_rate_enabled(&self) -> bool {
         self.reward_pool_bitmap & Self::CUSTOM_CONTRIBUTION_ACCRUAL_RATE_ENABLED_BIT > 0
     }
 
-    pub(super) fn initial_slot(&self) -> u64 {
+    pub(super) fn get_initial_slot(&self) -> u64 {
         self.initial_slot
     }
 
-    pub(super) fn closed_slot(&self) -> Option<u64> {
+    pub(super) fn get_closed_slot(&self) -> Option<u64> {
         self.is_closed().then_some(self.closed_slot)
     }
 
@@ -474,7 +474,7 @@ impl RewardPool {
         self.closed_slot = closed_slot;
     }
 
-    fn holder_id(&self) -> Option<u8> {
+    fn get_holder_id(&self) -> Option<u8> {
         (self.reward_pool_bitmap & Self::HAS_HOLDER_BIT > 0).then_some(self.holder_id)
     }
 
@@ -498,19 +498,19 @@ impl RewardPool {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn reward_settlements_mut(&mut self) -> &mut [RewardSettlement] {
+    fn get_reward_settlements_mut(&mut self) -> &mut [RewardSettlement] {
         &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
     }
 
-    pub(super) fn reward_settlements_iter_mut(
+    pub(super) fn get_reward_settlements_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlement> {
-        self.reward_settlements_mut().iter_mut()
+        self.get_reward_settlements_mut().iter_mut()
     }
 
-    fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
-        self.reward_settlements_iter_mut()
-            .find(|s| s.reward_id() == reward_id)
+    fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
+        self.get_reward_settlements_iter_mut()
+            .find(|s| s.get_reward_id() == reward_id)
     }
 
     fn settle_reward(&mut self, reward_id: u16, amount: u64, current_slot: u64) -> Result<()> {
@@ -523,7 +523,7 @@ impl RewardPool {
 
         // Find settlement and settle
         let current_reward_pool_contribution = self.contribution;
-        let settlement = if let Some(settlement) = self.reward_settlement_mut(reward_id) {
+        let settlement = if let Some(settlement) = self.get_reward_settlement_mut(reward_id) {
             settlement
         } else {
             self.add_new_reward_settlement(reward_id, current_slot)?
@@ -539,7 +539,7 @@ impl RewardPool {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let total_contribution_accrual_rate = self
             .token_allocated_amount
-            .total_contribution_accrual_rate()?;
+            .get_total_contribution_accrual_rate()?;
         let total_contribution = (elapsed_slot as u128)
             .checked_mul(total_contribution_accrual_rate as u128)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
@@ -558,7 +558,7 @@ impl RewardPool {
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         // First update contribution
-        let updated_slot = self.closed_slot().unwrap_or(current_slot);
+        let updated_slot = self.get_closed_slot().unwrap_or(current_slot);
         self.update_contribution(updated_slot)?;
 
         // Apply deltas

@@ -25,7 +25,7 @@ pub struct UserFundAccount {
 impl PDASeeds<3> for UserFundAccount {
     const SEED: &'static [u8] = b"user_fund";
 
-    fn seeds(&self) -> [&[u8]; 3] {
+    fn get_seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
@@ -33,7 +33,7 @@ impl PDASeeds<3> for UserFundAccount {
         ]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
@@ -74,7 +74,7 @@ impl UserFundAccount {
     fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
         let index = self
             .withdrawal_requests
-            .binary_search_by_key(&request_id, |req| req.request_id())
+            .binary_search_by_key(&request_id, |req| req.get_request_id())
             .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
     }
@@ -94,8 +94,8 @@ impl UserFundAccount {
 
         let request = withdrawal_status
             .issue_new_withdrawal_request(receipt_token_amount, current_timestamp)?;
-        let batch_id = request.batch_id();
-        let request_id = request.request_id();
+        let batch_id = request.get_batch_id();
+        let request_id = request.get_request_id();
 
         self.withdrawal_requests.push(request);
 

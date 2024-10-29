@@ -101,8 +101,8 @@ pub fn process_deposit_supported_token<'info>(
         receipt_token_mint,
         fund_account,
         fund_account
-            .supported_token(supported_token_mint.key())?
-            .sol_value_for(supported_token_amount)?,
+            .get_supported_token(supported_token_mint.key())?
+            .get_token_amount_as_sol(supported_token_amount)?,
     )?;
 
     mint_receipt_token_to_user(
@@ -160,7 +160,7 @@ fn verify_deposit_metadata(
             instructions_sysvar,
             metadata.try_to_vec()?.as_slice(),
         )?;
-        metadata.verify_expiration(current_timestamp)?;
+        metadata.assert_metadata_not_exipred(current_timestamp)?;
     }
     Ok(metadata.map(DepositMetadata::split).unzip())
 }
@@ -194,7 +194,7 @@ fn transfer_supported_token_from_user_to_fund<'info>(
     supported_token_amount: u64,
 ) -> Result<()> {
     fund_account
-        .supported_token_mut(supported_token_mint.key())?
+        .get_supported_token_mut(supported_token_mint.key())?
         .deposit_token(supported_token_amount)?;
     token_interface::transfer_checked(
         CpiContext::new(
@@ -217,10 +217,10 @@ fn receipt_token_mint_amount_for(
     fund_account: &Account<FundAccount>,
     sol_amount: u64,
 ) -> Result<u64> {
-    crate::utils::proportional_amount(
+    crate::utils::get_proportional_amount(
         sol_amount,
         receipt_token_mint.supply,
-        fund_account.total_sol_value()?,
+        fund_account.get_assets_total_amount_as_sol()?,
     )
     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
 }
@@ -245,7 +245,7 @@ fn mint_receipt_token_to_user<'info>(
                 to: user_receipt_token_account.to_account_info(),
                 authority: receipt_token_mint_authority.to_account_info(),
             },
-            &[receipt_token_mint_authority.signer_seeds().as_ref()],
+            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
         ),
         receipt_token_mint_amount,
     )

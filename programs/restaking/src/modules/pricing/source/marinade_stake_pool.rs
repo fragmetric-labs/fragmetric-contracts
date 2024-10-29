@@ -194,7 +194,7 @@ impl MarinadeStakePool {
     const PROGRAM_ID: Pubkey = pubkey!("MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD");
 
     fn msol_to_sol(&self, msol_amount: u64) -> Result<u64> {
-        crate::utils::proportional_amount(
+        crate::utils::get_proportional_amount(
             msol_amount,
             self.total_value_staked_lamports(),
             self.msol_supply,

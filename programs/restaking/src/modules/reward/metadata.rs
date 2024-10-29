@@ -69,22 +69,22 @@ impl Holder {
         Ok(())
     }
 
-    pub(super) fn id(&self) -> u8 {
+    pub(super) fn get_id(&self) -> u8 {
         self.id
     }
 
-    pub(super) fn name(&self) -> &[u8] {
+    pub(super) fn get_name(&self) -> &[u8] {
         &self.name
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn pubkeys_ref(&self) -> &[Pubkey] {
+    fn get_pubkeys(&self) -> &[Pubkey] {
         &self.pubkeys_1[..self.num_pubkeys as usize]
     }
 
     pub(super) fn has_pubkey(&self, key: &Pubkey) -> bool {
-        self.pubkeys_ref().contains(key)
+        self.get_pubkeys().contains(key)
     }
 }
 
@@ -133,15 +133,15 @@ impl Reward {
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
         // RewardType
-        self.reward_type_discriminant = reward_type.discriminant();
-        self.token_mint = reward_type.token_mint().unwrap_or_default();
-        self.token_program = reward_type.token_program().unwrap_or_default();
-        self.decimals = reward_type.decimals().unwrap_or_default();
+        self.reward_type_discriminant = reward_type.get_discriminant();
+        self.token_mint = reward_type.get_token_mint().unwrap_or_default();
+        self.token_program = reward_type.get_token_program().unwrap_or_default();
+        self.decimals = reward_type.get_decimals().unwrap_or_default();
 
         Ok(())
     }
 
-    pub(super) fn name(&self) -> &[u8] {
+    pub(super) fn get_name(&self) -> &[u8] {
         &self.name
     }
 
@@ -185,7 +185,7 @@ pub enum RewardType {
 }
 
 impl RewardType {
-    fn discriminant(&self) -> u8 {
+    fn get_discriminant(&self) -> u8 {
         match self {
             RewardType::Point { .. } => 0,
             RewardType::Token { .. } => 1,
@@ -193,21 +193,21 @@ impl RewardType {
         }
     }
 
-    fn token_mint(&self) -> Option<Pubkey> {
+    fn get_token_mint(&self) -> Option<Pubkey> {
         match self {
             Self::Token { mint, .. } => Some(*mint),
             Self::Point { .. } | Self::SOL => None,
         }
     }
 
-    fn token_program(&self) -> Option<Pubkey> {
+    fn get_token_program(&self) -> Option<Pubkey> {
         match self {
             Self::Token { program, .. } => Some(*program),
             Self::Point { .. } | Self::SOL => None,
         }
     }
 
-    fn decimals(&self) -> Option<u8> {
+    fn get_decimals(&self) -> Option<u8> {
         match self {
             Self::Point { decimals } | Self::Token { decimals, .. } => Some(*decimals),
             Self::SOL => None,

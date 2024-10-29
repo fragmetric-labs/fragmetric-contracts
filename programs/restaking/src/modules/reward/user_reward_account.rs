@@ -29,7 +29,7 @@ pub struct UserRewardAccount {
 impl PDASeeds<3> for UserRewardAccount {
     const SEED: &'static [u8] = b"user_reward";
 
-    fn seeds(&self) -> [&[u8]; 3] {
+    fn get_seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
@@ -37,13 +37,13 @@ impl PDASeeds<3> for UserRewardAccount {
         ]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
 
 impl ZeroCopyHeader for UserRewardAccount {
-    fn bump_offset() -> usize {
+    fn get_bump_offset() -> usize {
         2
     }
 }
@@ -92,18 +92,18 @@ impl UserRewardAccount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn user_reward_pools_mut(&mut self) -> &mut [UserRewardPool] {
+    fn get_user_reward_pools_mut(&mut self) -> &mut [UserRewardPool] {
         &mut self.user_reward_pools_1
     }
 
-    pub(super) fn user_reward_pools_iter_mut(
+    pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut UserRewardPool> {
-        self.user_reward_pools_mut().iter_mut()
+        self.get_user_reward_pools_mut().iter_mut()
     }
 
-    pub(super) fn user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
-        self.user_reward_pools_mut()
+    pub(super) fn get_user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
+        self.get_user_reward_pools_mut()
             .get_mut(id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardUserPoolNotFoundError))
     }
@@ -114,7 +114,7 @@ impl UserRewardAccount {
     ) -> Result<()> {
         let num_user_reward_pools = self.num_user_reward_pools;
         for reward_pool in reward_pools.skip(num_user_reward_pools as usize) {
-            self.add_new_user_reward_pool(reward_pool.id(), reward_pool.initial_slot())?;
+            self.add_new_user_reward_pool(reward_pool.get_id(), reward_pool.get_initial_slot())?;
         }
 
         Ok(())
@@ -179,17 +179,19 @@ impl UserRewardPool {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
-    fn reward_settlements_mut(&mut self) -> &mut [UserRewardSettlement] {
+    fn get_reward_settlements_mut(&mut self) -> &mut [UserRewardSettlement] {
         &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
     }
 
-    fn reward_settlements_iter_mut(&mut self) -> impl Iterator<Item = &mut UserRewardSettlement> {
-        self.reward_settlements_mut().iter_mut()
+    fn get_reward_settlements_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut UserRewardSettlement> {
+        self.get_reward_settlements_mut().iter_mut()
     }
 
-    fn reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut UserRewardSettlement> {
-        self.reward_settlements_iter_mut()
-            .find(|s| s.reward_id() == reward_id)
+    fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut UserRewardSettlement> {
+        self.get_reward_settlements_iter_mut()
+            .find(|s| s.get_reward_id() == reward_id)
     }
 
     pub(super) fn update(
@@ -201,67 +203,71 @@ impl UserRewardPool {
         // cache value
         let total_contribution_accrual_rate = self
             .token_allocated_amount
-            .total_contribution_accrual_rate()?;
+            .get_total_contribution_accrual_rate()?;
 
         // First update contribution, but save old data for settlement
         let last_contribution = self.contribution;
         let last_updated_slot = self.updated_slot;
-        let updated_slot = reward_pool.closed_slot().unwrap_or(current_slot);
+        let updated_slot = reward_pool.get_closed_slot().unwrap_or(current_slot);
         self.update_contribution(updated_slot, total_contribution_accrual_rate)?;
 
         // Settle user reward
-        let reward_pool_initial_slot = reward_pool.initial_slot();
-        for reward_settlement in reward_pool.reward_settlements_iter_mut() {
+        let reward_pool_initial_slot = reward_pool.get_initial_slot();
+        for reward_settlement in reward_pool.get_reward_settlements_iter_mut() {
             // Find corresponding user reward settlement
             let user_reward_settlement = if let Some(user_reward_settlement) =
-                self.reward_settlement_mut(reward_settlement.reward_id())
+                self.get_reward_settlement_mut(reward_settlement.get_reward_id())
             {
                 user_reward_settlement
             } else {
-                self.add_new_settlement(reward_settlement.reward_id(), reward_pool_initial_slot)?
+                self.add_new_settlement(
+                    reward_settlement.get_reward_id(),
+                    reward_pool_initial_slot,
+                )?
             };
 
-            for block in reward_settlement.settlement_blocks_iter_mut() {
-                let user_block_settled_contribution = if last_updated_slot < block.starting_slot() {
-                    // case 1: ...updated...[starting...ending)...
-                    (block.block_height() as u128)
-                        .checked_mul(total_contribution_accrual_rate as u128)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-                } else if last_updated_slot <= block.ending_slot() {
-                    // case 2: ...[starting...updated...ending)...
-                    //
-                    // Special case: updated == ending
-                    //
-                    // In this case this settlement block has been settled at the same slot
-                    // when user reward pool has been updated.
-                    // Therefore we have to check settled_slot == ending_slot to determine
-                    // if this block is already settled. However, it could be ignored
-                    // since the calculation logic below will return 0.
-                    let first_half =
-                        last_contribution - user_reward_settlement.settled_contribution(); // SAFE: contribution always monotonically increase
-                    let second_half = ((block.ending_slot() - last_updated_slot) as u128)
-                        .checked_mul(total_contribution_accrual_rate as u128)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-                    first_half
-                        .checked_add(second_half)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-                } else {
-                    // case 3: [starting...ending)...updated...
-                    //
-                    // This block has already been handled so skip
-                    continue;
-                };
+            for block in reward_settlement.get_settlement_blocks_iter_mut() {
+                let user_block_settled_contribution =
+                    if last_updated_slot < block.get_starting_slot() {
+                        // case 1: ...updated...[starting...ending)...
+                        (block.get_block_height() as u128)
+                            .checked_mul(total_contribution_accrual_rate as u128)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+                    } else if last_updated_slot <= block.get_ending_slot() {
+                        // case 2: ...[starting...updated...ending)...
+                        //
+                        // Special case: updated == ending
+                        //
+                        // In this case this settlement block has been settled at the same slot
+                        // when user reward pool has been updated.
+                        // Therefore we have to check settled_slot == ending_slot to determine
+                        // if this block is already settled. However, it could be ignored
+                        // since the calculation logic below will return 0.
+                        let first_half =
+                            last_contribution - user_reward_settlement.get_settled_contribution(); // SAFE: contribution always monotonically increase
+                        let second_half = ((block.get_ending_slot() - last_updated_slot) as u128)
+                            .checked_mul(total_contribution_accrual_rate as u128)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                        first_half
+                            .checked_add(second_half)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+                    } else {
+                        // case 3: [starting...ending)...updated...
+                        //
+                        // This block has already been handled so skip
+                        continue;
+                    };
 
                 // If block contribution is zero, then user contribution is also zero.
                 // Why? If block height = 0 then obvious.
                 // If total allocated amount is zero then user's allocated amount is also zero.
                 // Therefore nobody can claim for this settlement block, and the block is stale.
-                let block_contribution = block.block_contribution();
+                let block_contribution = block.get_block_contribution();
                 let user_block_settled_amount = (block_contribution > 0)
                     .then(|| {
                         u64::try_from(
                             user_block_settled_contribution
-                                .checked_mul(block.amount() as u128)
+                                .checked_mul(block.get_amount() as u128)
                                 .and_then(|x| x.checked_div(block_contribution))
                                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
                         )
@@ -282,10 +288,10 @@ impl UserRewardPool {
                 //     0
                 // };
 
-                user_reward_settlement.settle_reward(
+                user_reward_settlement.get_settle_reward(
                     user_block_settled_amount,
                     user_block_settled_contribution,
-                    block.ending_slot(),
+                    block.get_ending_slot(),
                 )?;
 
                 // to find out stale blocks;

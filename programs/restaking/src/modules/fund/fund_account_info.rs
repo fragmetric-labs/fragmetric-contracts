@@ -28,16 +28,18 @@ impl FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_price,
             receipt_token_supply_amount,
-            supported_tokens: fund_account.supported_tokens_iter().cloned().collect(),
-            sol_capacity_amount: fund_account.sol_capacity_amount(),
-            sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount(),
-            sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount(),
+            supported_tokens: fund_account.get_supported_tokens_iter().cloned().collect(),
+            sol_capacity_amount: fund_account.get_sol_capacity_amount(),
+            sol_accumulated_deposit_amount: fund_account.get_sol_accumulated_deposit_amount(),
+            sol_operation_reserved_amount: fund_account.get_sol_operation_reserved_amount(),
             sol_withdrawal_reserved_amount: fund_account
                 .withdrawal
-                .sol_withdrawal_reserved_amount(),
-            sol_withdrawal_fee_rate: fund_account.withdrawal.sol_withdrawal_fee_rate_as_f32(),
-            withdrawal_enabled: fund_account.withdrawal.withdrawal_enabled_flag(),
-            withdrawal_last_completed_batch_id: fund_account.withdrawal.last_completed_batch_id(),
+                .get_sol_withdrawal_reserved_amount(),
+            sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_withdrawal_fee_rate_as_f32(),
+            withdrawal_enabled: fund_account.withdrawal.get_withdrawal_enabled_flag(),
+            withdrawal_last_completed_batch_id: fund_account
+                .withdrawal
+                .get_last_completed_batch_id(),
         }
     }
 }

@@ -12,11 +12,11 @@ pub(in crate::modules) fn receipt_token_price(
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &Account<FundAccount>,
 ) -> Result<u64> {
-    crate::utils::proportional_amount(
+    crate::utils::get_proportional_amount(
         10u64
             .checked_pow(receipt_token_mint.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-        fund_account.total_sol_value()?,
+        fund_account.get_assets_total_amount_as_sol()?,
         receipt_token_mint.supply,
     )
     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))

@@ -51,7 +51,7 @@ pub fn process_update_supported_token_capacity_amount(
     capacity_amount: u64,
 ) -> Result<()> {
     fund_account
-        .supported_token_mut(token)?
+        .get_supported_token_mut(token)?
         .set_capacity_amount(capacity_amount)?;
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
@@ -132,12 +132,12 @@ pub(in crate::modules) fn update_prices<'info>(
     pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
     let mut prices = Vec::new();
-    let pricing_source_accounts = pricing::pricing_sources_map(pricing_sources);
-    for token in fund_account.supported_tokens_iter() {
+    let pricing_source_accounts = pricing::create_pricing_sources_map(pricing_sources);
+    for token in fund_account.get_supported_tokens_iter() {
         let mut sol_value = 0u64;
         let mut stack = Vec::from([(
-            token.pricing_source(),
-            token.denominated_amount_per_token()?,
+            token.get_pricing_source(),
+            token.get_denominated_amount_per_token()?,
         )]);
 
         while let Some((source, amount)) = stack.pop() {
@@ -149,7 +149,7 @@ pub(in crate::modules) fn update_prices<'info>(
                 }
                 TokenValue::Tokens(values) => {
                     for (mint, amount) in values {
-                        let source = fund_account.supported_token(mint)?.pricing_source();
+                        let source = fund_account.get_supported_token(mint)?.get_pricing_source();
                         stack.push((source, amount));
                     }
                 }
@@ -159,7 +159,7 @@ pub(in crate::modules) fn update_prices<'info>(
         prices.push(sol_value);
     }
 
-    for (token, price) in fund_account.supported_tokens_iter_mut().zip(prices) {
+    for (token, price) in fund_account.get_supported_tokens_iter_mut().zip(prices) {
         token.price = price;
     }
 

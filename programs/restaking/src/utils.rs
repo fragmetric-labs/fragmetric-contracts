@@ -4,24 +4,24 @@ use anchor_lang::{prelude::*, ZeroCopy};
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
 
-    fn seeds(&self) -> [&[u8]; N];
-    fn bump_ref(&self) -> &u8;
+    fn get_seeds(&self) -> [&[u8]; N];
+    fn get_bump_ref(&self) -> &u8;
 
-    fn signer_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.seeds().to_vec();
-        signer_seeds.push(std::slice::from_ref(self.bump_ref()));
+    fn get_signer_seeds(&self) -> Vec<&[u8]> {
+        let mut signer_seeds = self.get_seeds().to_vec();
+        signer_seeds.push(std::slice::from_ref(self.get_bump_ref()));
         signer_seeds
     }
 
-    fn bump(&self) -> u8 {
-        *self.bump_ref()
+    fn get_bump(&self) -> u8 {
+        *self.get_bump_ref()
     }
 }
 
 /// Zero-copy account that has header (data-version, bump).
 pub trait ZeroCopyHeader: ZeroCopy {
     /// Offset of bump (8bit)
-    fn bump_offset() -> usize;
+    fn get_bump_offset() -> usize;
 }
 
 /// An extension trait for [AccountLoader].
@@ -36,7 +36,7 @@ pub trait AccountLoaderExt<'info> {
 
     /// Reads bump directly from data without
     /// borsh deserialization or bytemuck type casting.
-    fn bump(&self) -> Result<u8>;
+    fn get_bump(&self) -> Result<u8>;
 
     /// Realloc account to increase extra amount of data size.
     /// It will add at most 10KB([`MAX_PERMITTED_DATA_INCREASE`]).
@@ -66,7 +66,7 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         }
 
         // Safety check
-        let offset = 8 + T::bump_offset();
+        let offset = 8 + T::get_bump_offset();
         if data.len() < offset + 1 {
             return Err(ErrorCode::ConstraintSpace.into());
         }
@@ -77,11 +77,11 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         Ok(())
     }
 
-    fn bump(&self) -> Result<u8> {
+    fn get_bump(&self) -> Result<u8> {
         let data = self.as_ref().try_borrow_data()?;
 
         // Safety check
-        let offset = 8 + T::bump_offset();
+        let offset = 8 + T::get_bump_offset();
         if data.len() < offset + 1 {
             return Err(ErrorCode::ConstraintSpace.into());
         }
@@ -147,7 +147,7 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns amount.
-pub fn proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {
+pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {
     if numerator == 0 && denominator == 0 {
         return Some(amount);
     }

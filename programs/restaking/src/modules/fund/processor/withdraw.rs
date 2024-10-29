@@ -25,7 +25,7 @@ pub fn process_request_withdrawal<'info>(
 ) -> Result<()> {
     require_gte!(user_receipt_token_account.amount, receipt_token_amount);
 
-    fund_account.withdrawal.check_withdrawal_enabled()?;
+    fund_account.withdrawal.assert_withdrawal_enabled()?;
 
     let (batch_id, request_id) = user_fund_account.create_withdrawal_request(
         &mut fund_account.withdrawal,
@@ -169,7 +169,7 @@ fn lock_receipt_token<'info>(
                 to: receipt_token_lock_account.to_account_info(),
                 authority: receipt_token_mint_authority.to_account_info(),
             },
-            &[receipt_token_mint_authority.signer_seeds().as_ref()],
+            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )
@@ -213,7 +213,7 @@ fn unlock_receipt_token<'info>(
                 from: receipt_token_lock_account.to_account_info(),
                 authority: receipt_token_lock_authority.to_account_info(),
             },
-            &[receipt_token_lock_authority.signer_seeds().as_ref()],
+            &[receipt_token_lock_authority.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )
@@ -227,7 +227,7 @@ fn unlock_receipt_token<'info>(
                 to: user_receipt_token_account.to_account_info(),
                 authority: receipt_token_mint_authority.to_account_info(),
             },
-            &[receipt_token_mint_authority.signer_seeds().as_ref()],
+            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )

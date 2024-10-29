@@ -10,7 +10,7 @@ pub struct DepositMetadata {
 }
 
 impl DepositMetadata {
-    pub(super) fn verify_expiration(&self, current_timestamp: i64) -> Result<()> {
+    pub(super) fn assert_metadata_not_exipred(&self, current_timestamp: i64) -> Result<()> {
         require_gte!(
             self.expired_at,
             current_timestamp,

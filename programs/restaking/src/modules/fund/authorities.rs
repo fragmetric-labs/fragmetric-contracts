@@ -13,11 +13,11 @@ pub struct ReceiptTokenLockAuthority {
 impl PDASeeds<2> for ReceiptTokenLockAuthority {
     const SEED: &'static [u8] = b"receipt_token_lock_authority";
 
-    fn seeds(&self) -> [&[u8]; 2] {
+    fn get_seeds(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
@@ -46,7 +46,7 @@ pub struct SupportedTokenAuthority {
 impl PDASeeds<3> for SupportedTokenAuthority {
     const SEED: &'static [u8] = b"supported_token_authority";
 
-    fn seeds(&self) -> [&[u8]; 3] {
+    fn get_seeds(&self) -> [&[u8]; 3] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
@@ -54,7 +54,7 @@ impl PDASeeds<3> for SupportedTokenAuthority {
         ]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }
@@ -88,11 +88,11 @@ pub struct ReceiptTokenMintAuthority {
 impl PDASeeds<2> for ReceiptTokenMintAuthority {
     const SEED: &'static [u8] = b"receipt_token_mint_authority";
 
-    fn seeds(&self) -> [&[u8]; 2] {
+    fn get_seeds(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
-    fn bump_ref(&self) -> &u8 {
+    fn get_bump_ref(&self) -> &u8 {
         &self.bump
     }
 }

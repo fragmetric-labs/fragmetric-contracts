@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::*;
 
-pub(in crate::modules) fn pricing_sources_map<'info>(
+pub(in crate::modules) fn create_pricing_sources_map<'info>(
     accounts: &'info [AccountInfo<'info>],
 ) -> BTreeMap<Pubkey, &'info AccountInfo<'info>> {
     accounts
@@ -19,38 +19,33 @@ pub(in crate::modules) fn calculate_token_value<'info>(
     source: &TokenPricingSource,
     amount: u64,
 ) -> Result<TokenValue> {
-    token_value_calculator(pricing_source_accounts, source)?.calculate_token_value(amount)
+    create_token_value_calculator(pricing_source_accounts, source)?.calculate_token_value(amount)
 }
 
-fn token_value_calculator<'info>(
+fn create_token_value_calculator<'info>(
     pricing_source_accounts: &BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     source: &TokenPricingSource,
 ) -> Result<Box<dyn TokenValueCalculator>> {
     match source {
-        TokenPricingSource::SPLStakePool { address } => {
-            let account = find_token_pricing_source_by_key(pricing_source_accounts, address)?;
-            Ok(Box::new(
-                Account::<SplStakePool>::try_from(account)?.into_inner(),
-            ))
-        }
-        TokenPricingSource::MarinadeStakePool { address } => {
-            let account = find_token_pricing_source_by_key(pricing_source_accounts, address)?;
-            Ok(Box::new(
-                Account::<MarinadeStakePool>::try_from(account)?.into_inner(),
-            ))
-        }
+        TokenPricingSource::SPLStakePool { address } => Ok(Box::new(
+            Account::<SplStakePool>::try_from(
+                pricing_source_accounts
+                    .get(address)
+                    .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?,
+            )?
+            .into_inner(),
+        )),
+        TokenPricingSource::MarinadeStakePool { address } => Ok(Box::new(
+            Account::<MarinadeStakePool>::try_from(
+                pricing_source_accounts
+                    .get(address)
+                    .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?,
+            )?
+            .into_inner(),
+        )),
         #[cfg(test)]
         TokenPricingSource::Mock => Ok(Box::new(MockPriceSource)),
     }
-}
-
-fn find_token_pricing_source_by_key<'info>(
-    pricing_source_accounts: &BTreeMap<Pubkey, &'info AccountInfo<'info>>,
-    key: &Pubkey,
-) -> Result<&'info AccountInfo<'info>> {
-    Ok(*pricing_source_accounts
-        .get(key)
-        .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?)
 }
 
 #[cfg(test)]

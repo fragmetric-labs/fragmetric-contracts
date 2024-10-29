@@ -18,7 +18,7 @@ pub struct OperatorFundContext<'info> {
 
     #[account(
         seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_lock_authority.bump(),
+        bump = receipt_token_lock_authority.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
@@ -36,7 +36,7 @@ pub struct OperatorFundContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.bump(),
+        bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]

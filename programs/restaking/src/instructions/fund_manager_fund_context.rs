@@ -17,7 +17,7 @@ pub struct FundManagerFundContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.bump(),
+        bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]

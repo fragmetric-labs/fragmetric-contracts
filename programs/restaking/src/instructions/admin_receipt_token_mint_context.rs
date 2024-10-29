@@ -77,7 +77,7 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
 
     #[account(
         seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.bump(),
+        bump = receipt_token_mint_authority.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
