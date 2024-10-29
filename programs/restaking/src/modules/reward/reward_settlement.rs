@@ -47,14 +47,17 @@ impl RewardSettlement {
         self.settlement_blocks_last_reward_pool_contribution = 0;
     }
 
+    #[inline(always)]
     pub(super) fn get_reward_id(&self) -> u16 {
         self.reward_id
     }
 
+    #[inline(always)]
     fn is_settlement_blocks_full(&self) -> bool {
         self.num_settlement_blocks as usize == REWARD_SETTLEMENT_BLOCK_MAX_LEN
     }
 
+    #[inline(always)]
     fn is_settlement_blocks_empty(&self) -> bool {
         self.num_settlement_blocks == 0
     }
@@ -208,14 +211,17 @@ impl RewardSettlementBlock {
         Ok(())
     }
 
+    #[inline(always)]
     pub(super) fn get_amount(&self) -> u64 {
         self.amount
     }
 
+    #[inline(always)]
     pub(super) fn get_starting_slot(&self) -> u64 {
         self.starting_slot
     }
 
+    #[inline(always)]
     pub(super) fn get_ending_slot(&self) -> u64 {
         self.ending_slot
     }

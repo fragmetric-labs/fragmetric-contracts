@@ -64,10 +64,12 @@ impl UserRewardAccount {
         // }
     }
 
+    #[inline(always)]
     pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
         self.initialize(self.bump, receipt_token_mint, user);
     }
 
+    #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == USER_REWARD_ACCOUNT_CURRENT_VERSION
     }
@@ -92,10 +94,12 @@ impl UserRewardAccount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_user_reward_pools_mut(&mut self) -> &mut [UserRewardPool] {
         &mut self.user_reward_pools_1
     }
 
+    #[inline(always)]
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut UserRewardPool> {
@@ -179,10 +183,12 @@ impl UserRewardPool {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_reward_settlements_mut(&mut self) -> &mut [UserRewardSettlement] {
         &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
     }
 
+    #[inline(always)]
     fn get_reward_settlements_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut UserRewardSettlement> {
@@ -288,7 +294,7 @@ impl UserRewardPool {
                 //     0
                 // };
 
-                user_reward_settlement.get_settle_reward(
+                user_reward_settlement.settle_reward(
                     user_block_settled_amount,
                     user_block_settled_contribution,
                     block.get_ending_slot(),

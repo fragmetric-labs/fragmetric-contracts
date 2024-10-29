@@ -40,10 +40,12 @@ impl TokenAllocatedAmount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_records_mut(&mut self) -> &mut [TokenAllocatedAmountRecord] {
         &mut self.records[..self.num_records as usize]
     }
 
+    #[inline(always)]
     fn get_records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
         self.get_records_mut().iter_mut()
     }
@@ -97,7 +99,10 @@ impl TokenAllocatedAmount {
         let contribution_accrual_rate = delta.contribution_accrual_rate.unwrap();
 
         if let Some(existing_record) = self.get_record_mut(contribution_accrual_rate) {
-            existing_record.add_amount(delta.amount)?;
+            existing_record.amount = existing_record
+                .amount
+                .checked_add(delta.amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         } else {
             self.add_new_record(delta.amount, contribution_accrual_rate)?;
             self.get_records_mut()
@@ -129,7 +134,10 @@ impl TokenAllocatedAmount {
                 // SAFE: already checked that contribution_accrual_rate exists
                 .get_record_mut(delta.contribution_accrual_rate.unwrap())
                 .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
-            record.sub_amount(delta.amount)?;
+            record.amount = record
+                .amount
+                .checked_sub(delta.amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
             deltas.push(delta);
         } else {
             let mut remaining_delta_amount = delta.amount;
@@ -140,8 +148,7 @@ impl TokenAllocatedAmount {
 
                 let amount = std::cmp::min(record.amount, remaining_delta_amount);
                 if amount > 0 {
-                    // SAFE: amount is less then or equal to record.amount
-                    record.sub_amount(amount).unwrap();
+                    record.amount -= amount;
                     remaining_delta_amount -= amount;
                     deltas.push(TokenAllocatedAmountDelta {
                         contribution_accrual_rate: Some(record.contribution_accrual_rate),
@@ -170,23 +177,6 @@ impl TokenAllocatedAmountRecord {
     fn initialize(&mut self, amount: u64, contribution_accrual_rate: u8) {
         self.amount = amount;
         self.contribution_accrual_rate = contribution_accrual_rate;
-    }
-
-    fn add_amount(&mut self, amount: u64) -> Result<()> {
-        self.amount = self
-            .amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        Ok(())
-    }
-
-    fn sub_amount(&mut self, amount: u64) -> Result<()> {
-        self.amount = self
-            .amount
-            .checked_sub(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
     }
 
     /// Contribution accrual rate multiplied by amount (decimals = 2)

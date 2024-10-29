@@ -69,6 +69,7 @@ impl Holder {
         Ok(())
     }
 
+    #[inline(always)]
     pub(super) fn get_id(&self) -> u8 {
         self.id
     }
@@ -81,6 +82,7 @@ impl Holder {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_pubkeys(&self) -> &[Pubkey] {
         &self.pubkeys_1[..self.num_pubkeys as usize]
     }

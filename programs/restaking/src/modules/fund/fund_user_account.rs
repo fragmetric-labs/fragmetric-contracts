@@ -50,6 +50,7 @@ impl UserFundAccount {
         }
     }
 
+    #[inline(always)]
     pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
         self.initialize(self.bump, receipt_token_mint, user);
     }

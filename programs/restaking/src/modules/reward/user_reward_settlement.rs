@@ -23,15 +23,17 @@ impl UserRewardSettlement {
         self.claimed_amount = 0;
     }
 
+    #[inline(always)]
     pub(super) fn get_reward_id(&self) -> u16 {
         self.reward_id
     }
 
+    #[inline(always)]
     pub(super) fn get_settled_contribution(&self) -> u128 {
         self.settled_contribution
     }
 
-    pub(super) fn get_settle_reward(
+    pub(super) fn settle_reward(
         &mut self,
         amount: u64,
         contribution: u128,

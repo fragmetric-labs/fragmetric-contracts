@@ -21,6 +21,7 @@ impl DepositMetadata {
     }
 
     /// Returns (wallet_provider, contribution_accrual_rate)
+    #[inline(always)]
     pub(super) fn split(self) -> (String, u8) {
         (self.wallet_provider, self.contribution_accrual_rate)
     }

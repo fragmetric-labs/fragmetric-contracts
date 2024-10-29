@@ -14,6 +14,7 @@ pub(in crate::modules) fn create_pricing_sources_map<'info>(
         .collect()
 }
 
+#[inline(always)]
 pub(in crate::modules) fn calculate_token_value<'info>(
     pricing_source_accounts: &BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     source: &TokenPricingSource,

@@ -58,18 +58,22 @@ impl FundAccount {
         }
     }
 
+    #[inline(always)]
     pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
         self.initialize(self.bump, receipt_token_mint);
     }
 
+    #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
         self.supported_tokens.iter()
     }
 
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SupportedTokenInfo> {
@@ -220,6 +224,7 @@ impl SupportedTokenInfo {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
+    #[inline(always)]
     pub(super) fn get_pricing_source(&self) -> &TokenPricingSource {
         &self.pricing_source
     }
@@ -320,18 +325,22 @@ impl WithdrawalStatus {
     /// 1 fee rate = 1bps = 0.01%
     const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
 
+    #[inline(always)]
     pub(super) fn get_last_completed_batch_id(&self) -> u64 {
         self.last_completed_batch_id
     }
 
+    #[inline(always)]
     pub(super) fn get_sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
         self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
 
+    #[inline(always)]
     pub(super) fn get_withdrawal_enabled_flag(&self) -> bool {
         self.withdrawal_enabled_flag
     }
 
+    #[inline(always)]
     pub(super) fn get_sol_withdrawal_reserved_amount(&self) -> u64 {
         self.sol_withdrawal_reserved_amount
     }
@@ -601,6 +610,7 @@ impl BatchWithdrawal {
         Ok(())
     }
 
+    #[inline(always)]
     fn is_completed(&self) -> bool {
         self.processing_started_at.is_some()
             && self.receipt_token_to_process == 0
@@ -674,10 +684,12 @@ impl WithdrawalRequest {
         }
     }
 
+    #[inline(always)]
     pub(super) fn get_batch_id(&self) -> u64 {
         self.batch_id
     }
 
+    #[inline(always)]
     pub(super) fn get_request_id(&self) -> u64 {
         self.request_id
     }

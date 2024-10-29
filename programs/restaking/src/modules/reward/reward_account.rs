@@ -68,10 +68,12 @@ impl RewardAccount {
         // }
     }
 
+    #[inline(always)]
     pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
         self.initialize(self.bump, receipt_token_mint);
     }
 
+    #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == REWARD_ACCOUNT_CURRENT_VERSION
     }
@@ -318,40 +320,48 @@ impl RewardAccount {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_holders(&self) -> &[Holder] {
         &self.holders_1[..self.num_holders as usize]
     }
 
+    #[inline(always)]
     fn get_holders_iter(&self) -> impl Iterator<Item = &Holder> {
         self.get_holders().iter()
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_rewards(&self) -> &[Reward] {
         &self.rewards_1[..self.num_rewards as usize]
     }
 
+    #[inline(always)]
     fn get_rewards_iter(&self) -> impl Iterator<Item = &Reward> {
         self.get_rewards().iter()
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_reward_pools(&self) -> &[RewardPool] {
         &self.reward_pools_1[..self.num_reward_pools as usize]
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_reward_pools_mut(&mut self) -> &mut [RewardPool] {
         &mut self.reward_pools_1[..self.num_reward_pools as usize]
     }
 
+    #[inline(always)]
     fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
         self.get_reward_pools().iter()
     }
 
+    #[inline(always)]
     fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
         self.get_reward_pools_mut().iter_mut()
     }
@@ -445,6 +455,7 @@ impl RewardPool {
         Ok(())
     }
 
+    #[inline(always)]
     pub(super) fn get_id(&self) -> u8 {
         self.id
     }
@@ -455,18 +466,22 @@ impl RewardPool {
             .trim_matches('\0'))
     }
 
+    #[inline(always)]
     fn is_custom_contribution_accrual_rate_enabled(&self) -> bool {
         self.reward_pool_bitmap & Self::CUSTOM_CONTRIBUTION_ACCRUAL_RATE_ENABLED_BIT > 0
     }
 
+    #[inline(always)]
     pub(super) fn get_initial_slot(&self) -> u64 {
         self.initial_slot
     }
 
+    #[inline(always)]
     pub(super) fn get_closed_slot(&self) -> Option<u64> {
         self.is_closed().then_some(self.closed_slot)
     }
 
+    #[inline(always)]
     fn is_closed(&self) -> bool {
         self.reward_pool_bitmap & Self::IS_CLOSED_BIT > 0
     }
@@ -476,6 +491,7 @@ impl RewardPool {
         self.closed_slot = closed_slot;
     }
 
+    #[inline(always)]
     fn get_holder_id(&self) -> Option<u8> {
         (self.reward_pool_bitmap & Self::HAS_HOLDER_BIT > 0).then_some(self.holder_id)
     }
@@ -500,10 +516,12 @@ impl RewardPool {
 
     /// How to integrate multiple fields into a single array slice or whatever...
     /// You may change the return type if needed
+    #[inline(always)]
     fn get_reward_settlements_mut(&mut self) -> &mut [RewardSettlement] {
         &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
     }
 
+    #[inline(always)]
     pub(super) fn get_reward_settlements_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlement> {
