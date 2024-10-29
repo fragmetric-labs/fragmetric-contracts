@@ -120,9 +120,8 @@ pub fn process_withdraw(
     emit!(events::UserWithdrewSOLFromFund {
         receipt_token_mint: fund_account.receipt_token_mint,
         fund_account: FundAccountInfo::from(
-            fund_account.as_ref(),
-            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
-            receipt_token_mint.supply
+            fund_account,
+            receipt_token_mint,
         ),
         request_id,
         user_fund_account: Clone::clone(user_fund_account),

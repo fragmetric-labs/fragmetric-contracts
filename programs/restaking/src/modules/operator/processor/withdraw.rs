@@ -90,15 +90,11 @@ pub fn process_process_fund_withdrawal_job<'info>(
         .withdrawal
         .end_processing_completed_batch_withdrawals(current_timestamp)?;
 
-    let one_receipt_token_as_sol =
-        fund::get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?;
-
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            one_receipt_token_as_sol,
-            receipt_token_mint.supply,
+            receipt_token_mint,
         ),
     });
 

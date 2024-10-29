@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-
+use anchor_spl::token_interface::Mint;
+use crate::modules::fund;
 use super::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -20,14 +21,13 @@ pub struct FundAccountInfo {
 impl FundAccountInfo {
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn from(
-        fund_account: &FundAccount,
-        one_receipt_token_as_sol: u64,
-        receipt_token_supply_amount: u64,
+        fund_account: &Account<FundAccount>,
+        receipt_token_mint: &InterfaceAccount<Mint>,
     ) -> Self {
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
-            one_receipt_token_as_sol,
-            receipt_token_supply_amount,
+            one_receipt_token_as_sol: get_one_receipt_token_as_sol(receipt_token_mint, fund_account).unwrap(),
+            receipt_token_supply_amount: receipt_token_mint.supply,
             supported_tokens: fund_account.get_supported_tokens_iter().cloned().collect(),
             sol_capacity_amount: fund_account.get_sol_capacity_amount(),
             sol_accumulated_deposit_amount: fund_account.get_sol_accumulated_deposit_amount(),
