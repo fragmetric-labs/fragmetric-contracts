@@ -10,10 +10,12 @@ mod instructions;
 
 use constants::*;
 use instructions::*;
+use modules::restaking::jito::*;
 
 #[program]
 pub mod restaking {
     use super::*;
+
 
     ////////////////////////////////////////////
     // AdminFundInitialContext
