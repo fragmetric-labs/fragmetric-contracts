@@ -289,10 +289,11 @@ pub mod restaking {
         description: String,
         reward_type: modules::reward::RewardType,
     ) -> Result<()> {
-        ctx.accounts.check_reward_type_constraint(&reward_type)?;
         modules::reward::process_add_reward(
             &ctx.accounts.receipt_token_mint,
+            ctx.accounts.reward_token_mint.as_deref(),
             &mut ctx.accounts.reward_account,
+            ctx.accounts.reward_token_program.as_ref(),
             name,
             description,
             reward_type,

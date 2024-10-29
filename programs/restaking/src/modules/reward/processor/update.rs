@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenInterface};
 
+use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::reward::*;
 use crate::utils::AccountLoaderExt;
@@ -120,11 +121,15 @@ pub fn process_close_reward_pool(
 
 pub fn process_add_reward(
     receipt_token_mint: &InterfaceAccount<Mint>,
+    reward_token_mint: Option<&InterfaceAccount<Mint>>,
     reward_account: &mut AccountLoader<RewardAccount>,
+    reward_token_program: Option<&Interface<TokenInterface>>,
     name: String,
     description: String,
     reward_type: RewardType,
 ) -> Result<()> {
+    validate_token_reward_type(reward_token_mint, reward_token_program, &reward_type)?;
+
     reward_account
         .load_mut()?
         .add_new_reward(name, description, reward_type)?;
@@ -193,6 +198,42 @@ pub(in crate::modules) fn update_reward_pools_token_allocation(
         receipt_token_mint,
         updated_user_reward_account_addresses,
     });
+
+    Ok(())
+}
+
+pub(super) fn validate_token_reward_type(
+    reward_token_mint: Option<&InterfaceAccount<Mint>>,
+    reward_token_program: Option<&Interface<TokenInterface>>,
+    reward_type: &RewardType,
+) -> Result<()> {
+    if let RewardType::Token {
+        mint,
+        program,
+        decimals,
+    } = reward_type
+    {
+        let (expected_mint, expected_program) = match (reward_token_mint, reward_token_program) {
+            (Some(mint), Some(program)) => (mint, program),
+            _ => err!(ErrorCode::RewardInvalidRewardType)?,
+        };
+
+        require_keys_eq!(
+            *mint,
+            expected_mint.key(),
+            ErrorCode::RewardInvalidRewardType,
+        );
+        require_keys_eq!(
+            *program,
+            expected_program.key(),
+            ErrorCode::RewardInvalidRewardType,
+        );
+        require_eq!(
+            *decimals,
+            expected_mint.decimals,
+            ErrorCode::RewardInvalidRewardType,
+        );
+    }
 
     Ok(())
 }
