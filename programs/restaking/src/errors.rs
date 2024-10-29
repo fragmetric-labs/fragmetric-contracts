@@ -157,4 +157,16 @@ pub enum ErrorCode {
 
     #[msg("fund: signature has expired")]
     FundDepositMetadataSignatureExpiredError,
+
+    #[msg("invalid data account version")]
+    InvalidDataVersionError,
+
+    #[msg("fund: exceeded max batch withdrawals in progress")]
+    FundExceededMaxBatchWithdrawalInProgressError,
+
+    #[msg("fund: exceeded max supported tokens")]
+    FundExceededMaxSupportedTokensError,
+
+    #[msg("fund: invalid sol withdrawal fee rate")]
+    FundInvalidSolWithdrawalFeeRateError,
 }

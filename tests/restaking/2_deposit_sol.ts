@@ -20,7 +20,7 @@ describe("deposit_sol", async () => {
 
     step("user1 deposits SOL without metadata to mint fragSOL", async function () {
         const res0 = await restaking.runOperatorUpdatePrices();
-        expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
+        expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
 
         const amount = new BN(10 * anchor.web3.LAMPORTS_PER_SOL);
@@ -43,7 +43,7 @@ describe("deposit_sol", async () => {
         expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(amount.toString());
 
         const res2 = await restaking.runOperatorUpdatePrices();
-        expect(res2.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toString()).eq((amount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** restaking.fragSOLDecimals))).toString());
+        expect(res2.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toString()).eq((amount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** restaking.fragSOLDecimals))).toString());
         expect(res2.fragSOLFundBalance.sub(res0.fragSOLFundBalance).toString()).eq(amount.toString());
     });
 

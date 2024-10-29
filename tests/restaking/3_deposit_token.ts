@@ -27,9 +27,9 @@ describe("deposit_token", async () => {
 
     step("user3 deposits supported token without metadata to mint fragSOL", async function () {
         const res0 = await restaking.runOperatorUpdatePrices();
-        expect(res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice.toNumber()).greaterThan(0);
+        expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber()).greaterThan(0);
         expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
-        const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice;
+        const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol;
 
         const decimals = 10 ** 9;
         const amount = new BN(10 * decimals);
@@ -39,11 +39,11 @@ describe("deposit_token", async () => {
 
         expect(new BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new BN(initialTokenAmount).sub(amount).toString());
         expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.toString()).eq(amount.toString());
-        const fragSOLPrice1 = res1.event.userDepositedSupportedTokenToFund.fundAccount.receiptTokenPrice;
+        const fragSOLPrice1 = res1.event.userDepositedSupportedTokenToFund.fundAccount.oneReceiptTokenAsSol;
 
         expect(fragSOLPrice0.toString()).eq(fragSOLPrice1.toString()); // price is consistent upon deposits
 
-        const tokenPrice = res1.fragSOLFund.supportedTokens[0].price;
+        const tokenPrice = res1.fragSOLFund.supportedTokens[0].oneTokenAsSol;
         expect(tokenPrice.mul(amount).div(fragSOLPrice1).toString()).eq(res1.fragSOLUserTokenAccount.amount.toString()); // proper amount minted?
 
         expect(res1.event.userDepositedSupportedTokenToFund.walletProvider).null;

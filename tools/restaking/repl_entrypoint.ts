@@ -2,6 +2,7 @@ import {getKeychain, KEYCHAIN_ENV} from "./keychain";
 import {askOnce, startREPL} from "../lib/repl";
 import {RestakingPlayground} from "./playground";
 import * as anchor from "@coral-xyz/anchor";
+import {BN} from "@coral-xyz/anchor";
 import * as web3 from "@solana/web3.js";
 
 if (process.argv.length > 2) {
@@ -20,6 +21,7 @@ function run(env: KEYCHAIN_ENV) {
                 prompt: `${restaking.connection.rpcEndpoint} > `,
                 context: {
                     restaking,
+                    BN,
                 },
             });
         })

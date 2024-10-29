@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
@@ -24,21 +25,16 @@ pub struct AdminRewardAccountInitialContext<'info> {
         payer = payer,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = 10 * 1024,
+        space = std::cmp::min(
+            solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
+            8 + std::mem::size_of::<RewardAccount>(),
+        ),
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 }
 
-impl<'info> AdminRewardAccountInitialContext<'info> {
-    pub fn initialize_reward_account(ctx: Context<Self>) -> Result<()> {
-        ctx.accounts
-            .reward_account
-            .initialize_zero_copy_header(ctx.bumps.reward_account)
-    }
-}
-
 #[derive(Accounts)]
-pub struct AdminRewardContext<'info> {
+pub struct AdminRewardAccountUpdateContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -53,33 +49,7 @@ pub struct AdminRewardContext<'info> {
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = reward_account.bump()?,
-        // DO NOT Use has_one constraint, since reward_account is not safe yet
+        bump = reward_account.get_bump()?,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
-}
-
-impl<'info> AdminRewardContext<'info> {
-    pub fn update_accounts_if_needed(
-        ctx: Context<Self>,
-        desired_account_size: Option<u32>,
-        initialize: bool,
-    ) -> Result<()> {
-        ctx.accounts.reward_account.expand_account_size_if_needed(
-            &ctx.accounts.payer,
-            &ctx.accounts.system_program,
-            desired_account_size,
-            initialize,
-        )?;
-
-        if initialize {
-            let bump = ctx.accounts.reward_account.bump()?;
-            ctx.accounts
-                .reward_account
-                .load_mut()?
-                .update_if_needed(bump, ctx.accounts.receipt_token_mint.key());
-        }
-
-        Ok(())
-    }
 }
