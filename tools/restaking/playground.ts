@@ -449,7 +449,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 .fill(null)
                 .map((_, index, arr) =>
                     this.program.methods
-                        .adminUpdateRewardAccountsIfNeeded(null, index == arr.length - 1)
+                        .adminUpdateRewardAccountsIfNeeded(null)
                         .accounts({ payer: this.wallet.publicKey })
                         .instruction()
                 ),
@@ -579,7 +579,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             .instruction(),
                         this.program.methods
                             .fundManagerInitializeSupportedTokenAccount()
-                            .accounts({
+                            .accountsPartial({
                                 payer: this.wallet.publicKey,
                                 supportedTokenMint: v.mint,
                                 supportedTokenProgram: v.program,
@@ -590,7 +590,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                 v.capacity,
                                 v.pricingSource,
                             )
-                            .accounts({
+                            .accountsPartial({
                                 supportedTokenMint: v.mint,
                                 supportedTokenProgram: v.program,
                             })

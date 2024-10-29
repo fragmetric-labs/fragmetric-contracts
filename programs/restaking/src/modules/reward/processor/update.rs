@@ -12,16 +12,10 @@ pub fn process_update_reward_account_if_needed<'info>(
     reward_account: &AccountLoader<'info, RewardAccount>,
     system_program: &Program<'info, System>,
     desired_account_size: Option<u32>,
-    initialize: bool,
 ) -> Result<()> {
-    reward_account.expand_account_size_if_needed(
-        payer,
-        system_program,
-        desired_account_size,
-        initialize,
-    )?;
+    reward_account.expand_account_size_if_needed(payer, system_program, desired_account_size)?;
 
-    if initialize {
+    if reward_account.as_ref().data_len() >= 8 + std::mem::size_of::<RewardAccount>() {
         reward_account
             .load_mut()?
             .update_if_needed(receipt_token_mint.key());
@@ -36,16 +30,14 @@ pub fn process_update_user_reward_account_if_needed<'info>(
     user_reward_account: &AccountLoader<'info, UserRewardAccount>,
     system_program: &Program<'info, System>,
     desired_account_size: Option<u32>,
-    initialize: bool,
 ) -> Result<()> {
     user_reward_account.expand_account_size_if_needed(
         user,
         system_program,
         desired_account_size,
-        initialize,
     )?;
 
-    if initialize {
+    if user_reward_account.as_ref().data_len() >= 8 + std::mem::size_of::<UserRewardAccount>() {
         user_reward_account
             .load_mut()?
             .update_if_needed(receipt_token_mint.key(), user.key());

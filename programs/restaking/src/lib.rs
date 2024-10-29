@@ -116,7 +116,6 @@ pub mod restaking {
     pub fn admin_update_reward_accounts_if_needed(
         ctx: Context<AdminRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
-        initialize: bool,
     ) -> Result<()> {
         modules::reward::process_update_reward_account_if_needed(
             &ctx.accounts.payer,
@@ -124,7 +123,6 @@ pub mod restaking {
             &ctx.accounts.reward_account,
             &ctx.accounts.system_program,
             desired_account_size,
-            initialize,
         )
     }
 
@@ -533,10 +531,11 @@ pub mod restaking {
     // UserRewardContext
     ////////////////////////////////////////////
 
+    #[allow(unused_variables)]
     pub fn user_update_reward_accounts_if_needed(
         ctx: Context<UserRewardContext>,
         desired_account_size: Option<u32>,
-        initialize: bool,
+        initialize: bool, // deprecated
     ) -> Result<()> {
         modules::reward::process_update_user_reward_account_if_needed(
             &ctx.accounts.user,
@@ -544,7 +543,6 @@ pub mod restaking {
             &ctx.accounts.user_reward_account,
             &ctx.accounts.system_program,
             desired_account_size,
-            initialize,
         )
     }
 

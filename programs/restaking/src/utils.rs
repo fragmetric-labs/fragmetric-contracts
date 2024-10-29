@@ -47,7 +47,6 @@ pub trait AccountLoaderExt<'info> {
         payer: &Signer<'info>,
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
-        assert_size: bool,
     ) -> Result<()>;
 }
 
@@ -95,7 +94,6 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         payer: &Signer<'info>,
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
-        assert_size: bool,
     ) -> Result<()> {
         let account_info = self.as_ref();
 
@@ -133,9 +131,6 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
             let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
             let increase = std::cmp::min(required_realloc_size, max_increase);
             let new_account_size = current_account_size + increase;
-            if assert_size && new_account_size < target_account_size {
-                return Err(crate::errors::ErrorCode::AccountUnmetDesiredReallocSizeError)?;
-            }
 
             account_info.realloc(new_account_size, false)?;
             msg!(
