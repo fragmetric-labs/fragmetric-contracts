@@ -93,6 +93,7 @@ impl TokenAllocatedAmount {
     fn add(&mut self, mut delta: TokenAllocatedAmountDelta) -> Result<TokenAllocatedAmountDelta> {
         delta.check_valid_addition()?;
         delta.set_default_contribution_accrual_rate();
+        // SAFE: contribution_accrual_rate is set to default if not exist
         let contribution_accrual_rate = delta.contribution_accrual_rate.unwrap();
 
         if let Some(existing_record) = self.record_mut(contribution_accrual_rate) {
@@ -125,6 +126,7 @@ impl TokenAllocatedAmount {
         let mut deltas = vec![];
         if delta.contribution_accrual_rate.is_some_and(|r| r != 100) {
             let record = self
+                // SAFE: already checked that contribution_accrual_rate exists
                 .record_mut(delta.contribution_accrual_rate.unwrap())
                 .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
             record.sub_amount(delta.amount)?;
@@ -138,6 +140,7 @@ impl TokenAllocatedAmount {
 
                 let amount = std::cmp::min(record.amount, remaining_delta_amount);
                 if amount > 0 {
+                    // SAFE: amount is less then or equal to record.amount
                     record.sub_amount(amount).unwrap();
                     remaining_delta_amount -= amount;
                     deltas.push(TokenAllocatedAmountDelta {
