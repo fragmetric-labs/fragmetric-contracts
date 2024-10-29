@@ -1,8 +1,9 @@
 import * as anchor from '@coral-xyz/anchor';
+import {web3, AnchorError, IdlEvents} from '@coral-xyz/anchor';
+import * as sweb3 from '@solana/web3.js';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
-import {AnchorError, IdlEvents} from "@coral-xyz/anchor";
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes/index';
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 
@@ -51,8 +52,8 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 
     public async run<EVENTS extends ExtractEventNames<IDL>>(args: {
-        instructions: (Promise<anchor.web3.TransactionInstruction> | anchor.web3.TransactionInstruction)[],
-        signers?: anchor.web3.Signer[],
+        instructions: (Promise<web3.TransactionInstruction> | web3.TransactionInstruction)[],
+        signers?: web3.Signer[],
         signerNames?: KEYS[],
         events?: EVENTS[],
     }) {
@@ -60,7 +61,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         try {
             // prepare instructions
             let {instructions, signers = [], signerNames = []} = args;
-            const tx = new anchor.web3.Transaction()
+            const tx = new web3.Transaction()
                 .add(
                     ...await Promise.all(instructions)
                 );
@@ -88,7 +89,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
             // send transaction
             txSig = bs58.encode(tx.signature);
-            await anchor.web3.sendAndConfirmRawTransaction(
+            await web3.sendAndConfirmRawTransaction(
                 this.provider.connection,
                 tx.serialize(),
                 {
@@ -131,11 +132,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.wallet.publicKey.toString();
     }
 
-    public get connection() {
-        return this.provider.connection;
+    public get connection(): sweb3.Connection {
+        return this.provider.connection as unknown as sweb3.Connection;
     }
 
-    public get programId(): anchor.web3.PublicKey {
+    public get programId(): web3.PublicKey {
         return this.program.programId;
     }
 
@@ -147,11 +148,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.program.account;
     }
 
-    public async tryAirdrop(account: anchor.web3.PublicKey, sol = 100) {
+    public async tryAirdrop(account: web3.PublicKey, sol = 100) {
         let [txSig, { blockhash, lastValidBlockHeight }] = await Promise.all([
             this.connection.requestAirdrop(
                 account,
-                sol * anchor.web3.LAMPORTS_PER_SOL
+                sol * web3.LAMPORTS_PER_SOL
             ),
             this.connection.getLatestBlockhash(),
         ]);
@@ -171,19 +172,19 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 
     public get isMaybeDevnet(): boolean {
-        return this.connection.rpcEndpoint == anchor.web3.clusterApiUrl('devnet');
+        return this.connection.rpcEndpoint == web3.clusterApiUrl('devnet');
     }
 
     public get isMaybeMainnetBeta(): boolean {
-        return this.connection.rpcEndpoint == anchor.web3.clusterApiUrl("mainnet-beta");
+        return this.connection.rpcEndpoint == web3.clusterApiUrl("mainnet-beta");
     }
 
     public getConstant(name: ExtractConstantNames<IDL>): string {
         return this.program.idl.constants.find(a => a.name == name).value;
     }
 
-    public getConstantAsPublicKey(name: ExtractConstantNames<IDL>): anchor.web3.PublicKey {
-        return new anchor.web3.PublicKey(this.getConstant(name));
+    public getConstantAsPublicKey(name: ExtractConstantNames<IDL>): web3.PublicKey {
+        return new web3.PublicKey(this.getConstant(name));
     }
 
     public asType<K extends ExtractTypeNames<IDL>>(value: IdlTypes<IDL>[K]) {

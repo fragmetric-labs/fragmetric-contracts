@@ -42,6 +42,8 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
+    pub const OPERATION_RESERVED_SEED: &'static [u8] = b"operation_reserved";
+
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;

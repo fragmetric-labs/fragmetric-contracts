@@ -1,10 +1,9 @@
-import * as anchor from "@coral-xyz/anchor";
 // @ts-ignore
-import * as spl from "@solana/spl-token";
-import {BN} from "@coral-xyz/anchor";
-import {expect} from "chai";
-import {step} from "mocha-steps";
-import {restakingPlayground} from "../restaking";
+import * as spl from '@solana/spl-token-3.x';
+import {BN} from '@coral-xyz/anchor';
+import {expect} from 'chai';
+import {step} from 'mocha-steps';
+import {restakingPlayground} from '../restaking';
 
 describe("transfer_hook", async function () {
     const restaking = await restakingPlayground;
