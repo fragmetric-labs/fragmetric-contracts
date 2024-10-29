@@ -345,10 +345,22 @@ impl WithdrawalStatus {
         self.sol_withdrawal_reserved_amount
     }
 
-    pub(super) fn set_sol_withdrawal_fee_rate(&mut self, sol_withdrawal_fee_rate: u16) {
+    pub(super) fn set_sol_withdrawal_fee_rate(
+        &mut self,
+        sol_withdrawal_fee_rate: u16,
+    ) -> Result<()> {
+        require_gte!(
+            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
+            sol_withdrawal_fee_rate as u64,
+            ErrorCode::FundInvalidSolWithdrawalFeeRateError
+        );
+
         self.sol_withdrawal_fee_rate = sol_withdrawal_fee_rate;
+
+        Ok(())
     }
 
+    #[inline(always)]
     pub(super) fn set_withdrawal_enabled_flag(&mut self, enabled: bool) {
         self.withdrawal_enabled_flag = enabled;
     }

@@ -72,7 +72,7 @@ pub fn process_update_sol_withdrawal_fee_rate(
 ) -> Result<()> {
     fund_account
         .withdrawal
-        .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate);
+        .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)?;
     emit_fund_manager_updated_fund_event(receipt_token_mint, fund_account)
 }
 
