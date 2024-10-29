@@ -26,13 +26,13 @@ pub fn process_process_fund_withdrawal_job<'info>(
             .assert_withdrawal_threshold_satisfied(current_timestamp)?;
     }
 
-    fund::update_prices(fund_account, pricing_sources)?;
+    fund::update_asset_prices(fund_account, pricing_sources)?;
 
     fund_account
         .withdrawal
         .start_processing_pending_batch_withdrawal(current_timestamp)?;
 
-    let total_sol_value_in_fund = fund_account.get_assets_total_amount_as_sol()?;
+    let assets_total_amount_as_sol = fund_account.get_assets_total_amount_as_sol()?;
     let mut receipt_token_amount_to_burn: u64 = 0;
     for batch in &mut fund_account.withdrawal.batch_withdrawals_in_progress {
         let amount = batch.receipt_token_to_process;
@@ -57,7 +57,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
         let sol_reserved_amount = crate::utils::get_proportional_amount(
             receipt_token_amount,
-            total_sol_value_in_fund,
+            assets_total_amount_as_sol,
             receipt_token_mint.supply,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
@@ -90,13 +90,14 @@ pub fn process_process_fund_withdrawal_job<'info>(
         .withdrawal
         .end_processing_completed_batch_withdrawals(current_timestamp)?;
 
-    let receipt_token_price = fund::receipt_token_price(receipt_token_mint, fund_account)?;
+    let one_receipt_token_as_sol =
+        fund::get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?;
 
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            receipt_token_price,
+            one_receipt_token_as_sol,
             receipt_token_mint.supply,
         ),
     });

@@ -15,18 +15,19 @@ pub(in crate::modules) fn create_pricing_sources_map<'info>(
 }
 
 #[inline(always)]
-pub(in crate::modules) fn calculate_token_value<'info>(
+pub(in crate::modules) fn calculate_token_amount_as_sol<'info>(
     pricing_source_accounts: &BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     source: &TokenPricingSource,
     amount: u64,
-) -> Result<TokenValue> {
-    create_token_value_calculator(pricing_source_accounts, source)?.calculate_token_value(amount)
+) -> Result<TokenAmount> {
+    create_token_amount_as_sol_calculator(pricing_source_accounts, source)?
+        .calculate_token_amount_as_sol(amount)
 }
 
-fn create_token_value_calculator<'info>(
+fn create_token_amount_as_sol_calculator<'info>(
     pricing_source_accounts: &BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     source: &TokenPricingSource,
-) -> Result<Box<dyn TokenValueCalculator>> {
+) -> Result<Box<dyn TokenAmountAsSOLCalculator>> {
     match source {
         TokenPricingSource::SPLStakePool { address } => Ok(Box::new(
             Account::<SplStakePool>::try_from(
@@ -54,10 +55,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mock_price() {
+    fn test_mock_pricing_source() {
         let pricing_source = TokenPricingSource::Mock;
-        let token_value =
-            calculate_token_value(&Default::default(), &pricing_source, 10000).unwrap();
-        assert!(matches!(token_value, TokenValue::SOL(12000)));
+        let token_amount =
+            calculate_token_amount_as_sol(&Default::default(), &pricing_source, 10000).unwrap();
+        assert!(matches!(token_amount, TokenAmount::SOLAmount(12000)));
     }
 }

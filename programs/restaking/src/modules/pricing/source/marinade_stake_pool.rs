@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use anchor_lang::{prelude::*, Discriminator};
 
-use super::{TokenValue, TokenValueCalculator};
+use super::{TokenAmount, TokenAmountAsSOLCalculator};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 #[cfg_attr(test, derive(InitSpace))]
@@ -184,9 +184,9 @@ impl AccountDeserialize for MarinadeStakePool {
     }
 }
 
-impl TokenValueCalculator for MarinadeStakePool {
-    fn calculate_token_value(&self, amount: u64) -> Result<TokenValue> {
-        Ok(TokenValue::SOL(self.msol_to_sol(amount)?))
+impl TokenAmountAsSOLCalculator for MarinadeStakePool {
+    fn calculate_token_amount_as_sol(&self, amount: u64) -> Result<TokenAmount> {
+        Ok(TokenAmount::SOLAmount(self.msol_to_sol(amount)?))
     }
 }
 

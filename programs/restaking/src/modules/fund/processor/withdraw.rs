@@ -121,7 +121,7 @@ pub fn process_withdraw(
         receipt_token_mint: fund_account.receipt_token_mint,
         fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
-            receipt_token_price(receipt_token_mint, fund_account)?,
+            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply
         ),
         request_id,

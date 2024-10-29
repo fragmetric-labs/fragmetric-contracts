@@ -4,7 +4,7 @@ use anchor_lang::{
     solana_program::clock::{Epoch, UnixTimestamp},
 };
 
-use super::{TokenValue, TokenValueCalculator};
+use super::{TokenAmount, TokenAmountAsSOLCalculator};
 
 #[repr(C)]
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -163,9 +163,9 @@ impl AccountDeserialize for SplStakePool {
     }
 }
 
-impl TokenValueCalculator for SplStakePool {
-    fn calculate_token_value(&self, token_amount: u64) -> Result<TokenValue> {
-        Ok(TokenValue::SOL(
+impl TokenAmountAsSOLCalculator for SplStakePool {
+    fn calculate_token_amount_as_sol(&self, token_amount: u64) -> Result<TokenAmount> {
+        Ok(TokenAmount::SOLAmount(
             self.calculate_lamports_from_pool_tokens(token_amount)?,
         ))
     }

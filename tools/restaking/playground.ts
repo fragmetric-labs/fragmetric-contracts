@@ -833,7 +833,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.connection.getBalance(this.knownAddress.fragSOLFund, 'confirmed').then(v => new BN(v)),
         ]);
 
-        logger.notice(`operator updated prices: ${this.lamportsToSOL(event.operatorUpdatedFundPrice.fundAccount.receiptTokenPrice)}/fragSOL`);
+        logger.notice(`operator updated prices: ${this.lamportsToSOL(event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol)}/fragSOL`);
         return { event, error, fragSOLFund, fragSOLFundBalance };
     }
 

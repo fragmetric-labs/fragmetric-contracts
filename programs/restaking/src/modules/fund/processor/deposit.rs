@@ -32,7 +32,7 @@ pub fn process_deposit_sol<'info>(
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, current_timestamp)?;
 
-    update_prices(fund_account, pricing_sources)?;
+    update_asset_prices(fund_account, pricing_sources)?;
     let receipt_token_mint_amount =
         receipt_token_mint_amount_for(receipt_token_mint, fund_account, sol_amount)?;
 
@@ -62,7 +62,7 @@ pub fn process_deposit_sol<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
             fund_account.as_ref(),
-            receipt_token_price(receipt_token_mint, fund_account)?,
+            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });
@@ -96,7 +96,7 @@ pub fn process_deposit_supported_token<'info>(
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, current_timestamp)?;
 
-    update_prices(fund_account, pricing_sources)?;
+    update_asset_prices(fund_account, pricing_sources)?;
     let receipt_token_mint_amount = receipt_token_mint_amount_for(
         receipt_token_mint,
         fund_account,
@@ -141,7 +141,7 @@ pub fn process_deposit_supported_token<'info>(
         contribution_accrual_rate,
         fund_account: FundAccountInfo::from(
             fund_account,
-            receipt_token_price(receipt_token_mint, fund_account)?,
+            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
             receipt_token_mint.supply,
         ),
     });

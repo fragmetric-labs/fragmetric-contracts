@@ -191,8 +191,7 @@ pub struct SupportedTokenInfo {
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
     operation_reserved_amount: u64,
-    /// Price = SOL value for denominated amount of 1 token
-    pub(super) price: u64,
+    pub(super) one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
     _reserved: [u8; 128],
 }
@@ -212,7 +211,7 @@ impl SupportedTokenInfo {
             capacity_amount,
             accumulated_deposit_amount: 0,
             operation_reserved_amount: 0,
-            price: 0,
+            one_token_as_sol: 0,
             pricing_source,
             _reserved: [0; 128],
         }
@@ -265,7 +264,7 @@ impl SupportedTokenInfo {
     pub(super) fn get_token_amount_as_sol(&self, token_amount: u64) -> Result<u64> {
         crate::utils::get_proportional_amount(
             token_amount,
-            self.price,
+            self.one_token_as_sol,
             self.get_denominated_amount_per_token()?,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))

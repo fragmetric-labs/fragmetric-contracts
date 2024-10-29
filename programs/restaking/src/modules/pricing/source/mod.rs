@@ -11,14 +11,14 @@ pub(super) use mock::*;
 pub(super) use spl_stake_pool::*;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
-pub enum TokenValue {
-    SOL(u64),
-    Tokens(Vec<(Pubkey, u64)>),
+pub enum TokenAmount {
+    SOLAmount(u64),
+    TokenAmounts(Vec<(Pubkey, u64)>),
 }
 
-/// A type that can calculate the value of token with its data.
-pub(super) trait TokenValueCalculator {
-    fn calculate_token_value(&self, amount: u64) -> Result<TokenValue>;
+/// A type that can calculate the token amount as sol with its data.
+pub(super) trait TokenAmountAsSOLCalculator {
+    fn calculate_token_amount_as_sol(&self, amount: u64) -> Result<TokenAmount>;
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]

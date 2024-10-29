@@ -5,7 +5,7 @@ use super::*;
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {
     receipt_token_mint: Pubkey,
-    receipt_token_price: u64,
+    one_receipt_token_as_sol: u64,
     receipt_token_supply_amount: u64,
     supported_tokens: Vec<SupportedTokenInfo>,
     sol_capacity_amount: u64,
@@ -21,12 +21,12 @@ impl FundAccountInfo {
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn from(
         fund_account: &FundAccount,
-        receipt_token_price: u64,
+        one_receipt_token_as_sol: u64,
         receipt_token_supply_amount: u64,
     ) -> Self {
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
-            receipt_token_price,
+            one_receipt_token_as_sol,
             receipt_token_supply_amount,
             supported_tokens: fund_account.get_supported_tokens_iter().cloned().collect(),
             sol_capacity_amount: fund_account.get_sol_capacity_amount(),

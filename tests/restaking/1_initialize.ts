@@ -73,7 +73,7 @@ describe("initialize", async () => {
             const supported = res0.fragSOLFund.supportedTokens[i++];
             expect(supported.mint.toString()).eq(v.mint.toString());
             expect(supported.program.toString()).eq(v.program.toString());
-            expect(supported.price.toNumber()).greaterThan(0);
+            expect(supported.oneTokenAsSol.toNumber()).greaterThan(0);
             expect(supported.operationReservedAmount.toNumber()).eq(0);
         }
     });
