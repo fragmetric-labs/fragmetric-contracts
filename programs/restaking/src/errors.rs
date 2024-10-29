@@ -172,4 +172,16 @@ pub enum ErrorCode {
 
     #[msg("fund: unexpected execution reserved account balance")]
     FundUnexpectedExecutionReservedAccountBalanceException,
+
+    #[msg("normalize: not supported token")]
+    NormalizeNotSupportedTokenError,
+
+    #[msg("normalize: already supported token")]
+    NormalizeAlreadySupportedTokenError,
+
+    #[msg("normalize: exceeded max supported tokens")]
+    NormalizeExceededMaxSupportedTokensError,
+
+    #[msg("normalize: invalid accounts provided")]
+    NormalizeInvalidAccountsProvided,
 }

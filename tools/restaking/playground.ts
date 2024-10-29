@@ -68,6 +68,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 rewardName: 'fPoint',
                 amount: new BN(0),
             }),
+            () => this.runAdminInitializeNSOLTokenMint(), // 8*****
+            () => this.runAdminInitializeNormalizeTokenPool(), // 9****
+            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10*******
         ]
     }
 
@@ -77,6 +80,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
     private _knownAddress: ReturnType<typeof this._getKnownAddress>;
     private _getKnownAddress() {
+        const nSOLTokenMint = this.getConstantAsPublicKey('nsolMintAddress');
+        const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
+        const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from('normalized_token_pool'), nSOLTokenMintBuf],
+            this.programId
+        );
+        const [nSOLFundTokenAccount] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from('normalized_token'), nSOLTokenMintBuf],
+            this.programId
+        );
+        const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) => web3.PublicKey.findProgramAddressSync(
+            [Buffer.from('supported_token_lock'), nSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
+            this.programId
+        );
+
         const fragSOLTokenMint = this.getConstantAsPublicKey('fragsolMintAddress');
         const fragSOLTokenMintBuf = fragSOLTokenMint.toBuffer();
         const [fragSOLTokenLock] = web3.PublicKey.findProgramAddressSync(
@@ -133,6 +151,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.supportedTokenMetadata[symbol].program,
         );
         return {
+            nSOLTokenMint,
+            nSOLFundTokenAccount,
+            nSOLTokenPool,
+            nSOLSupportedTokenLockAccount,
             fragSOLTokenMint,
             fragSOLTokenLock,
             fragSOLFund,
@@ -151,6 +173,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public readonly fragSOLDecimals = 9;
+    public readonly nSOLDecimals = 9;
 
     public get supportedTokenMetadata() {
         if (this._supportedTokenMetadata) return this._supportedTokenMetadata;
@@ -229,13 +252,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
     private _pricingSourceAccounts: ReturnType<typeof this._getPricingSourceAccounts>;
     private _getPricingSourceAccounts(): web3.AccountMeta[] {
-        return Object.values(this.supportedTokenMetadata).map(v => {
-            return {
-                pubkey: v.pricingSourceAddress,
+        return [
+            ...Object.values(this.supportedTokenMetadata).map(v => {
+                return {
+                    pubkey: v.pricingSourceAddress,
+                    isSigner: false,
+                    isWritable: false,
+                };
+            }),
+            {
+                pubkey: this.knownAddress.nSOLTokenMint,
                 isSigner: false,
                 isWritable: false,
-            };
-        })
+            },
+            {
+                pubkey: this.knownAddress.nSOLTokenPool,
+                isSigner: false,
+                isWritable: false,
+            }
+        ]
     }
 
     public get jitoStakePoolDepositAccounts() {
@@ -429,6 +464,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return this.connection.getBalance(this.knownAddress.fragSOLFundExecutionReservedAccount, "confirmed");
     }
 
+    public getNSOLTokenPoolAccount() {
+        return this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
+    }
+
     public async runAdminInitializeTokenMint() {
         const metadata: splTokenMetadata.TokenMetadata = {
             mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
@@ -512,6 +551,56 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         logger.notice('fragSOL token mint created with extensions'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLTokenMint.toString());
         return { fragSOLMint };
+    }
+
+    public async runAdminInitializeNSOLTokenMint() {
+        // const metadata: splTokenMetadata.TokenMetadata = {
+        //     mint: this.keychain.getPublicKey('FRAGSOL_MINT'),
+        //     name: 'Fragmetric Restaked SOL',
+        //     symbol: 'fragSOL',
+        //     uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw',
+        //     additionalMetadata: [['description', `fragSOL is Solana's first native LRT that provides optimized restaking rewards.`]],
+        //     updateAuthority: this.keychain.getPublicKey('ADMIN'),
+        // };
+        // const fileForMetadataURI = JSON.stringify({
+        //     name: metadata.name,
+        //     symbol: metadata.symbol,
+        //     description: metadata.additionalMetadata[0][1],
+        //     image: 'https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png',
+        //     // attributes: [],
+        // }, null, 0);
+        // logger.debug(`fragSOL metadata file:\n> ${metadata.uri}\n> ${fileForMetadataURI}`);
+
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.nSOLTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.nSOLTokenMint,
+                    this.nSOLDecimals,
+                    this.keychain.getPublicKey('ADMIN'),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID,
+                ),
+            ],
+            signerNames: ['NSOL_MINT'],
+        });
+        const nSOLMint = await spl.getMint(
+            this.connection,
+            this.knownAddress.nSOLTokenMint,
+            "confirmed",
+            spl.TOKEN_PROGRAM_ID,
+        );
+        logger.notice('nSOL token mint created'.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenMint.toString());
+        return { nSOLMint };
     }
 
     public async runAdminUpdateTokenMetadata() {
@@ -635,6 +724,26 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice('fragSOL fund account updated'.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
         return { fragSOLFundAccount };
+    }
+
+    public async runAdminInitializeNormalizeTokenPool() {
+        await this.run({
+            instructions: [
+                this.program.methods
+                    .adminInitializeNormalizedTokenPool()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+                this.program.methods
+                    .adminInitializeFundNormalizedTokenAccount()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+            ],
+            signerNames: ['ADMIN'],
+        });
+        const nSOLTokenPoolAccount = await this.getNSOLTokenPoolAccount();
+        logger.notice('nSOL token pool created'.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
+
+        return { nSOLTokenPoolAccount }
     }
 
     public async runAdminTransferMintAuthority() {
@@ -795,6 +904,35 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`updated fragSOL fund configuration`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
         const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund);
         return { event, error, fragSOLFund };
+    }
+
+    public async runFundManagerInitializeNormalizeTokenPoolConfigurations() {
+        await this.run({
+            instructions: Object.values(this.supportedTokenMetadata).flatMap(v => {
+                return [
+                    this.program.methods
+                        .fundManagerInitializeSupportedTokenLockAccount()
+                        .accounts({
+                            payer: this.wallet.publicKey,
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .instruction(),
+                    this.program.methods
+                        .fundManagerAddNormalizedTokenPoolSupportedToken()
+                        .accounts({
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .instruction(),
+                ];
+            }),
+            signerNames: ['FUND_MANAGER'],
+        });
+
+        logger.notice(`configured nSOL supported tokens`.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
+        const nSOLTokenPool = await this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
+        return { nSOLTokenPool };
     }
 
     public get rewardsMetadata() {

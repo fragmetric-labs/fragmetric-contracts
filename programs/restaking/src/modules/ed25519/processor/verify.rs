@@ -14,7 +14,7 @@ pub(in crate::modules) fn verify_preceding_ed25519_instruction(
         instructions::load_current_index_checked(instruction_sysvar)?.into();
     let previous_ix_index = current_ix_index
         .checked_sub(1)
-        .ok_or_else(|| ProgramError::InvalidArgument)?;
+        .ok_or(ProgramError::InvalidArgument)?;
     let ix = instructions::load_instruction_at_checked(previous_ix_index, instruction_sysvar)?;
     require_eq!(ix.program_id, ed25519_program::ID);
     require_eq!(ix.accounts.len(), 0);
