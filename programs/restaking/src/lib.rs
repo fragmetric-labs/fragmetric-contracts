@@ -413,7 +413,6 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        ctx.accounts.check_user_sol_balance(amount)?;
         modules::fund::process_deposit_sol(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,
@@ -437,8 +436,6 @@ pub mod restaking {
         ctx: Context<UserFundContext>,
         receipt_token_amount: u64,
     ) -> Result<()> {
-        ctx.accounts
-            .check_user_receipt_token_balance(receipt_token_amount)?;
         modules::fund::process_request_withdrawal(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,
@@ -495,7 +492,6 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        ctx.accounts.check_user_supported_token_balance(amount)?;
         modules::fund::process_deposit_supported_token(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,

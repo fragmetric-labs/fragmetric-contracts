@@ -103,10 +103,3 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(address = instructions_sysvar::ID)]
     pub instruction_sysvar: UncheckedAccount<'info>,
 }
-
-impl<'info> UserFundSupportedTokenContext<'info> {
-    pub fn check_user_supported_token_balance(&self, amount: u64) -> Result<()> {
-        require_gte!(self.user_supported_token_account.amount, amount);
-        Ok(())
-    }
-}

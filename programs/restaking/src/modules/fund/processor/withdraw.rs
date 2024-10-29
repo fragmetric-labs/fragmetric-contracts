@@ -22,6 +22,8 @@ pub fn process_request_withdrawal<'info>(
     clock: Clock,
     receipt_token_amount: u64,
 ) -> Result<()> {
+    require_gte!(user_receipt_token_account.amount, receipt_token_amount);
+
     fund_account.withdrawal.check_withdrawal_enabled()?;
 
     let (batch_id, request_id) = user_fund_account.create_withdrawal_request(

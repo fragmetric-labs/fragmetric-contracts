@@ -26,6 +26,8 @@ pub fn process_deposit_sol<'info>(
     sol_amount: u64,
     metadata: Option<DepositMetadata>,
 ) -> Result<()> {
+    require_gte!(user.lamports(), sol_amount);
+
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 
@@ -87,6 +89,8 @@ pub fn process_deposit_supported_token<'info>(
     supported_token_amount: u64,
     metadata: Option<DepositMetadata>,
 ) -> Result<()> {
+    require_gte!(user_supported_token_account.amount, supported_token_amount);
+
     let (wallet_provider, contribution_accrual_rate) =
         verify_deposit_metadata(metadata, instructions_sysvar, clock.unix_timestamp)?;
 

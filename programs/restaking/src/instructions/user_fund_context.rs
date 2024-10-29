@@ -159,15 +159,3 @@ pub struct UserFundContext<'info> {
     #[account(address = instructions_sysvar::ID)]
     pub instructions_sysvar: UncheckedAccount<'info>,
 }
-
-impl<'info> UserFundContext<'info> {
-    pub fn check_user_sol_balance(&self, sol_amount: u64) -> Result<()> {
-        require_gte!(self.user.lamports(), sol_amount);
-        Ok(())
-    }
-
-    pub fn check_user_receipt_token_balance(&self, receipt_token_amount: u64) -> Result<()> {
-        require_gte!(self.user_receipt_token_account.amount, receipt_token_amount);
-        Ok(())
-    }
-}
