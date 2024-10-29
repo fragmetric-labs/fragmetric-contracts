@@ -7,3 +7,4 @@ pub mod operator;
 pub mod pricing;
 pub mod reward;
 pub mod staking;
+pub mod restaking;

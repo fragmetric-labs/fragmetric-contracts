@@ -15,6 +15,7 @@ process.on('unhandledRejection', (err) => {
 
 /** define test suites here **/
 
+require('./restaking/0_operation');
 require('./restaking/1_initialize');
 
 if (!process.env.JUST_INIT) {
