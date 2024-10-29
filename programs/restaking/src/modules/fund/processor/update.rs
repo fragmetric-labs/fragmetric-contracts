@@ -6,7 +6,7 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::*;
-use crate::modules::pricing::{self, TokenAmount, TokenPricingSource};
+use crate::modules::pricing::{self, TokenPricingSource, TokenPricingSourceMap};
 
 pub fn process_update_fund_account_if_needed(
     receipt_token_mint: &InterfaceAccount<Mint>,
@@ -130,43 +130,13 @@ pub(in crate::modules) fn update_asset_prices<'info>(
     fund_account: &mut Account<FundAccount>,
     pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
-    let mut one_token_as_sol_list = Vec::new();
-    let pricing_source_accounts = pricing::create_pricing_sources_map(pricing_sources);
-    for token in fund_account.get_supported_tokens_iter() {
-        let mut token_amount_as_sol = 0u64;
-        let mut stack = Vec::from([(
-            token.get_pricing_source(),
+    let pricing_source_map = create_pricing_source_map(fund_account, pricing_sources)?;
+    for token in fund_account.get_supported_tokens_iter_mut() {
+        token.one_token_as_sol = pricing::calculate_token_amount_as_sol(
+            token.get_mint(),
+            &pricing_source_map,
             token.get_denominated_amount_per_token()?,
-        )]);
-
-        while let Some((source, token_amount)) = stack.pop() {
-            match pricing::calculate_token_amount_as_sol(
-                &pricing_source_accounts,
-                source,
-                token_amount,
-            )? {
-                TokenAmount::SOLAmount(sol_amount) => {
-                    token_amount_as_sol = token_amount_as_sol
-                        .checked_add(sol_amount)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-                }
-                TokenAmount::TokenAmounts(token_amounts) => {
-                    for (mint, token_amount) in token_amounts {
-                        let source = fund_account.get_supported_token(mint)?.get_pricing_source();
-                        stack.push((source, token_amount));
-                    }
-                }
-            }
-        }
-
-        one_token_as_sol_list.push(token_amount_as_sol);
-    }
-
-    for (token, one_token_as_sol) in fund_account
-        .get_supported_tokens_iter_mut()
-        .zip(one_token_as_sol_list)
-    {
-        token.one_token_as_sol = one_token_as_sol;
+        )?;
     }
 
     Ok(())

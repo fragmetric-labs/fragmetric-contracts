@@ -71,7 +71,9 @@ impl FundAccount {
     }
 
     #[inline(always)]
-    pub(in crate::modules) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
+    pub(in crate::modules) fn get_supported_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &SupportedTokenInfo> {
         self.supported_tokens.iter()
     }
 
@@ -219,8 +221,8 @@ impl SupportedTokenInfo {
         }
     }
 
-    pub(in crate::modules) fn get_mint(&self) -> &Pubkey {
-        &self.mint
+    pub(in crate::modules) fn get_mint(&self) -> Pubkey {
+        self.mint
     }
 
     pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
@@ -238,8 +240,8 @@ impl SupportedTokenInfo {
     }
 
     #[inline(always)]
-    pub(super) fn get_pricing_source(&self) -> &TokenPricingSource {
-        &self.pricing_source
+    pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
+        self.pricing_source
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
