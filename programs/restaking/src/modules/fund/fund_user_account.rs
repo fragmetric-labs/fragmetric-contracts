@@ -84,7 +84,7 @@ impl UserFundAccount {
         &mut self,
         withdrawal_status: &mut WithdrawalStatus,
         receipt_token_amount: u64,
-        current_time: i64,
+        current_timestamp: i64,
     ) -> Result<(u64, u64)> {
         require_gt!(
             Self::MAX_WITHDRAWAL_REQUESTS_SIZE,
@@ -92,8 +92,8 @@ impl UserFundAccount {
             ErrorCode::FundExceededMaxWithdrawalRequestError
         );
 
-        let request =
-            withdrawal_status.issue_new_withdrawal_request(receipt_token_amount, current_time)?;
+        let request = withdrawal_status
+            .issue_new_withdrawal_request(receipt_token_amount, current_timestamp)?;
         let batch_id = request.batch_id();
         let request_id = request.request_id();
 

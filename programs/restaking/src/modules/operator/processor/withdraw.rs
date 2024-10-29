@@ -18,19 +18,19 @@ pub fn process_process_fund_withdrawal_job<'info>(
     receipt_token_program: &Program<'info, Token2022>,
     pricing_sources: &'info [AccountInfo<'info>],
     forced: bool,
-    current_time: i64,
+    current_timestamp: i64,
 ) -> Result<()> {
     if !(forced && operator.key() == ADMIN_PUBKEY) {
         fund_account
             .withdrawal
-            .check_withdrawal_threshold(current_time)?;
+            .check_withdrawal_threshold(current_timestamp)?;
     }
 
     fund::update_prices(fund_account, pricing_sources)?;
 
     fund_account
         .withdrawal
-        .start_processing_pending_batch_withdrawal(current_time)?;
+        .start_processing_pending_batch_withdrawal(current_timestamp)?;
 
     let total_sol_value_in_fund = fund_account.total_sol_value()?;
     let mut receipt_token_amount_to_burn: u64 = 0;
@@ -88,7 +88,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
 
     fund_account
         .withdrawal
-        .end_processing_completed_batch_withdrawals(current_time)?;
+        .end_processing_completed_batch_withdrawals(current_timestamp)?;
 
     let receipt_token_price = fund::receipt_token_price(receipt_token_mint, fund_account)?;
 

@@ -423,10 +423,11 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.instructions_sysvar,
-            Clock::get()?,
             ctx.remaining_accounts,
             amount,
             metadata,
+            Clock::get()?.slot,
+            Clock::get()?.unix_timestamp,
         )
     }
 
@@ -445,8 +446,9 @@ pub mod restaking {
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
             &ctx.accounts.receipt_token_program,
-            Clock::get()?,
             receipt_token_amount,
+            Clock::get()?.slot,
+            Clock::get()?.unix_timestamp,
         )
     }
 
@@ -505,10 +507,11 @@ pub mod restaking {
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.supported_token_program,
             &ctx.accounts.instruction_sysvar,
-            Clock::get()?,
             ctx.remaining_accounts,
             amount,
             metadata,
+            Clock::get()?.slot,
+            Clock::get()?.unix_timestamp,
         )
     }
 

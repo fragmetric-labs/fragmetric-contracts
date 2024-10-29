@@ -10,10 +10,10 @@ pub struct DepositMetadata {
 }
 
 impl DepositMetadata {
-    pub(super) fn verify_expiration(&self, current_time: i64) -> Result<()> {
+    pub(super) fn verify_expiration(&self, current_timestamp: i64) -> Result<()> {
         require_gte!(
             self.expired_at,
-            current_time,
+            current_timestamp,
             ErrorCode::FundDepositMetadataSignatureExpiredError,
         );
 

@@ -352,7 +352,7 @@ impl WithdrawalStatus {
     pub(super) fn issue_new_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,
-        current_time: i64,
+        current_timestamp: i64,
     ) -> Result<WithdrawalRequest> {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
@@ -364,7 +364,7 @@ impl WithdrawalStatus {
             self.pending_batch_withdrawal.batch_id,
             request_id,
             receipt_token_amount,
-            current_time,
+            current_timestamp,
         ))
     }
 
@@ -445,9 +445,12 @@ impl WithdrawalStatus {
     }
 
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
-    pub(in crate::modules) fn check_withdrawal_threshold(&self, current_time: i64) -> Result<()> {
+    pub(in crate::modules) fn check_withdrawal_threshold(
+        &self,
+        current_timestamp: i64,
+    ) -> Result<()> {
         let mut threshold_satisfied = match self.last_batch_processing_started_at {
-            Some(x) => current_time - x > self.batch_processing_threshold_duration,
+            Some(x) => current_timestamp - x > self.batch_processing_threshold_duration,
             None => true,
         };
 
@@ -478,7 +481,7 @@ impl WithdrawalStatus {
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn start_processing_pending_batch_withdrawal(
         &mut self,
-        current_time: i64,
+        current_timestamp: i64,
     ) -> Result<()> {
         require_gt!(
             MAX_BATCH_WITHDRAWALS_IN_PROGRESS,
@@ -491,7 +494,7 @@ impl WithdrawalStatus {
         let new = BatchWithdrawal::new(batch_id);
 
         let mut old = std::mem::replace(&mut self.pending_batch_withdrawal, new);
-        old.processing_started_at = Some(current_time);
+        old.processing_started_at = Some(current_timestamp);
 
         self.num_withdrawal_requests_in_progress += old.num_withdrawal_requests;
         self.last_batch_processing_started_at = old.processing_started_at;
@@ -504,12 +507,12 @@ impl WithdrawalStatus {
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn end_processing_completed_batch_withdrawals(
         &mut self,
-        current_time: i64,
+        current_timestamp: i64,
     ) -> Result<()> {
         let completed_batch_withdrawals = self.pop_completed_batch_withdrawals_from_queue();
         if let Some(batch) = completed_batch_withdrawals.last() {
             self.last_completed_batch_id = batch.batch_id;
-            self.last_batch_processing_completed_at = Some(current_time);
+            self.last_batch_processing_completed_at = Some(current_timestamp);
         }
 
         for batch in completed_batch_withdrawals {
@@ -648,12 +651,17 @@ pub struct WithdrawalRequest {
 }
 
 impl WithdrawalRequest {
-    fn new(batch_id: u64, request_id: u64, receipt_token_amount: u64, current_time: i64) -> Self {
+    fn new(
+        batch_id: u64,
+        request_id: u64,
+        receipt_token_amount: u64,
+        current_timestamp: i64,
+    ) -> Self {
         Self {
             batch_id,
             request_id,
             receipt_token_amount,
-            created_at: current_time,
+            created_at: current_timestamp,
             _reserved: [0; 16],
         }
     }
