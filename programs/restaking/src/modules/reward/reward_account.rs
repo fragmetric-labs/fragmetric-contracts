@@ -97,8 +97,8 @@ impl RewardAccount {
     ) -> Result<()> {
         for holder in self.get_holders_iter() {
             require_neq!(
-                from_utf8_trim_null(holder.get_name())?,
-                name.replace('\0', ""),
+                holder.get_name()?,
+                name.trim_matches('\0'),
                 ErrorCode::RewardAlreadyExistingHolderError
             );
         }
@@ -124,8 +124,8 @@ impl RewardAccount {
     ) -> Result<()> {
         for reward in self.get_rewards_iter() {
             require_neq!(
-                from_utf8_trim_null(reward.get_name())?,
-                name.replace('\0', ""),
+                reward.get_name()?,
+                name.trim_matches('\0'),
                 ErrorCode::RewardAlreadyExistingRewardError
             );
         }
@@ -158,7 +158,7 @@ impl RewardAccount {
             (p.get_holder_id() == holder_id
                 && p.is_custom_contribution_accrual_rate_enabled()
                     == custom_contribution_accrual_rate_enabled)
-                || from_utf8_trim_null(p.get_name()) == Ok(name.replace('\0', ""))
+                || p.get_name() == Ok(name.trim_matches('\0'))
         }) {
             err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }
@@ -449,8 +449,10 @@ impl RewardPool {
         self.id
     }
 
-    fn get_name(&self) -> &[u8] {
-        &self.name
+    fn get_name(&self) -> Result<&str> {
+        Ok(std::str::from_utf8(&self.name)
+            .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
+            .trim_matches('\0'))
     }
 
     fn is_custom_contribution_accrual_rate_enabled(&self) -> bool {
@@ -580,11 +582,4 @@ impl RewardPool {
 
         Ok(())
     }
-}
-
-/// Truncates null (0x0000) at the end.
-fn from_utf8_trim_null(v: &[u8]) -> Result<String> {
-    Ok(std::str::from_utf8(v)
-        .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
-        .replace('\0', ""))
 }

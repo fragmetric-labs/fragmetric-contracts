@@ -73,8 +73,10 @@ impl Holder {
         self.id
     }
 
-    pub(super) fn get_name(&self) -> &[u8] {
-        &self.name
+    pub(super) fn get_name(&self) -> Result<&str> {
+        Ok(std::str::from_utf8(&self.name)
+            .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
+            .trim_matches('\0'))
     }
 
     /// How to integrate multiple fields into a single array slice or whatever...
@@ -141,8 +143,10 @@ impl Reward {
         Ok(())
     }
 
-    pub(super) fn get_name(&self) -> &[u8] {
-        &self.name
+    pub(super) fn get_name(&self) -> Result<&str> {
+        Ok(std::str::from_utf8(&self.name)
+            .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
+            .trim_matches('\0'))
     }
 
     // fn reward_type(&self) -> Result<RewardType> {
