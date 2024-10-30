@@ -1,5 +1,4 @@
-use anchor_lang::solana_program;
-use anchor_lang::{prelude::*, ZeroCopy};
+use anchor_lang::{prelude::*, solana_program, CheckOwner, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -158,4 +157,24 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
             .checked_div(denominator as u128)?,
     )
     .ok()
+}
+
+#[inline(never)]
+pub fn parse_account_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Box<Account<'info, T>>>
+where
+    T: AccountSerialize + AccountDeserialize + Clone + Owner,
+{
+    Account::try_from(account).map(Box::new)
+}
+
+#[inline(never)]
+pub fn parse_interface_account_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Box<InterfaceAccount<'info, T>>>
+where
+    T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
+{
+    InterfaceAccount::try_from(account).map(Box::new)
 }

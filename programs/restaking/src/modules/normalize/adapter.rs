@@ -18,20 +18,20 @@ pub struct NormalizedTokenPoolAdapter<'info> {
 
 impl<'info> NormalizedTokenPoolAdapter<'info> {
     pub(in crate::modules) fn new(
-        normalized_token_pool_account: Account<'info, NormalizedTokenPoolAccount>,
-        normalized_token_mint: InterfaceAccount<'info, Mint>,
+        normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
+        normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
         normalized_token_program: Program<'info, Token>,
-        supported_token_mint: InterfaceAccount<'info, Mint>,
+        supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
         supported_token_program: Interface<'info, TokenInterface>,
-        supported_token_lock_account: InterfaceAccount<'info, TokenAccount>,
+        supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
     ) -> Result<Self> {
         Ok(Self {
-            normalized_token_pool_account: Box::new(normalized_token_pool_account),
-            normalized_token_mint: Box::new(normalized_token_mint),
+            normalized_token_pool_account,
+            normalized_token_mint,
             normalized_token_program,
-            supported_token_mint: Box::new(supported_token_mint),
+            supported_token_mint,
             supported_token_program,
-            supported_token_lock_account: Box::new(supported_token_lock_account),
+            supported_token_lock_account,
         })
     }
 
@@ -51,7 +51,12 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         supported_token_amount_as_sol: u64,
         one_normalized_token_as_sol: u64,
     ) -> Result<()> {
-        msg!("FUCK2-1: {}, {}, {}", supported_token_amount_as_sol, self.get_denominated_amount_per_normalized_token()?, one_normalized_token_as_sol);
+        msg!(
+            "FUCK2-1: {}, {}, {}",
+            supported_token_amount_as_sol,
+            self.get_denominated_amount_per_normalized_token()?,
+            one_normalized_token_as_sol
+        );
         let normalized_token_mint_amount = crate::utils::get_proportional_amount(
             supported_token_amount_as_sol,
             self.get_denominated_amount_per_normalized_token()?,
