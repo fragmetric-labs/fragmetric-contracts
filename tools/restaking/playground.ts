@@ -15,6 +15,10 @@ import {Restaking} from "../../target/types/restaking";
 import {getKeychain, KEYCHAIN_ENV, KEYCHAIN_KEYS} from "./keychain";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 import * as ed25519 from "ed25519";
+import fs from "fs";
+import path from "path";
+import {createPublicKey} from "node:crypto";
+import {spawn} from "node:child_process";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
@@ -1467,10 +1471,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [fragSOLFund, fragSOLFundExecutionReservedAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundExecutionReservedAccountBalance()]);
 
         return {fragSOLFund, fragSOLFundExecutionReservedAccountBalance};
-    }
-
-    public async runInitializeDepositRestakingProtocol() {
-
     }
 
     public async createNSOLTokenMetadata() {

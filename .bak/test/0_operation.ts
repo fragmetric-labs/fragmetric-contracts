@@ -2,7 +2,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { step } from "mocha-steps";
 import { Keychain } from "../../tools/lib";
-import { restakingPlayground } from "../restaking";
+import { restakingPlayground } from "../../tests/restaking";
 
 function numberToBuffer(num) {
   const buffer = Buffer.allocUnsafe(8); // 8 바이트의 비할당 Buffer 생성
@@ -16,8 +16,8 @@ describe("operation", async () => {
 
   step("deposit to jito vault", async function () {
     const program_id = new anchor.web3.PublicKey("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
-    const config = new anchor.web3.PublicKey("Cx2tQmB4RdCQADK8dGzt9sbXDpQ9o2pcjuhKnN42NxbK");
-    const vault_info = new anchor.web3.PublicKey("8bCy6TWfxc7H2ib61ijR1LzGynZNuVspdeUNra9AS9Lg");
+    const config = new anchor.web3.PublicKey("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
+    const vault_info = new anchor.web3.PublicKey("3VrDXk62TxEh4cxNe8qgT3xcAiZFv6n1ccmcUAoVt7Hh:");
     const signer = Keychain.readKeypairSecretFile("./new-keypair.json"); //TODO: change keypair path
 
     const config_account_info = await restaking.connection.getAccountInfo(config, "confirmed");
