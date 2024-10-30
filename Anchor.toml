@@ -86,9 +86,9 @@ address = "96nH6npzmaAWpmraLaN2F55h27TMEtJrsjo881dCc2Dt"
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
 
 [[test.validator.account]]
-address = "3VrDXk62TxEh4cxNe8qgT3xcAiZFv6n1ccmcUAoVt7Hh"
+address = "Fr5Xvta98284hu9HkMUixWRRW7pSK3nS19goGTYUzHpf"
 filename = "./tests/mocks/jito_nsol_vault.json"#
 
 [[test.validator.account]]
-address = "HdvYuaWwi8eByP7pU6cdA2qf7YX3dUR1zHCfM7Y9BX43"
+address = "DXHvJfVP9dHmjP4m4GGD6ujyj8dj7BjvKgwHguqw3mD9"
 filename = "./tests/mocks/jito_vault_vrt.json"
