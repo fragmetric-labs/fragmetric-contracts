@@ -9,6 +9,7 @@ use crate::modules::normalize::*;
 
 pub(in crate::modules) fn normalize_supported_token<'info>(
     normalized_token_pool_adapter: &mut NormalizedTokenPoolAdapter<'info>,
+    normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
     supported_token_account: &InterfaceAccount<'info, TokenAccount>,
     signer: AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]],
@@ -16,18 +17,13 @@ pub(in crate::modules) fn normalize_supported_token<'info>(
     supported_token_amount_as_sol: u64,
     one_normalized_token_as_sol: u64,
 ) -> Result<()> {
-    let normalized_token_mint_amount = crate::utils::get_proportional_amount(
-        supported_token_amount_as_sol,
-        normalized_token_pool_adapter.get_denominated_amount_per_normalized_token()?,
-        one_normalized_token_as_sol,
-    )
-    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
     normalized_token_pool_adapter.deposit(
+        normalized_token_account,
         supported_token_account,
         signer,
         signer_seeds,
         supported_token_amount,
-        normalized_token_mint_amount,
+        supported_token_amount_as_sol,
+        one_normalized_token_as_sol,
     )
 }

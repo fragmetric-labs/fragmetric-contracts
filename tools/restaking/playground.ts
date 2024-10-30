@@ -69,8 +69,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 amount: new BN(0),
             }),
             () => this.runAdminInitializeNSOLTokenMint(), // 8*****
-            () => this.runAdminInitializeNormalizeTokenPool(), // 9*****
-            () => this.runFundManagerInitializeNormalizeTokenPoolConigurations(), // 10*******
+            () => this.runAdminInitializeNormalizeTokenPool(), // 9****
+            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10*******
         ]
     }
 
@@ -86,7 +86,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             [Buffer.from('normalized_token_pool'), nSOLTokenMintBuf],
             this.programId
         );
-        const [nSOLTokenAccount] = web3.PublicKey.findProgramAddressSync(
+        const [nSOLFundTokenAccount] = web3.PublicKey.findProgramAddressSync(
             [Buffer.from('normalized_token'), nSOLTokenMintBuf],
             this.programId
         );
@@ -152,7 +152,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         return {
             nSOLTokenMint,
-            nSOLTokenAccount,
+            nSOLFundTokenAccount,
             nSOLTokenPool,
             nSOLSupportedTokenLockAccount,
             fragSOLTokenMint,
@@ -600,7 +600,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_PROGRAM_ID,
         );
         logger.notice('nSOL token mint created'.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenMint.toString());
-        return { nSOLMint: nSOLMint };
+        return { nSOLMint };
     }
 
     public async runAdminUpdateTokenMetadata() {
@@ -731,6 +731,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 this.program.methods
                     .adminInitializeNormalizedTokenPool()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+                this.program.methods
+                    .adminInitializeFundNormalizedTokenAccount()
                     .accounts({payer: this.wallet.publicKey})
                     .instruction(),
             ],
@@ -902,32 +906,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLFund };
     }
 
-    public async runFundManagerInitializeNormalizeTokenPoolConigurations() {
+    public async runFundManagerInitializeNormalizeTokenPoolConfigurations() {
         await this.run({
-            instructions: [
-                ...Object.values(this.supportedTokenMetadata).flatMap(v => {
-                    return [
-                        this.program.methods
-                            .fundManagerInitializeSupportedTokenLockAccount()
-                            .accounts({
-                                payer: this.wallet.publicKey,
-                                supportedTokenMint: v.mint,
-                                supportedTokenProgram: v.program,
-                            })
-                            .instruction(),
-                        this.program.methods
-                            .fundManagerUpdateSupportedTokenLockAccountAuthority()
-                            .accounts({
-                                supportedTokenMint: v.mint,
-                                supportedTokenProgram: v.program,
-                            })
-                            .instruction(),
-                    ];
-                }),
-                this.program.methods
-                    .fundManagerSyncNormalizedTokenPoolSupportedTokens()
-                    .instruction(),
-            ],
+            instructions: Object.values(this.supportedTokenMetadata).flatMap(v => {
+                return [
+                    this.program.methods
+                        .fundManagerInitializeSupportedTokenLockAccount()
+                        .accounts({
+                            payer: this.wallet.publicKey,
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .instruction(),
+                    this.program.methods
+                        .fundManagerAddNormalizedTokenPoolSupportedToken()
+                        .accounts({
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .instruction(),
+                ];
+            }),
             signerNames: ['FUND_MANAGER'],
         });
 

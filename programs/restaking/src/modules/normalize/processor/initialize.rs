@@ -9,7 +9,6 @@ use crate::modules::normalize::*;
 pub fn process_initialize_normalized_token_pool_account<'info>(
     admin: &Signer<'info>,
     normalized_token_mint: &InterfaceAccount<'info, Mint>,
-    normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
     normalized_token_pool_account: &mut Account<NormalizedTokenPoolAccount>,
     normalized_token_program: &Program<'info, Token>,
     bump: u8,
@@ -18,7 +17,6 @@ pub fn process_initialize_normalized_token_pool_account<'info>(
         bump,
         normalized_token_mint.key(),
         normalized_token_program.key(),
-        normalized_token_account.key(),
     );
 
     token::set_authority(

@@ -118,24 +118,10 @@ pub fn process_update_prices<'info>(
 
     emit!(events::OperatorUpdatedFundPrice {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: FundAccountInfo::from(
-            fund_account,
-            receipt_token_mint,
-        ),
+        fund_account: FundAccountInfo::from(fund_account, receipt_token_mint),
     });
 
     Ok(())
-}
-
-pub fn process_sync_normalized_token_pool_supported_tokens(
-    fund_account: &Account<FundAccount>,
-    normalized_token_pool_account: &mut Account<NormalizedTokenPoolAccount>,
-) -> Result<()> {
-    normalized_token_pool_account.backfill_not_existing_supported_tokens(
-        fund_account
-            .get_supported_tokens_iter()
-            .map(|token| (token.get_mint(), token.get_program())),
-    )
 }
 
 pub(in crate::modules) fn update_asset_prices<'info>(
@@ -154,10 +140,7 @@ fn emit_fund_manager_updated_fund_event(
 ) -> Result<()> {
     emit!(events::FundManagerUpdatedFund {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: FundAccountInfo::from(
-            fund_account,
-            receipt_token_mint,
-        ),
+        fund_account: FundAccountInfo::from(fund_account, receipt_token_mint),
     });
 
     Ok(())

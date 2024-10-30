@@ -13,10 +13,9 @@ pub struct NormalizedTokenPoolAccount {
     bump: u8,
     pub normalized_token_mint: Pubkey,
     normalized_token_program: Pubkey,
-    /// buffer account
-    normalized_token_account: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
     supported_tokens: Vec<SupportedToken>,
+    _reserved: [u8; 128],
 }
 
 impl PDASeeds<2> for NormalizedTokenPoolAccount {
@@ -32,7 +31,6 @@ impl PDASeeds<2> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
-    pub const NORMALIZED_TOKEN_ACCOUNT_SEED: &'static [u8] = b"normalized_token";
     pub const SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED: &'static [u8] = b"supported_token_lock";
 
     pub(super) fn initialize(
@@ -40,35 +38,13 @@ impl NormalizedTokenPoolAccount {
         bump: u8,
         normalized_token_mint: Pubkey,
         normalized_token_program: Pubkey,
-        normalized_token_account: Pubkey,
     ) {
-        self.bump = bump;
-        self.normalized_token_mint = normalized_token_mint;
-        self.normalized_token_program = normalized_token_program;
-        self.normalized_token_account = normalized_token_account;
-    }
-
-    pub(in crate::modules) fn backfill_not_existing_supported_tokens(
-        &mut self,
-        supported_tokens_mint_and_program: impl Iterator<Item = (Pubkey, Pubkey)>,
-    ) -> Result<()> {
-        supported_tokens_mint_and_program
-            .skip(self.supported_tokens.len())
-            .try_for_each(|(supported_token_mint, supported_token_program)| {
-                self.add_new_supported_token(
-                    supported_token_mint,
-                    supported_token_program,
-                    Pubkey::find_program_address(
-                        &[
-                            Self::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
-                            self.normalized_token_mint.as_ref(),
-                            supported_token_mint.as_ref(),
-                        ],
-                        &crate::ID,
-                    )
-                    .0,
-                )
-            })
+        if self.data_version == 0 {
+            self.data_version = 1;
+            self.bump = bump;
+            self.normalized_token_mint = normalized_token_mint;
+            self.normalized_token_program = normalized_token_program;
+        }
     }
 
     pub(super) fn add_new_supported_token(
@@ -137,7 +113,7 @@ impl NormalizedTokenPoolAccount {
     ) -> Result<()> {
         require_gte!(
             accounts.len(),
-            3,
+            2,
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
@@ -150,14 +126,9 @@ impl NormalizedTokenPoolAccount {
             accounts[1].key(),
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
-        require_eq!(
-            self.normalized_token_account,
-            accounts[2].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
-        );
 
-        self.get_supported_token(accounts[3].key())?
-            .validate_adapter_constructor_accounts(&accounts[3..])
+        self.get_supported_token(accounts[2].key())?
+            .validate_adapter_constructor_accounts(&accounts[2..])
     }
 }
 
@@ -167,6 +138,7 @@ pub(super) struct SupportedToken {
     program: Pubkey,
     lock_account: Pubkey,
     locked_amount: u64,
+    _reserved: [u8; 64],
 }
 
 impl SupportedToken {
@@ -176,6 +148,7 @@ impl SupportedToken {
             program,
             lock_account,
             locked_amount: 0,
+            _reserved: [0; 64],
         }
     }
 

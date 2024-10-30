@@ -73,7 +73,7 @@ describe("initialize", async () => {
     });
 
     step("initialize normalized token pool supported tokens configuration", async function() {
-        const { nSOLTokenPool } = await restaking.runFundManagerInitializeNormalizeTokenPoolConigurations();
+        const { nSOLTokenPool } = await restaking.runFundManagerInitializeNormalizeTokenPoolConfigurations();
 
         expect(nSOLTokenPool.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
         let i = 0;

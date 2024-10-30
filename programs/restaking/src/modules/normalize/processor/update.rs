@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::spl_token_2022;
-use anchor_spl::token_interface::{self, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
 use crate::modules::normalize::*;
 
-pub fn process_update_supported_token_lock_account_authority<'info>(
+pub fn process_add_supported_token<'info>(
     fund_manager: &Signer<'info>,
+    supported_token_mint: &InterfaceAccount<Mint>,
     supported_token_lock_account: &InterfaceAccount<'info, TokenAccount>,
-    normalized_token_pool_account: &Account<NormalizedTokenPoolAccount>,
+    normalized_token_pool_account: &mut Account<NormalizedTokenPoolAccount>,
     supported_token_program: &Interface<'info, TokenInterface>,
 ) -> Result<()> {
     token_interface::set_authority(
@@ -20,5 +21,11 @@ pub fn process_update_supported_token_lock_account_authority<'info>(
         ),
         spl_token_2022::instruction::AuthorityType::AccountOwner,
         Some(normalized_token_pool_account.key()),
+    )?;
+
+    normalized_token_pool_account.add_new_supported_token(
+        supported_token_mint.key(),
+        supported_token_program.key(),
+        supported_token_lock_account.key(),
     )
 }

@@ -45,6 +45,12 @@ pub mod restaking {
         )
     }
 
+    pub fn admin_initialize_fund_normalized_token_account(
+        _ctx: Context<AdminFundNormalizedTokenAccountInitialContext>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // AdminFundUpdateContext
     ////////////////////////////////////////////
@@ -68,7 +74,6 @@ pub mod restaking {
         modules::normalize::process_initialize_normalized_token_pool_account(
             &ctx.accounts.admin,
             &ctx.accounts.normalized_token_mint,
-            &ctx.accounts.normalized_token_account,
             &mut ctx.accounts.normalized_token_pool_account,
             &ctx.accounts.normalized_token_program,
             ctx.bumps.normalized_token_pool_account,
@@ -252,7 +257,7 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn fund_manager_initialize_supported_token_lock_account(
-        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
+        ctx: Context<FundManagerSupportedTokenLockAccountInitialContext>,
     ) -> Result<()> {
         modules::fund::process_initialize_supported_token_lock_account(
             &ctx.accounts.supported_token_mint,
@@ -265,23 +270,15 @@ pub mod restaking {
     // FundManagerNormalizedTokenPoolSupportedTokenContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_update_supported_token_lock_account_authority(
-        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountContext>,
-    ) -> Result<()> {
-        modules::normalize::process_update_supported_token_lock_account_authority(
-            &ctx.accounts.fund_manager,
-            &ctx.accounts.supported_token_lock_account,
-            &ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.supported_token_program,
-        )
-    }
-
-    pub fn fund_manager_sync_normalized_token_pool_supported_tokens(
+    pub fn fund_manager_add_normalized_token_pool_supported_token(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
     ) -> Result<()> {
-        modules::fund::process_sync_normalized_token_pool_supported_tokens(
-            &ctx.accounts.fund_account,
+        modules::normalize::process_add_supported_token(
+            &ctx.accounts.fund_manager,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.supported_token_lock_account,
             &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.supported_token_program,
         )
     }
 
