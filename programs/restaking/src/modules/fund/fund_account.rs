@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{self, TokenPricingSource, TokenPricingSourceMap};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -195,7 +195,7 @@ pub struct SupportedTokenInfo {
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
     operation_reserved_amount: u64,
-    pub(super) one_token_as_sol: u64,
+    one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
     _reserved: [u8; 128],
 }
@@ -233,15 +233,15 @@ impl SupportedTokenInfo {
         self.operation_reserved_amount = amount;
     }
 
-    pub(super) fn get_denominated_amount_per_token(&self) -> Result<u64> {
+    fn get_denominated_amount_per_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     #[inline(always)]
-    pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
-        self.pricing_source
+    pub(super) fn get_mint_and_pricing_source(&self) -> (Pubkey, TokenPricingSource) {
+        (self.mint, self.pricing_source)
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -277,6 +277,19 @@ impl SupportedTokenInfo {
         Ok(())
     }
 
+    pub(super) fn update_one_token_as_sol(
+        &mut self,
+        pricing_source_map: &TokenPricingSourceMap,
+    ) -> Result<()> {
+        self.one_token_as_sol = pricing::calculate_token_amount_as_sol(
+            self.mint,
+            pricing_source_map,
+            self.get_denominated_amount_per_token()?,
+        )?;
+
+        Ok(())
+    }
+
     pub(super) fn get_token_amount_as_sol(&self, token_amount: u64) -> Result<u64> {
         crate::utils::get_proportional_amount(
             token_amount,
@@ -305,7 +318,7 @@ pub struct WithdrawalStatus {
     batch_processing_threshold_duration: i64,
 
     // Withdrawal Status = PENDING
-    pub(super) pending_batch_withdrawal: BatchWithdrawal,
+    pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]

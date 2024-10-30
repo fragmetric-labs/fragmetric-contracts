@@ -131,15 +131,9 @@ pub(in crate::modules) fn update_asset_prices<'info>(
     pricing_sources: &'info [AccountInfo<'info>],
 ) -> Result<()> {
     let pricing_source_map = create_pricing_source_map(fund_account, pricing_sources)?;
-    for token in fund_account.get_supported_tokens_iter_mut() {
-        token.one_token_as_sol = pricing::calculate_token_amount_as_sol(
-            token.get_mint(),
-            &pricing_source_map,
-            token.get_denominated_amount_per_token()?,
-        )?;
-    }
-
-    Ok(())
+    fund_account
+        .get_supported_tokens_iter_mut()
+        .try_for_each(|token| token.update_one_token_as_sol(&pricing_source_map))
 }
 
 fn emit_fund_manager_updated_fund_event(

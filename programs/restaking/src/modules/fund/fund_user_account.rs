@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
@@ -15,7 +16,7 @@ pub struct UserFundAccount {
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
 
-    pub(super) receipt_token_amount: u64,
+    receipt_token_amount: u64,
     _reserved: [u8; 32],
 
     #[max_len(MAX_WITHDRAWAL_REQUESTS_SIZE)]
@@ -78,6 +79,16 @@ impl UserFundAccount {
             .binary_search_by_key(&request_id, |req| req.get_request_id())
             .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
+    }
+
+    pub(super) fn sync_receipt_token_amount(
+        &mut self,
+        user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
+    ) -> Result<()> {
+        user_receipt_token_account.reload()?;
+        self.receipt_token_amount = user_receipt_token_account.amount;
+
+        Ok(())
     }
 
     /// Returns (batch_id, request_id)
