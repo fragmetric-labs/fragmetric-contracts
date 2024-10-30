@@ -468,6 +468,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
     }
 
+    public getNSOLSupportedTokenLockAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
+        return this.connection.getTokenAccountBalance(this.knownAddress.nSOLSupportedTokenLockAccount(symbol), "confirmed")
+            .then(v => new BN(v.value.amount));
+    }
+
     public getNSOLTokenMint() {
         return spl.getMint(
             // @ts-ignore
