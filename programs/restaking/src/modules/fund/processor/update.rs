@@ -119,8 +119,7 @@ pub fn process_update_prices<'info>(
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
-            receipt_token_mint.supply,
+            receipt_token_mint,
         ),
     });
 
@@ -181,8 +180,7 @@ fn emit_fund_manager_updated_fund_event(
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(
             fund_account,
-            get_one_receipt_token_as_sol(receipt_token_mint, fund_account)?,
-            receipt_token_mint.supply,
+            receipt_token_mint,
         ),
     });
 
