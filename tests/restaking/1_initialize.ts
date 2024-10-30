@@ -42,10 +42,10 @@ describe("initialize", async () => {
     })
 
     step("initialize jito restaking protocol account", async () => {
-        const { fragSOLJitoVRTAccount } = await restaking.runAdminInitializeJitoRestakingProtocolAccount();
+        const { fragSOLFundJitoVRTAccount } = await restaking.runAdminInitializeJitoRestakingProtocolAccount();
 
-        expect(fragSOLJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
-        expect(fragSOLJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
+        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
     })
 
     step("initialize reward accounts", async () => {

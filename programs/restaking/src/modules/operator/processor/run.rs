@@ -291,6 +291,7 @@ pub fn process_run<'info>(
         jito_vault_receipt_token_mint,
         jito_vault_receipt_token_program,
         jito_vault_supported_token_account,
+        jito_vault_fee_receipt_token_account,
         fund_jito_vault_receipt_token_account,
         // pricing
         pricing_source_accounts @..,
@@ -303,6 +304,10 @@ pub fn process_run<'info>(
         let restaking_nt_amount = fund_normalized_token_account_parsed.amount;
 
         if restaking_nt_amount > 0 {
+            let mut fund_jito_vault_receipt_token_account_parsed =
+                parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
+            let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
+
             restaking::jito::deposit(
                 &restaking::jito::JitoRestakingVaultContext{
                     vault_program: jito_vault_program.clone(),
@@ -317,6 +322,7 @@ pub fn process_run<'info>(
                 fund_normalized_token_account, // supported_token_account,
                 restaking_nt_amount, // supported_token_amount_in,
 
+                jito_vault_fee_receipt_token_account,
                 fund_jito_vault_receipt_token_account, // vault_receipt_token_account,
                 restaking_nt_amount, // vault_receipt_token_min_amount_out,
 
@@ -324,6 +330,16 @@ pub fn process_run<'info>(
 
                 &[fund_account.get_signer_seeds().as_ref()],
             )?;
+
+            fund_jito_vault_receipt_token_account_parsed.reload()?;
+            let minted_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount - before_fund_vrt_amount;
+
+            msg!(
+                "restaked {} nt to mint {} vrt",
+                restaking_nt_amount,
+                minted_fund_vrt_amount
+            );
+            require_gte!(minted_fund_vrt_amount, restaking_nt_amount);
         }
     }
 

@@ -110,7 +110,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
     step("signature verification has to fail when after expiration", async function () {
         const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
-        const expirationTimestamp = new BN(Math.floor(Date.now() / 1000) - 2); // expired 2 sec ago
+        const expirationTimestamp = new BN(Math.floor(Date.now() / 1000) - 5); // expired 2 sec ago
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
