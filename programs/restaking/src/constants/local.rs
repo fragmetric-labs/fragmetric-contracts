@@ -27,7 +27,7 @@ pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZM
 pub const FRAGSOL_JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 #[constant]
-pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey = pubkey!("3VrDXk62TxEh4cxNe8qgT3xcAiZFv6n1ccmcUAoVt7Hh");
+pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey = pubkey!("Fr5Xvta98284hu9HkMUixWRRW7pSK3nS19goGTYUzHpf");
 
 #[constant]
-pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey = pubkey!("HdvYuaWwi8eByP7pU6cdA2qf7YX3dUR1zHCfM7Y9BX43");
+pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey = pubkey!("DXHvJfVP9dHmjP4m4GGD6ujyj8dj7BjvKgwHguqw3mD9");

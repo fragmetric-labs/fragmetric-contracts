@@ -144,6 +144,7 @@ pub fn deposit<'info>(
     supported_token_account: &AccountInfo<'info>, // &InterfaceAccount<'info, TokenAccount>,
     supported_token_amount_in: u64,
 
+    fee_vault_receipt_token_account: &AccountInfo<'info>,
     vault_receipt_token_account: &AccountInfo<'info>, // &InterfaceAccount<'info, TokenAccount>,
     vault_receipt_token_min_amount_out: u64,
 
@@ -162,9 +163,10 @@ pub fn deposit<'info>(
         ctx.vault_supported_token_account.key,
         vault_receipt_token_account.key,
 
-        vault_receipt_token_account.key,
+        // TODO: read fee admin ata from vault state account
+        fee_vault_receipt_token_account.key,
 
-        Some(signer.key),
+        None,
 
         supported_token_amount_in,
         vault_receipt_token_min_amount_out,
@@ -181,7 +183,8 @@ pub fn deposit<'info>(
             supported_token_account.clone(),
             ctx.vault_supported_token_account.clone(),
             vault_receipt_token_account.clone(),
-            ctx.vault_receipt_token_program.to_account_info(),
+            fee_vault_receipt_token_account.clone(),
+            ctx.vault_receipt_token_program.clone(),
         ],
         signer_seeds,
     )?;

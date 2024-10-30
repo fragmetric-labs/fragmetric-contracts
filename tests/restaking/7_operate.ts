@@ -14,8 +14,10 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const fragSOLFundExecutionReservedAccountBalance0 = await restaking.getFragSOLFundExecutionReservedAccountBalance();
         const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();
         const nSOLMint0 = await restaking.getNSOLTokenMint();
+        const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
         logger.info(`[BEFORE] fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance0}`);
-        logger.info(`[BEFORE] nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint0.supply.toString()}`);
+        logger.info(`[BEFORE] nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLOperationReservedAmount, nSOLSupply=${nSOLMint0.supply.toString()}`);
+        logger.info(`[BEFORE] jitoVaultNSOL=${jitoVaultNSOLBalance0.toString()}`);
         expect(fragSOLFundExecutionReservedAccountBalance0.toString()).eq('0', 'execution reserved should be zero before operation');
 
         // TODO: currently staking sol to hard-coded LST, like localnet: jitoSOL
@@ -27,9 +29,12 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const nSOLPool1 = await restaking.getNSOLTokenPoolAccount();
         const nSOLJitoSOLBalance1 = await restaking.getNSOLSupportedTokenLockAccountBalance('jitoSOL');
         const nSOLMint1 = await restaking.getNSOLTokenMint();
+        const jitoVaultNSOLBalance1 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
         logger.info(`[AFTER] fundSupportedTokens=${fragSOLFund1.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund1.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance1}`);
         logger.info(`[AFTER] nSOLSupportedTokens=${nSOLPool1.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint1.supply.toString()}`);
+        logger.info(`[AFTER] jitoVaultNSOL=${jitoVaultNSOLBalance1.toString()}`);
         expect(fragSOLFundExecutionReservedAccountBalance1.toString()).eq('0', 'execution reserved should be zero after operation');
+        expect(jitoVaultNSOLBalance1.toString()).eq(nSOLMint1.supply.toString(), 'for now, all nSOL is being deposited to jito vault');
 
         const stakedSOLAmount = fragSOLFund0.solOperationReservedAmount.sub(fragSOLFund1.solOperationReservedAmount);
         expect(stakedSOLAmount.gt(new BN(0))).eq(true, 'executed amount should be greater than zero');

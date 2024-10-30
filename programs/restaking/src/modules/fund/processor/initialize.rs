@@ -72,7 +72,7 @@ pub fn process_initialize_supported_token_authority(
 }
 
 pub fn process_initialize_supported_token_lock_account(
-    supported_token_mint: &InterfaceAccount<Mint>,
+    supported_token_mint: &AccountInfo,
     fund_account: &Account<FundAccount>,
     supported_token_program: &Interface<TokenInterface>,
 ) -> Result<()> {
