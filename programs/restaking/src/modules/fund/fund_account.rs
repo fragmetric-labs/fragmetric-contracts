@@ -240,11 +240,6 @@ impl SupportedTokenInfo {
     }
 
     #[inline(always)]
-    pub(super) fn get_mint(&self) -> Pubkey {
-        self.mint
-    }
-
-    #[inline(always)]
     pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
         self.pricing_source
     }

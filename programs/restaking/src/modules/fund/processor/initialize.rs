@@ -71,7 +71,7 @@ pub fn process_initialize_supported_token_authority(
     Ok(())
 }
 
-pub fn process_initialize_normalized_token_pool_supported_token_lock_account(
+pub fn process_initialize_supported_token_lock_account(
     supported_token_mint: &InterfaceAccount<Mint>,
     fund_account: &Account<FundAccount>,
     supported_token_program: &Interface<TokenInterface>,

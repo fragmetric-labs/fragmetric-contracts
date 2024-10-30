@@ -33,17 +33,5 @@ pub fn process_initialize_normalized_token_pool_account<'info>(
         Some(normalized_token_pool_account.key()),
     )?;
 
-    token::set_authority(
-        CpiContext::new(
-            normalized_token_program.to_account_info(),
-            token::SetAuthority {
-                current_authority: admin.to_account_info(),
-                account_or_mint: normalized_token_account.to_account_info(),
-            },
-        ),
-        spl_token::instruction::AuthorityType::AccountOwner,
-        Some(normalized_token_pool_account.key()),
-    )?;
-
     Ok(())
 }

@@ -251,10 +251,10 @@ pub mod restaking {
     // FundManagerNormalizedTokenPoolSupportedTokenInitialContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_initialize_normalized_token_pool_supported_token_lock_account(
+    pub fn fund_manager_initialize_supported_token_lock_account(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::process_initialize_normalized_token_pool_supported_token_lock_account(
+        modules::fund::process_initialize_supported_token_lock_account(
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.fund_account,
             &ctx.accounts.supported_token_program,
@@ -264,6 +264,17 @@ pub mod restaking {
     ////////////////////////////////////////////
     // FundManagerNormalizedTokenPoolSupportedTokenContext
     ////////////////////////////////////////////
+
+    pub fn fund_manager_update_supported_token_lock_account_authority(
+        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountContext>,
+    ) -> Result<()> {
+        modules::normalize::process_update_supported_token_lock_account_authority(
+            &ctx.accounts.fund_manager,
+            &ctx.accounts.supported_token_lock_account,
+            &ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.supported_token_program,
+        )
+    }
 
     pub fn fund_manager_sync_normalized_token_pool_supported_tokens(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
