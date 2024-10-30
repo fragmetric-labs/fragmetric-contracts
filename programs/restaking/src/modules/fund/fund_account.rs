@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{self, TokenPricingSource, TokenPricingSourceMap};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -43,6 +43,7 @@ impl PDASeeds<2> for FundAccount {
 
 impl FundAccount {
     pub const EXECUTION_RESERVED_SEED: &'static [u8] = b"fund_execution_reserved";
+    pub const NORMALIZED_TOKEN_ACCOUNT_SEED: &'static [u8] = b"normalized_token";
 
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
@@ -71,7 +72,9 @@ impl FundAccount {
     }
 
     #[inline(always)]
-    pub(in crate::modules) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedTokenInfo> {
+    pub(in crate::modules) fn get_supported_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &SupportedTokenInfo> {
         self.supported_tokens.iter()
     }
 
@@ -174,12 +177,16 @@ impl FundAccount {
 
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
-        // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
+        // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
         self.get_supported_tokens_iter().try_fold(
             self.sol_operation_reserved_amount,
             |sum, token| {
-                sum.checked_add(token.get_token_amount_as_sol(token.operation_reserved_amount)?)
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+                sum.checked_add(
+                    token.get_token_amount_as_sol(
+                        token.operation_reserved_amount.checked_add(token.operating_amount)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+                        )?
+                ).ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
             },
         )
     }
@@ -193,9 +200,10 @@ pub struct SupportedTokenInfo {
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
     operation_reserved_amount: u64,
-    pub(super) one_token_as_sol: u64,
+    one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
-    _reserved: [u8; 128],
+    operating_amount: u64,
+    _reserved: [u8; 88],
 }
 
 impl SupportedTokenInfo {
@@ -215,31 +223,47 @@ impl SupportedTokenInfo {
             operation_reserved_amount: 0,
             one_token_as_sol: 0,
             pricing_source,
-            _reserved: [0; 128],
+            operating_amount: 0,
+            _reserved: [0; 88],
         }
     }
 
-    pub(in crate::modules) fn get_mint(&self) -> &Pubkey {
-        &self.mint
+    pub(in crate::modules) fn get_mint(&self) -> Pubkey {
+        self.mint
     }
 
     pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
         self.operation_reserved_amount
     }
 
+    // TODO: wtf!
     pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
         self.operation_reserved_amount = amount;
     }
 
-    pub(super) fn get_denominated_amount_per_token(&self) -> Result<u64> {
+    pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
+        self.operating_amount
+    }
+
+    // TODO: wtf!
+    pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
+        self.operating_amount = amount;
+    }
+
+    pub(in crate::modules) fn get_denominated_amount_per_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     #[inline(always)]
-    pub(super) fn get_pricing_source(&self) -> &TokenPricingSource {
-        &self.pricing_source
+    pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
+        self.pricing_source
+    }
+
+    #[inline(always)]
+    pub(super) fn get_program(&self) -> Pubkey {
+        self.program
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -275,6 +299,19 @@ impl SupportedTokenInfo {
         Ok(())
     }
 
+    pub(super) fn update_one_token_as_sol(
+        &mut self,
+        pricing_source_map: &TokenPricingSourceMap,
+    ) -> Result<()> {
+        self.one_token_as_sol = pricing::calculate_token_amount_as_sol(
+            self.mint,
+            pricing_source_map,
+            self.get_denominated_amount_per_token()?,
+        )?;
+
+        Ok(())
+    }
+
     pub(super) fn get_token_amount_as_sol(&self, token_amount: u64) -> Result<u64> {
         crate::utils::get_proportional_amount(
             token_amount,
@@ -303,7 +340,7 @@ pub struct WithdrawalStatus {
     batch_processing_threshold_duration: i64,
 
     // Withdrawal Status = PENDING
-    pub(super) pending_batch_withdrawal: BatchWithdrawal,
+    pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]

@@ -249,8 +249,7 @@ fn mint_receipt_token_to_user<'info>(
     )
     .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
     receipt_token_mint.reload()?;
-    user_receipt_token_account.reload()?;
-    user_fund_account.receipt_token_amount = user_receipt_token_account.amount;
+    user_fund_account.sync_receipt_token_amount(user_receipt_token_account)?;
 
     reward::update_reward_pools_token_allocation(
         &mut *reward_account.load_mut()?,

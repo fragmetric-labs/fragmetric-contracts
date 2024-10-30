@@ -20,7 +20,11 @@ pub struct AdminReceiptTokenMintAuthorityInitialContext<'info> {
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(
+        mut,
+        address = FRAGSOL_MINT_ADDRESS,
+        constraint = receipt_token_mint.supply == 0,
+    )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

@@ -18,6 +18,13 @@ describe("initialize", async () => {
         await restaking.runAdminUpdateTokenMetadata();
     });
 
+    step("create nSOL token mint", async function () {
+        const { nSOLMint } = await restaking.runAdminInitializeNSOLTokenMint();
+        expect(nSOLMint.address.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
+        expect(nSOLMint.mintAuthority.toString()).eq(restaking.keychain.getKeypair('ADMIN').publicKey.toString());
+        expect(nSOLMint.freezeAuthority).null;
+    })
+
     step("initialize fund accounts", async () => {
         const { fragSOLFundAccount } = await restaking.runAdminInitializeFundAccounts();
 
@@ -26,6 +33,12 @@ describe("initialize", async () => {
         await restaking.runAdminUpdateFundAccounts();
 
         expect(fragSOLFundAccount.dataVersion).gt(1);
+    })
+
+    step("initialize normalized token pool", async () => {
+        const { nSOLTokenPoolAccount } = await restaking.runAdminInitializeNormalizeTokenPool();
+
+        expect(nSOLTokenPoolAccount.normalizedTokenMint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
     })
 
     step("initialize reward accounts", async () => {
@@ -58,6 +71,19 @@ describe("initialize", async () => {
             expect(supported.operationReservedAmount.toNumber()).eq(0);
         }
     });
+
+    step("initialize normalized token pool supported tokens configuration", async function() {
+        const { nSOLTokenPool } = await restaking.runFundManagerInitializeNormalizeTokenPoolConfigurations();
+
+        expect(nSOLTokenPool.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
+        let i = 0;
+        for (const v of Object.values(restaking.supportedTokenMetadata)) {
+            const supported = nSOLTokenPool.supportedTokens[i++];
+            expect(supported.mint.toString()).eq(v.mint.toString());
+            expect(supported.program.toString()).eq(v.program.toString());
+            expect(supported.lockedAmount.toNumber()).eq(0);
+        }
+    })
 
     step("initialize reward pools and rewards", async function () {
         const res0 = await restaking.runFundManagerInitializeRewardPools();
