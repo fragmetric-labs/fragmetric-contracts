@@ -17,3 +17,17 @@ pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg
 
 #[constant]
 pub const NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+
+// TODO: replace it
+#[constant]
+pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
+
+#[constant]
+pub const FRAGSOL_JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("nxxxxkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+
+#[constant]
+pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey = pubkey!("nxxxxkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+
+#[constant]
+pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey = pubkey!("nxxxxkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+

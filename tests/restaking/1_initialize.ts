@@ -41,6 +41,13 @@ describe("initialize", async () => {
         expect(nSOLTokenPoolAccount.normalizedTokenMint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
     })
 
+    step("initialize jito restaking protocol account", async () => {
+        const { fragSOLJitoVRTAccount } = await restaking.runAdminInitializeJitoRestakingProtocolAccount();
+
+        expect(fragSOLJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
+        expect(fragSOLJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+    })
+
     step("initialize reward accounts", async () => {
         const { fragSOLRewardAccount } = await restaking.runAdminUpdateRewardAccounts();
 

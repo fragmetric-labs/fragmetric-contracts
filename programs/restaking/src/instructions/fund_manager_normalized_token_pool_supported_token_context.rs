@@ -34,14 +34,9 @@ pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        token::mint = normalized_token_mint,
-        token::authority = fund_account,
-        token::token_program = normalized_token_program,
-        seeds = [
-            FundAccount::NORMALIZED_TOKEN_ACCOUNT_SEED,
-            normalized_token_mint.key().as_ref()
-        ],
-        bump,
+        associated_token::mint = normalized_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = normalized_token_program,
     )]
     pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

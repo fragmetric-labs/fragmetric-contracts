@@ -9,7 +9,7 @@ const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
 module.exports = (i: number) => describe(`operate#${i}`, async () => {
     const restaking = await restakingPlayground;
 
-    step("fund operation: staking, normalization, restaking", async function () {
+    step("fund operation: staking, normalize, restaking", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
         const fragSOLFundExecutionReservedAccountBalance0 = await restaking.getFragSOLFundExecutionReservedAccountBalance();
         const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();

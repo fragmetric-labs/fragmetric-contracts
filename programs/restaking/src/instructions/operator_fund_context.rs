@@ -61,11 +61,4 @@ pub struct OperatorFundContext2<'info> {
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
-
-    #[account(
-        mut,
-        seeds = [FundAccount::EXECUTION_RESERVED_SEED, receipt_token_mint.key().as_ref()],
-        bump,
-    )]
-    pub fund_execution_reserve_account: SystemAccount<'info>,
 }

@@ -15,10 +15,6 @@ import {Restaking} from "../../target/types/restaking";
 import {getKeychain, KEYCHAIN_ENV, KEYCHAIN_KEYS} from "./keychain";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 import * as ed25519 from "ed25519";
-import fs from "fs";
-import path from "path";
-import {createPublicKey} from "node:crypto";
-import {spawn} from "node:child_process";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
@@ -79,6 +75,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runAdminInitializeNSOLTokenMint(), // 8*****
             () => this.runAdminInitializeNormalizeTokenPool(), // 9****
             () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10*******
+            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11***
         ];
     }
 
@@ -90,13 +87,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     private _knownAddress: ReturnType<typeof this._getKnownAddress>;
 
     private _getKnownAddress() {
-        const nSOLTokenMint = this.getConstantAsPublicKey("nsolMintAddress");
-        const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
-        const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("normalized_token_pool"), nSOLTokenMintBuf], this.programId);
-        const [nSOLFundTokenAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("normalized_token"), nSOLTokenMintBuf], this.programId);
-        const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
-            web3.PublicKey.findProgramAddressSync([Buffer.from("supported_token_lock"), nSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()], this.programId)[0];
-
         const fragSOLTokenMint = this.getConstantAsPublicKey("fragsolMintAddress");
         const fragSOLTokenMintBuf = fragSOLTokenMint.toBuffer();
         const [fragSOLTokenLock] = web3.PublicKey.findProgramAddressSync([Buffer.from("receipt_token_lock"), fragSOLTokenMintBuf], this.programId);
@@ -115,6 +105,39 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             web3.PublicKey.findProgramAddressSync([Buffer.from("supported_token"), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()], this.programId)[0];
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, user, false, this.supportedTokenMetadata[symbol].program);
+
+        const nSOLTokenMint = this.getConstantAsPublicKey("nsolMintAddress");
+        const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
+        const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
+        const nSOLFundTokenAccount = spl.getAssociatedTokenAddressSync(
+            nSOLTokenMint,
+            fragSOLFund,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
+            web3.PublicKey.findProgramAddressSync([Buffer.from("nt_supported_token_lock"), nSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()], this.programId)[0];
+
+        const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
+        const fragSOLJitoVaultConfig = this.getConstantAsPublicKey('fragsolJitoVaultConfigAddress');
+        const fragSOLJitoVaultAccount = this.getConstantAsPublicKey('fragsolJitoVaultAccountAddress');
+        const fragSOLJitoVRTMint = this.getConstantAsPublicKey('fragsolJitoVaultReceiptTokenMintAddress');
+        const fragSOLJitoVaultSupportedTokenAccount = spl.getAssociatedTokenAddressSync(
+            nSOLTokenMint,
+            fragSOLJitoVaultAccount,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        const fragSOLJitoVRTAccount = spl.getAssociatedTokenAddressSync(
+            fragSOLJitoVRTMint,
+            fragSOLFund,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+
         return {
             nSOLTokenMint,
             nSOLFundTokenAccount,
@@ -134,6 +157,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLSupportedTokenAuthority,
             fragSOLSupportedTokenAccount,
             userSupportedTokenAccount,
+            jitoVaultProgram,
+            fragSOLJitoVaultConfig,
+            fragSOLJitoVaultAccount,
+            fragSOLJitoVRTMint,
+            fragSOLJitoVRTAccount,
+            fragSOLJitoVaultSupportedTokenAccount,
         };
     }
 
@@ -239,78 +268,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 isSigner: false,
                 isWritable: false,
             },
-        ];
-    }
-
-    public get jitoStakePoolDepositAccounts() {
-        if (this._jitoStakePoolDepositAccounts) return this._jitoStakePoolDepositAccounts;
-        return (this._jitoStakePoolDepositAccounts = this._getJitoStakePoolDepositAccounts());
-    }
-
-    private _jitoStakePoolDepositAccounts: ReturnType<typeof this._getJitoStakePoolDepositAccounts>;
-
-    private _getJitoStakePoolDepositAccounts(): web3.AccountMeta[] {
-        const [jitoStakePoolWithdrawAuthority] = anchor.web3.PublicKey.findProgramAddressSync(
-            [new anchor.web3.PublicKey("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb").toBuffer(), Buffer.from("withdraw")],
-            new anchor.web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy")
-        );
-
-        return [
-            {
-                // stake pool program id
-                pubkey: new anchor.web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // jito stake pool address
-                pubkey: new anchor.web3.PublicKey("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // stake_pool_withdraw_authority
-                pubkey: jitoStakePoolWithdrawAuthority,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // reserve_stake_account
-                pubkey: new anchor.web3.PublicKey("BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
-                isSigner: false,
-                isWritable: true,
-            },
-            // { // lamports_from
-            //   pubkey: new anchor.web3.PublicKey(""), // fundAccount
-            //   isSigner: true,
-            //   isWritable: true,
-            // },
-            // { // pool_tokens_to
-            //   pubkey: new anchor.web3.PublicKey(""), // fundAccount의 token account
-            //   isSigner: false,
-            //   isWritable: true,
-            // },
-            {
-                // manager_fee_account
-                pubkey: new anchor.web3.PublicKey("feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
-                isSigner: false,
-                isWritable: true,
-            },
-            // { // referrer_pool_tokens_account
-            //   pubkey: new anchor.web3.PublicKey(""), // pool_tokens_to랑 같게
-            //   isSigner: false,
-            //   isWritable: true,
-            // },
-            // { // pool_mint
-            //   pubkey: new anchor.web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
-            //   isSigner: false,
-            //   isWritable: true,
-            // },
-            // { // token_program_id
-            //   pubkey: spl.TOKEN_PROGRAM_ID,
-            //   isSigner: false,
-            //   isWritable: false,
-            // },
         ];
     }
 
@@ -684,6 +641,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice("nSOL token pool created".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
 
         return {nSOLTokenPoolAccount};
+    }
+
+    public async runAdminInitializeJitoRestakingProtocolAccount() {
+        await this.run({
+            instructions: [
+                this.program.methods.adminInitializeJitoRestakingVaultReceiptTokenAccount()
+                    .accounts({payer: this.wallet.publicKey}).instruction(),
+            ],
+            signerNames: ["ADMIN"],
+        });
+        const fragSOLJitoVRTAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVRTAccount, 'confirmed');
+        logger.notice("jito VRT account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLJitoVRTAccount.toString());
+
+        return {fragSOLJitoVRTAccount};
     }
 
     public async runAdminTransferMintAuthority() {
@@ -1323,59 +1294,101 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runOperatorRun(operator: web3.Keypair = this.wallet) {
-        const accountsList: web3.AccountMeta[][] = Object.entries(this.supportedTokenMetadata).map(([token, v]) => {
-            return [
-                // staking
-                {
-                    // stake_pool_program
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy" : "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
-                    isSigner: false,
-                    isWritable: false,
-                },
-                {
-                    // stake_pool
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9" : "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
-                    isSigner: false,
-                    isWritable: true,
-                },
-                {
-                    // stake_pool_withdraw_authority
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "4vJJQTSApqig3DEZbLRNuWscQfE6GVisSgRPraiPn1Fz" : "6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS"),
-                    isSigner: false,
-                    isWritable: false,
-                },
-                {
-                    // reserve_stake_account
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "aRkys1kVHeysrcn9bJFat9FkvoyyYD8M1kK286X3Aro" : "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
-                    isSigner: false,
-                    isWritable: true,
-                },
-                {
-                    // manager_fee_account
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1" : "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
-                    isSigner: false,
-                    isWritable: true,
-                },
-                {
-                    // pool_mint
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1" : "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
-                    isSigner: false,
-                    isWritable: true,
-                },
-                {
-                    // token_program
-                    pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" : "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-                    isSigner: false,
-                    isWritable: false,
-                },
-                {
-                    // supported_token_account
-                    pubkey: this.isMaybeDevnet ? this.knownAddress.fragSOLSupportedTokenAccount("bSOL") : this.knownAddress.fragSOLSupportedTokenAccount("jitoSOL"),
-                    isSigner: false,
-                    isWritable: true,
-                },
+        // command=0. staking once x2
+        // command=1. normalize lst x(#supported tokens)
+        // command=2. restaking nsol x1
 
-                // normalization
+        const cmd0Accounts: web3.AccountMeta[] = [
+            // staking
+            {
+                // fund_execution_reserve_account
+                pubkey: this.knownAddress.fragSOLFundExecutionReservedAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // stake_pool_program
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy" : "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // stake_pool
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9" : "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // stake_pool_withdraw_authority
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "4vJJQTSApqig3DEZbLRNuWscQfE6GVisSgRPraiPn1Fz" : "6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS"),
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // reserve_stake_account
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "aRkys1kVHeysrcn9bJFat9FkvoyyYD8M1kK286X3Aro" : "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // manager_fee_account
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1" : "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // pool_mint
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1" : "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // token_program
+                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" : "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // supported_token_account
+                pubkey: this.isMaybeDevnet ? this.knownAddress.fragSOLSupportedTokenAccount("bSOL") : this.knownAddress.fragSOLSupportedTokenAccount("jitoSOL"),
+                isSigner: false,
+                isWritable: true,
+            },
+        ];
+        const cmd0Tx = await this.run({
+            instructions: [
+                // web3.ComputeBudgetProgram.setComputeUnitPrice({
+                //     microLamports: 0,
+                // }),
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800_000,
+                }),
+                this.program.methods
+                    .operatorRun(0)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd0Accounts)
+                    .instruction(),
+                this.program.methods
+                    .operatorRun(0)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd0Accounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+        });
+        if (cmd0Tx.error) {
+            return {error: cmd0Tx.error};
+        }
+        logger.notice(`operator run#0: staked sol`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
+            const cmd1Accounts: web3.AccountMeta[] = [
+                // normalize
                 {
                     // normalized_token_pool_account
                     pubkey: this.knownAddress.nSOLTokenPool,
@@ -1400,42 +1413,39 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     isSigner: false,
                     isWritable: true,
                 },
-                // TODO: iterate over supported tokens
                 {
                     // fund_supported_token_account_to_normalize
-                    pubkey: this.knownAddress.fragSOLSupportedTokenAccount(token as any),
+                    pubkey: this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
                     isSigner: false,
                     isWritable: true,
                 },
                 {
                     // fund_supported_token_account_authority_to_normalize
-                    pubkey: this.knownAddress.fragSOLSupportedTokenAuthority(token as any),
+                    pubkey: this.knownAddress.fragSOLSupportedTokenAuthority(symbol as any),
                     isSigner: false,
                     isWritable: false,
                 },
                 {
                     // fund_supported_token_mint_to_normalize
-                    pubkey: v.mint,
+                    pubkey: token.mint,
                     isSigner: false,
                     isWritable: false,
                 },
                 {
                     // fund_supported_token_program_to_normalize
-                    pubkey: v.program,
+                    pubkey: token.program,
                     isSigner: false,
                     isWritable: false,
                 },
                 {
                     // normalized_token_pool_supported_token_lock_account
-                    pubkey: this.knownAddress.nSOLSupportedTokenLockAccount(token as any),
+                    pubkey: this.knownAddress.nSOLSupportedTokenLockAccount(symbol as any),
                     isSigner: false,
                     isWritable: true,
                 },
                 ...this.pricingSourceAccounts,
             ];
-        });
-        for (const accounts of accountsList) {
-            const {event, error} = await this.run({
+            const cmd1Tx = await this.run({
                 instructions: [
                     // web3.ComputeBudgetProgram.setComputeUnitPrice({
                     //     microLamports: 0,
@@ -1444,29 +1454,110 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         units: 800_000,
                     }),
                     this.program.methods
-                        .operatorRun()
+                        .operatorRun(1)
                         .accounts({
                             operator: operator.publicKey,
                         })
-                        .remainingAccounts(accounts)
-                        .instruction(),
-                    this.program.methods
-                        .operatorRun()
-                        .accounts({
-                            operator: operator.publicKey,
-                        })
-                        .remainingAccounts(accounts)
+                        .remainingAccounts(cmd1Accounts)
                         .instruction(),
                 ],
                 signers: [operator],
                 events: ["operatorProcessedJob"],
             });
-            if (error) {
-                return {error};
+            if (cmd1Tx.error) {
+                return {error: cmd1Tx.error};
             }
+            logger.notice(`operator run#1: normalized lst ${symbol}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
         }
 
-        logger.notice(`operator run`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        const cmd2Accounts: web3.AccountMeta[] = [
+            // normalize
+            {
+                // normalized_token_mint
+                pubkey: this.knownAddress.nSOLTokenMint,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // normalized_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // fund_normalized_token_account
+                pubkey: this.knownAddress.nSOLFundTokenAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            // restaking
+            {
+                // jito_vault_program
+                pubkey: this.knownAddress.jitoVaultProgram,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_config
+                pubkey: this.knownAddress.fragSOLJitoVaultConfig,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_account
+                pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_mint
+                pubkey: this.knownAddress.fragSOLJitoVRTMint,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_supported_token_account
+                pubkey: this.knownAddress.fragSOLJitoVaultSupportedTokenAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_supported_token_account
+                pubkey: this.knownAddress.fragSOLJitoVRTAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            ...this.pricingSourceAccounts,
+        ];
+        const cmd2Tx = await this.run({
+            instructions: [
+                // web3.ComputeBudgetProgram.setComputeUnitPrice({
+                //     microLamports: 0,
+                // }),
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800_000,
+                }),
+                this.program.methods
+                    .operatorRun(2)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd2Accounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+        });
+        if (cmd2Tx.error) {
+            return {error: cmd2Tx.error};
+        }
+        logger.notice(`operator run#2: restaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
         const [fragSOLFund, fragSOLFundExecutionReservedAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundExecutionReservedAccountBalance()]);
 
