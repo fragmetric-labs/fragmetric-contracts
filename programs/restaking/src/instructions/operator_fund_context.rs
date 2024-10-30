@@ -48,6 +48,8 @@ pub struct OperatorFundContext<'info> {
 pub struct OperatorFundContext2<'info> {
     pub operator: Signer<'info>,
 
+    pub system_program: Program<'info, System>,
+
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -59,4 +61,11 @@ pub struct OperatorFundContext2<'info> {
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::EXECUTION_RESERVED_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_execution_reserve_account: SystemAccount<'info>,
 }

@@ -23,5 +23,5 @@ if (!process.env.JUST_INIT) {
     require('./restaking/4_withdraw');
     require('./restaking/5_transfer_hook');
     require('./restaking/6_reward');
-    require('./restaking/7_operator_spl_stake_pool');
+    require('./restaking/7_operate');
 }

@@ -88,6 +88,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             [Buffer.from('fund'), fragSOLTokenMintBuf],
             this.programId
         );
+        const [fragSOLFundExecutionReservedAccount] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("fund_execution_reserved"), fragSOLTokenMintBuf],
+            this.programId,
+        );
         const fragSOLUserFund = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync(
             [Buffer.from('user_fund'), fragSOLTokenMintBuf, user.toBuffer()],
             this.programId
@@ -121,7 +125,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) => web3.PublicKey.findProgramAddressSync(
             [Buffer.from('supported_token'), fragSOLTokenMintBuf, this.supportedTokenMetadata[symbol].mint.toBuffer()],
             this.programId
-        );
+        )[0];
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) => spl.getAssociatedTokenAddressSync(
             this.supportedTokenMetadata[symbol].mint,
             user,
@@ -132,6 +136,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLTokenMint,
             fragSOLTokenLock,
             fragSOLFund,
+            fragSOLFundExecutionReservedAccount,
             fragSOLExtraAccountMetasAccount,
             fragSOLUserFund,
             fragSOLUserTokenAccount,
@@ -420,12 +425,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
     }
 
-    public getOperationReserveAccountAddress() {
-        const [operationReserveAccountAddress] = anchor.web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("operation_reserved"), this.knownAddress.fragSOLTokenMint.toBuffer()],
-            this.programId,
-        );
-        return operationReserveAccountAddress;
+    public getFragSOLFundExecutionReservedAccountBalance() {
+        return this.connection.getBalance(this.knownAddress.fragSOLFundExecutionReservedAccount, "confirmed");
     }
 
     public async runAdminInitializeTokenMint() {
@@ -1301,26 +1302,68 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLReward };
     }
 
-    public async runOperatorDepositSolToSplStakePool(operator: web3.Keypair = this.wallet, solAmount: BN, splPoolTokenMint: web3.PublicKey, supportedTokenProgram: web3.PublicKey) {
-        const { error } = await this.run({
+    public async runOperatorRun(operator: web3.Keypair = this.wallet) {
+        const accounts: web3.AccountMeta[] = [
+            { // stake_pool_program
+                pubkey: new anchor.web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
+                isSigner: false,
+                isWritable: false,
+            },
+            { // stake_pool
+                pubkey: new anchor.web3.PublicKey("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
+                isSigner: false,
+                isWritable: true,
+            },
+            { // stake_pool_withdraw_authority
+                pubkey: new anchor.web3.PublicKey("6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS"),
+                isSigner: false,
+                isWritable: false,
+            },
+            { // reserve_stake_account
+                pubkey: new anchor.web3.PublicKey("BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
+                isSigner: false,
+                isWritable: true,
+            },
+            { // manager_fee_account
+                pubkey: new anchor.web3.PublicKey("feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
+                isSigner: false,
+                isWritable: true,
+            },
+            { // pool_mint
+                pubkey: new anchor.web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                isSigner: false,
+                isWritable: true,
+            },
+            { // token_program
+                pubkey: new anchor.web3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+                isSigner: false,
+                isWritable: false,
+            },
+            { // supported_token_account
+                pubkey: this.knownAddress.fragSOLSupportedTokenAccount('jitoSOL'),
+                isSigner: false,
+                isWritable: true,
+            },
+        ];
+        const { event, error } = await this.run({
             instructions: [
                 this.program.methods
-                    .operatorMoveFundToOperationReserveAccount()
+                    .operatorRun()
                     .accounts({
                         operator: operator.publicKey,
                     })
+                    .remainingAccounts(accounts)
                     .instruction(),
                 this.program.methods
-                    .operatorDepositSolToSplStakePool(solAmount)
+                    .operatorRun()
                     .accounts({
                         operator: operator.publicKey,
-                        splPoolTokenMint,
-                        supportedTokenProgram,
                     })
-                    .remainingAccounts(this.jitoStakePoolDepositAccounts)
+                    .remainingAccounts(accounts)
                     .instruction(),
             ],
             signers: [operator],
+            events: ['operatorProcessedJob'],
         });
 
         logger.notice(`operator moved sol fund to operation reserve account`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
@@ -1328,12 +1371,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const [
             fragSOLFund,
-            operationReserveAccountAddress,
+            fragSOLFundExecutionReservedAccountBalance,
         ] = await Promise.all([
             this.getFragSOLFundAccount(),
-            this.getOperationReserveAccountAddress(),
+            this.getFragSOLFundExecutionReservedAccountBalance(),
         ]);
 
-        return { error, fragSOLFund, operationReserveAccountAddress };
+        return { event, error, fragSOLFund, fragSOLFundExecutionReservedAccountBalance };
     }
 }

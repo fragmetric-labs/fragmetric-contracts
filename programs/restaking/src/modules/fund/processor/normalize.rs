@@ -7,5 +7,5 @@ pub(crate) fn normalize_lst_operation_reserved(
     _amount_in: u64,
     _remaining_accounts: &[AccountInfo],
 ) -> Result<u64> {
-    Ok(0)
+    todo!()
 }

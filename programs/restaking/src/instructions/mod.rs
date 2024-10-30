@@ -9,7 +9,6 @@ mod fund_manager_reward_context;
 mod operator_empty_context;
 mod operator_fund_context;
 mod operator_reward_context;
-mod operator_staking_context;
 
 mod user_fund_context;
 mod user_fund_supported_token_context;
@@ -27,7 +26,6 @@ pub use fund_manager_reward_context::*;
 pub use operator_empty_context::*;
 pub use operator_fund_context::*;
 pub use operator_reward_context::*;
-pub use operator_staking_context::*;
 
 pub use user_fund_context::*;
 pub use user_fund_supported_token_context::*;

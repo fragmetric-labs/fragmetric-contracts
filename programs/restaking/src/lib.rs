@@ -338,6 +338,8 @@ pub mod restaking {
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+            &ctx.accounts.fund_execution_reserve_account,
+            ctx.bumps.fund_execution_reserve_account,
             ctx.remaining_accounts,
             clock.unix_timestamp,
             clock.slot,
@@ -381,35 +383,6 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
             Clock::get()?.slot,
-        )
-    }
-
-    ////////////////////////////////////////////
-    // OperatorStakingContext
-    ////////////////////////////////////////////
-
-    pub fn operator_move_fund_to_operation_reserve_account(
-        ctx: Context<OperatorMoveFundToOperationReserveAccountContext>,
-    ) -> Result<()> {
-        modules::staking::process_move_fund_to_operation_reserve_account(
-            &mut ctx.accounts.fund_account,
-            &ctx.accounts.operation_reserve_account,
-        )
-    }
-
-    pub fn operator_deposit_sol_to_spl_stake_pool<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorStakingContext<'info>>,
-        sol_amount: u64,
-    ) -> Result<()> {
-        modules::staking::process_deposit_sol_to_spl_stake_pool(
-            ctx.remaining_accounts,
-            &ctx.accounts.operation_reserve_account,
-            &ctx.accounts.supported_token_account,
-            &ctx.accounts.spl_pool_token_mint,
-            &ctx.accounts.supported_token_program,
-            &ctx.accounts.fund_account,
-            ctx.bumps.operation_reserve_account,
-            sol_amount,
         )
     }
 

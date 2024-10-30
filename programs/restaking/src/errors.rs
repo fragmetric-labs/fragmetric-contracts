@@ -169,4 +169,7 @@ pub enum ErrorCode {
 
     #[msg("fund: invalid sol withdrawal fee rate")]
     FundInvalidSolWithdrawalFeeRateError,
+
+    #[msg("fund: unexpected execution reserved account balance")]
+    FundUnexpectedExecutionReservedAccountBalanceException,
 }
