@@ -489,6 +489,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeNSOLTokenMint() {
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.nSOLTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.nSOLTokenMint,
+                    this.nSOLDecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID
+                ),
+            ],
+            signerNames: ["NSOL_MINT"],
+        });
+
         const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
         const keypair = this.keychain.getKeypair('NSOL_MINT');
         const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
@@ -497,6 +520,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
         const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
         umiInstance.use(umi.signerIdentity(authority));
+
+        if (this.isMaybeLocalnet) {
+            await umiInstance.rpc.airdrop(authKeypair.publicKey, umi.sol(1));
+        }
 
         await mpl.createV1(umiInstance, {
             mint,
