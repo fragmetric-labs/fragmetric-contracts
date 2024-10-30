@@ -31,6 +31,7 @@ describe("operation", async () => {
 
     const accounts = restaking.methods.operatorRun().accounts({
       vaultUpdateStateTracker: vault_update_state_tracker_pda[0],
+      user: signer.publicKey,
     })
 
     const tx = new anchor.web3.Transaction();
