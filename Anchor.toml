@@ -22,21 +22,17 @@ bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-# mock mainnet bSOL mint to localnet
-[[test.validator.account]]
+# clone mainnet bSOL mint to localnet
+[[test.validator.clone]]
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-filename = "tests/mocks/mainnet/bSOL_mint.json"
 
-# mock mainnet jitoSOL mint to localnet
-# DEV: this should be used when testing deposit_token()
-# [[test.validator.account]]
-# address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-# filename = "tests/mocks/mainnet/jitoSOL_mint.json"
+# clone mainnet jitoSOL mint to localnet
+[[test.validator.clone]]
+address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 
-# mock mainnet mSOL mint to localnet
-[[test.validator.account]]
+# clone mainnet mSOL mint to localnet
+[[test.validator.clone]]
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-filename = "tests/mocks/mainnet/mSOL_mint.json"
 
 # clone mainnet bSOL stake pool to localnet
 [[test.validator.clone]]
@@ -50,15 +46,18 @@ address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
 [[test.validator.clone]]
 address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
 
-# clone mainnet SPL stake pool to localnet
+# clone mainnet SPL stake pool program to localnet
 [[test.validator.clone]]
 address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
 
-# clone mainnet SPL stake pool executable account to localnet
+# clone mainnet SPL stake pool executable data account to localnet
 [[test.validator.clone]]
 address = "EmiU8AQkB2sswTxVB6aCmsAJftoowZGGDXuytm6X65R3"
 
-# clone mainnet jitoSOL mint to localnet
-# DEV: this should be used when testing staking module
+# clone mainnet Marinade stake pool program to localnet
 [[test.validator.clone]]
-address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+address = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
+
+# clone mainnet Marinade stake pool executable data account to localnet
+[[test.validator.clone]]
+address = "4PQH9YmfuKrVyZaibkLYpJZPv2FPaybhq2GAuBcWMSBf"

@@ -1191,31 +1191,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { event, error, fragSOLReward };
     }
 
-    public async runOperatorMoveFundToOperationReserveAccount(operator: web3.Keypair = this.wallet) {
-        const { error } = await this.run({
-            instructions: [
-                this.program.methods
-                    .operatorMoveFundToOperationReserveAccount()
-                    .accounts({
-                        operator: operator.publicKey,
-                    })
-                    .instruction(),
-            ],
-            signers: [operator],
-        });
-
-        logger.notice(`operator moved sol fund to operation reserve account`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
-        const [
-            fragSOLFund,
-            operationReserveAccountAddress,
-        ] = await Promise.all([
-            this.getFragSOLFundAccount(),
-            this.getOperationReserveAccountAddress(),
-        ]);
-
-        return { error, fragSOLFund, operationReserveAccountAddress };
-    }
-
     public async runOperatorDepositSolToSplStakePool(operator: web3.Keypair = this.wallet, solAmount: BN, splPoolTokenMint: web3.PublicKey, supportedTokenProgram: web3.PublicKey) {
         const { error } = await this.run({
             instructions: [
