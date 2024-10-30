@@ -15,7 +15,6 @@ use instructions::*;
 pub mod restaking {
     use super::*;
 
-
     ////////////////////////////////////////////
     // AdminFundInitialContext
     ////////////////////////////////////////////
@@ -264,13 +263,14 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn fund_manager_initialize_supported_token_lock_account(
-        ctx: Context<FundManagerSupportedTokenLockAccountInitialContext>,
+        _ctx: Context<FundManagerSupportedTokenLockAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::process_initialize_supported_token_lock_account(
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_account,
-            &ctx.accounts.supported_token_program,
-        )
+        // modules::fund::process_initialize_supported_token_lock_account(
+        //     &ctx.accounts.supported_token_mint,
+        //     &ctx.accounts.fund_account,
+        //     &ctx.accounts.supported_token_program,
+        // )
+        Ok(())
     }
 
     ////////////////////////////////////////////

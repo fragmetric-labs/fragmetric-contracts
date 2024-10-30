@@ -182,10 +182,13 @@ impl FundAccount {
             |sum, token| {
                 sum.checked_add(
                     token.get_token_amount_as_sol(
-                        token.operation_reserved_amount.checked_add(token.operating_amount)
-                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-                        )?
-                ).ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+                        token
+                            .operation_reserved_amount
+                            .checked_add(token.operating_amount)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                    )?,
+                )
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
             },
         )
     }
@@ -202,7 +205,7 @@ pub struct SupportedTokenInfo {
     one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
     operating_amount: u64,
-    _reserved: [u8; 88],
+    _reserved: [u8; 120],
 }
 
 impl SupportedTokenInfo {
@@ -223,7 +226,7 @@ impl SupportedTokenInfo {
             one_token_as_sol: 0,
             pricing_source,
             operating_amount: 0,
-            _reserved: [0; 88],
+            _reserved: [0; 120],
         }
     }
 

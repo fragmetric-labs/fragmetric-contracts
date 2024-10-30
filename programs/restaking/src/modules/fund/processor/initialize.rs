@@ -71,20 +71,20 @@ pub fn process_initialize_supported_token_authority(
     Ok(())
 }
 
-pub fn process_initialize_supported_token_lock_account(
-    supported_token_mint: &InterfaceAccount<Mint>,
-    fund_account: &Account<FundAccount>,
-    supported_token_program: &Interface<TokenInterface>,
-) -> Result<()> {
-    require_keys_eq!(
-        fund_account
-            .get_supported_token(supported_token_mint.key())?
-            .get_program(),
-        supported_token_program.key(),
-    );
+// pub fn process_initialize_supported_token_lock_account(
+//     supported_token_mint: &AccountInfo,
+//     fund_account: &Account<FundAccount>,
+//     supported_token_program: &Interface<TokenInterface>,
+// ) -> Result<()> {
+//     require_keys_eq!(
+//         fund_account
+//             .get_supported_token(supported_token_mint.key())?
+//             .get_program(),
+//         supported_token_program.key(),
+//     );
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 pub fn process_initialize_user_fund_account(
     user: &Signer,

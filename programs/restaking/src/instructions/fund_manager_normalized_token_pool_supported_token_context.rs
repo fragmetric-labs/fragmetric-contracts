@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
-use crate::errors::ErrorCode;
-use crate::modules::fund::FundAccount;
+// use crate::errors::ErrorCode;
+// use crate::modules::fund::FundAccount;
 use crate::modules::normalize::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
@@ -18,24 +17,24 @@ pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+    // /// CHECK: only key needed
+    // #[account(address = FRAGSOL_MINT_ADDRESS)]
+    // pub receipt_token_mint: UncheckedAccount<'info>,
 
-    #[account(
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
-    )]
-    // TODO fund must have authority to configure normalized token pool - for now just fix normalized token mint address
-    pub fund_account: Box<Account<'info, FundAccount>>,
-
+    // #[account(
+    //     seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+    //     bump = fund_account.get_bump(),
+    //     has_one = receipt_token_mint,
+    //     constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    // )]
+    // // TODO fund must have authority to configure normalized token pool - for now just fix normalized token mint address
+    // pub fund_account: Box<Account<'info, FundAccount>>,
+    /// CHECK: only key needed
     #[account(address = NSOL_MINT_ADDRESS)]
-    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub normalized_token_mint: UncheckedAccount<'info>,
 
-    pub normalized_token_program: Program<'info, Token>,
-
-    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+    /// CHECK: only key needed
+    pub supported_token_mint: UncheckedAccount<'info>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
