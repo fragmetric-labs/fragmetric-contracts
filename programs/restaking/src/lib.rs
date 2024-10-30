@@ -10,7 +10,6 @@ mod instructions;
 
 use constants::*;
 use instructions::*;
-use modules::restaking::jito::*;
 
 #[program]
 pub mod restaking {
@@ -49,6 +48,12 @@ pub mod restaking {
 
     pub fn admin_initialize_fund_normalized_token_account(
         _ctx: Context<AdminFundNormalizedTokenAccountInitialContext>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn admin_initialize_jito_restaking_vault_receipt_token_account(
+        _ctx: Context<AdminFundJitoRestakingProtocolAccountInitialContext>,
     ) -> Result<()> {
         Ok(())
     }
@@ -386,17 +391,17 @@ pub mod restaking {
 
     pub fn operator_run<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext2<'info>>,
+        command: u8,
     ) -> Result<()> {
         let clock = Clock::get()?;
         modules::operator::process_run(
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            &ctx.accounts.fund_execution_reserve_account,
-            ctx.bumps.fund_execution_reserve_account,
             ctx.remaining_accounts,
             clock.unix_timestamp,
             clock.slot,
+            command,
         )
     }
 

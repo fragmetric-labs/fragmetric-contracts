@@ -33,18 +33,6 @@ pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
     #[account(address = NSOL_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(
-        token::mint = normalized_token_mint,
-        token::authority = fund_account,
-        token::token_program = normalized_token_program,
-        seeds = [
-            FundAccount::NORMALIZED_TOKEN_ACCOUNT_SEED,
-            normalized_token_mint.key().as_ref()
-        ],
-        bump,
-    )]
-    pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
     pub normalized_token_program: Program<'info, Token>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,

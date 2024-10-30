@@ -36,7 +36,6 @@ impl<'info> TokenAmountAsSOLCalculator for NormalizedTokenAmountAsSOLCalculator<
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         }
 
-        msg!("FUCK2-0: {}, {}, {}", token_amount, assets_total_amount_as_sol, self.normalized_token_mint.supply);
         crate::utils::get_proportional_amount(
             token_amount,
             assets_total_amount_as_sol,

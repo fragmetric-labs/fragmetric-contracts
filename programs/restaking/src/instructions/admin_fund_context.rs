@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
@@ -120,16 +121,51 @@ pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
     #[account(
         init,
         payer = payer,
-        token::mint = normalized_token_mint,
-        token::authority = fund_account,
-        token::token_program = normalized_token_program,
-        seeds = [
-            FundAccount::NORMALIZED_TOKEN_ACCOUNT_SEED,
-            normalized_token_mint.key().as_ref()
-        ],
-        bump,
+        associated_token::mint = normalized_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = normalized_token_program,
     )]
     pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct  AdminFundJitoRestakingProtocolAccountInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(address = FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS)]
+    pub jito_vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub jito_vault_receipt_token_program: Program<'info, Token>,
+
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = jito_vault_receipt_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = jito_vault_receipt_token_program,
+    )]
+    pub fund_jito_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[derive(Accounts)]

@@ -1,30 +1,32 @@
+use std::clone;
 use anchor_lang::{prelude::*, solana_program, CheckOwner};
 use anchor_spl::token::accessor::mint;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-
-use crate::constants::ADMIN_PUBKEY;
+use crate::modules::{fund, staking, normalize, pricing, restaking};
 use crate::errors;
 use crate::events;
-use crate::modules::{fund, normalize, pricing, staking};
+use crate::constants::{ADMIN_PUBKEY};
 use crate::utils::*;
 
 pub fn process_run<'info>(
     operator: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     fund_account: &mut Account<'info, fund::FundAccount>,
-    fund_execution_reserve_account: &SystemAccount<'info>,
-    fund_execution_reserve_account_bump: u8,
     remaining_accounts: &'info [AccountInfo<'info>],
     _current_timestamp: i64,
     _current_slot: u64,
+    command: u8, // 0, 1, 2
 ) -> Result<()> {
     // temporary authorization
     require_eq!(operator.key(), ADMIN_PUBKEY);
 
-    // accounts
-    let [
+    // stake sol to jitoSOL
+    if command == 0 {
+        // accounts
+        let [
         // staking
+        fund_execution_reserve_account,
         stake_pool_program,
         stake_pool,
         stake_pool_withdraw_authority,
@@ -33,23 +35,17 @@ pub fn process_run<'info>(
         pool_mint,
         token_program,
         fund_supported_token_account_to_stake,
-        // normalization
-        normalized_token_pool_account,
-        normalized_token_mint,
-        normalized_token_program,
-        fund_normalized_token_account,
-        fund_supported_token_account_to_normalize,
-        fund_supported_token_account_authority_to_normalize,
-        fund_supported_token_mint_to_normalize,
-        fund_supported_token_program_to_normalize,
-        normalized_token_pool_supported_token_lock_account,
+        // pricing
         pricing_source_accounts @..,
-    ] = remaining_accounts else {
-        return Err(ProgramError::NotEnoughAccountKeys)?;
-    };
+        ] = remaining_accounts else {
+            return Err(ProgramError::NotEnoughAccountKeys)?;
+        };
 
-    // 1. stake sol to jitoSOL
-    {
+        let (fund_execution_reserve_account_address, fund_execution_reserve_account_bump) = Pubkey::find_program_address(
+            &[fund::FundAccount::EXECUTION_RESERVED_SEED, receipt_token_mint.key().as_ref()], &crate::ID,
+        );
+        require_eq!(fund_execution_reserve_account_address, fund_execution_reserve_account.key());
+
         let mut fund_supported_token_account_to_stake_parsed =
             parse_interface_account_boxed::<TokenAccount>(fund_supported_token_account_to_stake)?;
         let sol_operation_reserved_amount = fund_account.sol_operation_reserved_amount;
@@ -137,23 +133,41 @@ pub fn process_run<'info>(
         }
     }
 
-    // create pricing calculator
-    let mut pricing_source_map =
-        fund::create_pricing_source_map(fund_account, pricing_source_accounts)?;
-    pricing_source_map.insert(
-        normalized_token_mint.key(),
-        (
-            pricing::TokenPricingSource::NormalizedTokenPool {
-                mint_address: normalized_token_mint.key(),
-                pool_address: normalized_token_pool_account.key(),
-            },
-            vec![normalized_token_mint, normalized_token_pool_account],
-        ),
-    );
 
-    // 2. normalize supported tokens
-    // TODO: nt_opeartion_reserved_amount -> fund_account_ref.get_nt_operation_reserved_amount()
-    {
+    // normalize supported tokens
+    // TODO: apply fund_account.nt_operation_reserved_amount
+    if command == 1 {
+        let [
+        // normalization
+        normalized_token_pool_account,
+        normalized_token_mint,
+        normalized_token_program,
+        fund_normalized_token_account,
+        fund_supported_token_account_to_normalize,
+        fund_supported_token_account_authority_to_normalize,
+        fund_supported_token_mint_to_normalize,
+        fund_supported_token_program_to_normalize,
+        normalized_token_pool_supported_token_lock_account,
+        // pricing
+        pricing_source_accounts @..,
+        ] = remaining_accounts else {
+            return Err(ProgramError::NotEnoughAccountKeys)?;
+        };
+
+        // create pricing calculator
+        let mut pricing_source_map =
+            fund::create_pricing_source_map(fund_account, pricing_source_accounts)?;
+        pricing_source_map.insert(
+            normalized_token_mint.key(),
+            (
+                pricing::TokenPricingSource::NormalizedTokenPool {
+                    mint_address: normalized_token_mint.key(),
+                    pool_address: normalized_token_pool_account.key(),
+                },
+                vec![normalized_token_mint, normalized_token_pool_account],
+            ),
+        );
+
         let normalized_token_pool_account_parsed =
             parse_account_boxed(normalized_token_pool_account)?;
         let mut fund_supported_token_account_to_normalize_parsed =
@@ -201,9 +215,11 @@ pub fn process_run<'info>(
                 &fund_normalized_token_account_parsed,
                 &fund_supported_token_account_to_normalize_parsed,
                 fund_supported_token_account_authority_to_normalize.clone(),
-                &[fund_supported_token_account_authority_to_normalize_parsed
+                &[
+                    fund_supported_token_account_authority_to_normalize_parsed
                     .get_signer_seeds()
-                    .as_ref()],
+                    .as_ref(),
+                ],
                 normalizing_supported_token_amount,
                 // TODO: revisit later about pricing interface and dependency graph
                 pricing::calculate_token_amount_as_sol(
@@ -261,29 +277,76 @@ pub fn process_run<'info>(
         }
     }
 
-    // 3. restake normalized tokens
-    // {
-    //     fund::restake_nt_operation_reserved(
-    //         fund_account,
-    //         nt_opeartion_reserved_amount,
-    //         // TODO: pick required accounts for this fn
-    //         remaining_accounts,
-    //     );
-    // }
+    // restake normalized tokens
+    if command == 2 {
+        let [
+        // normalization
+        normalized_token_mint,
+        normalized_token_program,
+        fund_normalized_token_account,
+        // restaking
+        jito_vault_program,
+        jito_vault_config,
+        jito_vault_account,
+        jito_vault_receipt_token_mint,
+        jito_vault_receipt_token_program,
+        jito_vault_supported_token_account,
+        jito_vault_fee_receipt_token_account,
+        fund_jito_vault_receipt_token_account,
+        // pricing
+        pricing_source_accounts @..,
+        ] = remaining_accounts else {
+            return Err(ProgramError::NotEnoughAccountKeys)?;
+        };
+
+        let fund_normalized_token_account_parsed =
+            parse_interface_account_boxed::<TokenAccount>(fund_normalized_token_account)?;
+        let restaking_nt_amount = fund_normalized_token_account_parsed.amount;
+
+        if restaking_nt_amount > 0 {
+            let mut fund_jito_vault_receipt_token_account_parsed =
+                parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
+            let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
+
+            restaking::jito::deposit(
+                &restaking::jito::JitoRestakingVaultContext{
+                    vault_program: jito_vault_program.clone(),
+                    vault_config: jito_vault_config.clone(),
+                    vault: jito_vault_account.clone(),
+                    vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+                    vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
+                    vault_supported_token_mint: normalized_token_mint.clone(),
+                    vault_supported_token_program: normalized_token_program.clone(),
+                    vault_supported_token_account: jito_vault_supported_token_account.clone(),
+                },
+                fund_normalized_token_account, // supported_token_account,
+                restaking_nt_amount, // supported_token_amount_in,
+
+                jito_vault_fee_receipt_token_account,
+                fund_jito_vault_receipt_token_account, // vault_receipt_token_account,
+                restaking_nt_amount, // vault_receipt_token_min_amount_out,
+
+                fund_account.as_ref(), // signer
+
+                &[fund_account.get_signer_seeds().as_ref()],
+            )?;
+
+            fund_jito_vault_receipt_token_account_parsed.reload()?;
+            let minted_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount - before_fund_vrt_amount;
+
+            msg!(
+                "restaked {} nt to mint {} vrt",
+                restaking_nt_amount,
+                minted_fund_vrt_amount
+            );
+            require_gte!(minted_fund_vrt_amount, restaking_nt_amount);
+        }
+    }
 
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: fund::FundAccountInfo::from(fund_account, receipt_token_mint,),
+        fund_account: fund::FundAccountInfo::from(fund_account, receipt_token_mint),
     });
 
     Ok(())
 }
-
-// fn pick_account<'info, T: AccountDeserialize + Clone>(key: &Pubkey, accounts: &[AccountInfo<'info>]) -> Result<Box<AccountInfo<'info>>> {
-//     accounts.iter().find(|account| {
-//         return account.key.eq(key);
-//     }).map_or_else(Err(Error::from(ProgramError::NotEnoughAccountKeys)), |account| {
-//         let b = Box::new(Account::<T>::try_from(account)?);
-//         return b.as_ref();
-//     })
-// }

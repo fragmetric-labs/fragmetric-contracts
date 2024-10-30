@@ -18,7 +18,7 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [[test.genesis]]
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-program = "./tools/restaking/mpl-token-metadata.so"
+program = "./tests/mocks/mainnet/mpl-token-metadata.so"
 
 [test.validator]
 url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
@@ -86,9 +86,9 @@ address = "96nH6npzmaAWpmraLaN2F55h27TMEtJrsjo881dCc2Dt"
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
 
 [[test.validator.account]]
-address = "3VrDXk62TxEh4cxNe8qgT3xcAiZFv6n1ccmcUAoVt7Hh"
-filename = "./tests/mocks/jito_nsol_vault.json"#
+address = "Fr5Xvta98284hu9HkMUixWRRW7pSK3nS19goGTYUzHpf"
+filename = "./tests/mocks/mainnet/jito_nsol_vault.json"#
 
 [[test.validator.account]]
-address = "HdvYuaWwi8eByP7pU6cdA2qf7YX3dUR1zHCfM7Y9BX43"
-filename = "./tests/mocks/jito_vault_vrt.json"
+address = "DXHvJfVP9dHmjP4m4GGD6ujyj8dj7BjvKgwHguqw3mD9"
+filename = "./tests/mocks/mainnet/jito_vault_vrt.json"

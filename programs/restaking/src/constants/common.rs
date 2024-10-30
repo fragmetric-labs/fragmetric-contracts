@@ -37,7 +37,3 @@ pub const MAINNET_JITOSOL_STAKE_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZP
 pub const MAINNET_NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 #[constant]
 pub const DEVNET_NSOL_MINT_ADDRESS: Pubkey = MAINNET_NSOL_MINT_ADDRESS;
-// #[constant]
-// pub const MAINNET_NSOL_POOL_ADDRESS: Pubkey = pubkey!("");
-// #[constant]
-// pub const DEVNET_NSOL_POOL_ADDRESS: Pubkey = MAINNET_NSOL_POOL_ADDRESS;

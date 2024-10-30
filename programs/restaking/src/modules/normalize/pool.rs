@@ -19,7 +19,7 @@ pub struct NormalizedTokenPoolAccount {
 }
 
 impl PDASeeds<2> for NormalizedTokenPoolAccount {
-    const SEED: &'static [u8] = b"normalized_token_pool";
+    const SEED: &'static [u8] = b"nt_pool";
 
     fn get_seeds(&self) -> [&[u8]; 2] {
         [Self::SEED, self.normalized_token_mint.as_ref()]
@@ -31,7 +31,7 @@ impl PDASeeds<2> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
-    pub const SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED: &'static [u8] = b"supported_token_lock";
+    pub const SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED: &'static [u8] = b"nt_supported_token_lock";
 
     pub(super) fn initialize(
         &mut self,
@@ -58,13 +58,13 @@ impl NormalizedTokenPoolAccount {
             .iter()
             .any(|token| token.mint == supported_token_mint)
         {
-            err!(ErrorCode::NormalizeAlreadySupportedTokenError)?
+            err!(ErrorCode::NormalizedTokenPoolAlreadySupportedTokenError)?
         }
 
         require_gt!(
             MAX_SUPPORTED_TOKENS,
             self.supported_tokens.len(),
-            ErrorCode::NormalizeExceededMaxSupportedTokensError
+            ErrorCode::NormalizedTokenPoolExceededMaxSupportedTokensError
         );
 
         self.supported_tokens.push(SupportedToken::new(
@@ -94,7 +94,7 @@ impl NormalizedTokenPoolAccount {
         self.supported_tokens
             .iter()
             .find(|token| token.mint == supported_token_mint)
-            .ok_or_else(|| error!(ErrorCode::NormalizeNotSupportedTokenError))
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
     pub(super) fn get_supported_token_mut(
@@ -104,7 +104,7 @@ impl NormalizedTokenPoolAccount {
         self.supported_tokens
             .iter_mut()
             .find(|token| token.mint == supported_token_mint)
-            .ok_or_else(|| error!(ErrorCode::NormalizeNotSupportedTokenError))
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
     pub(super) fn validate_adapter_constructor_accounts(
@@ -114,17 +114,17 @@ impl NormalizedTokenPoolAccount {
         require_gte!(
             accounts.len(),
             2,
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
         require_eq!(
             self.normalized_token_mint,
             accounts[0].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
         require_eq!(
             self.normalized_token_program,
             accounts[1].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
 
         self.get_supported_token(accounts[2].key())?
@@ -156,22 +156,22 @@ impl SupportedToken {
         require_eq!(
             accounts.len(),
             3,
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
         require_eq!(
             self.mint,
             accounts[0].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
         require_eq!(
             self.program,
             accounts[1].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
         require_eq!(
             self.lock_account,
             accounts[2].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
+            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
         );
 
         Ok(())
