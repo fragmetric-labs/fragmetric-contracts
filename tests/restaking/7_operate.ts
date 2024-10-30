@@ -6,7 +6,7 @@ import { getLogger } from '../../tools/lib';
 
 const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
 
-describe("operate", async () => {
+module.exports = (i: number) => describe(`operate#${i}`, async () => {
     const restaking = await restakingPlayground;
 
     step("fund operation: staking, normalization, restaking", async function () {

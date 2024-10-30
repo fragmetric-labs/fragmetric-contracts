@@ -448,8 +448,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getUserFragSOLFundAccount(user: web3.PublicKey) {
+        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user));
+    }
+
     public getUserFragSOLRewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user))
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user));
     }
 
     public getFragSOLRewardAccount() {
