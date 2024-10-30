@@ -6,13 +6,16 @@ import { getLogger } from '../../tools/lib';
 
 const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
 
-describe("operator_spl_stake_pool", async () => {
+describe("operate", async () => {
     const restaking = await restakingPlayground;
 
-    step("Do temporary operation: staking, normalization, restaking", async function () {
+    step("fund operation: staking, normalization, restaking", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
         const fragSOLFundExecutionReservedAccountBalance0 = await restaking.getFragSOLFundExecutionReservedAccountBalance();
-        logger.info(`[BEFORE] supported_tokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, solOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, executionReservedAmount=${fragSOLFundExecutionReservedAccountBalance0}`);
+        const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();
+        const nSOLMint0 = await restaking.getNSOLTokenMint();
+        logger.info(`[BEFORE] fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance0}`);
+        logger.info(`[BEFORE] nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLPool0.normalizedTokenMint}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance0}`);
         expect(fragSOLFundExecutionReservedAccountBalance0.toString()).eq('0', 'execution reserved should be zero before operation');
 
         const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");

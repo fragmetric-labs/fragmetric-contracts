@@ -24,4 +24,7 @@ if (!process.env.JUST_INIT) {
     require('./restaking/5_transfer_hook');
     require('./restaking/6_reward');
     require('./restaking/7_operate');
+    // require('./restaking/2_deposit_sol');
+    // require('./restaking/3_deposit_token');
+    // require('./restaking/7_operate');
 }

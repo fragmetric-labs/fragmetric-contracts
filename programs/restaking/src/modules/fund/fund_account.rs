@@ -177,12 +177,16 @@ impl FundAccount {
 
     // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
     pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
-        // TODO: need to add the sum(operating sol/tokens) after supported_restaking_protocols add
+        // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
         self.get_supported_tokens_iter().try_fold(
             self.sol_operation_reserved_amount,
             |sum, token| {
-                sum.checked_add(token.get_token_amount_as_sol(token.operation_reserved_amount)?)
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+                sum.checked_add(
+                    token.get_token_amount_as_sol(
+                        token.operation_reserved_amount.checked_add(token.operating_amount)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+                        )?
+                ).ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
             },
         )
     }
@@ -198,7 +202,8 @@ pub struct SupportedTokenInfo {
     operation_reserved_amount: u64,
     one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
-    _reserved: [u8; 128],
+    operating_amount: u64,
+    _reserved: [u8; 88],
 }
 
 impl SupportedTokenInfo {
@@ -218,7 +223,8 @@ impl SupportedTokenInfo {
             operation_reserved_amount: 0,
             one_token_as_sol: 0,
             pricing_source,
-            _reserved: [0; 128],
+            operating_amount: 0,
+            _reserved: [0; 88],
         }
     }
 
@@ -230,11 +236,21 @@ impl SupportedTokenInfo {
         self.operation_reserved_amount
     }
 
+    // TODO: wtf!
     pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
         self.operation_reserved_amount = amount;
     }
 
-    fn get_denominated_amount_per_token(&self) -> Result<u64> {
+    pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
+        self.operating_amount
+    }
+
+    // TODO: wtf!
+    pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
+        self.operating_amount = amount;
+    }
+
+    pub(in crate::modules) fn get_denominated_amount_per_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))

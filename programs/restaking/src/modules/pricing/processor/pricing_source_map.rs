@@ -33,7 +33,7 @@ fn find_related_pricing_source_accounts<'info>(
         | TokenPricingSource::MarinadeStakePool { address } => Ok(vec![*pubkey_to_account_map
             .get(address)
             .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?]),
-        TokenPricingSource::NormalizedTokenPool { mint, config } => {
+        TokenPricingSource::NormalizedTokenPool { mint_address: mint, pool_address: config } => {
             let mint = *pubkey_to_account_map
                 .get(mint)
                 .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?;

@@ -43,8 +43,8 @@ pub enum TokenPricingSource {
         address: Pubkey,
     },
     NormalizedTokenPool {
-        mint: Pubkey,
-        config: Pubkey,
+        mint_address: Pubkey,
+        pool_address: Pubkey,
     },
     #[cfg(test)]
     Mock,
@@ -75,10 +75,10 @@ pub(super) fn create_token_amount_as_sol_calculator<'info>(
         TokenPricingSource::NormalizedTokenPool { .. } => {
             require_eq!(pricing_source_accounts.len(), 2);
 
-            let normalized_token_pool_account =
-                Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[0])?;
             let normalized_token_mint =
-                InterfaceAccount::<Mint>::try_from(pricing_source_accounts[1])?;
+                InterfaceAccount::<Mint>::try_from(pricing_source_accounts[0])?;
+            let normalized_token_pool_account =
+                Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[1])?;
 
             Ok(Box::new(NormalizedTokenAmountAsSOLCalculator::new(
                 normalized_token_pool_account,

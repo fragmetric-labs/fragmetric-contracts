@@ -109,7 +109,7 @@ impl NormalizedTokenPoolAccount {
 
     pub(super) fn validate_adapter_constructor_accounts(
         &self,
-        accounts: &[AccountInfo],
+        accounts: &[&AccountInfo],
     ) -> Result<()> {
         require_gte!(
             accounts.len(),
@@ -152,7 +152,7 @@ impl SupportedToken {
         }
     }
 
-    fn validate_adapter_constructor_accounts(&self, accounts: &[AccountInfo]) -> Result<()> {
+    fn validate_adapter_constructor_accounts(&self, accounts: &[&AccountInfo]) -> Result<()> {
         require_eq!(
             accounts.len(),
             3,
