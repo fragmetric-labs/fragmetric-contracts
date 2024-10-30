@@ -14,7 +14,6 @@ impl Id for Jito {
     }
 }
 
-
 #[derive(Accounts)]
 pub struct RestakingDepositContext<'info> {
     #[account(address = JitoRestakingProtocol::JITO_VAULT_PROGRAM_ID)]

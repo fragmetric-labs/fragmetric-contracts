@@ -15,7 +15,7 @@ describe("operation", async () => {
   const restaking = await restakingPlayground;
 
   step("deposit to jito vault", async function () {
-    const program_id = new anchor.web3.PublicKey("34X2uqBhEGiWHu43RDEMwrMqXF4CpCPEZNaKdAaUS9jx");
+    const program_id = new anchor.web3.PublicKey("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
     const config = new anchor.web3.PublicKey("Cx2tQmB4RdCQADK8dGzt9sbXDpQ9o2pcjuhKnN42NxbK");
     const vault_info = new anchor.web3.PublicKey("8bCy6TWfxc7H2ib61ijR1LzGynZNuVspdeUNra9AS9Lg");
     const signer = Keychain.readKeypairSecretFile("./new-keypair.json"); //TODO: change keypair path

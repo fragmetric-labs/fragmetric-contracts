@@ -650,12 +650,4 @@ pub mod restaking {
     ) -> Result<()> {
         UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
     }
-
-    /// Temporary Instruction to Circulate Assets
-    pub fn operator_run(
-        ctx: Context<RestakingDepositContext>
-    ) -> Result<()> {
-        RestakingDepositContext::deposit(ctx, 100, 0)
-    }
-
 }
