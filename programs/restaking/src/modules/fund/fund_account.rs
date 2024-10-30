@@ -42,6 +42,8 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
+    pub const EXECUTION_RESERVED_SEED: &'static [u8] = b"fund_execution_reserved";
+
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
             self.data_version = 1;
@@ -87,7 +89,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn get_supported_token_mut(
+    pub(in crate::modules) fn get_supported_token_mut(
         &mut self,
         token: Pubkey,
     ) -> Result<&mut SupportedTokenInfo> {
@@ -223,6 +225,10 @@ impl SupportedTokenInfo {
 
     pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
         self.operation_reserved_amount
+    }
+
+    pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
+        self.operation_reserved_amount = amount;
     }
 
     pub(super) fn get_denominated_amount_per_token(&self) -> Result<u64> {

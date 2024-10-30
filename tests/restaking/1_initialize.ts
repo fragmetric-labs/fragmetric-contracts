@@ -1,9 +1,8 @@
 import {BN} from '@coral-xyz/anchor';
-// @ts-ignore
-import * as spl from "@solana/spl-token";
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+
 
 describe("initialize", async () => {
     const restaking = await restakingPlayground;
@@ -15,27 +14,8 @@ describe("initialize", async () => {
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
-    // step("update fragSOL token metadata", async function () {
-    //     await restaking.runAdminUpdateTokenMetadata();
-    // });
-
-    step("mock supported token mints", async function () {
-        const tokenMint_bSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.bSOL.mint,
-        );
-        const tokenMint_mSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.mSOL.mint,
-        );
-        const tokenMint_jitoSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.jitoSOL.mint,
-        );
-
-        expect(tokenMint_bSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
-        expect(tokenMint_mSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
-        expect(tokenMint_jitoSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
+    step("update fragSOL token metadata", async function () {
+        await restaking.runAdminUpdateTokenMetadata();
     });
 
     step("initialize fund accounts", async () => {
@@ -65,7 +45,8 @@ describe("initialize", async () => {
     });
 
     step("initialize fund and supported tokens configuration", async function () {
-        const res0 = await restaking.runFundManagerInitializeFundConfigurations();
+        const _ = await restaking.runFundManagerInitializeFundConfigurations();
+        const res0 = await restaking.runFundManagerUpdateFundConfigurations();
 
         expect(res0.fragSOLFund.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
         let i = 0;

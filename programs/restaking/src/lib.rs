@@ -338,6 +338,8 @@ pub mod restaking {
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+            &ctx.accounts.fund_execution_reserve_account,
+            ctx.bumps.fund_execution_reserve_account,
             ctx.remaining_accounts,
             clock.unix_timestamp,
             clock.slot,
