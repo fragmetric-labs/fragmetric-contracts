@@ -6,34 +6,15 @@ import * as splStakePool from "@solana/spl-stake-pool";
 import * as marinade from "@marinade.finance/marinade-ts-sdk";
 // @ts-ignore
 import * as spl from "@solana/spl-token-3.x";
-import {createUmi} from "@metaplex-foundation/umi-bundle-defaults";
-import {
-    createV1,
-    fetchAllDigitalAssetByUpdateAuthority,
-    mintV1,
-    mplTokenMetadata,
-    TokenStandard
-} from "@metaplex-foundation/mpl-token-metadata";
-import {
-    createSignerFromKeypair,
-    signerIdentity,
-    generateSigner,
-    percentAmount,
-    publicKey,
-    assertSolAmount,
-    sol
-} from "@metaplex-foundation/umi";
-import {updateV1, fetchMetadataFromSeeds} from "@metaplex-foundation/mpl-token-metadata";
+import * as mpl from "@metaplex-foundation/mpl-token-metadata";
+import * as umi from "@metaplex-foundation/umi";
+import * as umi2 from "@metaplex-foundation/umi-bundle-defaults";
 // @ts-ignore
-import * as spl from "@solana/spl-token";
-import {AnchorPlayground, AnchorPlaygroundConfig, getLogger, Keychain} from "../lib";
+import {AnchorPlayground, AnchorPlaygroundConfig, getLogger} from "../lib";
 import {Restaking} from "../../target/types/restaking";
 import {getKeychain, KEYCHAIN_ENV, KEYCHAIN_KEYS} from "./keychain";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 import * as ed25519 from "ed25519";
-import fs from "fs";
-import path from "path";
-import {createPublicKey} from "node:crypto";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
@@ -1493,28 +1474,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async createNSOLTokenMetadata() {
-        const umi = createUmi(this.connection.rpcEndpoint).use(mplTokenMetadata());
+        const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+        const keypair = this.keychain.getKeypair('NSOL_MINT');
+        const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+        const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
 
-        const key = Keychain.readKeypairSecretFile("./keypairs/restaking/nsol_mint_nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e.json");
-        const keypair = umi.eddsa.createKeypairFromSecretKey(key.secretKey);
-        const mint = createSignerFromKeypair(umi, keypair);
+        const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+        const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+        umiInstance.use(umi.signerIdentity(authority));
 
-        const authKeypair = umi.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
-        const authority = createSignerFromKeypair(umi, authKeypair);
-        umi.use(signerIdentity(authority));
-
-        await createV1(umi, {
+        await mpl.createV1(umiInstance, {
             mint,
             authority,
             name: "normalized Liquid Staked Solana",
             symbol: "nSOL",
             decimals: 9,
             uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmR5pP6Zo65XWCEXgixY8UtZjWbYPKmYHcyxzUq4p1KZt5",
-            sellerFeeBasisPoints: percentAmount(0),
-            tokenStandard: TokenStandard.Fungible,
-        }).sendAndConfirm(umi);
+            sellerFeeBasisPoints: umi.percentAmount(0),
+            tokenStandard: mpl.TokenStandard.Fungible,
+        }).sendAndConfirm(umiInstance);
 
-        const assets = await fetchAllDigitalAssetByUpdateAuthority(umi, authority.publicKey);
+        const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
         console.log(assets);
     }
 }
