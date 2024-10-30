@@ -51,6 +51,7 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         supported_token_amount_as_sol: u64,
         one_normalized_token_as_sol: u64,
     ) -> Result<()> {
+        msg!("FUCK2-1: {}, {}, {}", supported_token_amount_as_sol, self.get_denominated_amount_per_normalized_token()?, one_normalized_token_as_sol);
         let normalized_token_mint_amount = crate::utils::get_proportional_amount(
             supported_token_amount_as_sol,
             self.get_denominated_amount_per_normalized_token()?,
@@ -94,5 +95,9 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         )?;
 
         Ok(())
+    }
+
+    pub(crate) fn into_pool_account(self) -> Box<Account<'info, NormalizedTokenPoolAccount>> {
+        self.normalized_token_pool_account
     }
 }

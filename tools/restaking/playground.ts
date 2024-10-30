@@ -448,8 +448,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getUserFragSOLFundAccount(user: web3.PublicKey) {
+        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user));
+    }
+
     public getUserFragSOLRewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user))
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user));
     }
 
     public getFragSOLRewardAccount() {
@@ -466,6 +470,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public getNSOLTokenPoolAccount() {
         return this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
+    }
+
+    public getNSOLSupportedTokenLockAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
+        return this.connection.getTokenAccountBalance(this.knownAddress.nSOLSupportedTokenLockAccount(symbol), "confirmed")
+            .then(v => new BN(v.value.amount));
     }
 
     public getNSOLTokenMint() {
