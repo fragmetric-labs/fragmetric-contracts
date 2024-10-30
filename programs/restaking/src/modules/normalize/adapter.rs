@@ -16,6 +16,7 @@ pub struct NormalizedTokenPoolAdapter<'info> {
     supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
     supported_token_program: Box<Interface<'info, TokenInterface>>,
     supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    supported_token_authority: &'info AccountInfo<'info>,
     supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
@@ -35,16 +36,20 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
             supported_token_mint: Box::new(InterfaceAccount::try_from(&accounts[4])?),
             supported_token_program: Box::new(Interface::try_from(&accounts[5])?),
             supported_token_account: Box::new(InterfaceAccount::try_from(&accounts[6])?),
-            supported_token_lock_account: Box::new(InterfaceAccount::try_from(&accounts[7])?),
+            supported_token_authority: &accounts[7],
+            supported_token_lock_account: Box::new(InterfaceAccount::try_from(&accounts[8])?),
         })
+    }
+
+    pub(in crate::modules) fn get_supported_token_authority(&self) -> &'info AccountInfo<'info> {
+        self.supported_token_authority
     }
 
     pub(super) fn deposit(
         &mut self,
         supported_token_amount: u64,
         normalized_token_mint_amount: u64,
-        supported_token_authority: &AccountInfo<'info>,
-        signer_seeds: &[&[&[u8]]],
+        supported_token_authority_signer_seeds: &[&[&[u8]]],
     ) -> Result<()> {
         require_gte!(self.supported_token_account.amount, supported_token_amount);
 
@@ -63,9 +68,9 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
                     from: self.supported_token_account.to_account_info(),
                     mint: self.supported_token_mint.to_account_info(),
                     to: self.supported_token_lock_account.to_account_info(),
-                    authority: supported_token_authority.clone(),
+                    authority: self.supported_token_authority.clone(),
                 },
-                signer_seeds,
+                supported_token_authority_signer_seeds,
             ),
             supported_token_amount,
             self.supported_token_mint.decimals,

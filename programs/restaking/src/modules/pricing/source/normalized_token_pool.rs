@@ -23,8 +23,9 @@ impl<'info> TokenAmountAsSOLCalculator<'info> for NormalizedTokenAmountAsSOLCalc
         pricing_source_map: &TokenPricingSourceMap<'info>,
     ) -> Result<u64> {
         let mut assets_total_amount_as_sol = 0u64;
-        for (mint, token_amount) in
-            normalize::get_supported_tokens_locked_amount(&self.normalized_token_pool_config)
+        for (mint, token_amount) in self
+            .normalized_token_pool_config
+            .get_supported_tokens_locked_amount()
         {
             assets_total_amount_as_sol = assets_total_amount_as_sol
                 .checked_add(calculate_token_amount_as_sol(

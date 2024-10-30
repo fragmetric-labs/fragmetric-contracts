@@ -8,17 +8,12 @@ use crate::modules::normalize::*;
 
 pub fn process_initialize_normalized_token_authority<'info>(
     admin: &Signer<'info>,
-    receipt_token_mint: &InterfaceAccount<Mint>,
     normalized_token_mint: &InterfaceAccount<'info, Mint>,
     normalized_token_authority: &mut Account<NormalizedTokenAuthority>,
     normalized_token_program: &Program<'info, Token>,
     bump: u8,
 ) -> Result<()> {
-    normalized_token_authority.initialize(
-        bump,
-        receipt_token_mint.key(),
-        normalized_token_mint.key(),
-    );
+    normalized_token_authority.initialize(bump, normalized_token_mint.key());
 
     token::set_authority(
         CpiContext::new(
@@ -36,7 +31,6 @@ pub fn process_initialize_normalized_token_authority<'info>(
 }
 
 pub fn process_initialize_normalized_token_pool_config(
-    receipt_token_mint: &InterfaceAccount<Mint>,
     normalized_token_mint: &InterfaceAccount<Mint>,
     normalized_token_authority: &Account<NormalizedTokenAuthority>,
     normalized_token_account: &InterfaceAccount<TokenAccount>,
@@ -46,7 +40,6 @@ pub fn process_initialize_normalized_token_pool_config(
 ) -> Result<()> {
     normalized_token_pool_config.initialize(
         bump,
-        receipt_token_mint.key(),
         normalized_token_mint.key(),
         normalized_token_program.key(),
         normalized_token_authority.key(),

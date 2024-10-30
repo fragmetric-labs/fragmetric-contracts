@@ -10,24 +10,20 @@ const MAX_SUPPORTED_TOKENS: usize = 10;
 pub struct NormalizedTokenPoolConfig {
     data_version: u16,
     bump: u8,
-    pub receipt_token_mint: Pubkey,
     pub normalized_token_mint: Pubkey,
     normalized_token_program: Pubkey,
-    normalized_token_authority: Pubkey,
+    pub normalized_token_authority: Pubkey,
     /// buffer account
     normalized_token_account: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
     supported_tokens: Vec<SupportedTokenConfig>,
 }
 
-impl PDASeeds<2> for NormalizedTokenPoolConfig {
+impl PDASeeds<1> for NormalizedTokenPoolConfig {
     const SEED: &'static [u8] = b"normalized_token_pool_config";
 
-    fn get_seeds(&self) -> [&[u8]; 2] {
-        [
-            self.receipt_token_mint.as_ref(),
-            self.normalized_token_mint.as_ref(),
-        ]
+    fn get_seeds(&self) -> [&[u8]; 1] {
+        [self.normalized_token_mint.as_ref()]
     }
 
     fn get_bump_ref(&self) -> &u8 {
@@ -39,14 +35,12 @@ impl NormalizedTokenPoolConfig {
     pub(super) fn initialize(
         &mut self,
         bump: u8,
-        receipt_token_mint: Pubkey,
         normalized_token_mint: Pubkey,
         normalized_token_program: Pubkey,
         normalized_token_authority: Pubkey,
         normalized_token_account: Pubkey,
     ) {
         self.bump = bump;
-        self.receipt_token_mint = receipt_token_mint;
         self.normalized_token_mint = normalized_token_mint;
         self.normalized_token_program = normalized_token_program;
         self.normalized_token_authority = normalized_token_authority;
@@ -58,6 +52,7 @@ impl NormalizedTokenPoolConfig {
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
         supported_token_account: Pubkey,
+        supported_token_authority: Pubkey,
         supported_token_lock_account: Pubkey,
     ) -> Result<()> {
         require_gt!(
@@ -70,13 +65,14 @@ impl NormalizedTokenPoolConfig {
             supported_token_mint,
             supported_token_program,
             supported_token_account,
+            supported_token_authority,
             supported_token_lock_account,
         ));
 
         Ok(())
     }
 
-    pub(super) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
+    pub(in crate::modules) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
         self.supported_tokens
             .iter()
             .map(|config| (config.mint, config.locked_amount))
@@ -143,17 +139,25 @@ pub struct SupportedTokenConfig {
     mint: Pubkey,
     program: Pubkey,
     token_account: Pubkey,
+    token_authority: Pubkey,
     /// lock_authority = normalized_token_authority
     lock_account: Pubkey,
     pub(super) locked_amount: u64,
 }
 
 impl SupportedTokenConfig {
-    fn new(mint: Pubkey, program: Pubkey, token_account: Pubkey, lock_account: Pubkey) -> Self {
+    fn new(
+        mint: Pubkey,
+        program: Pubkey,
+        token_account: Pubkey,
+        token_authority: Pubkey,
+        lock_account: Pubkey,
+    ) -> Self {
         Self {
             mint,
             program,
             token_account,
+            token_authority,
             lock_account,
             locked_amount: 0,
         }
@@ -162,7 +166,7 @@ impl SupportedTokenConfig {
     fn validate_adapter_constructor_accounts(&self, accounts: &[AccountInfo]) -> Result<()> {
         require_eq!(
             accounts.len(),
-            4,
+            5,
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
@@ -181,8 +185,13 @@ impl SupportedTokenConfig {
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
-            self.lock_account,
+            self.token_authority,
             accounts[3].key(),
+            ErrorCode::NormalizeInvalidAccountsProvided,
+        );
+        require_eq!(
+            self.lock_account,
+            accounts[4].key(),
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
 

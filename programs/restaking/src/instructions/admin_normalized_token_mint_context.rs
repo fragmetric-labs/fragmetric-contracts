@@ -18,16 +18,13 @@ pub struct AdminNormalizedTokenAuthorityInitialContext<'info> {
 
     pub normalized_token_program: Program<'info, Token>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
     #[account(mut)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
         payer = payer,
-        seeds = [NormalizedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenAuthority::SEED, normalized_token_mint.key().as_ref()],
         bump,
         space = 8 + NormalizedTokenAuthority::INIT_SPACE,
     )]

@@ -18,16 +18,14 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [NormalizedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenAuthority::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_authority.get_bump(),
+        has_one = normalized_token_mint,
     )]
     pub normalized_token_authority: Account<'info, NormalizedTokenAuthority>,
 
@@ -39,7 +37,6 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext
         token::token_program = supported_token_program,
         seeds = [
             NormalizedTokenAuthority::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
-            receipt_token_mint.key().as_ref(),
             normalized_token_mint.key().as_ref(),
             supported_token_mint.key().as_ref()
         ],
@@ -57,17 +54,13 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [NormalizedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenAuthority::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_authority.get_bump(),
-        has_one = receipt_token_mint,
         has_one = normalized_token_mint,
     )]
     pub normalized_token_authority: Account<'info, NormalizedTokenAuthority>,
@@ -76,15 +69,17 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
         token::mint = normalized_token_mint,
         token::authority = normalized_token_authority,
         token::token_program = normalized_token_program,
-        seeds = [NormalizedTokenAuthority::NORMALIZED_TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref(), normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenAuthority::NORMALIZED_TOKEN_ACCOUNT_SEED, normalized_token_mint.key().as_ref()],
         bump,
     )]
     pub normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        seeds = [NormalizedTokenPoolConfig::SEED, receipt_token_mint.key().as_ref(), normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenPoolConfig::SEED, normalized_token_mint.key().as_ref()],
         bump,
+        has_one = normalized_token_mint,
+        has_one = normalized_token_authority,
     )]
     pub normalized_token_pool_config: Box<Account<'info, NormalizedTokenPoolConfig>>,
 }
