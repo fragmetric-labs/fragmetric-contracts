@@ -15,4 +15,7 @@ pub const ADMIN_PUBKEY: Pubkey = pubkey!(/*local:ADMIN*/"9b2RSMDYskVvjVbwF4cVwEh
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!(/*local:FUND_MANAGER*/"5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"/**/);
 
 #[constant]
-pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:FRAGSOL_MINT*/"Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"/**/);
+pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:FRAGSOL_MINT*/ "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD" /**/);
+
+#[constant]
+pub const NSOL_MINT_ADDRESS: Pubkey = pubkey!(/*local:NSOL_MINT*/ "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e" /**/);

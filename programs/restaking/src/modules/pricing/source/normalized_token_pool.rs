@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::ErrorCode,
     modules::{
-        normalize::{self, NormalizedTokenPoolConfig},
+        normalize::{self, NormalizedTokenPoolAccount},
         pricing::calculate_token_amount_as_sol,
     },
 };
@@ -12,7 +12,7 @@ use crate::{
 use super::*;
 
 pub struct NormalizedTokenAmountAsSOLCalculator<'info> {
-    normalized_token_pool_config: Account<'info, NormalizedTokenPoolConfig>,
+    normalized_token_pool_account: Account<'info, NormalizedTokenPoolAccount>,
     normalized_token_mint: InterfaceAccount<'info, Mint>,
 }
 
@@ -24,7 +24,7 @@ impl<'info> TokenAmountAsSOLCalculator for NormalizedTokenAmountAsSOLCalculator<
     ) -> Result<u64> {
         let mut assets_total_amount_as_sol = 0u64;
         for (mint, token_amount) in self
-            .normalized_token_pool_config
+            .normalized_token_pool_account
             .get_supported_tokens_locked_amount()
         {
             assets_total_amount_as_sol = assets_total_amount_as_sol
@@ -47,11 +47,11 @@ impl<'info> TokenAmountAsSOLCalculator for NormalizedTokenAmountAsSOLCalculator<
 
 impl<'info> NormalizedTokenAmountAsSOLCalculator<'info> {
     pub(super) fn new(
-        normalized_token_pool_config: Account<'info, NormalizedTokenPoolConfig>,
+        normalized_token_pool_account: Account<'info, NormalizedTokenPoolAccount>,
         normalized_token_mint: InterfaceAccount<'info, Mint>,
     ) -> Self {
         Self {
-            normalized_token_pool_config,
+            normalized_token_pool_account,
             normalized_token_mint,
         }
     }

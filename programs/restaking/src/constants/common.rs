@@ -32,3 +32,12 @@ pub const DEVNET_MSOL_STAKE_POOL_ADDRESS: Pubkey = MAINNET_MSOL_STAKE_POOL_ADDRE
 pub const MAINNET_JITOSOL_MINT_ADDRESS: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
 #[constant]
 pub const MAINNET_JITOSOL_STAKE_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
+
+#[constant]
+pub const MAINNET_NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+#[constant]
+pub const DEVNET_NSOL_MINT_ADDRESS: Pubkey = MAINNET_NSOL_MINT_ADDRESS;
+// #[constant]
+// pub const MAINNET_NSOL_POOL_ADDRESS: Pubkey = pubkey!("");
+// #[constant]
+// pub const DEVNET_NSOL_POOL_ADDRESS: Pubkey = MAINNET_NSOL_POOL_ADDRESS;

@@ -3,9 +3,7 @@ mod processor;
 pub use processor::*;
 
 mod adapter;
-mod authority;
-mod config;
+mod pool;
 
 pub use adapter::*;
-pub use authority::*;
-pub use config::*;
+pub use pool::*;

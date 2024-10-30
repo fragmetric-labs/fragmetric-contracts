@@ -59,6 +59,23 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // AdminNormalizedTokenPoolInitialContext
+    ////////////////////////////////////////////
+
+    pub fn admin_initialize_normalized_token_pool(
+        ctx: Context<AdminNormalizedTokenPoolInitialContext>,
+    ) -> Result<()> {
+        modules::normalize::process_initialize_normalized_token_pool_account(
+            &ctx.accounts.admin,
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_account,
+            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.normalized_token_program,
+            ctx.bumps.normalized_token_pool_account,
+        )
+    }
+
+    ////////////////////////////////////////////
     // AdminReceiptTokenMintInitialContext
     ////////////////////////////////////////////
 
@@ -227,6 +244,33 @@ pub mod restaking {
             capacity_amount,
             pricing_source,
             ctx.remaining_accounts,
+        )
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerNormalizedTokenPoolSupportedTokenInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_normalized_token_pool_supported_token_lock_account(
+        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
+    ) -> Result<()> {
+        modules::fund::process_initialize_normalized_token_pool_supported_token_lock_account(
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.fund_account,
+            &ctx.accounts.supported_token_program,
+        )
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerNormalizedTokenPoolSupportedTokenContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_sync_normalized_token_pool_supported_tokens(
+        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
+    ) -> Result<()> {
+        modules::fund::process_sync_normalized_token_pool_supported_tokens(
+            &ctx.accounts.fund_account,
+            &mut ctx.accounts.normalized_token_pool_account,
         )
     }
 

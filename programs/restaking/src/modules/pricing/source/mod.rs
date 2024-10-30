@@ -16,7 +16,7 @@ use normalized_token_pool::*;
 use spl_stake_pool::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::normalize::NormalizedTokenPoolConfig;
+use crate::modules::normalize::NormalizedTokenPoolAccount;
 
 /// { mint : (pricing_source, account list) }
 pub type TokenPricingSourceMap<'info> = BTreeMap<
@@ -75,13 +75,13 @@ pub(super) fn create_token_amount_as_sol_calculator<'info>(
         TokenPricingSource::NormalizedTokenPool { .. } => {
             require_eq!(pricing_source_accounts.len(), 2);
 
-            let normalized_token_pool_config =
-                Account::<NormalizedTokenPoolConfig>::try_from(pricing_source_accounts[0])?;
+            let normalized_token_pool_account =
+                Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[0])?;
             let normalized_token_mint =
                 InterfaceAccount::<Mint>::try_from(pricing_source_accounts[1])?;
 
             Ok(Box::new(NormalizedTokenAmountAsSOLCalculator::new(
-                normalized_token_pool_config,
+                normalized_token_pool_account,
                 normalized_token_mint,
             )))
         }

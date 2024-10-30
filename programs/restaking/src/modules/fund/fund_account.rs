@@ -240,8 +240,18 @@ impl SupportedTokenInfo {
     }
 
     #[inline(always)]
-    pub(super) fn get_mint_and_pricing_source(&self) -> (Pubkey, TokenPricingSource) {
-        (self.mint, self.pricing_source)
+    pub(super) fn get_mint(&self) -> Pubkey {
+        self.mint
+    }
+
+    #[inline(always)]
+    pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
+        self.pricing_source
+    }
+
+    #[inline(always)]
+    pub(super) fn get_program(&self) -> Pubkey {
+        self.program
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {

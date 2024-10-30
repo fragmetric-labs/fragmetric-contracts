@@ -7,23 +7,23 @@ const MAX_SUPPORTED_TOKENS: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
-pub struct NormalizedTokenPoolConfig {
+
+pub struct NormalizedTokenPoolAccount {
     data_version: u16,
     bump: u8,
     pub normalized_token_mint: Pubkey,
     normalized_token_program: Pubkey,
-    pub normalized_token_authority: Pubkey,
     /// buffer account
     normalized_token_account: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
-    supported_tokens: Vec<SupportedTokenConfig>,
+    supported_tokens: Vec<SupportedToken>,
 }
 
-impl PDASeeds<1> for NormalizedTokenPoolConfig {
-    const SEED: &'static [u8] = b"normalized_token_pool_config";
+impl PDASeeds<2> for NormalizedTokenPoolAccount {
+    const SEED: &'static [u8] = b"normalized_token_pool";
 
-    fn get_seeds(&self) -> [&[u8]; 1] {
-        [self.normalized_token_mint.as_ref()]
+    fn get_seeds(&self) -> [&[u8]; 2] {
+        [Self::SEED, self.normalized_token_mint.as_ref()]
     }
 
     fn get_bump_ref(&self) -> &u8 {
@@ -31,41 +31,69 @@ impl PDASeeds<1> for NormalizedTokenPoolConfig {
     }
 }
 
-impl NormalizedTokenPoolConfig {
+impl NormalizedTokenPoolAccount {
+    pub const NORMALIZED_TOKEN_ACCOUNT_SEED: &'static [u8] = b"normalized_token";
+    pub const SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED: &'static [u8] = b"supported_token_lock";
+
     pub(super) fn initialize(
         &mut self,
         bump: u8,
         normalized_token_mint: Pubkey,
         normalized_token_program: Pubkey,
-        normalized_token_authority: Pubkey,
         normalized_token_account: Pubkey,
     ) {
         self.bump = bump;
         self.normalized_token_mint = normalized_token_mint;
         self.normalized_token_program = normalized_token_program;
-        self.normalized_token_authority = normalized_token_authority;
         self.normalized_token_account = normalized_token_account;
     }
 
-    pub(super) fn add_supported_token(
+    pub(in crate::modules) fn backfill_not_existing_supported_tokens(
+        &mut self,
+        supported_tokens_mint_and_program: impl Iterator<Item = (Pubkey, Pubkey)>,
+    ) -> Result<()> {
+        supported_tokens_mint_and_program
+            .skip(self.supported_tokens.len())
+            .try_for_each(|(supported_token_mint, supported_token_program)| {
+                self.add_new_supported_token(
+                    supported_token_mint,
+                    supported_token_program,
+                    Pubkey::find_program_address(
+                        &[
+                            Self::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
+                            self.normalized_token_mint.as_ref(),
+                            supported_token_mint.as_ref(),
+                        ],
+                        &crate::ID,
+                    )
+                    .0,
+                )
+            })
+    }
+
+    pub(super) fn add_new_supported_token(
         &mut self,
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
-        supported_token_account: Pubkey,
-        supported_token_authority: Pubkey,
         supported_token_lock_account: Pubkey,
     ) -> Result<()> {
+        if self
+            .supported_tokens
+            .iter()
+            .any(|token| token.mint == supported_token_mint)
+        {
+            err!(ErrorCode::NormalizeAlreadySupportedTokenError)?
+        }
+
         require_gt!(
             MAX_SUPPORTED_TOKENS,
             self.supported_tokens.len(),
             ErrorCode::NormalizeExceededMaxSupportedTokensError
         );
 
-        self.supported_tokens.push(SupportedTokenConfig::new(
+        self.supported_tokens.push(SupportedToken::new(
             supported_token_mint,
             supported_token_program,
-            supported_token_account,
-            supported_token_authority,
             supported_token_lock_account,
         ));
 
@@ -75,27 +103,31 @@ impl NormalizedTokenPoolConfig {
     pub(in crate::modules) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
         self.supported_tokens
             .iter()
-            .map(|config| (config.mint, config.locked_amount))
+            .map(|token| (token.mint, token.locked_amount))
             .collect()
     }
 
-    fn get_supported_token_config(
-        &self,
-        supported_token_mint: Pubkey,
-    ) -> Result<&SupportedTokenConfig> {
+    #[inline(always)]
+    pub(super) fn get_supported_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut SupportedToken> {
+        self.supported_tokens.iter_mut()
+    }
+
+    fn get_supported_token(&self, supported_token_mint: Pubkey) -> Result<&SupportedToken> {
         self.supported_tokens
             .iter()
-            .find(|config| config.mint == supported_token_mint)
+            .find(|token| token.mint == supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizeNotSupportedTokenError))
     }
 
-    pub(super) fn get_supported_token_config_mut(
+    pub(super) fn get_supported_token_mut(
         &mut self,
         supported_token_mint: Pubkey,
-    ) -> Result<&mut SupportedTokenConfig> {
+    ) -> Result<&mut SupportedToken> {
         self.supported_tokens
             .iter_mut()
-            .find(|config| config.mint == supported_token_mint)
+            .find(|token| token.mint == supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizeNotSupportedTokenError))
     }
 
@@ -105,7 +137,7 @@ impl NormalizedTokenPoolConfig {
     ) -> Result<()> {
         require_gte!(
             accounts.len(),
-            4,
+            3,
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
@@ -119,45 +151,29 @@ impl NormalizedTokenPoolConfig {
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
-            self.normalized_token_authority,
+            self.normalized_token_account,
             accounts[2].key(),
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
-        require_eq!(
-            self.normalized_token_account,
-            accounts[3].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
-        );
 
-        self.get_supported_token_config(accounts[4].key())?
-            .validate_adapter_constructor_accounts(&accounts[4..])
+        self.get_supported_token(accounts[3].key())?
+            .validate_adapter_constructor_accounts(&accounts[3..])
     }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub struct SupportedTokenConfig {
+pub(super) struct SupportedToken {
     mint: Pubkey,
     program: Pubkey,
-    token_account: Pubkey,
-    token_authority: Pubkey,
-    /// lock_authority = normalized_token_authority
     lock_account: Pubkey,
     locked_amount: u64,
 }
 
-impl SupportedTokenConfig {
-    fn new(
-        mint: Pubkey,
-        program: Pubkey,
-        token_account: Pubkey,
-        token_authority: Pubkey,
-        lock_account: Pubkey,
-    ) -> Self {
+impl SupportedToken {
+    fn new(mint: Pubkey, program: Pubkey, lock_account: Pubkey) -> Self {
         Self {
             mint,
             program,
-            token_account,
-            token_authority,
             lock_account,
             locked_amount: 0,
         }
@@ -166,7 +182,7 @@ impl SupportedTokenConfig {
     fn validate_adapter_constructor_accounts(&self, accounts: &[AccountInfo]) -> Result<()> {
         require_eq!(
             accounts.len(),
-            5,
+            3,
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
@@ -180,18 +196,8 @@ impl SupportedTokenConfig {
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
         require_eq!(
-            self.token_account,
-            accounts[2].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.token_authority,
-            accounts[3].key(),
-            ErrorCode::NormalizeInvalidAccountsProvided,
-        );
-        require_eq!(
             self.lock_account,
-            accounts[4].key(),
+            accounts[2].key(),
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
 

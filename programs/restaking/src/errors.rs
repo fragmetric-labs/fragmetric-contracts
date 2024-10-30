@@ -176,6 +176,9 @@ pub enum ErrorCode {
     #[msg("normalize: not supported token")]
     NormalizeNotSupportedTokenError,
 
+    #[msg("normalize: already supported token")]
+    NormalizeAlreadySupportedTokenError,
+
     #[msg("normalize: exceeded max supported tokens")]
     NormalizeExceededMaxSupportedTokensError,
 

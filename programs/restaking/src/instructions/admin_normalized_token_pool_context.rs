@@ -3,11 +3,11 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
-use crate::modules::normalize::{NormalizedTokenAuthority, NormalizedTokenPoolConfig};
+use crate::modules::normalize::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
-pub struct AdminNormalizedTokenAccountInitialContext<'info> {
+pub struct AdminNormalizedTokenPoolInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -18,53 +18,20 @@ pub struct AdminNormalizedTokenAccountInitialContext<'info> {
 
     pub normalized_token_program: Program<'info, Token>,
 
-    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
     #[account(
-        seeds = [NormalizedTokenAuthority::SEED, normalized_token_mint.key().as_ref()],
-        bump = normalized_token_authority.get_bump(),
-        has_one = normalized_token_mint,
+        mut,
+        address = NSOL_MINT_ADDRESS,
+        constraint = normalized_token_mint.supply == 0,
     )]
-    pub normalized_token_authority: Account<'info, NormalizedTokenAuthority>,
+    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init,
         payer = payer,
         token::mint = normalized_token_mint,
-        token::authority = normalized_token_authority,
+        token::authority = normalized_token_pool_account,
         token::token_program = normalized_token_program,
-        seeds = [NormalizedTokenAuthority::NORMALIZED_TOKEN_ACCOUNT_SEED, normalized_token_mint.key().as_ref()],
-        bump,
-    )]
-    pub normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-}
-
-#[derive(Accounts)]
-pub struct AdminNormalizedTokenPoolConfigInitialContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    pub normalized_token_program: Program<'info, Token>,
-
-    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        seeds = [NormalizedTokenAuthority::SEED, normalized_token_mint.key().as_ref()],
-        bump = normalized_token_authority.get_bump(),
-        has_one = normalized_token_mint,
-    )]
-    pub normalized_token_authority: Account<'info, NormalizedTokenAuthority>,
-
-    #[account(
-        token::mint = normalized_token_mint,
-        token::authority = normalized_token_authority,
-        token::token_program = normalized_token_program,
-        seeds = [NormalizedTokenAuthority::NORMALIZED_TOKEN_ACCOUNT_SEED, normalized_token_mint.key().as_ref()],
+        seeds = [NormalizedTokenPoolAccount::NORMALIZED_TOKEN_ACCOUNT_SEED, normalized_token_mint.key().as_ref()],
         bump,
     )]
     pub normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -72,9 +39,9 @@ pub struct AdminNormalizedTokenPoolConfigInitialContext<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + NormalizedTokenPoolConfig::INIT_SPACE,
-        seeds = [NormalizedTokenPoolConfig::SEED, normalized_token_mint.key().as_ref()],
+        space = 8 + NormalizedTokenPoolAccount::INIT_SPACE,
+        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump,
     )]
-    pub normalized_token_pool_config: Box<Account<'info, NormalizedTokenPoolConfig>>,
+    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 }

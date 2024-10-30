@@ -5,8 +5,9 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::*;
+use crate::modules::normalize::NormalizedTokenPoolAccount;
 use crate::modules::pricing::{self, TokenPricingSource, TokenPricingSourceMap};
+use crate::modules::{fund::*, normalize};
 
 pub fn process_update_fund_account_if_needed(
     receipt_token_mint: &InterfaceAccount<Mint>,
@@ -124,6 +125,17 @@ pub fn process_update_prices<'info>(
     });
 
     Ok(())
+}
+
+pub fn process_sync_normalized_token_pool_supported_tokens(
+    fund_account: &Account<FundAccount>,
+    normalized_token_pool_account: &mut Account<NormalizedTokenPoolAccount>,
+) -> Result<()> {
+    normalized_token_pool_account.backfill_not_existing_supported_tokens(
+        fund_account
+            .get_supported_tokens_iter()
+            .map(|token| (token.get_mint(), token.get_program())),
+    )
 }
 
 pub(in crate::modules) fn update_asset_prices<'info>(

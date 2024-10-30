@@ -27,7 +27,7 @@ pub(in crate::modules) fn create_pricing_source_map<'info>(
 ) -> Result<TokenPricingSourceMap<'info>> {
     let mints_and_pricing_sources = fund_account
         .get_supported_tokens_iter()
-        .map(SupportedTokenInfo::get_mint_and_pricing_source)
+        .map(|token| (token.get_mint(), token.get_pricing_source()))
         .collect();
 
     pricing::create_pricing_source_map(mints_and_pricing_sources, pricing_source_accounts)

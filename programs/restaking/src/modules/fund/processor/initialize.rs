@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, spl_token_2022, Token2022};
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
@@ -68,6 +68,21 @@ pub fn process_initialize_supported_token_authority(
         receipt_token_mint.key(),
         supported_token_mint.key(),
     );
+    Ok(())
+}
+
+pub fn process_initialize_normalized_token_pool_supported_token_lock_account(
+    supported_token_mint: &InterfaceAccount<Mint>,
+    fund_account: &Account<FundAccount>,
+    supported_token_program: &Interface<TokenInterface>,
+) -> Result<()> {
+    require_keys_eq!(
+        fund_account
+            .get_supported_token(supported_token_mint.key())?
+            .get_program(),
+        supported_token_program.key(),
+    );
+
     Ok(())
 }
 
