@@ -25,22 +25,10 @@ pub(in crate::modules) fn create_pricing_source_map<'info>(
     fund_account: &Account<FundAccount>,
     pricing_source_accounts: &'info [AccountInfo<'info>],
 ) -> Result<TokenPricingSourceMap<'info>> {
-    let mut pricing_source_map = TokenPricingSourceMap::default();
-    // just convert array to map (by its pubkey)
-    let pricing_source_accounts = pricing_source_accounts
-        .iter()
-        .map(|account| (account.key(), account))
+    let mints_and_pricing_sources = fund_account
+        .get_supported_tokens_iter()
+        .map(|token| (token.get_mint(), token.get_pricing_source()))
         .collect();
 
-    for token in fund_account.get_supported_tokens_iter() {
-        let mint = token.get_mint();
-        let pricing_source = token.get_pricing_source();
-        let accounts = pricing::find_related_pricing_source_accounts(
-            &pricing_source,
-            &pricing_source_accounts,
-        )?;
-        pricing_source_map.insert(mint, (pricing_source, accounts));
-    }
-
-    Ok(pricing_source_map)
+    pricing::create_pricing_source_map(mints_and_pricing_sources, pricing_source_accounts)
 }
