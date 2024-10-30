@@ -184,11 +184,11 @@ impl AccountDeserialize for MarinadeStakePool {
     }
 }
 
-impl<'info> TokenAmountAsSOLCalculator<'info> for MarinadeStakePool {
+impl TokenAmountAsSOLCalculator for MarinadeStakePool {
     fn calculate_token_amount_as_sol(
         &self,
         token_amount: u64,
-        _pricing_source_map: &TokenPricingSourceMap<'info>,
+        _pricing_source_map: &TokenPricingSourceMap,
     ) -> Result<u64> {
         self.msol_to_sol(token_amount)
     }

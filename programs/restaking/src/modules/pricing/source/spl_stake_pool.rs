@@ -163,11 +163,11 @@ impl AccountDeserialize for SplStakePool {
     }
 }
 
-impl<'info> TokenAmountAsSOLCalculator<'info> for SplStakePool {
+impl TokenAmountAsSOLCalculator for SplStakePool {
     fn calculate_token_amount_as_sol(
         &self,
         token_amount: u64,
-        _pricing_source_map: &TokenPricingSourceMap<'info>,
+        _pricing_source_map: &TokenPricingSourceMap,
     ) -> Result<u64> {
         self.calculate_lamports_from_pool_tokens(token_amount)
     }

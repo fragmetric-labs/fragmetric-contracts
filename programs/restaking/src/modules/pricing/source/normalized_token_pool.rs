@@ -16,11 +16,11 @@ pub struct NormalizedTokenAmountAsSOLCalculator<'info> {
     normalized_token_mint: InterfaceAccount<'info, Mint>,
 }
 
-impl<'info> TokenAmountAsSOLCalculator<'info> for NormalizedTokenAmountAsSOLCalculator<'info> {
+impl<'info> TokenAmountAsSOLCalculator for NormalizedTokenAmountAsSOLCalculator<'info> {
     fn calculate_token_amount_as_sol(
         &self,
         token_amount: u64,
-        pricing_source_map: &TokenPricingSourceMap<'info>,
+        pricing_source_map: &TokenPricingSourceMap,
     ) -> Result<u64> {
         let mut assets_total_amount_as_sol = 0u64;
         for (mint, token_amount) in self

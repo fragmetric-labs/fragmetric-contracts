@@ -25,11 +25,11 @@ pub type TokenPricingSourceMap<'info> = BTreeMap<
 >;
 
 /// A type that can calculate the token amount as sol with its data.
-pub(super) trait TokenAmountAsSOLCalculator<'info> {
+pub(super) trait TokenAmountAsSOLCalculator {
     fn calculate_token_amount_as_sol(
         &self,
         token_amount: u64,
-        pricing_source_map: &TokenPricingSourceMap<'info>,
+        pricing_source_map: &TokenPricingSourceMap,
     ) -> Result<u64>;
 }
 
@@ -53,7 +53,7 @@ pub enum TokenPricingSource {
 pub(super) fn create_token_amount_as_sol_calculator<'info>(
     mint: Pubkey,
     pricing_source_map: &TokenPricingSourceMap<'info>,
-) -> Result<Box<dyn TokenAmountAsSOLCalculator<'info> + 'info>> {
+) -> Result<Box<dyn TokenAmountAsSOLCalculator + 'info>> {
     let (pricing_source, pricing_source_accounts) = pricing_source_map
         .get(&mint)
         .ok_or_else(|| error!(ErrorCode::FundTokenPricingSourceNotFoundException))?;
