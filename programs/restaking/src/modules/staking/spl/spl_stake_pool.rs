@@ -1,42 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{instruction::Instruction, system_program};
 
-/// Creates instruction required to deposit SOL directly into a stake pool.
-/// The difference with `deposit_sol()` is that a deposit
-/// authority must sign this instruction.
-pub fn deposit_sol_with_authority(
-    program_id: &Pubkey,
-    stake_pool: &Pubkey,
-    sol_deposit_authority: &Pubkey,
-    stake_pool_withdraw_authority: &Pubkey,
-    reserve_stake_account: &Pubkey,
-    lamports_from: &Pubkey,
-    pool_tokens_to: &Pubkey,
-    manager_fee_account: &Pubkey,
-    referrer_pool_tokens_account: &Pubkey,
-    pool_mint: &Pubkey,
-    token_program_id: &Pubkey,
-    lamports_in: u64,
-) -> Instruction {
-    deposit_sol_internal(
-        program_id,
-        stake_pool,
-        stake_pool_withdraw_authority,
-        reserve_stake_account,
-        lamports_from,
-        pool_tokens_to,
-        manager_fee_account,
-        referrer_pool_tokens_account,
-        pool_mint,
-        token_program_id,
-        Some(sol_deposit_authority),
-        lamports_in,
-        None,
-    )
-}
-
 /// Creates instructions required to deposit SOL directly into a stake pool.
-fn deposit_sol_internal(
+pub fn deposit_sol(
     program_id: &Pubkey,
     stake_pool: &Pubkey,
     stake_pool_withdraw_authority: &Pubkey,
@@ -66,6 +32,7 @@ fn deposit_sol_internal(
     if let Some(sol_deposit_authority) = sol_deposit_authority {
         accounts.push(AccountMeta::new_readonly(*sol_deposit_authority, true));
     }
+
     if let Some(minimum_pool_tokens_out) = minimum_pool_tokens_out {
         Instruction {
             program_id: *program_id,

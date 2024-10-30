@@ -29,6 +29,7 @@ bytemuck = { version = "1.17.1", features = ["derive"] }
 #pyth-solana-receiver-sdk = "0.2.0"
 spl-tlv-account-resolution = "0.6.5"
 spl-transfer-hook-interface = "0.6.5"
+spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-program-test = "1.18.15"
