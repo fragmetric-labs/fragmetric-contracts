@@ -7,7 +7,7 @@ const keypairs = {
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
 
     // fixtures for local test
-    'MOCK_ALL_MINT_AUTHORITY': './tests/mocks/mainnet/all_mint_authority.json',
+    // 'MOCK_ALL_MINT_AUTHORITY': './tests/mocks/mainnet/all_mint_authority.json',
     'MOCK_USER1': './tests/mocks/user1.json',
     'MOCK_USER2': './tests/mocks/user2.json',
     'MOCK_USER3': './tests/mocks/user3.json',

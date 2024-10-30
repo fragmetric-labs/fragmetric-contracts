@@ -22,30 +22,7 @@ bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-# clone mainnet bSOL mint to localnet
-[[test.validator.clone]]
-address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-
-# clone mainnet jitoSOL mint to localnet
-[[test.validator.clone]]
-address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-
-# clone mainnet mSOL mint to localnet
-[[test.validator.clone]]
-address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-
-# clone mainnet bSOL stake pool to localnet
-[[test.validator.clone]]
-address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
-
-# clone mainnet jitoSOL stake pool to localnet
-[[test.validator.clone]]
-address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-
-# clone mainnet mSOL stake pool to localnet
-[[test.validator.clone]]
-address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
-
+# *bSOL, jitoSOL
 # clone mainnet SPL stake pool program to localnet
 [[test.validator.clone]]
 address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
@@ -54,6 +31,24 @@ address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
 [[test.validator.clone]]
 address = "EmiU8AQkB2sswTxVB6aCmsAJftoowZGGDXuytm6X65R3"
 
+# clone mainnet bSOL mint to localnet
+[[test.validator.clone]]
+address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
+
+# clone mainnet bSOL stake pool to localnet
+[[test.validator.clone]]
+address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+
+# clone mainnet jitoSOL mint to localnet
+[[test.validator.clone]]
+address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+
+# clone mainnet jitoSOL stake pool to localnet
+[[test.validator.clone]]
+address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+
+# *mSOL
+# ref: https://docs.marinade.finance/developers/contract-addresses#tokens
 # clone mainnet Marinade stake pool program to localnet
 [[test.validator.clone]]
 address = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
@@ -61,3 +56,15 @@ address = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
 # clone mainnet Marinade stake pool executable data account to localnet
 [[test.validator.clone]]
 address = "4PQH9YmfuKrVyZaibkLYpJZPv2FPaybhq2GAuBcWMSBf"
+
+# clone mainnet mSOL mint to localnet
+[[test.validator.clone]]
+address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+
+# clone mainnet mSOL stake pool to localnet
+[[test.validator.clone]]
+address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
+
+# clone mainnet mSOL liqudity pool to localnet
+[[test.validator.clone]]
+address = "7GgPYjS5Dza89wV6FpZ23kUJRG5vbQ1GM25ezspYFSoE"

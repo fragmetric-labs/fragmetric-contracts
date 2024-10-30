@@ -1,9 +1,7 @@
-import * as anchor from "@coral-xyz/anchor";
-// @ts-ignore
-import * as spl from "@solana/spl-token";
-import { BN } from '@coral-xyz/anchor';
 import { expect } from "chai";
 import { step } from "mocha-steps";
+// @ts-ignore
+import * as spl from "@solana/spl-token-3.x";
 import { restakingPlayground } from "../restaking";
 import { getLogger } from '../../tools/lib';
 
