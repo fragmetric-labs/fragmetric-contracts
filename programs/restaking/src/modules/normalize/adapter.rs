@@ -12,28 +12,30 @@ pub struct NormalizedTokenPoolAdapter<'info> {
     normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
     normalized_token_program: Program<'info, Token>,
     supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
-    supported_token_program: Box<Interface<'info, TokenInterface>>,
+    supported_token_program: Interface<'info, TokenInterface>,
     supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
 impl<'info> NormalizedTokenPoolAdapter<'info> {
-    pub(super) fn new(
-        normalized_token_pool_account: Account<'info, NormalizedTokenPoolAccount>,
-        accounts: &'info [AccountInfo<'info>],
+    pub(in crate::modules) fn new(
+        normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
+        normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+        normalized_token_program: Program<'info, Token>,
+        supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+        supported_token_program: Interface<'info, TokenInterface>,
+        supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
     ) -> Result<Self> {
-        normalized_token_pool_account.validate_adapter_constructor_accounts(accounts)?;
-
         Ok(Self {
-            normalized_token_pool_account: Box::new(normalized_token_pool_account),
-            normalized_token_mint: Box::new(InterfaceAccount::try_from(&accounts[0])?),
-            normalized_token_program: Program::try_from(&accounts[1])?,
-            supported_token_mint: Box::new(InterfaceAccount::try_from(&accounts[2])?),
-            supported_token_program: Box::new(Interface::try_from(&accounts[3])?),
-            supported_token_lock_account: Box::new(InterfaceAccount::try_from(&accounts[4])?),
+            normalized_token_pool_account,
+            normalized_token_mint,
+            normalized_token_program,
+            supported_token_mint,
+            supported_token_program,
+            supported_token_lock_account,
         })
     }
 
-    pub(super) fn get_denominated_amount_per_normalized_token(&self) -> Result<u64> {
+    pub(in crate::modules) fn get_denominated_amount_per_normalized_token(&self) -> Result<u64> {
         10u64
             .checked_pow(self.normalized_token_mint.decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
@@ -49,6 +51,12 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         supported_token_amount_as_sol: u64,
         one_normalized_token_as_sol: u64,
     ) -> Result<()> {
+        msg!(
+            "FUCK2-1: {}, {}, {}",
+            supported_token_amount_as_sol,
+            self.get_denominated_amount_per_normalized_token()?,
+            one_normalized_token_as_sol
+        );
         let normalized_token_mint_amount = crate::utils::get_proportional_amount(
             supported_token_amount_as_sol,
             self.get_denominated_amount_per_normalized_token()?,
@@ -92,5 +100,9 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         )?;
 
         Ok(())
+    }
+
+    pub(crate) fn into_pool_account(self) -> Box<Account<'info, NormalizedTokenPoolAccount>> {
+        self.normalized_token_pool_account
     }
 }
