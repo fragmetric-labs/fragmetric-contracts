@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
 
-describe("deposit_token", async () => {
+module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
     const restaking = await restakingPlayground;
     const user3 = restaking.keychain.getKeypair('MOCK_USER3');
     const user4 = restaking.keychain.getKeypair('MOCK_USER4');
@@ -26,9 +26,10 @@ describe("deposit_token", async () => {
 
     step("user3 deposits supported token without metadata to mint fragSOL", async function () {
         const res0 = await restaking.runOperatorUpdatePrices();
-        expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber()).greaterThan(0);
-        expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0);
+        expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber()).greaterThan(0, '1');
+        expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0, '2');
         const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol;
+        const fragSOLUserTokenAccount0 = await restaking.getUserFragSOLAccount(user3.publicKey).catch(v => null);
 
         const decimals = 10 ** 9;
         const amount = new BN(10 * decimals);
@@ -36,18 +37,19 @@ describe("deposit_token", async () => {
         const initialTokenAmount = new BN((await restaking.getUserSupportedTokenAccount(user3.publicKey, symbol)).amount.toString());
         const res1 = await restaking.runUserDepositSupportedToken(user3, symbol, amount, null);
 
-        expect(new BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new BN(initialTokenAmount).sub(amount).toString());
-        expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.toString()).eq(amount.toString());
+        expect(new BN(res1.userSupportedTokenAccount.amount.toString()).toString()).eq(new BN(initialTokenAmount).sub(amount).toString(), '3');
+        expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res0.fragSOLFund.supportedTokens[0].operationReservedAmount).toString()).eq(amount.toString(), '4');
         const fragSOLPrice1 = res1.event.userDepositedSupportedTokenToFund.fundAccount.oneReceiptTokenAsSol;
 
-        expect(fragSOLPrice0.toString()).eq(fragSOLPrice1.toString()); // price is consistent upon deposits
+        expect(fragSOLPrice0.toString()).eq(fragSOLPrice1.toString(), '5'); // price is consistent around deposits
 
         const tokenPrice = res1.fragSOLFund.supportedTokens[0].oneTokenAsSol;
-        expect(tokenPrice.mul(amount).div(fragSOLPrice1).toString()).eq(res1.fragSOLUserTokenAccount.amount.toString()); // proper amount minted?
+        expect(tokenPrice.mul(amount).div(fragSOLPrice1).div(new BN(100)).toString())
+            .eq(new BN(res1.fragSOLUserTokenAccount.amount.toString()).sub(new BN(fragSOLUserTokenAccount0?.amount.toString() ?? 0)).div(new BN(100)).toString(), '6'); // proper amount minted?
 
         expect(res1.event.userDepositedSupportedTokenToFund.walletProvider).null;
         expect(res1.event.userDepositedSupportedTokenToFund.contributionAccrualRate).null;
-        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1, '7');
     });
 
     step("user3 fails to deposit too many tokens", async function () {
@@ -59,11 +61,13 @@ describe("deposit_token", async () => {
 
     step("user4 deposits supported token with metadata to mint fragSOL", async function () {
         const res0 = await restaking.runOperatorUpdatePrices();
+        // const fragSOLUserTokenAccount0 = await restaking.getUserFragSOLAccount(user3.publicKey).catch(v => null);
+        const userRewardAccount0 = await restaking.getUserFragSOLRewardAccount(user4.publicKey).catch(v => null);
 
         const symbol = 'bSOL';
         const decimals = 10 ** 9;
         const amount1 = new BN(6 * decimals);
-        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
+        const currentTimestamp = new BN(Math.floor(Date.now() / 1000) + 5);
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
@@ -72,15 +76,15 @@ describe("deposit_token", async () => {
         const res1 = await restaking.runUserDepositSupportedToken(user4, symbol, amount1, depositMetadata1);
         const mintedAmount1 = res1.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
 
-        expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res0.fragSOLFund.supportedTokens[0].operationReservedAmount).toString()).eq(amount1.toString());
-        expect(res1.event.userDepositedSupportedTokenToFund.walletProvider).eq(depositMetadata1.walletProvider);
-        expect(res1.event.userDepositedSupportedTokenToFund.contributionAccrualRate.toString()).eq(depositMetadata1.contributionAccrualRate.toString());
-        expect(res1.event.userDepositedSupportedTokenToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString())
+        expect(res1.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res0.fragSOLFund.supportedTokens[0].operationReservedAmount).toString()).eq(amount1.toString(), '1');
+        expect(res1.event.userDepositedSupportedTokenToFund.walletProvider).eq(depositMetadata1.walletProvider, '2');
+        expect(res1.event.userDepositedSupportedTokenToFund.contributionAccrualRate.toString()).eq(depositMetadata1.contributionAccrualRate.toString(), '3');
+        expect(res1.event.userDepositedSupportedTokenToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString(), '4');
 
-        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        expect(res1.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1, '5');
         const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user4.publicKey);
-        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.toString());
-        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.toString());
+        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[0].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '6');
+        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[1].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '7');
 
         const amount2 = new BN(4 * decimals);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
@@ -92,15 +96,15 @@ describe("deposit_token", async () => {
         const mintedAmount2 = res2.event.userDepositedSupportedTokenToFund.mintedReceiptTokenAmount;
 
         expect(res2.fragSOLFund.supportedTokens[0].operationReservedAmount.sub(res1.fragSOLFund.supportedTokens[0].operationReservedAmount).toString(), 'added reserved token amount').eq(amount2.toString(), 'deposited token amount');
-        expect(res2.event.userDepositedSupportedTokenToFund.walletProvider).eq(depositMetadata2.walletProvider);
-        expect(res2.event.userDepositedSupportedTokenToFund.contributionAccrualRate.toString()).eq(depositMetadata2.contributionAccrualRate.toString());
-        expect(res2.event.userDepositedSupportedTokenToFund.userFundAccount.receiptTokenAmount.toString()).eq(res2.fragSOLUserTokenAccount.amount.toString())
+        expect(res2.event.userDepositedSupportedTokenToFund.walletProvider).eq(depositMetadata2.walletProvider, '8');
+        expect(res2.event.userDepositedSupportedTokenToFund.contributionAccrualRate.toString()).eq(depositMetadata2.contributionAccrualRate.toString(), '9');
+        expect(res2.event.userDepositedSupportedTokenToFund.userFundAccount.receiptTokenAmount.toString()).eq(res2.fragSOLUserTokenAccount.amount.toString(), '10');
 
-        expect(res2.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1);
+        expect(res2.event.userUpdatedRewardPool.updatedUserRewardAccountAddresses.length).eq(1, '11');
         const userRewardAccount2 = await restaking.getUserFragSOLRewardAccount(user4.publicKey);
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString(), 'total allocated amount').eq(mintedAmount1.add(mintedAmount2).toString(), 'minted fragSOL amount');
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.numRecords).eq(1);
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(mintedAmount1.add(mintedAmount2).toString());
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.numRecords).eq(2);
+        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString(), 'total allocated amount').eq(mintedAmount2.toString(), 'minted fragSOL amount');
+        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.numRecords).eq(1, '12');
+        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '13');
+        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.numRecords).eq(2, '14');
     });
 });

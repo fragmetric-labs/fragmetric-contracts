@@ -22,7 +22,6 @@ pub fn process_run<'info>(
 ) -> Result<()> {
     // temporary authorization
     require_eq!(operator.key(), ADMIN_PUBKEY);
-    msg!("Pubkey = {:?}", remaining_accounts.iter().map(|v| v.key.to_string()).collect::<Vec<_>>().join(", "));
 
     // accounts
     let [
@@ -177,8 +176,12 @@ pub fn process_run<'info>(
             require_gte!(minted_normalized_token_amount, normalizing_supported_token_amount.div_ceil(2));
             require_eq!(fund_supported_token_info_to_normalize.get_operation_reserved_amount(), fund_supported_token_account_to_normalize_parsed.amount);
             require_eq!(fund_supported_token_info_to_normalize.get_operating_amount(), normalized_token_pool_supported_token_lock_account_parsed.amount);
+
+            let normalized_token_pool_account = normalizer.into_pool_account();
+            normalized_token_pool_account.exit(&crate::ID)?;
         }
     }
+
 
     // 3. restake normalized tokens
     // {
