@@ -142,7 +142,7 @@ pub struct SupportedTokenConfig {
     token_authority: Pubkey,
     /// lock_authority = normalized_token_authority
     lock_account: Pubkey,
-    pub(super) locked_amount: u64,
+    locked_amount: u64,
 }
 
 impl SupportedTokenConfig {
@@ -194,6 +194,15 @@ impl SupportedTokenConfig {
             accounts[4].key(),
             ErrorCode::NormalizeInvalidAccountsProvided,
         );
+
+        Ok(())
+    }
+
+    pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {
+        self.locked_amount = self
+            .locked_amount
+            .checked_add(token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }

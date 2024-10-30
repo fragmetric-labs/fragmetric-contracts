@@ -8,8 +8,8 @@ use crate::utils::PDASeeds;
 use super::*;
 
 pub struct NormalizedTokenPoolAdapter<'info> {
-    pub(super) normalized_token_pool_config: Box<Account<'info, NormalizedTokenPoolConfig>>,
-    pub(super) normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+    normalized_token_pool_config: Box<Account<'info, NormalizedTokenPoolConfig>>,
+    normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
     normalized_token_program: Program<'info, Token>,
     normalized_token_authority: Box<Account<'info, NormalizedTokenAuthority>>,
     normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -39,6 +39,12 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
         })
     }
 
+    pub(super) fn get_denominated_amount_per_normalized_token(&self) -> Result<u64> {
+        10u64
+            .checked_pow(self.normalized_token_mint.decimals as u32)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
     pub(super) fn deposit(
         &mut self,
         supported_token_authority: AccountInfo<'info>,
@@ -48,13 +54,9 @@ impl<'info> NormalizedTokenPoolAdapter<'info> {
     ) -> Result<()> {
         require_gte!(self.supported_token_account.amount, supported_token_amount);
 
-        let supported_token_config = self
-            .normalized_token_pool_config
-            .get_supported_token_config_mut(self.supported_token_mint.key())?;
-        supported_token_config.locked_amount = supported_token_config
-            .locked_amount
-            .checked_add(supported_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.normalized_token_pool_config
+            .get_supported_token_config_mut(self.supported_token_mint.key())?
+            .lock_token(supported_token_amount)?;
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(

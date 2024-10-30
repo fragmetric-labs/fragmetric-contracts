@@ -17,9 +17,7 @@ pub(in crate::modules) fn normalize_supported_token<'info>(
 ) -> Result<()> {
     let normalized_token_mint_amount = crate::utils::get_proportional_amount(
         supported_token_amount_as_sol,
-        10u64
-            .checked_pow(normalized_token_pool_adapter.normalized_token_mint.decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        normalized_token_pool_adapter.get_denominated_amount_per_normalized_token()?,
         one_normalized_token_as_sol,
     )
     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
