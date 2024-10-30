@@ -3,7 +3,6 @@ use anchor_lang::solana_program::program::{invoke};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use jito_vault_sdk::sdk::{mint_to, update_vault_balance, initialize_vault_update_state_tracker, close_vault_update_state_tracker};
-use crate::constants::*;
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -11,29 +10,29 @@ pub struct Jito;
 
 impl Id for Jito {
     fn id() -> Pubkey {
-        JITO_VAULT_PROGRAM_ID
+        JitoRestakingProtocol::JITO_VAULT_PROGRAM_ID
     }
 }
 
 
 #[derive(Accounts)]
 pub struct RestakingDepositContext<'info> {
-    #[account(address = JITO_VAULT_PROGRAM_ID)]
+    #[account(address = JitoRestakingProtocol::JITO_VAULT_PROGRAM_ID)]
     pub program: Program<'info, Jito>,
 
     /// CHECK: blabla
-    #[account(mut, address = JITO_VAULT_CONFIG_ADDRESS)]
+    #[account(mut, address = JitoRestakingProtocol::JITO_VAULT_CONFIG_ADDRESS)]
     pub config: UncheckedAccount<'info>,
 
     /// CHECK: blabla
-    #[account(mut, address = JITO_VAULT_ADDRESS)]
+    #[account(mut, address = JitoRestakingProtocol::JITO_VAULT_ADDRESS)]
     pub vault: UncheckedAccount<'info>,
 
     /// CHECK: blabla
-    #[account(mut, address = JITO_VAULT_RECEIPT_TOKEN)]
+    #[account(mut, address = JitoRestakingProtocol::JITO_VAULT_RECEIPT_TOKEN)]
     pub vault_receipt_token: UncheckedAccount<'info>,
 
-    #[account(mut, address = JITO_VAULT_SUPPORTED_TOKEN)]
+    #[account(mut, address = JitoRestakingProtocol::JITO_VAULT_SUPPORTED_TOKEN)]
     pub vault_supported_token: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
