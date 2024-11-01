@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::constants::*;
 // use crate::errors::ErrorCode;
 // use crate::modules::fund::FundAccount;
-use crate::modules::normalize::NormalizedTokenPoolAccount;
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]

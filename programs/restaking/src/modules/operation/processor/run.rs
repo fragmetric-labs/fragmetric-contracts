@@ -1,7 +1,7 @@
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors;
 use crate::events;
-use crate::modules::{fund, normalize, pricing, restaking, staking};
+use crate::modules::{fund, normalization, pricing, restaking, staking};
 use crate::utils::*;
 use anchor_lang::{prelude::*, solana_program, CheckOwner};
 use anchor_spl::token::accessor::mint;
@@ -200,7 +200,7 @@ pub fn process_run<'info>(
                 parse_interface_account_boxed::<TokenAccount>(
                     normalized_token_pool_supported_token_lock_account,
                 )?;
-            let mut normalizer = normalize::NormalizedTokenPoolAdapter::new(
+            let mut normalizer = normalization::NormalizedTokenPoolAdapter::new(
                 normalized_token_pool_account_parsed,
                 normalized_token_mint_parsed,
                 normalized_token_program_parsed,
@@ -210,7 +210,7 @@ pub fn process_run<'info>(
             )?;
             let denominated_amount_per_normalized_token =
                 normalizer.get_denominated_amount_per_normalized_token()?;
-            normalize::normalize_supported_token(
+            normalization::normalize_supported_token(
                 &mut normalizer,
                 &fund_normalized_token_account_parsed,
                 &fund_supported_token_account_to_normalize_parsed,

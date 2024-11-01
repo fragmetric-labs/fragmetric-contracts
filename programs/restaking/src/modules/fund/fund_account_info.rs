@@ -18,7 +18,7 @@ pub struct FundAccountInfo {
 }
 
 impl FundAccountInfo {
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn from(
         fund_account: &Account<FundAccount>,
         receipt_token_mint: &InterfaceAccount<Mint>,

@@ -3,7 +3,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
-use crate::modules::normalize::NormalizedTokenPoolAccount;
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]

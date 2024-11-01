@@ -16,7 +16,7 @@ use normalized_token_pool::*;
 use spl_stake_pool::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::normalize::NormalizedTokenPoolAccount;
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 
 /// { mint : (pricing_source, account list) }
 pub type TokenPricingSourceMap<'info> = BTreeMap<

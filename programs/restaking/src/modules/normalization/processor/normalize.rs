@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::TokenAccount;
 
-use crate::modules::normalize::*;
+use crate::modules::normalization::*;
 
 pub(in crate::modules) fn normalize_supported_token<'info>(
     normalized_token_pool_adapter: &mut NormalizedTokenPoolAdapter<'info>,

@@ -1,6 +1,6 @@
 // use anchor_lang::prelude::*;
 //
-// use crate::modules::normalize::*;
+// use crate::modules::normalization::*;
 //
 // #[inline(always)]
 // pub(in crate::modules) fn create_normalized_token_pool_adapter<'info>(

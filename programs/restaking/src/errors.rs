@@ -62,7 +62,7 @@ pub enum ErrorCode {
     #[msg("fund: token pricing source is not found")]
     FundTokenPricingSourceNotFoundException,
 
-    #[msg("operator: job unmet threshold")]
+    #[msg("operation: job unmet threshold")]
     OperatorJobUnmetThresholdError,
 
     #[msg("reward: invalid token transfer args")]
@@ -173,15 +173,15 @@ pub enum ErrorCode {
     #[msg("fund: unexpected execution reserved account balance")]
     FundUnexpectedExecutionReservedAccountBalanceException,
 
-    #[msg("normalize: not supported token")]
+    #[msg("normalization: not supported token")]
     NormalizedTokenPoolNotSupportedTokenError,
 
-    #[msg("normalize: already supported token")]
+    #[msg("normalization: already supported token")]
     NormalizedTokenPoolAlreadySupportedTokenError,
 
-    #[msg("normalize: exceeded max supported tokens")]
+    #[msg("normalization: exceeded max supported tokens")]
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
-    #[msg("normalize: invalid accounts provided")]
+    #[msg("normalization: invalid accounts provided")]
     NormalizedTokenPoolInvalidAccountsProvided,
 }

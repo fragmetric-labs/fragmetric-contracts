@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::ErrorCode,
     modules::{
-        normalize::{self, NormalizedTokenPoolAccount},
+        normalization::{self, NormalizedTokenPoolAccount},
         pricing::calculate_token_amount_as_sol,
     },
 };

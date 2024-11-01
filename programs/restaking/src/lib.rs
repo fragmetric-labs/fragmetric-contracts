@@ -77,7 +77,7 @@ pub mod restaking {
     pub fn admin_initialize_normalized_token_pool(
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
-        modules::normalize::process_initialize_normalized_token_pool_account(
+        modules::normalization::process_initialize_normalized_token_pool_account(
             &ctx.accounts.admin,
             &ctx.accounts.normalized_token_mint,
             &mut ctx.accounts.normalized_token_pool_account,
@@ -280,7 +280,7 @@ pub mod restaking {
     pub fn fund_manager_add_normalized_token_pool_supported_token(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
     ) -> Result<()> {
-        modules::normalize::process_add_supported_token(
+        modules::normalization::process_add_supported_token(
             &ctx.accounts.fund_manager,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_lock_account,
@@ -394,7 +394,7 @@ pub mod restaking {
         command: u8,
     ) -> Result<()> {
         let clock = Clock::get()?;
-        modules::operator::process_run(
+        modules::operation::process_run(
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
@@ -410,7 +410,7 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         forced: bool,
     ) -> Result<()> {
-        modules::operator::process_process_fund_withdrawal_job(
+        modules::operation::process_process_fund_withdrawal_job(
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_lock_account,

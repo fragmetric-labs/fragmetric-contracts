@@ -501,7 +501,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLMint};
     }
 
-    public async runAdminInitializeNSOLTokenMint() {
+    public async runAdminInitializeNSOLTokenMint(createMetadata = false) {
         const mintSize = spl.getMintLen([]);
         const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
 
@@ -525,34 +525,38 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signerNames: ["NSOL_MINT"],
         });
 
-        const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
-        const keypair = this.keychain.getKeypair('NSOL_MINT');
-        const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
-        const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
+        if (createMetadata) {
+            const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+            const keypair = this.keychain.getKeypair('NSOL_MINT');
+            const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+            const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
 
-        const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
-        const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
-        umiInstance.use(umi.signerIdentity(authority));
+            const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+            const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+            umiInstance.use(umi.signerIdentity(authority));
 
-        if (this.isMaybeLocalnet) {
-            await umiInstance.rpc.airdrop(authKeypair.publicKey, umi.sol(1));
+            if (this.isMaybeLocalnet) {
+                await umiInstance.rpc.airdrop(authKeypair.publicKey, umi.sol(1));
+            }
+
+            await mpl.createV1(umiInstance, {
+                mint,
+                authority,
+                name: "normalized Liquid Staked Solana",
+                symbol: "nSOL",
+                decimals: 9,
+                uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmR5pP6Zo65XWCEXgixY8UtZjWbYPKmYHcyxzUq4p1KZt5",
+                sellerFeeBasisPoints: umi.percentAmount(0),
+                tokenStandard: mpl.TokenStandard.Fungible,
+            }).sendAndConfirm(umiInstance);
+
+            const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
+            logger.notice("nSOL token mint metadata created".padEnd(LOG_PAD_LARGE), assets);
         }
 
-        await mpl.createV1(umiInstance, {
-            mint,
-            authority,
-            name: "normalized Liquid Staked Solana",
-            symbol: "nSOL",
-            decimals: 9,
-            uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmR5pP6Zo65XWCEXgixY8UtZjWbYPKmYHcyxzUq4p1KZt5",
-            sellerFeeBasisPoints: umi.percentAmount(0),
-            tokenStandard: mpl.TokenStandard.Fungible,
-        }).sendAndConfirm(umiInstance);
-
-        const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
         const nSOLMint = await spl.getMint(this.connection, this.knownAddress.nSOLTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID);
         logger.notice("nSOL token mint created".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenMint.toString());
-        return {nSOLMint, assets};
+        return {nSOLMint};
     }
 
     public async runAdminUpdateTokenMetadata() {
