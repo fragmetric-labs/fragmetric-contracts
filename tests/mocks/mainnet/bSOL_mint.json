@@ -1,1 +1,14 @@
-{"account":{"data":["AQAAAA/g6aFKEi7hKOKW/Y9tPLPNsidnEvhNgUvyKMZ8N55f8nskZsYRBgAJAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","base64"],"executable":false,"lamports":4098320394,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":82},"pubkey":"bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"}
+{
+  "account": {
+    "data": [
+      "AQAAAA/g6aFKEi7hKOKW/Y9tPLPNsidnEvhNgUvyKMZ8N55f8nskZsYRBgAJAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+      "base64"
+    ],
+    "executable": false,
+    "lamports": 4098320394,
+    "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "rentEpoch": 18446744073709551615,
+    "space": 82
+  },
+  "pubkey": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
+}

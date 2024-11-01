@@ -1,13 +1,11 @@
 import fs from "fs";
 import path from "path";
-import readline from 'readline';
 import {exec} from "node:child_process";
-import * as web3 from "@solana/web3.js";
+import {web3} from '@coral-xyz/anchor';
 import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
 import {Buffer} from "buffer";
-import {Key} from "node:readline";
 import {askOnce} from "./repl";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger('keychain');
@@ -57,7 +55,10 @@ export class Keychain<KEYS extends string> {
             null;
     }
 
-    public async signTransaction(name: KEYS, tx: web3.Transaction): Promise<{ local?: web3.Keypair, ledger?: web3.SignaturePubkeyPair }> {
+    public async signTransaction(name: KEYS, tx: web3.Transaction): Promise<{
+        local?: web3.Keypair,
+        ledger?: web3.SignaturePubkeyPair
+    }> {
         try {
             if (this.keypairs.local.has(name)) {
                 const keypair = this.keypairs.local.get(name);
@@ -222,11 +223,11 @@ export class Keychain<KEYS extends string> {
                 const filePath = path.join(programSrcDir, fileName);
                 let fileSource = fs.readFileSync(filePath).toString();
                 logger.debug(`checking ${filePath}`);
-    
+
                 let updated = 0;
                 for (const keypairName of keypairKEYS) {
                     const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
-    
+
                     if (matches) {
                         const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
                         const target = `/*local:${keypairName}*/"${publicKey.toString()}"/**/`;

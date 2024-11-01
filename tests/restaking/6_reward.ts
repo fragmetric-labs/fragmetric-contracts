@@ -96,8 +96,8 @@ describe("reward", async function () {
             .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
         // aSettle.settledAmount/bSettle.settledAmount = aSettle.settledContribution/bSettle.settledContribution
 
-        expect((aSettledAmountDelta.toNumber()/bSettledAmountDelta.toNumber()).toPrecision(6))
-            .eq((aSettledContribDelta.toNumber()/bSettledContribDelta.toNumber()).toPrecision(6), 'd');
+        expect((aSettledAmountDelta.toNumber() / bSettledAmountDelta.toNumber()).toPrecision(6))
+            .eq((aSettledContribDelta.toNumber() / bSettledContribDelta.toNumber()).toPrecision(6), 'd');
     });
 
     step("rewards can be settled with custom contribution accrual rate enabled", async function () {
@@ -178,8 +178,8 @@ describe("reward", async function () {
         const b6BonusSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
             .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
 
-        expect((a6BonusSettledAmountDelta.toNumber()/b6BonusSettledAmountDelta.toNumber()).toPrecision(6), 'a6_amount / b6_amount')
-            .eq((a6BonusSettledContribDelta.toNumber()/b6BonusSettledContribDelta.toNumber()).toPrecision(6), 'a6_contrib / b6_contrib');
+        expect((a6BonusSettledAmountDelta.toNumber() / b6BonusSettledAmountDelta.toNumber()).toPrecision(6), 'a6_amount / b6_amount')
+            .eq((a6BonusSettledContribDelta.toNumber() / b6BonusSettledContribDelta.toNumber()).toPrecision(6), 'a6_contrib / b6_contrib');
 
         expect(a6BonusSettledContribDelta.mul(new BN(5)).toString(), 'a6_contrib x 5')
             .eq(b6BonusSettledContribDelta.mul(new BN(4)).toString(), 'b6_contrib x 4');

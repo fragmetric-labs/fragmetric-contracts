@@ -107,8 +107,8 @@ pub enum ErrorCode {
     #[msg("reward: invalid reward pool access")]
     RewardInvalidPoolAccessException,
 
-    #[msg("reward: unmet account size reallocation")]
-    RewardUnmetAccountReallocError,
+    #[msg("unmet account size reallocation")]
+    AccountUnmetDesiredReallocSizeError,
 
     #[msg("reward: incorrect accounting exception")]
     RewardInvalidAccountingException,
@@ -157,4 +157,31 @@ pub enum ErrorCode {
 
     #[msg("fund: signature has expired")]
     FundDepositMetadataSignatureExpiredError,
+
+    #[msg("invalid data account version")]
+    InvalidDataVersionError,
+
+    #[msg("fund: exceeded max batch withdrawals in progress")]
+    FundExceededMaxBatchWithdrawalInProgressError,
+
+    #[msg("fund: exceeded max supported tokens")]
+    FundExceededMaxSupportedTokensError,
+
+    #[msg("fund: invalid sol withdrawal fee rate")]
+    FundInvalidSolWithdrawalFeeRateError,
+
+    #[msg("fund: unexpected execution reserved account balance")]
+    FundUnexpectedExecutionReservedAccountBalanceException,
+
+    #[msg("normalize: not supported token")]
+    NormalizedTokenPoolNotSupportedTokenError,
+
+    #[msg("normalize: already supported token")]
+    NormalizedTokenPoolAlreadySupportedTokenError,
+
+    #[msg("normalize: exceeded max supported tokens")]
+    NormalizedTokenPoolExceededMaxSupportedTokensError,
+
+    #[msg("normalize: invalid accounts provided")]
+    NormalizedTokenPoolInvalidAccountsProvided,
 }

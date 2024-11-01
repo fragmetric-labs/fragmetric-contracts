@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports)]
 use anchor_lang::prelude::*;
 
 #[constant]
@@ -7,8 +6,8 @@ pub const MAINNET_PROGRAM_ID: Pubkey = pubkey!("fragnAis7Bp6FTsMoa6YcH8UffhEw43P
 pub const DEVNET_PROGRAM_ID: Pubkey = pubkey!("frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ");
 
 /**
-    Below address are needed to be passed to transactions which includes pricing of tokens (token deposit, withdrawal request)
-    A complete list will be provided to client via address lookup table later.
+Below address are needed to be passed to transactions which includes pricing of tokens (token deposit, withdrawal request)
+A complete list will be provided to client via address lookup table later.
 **/
 
 #[constant]
@@ -33,3 +32,8 @@ pub const DEVNET_MSOL_STAKE_POOL_ADDRESS: Pubkey = MAINNET_MSOL_STAKE_POOL_ADDRE
 pub const MAINNET_JITOSOL_MINT_ADDRESS: Pubkey = pubkey!("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn");
 #[constant]
 pub const MAINNET_JITOSOL_STAKE_POOL_ADDRESS: Pubkey = pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
+
+#[constant]
+pub const MAINNET_NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+#[constant]
+pub const DEVNET_NSOL_MINT_ADDRESS: Pubkey = MAINNET_NSOL_MINT_ADDRESS;

@@ -1,9 +1,8 @@
 import {BN} from '@coral-xyz/anchor';
-// @ts-ignore
-import * as spl from "@solana/spl-token";
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+
 
 describe("initialize", async () => {
     const restaking = await restakingPlayground;
@@ -15,31 +14,19 @@ describe("initialize", async () => {
         expect(res0.fragSOLMint.freezeAuthority).null;
     });
 
-    // step("update fragSOL token metadata", async function () {
-    //     await restaking.runAdminUpdateTokenMetadata();
-    // });
-
-    step("mock supported token mints", async function () {
-        const tokenMint_bSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.bSOL.mint,
-        );
-        const tokenMint_mSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.mSOL.mint,
-        );
-        const tokenMint_jitoSOL = await spl.getMint(
-            restaking.connection,
-            restaking.supportedTokenMetadata.jitoSOL.mint,
-        );
-
-        expect(tokenMint_bSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
-        expect(tokenMint_mSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
-        expect(tokenMint_jitoSOL.mintAuthority.toString()).eq(restaking.keychain.getKeypair('MOCK_ALL_MINT_AUTHORITY').publicKey.toString());
+    step("update fragSOL token metadata", async function () {
+        await restaking.runAdminUpdateTokenMetadata();
     });
 
+    step("create nSOL token mint", async function () {
+        const {nSOLMint} = await restaking.runAdminInitializeNSOLTokenMint();
+        expect(nSOLMint.address.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
+        expect(nSOLMint.mintAuthority.toString()).eq(restaking.keychain.getKeypair('ADMIN').publicKey.toString());
+        expect(nSOLMint.freezeAuthority).null;
+    })
+
     step("initialize fund accounts", async () => {
-        const { fragSOLFundAccount } = await restaking.runAdminInitializeFundAccounts();
+        const {fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
 
         expect(fragSOLFundAccount.dataVersion).gt(0);
 
@@ -48,8 +35,21 @@ describe("initialize", async () => {
         expect(fragSOLFundAccount.dataVersion).gt(1);
     })
 
+    step("initialize normalized token pool", async () => {
+        const {nSOLTokenPoolAccount} = await restaking.runAdminInitializeNormalizeTokenPool();
+
+        expect(nSOLTokenPoolAccount.normalizedTokenMint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
+    })
+
+    step("initialize jito restaking protocol account", async () => {
+        const {fragSOLFundJitoVRTAccount} = await restaking.runAdminInitializeJitoRestakingProtocolAccount();
+
+        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
+        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+    })
+
     step("initialize reward accounts", async () => {
-        const { fragSOLRewardAccount } = await restaking.runAdminUpdateRewardAccounts();
+        const {fragSOLRewardAccount} = await restaking.runAdminUpdateRewardAccounts();
 
         expect(fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
     })
@@ -65,7 +65,8 @@ describe("initialize", async () => {
     });
 
     step("initialize fund and supported tokens configuration", async function () {
-        const res0 = await restaking.runFundManagerInitializeFundConfigurations();
+        const _ = await restaking.runFundManagerInitializeFundConfigurations();
+        const res0 = await restaking.runFundManagerUpdateFundConfigurations();
 
         expect(res0.fragSOLFund.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
         let i = 0;
@@ -73,10 +74,23 @@ describe("initialize", async () => {
             const supported = res0.fragSOLFund.supportedTokens[i++];
             expect(supported.mint.toString()).eq(v.mint.toString());
             expect(supported.program.toString()).eq(v.program.toString());
-            expect(supported.price.toNumber()).greaterThan(0);
+            expect(supported.oneTokenAsSol.toNumber()).greaterThan(0);
             expect(supported.operationReservedAmount.toNumber()).eq(0);
         }
     });
+
+    step("initialize normalized token pool supported tokens configuration", async function () {
+        const {nSOLTokenPool} = await restaking.runFundManagerInitializeNormalizeTokenPoolConfigurations();
+
+        expect(nSOLTokenPool.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
+        let i = 0;
+        for (const v of Object.values(restaking.supportedTokenMetadata)) {
+            const supported = nSOLTokenPool.supportedTokens[i++];
+            expect(supported.mint.toString()).eq(v.mint.toString());
+            expect(supported.program.toString()).eq(v.program.toString());
+            expect(supported.lockedAmount.toNumber()).eq(0);
+        }
+    })
 
     step("initialize reward pools and rewards", async function () {
         const res0 = await restaking.runFundManagerInitializeRewardPools();
