@@ -25,18 +25,17 @@ pub fn process_run<'info>(
     if command == 0 {
         // accounts
         let [
-        // staking
-        fund_execution_reserve_account,
-        stake_pool_program,
-        stake_pool,
-        stake_pool_withdraw_authority,
-        reserve_stake_account,
-        manager_fee_account,
-        pool_mint,
-        token_program,
-        fund_supported_token_account_to_stake,
-        // pricing
-        pricing_source_accounts @ ..,
+            // staking
+            fund_execution_reserve_account,
+            stake_pool_program,
+            stake_pool,
+            stake_pool_withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            pool_mint,
+            token_program,
+            fund_supported_token_account_to_stake,
+            ..,
         ] = remaining_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };
@@ -138,23 +137,23 @@ pub fn process_run<'info>(
     // TODO: apply fund_account.nt_operation_reserved_amount
     if command == 1 {
         let [
-        // normalization
-        normalized_token_pool_account,
-        normalized_token_mint,
-        normalized_token_program,
-        fund_normalized_token_account,
-        fund_supported_token_account_to_normalize,
-        fund_supported_token_account_authority_to_normalize,
-        fund_supported_token_mint_to_normalize,
-        fund_supported_token_program_to_normalize,
-        normalized_token_pool_supported_token_lock_account,
-        // pricing
-        pricing_source_accounts @ ..,
+            // normalization
+            normalized_token_pool_account,
+            normalized_token_mint,
+            normalized_token_program,
+            fund_normalized_token_account,
+            fund_supported_token_account_to_normalize,
+            fund_supported_token_mint_to_normalize,
+            fund_supported_token_program_to_normalize,
+            normalized_token_pool_supported_token_lock_account,
+            // pricing
+            pricing_source_accounts @ ..,
         ] = remaining_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };
 
         // create pricing calculator
+        // TODO fix `create_pricing_source_map`
         let mut pricing_source_map =
             fund::create_pricing_source_map(fund_account, pricing_source_accounts)?;
         pricing_source_map.insert(
@@ -173,10 +172,6 @@ pub fn process_run<'info>(
         let mut fund_supported_token_account_to_normalize_parsed =
             parse_interface_account_boxed::<TokenAccount>(
                 fund_supported_token_account_to_normalize,
-            )?;
-        let fund_supported_token_account_authority_to_normalize_parsed =
-            parse_account_boxed::<fund::SupportedTokenAuthority>(
-                fund_supported_token_account_authority_to_normalize,
             )?;
         let fund_supported_token_info_to_normalize = fund_account
             .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
@@ -214,12 +209,8 @@ pub fn process_run<'info>(
                 &mut normalizer,
                 &fund_normalized_token_account_parsed,
                 &fund_supported_token_account_to_normalize_parsed,
-                fund_supported_token_account_authority_to_normalize.clone(),
-                &[
-                    fund_supported_token_account_authority_to_normalize_parsed
-                        .get_signer_seeds()
-                        .as_ref(),
-                ],
+                fund_account.to_account_info(),
+                &[fund_account.get_signer_seeds().as_ref()],
                 normalizing_supported_token_amount,
                 // TODO: revisit later about pricing interface and dependency graph
                 pricing::calculate_token_amount_as_sol(
@@ -234,6 +225,8 @@ pub fn process_run<'info>(
                 )?,
             )?;
             fund_supported_token_account_to_normalize_parsed.reload()?;
+            let fund_supported_token_info_to_normalize = fund_account
+                .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
             fund_supported_token_info_to_normalize.set_operation_reserved_amount(
                 fund_supported_token_info_to_normalize.get_operation_reserved_amount()
                     - normalizing_supported_token_amount,
@@ -280,21 +273,20 @@ pub fn process_run<'info>(
     // restake normalized tokens
     if command == 2 {
         let [
-        // normalization
-        normalized_token_mint,
-        normalized_token_program,
-        fund_normalized_token_account,
-        // restaking
-        jito_vault_program,
-        jito_vault_config,
-        jito_vault_account,
-        jito_vault_receipt_token_mint,
-        jito_vault_receipt_token_program,
-        jito_vault_supported_token_account,
-        jito_vault_fee_receipt_token_account,
-        fund_jito_vault_receipt_token_account,
-        // pricing
-        pricing_source_accounts @ ..,
+            // normalization
+            normalized_token_mint,
+            normalized_token_program,
+            fund_normalized_token_account,
+            // restaking
+            jito_vault_program,
+            jito_vault_config,
+            jito_vault_account,
+            jito_vault_receipt_token_mint,
+            jito_vault_receipt_token_program,
+            jito_vault_supported_token_account,
+            jito_vault_fee_receipt_token_account,
+            fund_jito_vault_receipt_token_account,
+            ..,
         ] = remaining_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };

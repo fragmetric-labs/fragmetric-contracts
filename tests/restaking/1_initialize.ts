@@ -60,7 +60,7 @@ describe("initialize", async () => {
             fragSOLExtraAccountMetasAccount,
         } = await restaking.runAdminTransferMintAuthority();
 
-        expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLTokenMintAuthority.toString());
+        expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
         expect(fragSOLExtraAccountMetasAccount.length).eq(6);
     });
 

@@ -177,6 +177,11 @@ impl SupportedToken {
         Ok(())
     }
 
+    // migration v0.3.1
+    pub(super) fn set_lock_account(&mut self, lock_account: Pubkey) {
+        self.lock_account = lock_account;
+    }
+
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {
         self.locked_amount = self
             .locked_amount

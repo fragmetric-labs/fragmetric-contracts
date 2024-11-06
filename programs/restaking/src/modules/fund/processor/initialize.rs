@@ -6,15 +6,6 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::modules::fund::*;
 
-pub fn process_initialize_receipt_token_lock_authority(
-    receipt_token_mint: &InterfaceAccount<Mint>,
-    receipt_token_lock_authority: &mut Account<ReceiptTokenLockAuthority>,
-    bump: u8,
-) -> Result<()> {
-    receipt_token_lock_authority.initialize(bump, receipt_token_mint.key());
-    Ok(())
-}
-
 pub fn process_initialize_fund_account(
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
@@ -27,12 +18,9 @@ pub fn process_initialize_fund_account(
 pub fn process_initialize_receipt_token_mint_authority<'info>(
     admin: &Signer<'info>,
     receipt_token_mint: &InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &mut Account<ReceiptTokenMintAuthority>,
+    fund_account: &Account<FundAccount>,
     receipt_token_program: &Program<'info, Token2022>,
-    bump: u8,
 ) -> Result<()> {
-    receipt_token_mint_authority.initialize(bump, receipt_token_mint.key());
-
     // set token mint authority
     token_2022::set_authority(
         CpiContext::new(
@@ -43,7 +31,7 @@ pub fn process_initialize_receipt_token_mint_authority<'info>(
             },
         ),
         spl_token_2022::instruction::AuthorityType::MintTokens,
-        Some(receipt_token_mint_authority.key()),
+        Some(fund_account.key()),
     )
 }
 
@@ -56,35 +44,6 @@ pub fn process_initialize_extra_account_meta_list(
     )?;
     Ok(())
 }
-
-pub fn process_initialize_supported_token_authority(
-    receipt_token_mint: &InterfaceAccount<Mint>,
-    supported_token_mint: &InterfaceAccount<Mint>,
-    supported_token_authority: &mut Account<SupportedTokenAuthority>,
-    bump: u8,
-) -> Result<()> {
-    supported_token_authority.initialize(
-        bump,
-        receipt_token_mint.key(),
-        supported_token_mint.key(),
-    );
-    Ok(())
-}
-
-// pub fn process_initialize_supported_token_lock_account(
-//     supported_token_mint: &AccountInfo,
-//     fund_account: &Account<FundAccount>,
-//     supported_token_program: &Interface<TokenInterface>,
-// ) -> Result<()> {
-//     require_keys_eq!(
-//         fund_account
-//             .get_supported_token(supported_token_mint.key())?
-//             .get_program(),
-//         supported_token_program.key(),
-//     );
-
-//     Ok(())
-// }
 
 pub fn process_initialize_user_fund_account(
     user: &Signer,

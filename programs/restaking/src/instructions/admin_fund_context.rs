@@ -11,30 +11,6 @@ use crate::utils::PDASeeds;
 
 // will be used only once
 #[derive(Accounts)]
-pub struct AdminFundReceiptTokenLockAuthorityInitialContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        init,
-        payer = payer,
-        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + ReceiptTokenLockAuthority::INIT_SPACE,
-    )]
-    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
-}
-
-// will be used only once
-#[derive(Accounts)]
 pub struct AdminFundReceiptTokenLockAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -44,28 +20,29 @@ pub struct AdminFundReceiptTokenLockAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
+    #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_lock_authority.get_bump(),
-        has_one = receipt_token_mint,
-    )]
-    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
-
-    #[account(
         init,
         payer = payer,
-        token::mint = receipt_token_mint,
-        token::authority = receipt_token_lock_authority,
-        token::token_program = receipt_token_program,
-        seeds = [ReceiptTokenLockAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = receipt_token_program,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 // will be used only once
@@ -168,8 +145,88 @@ pub struct AdminFundJitoRestakingProtocolAccountInitialContext<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+// migration v0.3.1
+#[derive(Accounts)]
+pub struct AdminFundReceiptTokenLockAccountUpdateContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_lock_authority.get_bump(),
+        has_one = receipt_token_mint,
+    )]
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
+
+    #[account(
+        mut,
+        token::mint = receipt_token_mint,
+        token::authority = receipt_token_lock_authority,
+        token::token_program = receipt_token_program,
+        seeds = [ReceiptTokenLockAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        constraint = old_receipt_token_lock_account.amount == 0,
+    )]
+    pub old_receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = receipt_token_program,
+    )]
+    pub new_receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
 #[derive(Accounts)]
 pub struct AdminFundAccountUpdateContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        realloc = 8 + FundAccount::INIT_SPACE,
+        realloc::payer = payer,
+        realloc::zero = false,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+}
+
+// migration v0.3.1
+#[derive(Accounts)]
+pub struct AdminFundReceiptTokenLockAuthorityCloseContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -181,9 +238,10 @@ pub struct AdminFundAccountUpdateContext<'info> {
 
     #[account(
         mut,
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
+        close = payer,
+        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
+        bump = receipt_token_lock_authority.get_bump(),
         has_one = receipt_token_mint,
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
 }

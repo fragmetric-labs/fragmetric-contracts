@@ -12,7 +12,6 @@ use crate::utils::PDASeeds;
 pub fn process_deposit_sol<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
     fund_account: &mut Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
@@ -38,8 +37,8 @@ pub fn process_deposit_sol<'info>(
 
     mint_receipt_token_to_user(
         receipt_token_mint,
-        receipt_token_mint_authority,
         user_receipt_token_account,
+        fund_account,
         reward_account,
         user_fund_account,
         user_reward_account,
@@ -72,12 +71,11 @@ pub fn process_deposit_sol<'info>(
 pub fn process_deposit_supported_token<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
     supported_token_mint: &InterfaceAccount<'info, Mint>,
     supported_token_account: &InterfaceAccount<'info, TokenAccount>,
     user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut Account<FundAccount>,
+    fund_account: &mut Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -106,8 +104,8 @@ pub fn process_deposit_supported_token<'info>(
 
     mint_receipt_token_to_user(
         receipt_token_mint,
-        receipt_token_mint_authority,
         user_receipt_token_account,
+        fund_account,
         reward_account,
         user_fund_account,
         user_reward_account,
@@ -225,8 +223,8 @@ fn receipt_token_mint_amount_for(
 
 fn mint_receipt_token_to_user<'info>(
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+    fund_account: &Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -241,9 +239,9 @@ fn mint_receipt_token_to_user<'info>(
             token_2022::MintTo {
                 mint: receipt_token_mint.to_account_info(),
                 to: user_receipt_token_account.to_account_info(),
-                authority: receipt_token_mint_authority.to_account_info(),
+                authority: fund_account.to_account_info(),
             },
-            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
+            &[fund_account.get_signer_seeds().as_ref()],
         ),
         receipt_token_mint_amount,
     )
