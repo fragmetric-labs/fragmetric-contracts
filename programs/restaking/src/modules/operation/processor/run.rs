@@ -26,7 +26,7 @@ pub fn process_run<'info>(
         // accounts
         let [
             // staking
-            fund_execution_reserve_account,
+            fund_reserve_account,
             stake_pool_program,
             stake_pool,
             stake_pool_withdraw_authority,
@@ -40,41 +40,15 @@ pub fn process_run<'info>(
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };
 
-        let (fund_execution_reserve_account_address, fund_execution_reserve_account_bump) = Pubkey::find_program_address(
-            &[fund::FundAccount::EXECUTION_RESERVED_SEED, receipt_token_mint.key().as_ref()], &crate::ID,
+        let (fund_reserve_account_address, fund_reserve_account_bump) = Pubkey::find_program_address(
+            &[fund::FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()], &crate::ID
         );
-        require_eq!(fund_execution_reserve_account_address, fund_execution_reserve_account.key());
+        require_eq!(fund_reserve_account_address, fund_reserve_account.key());
 
         let mut fund_supported_token_account_to_stake_parsed =
             parse_interface_account_boxed::<TokenAccount>(fund_supported_token_account_to_stake)?;
-        let sol_operation_reserved_amount = fund_account.sol_operation_reserved_amount;
-        if sol_operation_reserved_amount > 0 {
-            let moving_amount = sol_operation_reserved_amount
-                .checked_sub(fund_execution_reserve_account.get_lamports())
-                .ok_or_else(|| {
-                    error!(
-                        errors::ErrorCode::FundUnexpectedExecutionReservedAccountBalanceException
-                    )
-                })?;
 
-            if moving_amount > 0 {
-                let rent = Rent::get()?;
-                fund_account.sub_lamports(moving_amount)?;
-                fund_execution_reserve_account.add_lamports(moving_amount)?;
-                if !rent.is_exempt(
-                    fund_account.get_lamports(),
-                    fund_account.to_account_info().data_len(),
-                ) {
-                    err!(
-                        errors::ErrorCode::FundUnexpectedExecutionReservedAccountBalanceException
-                    )?;
-                }
-                msg!("transferred sol_operation_reserved_amount={} to fund_execution_reserve_account={}", moving_amount, fund_execution_reserve_account.get_lamports());
-                return Ok(()); // need to re-run
-            }
-        }
-
-        let staking_lamports = fund_execution_reserve_account.get_lamports();
+        let staking_lamports = fund_account.sol_operation_reserved_amount;
         if staking_lamports > 0 {
             let before_fund_supported_token_amount =
                 fund_supported_token_account_to_stake_parsed.amount;
@@ -89,13 +63,13 @@ pub fn process_run<'info>(
                     pool_mint: pool_mint.clone(),
                     token_program: token_program.clone(),
                 },
-                fund_execution_reserve_account.get_lamports(),
-                fund_execution_reserve_account,
+                staking_lamports,
+                fund_reserve_account,
                 fund_supported_token_account_to_stake,
                 &[&[
-                    fund::FundAccount::EXECUTION_RESERVED_SEED,
+                    fund::FundAccount::RESERVE_SEED,
                     &fund_account.receipt_token_mint.to_bytes(),
-                    &[fund_execution_reserve_account_bump],
+                    &[fund_reserve_account_bump],
                 ]],
             )?;
             fund_supported_token_account_to_stake_parsed.reload()?;
@@ -104,7 +78,7 @@ pub fn process_run<'info>(
                 .checked_sub(staking_lamports)
                 .ok_or_else(|| {
                     error!(
-                        errors::ErrorCode::FundUnexpectedExecutionReservedAccountBalanceException
+                        errors::ErrorCode::FundUnexpectedReserveAccountBalanceException
                     )
                 })?;
 

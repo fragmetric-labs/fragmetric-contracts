@@ -106,22 +106,20 @@ describe("withdraw", async () => {
         const res1 = await restaking.runUserWithdraw(user5, new BN(2));
         const balance1 = await restaking.connection.getBalance(user5.publicKey);
         expect(res1.event.userWithdrewSolFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
-        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString()).eq((balance1 - balance0).toString());
+        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
         // x * (1 - feeRate/10_000) = withdrawnSolAmount
         // x * feeRate/10_000 = deductedSolFeeAmount
         // withdrawnSolAmount/deductedSolFeeAmount = 10_000/feeRate - 1
         expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.div(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString())
-            .eq((10_000 / res1.fragSOLFund.withdrawal.solWithdrawalFeeRate - 1).toString());
+            .eq((10_000 / res1.fragSOLFund.withdrawal.solWithdrawalFeeRate - 1).toString(), '2');
         expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString())
             .eq(amountFragSOLWithdrawalEach.toString(), 'in this test, fragSOL unit price is still 1SOL - 1');
         expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString())
-            .eq(amountFragSOLWithdrawalEach.sub(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString());
+            .eq(amountFragSOLWithdrawalEach.sub(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '3');
         expect(res1.fragSOLFund.withdrawal.solWithdrawalReservedAmount.toString())
             .eq(amountFragSOLWithdrawalEach.toString(), 'in this test, fragSOL unit price is still 1SOL - 2');
         expect(res1.fragSOLFund.withdrawal.solWithdrawalReservedAmount.toString())
-            .eq(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString());
-        expect(res1.fragSOLFund.withdrawal.solFeeIncomeReservedAmount.toString())
-            .eq(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount.toString());
+            .eq(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '4');
     });
 
     step("user5 cannot request withdrawal when withdrawal is disabled", async () => {
@@ -149,7 +147,5 @@ describe("withdraw", async () => {
 
         const res2 = await restaking.runUserWithdraw(user5, new BN(4));
         expect(res2.fragSOLFund.withdrawal.pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).eq(0);
-        expect(res2.fragSOLFund.withdrawal.solFeeIncomeReservedAmount.toString())
-            .eq(amountFragSOLWithdrawalEach.mul(new BN(2 * res2.fragSOLFund.withdrawal.solWithdrawalFeeRate)).div(new BN(10_000)).toString());
     });
 });

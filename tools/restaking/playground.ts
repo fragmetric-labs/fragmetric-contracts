@@ -91,13 +91,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLTokenMintBuf = fragSOLTokenMint.toBuffer();
         const fragSOLExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragSOLTokenMint, this.programId);
         const [fragSOLFund] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund"), fragSOLTokenMintBuf], this.programId);
+        const [fragSOLFundReserveAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_reserve"), fragSOLTokenMintBuf], this.programId);
+        const [fragSOLFundTreasuryAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_treasury"), fragSOLTokenMintBuf], this.programId);
         const fragSOLTokenLock = spl.getAssociatedTokenAddressSync(
             fragSOLTokenMint,
             fragSOLFund,
             true,
             spl.TOKEN_2022_PROGRAM_ID,
         );
-        const [fragSOLFundExecutionReservedAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_execution_reserved"), fragSOLTokenMintBuf], this.programId);
         const fragSOLUserFund = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_fund"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
         const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragSOLTokenMintBuf], this.programId);
         const fragSOLUserReward = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_reward"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
@@ -154,7 +155,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLTokenMint,
             fragSOLTokenLock,
             fragSOLFund,
-            fragSOLFundExecutionReservedAccount,
+            fragSOLFundReserveAccount,
+            fragSOLFundTreasuryAccount,
             fragSOLExtraAccountMetasAccount,
             fragSOLUserFund,
             fragSOLUserTokenAccount,
@@ -393,8 +395,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
     }
 
-    public getFragSOLFundExecutionReservedAccountBalance() {
-        return this.connection.getBalance(this.knownAddress.fragSOLFundExecutionReservedAccount, "confirmed");
+    public getFragSOLFundReserveAccountBalance() {
+        return this.connection.getBalance(this.knownAddress.fragSOLFundReserveAccount, "confirmed");
     }
 
     public getNSOLTokenPoolAccount() {
@@ -948,6 +950,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.methods.adminUpdateFundAccountIfNeeded()
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
+                this.methods.adminUpdateFundReserveAccountIfNeeded()
+                    .instruction(),
                 this.methods.adminUpdateReceiptTokenLockAccount()
                     .accounts({ payer: this.wallet.publicKey })
                     .instruction(),
@@ -1064,9 +1068,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`user deposited: ${this.lamportsToSOL(amount)}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
@@ -1078,7 +1082,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event,
             error,
             fragSOLFund,
-            fragSOLFundBalance,
+            fragSOLFundReserveAccountBalance,
             fragSOLReward,
             fragSOLUserFund,
             fragSOLUserReward,
@@ -1096,13 +1100,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["operatorUpdatedFundPrice"],
             signers: [operator],
         });
-        const [fragSOLFund, fragSOLFundBalance] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
         ]);
 
         logger.notice(`operator updated prices: ${this.lamportsToSOL(event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol)}/fragSOL`);
-        return {event, error, fragSOLFund, fragSOLFundBalance};
+        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance};
     }
 
     public async runUserDepositSupportedToken(
@@ -1149,9 +1153,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`user deposited: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)}`.padEnd(LOG_PAD_LARGE), userSupportedTokenAddress.toString());
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, userSupportedTokenAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, userSupportedTokenAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
@@ -1164,7 +1168,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event,
             error,
             fragSOLFund,
-            fragSOLFundBalance,
+            fragSOLFundReserveAccountBalance,
             fragSOLReward,
             fragSOLUserFund,
             fragSOLUserReward,
@@ -1192,9 +1196,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             `user requested withdrawal: ${this.lamportsToFragSOL(amount)} #${event.userRequestedWithdrawalFromFund.requestId.toString()}/${event.userRequestedWithdrawalFromFund.batchId.toString()}`.padEnd(LOG_PAD_LARGE),
             user.publicKey.toString()
         );
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
@@ -1207,7 +1211,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event,
             error,
             fragSOLFund,
-            fragSOLFundBalance,
+            fragSOLFundReserveAccountBalance,
             fragSOLReward,
             fragSOLUserFund,
             fragSOLUserReward,
@@ -1232,9 +1236,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`user canceled withdrawal request: #${requestId.toString()}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
@@ -1247,7 +1251,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event,
             error,
             fragSOLFund,
-            fragSOLFundBalance,
+            fragSOLFundReserveAccountBalance,
             fragSOLReward,
             fragSOLUserFund,
             fragSOLUserReward,
@@ -1272,14 +1276,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`operator processed withdrawal job: #${event.operatorProcessedJob.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.getFragSOLLockAccount(),
         ]);
 
-        return {event, error, fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLLockAccount};
+        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
     public async runUserWithdraw(user: web3.Keypair, requestId: BN) {
@@ -1299,9 +1303,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewSolFromFund.withdrawnSolAmount)} #${requestId.toString()}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
-        const [fragSOLFund, fragSOLFundBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.connection.getBalance(this.knownAddress.fragSOLFund, "confirmed").then((v) => new BN(v)),
+            this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
@@ -1313,7 +1317,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event,
             error,
             fragSOLFund,
-            fragSOLFundBalance,
+            fragSOLFundReserveAccountBalance,
             fragSOLReward,
             fragSOLUserFund,
             fragSOLUserReward,
@@ -1393,8 +1397,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const cmd0Accounts: web3.AccountMeta[] = [
             // staking
             {
-                // fund_execution_reserve_account
-                pubkey: this.knownAddress.fragSOLFundExecutionReservedAccount,
+                // fund_reserve_account
+                pubkey: this.knownAddress.fragSOLFundReserveAccount,
                 isSigner: false,
                 isWritable: true,
             },
@@ -1455,13 +1459,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 web3.ComputeBudgetProgram.setComputeUnitLimit({
                     units: 800_000,
                 }),
-                this.program.methods
-                    .operatorRun(0)
-                    .accounts({
-                        operator: operator.publicKey,
-                    })
-                    .remainingAccounts(cmd0Accounts)
-                    .instruction(),
                 this.program.methods
                     .operatorRun(0)
                     .accounts({
@@ -1651,8 +1648,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
         logger.notice(`operator run#2: restaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
-        const [fragSOLFund, fragSOLFundExecutionReservedAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundExecutionReservedAccountBalance()]);
+        const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundReserveAccountBalance()]);
 
-        return {fragSOLFund, fragSOLFundExecutionReservedAccountBalance};
+        return {fragSOLFund, fragSOLFundReserveAccountBalance};
     }
 }

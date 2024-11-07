@@ -171,7 +171,7 @@ pub enum ErrorCode {
     FundInvalidSolWithdrawalFeeRateError,
 
     #[msg("fund: unexpected execution reserved account balance")]
-    FundUnexpectedExecutionReservedAccountBalanceException,
+    FundUnexpectedReserveAccountBalanceException,
 
     #[msg("normalization: not supported token")]
     NormalizedTokenPoolNotSupportedTokenError,

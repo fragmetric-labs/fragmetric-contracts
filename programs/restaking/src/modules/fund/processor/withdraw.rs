@@ -100,18 +100,29 @@ pub fn process_cancel_withdrawal_request<'info>(
     Ok(())
 }
 
-pub fn process_withdraw(
-    user: &Signer,
+pub fn process_withdraw<'info>(
+    user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
+    fund_treasury_account: &SystemAccount<'info>,
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
+    system_program: &Program<'info, System>,
+    signer_seeds: &[&[&[u8]]],
     request_id: u64,
 ) -> Result<()> {
-    let (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount) =
+    let (sol_amount, sol_fee_amount, receipt_token_withdraw_amount) =
         user_fund_account.claim_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
 
-    fund_account.sub_lamports(sol_withdraw_amount)?;
-    user.add_lamports(sol_withdraw_amount)?;
+    let sol_withdraw_amount = transfer_sol_from_fund_to_user_and_treasury(
+        user,
+        fund_reserve_account,
+        fund_treasury_account,
+        system_program,
+        signer_seeds,
+        sol_amount,
+        sol_fee_amount,
+    )?;
 
     emit!(events::UserWithdrewSOLFromFund {
         receipt_token_mint: fund_account.receipt_token_mint,
@@ -240,4 +251,45 @@ fn unlock_receipt_token<'info>(
         None,
         current_slot,
     )
+}
+
+/// Returns sol_withdraw_amount
+fn transfer_sol_from_fund_to_user_and_treasury<'info>(
+    user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
+    fund_treasury_account: &SystemAccount<'info>,
+    system_program: &Program<'info, System>,
+    signer_seeds: &[&[&[u8]]],
+    sol_amount: u64,
+    sol_fee_amount: u64,
+) -> Result<u64> {
+    let sol_withdraw_amount = sol_amount
+        .checked_sub(sol_fee_amount)
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+    anchor_lang::system_program::transfer(
+        CpiContext::new_with_signer(
+            system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: fund_reserve_account.to_account_info(),
+                to: user.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        sol_withdraw_amount,
+    )?;
+
+    anchor_lang::system_program::transfer(
+        CpiContext::new_with_signer(
+            system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: fund_reserve_account.to_account_info(),
+                to: fund_treasury_account.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        sol_fee_amount,
+    )?;
+
+    Ok(sol_withdraw_amount)
 }

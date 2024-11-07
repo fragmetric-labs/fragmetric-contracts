@@ -113,6 +113,20 @@ pub struct UserFundContext<'info> {
 
     #[account(
         mut,
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_treasury_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,

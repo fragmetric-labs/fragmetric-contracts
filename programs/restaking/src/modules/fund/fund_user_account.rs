@@ -124,7 +124,7 @@ impl UserFundAccount {
         withdrawal_status.remove_withdrawal_request_from_batch(request)
     }
 
-    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    /// Returns (sol_amount, sol_fee_amount, receipt_token_withdraw_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
         withdrawal_status: &mut WithdrawalStatus,

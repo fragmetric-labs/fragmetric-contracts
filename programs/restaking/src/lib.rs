@@ -72,6 +72,20 @@ pub mod restaking {
         )
     }
 
+    // migration v0.3.1
+    pub fn admin_update_fund_reserve_account_if_needed(
+        ctx: Context<AdminFundReserveAccountUpdateContext>,
+    ) -> Result<()> {
+        modules::fund::process_update_fund_reserve_account_if_needed(
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.fund_account,
+            &ctx.accounts.fund_execution_reserved_account,
+            &ctx.accounts.system_program,
+            ctx.bumps.fund_execution_reserved_account,
+        )
+    }
+
     ////////////////////////////////////////////
     // AdminFundCloseContext
     ////////////////////////////////////////////
@@ -542,6 +556,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::fund::process_deposit_sol(
             &ctx.accounts.user,
+            &ctx.accounts.fund_reserve_account,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.fund_account,
@@ -601,9 +616,17 @@ pub mod restaking {
     pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
         modules::fund::process_withdraw(
             &ctx.accounts.user,
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.fund_treasury_account,
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.user_fund_account,
+            &ctx.accounts.system_program,
+            &[&[
+                modules::fund::FundAccount::RESERVE_SEED,
+                ctx.accounts.receipt_token_mint.key().as_ref(),
+                &[ctx.bumps.fund_reserve_account],
+            ]],
             request_id,
         )
     }

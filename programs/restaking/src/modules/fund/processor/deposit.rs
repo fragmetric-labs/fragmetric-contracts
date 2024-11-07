@@ -11,6 +11,7 @@ use crate::utils::PDASeeds;
 
 pub fn process_deposit_sol<'info>(
     user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
     fund_account: &mut Account<'info, FundAccount>,
@@ -48,7 +49,13 @@ pub fn process_deposit_sol<'info>(
         current_slot,
     )?;
 
-    transfer_sol_from_user_to_fund(user, fund_account, system_program, sol_amount)?;
+    transfer_sol_from_user_to_fund(
+        user,
+        fund_reserve_account,
+        fund_account,
+        system_program,
+        sol_amount
+    )?;
 
     emit!(events::UserDepositedSOLToFund {
         user: user.key(),
@@ -163,6 +170,7 @@ fn verify_deposit_metadata(
 
 fn transfer_sol_from_user_to_fund<'info>(
     user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
     fund_account: &mut Account<'info, FundAccount>,
     system_program: &Program<'info, System>,
     sol_amount: u64,
@@ -173,7 +181,7 @@ fn transfer_sol_from_user_to_fund<'info>(
             system_program.to_account_info(),
             system_program::Transfer {
                 from: user.to_account_info(),
-                to: fund_account.to_account_info(),
+                to: fund_reserve_account.to_account_info(),
             },
         ),
         sol_amount,
