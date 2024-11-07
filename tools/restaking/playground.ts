@@ -61,7 +61,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runAdminInitializeTokenMint(), // 0
             () => this.runAdminInitializeFundAccounts(), // 1
             () => this.runAdminUpdateRewardAccounts(), // 2
-            () => this.runAdminTransferMintAuthority(), // 3
+            () => this.runAdminInitializeExtraAccountMetaList(), // 3
             () => this.runFundManagerInitializeFundConfigurations(), // 4
             () => this.runFundManagerUpdateFundConfigurations(), // 5
             () => this.runFundManagerInitializeRewardPools(), // 6
@@ -638,10 +638,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signerNames: ["ADMIN"],
         });
-        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
+        const [fragSOLMint, fragSOLFundAccount] = await Promise.all([
+            spl.getMint(this.connection, this.knownAddress.fragSOLTokenMint, "confirmed", spl.TOKEN_2022_PROGRAM_ID),
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed"),
+        ]);
         logger.notice("fragSOL fund account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
-        return {fragSOLFundAccount};
+        return {fragSOLMint, fragSOLFundAccount};
     }
 
     public async runAdminUpdateFundAccounts() {
@@ -701,22 +704,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount};
     }
 
-    public async runAdminTransferMintAuthority() {
+    public async runAdminInitializeExtraAccountMetaList() {
         await this.run({
             instructions: [
-                this.program.methods.adminInitializeReceiptTokenMintAuthority().accounts({payer: this.wallet.publicKey}).instruction(),
                 this.program.methods.adminInitializeExtraAccountMetaList().accounts({payer: this.wallet.publicKey}).instruction(),
                 this.program.methods.adminUpdateExtraAccountMetaListIfNeeded().accounts({payer: this.wallet.publicKey}).instruction(),
             ],
             signerNames: ["ADMIN"],
         });
-        const [fragSOLMint, fragSOLExtraAccountMetasAccount] = await Promise.all([
-            spl.getMint(this.connection, this.knownAddress.fragSOLTokenMint, "confirmed", spl.TOKEN_2022_PROGRAM_ID),
-            this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId)).then((acc) => spl.getExtraAccountMetas(acc)),
-        ]);
-        logger.notice(`transferred fragSOL mint authority to the PDA`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+        const fragSOLExtraAccountMetasAccount = await this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId)).then((acc) => spl.getExtraAccountMetas(acc));
+        logger.notice(`initialized fragSOL extra account meta list`.padEnd(LOG_PAD_LARGE));
 
-        return {fragSOLMint, fragSOLExtraAccountMetasAccount};
+        return {fragSOLExtraAccountMetasAccount};
     }
 
     public async runFundManagerInitializeFundConfigurations() {

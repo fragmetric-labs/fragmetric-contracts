@@ -6,21 +6,15 @@ use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::modules::fund::*;
 
-pub fn process_initialize_fund_account(
-    receipt_token_mint: &InterfaceAccount<Mint>,
+pub fn process_initialize_fund_account<'info>(
+    admin: &Signer<'info>,
+    receipt_token_mint: &InterfaceAccount<'info, Mint>,
     fund_account: &mut Account<FundAccount>,
+    receipt_token_program: &Program<'info, Token2022>,
     bump: u8,
 ) -> Result<()> {
     fund_account.initialize(bump, receipt_token_mint.key());
-    Ok(())
-}
 
-pub fn process_initialize_receipt_token_mint_authority<'info>(
-    admin: &Signer<'info>,
-    receipt_token_mint: &InterfaceAccount<'info, Mint>,
-    fund_account: &Account<FundAccount>,
-    receipt_token_program: &Program<'info, Token2022>,
-) -> Result<()> {
     // set token mint authority
     token_2022::set_authority(
         CpiContext::new(

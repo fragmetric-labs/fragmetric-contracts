@@ -56,8 +56,10 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(
         init,

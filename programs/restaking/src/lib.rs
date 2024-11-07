@@ -29,8 +29,10 @@ pub mod restaking {
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
         modules::fund::process_initialize_fund_account(
+            &ctx.accounts.admin,
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+            &ctx.accounts.receipt_token_program,
             ctx.bumps.fund_account,
         )
     }
@@ -116,17 +118,6 @@ pub mod restaking {
     ////////////////////////////////////////////
     // AdminReceiptTokenMintInitialContext
     ////////////////////////////////////////////
-
-    pub fn admin_initialize_receipt_token_mint_authority(
-        ctx: Context<AdminReceiptTokenMintAuthorityInitialContext>,
-    ) -> Result<()> {
-        modules::fund::process_initialize_receipt_token_mint_authority(
-            &ctx.accounts.admin,
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.fund_account,
-            &ctx.accounts.receipt_token_program,
-        )
-    }
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn admin_initialize_extra_account_meta_list(
