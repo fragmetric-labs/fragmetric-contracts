@@ -18,6 +18,12 @@ describe("initialize", async () => {
         await restaking.runAdminUpdateTokenMetadata();
     });
 
+    step("initialize fragSOL extra account meta list", async () => {
+        const { fragSOLExtraAccountMetasAccount } = await restaking.runAdminInitializeExtraAccountMetaList();
+
+        expect(fragSOLExtraAccountMetasAccount.length).eq(6);
+    })
+
     step("create nSOL token mint", async function () {
         const {nSOLMint} = await restaking.runAdminInitializeNSOLTokenMint();
         expect(nSOLMint.address.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
@@ -26,8 +32,9 @@ describe("initialize", async () => {
     })
 
     step("initialize fund accounts", async () => {
-        const {fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
+        const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
 
+        expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
         expect(fragSOLFundAccount.dataVersion).gt(0);
 
         await restaking.runAdminUpdateFundAccounts();
@@ -53,16 +60,6 @@ describe("initialize", async () => {
 
         expect(fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
     })
-
-    step("transfer token mint authority to PDA", async function () {
-        const {
-            fragSOLMint,
-            fragSOLExtraAccountMetasAccount,
-        } = await restaking.runAdminTransferMintAuthority();
-
-        expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLTokenMintAuthority.toString());
-        expect(fragSOLExtraAccountMetasAccount.length).eq(6);
-    });
 
     step("initialize fund and supported tokens configuration", async function () {
         const _ = await restaking.runFundManagerInitializeFundConfigurations();

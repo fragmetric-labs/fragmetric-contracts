@@ -24,14 +24,6 @@ impl PDASeeds<2> for ReceiptTokenLockAuthority {
 
 impl ReceiptTokenLockAuthority {
     pub const TOKEN_ACCOUNT_SEED: &'static [u8] = b"receipt_token_lock";
-
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-        }
-    }
 }
 
 #[account]
@@ -61,20 +53,6 @@ impl PDASeeds<3> for SupportedTokenAuthority {
 
 impl SupportedTokenAuthority {
     pub const TOKEN_ACCOUNT_SEED: &'static [u8] = b"supported_token";
-
-    pub(super) fn initialize(
-        &mut self,
-        bump: u8,
-        receipt_token_mint: Pubkey,
-        supported_token_mint: Pubkey,
-    ) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-            self.supported_token_mint = supported_token_mint;
-        }
-    }
 }
 
 #[account]
@@ -94,15 +72,5 @@ impl PDASeeds<2> for ReceiptTokenMintAuthority {
 
     fn get_bump_ref(&self) -> &u8 {
         &self.bump
-    }
-}
-
-impl ReceiptTokenMintAuthority {
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
-        if self.data_version == 0 {
-            self.data_version = 1;
-            self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-        }
     }
 }

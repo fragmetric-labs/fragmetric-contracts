@@ -2,8 +2,8 @@
 #![allow(unused_imports)]
 pub mod ed25519;
 pub mod fund;
-pub mod normalize;
-pub mod operator;
+pub mod normalization;
+pub mod operation;
 pub mod pricing;
 pub mod reward;
 pub mod staking;

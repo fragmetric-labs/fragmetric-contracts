@@ -8,7 +8,8 @@ use crate::utils::PDASeeds;
 /// ## Version History
 /// * v1: Initial Version
 /// * v2: Change reserve fund structure
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 2;
+/// * v3: Remove `sol_fee_income_reserved_amount` field
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 3;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
 
@@ -22,9 +23,9 @@ pub struct FundAccount {
     supported_tokens: Vec<SupportedTokenInfo>,
     sol_capacity_amount: u64,
     sol_accumulated_deposit_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private and use getter
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private and use getter
     pub(in crate::modules) sol_operation_reserved_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) withdrawal: WithdrawalStatus,
     _reserved: [u8; 1280],
 }
@@ -43,6 +44,8 @@ impl PDASeeds<2> for FundAccount {
 
 impl FundAccount {
     pub const EXECUTION_RESERVED_SEED: &'static [u8] = b"fund_execution_reserved";
+    pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
+    pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
@@ -57,6 +60,11 @@ impl FundAccount {
             self.withdrawal.sol_withdrawal_reserved_amount = 0;
             self.withdrawal.receipt_token_processed_amount = 0;
             self.withdrawal._reserved = [0; 88];
+        }
+
+        if self.data_version == 2 {
+            self.data_version = 3;
+            self.withdrawal._padding = [0; 8];
         }
     }
 
@@ -174,7 +182,7 @@ impl FundAccount {
         Ok(())
     }
 
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
         // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
         self.get_supported_tokens_iter().try_fold(
@@ -344,12 +352,12 @@ pub struct WithdrawalStatus {
     // Withdrawal Status = PENDING
     pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
     pub(in crate::modules) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
     sol_withdrawal_reserved_amount: u64,
-    sol_fee_income_reserved_amount: u64,
+    _padding: [u8; 8],
     receipt_token_processed_amount: u64,
     _reserved: [u8; 88],
 }
@@ -369,7 +377,7 @@ impl WithdrawalStatus {
         self.pending_batch_withdrawal = BatchWithdrawal::new(1);
         self.batch_withdrawals_in_progress = vec![];
         self.sol_withdrawal_reserved_amount = Default::default();
-        self.sol_fee_income_reserved_amount = Default::default();
+        self._padding = Default::default();
         self.receipt_token_processed_amount = Default::default();
         self._reserved = [0; 88];
     }
@@ -468,7 +476,7 @@ impl WithdrawalStatus {
         Ok(request.receipt_token_amount)
     }
 
-    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    /// Returns (sol_amount, sol_fee_amount, receipt_token_withdraw_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
         request: WithdrawalRequest,
@@ -493,9 +501,6 @@ impl WithdrawalStatus {
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let sol_transfer_amount = sol_amount
-            .checked_sub(sol_fee_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         self.receipt_token_processed_amount = self
             .receipt_token_processed_amount
@@ -505,13 +510,9 @@ impl WithdrawalStatus {
             .sol_withdrawal_reserved_amount
             .checked_sub(sol_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
-        self.sol_fee_income_reserved_amount = self
-            .sol_fee_income_reserved_amount
-            .checked_add(sol_fee_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok((
-            sol_transfer_amount,
+            sol_amount,
             sol_fee_amount,
             request.receipt_token_amount,
         ))
@@ -525,7 +526,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn assert_withdrawal_threshold_satisfied(
         &self,
         current_timestamp: i64,
@@ -559,7 +560,7 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn start_processing_pending_batch_withdrawal(
         &mut self,
         current_timestamp: i64,
@@ -585,7 +586,7 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn end_processing_completed_batch_withdrawals(
         &mut self,
         current_timestamp: i64,
@@ -630,9 +631,9 @@ impl WithdrawalStatus {
 pub struct BatchWithdrawal {
     batch_id: u64,
     num_withdrawal_requests: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
     pub(in crate::modules) receipt_token_to_process: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to private
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
     pub(in crate::modules) receipt_token_being_processed: u64,
     receipt_token_processed: u64,
     sol_reserved: u64,
@@ -682,7 +683,7 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn record_unstaking_start(
         &mut self,
         receipt_token_amount: u64,
@@ -700,7 +701,7 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operator module - change to `super`
+    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn record_unstaking_end(
         &mut self,
         receipt_token_amount: u64,

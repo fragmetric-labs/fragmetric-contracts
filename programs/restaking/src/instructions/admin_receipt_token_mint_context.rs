@@ -4,38 +4,9 @@ use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
 use crate::constants::*;
+use crate::errors::ErrorCode;
 use crate::modules::fund::*;
 use crate::utils::PDASeeds;
-
-// will be used only once
-#[derive(Accounts)]
-pub struct AdminReceiptTokenMintAuthorityInitialContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    pub receipt_token_program: Program<'info, Token2022>,
-
-    #[account(
-        mut,
-        address = FRAGSOL_MINT_ADDRESS,
-        constraint = receipt_token_mint.supply == 0,
-    )]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        init,
-        payer = payer,
-        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + ReceiptTokenMintAuthority::INIT_SPACE,
-    )]
-    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
-}
 
 // will be used only once
 #[derive(Accounts)]
@@ -64,27 +35,50 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
     pub extra_account_meta_list: UncheckedAccount<'info>,
 }
 
+// migration v0.3.1
 #[derive(Accounts)]
-pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
+pub struct AdminReceiptTokenMintAuthorityUpdateContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
+    #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    #[account(
+        mut,
+        address = FRAGSOL_MINT_ADDRESS,
+    )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
+        mut,
+        close = payer,
         seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.get_bump(),
+        bump,
         has_one = receipt_token_mint,
     )]
     pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
+}
+
+#[derive(Accounts)]
+pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: ExtraAccountMetaList Account, must use these seeds
     #[account(

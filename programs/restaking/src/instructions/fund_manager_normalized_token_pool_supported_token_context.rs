@@ -1,14 +1,13 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
-// use crate::errors::ErrorCode;
-// use crate::modules::fund::FundAccount;
-use crate::modules::normalize::NormalizedTokenPoolAccount;
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
-pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
+pub struct FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -17,32 +16,62 @@ pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    // /// CHECK: only key needed
-    // #[account(address = FRAGSOL_MINT_ADDRESS)]
-    // pub receipt_token_mint: UncheckedAccount<'info>,
+    #[account(
+        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
+        bump = normalized_token_pool_account.get_bump(),
+        has_one = normalized_token_mint,
+    )]
+    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 
-    // #[account(
-    //     seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-    //     bump = fund_account.get_bump(),
-    //     has_one = receipt_token_mint,
-    //     constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
-    // )]
-    // // TODO fund must have authority to configure normalized token pool - for now just fix normalized token mint address
-    // pub fund_account: Box<Account<'info, FundAccount>>,
-    /// CHECK: only key needed
     #[account(address = NSOL_MINT_ADDRESS)]
-    pub normalized_token_mint: UncheckedAccount<'info>,
+    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// CHECK: only key needed
-    pub supported_token_mint: UncheckedAccount<'info>,
+    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
     #[account(
         init,
         payer = payer,
+        associated_token::mint = supported_token_mint,
+        associated_token::authority = normalized_token_pool_account,
+        associated_token::token_program = supported_token_program,
+    )]
+    pub supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+// migration v0.3.1
+#[derive(Accounts)]
+pub struct AdminNormalizedTokenPoolSupportedTokenLockAccountUpdateContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(
+        mut,
+        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
+        bump = normalized_token_pool_account.get_bump(),
+        has_one = normalized_token_mint,
+    )]
+    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
+
+    #[account(address = NSOL_MINT_ADDRESS)]
+    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub supported_token_program: Interface<'info, TokenInterface>,
+
+    #[account(
+        mut,
         token::mint = supported_token_mint,
-        token::authority = fund_manager,
+        token::authority = normalized_token_pool_account,
         token::token_program = supported_token_program,
         seeds = [
             NormalizedTokenPoolAccount::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
@@ -51,7 +80,18 @@ pub struct FundManagerSupportedTokenLockAccountInitialContext<'info> {
         ],
         bump,
     )]
-    pub supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub old_supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = supported_token_mint,
+        associated_token::authority = normalized_token_pool_account,
+        associated_token::token_program = supported_token_program,
+    )]
+    pub new_supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[derive(Accounts)]
@@ -75,15 +115,9 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
     pub supported_token_program: Interface<'info, TokenInterface>,
 
     #[account(
-        token::mint = supported_token_mint,
-        token::authority = fund_manager,
-        token::token_program = supported_token_program,
-        seeds = [
-            NormalizedTokenPoolAccount::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
-            normalized_token_mint.key().as_ref(),
-            supported_token_mint.key().as_ref()
-        ],
-        bump,
+        associated_token::mint = supported_token_mint,
+        associated_token::authority = normalized_token_pool_account,
+        associated_token::token_program = supported_token_program,
     )]
     pub supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }

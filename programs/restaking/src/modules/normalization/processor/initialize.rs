@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::Mint,
 };
 
-use crate::modules::normalize::*;
+use crate::modules::normalization::*;
 
 pub fn process_initialize_normalized_token_pool_account<'info>(
     admin: &Signer<'info>,
