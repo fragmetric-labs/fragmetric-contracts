@@ -11,10 +11,9 @@ use crate::utils::PDASeeds;
 pub fn process_request_withdrawal<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut Account<FundAccount>,
+    fund_account: &mut Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -36,9 +35,9 @@ pub fn process_request_withdrawal<'info>(
     lock_receipt_token(
         user,
         receipt_token_mint,
-        receipt_token_mint_authority,
         receipt_token_lock_account,
         user_receipt_token_account,
+        fund_account,
         reward_account,
         user_fund_account,
         user_reward_account,
@@ -63,11 +62,9 @@ pub fn process_request_withdrawal<'info>(
 pub fn process_cancel_withdrawal_request<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
-    receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-    fund_account: &mut Account<FundAccount>,
+    fund_account: &mut Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -80,10 +77,9 @@ pub fn process_cancel_withdrawal_request<'info>(
 
     unlock_receipt_token(
         receipt_token_mint,
-        receipt_token_mint_authority,
         receipt_token_lock_account,
-        receipt_token_lock_authority,
         user_receipt_token_account,
+        fund_account,
         reward_account,
         user_fund_account,
         user_reward_account,
@@ -104,18 +100,29 @@ pub fn process_cancel_withdrawal_request<'info>(
     Ok(())
 }
 
-pub fn process_withdraw(
-    user: &Signer,
+pub fn process_withdraw<'info>(
+    user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
+    fund_treasury_account: &SystemAccount<'info>,
     receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &mut Account<FundAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
+    system_program: &Program<'info, System>,
+    signer_seeds: &[&[&[u8]]],
     request_id: u64,
 ) -> Result<()> {
-    let (sol_withdraw_amount, sol_fee_amount, receipt_token_withdraw_amount) =
+    let (sol_amount, sol_fee_amount, receipt_token_withdraw_amount) =
         user_fund_account.claim_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
 
-    fund_account.sub_lamports(sol_withdraw_amount)?;
-    user.add_lamports(sol_withdraw_amount)?;
+    let sol_withdraw_amount = transfer_sol_from_fund_to_user_and_treasury(
+        user,
+        fund_reserve_account,
+        fund_treasury_account,
+        system_program,
+        signer_seeds,
+        sol_amount,
+        sol_fee_amount,
+    )?;
 
     emit!(events::UserWithdrewSOLFromFund {
         receipt_token_mint: fund_account.receipt_token_mint,
@@ -137,9 +144,9 @@ pub fn process_withdraw(
 fn lock_receipt_token<'info>(
     user: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+    fund_account: &Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -166,9 +173,9 @@ fn lock_receipt_token<'info>(
             token_2022::MintTo {
                 mint: receipt_token_mint.to_account_info(),
                 to: receipt_token_lock_account.to_account_info(),
-                authority: receipt_token_mint_authority.to_account_info(),
+                authority: fund_account.to_account_info(),
             },
-            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
+            &[fund_account.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )
@@ -192,10 +199,9 @@ fn lock_receipt_token<'info>(
 
 fn unlock_receipt_token<'info>(
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
-    receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     user_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+    fund_account: &Account<'info, FundAccount>,
     reward_account: &mut AccountLoader<RewardAccount>,
     user_fund_account: &mut Account<UserFundAccount>,
     user_reward_account: &mut AccountLoader<UserRewardAccount>,
@@ -209,9 +215,9 @@ fn unlock_receipt_token<'info>(
             token_2022::Burn {
                 mint: receipt_token_mint.to_account_info(),
                 from: receipt_token_lock_account.to_account_info(),
-                authority: receipt_token_lock_authority.to_account_info(),
+                authority: fund_account.to_account_info(),
             },
-            &[receipt_token_lock_authority.get_signer_seeds().as_ref()],
+            &[fund_account.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )
@@ -223,9 +229,9 @@ fn unlock_receipt_token<'info>(
             token_2022::MintTo {
                 mint: receipt_token_mint.to_account_info(),
                 to: user_receipt_token_account.to_account_info(),
-                authority: receipt_token_mint_authority.to_account_info(),
+                authority: fund_account.to_account_info(),
             },
-            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
+            &[fund_account.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount,
     )
@@ -245,4 +251,45 @@ fn unlock_receipt_token<'info>(
         None,
         current_slot,
     )
+}
+
+/// Returns sol_withdraw_amount
+fn transfer_sol_from_fund_to_user_and_treasury<'info>(
+    user: &Signer<'info>,
+    fund_reserve_account: &SystemAccount<'info>,
+    fund_treasury_account: &SystemAccount<'info>,
+    system_program: &Program<'info, System>,
+    signer_seeds: &[&[&[u8]]],
+    sol_amount: u64,
+    sol_fee_amount: u64,
+) -> Result<u64> {
+    let sol_withdraw_amount = sol_amount
+        .checked_sub(sol_fee_amount)
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+    anchor_lang::system_program::transfer(
+        CpiContext::new_with_signer(
+            system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: fund_reserve_account.to_account_info(),
+                to: user.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        sol_withdraw_amount,
+    )?;
+
+    anchor_lang::system_program::transfer(
+        CpiContext::new_with_signer(
+            system_program.to_account_info(),
+            anchor_lang::system_program::Transfer {
+                from: fund_reserve_account.to_account_info(),
+                to: fund_treasury_account.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        sol_fee_amount,
+    )?;
+
+    Ok(sol_withdraw_amount)
 }

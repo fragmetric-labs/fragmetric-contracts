@@ -27,7 +27,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
     step("user3 deposits supported token without metadata to mint fragSOL", async function () {
         const res0 = await restaking.runOperatorUpdatePrices();
         expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber()).greaterThan(0, '1');
-        expect(res0.fragSOLFundBalance.toNumber()).greaterThan(0, '2');
+        expect(res0.fragSOLFundReserveAccountBalance.toNumber()).eq(res0.fragSOLFund.solOperationReservedAmount.add(res0.fragSOLFund.withdrawal.solWithdrawalReservedAmount).toNumber(), '2');
         const fragSOLPrice0 = res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol;
         const fragSOLUserTokenAccount0 = await restaking.getUserFragSOLAccount(user3.publicKey).catch(v => null);
 

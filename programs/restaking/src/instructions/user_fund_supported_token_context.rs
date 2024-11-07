@@ -20,13 +20,6 @@ pub struct UserFundSupportedTokenContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.get_bump(),
-        has_one = receipt_token_mint,
-    )]
-    pub receipt_token_mint_authority: Box<Account<'info, ReceiptTokenMintAuthority>>,
-
-    #[account(
         mut,
         associated_token::mint = receipt_token_mint,
         associated_token::token_program = receipt_token_program,
@@ -37,22 +30,12 @@ pub struct UserFundSupportedTokenContext<'info> {
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [SupportedTokenAuthority::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
-        bump = supported_token_authority.get_bump(),
-        has_one = receipt_token_mint,
-        has_one = supported_token_mint,
-    )]
-    pub supported_token_authority: Box<Account<'info, SupportedTokenAuthority>>,
-
-    #[account(
         mut,
-        token::mint = supported_token_mint,
-        token::token_program = supported_token_program,
-        token::authority = supported_token_authority,
-        seeds = [SupportedTokenAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref()],
-        bump,
+        associated_token::mint = supported_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = supported_token_program,
     )]
-    pub supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,

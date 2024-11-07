@@ -9,11 +9,11 @@ use crate::events;
 use crate::modules::fund::{self, FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
 use crate::utils::PDASeeds;
 
+// TODO: deprecate
 pub fn process_process_fund_withdrawal_job<'info>(
     operator: &Signer,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
-    receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
     fund_account: &mut Account<'info, FundAccount>,
     receipt_token_program: &Program<'info, Token2022>,
     pricing_sources: &'info [AccountInfo<'info>],
@@ -77,9 +77,9 @@ pub fn process_process_fund_withdrawal_job<'info>(
             token_2022::Burn {
                 mint: receipt_token_mint.to_account_info(),
                 from: receipt_token_lock_account.to_account_info(),
-                authority: receipt_token_lock_authority.to_account_info(),
+                authority: fund_account.to_account_info(),
             },
-            &[receipt_token_lock_authority.get_signer_seeds().as_ref()],
+            &[fund_account.get_signer_seeds().as_ref()],
         ),
         receipt_token_amount_to_burn,
     )?;

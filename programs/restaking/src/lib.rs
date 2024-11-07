@@ -19,16 +19,6 @@ pub mod restaking {
     // AdminFundInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_receipt_token_lock_authority(
-        ctx: Context<AdminFundReceiptTokenLockAuthorityInitialContext>,
-    ) -> Result<()> {
-        modules::fund::process_initialize_receipt_token_lock_authority(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_authority,
-            ctx.bumps.receipt_token_lock_authority,
-        )
-    }
-
     pub fn admin_initialize_receipt_token_lock_account(
         _ctx: Context<AdminFundReceiptTokenLockAccountInitialContext>,
     ) -> Result<()> {
@@ -39,8 +29,10 @@ pub mod restaking {
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
         modules::fund::process_initialize_fund_account(
+            &ctx.accounts.admin,
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+            &ctx.accounts.receipt_token_program,
             ctx.bumps.fund_account,
         )
     }
@@ -61,6 +53,18 @@ pub mod restaking {
     // AdminFundUpdateContext
     ////////////////////////////////////////////
 
+    // migration v0.3.1
+    pub fn admin_update_receipt_token_lock_account(
+        ctx: Context<AdminFundReceiptTokenLockAccountUpdateContext>
+    ) -> Result<()> {
+        modules::fund::process_update_receipt_token_lock_account(
+            &ctx.accounts.payer,
+            &ctx.accounts.old_receipt_token_lock_account,
+            &ctx.accounts.receipt_token_lock_authority,
+            &ctx.accounts.receipt_token_program
+        )
+    }
+
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
     ) -> Result<()> {
@@ -68,6 +72,31 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )
+    }
+
+    // migration v0.3.1
+    pub fn admin_update_fund_reserve_account_if_needed(
+        ctx: Context<AdminFundReserveAccountUpdateContext>,
+    ) -> Result<()> {
+        modules::fund::process_update_fund_reserve_account_if_needed(
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.fund_account,
+            &ctx.accounts.fund_execution_reserved_account,
+            &ctx.accounts.system_program,
+            ctx.bumps.fund_execution_reserved_account,
+        )
+    }
+
+    ////////////////////////////////////////////
+    // AdminFundCloseContext
+    ////////////////////////////////////////////
+
+    // migration v0.3.1
+    pub fn admin_close_receipt_token_lock_authority(
+        _ctx: Context<AdminFundReceiptTokenLockAuthorityCloseContext>,
+    ) -> Result<()> {
+        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -90,18 +119,6 @@ pub mod restaking {
     // AdminReceiptTokenMintInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_receipt_token_mint_authority(
-        ctx: Context<AdminReceiptTokenMintAuthorityInitialContext>,
-    ) -> Result<()> {
-        modules::fund::process_initialize_receipt_token_mint_authority(
-            &ctx.accounts.admin,
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_mint_authority,
-            &ctx.accounts.receipt_token_program,
-            ctx.bumps.receipt_token_mint_authority,
-        )
-    }
-
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
     pub fn admin_initialize_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
@@ -114,6 +131,18 @@ pub mod restaking {
     ////////////////////////////////////////////
     // AdminReceiptTokenMintUpdateContext
     ////////////////////////////////////////////
+
+    // migration v0.3.1
+    pub fn admin_update_receipt_token_mint_authority(
+        ctx: Context<AdminReceiptTokenMintAuthorityUpdateContext>,
+    ) -> Result<()> {
+        modules::fund::process_update_receipt_token_mint_authority(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_mint_authority,
+            &ctx.accounts.fund_account,
+            &ctx.accounts.receipt_token_program
+        )
+    }
 
     pub fn admin_update_extra_account_meta_list_if_needed(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
@@ -221,21 +250,28 @@ pub mod restaking {
     // FundManagerFundSupportedTokenInitialContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_initialize_supported_token_authority(
-        ctx: Context<FundManagerFundSupportedTokenAuthorityInitialContext>,
-    ) -> Result<()> {
-        modules::fund::process_initialize_supported_token_authority(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.supported_token_mint,
-            &mut ctx.accounts.supported_token_authority,
-            ctx.bumps.supported_token_authority,
-        )
-    }
-
     pub fn fund_manager_initialize_supported_token_account(
         _ctx: Context<FundManagerFundSupportedTokenAccountInitialContext>,
     ) -> Result<()> {
         Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerFundSupportedTokenUpdateContext
+    ////////////////////////////////////////////
+
+    // migration v0.3.1
+    pub fn admin_update_supported_token_account(
+        ctx: Context<AdminFundSupportedTokenAccountUpdateContext>,
+    ) -> Result<()> {
+        modules::fund::process_update_supported_token_account(
+            &ctx.accounts.payer,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.old_supported_token_account,
+            &ctx.accounts.supported_token_authority,
+            &ctx.accounts.new_supported_token_account,
+            &ctx.accounts.supported_token_program,
+        )
     }
 
     ////////////////////////////////////////////
@@ -259,18 +295,42 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // FundManagerFundSupportedTokenCloseContext
+    ////////////////////////////////////////////
+
+    // migration v0.3.1
+    pub fn admin_close_supported_token_authority<'info>(
+        _ctx: Context<AdminFundSupportedTokenAuthorityCloseContext>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // FundManagerNormalizedTokenPoolSupportedTokenInitialContext
     ////////////////////////////////////////////
 
     pub fn fund_manager_initialize_supported_token_lock_account(
-        _ctx: Context<FundManagerSupportedTokenLockAccountInitialContext>,
+        _ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
     ) -> Result<()> {
-        // modules::fund::process_initialize_supported_token_lock_account(
-        //     &ctx.accounts.supported_token_mint,
-        //     &ctx.accounts.fund_account,
-        //     &ctx.accounts.supported_token_program,
-        // )
         Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerNormalizedTokenPoolSupportedTokenUpdateContext
+    ////////////////////////////////////////////
+
+    // migration v0.3.1
+    pub fn admin_update_supported_token_lock_account(
+        ctx: Context<AdminNormalizedTokenPoolSupportedTokenLockAccountUpdateContext>,
+    ) -> Result<()> {
+        modules::normalization::process_update_supported_token_lock_account(
+            &ctx.accounts.payer,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.old_supported_token_lock_account,
+            &ctx.accounts.new_supported_token_lock_account,
+            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.supported_token_program,
+        )
     }
 
     ////////////////////////////////////////////
@@ -281,7 +341,6 @@ pub mod restaking {
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
     ) -> Result<()> {
         modules::normalization::process_add_supported_token(
-            &ctx.accounts.fund_manager,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_lock_account,
             &mut ctx.accounts.normalized_token_pool_account,
@@ -414,7 +473,6 @@ pub mod restaking {
             &ctx.accounts.operator,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.receipt_token_lock_account,
-            &ctx.accounts.receipt_token_lock_authority,
             &mut ctx.accounts.fund_account,
             &ctx.accounts.receipt_token_program,
             ctx.remaining_accounts,
@@ -489,8 +547,8 @@ pub mod restaking {
     ) -> Result<()> {
         modules::fund::process_deposit_sol(
             &ctx.accounts.user,
+            &ctx.accounts.fund_reserve_account,
             &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_mint_authority,
             &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
@@ -514,7 +572,6 @@ pub mod restaking {
         modules::fund::process_request_withdrawal(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_mint_authority,
             &mut ctx.accounts.receipt_token_lock_account,
             &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.fund_account,
@@ -535,9 +592,7 @@ pub mod restaking {
         modules::fund::process_cancel_withdrawal_request(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_mint_authority,
             &mut ctx.accounts.receipt_token_lock_account,
-            &ctx.accounts.receipt_token_lock_authority,
             &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
@@ -552,9 +607,17 @@ pub mod restaking {
     pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
         modules::fund::process_withdraw(
             &ctx.accounts.user,
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.fund_treasury_account,
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.user_fund_account,
+            &ctx.accounts.system_program,
+            &[&[
+                modules::fund::FundAccount::RESERVE_SEED,
+                ctx.accounts.receipt_token_mint.key().as_ref(),
+                &[ctx.bumps.fund_reserve_account],
+            ]],
             request_id,
         )
     }
@@ -571,10 +634,9 @@ pub mod restaking {
         modules::fund::process_deposit_supported_token(
             &ctx.accounts.user,
             &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_mint_authority,
             &mut ctx.accounts.user_receipt_token_account,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.supported_token_account,
+            &ctx.accounts.fund_supported_token_account,
             &ctx.accounts.user_supported_token_account,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,

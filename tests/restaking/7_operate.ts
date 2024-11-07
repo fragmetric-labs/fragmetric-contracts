@@ -11,14 +11,13 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
     step("fund operation: staking, normalize, restaking", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
-        const fragSOLFundExecutionReservedAccountBalance0 = await restaking.getFragSOLFundExecutionReservedAccountBalance();
+        const fragSOLFundReserveAccountBalance0 = await restaking.getFragSOLFundReserveAccountBalance();
         const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();
         const nSOLMint0 = await restaking.getNSOLTokenMint();
         const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
-        logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance0}`);
+        logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundReservedAmount=${fragSOLFundReserveAccountBalance0}`);
         logger.info(`before: nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLOperationReservedAmount, nSOLSupply=${nSOLMint0.supply.toString()}`);
         logger.info(`before: jitoVaultNSOL=${jitoVaultNSOLBalance0.toString()}`);
-        expect(fragSOLFundExecutionReservedAccountBalance0.toString()).eq('0', 'execution reserved should be zero before operation');
 
         // TODO: currently staking sol to hard-coded LST, like localnet: jitoSOL
         const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");
@@ -26,7 +25,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         expect(fragSOLFund0.supportedTokens.some(s => s.operationReservedAmount.toString() == jitoSolBalance0.value.amount.toString())).eq(true, 'supported ATA balance should be equal');
 
         const {
-            fragSOLFundExecutionReservedAccountBalance: fragSOLFundExecutionReservedAccountBalance1,
+            fragSOLFundReserveAccountBalance: fragSOLFundExecutionReservedAccountBalance1,
             fragSOLFund: fragSOLFund1
         } = await restaking.runOperatorRun(restaking.keychain.getKeypair('ADMIN'));
         const nSOLPool1 = await restaking.getNSOLTokenPoolAccount();

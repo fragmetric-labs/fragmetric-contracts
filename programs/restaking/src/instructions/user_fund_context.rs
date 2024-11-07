@@ -87,26 +87,10 @@ pub struct UserFundContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [ReceiptTokenMintAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_mint_authority.get_bump(),
-        has_one = receipt_token_mint,
-    )]
-    pub receipt_token_mint_authority: Account<'info, ReceiptTokenMintAuthority>,
-
-    #[account(
-        seeds = [ReceiptTokenLockAuthority::SEED, receipt_token_mint.key().as_ref()],
-        bump = receipt_token_lock_authority.get_bump(),
-        has_one = receipt_token_mint,
-    )]
-    pub receipt_token_lock_authority: Account<'info, ReceiptTokenLockAuthority>,
-
-    #[account(
         mut,
-        token::mint = receipt_token_mint,
-        token::authority = receipt_token_lock_authority,
-        token::token_program = receipt_token_program,
-        seeds = [ReceiptTokenLockAuthority::TOKEN_ACCOUNT_SEED, receipt_token_mint.key().as_ref()],
-        bump,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = receipt_token_program,
     )]
     pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -126,6 +110,20 @@ pub struct UserFundContext<'info> {
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_treasury_account: SystemAccount<'info>,
 
     #[account(
         mut,
