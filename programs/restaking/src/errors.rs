@@ -184,4 +184,7 @@ pub enum ErrorCode {
 
     #[msg("normalization: invalid accounts provided")]
     NormalizedTokenPoolInvalidAccountsProvided,
+
+    #[msg("normalization: not enough supported token to unlock")]
+    NormalizedTokenPoolNotEnoughLockedToken,
 }
