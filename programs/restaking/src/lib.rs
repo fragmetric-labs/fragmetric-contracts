@@ -32,11 +32,11 @@ pub mod restaking {
             &mut *ctx.accounts.receipt_token_mint,
             &mut *ctx.accounts.fund_account,
         )?
-            .process_initialize_fund_account(
-                &ctx.accounts.receipt_token_program,
-                &ctx.accounts.admin,
-                ctx.bumps.fund_account,
-            )
+        .process_initialize_fund_account(
+            &ctx.accounts.receipt_token_program,
+            &ctx.accounts.admin,
+            ctx.bumps.fund_account,
+        )
     }
 
     pub fn admin_initialize_fund_normalized_token_account(
@@ -62,7 +62,7 @@ pub mod restaking {
             &mut *ctx.accounts.receipt_token_mint,
             &mut *ctx.accounts.fund_account,
         )?
-            .process_update_fund_account_if_needed()
+        .process_update_fund_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -73,14 +73,14 @@ pub mod restaking {
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
-                &mut ctx.accounts.normalized_token_pool_account,
-                &ctx.accounts.normalized_token_mint,
-                &ctx.accounts.normalized_token_program,
+            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
         )?
-            .process_initialize_normalized_token_pool_account(
-                &ctx.accounts.admin,
-                ctx.bumps.normalized_token_pool_account,
-            )
+        .process_initialize_normalized_token_pool_account(
+            &ctx.accounts.admin,
+            ctx.bumps.normalized_token_pool_account,
+        )
     }
 
     ////////////////////////////////////////////
@@ -95,7 +95,7 @@ pub mod restaking {
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
-            .process_initialize_extra_account_meta_list()
+        .process_initialize_extra_account_meta_list()
     }
 
     ////////////////////////////////////////////
@@ -109,7 +109,7 @@ pub mod restaking {
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
-            .process_update_extra_account_meta_list_if_needed()
+        .process_update_extra_account_meta_list_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -123,9 +123,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_initialize_reward_account(
-                ctx.bumps.reward_account,
-            )
+        .process_initialize_reward_account(ctx.bumps.reward_account)
     }
 
     ////////////////////////////////////////////
@@ -140,11 +138,11 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_update_reward_account_if_needed(
-                &ctx.accounts.payer,
-                &ctx.accounts.system_program,
-                desired_account_size,
-            )
+        .process_update_reward_account_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            desired_account_size,
+        )
     }
 
     ////////////////////////////////////////////
@@ -159,9 +157,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_sol_capacity_amount(
-                capacity_amount,
-            )
+        .process_update_sol_capacity_amount(capacity_amount)
     }
 
     pub fn fund_manager_update_supported_token_capacity_amount(
@@ -173,10 +169,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_supported_token_capacity_amount(
-                token,
-                capacity_amount,
-            )
+        .process_update_supported_token_capacity_amount(token, capacity_amount)
     }
 
     pub fn fund_manager_update_withdrawal_enabled_flag(
@@ -187,9 +180,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_withdrawal_enabled_flag(
-                enabled,
-            )
+        .process_update_withdrawal_enabled_flag(enabled)
     }
 
     pub fn fund_manager_update_sol_withdrawal_fee_rate(
@@ -200,9 +191,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_sol_withdrawal_fee_rate(
-                sol_withdrawal_fee_rate,
-            )
+        .process_update_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
     }
 
     pub fn fund_manager_update_batch_processing_threshold(
@@ -214,10 +203,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_batch_processing_threshold(
-                amount,
-                duration,
-            )
+        .process_update_batch_processing_threshold(amount, duration)
     }
 
     ////////////////////////////////////////////
@@ -243,14 +229,14 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_add_supported_token(
-                &ctx.accounts.supported_token_account,
-                &ctx.accounts.supported_token_mint,
-                &ctx.accounts.supported_token_program,
-                capacity_amount,
-                pricing_source,
-                ctx.remaining_accounts,
-            )
+        .process_add_supported_token(
+            &ctx.accounts.supported_token_account,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.supported_token_program,
+            capacity_amount,
+            pricing_source,
+            ctx.remaining_accounts,
+        )
     }
 
     ////////////////////////////////////////////
@@ -275,11 +261,11 @@ pub mod restaking {
             &ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-            .process_add_supported_token(
-                &ctx.accounts.supported_token_lock_account,
-                &ctx.accounts.supported_token_mint,
-                &ctx.accounts.supported_token_program,
-            )
+        .process_add_supported_token(
+            &ctx.accounts.supported_token_lock_account,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.supported_token_program,
+        )
     }
 
     ////////////////////////////////////////////
@@ -296,11 +282,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_add_reward_pool_holder(
-                name,
-                description,
-                pubkeys,
-            )
+        .process_add_reward_pool_holder(name, description, pubkeys)
     }
 
     pub fn fund_manager_add_reward_pool(
@@ -313,11 +295,11 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_add_reward_pool(
-                name,
-                holder_id,
-                custom_contribution_accrual_rate_enabled,
-            )
+        .process_add_reward_pool(
+            name,
+            holder_id,
+            custom_contribution_accrual_rate_enabled,
+        )
     }
 
     pub fn fund_manager_close_reward_pool(
@@ -328,9 +310,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_close_reward_pool(
-                reward_pool_id,
-            )
+        .process_close_reward_pool(reward_pool_id)
     }
 
     ////////////////////////////////////////////
@@ -347,13 +327,13 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_add_reward(
-                ctx.accounts.reward_token_mint.as_deref(),
-                ctx.accounts.reward_token_program.as_ref(),
-                name,
-                description,
-                reward_type,
-            )
+        .process_add_reward(
+            ctx.accounts.reward_token_mint.as_deref(),
+            ctx.accounts.reward_token_program.as_ref(),
+            name,
+            description,
+            reward_type,
+        )
     }
 
     pub fn fund_manager_settle_reward(
@@ -366,11 +346,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_settle_reward(
-                reward_pool_id,
-                reward_id,
-                amount,
-            )
+        .process_settle_reward(reward_pool_id, reward_id, amount)
     }
 
     ////////////////////////////////////////////
@@ -389,10 +365,12 @@ pub mod restaking {
     // OperatorFundContext
     ////////////////////////////////////////////
 
+    // TODO v0.3/operation: integrate service
     pub fn operator_run<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext2<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         command: u8,
     ) -> Result<()> {
+        // TODO v0.3/operation: deprecate original process_run
         let clock = Clock::get()?;
         modules::operation::process_run(
             &ctx.accounts.operator,
@@ -403,11 +381,17 @@ pub mod restaking {
             clock.slot,
             command,
         )
+
+        // modules::fund::FundService::new(
+        //     &mut ctx.accounts.receipt_token_mint,
+        //     &mut ctx.accounts.fund_account,
+        // )?
+        //     .process_run(ctx.remaining_accounts)
     }
 
     // TODO v0.3/operation: deprecate
     pub fn operator_process_fund_withdrawal_job<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContextDeprecated<'info>>,
         forced: bool,
     ) -> Result<()> {
         modules::operation::process_process_fund_withdrawal_job(
@@ -429,9 +413,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_update_prices(
-                ctx.remaining_accounts,
-            )
+        .process_update_prices(ctx.remaining_accounts)
     }
 
     ////////////////////////////////////////////
@@ -443,7 +425,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-            .process_update_reward_pools()
+        .process_update_reward_pools()
     }
 
     ////////////////////////////////////////////
@@ -462,9 +444,7 @@ pub mod restaking {
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
         )?
-            .process_initialize_user_fund_account(
-                ctx.bumps.user_fund_account,
-            )
+        .process_initialize_user_fund_account(ctx.bumps.user_fund_account)
     }
 
     ////////////////////////////////////////////
@@ -479,7 +459,7 @@ pub mod restaking {
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
         )?
-            .process_update_user_fund_account_if_needed()
+        .process_update_user_fund_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -501,15 +481,15 @@ pub mod restaking {
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_deposit_sol(
-                &ctx.accounts.fund_reserve_account,
-                &ctx.accounts.system_program,
-                &ctx.accounts.instructions_sysvar,
-                ctx.remaining_accounts,
-                amount,
-                metadata,
-                &ADMIN_PUBKEY,
-            )
+        .process_deposit_sol(
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.system_program,
+            &ctx.accounts.instructions_sysvar,
+            ctx.remaining_accounts,
+            amount,
+            metadata,
+            &ADMIN_PUBKEY,
+        )
     }
 
     pub fn user_request_withdrawal(
@@ -526,10 +506,10 @@ pub mod restaking {
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_request_withdrawal(
-                &mut ctx.accounts.receipt_token_lock_account,
-                receipt_token_amount,
-            )
+        .process_request_withdrawal(
+            &mut ctx.accounts.receipt_token_lock_account,
+            receipt_token_amount,
+        )
     }
 
     pub fn user_cancel_withdrawal_request(
@@ -546,10 +526,7 @@ pub mod restaking {
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_cancel_withdrawal_request(
-                &mut ctx.accounts.receipt_token_lock_account,
-                request_id,
-            )
+        .process_cancel_withdrawal_request(&mut ctx.accounts.receipt_token_lock_account, request_id)
     }
 
     pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
@@ -562,14 +539,14 @@ pub mod restaking {
             &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
-        )?.
-            process_withdraw(
-                &ctx.accounts.fund_reserve_account,
-                ctx.bumps.fund_reserve_account,
-                &ctx.accounts.fund_treasury_account,
-                &ctx.accounts.system_program,
-                request_id,
-            )
+        )?
+        .process_withdraw(
+            &ctx.accounts.fund_reserve_account,
+            ctx.bumps.fund_reserve_account,
+            &ctx.accounts.fund_treasury_account,
+            &ctx.accounts.system_program,
+            request_id,
+        )
     }
 
     ////////////////////////////////////////////
@@ -591,17 +568,17 @@ pub mod restaking {
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_deposit_supported_token(
-                &ctx.accounts.supported_token_mint,
-                &ctx.accounts.fund_supported_token_account,
-                &ctx.accounts.user_supported_token_account,
-                &ctx.accounts.supported_token_program,
-                &ctx.accounts.instructions_sysvar,
-                ctx.remaining_accounts,
-                amount,
-                metadata,
-                &ADMIN_PUBKEY,
-            )
+        .process_deposit_supported_token(
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.fund_supported_token_account,
+            &ctx.accounts.user_supported_token_account,
+            &ctx.accounts.supported_token_program,
+            &ctx.accounts.instructions_sysvar,
+            ctx.remaining_accounts,
+            amount,
+            metadata,
+            &ADMIN_PUBKEY,
+        )
     }
 
     ////////////////////////////////////////////
@@ -616,9 +593,7 @@ pub mod restaking {
             &ctx.accounts.user,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_initialize_user_reward_account(
-                ctx.bumps.user_reward_account,
-            )
+        .process_initialize_user_reward_account(ctx.bumps.user_reward_account)
     }
 
     ////////////////////////////////////////////
@@ -636,21 +611,19 @@ pub mod restaking {
             &ctx.accounts.user,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_update_user_reward_account_if_needed(
-                &ctx.accounts.system_program,
-                desired_account_size,
-            )
+        .process_update_user_reward_account_if_needed(
+            &ctx.accounts.system_program,
+            desired_account_size,
+        )
     }
 
-    pub fn user_update_reward_pools(
-        ctx: Context<UserRewardContext>,
-    ) -> Result<()> {
+    pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
         modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_update_user_reward_pools()
+        .process_update_user_reward_pools()
     }
 
     #[allow(unused_variables)]
@@ -664,7 +637,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-            .process_claim_user_rewards()
+        .process_claim_user_rewards()
     }
 
     ////////////////////////////////////////////
@@ -682,12 +655,12 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_transfer_hook(
-                &mut ctx.accounts.reward_account,
-                &mut ctx.accounts.source_receipt_token_account,
-                &mut ctx.accounts.destination_receipt_token_account,
-                ctx.remaining_accounts,
-                amount,
-            )
+        .process_transfer_hook(
+            &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.source_receipt_token_account,
+            &mut ctx.accounts.destination_receipt_token_account,
+            ctx.remaining_accounts,
+            amount,
+        )
     }
 }

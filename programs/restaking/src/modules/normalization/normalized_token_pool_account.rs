@@ -39,10 +39,10 @@ impl NormalizedTokenPoolAccount {
         normalized_token_program: Pubkey,
     ) {
         if self.data_version == 0 {
-            self.data_version = 1;
             self.bump = bump;
             self.normalized_token_mint = normalized_token_mint;
             self.normalized_token_program = normalized_token_program;
+            self.data_version = 1;
         }
     }
 

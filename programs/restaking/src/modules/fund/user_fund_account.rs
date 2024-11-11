@@ -94,7 +94,7 @@ impl UserFundAccount {
     /// Returns (batch_id, request_id)
     pub(super) fn create_withdrawal_request(
         &mut self,
-        withdrawal_status: &mut WithdrawalStatus,
+        withdrawal_status: &mut WithdrawalState,
         receipt_token_amount: u64,
         current_timestamp: i64,
     ) -> Result<(u64, u64)> {
@@ -117,17 +117,17 @@ impl UserFundAccount {
     /// Returns receipt_token_amount
     pub(super) fn cancel_withdrawal_request(
         &mut self,
-        withdrawal_status: &mut WithdrawalStatus,
+        withdrawal_status: &mut WithdrawalState,
         request_id: u64,
     ) -> Result<u64> {
         let request = self.pop_withdrawal_request(request_id)?;
         withdrawal_status.remove_withdrawal_request_from_batch(request)
     }
 
-    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount)
+    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
-        withdrawal_status: &mut WithdrawalStatus,
+        withdrawal_status: &mut WithdrawalState,
         request_id: u64,
     ) -> Result<(u64, u64, u64)> {
         let request = self.pop_withdrawal_request(request_id)?;

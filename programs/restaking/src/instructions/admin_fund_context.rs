@@ -162,6 +162,9 @@ pub struct AdminFundAccountUpdateContext<'info> {
 
     #[account(
         mut,
+        realloc = 8 + FundAccount::INIT_SPACE,
+        realloc::payer = payer,
+        realloc::zero = false,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump(),
         has_one = receipt_token_mint,

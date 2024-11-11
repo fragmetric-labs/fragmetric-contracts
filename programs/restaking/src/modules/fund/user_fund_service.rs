@@ -390,11 +390,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed
-        let (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount) = self
+        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = self
             .user_fund_account
             .claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
 
-        // transfer sol_withdraw_amount to user wallet
+        // transfer sol_user_amount to user wallet
         let receipt_token_mint_key = self.receipt_token_mint.key();
         let fund_reserve_account_signer_seeds: &[&[&[u8]]] = &[&[
             FundAccount::RESERVE_SEED,
@@ -411,7 +411,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 },
                 fund_reserve_account_signer_seeds,
             ),
-            sol_withdraw_amount,
+            sol_user_amount,
         )?;
 
         // transfer sol_fee_amount to fund treasury account
@@ -435,7 +435,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             user_fund_account: Clone::clone(self.user_fund_account),
             user: self.user.key(),
             burnt_receipt_token_amount: receipt_token_burn_amount,
-            withdrawn_sol_amount: sol_withdraw_amount,
+            withdrawn_sol_amount: sol_user_amount,
             deducted_sol_fee_amount: sol_fee_amount,
         });
 
