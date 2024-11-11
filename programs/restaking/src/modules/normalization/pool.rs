@@ -31,8 +31,6 @@ impl PDASeeds<2> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
-    pub const SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED: &'static [u8] = b"nt_supported_token_lock";
-
     pub(super) fn initialize(
         &mut self,
         bump: u8,
@@ -175,11 +173,6 @@ impl SupportedToken {
         );
 
         Ok(())
-    }
-
-    // migration v0.3.1
-    pub(super) fn set_lock_account(&mut self, lock_account: Pubkey) {
-        self.lock_account = lock_account;
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {

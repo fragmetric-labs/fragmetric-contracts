@@ -18,58 +18,6 @@ pub fn process_update_fund_account_if_needed(
     Ok(())
 }
 
-// migration v0.3.1
-pub fn process_update_fund_reserve_account_if_needed<'info>(
-    fund_reserve_account: &SystemAccount<'info>,
-    receipt_token_mint: &InterfaceAccount<Mint>,
-    fund_account: &Account<'info, FundAccount>,
-    fund_execution_reserved_account: &SystemAccount<'info>,
-    system_program: &Program<'info, System>,
-    fund_execution_reserved_account_bump: u8,
-) -> Result<()> {
-    let rent = Rent::get()?;
-    let execution_reserved_account_balance = fund_execution_reserved_account.get_lamports();
-    let reserve_account_balance = fund_reserve_account.get_lamports();
-    let expected_sol_reserved_amount_in_fund_account = fund_account.sol_operation_reserved_amount
-        .checked_add(fund_account.withdrawal.get_sol_withdrawal_reserved_amount())
-        .ok_or_else(|| error!(ErrorCode::FundUnexpectedReserveAccountBalanceException))?
-        .checked_sub(execution_reserved_account_balance)
-        .ok_or_else(|| error!(ErrorCode::FundUnexpectedReserveAccountBalanceException))?
-        .checked_sub(reserve_account_balance)
-        .ok_or_else(|| error!(ErrorCode::FundUnexpectedReserveAccountBalanceException))?;
-
-    if expected_sol_reserved_amount_in_fund_account > 0 {
-        fund_account.sub_lamports(expected_sol_reserved_amount_in_fund_account)?;
-        fund_reserve_account.add_lamports(expected_sol_reserved_amount_in_fund_account)?;
-
-        if !rent.is_exempt(fund_account.get_lamports(), AsRef::<AccountInfo>::as_ref(fund_account).data_len()) {
-            err!(ErrorCode::FundUnexpectedReserveAccountBalanceException)?;
-        }
-
-        return Ok(()); // need to re-run
-    }
-
-    if execution_reserved_account_balance > 0 {
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: fund_execution_reserved_account.to_account_info(),
-                    to: fund_reserve_account.to_account_info(),
-                },
-                &[&[
-                    FundAccount::EXECUTION_RESERVED_SEED,
-                    receipt_token_mint.key().as_ref(),
-                    &[fund_execution_reserved_account_bump],
-                ]],
-            ),
-            execution_reserved_account_balance,
-        )?;
-    }
-
-    Ok(())
-}
-
 pub fn process_update_user_fund_account_if_needed(
     user: &Signer,
     receipt_token_mint: &InterfaceAccount<Mint>,

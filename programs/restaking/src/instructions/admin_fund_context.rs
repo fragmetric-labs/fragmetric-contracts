@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::fund::{FundAccount};
+use crate::modules::fund::FundAccount;
 use crate::utils::PDASeeds;
 
 // will be used only once
@@ -167,45 +167,4 @@ pub struct AdminFundAccountUpdateContext<'info> {
         has_one = receipt_token_mint,
     )]
     pub fund_account: Box<Account<'info, FundAccount>>,
-}
-
-// migration v0.3.1
-#[derive(Accounts)]
-pub struct AdminFundReserveAccountUpdateContext<'info> {
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    #[account(
-        mut,
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
-    )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
-
-    #[account(
-        mut,
-        seeds = [
-            FundAccount::EXECUTION_RESERVED_SEED,
-            receipt_token_mint.key().as_ref(),
-        ],
-        bump,
-    )]
-    pub fund_execution_reserved_account: SystemAccount<'info>,
-
-    #[account(
-        mut,
-        seeds = [
-            FundAccount::RESERVE_SEED,
-            receipt_token_mint.key().as_ref(),
-        ],
-        bump,
-    )]
-    pub fund_reserve_account: SystemAccount<'info>,
 }

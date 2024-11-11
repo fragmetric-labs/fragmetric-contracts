@@ -62,20 +62,6 @@ pub mod restaking {
         )
     }
 
-    // migration v0.3.1
-    pub fn admin_update_fund_reserve_account_if_needed(
-        ctx: Context<AdminFundReserveAccountUpdateContext>,
-    ) -> Result<()> {
-        modules::fund::process_update_fund_reserve_account_if_needed(
-            &ctx.accounts.fund_reserve_account,
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.fund_account,
-            &ctx.accounts.fund_execution_reserved_account,
-            &ctx.accounts.system_program,
-            ctx.bumps.fund_execution_reserved_account,
-        )
-    }
-
     ////////////////////////////////////////////
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
@@ -249,24 +235,6 @@ pub mod restaking {
         _ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
     ) -> Result<()> {
         Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // FundManagerNormalizedTokenPoolSupportedTokenUpdateContext
-    ////////////////////////////////////////////
-
-    // migration v0.3.1
-    pub fn admin_update_supported_token_lock_account(
-        ctx: Context<AdminNormalizedTokenPoolSupportedTokenLockAccountUpdateContext>,
-    ) -> Result<()> {
-        modules::normalization::process_update_supported_token_lock_account(
-            &ctx.accounts.payer,
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.old_supported_token_lock_account,
-            &ctx.accounts.new_supported_token_lock_account,
-            &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.supported_token_program,
-        )
     }
 
     ////////////////////////////////////////////
