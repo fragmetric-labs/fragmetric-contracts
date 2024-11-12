@@ -11,12 +11,20 @@ pub struct DepositMetadata {
 }
 
 impl DepositMetadata {
-    pub(super) fn verify(self, instructions_sysvar: &AccountInfo, current_timestamp: i64) -> Result<(String, u8)> {
+    pub(super) fn verify(
+        self,
+        instructions_sysvar: &AccountInfo,
+        payload_signer_key: &Pubkey,
+        current_timestamp: i64,
+    ) -> Result<(String, u8)> {
 
-        ed25519::verify_preceding_ed25519_instruction(
+        ed25519::SignatureVerificationService::new(
             instructions_sysvar,
-            self.try_to_vec()?.as_slice(),
-        )?;
+        )?
+            .verify(
+                self.try_to_vec()?.as_slice(),
+                payload_signer_key,
+            )?;
 
         require_gte!(
             self.expired_at,

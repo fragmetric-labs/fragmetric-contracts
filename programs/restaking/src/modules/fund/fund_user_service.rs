@@ -60,13 +60,14 @@ impl<'info, 'a> FundUserService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
         sol_amount: u64,
         metadata: Option<DepositMetadata>,
+        metadata_signer_key: &Pubkey,
     ) -> Result<()> {
         // validate user wallet balance
         require_gte!(self.user.lamports(), sol_amount);
 
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = &metadata
-            .map(|metadata| metadata.verify(instructions_sysvar, self.current_timestamp))
+            .map(|metadata| metadata.verify(instructions_sysvar, metadata_signer_key, self.current_timestamp))
             .transpose()?
             .unzip();
 
@@ -132,13 +133,14 @@ impl<'info, 'a> FundUserService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
         supported_token_amount: u64,
         metadata: Option<DepositMetadata>,
+        metadata_signer_key: &Pubkey,
     ) -> Result<()> {
         // validate user token account balance
         require_gte!(user_supported_token_account.amount, supported_token_amount);
 
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = &metadata
-            .map(|metadata| metadata.verify(instructions_sysvar, self.current_timestamp))
+            .map(|metadata| metadata.verify(instructions_sysvar, metadata_signer_key, self.current_timestamp))
             .transpose()?
             .unzip();
 

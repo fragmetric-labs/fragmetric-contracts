@@ -1,3 +1,3 @@
-mod verify;
+mod signature_verification_service;
 
-pub use verify::*;
+pub use signature_verification_service::*;
