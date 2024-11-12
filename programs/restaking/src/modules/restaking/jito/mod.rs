@@ -1,6 +1,7 @@
 pub mod config;
-pub mod deposit;
-pub mod protocol;
+pub mod service;
+mod initialize;
 
-pub use deposit::*;
-pub use protocol::*;
+pub use config::*;
+pub use service::*;
+use initialize::*;

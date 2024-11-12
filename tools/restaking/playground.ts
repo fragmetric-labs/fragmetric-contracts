@@ -122,9 +122,40 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, nSOLTokenPool, true);
 
         const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
+        const jitoVaultProgramFeeWallet = this.getConstantAsPublicKey('jitoVaultProgramFeeWallet');
         const fragSOLJitoVaultConfig = this.getConstantAsPublicKey('fragsolJitoVaultConfigAddress');
         const fragSOLJitoVaultAccount = this.getConstantAsPublicKey('fragsolJitoVaultAccountAddress');
         const fragSOLJitoVRTMint = this.getConstantAsPublicKey('fragsolJitoVaultReceiptTokenMintAddress');
+        const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
+        const vaultWithdrawalTicketAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoVaultAccount.toBuffer(), vaultBaseAccount1.toBuffer()], jitoVaultProgram)[0];
+        const vaultWithdrawalTicketTokenAccount1 = spl.getAssociatedTokenAddressSync(
+            fragSOLJitoVRTMint,
+            vaultWithdrawalTicketAccount1,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        const vaultBaseAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account2"), fragSOLTokenMintBuf], this.programId)[0];
+        const vaultWithdrawalTicketAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoVaultAccount.toBuffer(), vaultBaseAccount2.toBuffer()], jitoVaultProgram)[0];
+        const vaultWithdrawalTicketTokenAccount2 = spl.getAssociatedTokenAddressSync(
+            fragSOLJitoVRTMint,
+            vaultWithdrawalTicketAccount2,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        // const vaultBaseAccount3 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account3"), fragSOLTokenMintBuf], this.programId)[0];
+        // const vaultBaseAccount4 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account4"), fragSOLTokenMintBuf], this.programId)[0];
+        // const vaultBaseAccount5 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account5"), fragSOLTokenMintBuf], this.programId)[0];
+
+
+        const jitoVaultProgramFeeWalletVRTAccount = spl.getAssociatedTokenAddressSync(
+            fragSOLJitoVRTMint,
+            jitoVaultProgramFeeWallet,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
         const fragSOLJitoVaultNSOLAccount = spl.getAssociatedTokenAddressSync(
             nSOLTokenMint,
             fragSOLJitoVaultAccount,
@@ -139,6 +170,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
+
         const fragSOLFundJitoFeeVRTAccount = spl.getAssociatedTokenAddressSync(
             fragSOLJitoVRTMint,
             this.keychain.getPublicKey('ADMIN'),
@@ -146,6 +178,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
+
 
         return {
             nSOLTokenMint,
@@ -165,12 +198,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLSupportedTokenAccount,
             userSupportedTokenAccount,
             jitoVaultProgram,
+            jitoVaultProgramFeeWallet,
+            jitoVaultProgramFeeWalletVRTAccount,
             fragSOLJitoVaultConfig,
             fragSOLJitoVaultAccount,
             fragSOLJitoVRTMint,
             fragSOLFundJitoFeeVRTAccount,
             fragSOLFundJitoVRTAccount,
             fragSOLJitoVaultNSOLAccount,
+            vaultBaseAccount1,
+            vaultWithdrawalTicketAccount1,
+            vaultWithdrawalTicketTokenAccount1,
+            vaultBaseAccount2,
+            vaultWithdrawalTicketAccount2,
+            vaultWithdrawalTicketTokenAccount2
         };
     }
 
@@ -692,6 +733,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signerNames: ["ADMIN"],
         });
+
         const fragSOLFundJitoFeeVRTAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLFundJitoFeeVRTAccount, 'confirmed');
         logger.notice("jito VRT fee account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundJitoFeeVRTAccount.toString());
 
@@ -701,6 +743,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLFundJitoVRTAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLFundJitoVRTAccount, 'confirmed');
         logger.notice("jito VRT account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundJitoVRTAccount.toString());
 
+        await spl.getOrCreateAssociatedTokenAccount(
+                this.connection,
+                this.wallet,
+                this.knownAddress.fragSOLJitoVRTMint,
+                this.knownAddress.jitoVaultProgramFeeWallet,
+                true,
+                "confirmed",
+                {
+                    skipPreflight: false,
+                    commitment: "confirmed",
+                },
+            )
+        await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            this.wallet,
+            this.knownAddress.fragSOLJitoVRTMint,
+            this.knownAddress.vaultWithdrawalTicketAccount1,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+        )
+        await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            this.wallet,
+            this.knownAddress.fragSOLJitoVRTMint,
+            this.knownAddress.vaultWithdrawalTicketAccount2,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+        )
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount};
     }
 
@@ -1329,11 +1407,26 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
+    public async runInitializeJitoVaultFeeWalletAssociatedTokenAccount() {
+        return await spl
+            .getOrCreateAssociatedTokenAccount(
+                this.connection,
+                this.keychain.getKeypair("ADMIN"),
+                this.knownAddress.nSOLTokenMint,
+                this.knownAddress.jitoVaultProgramFeeWallet,
+                true,
+                "confirmed",
+                {
+                    skipPreflight: false,
+                    commitment: "confirmed",
+                },
+            )
+    }
+
     public async runOperatorRun(operator: web3.Keypair = this.wallet) {
         // command=0. staking once x2
         // command=1. normalize lst x(#supported tokens)
         // command=2. restaking nsol x1
-
         const cmd0Accounts: web3.AccountMeta[] = [
             // staking
             {
@@ -1588,8 +1681,336 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
         logger.notice(`operator run#2: restaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
-        const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundReserveAccountBalance()]);
+        logger.notice(`operator run#3: start request_withdraw`);
+        logger.notice(`operator run#3: `,this.knownAddress.vaultBaseAccount1);
+        logger.notice(`operator run#3: `,this.knownAddress.vaultWithdrawalTicketAccount1);
+        logger.notice(`operator run#3: `,this.knownAddress.vaultWithdrawalTicketTokenAccount1);
 
+        const cmd3Accounts: web3.AccountMeta[] = [
+            // normalize
+            {
+                // normalized_token_mint
+                pubkey: this.knownAddress.nSOLTokenMint,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // normalized_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            // restaking
+            {
+                // jito_vault_program
+                pubkey: this.knownAddress.jitoVaultProgram,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_config
+                pubkey: this.knownAddress.fragSOLJitoVaultConfig,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_account
+                pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_mint
+                pubkey: this.knownAddress.fragSOLJitoVRTMint,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_supported_token_account
+                pubkey: this.knownAddress.fragSOLJitoVaultNSOLAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket
+                pubkey: this.knownAddress.vaultWithdrawalTicketAccount1,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket_token_account
+                pubkey: this.knownAddress.vaultWithdrawalTicketTokenAccount1,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // fund_jito_vault_receipt_token_account
+                pubkey: this.knownAddress.fragSOLFundJitoVRTAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // vault_program_base_account
+                pubkey: this.knownAddress.vaultBaseAccount1,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // system_program
+                pubkey: web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+
+        const cmd3Tx = await this.run({
+            instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800_000,
+                }),
+                this.program.methods
+                    .operatorRun(3)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd3Accounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+        });
+        if (cmd3Tx.error) {
+            return {error: cmd3Tx.error};
+        }
+
+        logger.notice(`operator run#3-2: start request_withdraw`);
+        logger.notice(`operator run#3-2: `,this.knownAddress.vaultBaseAccount2);
+        logger.notice(`operator run#3-2: `,this.knownAddress.vaultWithdrawalTicketAccount2);
+        logger.notice(`operator run#3-2: `,this.knownAddress.vaultWithdrawalTicketTokenAccount2);
+        const cmd3Accounts2: web3.AccountMeta[] = [
+            // normalize
+            {
+                // normalized_token_mint
+                pubkey: this.knownAddress.nSOLTokenMint,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // normalized_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            // restaking
+            {
+                // jito_vault_program
+                pubkey: this.knownAddress.jitoVaultProgram,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_config
+                pubkey: this.knownAddress.fragSOLJitoVaultConfig,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_account
+                pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_mint
+                pubkey: this.knownAddress.fragSOLJitoVRTMint,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_supported_token_account
+                pubkey: this.knownAddress.fragSOLJitoVaultNSOLAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket
+                pubkey: this.knownAddress.vaultWithdrawalTicketAccount2,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket_token_account
+                pubkey: this.knownAddress.vaultWithdrawalTicketTokenAccount2,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // fund_jito_vault_receipt_token_account
+                pubkey: this.knownAddress.fragSOLFundJitoVRTAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // vault_program_base_account
+                pubkey: this.knownAddress.vaultBaseAccount2,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // system_program
+                pubkey: web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+
+
+        const cmd3Tx2 = await this.run({
+            instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800_000,
+                }),
+                this.program.methods
+                    .operatorRun(5)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd3Accounts2)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+        });
+        if (cmd3Tx2.error) {
+            return {error: cmd3Tx2.error};
+        }
+
+        logger.notice(`waiting for burn_withdrawal_ticket`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * 30));
+        logger.notice(`start burn_withdrawal_ticket`);
+
+        const cmd4Accounts: web3.AccountMeta[] = [
+            // normalize
+            {
+                // normalized_token_mint
+                pubkey: this.knownAddress.nSOLTokenMint,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // normalized_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            // restaking
+            {
+                // jito_vault_program
+                pubkey: this.knownAddress.jitoVaultProgram,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_config
+                pubkey: this.knownAddress.fragSOLJitoVaultConfig,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_account
+                pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_mint
+                pubkey: this.knownAddress.fragSOLJitoVRTMint,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_receipt_token_program
+                pubkey: spl.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false,
+            },
+            {
+                // jito_vault_supported_token_account
+                pubkey: this.knownAddress.fragSOLJitoVaultNSOLAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket
+                pubkey: this.knownAddress.vaultWithdrawalTicketAccount1,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_withdrawal_ticket_token_account
+                pubkey: this.knownAddress.vaultWithdrawalTicketTokenAccount1,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // fund_jito_vault_supported_token_account
+                pubkey: this.knownAddress.nSOLFundTokenAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_fee_receipt_token_account
+                pubkey: this.knownAddress.fragSOLFundJitoFeeVRTAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_program_fee_wallet_vrt_account
+                pubkey: this.knownAddress.jitoVaultProgramFeeWalletVRTAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // system_program
+                pubkey: web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
+            },
+        ];
+        const cmd4Tx = await this.run({
+            instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 800_000,
+                }),
+                this.program.methods
+                    .operatorRun(4)
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(cmd4Accounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+        });
+        if (cmd4Tx.error) {
+            return {error: cmd4Tx.error};
+        }
+
+        const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([this.getFragSOLFundAccount(), this.getFragSOLFundReserveAccountBalance()]);
         return {fragSOLFund, fragSOLFundReserveAccountBalance};
     }
 }

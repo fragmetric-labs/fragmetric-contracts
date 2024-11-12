@@ -37,6 +37,7 @@ pub struct OperatorFundContext<'info> {
 
 #[derive(Accounts)]
 pub struct OperatorFundContext2<'info> {
+    #[account(mut)]
     pub operator: Signer<'info>,
 
     pub system_program: Program<'info, System>,

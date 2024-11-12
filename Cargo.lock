@@ -2141,8 +2141,8 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "jito-account-traits-derive"
-version = "0.0.1"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=v0.0.1#c2beadee0c6b33ee2190567a36057cf87d7da0aa"
+version = "0.0.3"
+source = "git+https://github.com/jito-foundation/restaking.git?tag=v0.0.3#ecbe19a55dc4d1ce91a926102174f87ef9cb72ba"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2151,8 +2151,8 @@ dependencies = [
 
 [[package]]
 name = "jito-bytemuck"
-version = "0.0.1"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=v0.0.1#c2beadee0c6b33ee2190567a36057cf87d7da0aa"
+version = "0.0.3"
+source = "git+https://github.com/jito-foundation/restaking.git?tag=v0.0.3#ecbe19a55dc4d1ce91a926102174f87ef9cb72ba"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -2162,8 +2162,8 @@ dependencies = [
 
 [[package]]
 name = "jito-jsm-core"
-version = "0.0.1"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=v0.0.1#c2beadee0c6b33ee2190567a36057cf87d7da0aa"
+version = "0.0.3"
+source = "git+https://github.com/jito-foundation/restaking.git?tag=v0.0.3#ecbe19a55dc4d1ce91a926102174f87ef9cb72ba"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -2172,13 +2172,14 @@ dependencies = [
  "solana-program",
  "spl-associated-token-account 2.3.0",
  "spl-token",
+ "spl-token-2022 3.0.4",
  "thiserror",
 ]
 
 [[package]]
 name = "jito-vault-core"
-version = "0.0.1"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=v0.0.1#c2beadee0c6b33ee2190567a36057cf87d7da0aa"
+version = "0.0.3"
+source = "git+https://github.com/jito-foundation/restaking.git?tag=v0.0.3#ecbe19a55dc4d1ce91a926102174f87ef9cb72ba"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -2189,13 +2190,14 @@ dependencies = [
  "solana-program",
  "spl-associated-token-account 2.3.0",
  "spl-token",
+ "spl-token-2022 3.0.4",
  "thiserror",
 ]
 
 [[package]]
 name = "jito-vault-sdk"
-version = "0.0.1"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=v0.0.1#c2beadee0c6b33ee2190567a36057cf87d7da0aa"
+version = "0.0.3"
+source = "git+https://github.com/jito-foundation/restaking.git?tag=v0.0.3#ecbe19a55dc4d1ce91a926102174f87ef9cb72ba"
 dependencies = [
  "borsh 0.10.4",
  "shank",
@@ -3316,9 +3318,12 @@ version = "0.3.1"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "base64 0.13.1",
  "bytemuck",
+ "jito-bytemuck",
  "jito-vault-core",
  "jito-vault-sdk",
+ "shank",
  "solana-program-test",
  "solana-sdk",
  "spl-stake-pool",
