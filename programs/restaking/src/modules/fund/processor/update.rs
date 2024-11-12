@@ -79,48 +79,6 @@ pub fn process_update_user_fund_account_if_needed(
     Ok(())
 }
 
-// migration v0.3.1
-pub fn process_update_receipt_token_lock_account<'info>(
-    payer: &Signer<'info>,
-    old_receipt_token_lock_account: &InterfaceAccount<'info, TokenAccount>,
-    receipt_token_lock_authority: &Account<'info, ReceiptTokenLockAuthority>,
-    receipt_token_program: &Program<'info, Token2022>,
-) -> Result<()> {
-    token_interface::close_account(
-        CpiContext::new_with_signer(
-            receipt_token_program.to_account_info(),
-            token_interface::CloseAccount {
-                account: old_receipt_token_lock_account.to_account_info(),
-                destination: payer.to_account_info(),
-                authority: receipt_token_lock_authority.to_account_info()
-            },
-        &[
-                receipt_token_lock_authority.get_signer_seeds().as_ref(),
-            ]),
-    )
-}
-
-// migration v0.3.1
-pub fn process_update_receipt_token_mint_authority<'info>(
-    receipt_token_mint: &InterfaceAccount<'info, Mint>,
-    receipt_token_mint_authority: &Account<'info, ReceiptTokenMintAuthority>,
-    fund_account: &Account<FundAccount>,
-    receipt_token_program: &Program<'info, Token2022>,
-) -> Result<()> {
-    token_interface::set_authority(
-        CpiContext::new_with_signer(
-            receipt_token_program.to_account_info(),
-            token_interface::SetAuthority {
-                current_authority: receipt_token_mint_authority.to_account_info(),
-                account_or_mint: receipt_token_mint.to_account_info(),
-            },
-            &[receipt_token_mint_authority.get_signer_seeds().as_ref()],
-        ),
-        spl_token_2022::instruction::AuthorityType::MintTokens,
-        Some(fund_account.key()),
-    )
-}
-
 pub fn process_update_extra_account_meta_list_if_needed(
     extra_account_meta_list: &AccountInfo,
 ) -> Result<()> {
@@ -129,47 +87,6 @@ pub fn process_update_extra_account_meta_list_if_needed(
         &extra_account_metas()?,
     )?;
     Ok(())
-}
-
-// migration v0.3.1
-pub fn process_update_supported_token_account<'info>(
-    payer: &Signer<'info>,
-    supported_token_mint: &InterfaceAccount<'info, Mint>,
-    old_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    supported_token_authority: &Account<'info, SupportedTokenAuthority>,
-    new_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    supported_token_program: &Interface<'info, TokenInterface>,
-) -> Result<()> {
-    let amount = old_supported_token_account.amount;
-    let decimals = supported_token_mint.decimals;
-    token_interface::transfer_checked(
-        CpiContext::new_with_signer(
-            supported_token_program.to_account_info(),
-            token_interface::TransferChecked {
-                from: old_supported_token_account.to_account_info(),
-                mint: supported_token_mint.to_account_info(),
-                to: new_supported_token_account.to_account_info(),
-                authority: supported_token_authority.to_account_info()
-            },
-            &[
-                supported_token_authority.get_signer_seeds().as_ref()
-            ]),
-        amount,
-        decimals
-    )?;
-
-    token_interface::close_account(
-        CpiContext::new_with_signer(
-            supported_token_program.to_account_info(),
-            token_interface::CloseAccount {
-                account: old_supported_token_account.to_account_info(),
-                destination: payer.to_account_info(),
-                authority: supported_token_authority.to_account_info()
-            },
-        &[
-                supported_token_authority.get_signer_seeds().as_ref(),
-            ]),
-    )
 }
 
 pub fn process_update_sol_capacity_amount(

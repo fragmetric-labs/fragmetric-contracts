@@ -53,18 +53,6 @@ pub mod restaking {
     // AdminFundUpdateContext
     ////////////////////////////////////////////
 
-    // migration v0.3.1
-    pub fn admin_update_receipt_token_lock_account(
-        ctx: Context<AdminFundReceiptTokenLockAccountUpdateContext>
-    ) -> Result<()> {
-        modules::fund::process_update_receipt_token_lock_account(
-            &ctx.accounts.payer,
-            &ctx.accounts.old_receipt_token_lock_account,
-            &ctx.accounts.receipt_token_lock_authority,
-            &ctx.accounts.receipt_token_program
-        )
-    }
-
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
     ) -> Result<()> {
@@ -86,17 +74,6 @@ pub mod restaking {
             &ctx.accounts.system_program,
             ctx.bumps.fund_execution_reserved_account,
         )
-    }
-
-    ////////////////////////////////////////////
-    // AdminFundCloseContext
-    ////////////////////////////////////////////
-
-    // migration v0.3.1
-    pub fn admin_close_receipt_token_lock_authority(
-        _ctx: Context<AdminFundReceiptTokenLockAuthorityCloseContext>,
-    ) -> Result<()> {
-        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -131,18 +108,6 @@ pub mod restaking {
     ////////////////////////////////////////////
     // AdminReceiptTokenMintUpdateContext
     ////////////////////////////////////////////
-
-    // migration v0.3.1
-    pub fn admin_update_receipt_token_mint_authority(
-        ctx: Context<AdminReceiptTokenMintAuthorityUpdateContext>,
-    ) -> Result<()> {
-        modules::fund::process_update_receipt_token_mint_authority(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_mint_authority,
-            &ctx.accounts.fund_account,
-            &ctx.accounts.receipt_token_program
-        )
-    }
 
     pub fn admin_update_extra_account_meta_list_if_needed(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
@@ -257,24 +222,6 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerFundSupportedTokenUpdateContext
-    ////////////////////////////////////////////
-
-    // migration v0.3.1
-    pub fn admin_update_supported_token_account(
-        ctx: Context<AdminFundSupportedTokenAccountUpdateContext>,
-    ) -> Result<()> {
-        modules::fund::process_update_supported_token_account(
-            &ctx.accounts.payer,
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.old_supported_token_account,
-            &ctx.accounts.supported_token_authority,
-            &ctx.accounts.new_supported_token_account,
-            &ctx.accounts.supported_token_program,
-        )
-    }
-
-    ////////////////////////////////////////////
     // FundManagerFundSupportedTokenContext
     ////////////////////////////////////////////
 
@@ -292,17 +239,6 @@ pub mod restaking {
             pricing_source,
             ctx.remaining_accounts,
         )
-    }
-
-    ////////////////////////////////////////////
-    // FundManagerFundSupportedTokenCloseContext
-    ////////////////////////////////////////////
-
-    // migration v0.3.1
-    pub fn admin_close_supported_token_authority<'info>(
-        _ctx: Context<AdminFundSupportedTokenAuthorityCloseContext>,
-    ) -> Result<()> {
-        Ok(())
     }
 
     ////////////////////////////////////////////

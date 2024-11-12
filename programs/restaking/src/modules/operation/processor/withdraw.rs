@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{self, FundAccount, FundAccountInfo, ReceiptTokenLockAuthority};
+use crate::modules::fund::{self, FundAccount, FundAccountInfo};
 use crate::utils::PDASeeds;
 
 // TODO: deprecate
