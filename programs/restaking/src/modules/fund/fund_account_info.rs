@@ -1,6 +1,7 @@
 use super::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
+use crate::errors::ErrorCode;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {
@@ -23,14 +24,21 @@ impl FundAccountInfo {
         fund_account: &Account<FundAccount>,
         receipt_token_mint: &InterfaceAccount<Mint>,
     ) -> Self {
+        // TODO: use pricing service or.. add one_receipt_token_as_sol to fund account?
+        let one_receipt_token_as_sol = crate::utils::get_proportional_amount(
+            10u64.checked_pow(receipt_token_mint.decimals as u32).unwrap(),
+            fund_account.get_assets_total_amount_as_sol().unwrap(),
+            receipt_token_mint.supply,
+        ).unwrap();
+
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
-            one_receipt_token_as_sol: get_one_receipt_token_as_sol(receipt_token_mint, fund_account).unwrap(),
+            one_receipt_token_as_sol,
             receipt_token_supply_amount: receipt_token_mint.supply,
-            supported_tokens: fund_account.get_supported_tokens_iter().cloned().collect(),
-            sol_capacity_amount: fund_account.get_sol_capacity_amount(),
-            sol_accumulated_deposit_amount: fund_account.get_sol_accumulated_deposit_amount(),
-            sol_operation_reserved_amount: fund_account.get_sol_operation_reserved_amount(),
+            supported_tokens: fund_account.supported_tokens.iter().cloned().collect(),
+            sol_capacity_amount: fund_account.sol_capacity_amount,
+            sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
+            sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
             sol_withdrawal_reserved_amount: fund_account
                 .withdrawal
                 .get_sol_withdrawal_reserved_amount(),

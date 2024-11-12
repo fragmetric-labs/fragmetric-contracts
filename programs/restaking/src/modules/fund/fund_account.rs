@@ -20,9 +20,9 @@ pub struct FundAccount {
     bump: u8,
     pub receipt_token_mint: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
-    supported_tokens: Vec<SupportedTokenInfo>,
-    sol_capacity_amount: u64,
-    sol_accumulated_deposit_amount: u64,
+    pub(super) supported_tokens: Vec<SupportedTokenInfo>,
+    pub(super) sol_capacity_amount: u64,
+    pub(super) sol_accumulated_deposit_amount: u64,
     // TODO visibility is currently set to `in crate::modules` due to operation module - change to private and use getter
     pub(in crate::modules) sol_operation_reserved_amount: u64,
     // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
@@ -77,20 +77,6 @@ impl FundAccount {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
     }
 
-    #[inline(always)]
-    pub(in crate::modules) fn get_supported_tokens_iter(
-        &self,
-    ) -> impl Iterator<Item=&SupportedTokenInfo> {
-        self.supported_tokens.iter()
-    }
-
-    #[inline(always)]
-    pub(super) fn get_supported_tokens_iter_mut(
-        &mut self,
-    ) -> impl Iterator<Item=&mut SupportedTokenInfo> {
-        self.supported_tokens.iter_mut()
-    }
-
     pub(super) fn get_supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
         self.supported_tokens
             .iter()
@@ -98,6 +84,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
+    // TODO: set visibility to super
     pub(in crate::modules) fn get_supported_token_mut(
         &mut self,
         token: Pubkey,
@@ -106,21 +93,6 @@ impl FundAccount {
             .iter_mut()
             .find(|info| info.mint == token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
-    }
-
-    #[inline(always)]
-    pub(super) fn get_sol_capacity_amount(&self) -> u64 {
-        self.sol_capacity_amount
-    }
-
-    #[inline(always)]
-    pub(super) fn get_sol_accumulated_deposit_amount(&self) -> u64 {
-        self.sol_accumulated_deposit_amount
-    }
-
-    #[inline(always)]
-    pub(in crate::modules) fn get_sol_operation_reserved_amount(&self) -> u64 {
-        self.sol_operation_reserved_amount
     }
 
     pub(super) fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -181,10 +153,11 @@ impl FundAccount {
         Ok(())
     }
 
+    // TODO: implement pricing adapter for a receipt token
     // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
         // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
-        self.get_supported_tokens_iter().try_fold(
+        self.supported_tokens.iter().try_fold(
             self.sol_operation_reserved_amount,
             |sum, token| {
                 sum.checked_add(
@@ -268,11 +241,6 @@ impl SupportedTokenInfo {
     #[inline(always)]
     pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
         self.pricing_source
-    }
-
-    #[inline(always)]
-    pub(super) fn get_program(&self) -> Pubkey {
-        self.program
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -475,7 +443,7 @@ impl WithdrawalStatus {
         Ok(request.receipt_token_amount)
     }
 
-    /// Returns (sol_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
         request: WithdrawalRequest,
@@ -488,14 +456,14 @@ impl WithdrawalStatus {
             ErrorCode::FundPendingWithdrawalRequestError
         );
 
-        let sol_amount = crate::utils::get_proportional_amount(
+        let sol_total_amount = crate::utils::get_proportional_amount(
             request.receipt_token_amount,
             self.sol_withdrawal_reserved_amount,
             self.receipt_token_processed_amount,
         )
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let sol_fee_amount = crate::utils::get_proportional_amount(
-            sol_amount,
+            sol_total_amount,
             self.sol_withdrawal_fee_rate as u64,
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
@@ -507,11 +475,15 @@ impl WithdrawalStatus {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         self.sol_withdrawal_reserved_amount = self
             .sol_withdrawal_reserved_amount
-            .checked_sub(sol_amount)
+            .checked_sub(sol_total_amount)
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalReservedSOLExhaustedException))?;
 
+        let sol_withdraw_amount = sol_total_amount
+            .checked_sub(sol_fee_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
         Ok((
-            sol_amount,
+            sol_withdraw_amount,
             sol_fee_amount,
             request.receipt_token_amount,
         ))

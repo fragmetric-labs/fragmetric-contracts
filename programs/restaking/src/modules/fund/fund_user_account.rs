@@ -57,6 +57,7 @@ impl UserFundAccount {
     }
 
     // TODO visibility is currently set to `crate` due to transfer hook
+    // create a placeholder to emit event for non existing user account
     pub(crate) fn placeholder(
         user: Pubkey,
         receipt_token_mint: Pubkey,
@@ -124,7 +125,7 @@ impl UserFundAccount {
         withdrawal_status.remove_withdrawal_request_from_batch(request)
     }
 
-    /// Returns (sol_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    /// Returns (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
         withdrawal_status: &mut WithdrawalStatus,

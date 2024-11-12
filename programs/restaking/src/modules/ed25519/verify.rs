@@ -6,16 +6,16 @@ use crate::{constants::ADMIN_PUBKEY, errors::ErrorCode};
 
 /// Verify serialized Ed25519Program instruction data with ADMIN_PUBKEY
 pub(in crate::modules) fn verify_preceding_ed25519_instruction(
-    instruction_sysvar: &AccountInfo,
+    instructions_sysvar: &AccountInfo,
     payload: &[u8],
 ) -> Result<()> {
     // load prev instruction
     let current_ix_index: usize =
-        instructions::load_current_index_checked(instruction_sysvar)?.into();
+        instructions::load_current_index_checked(instructions_sysvar)?.into();
     let previous_ix_index = current_ix_index
         .checked_sub(1)
         .ok_or(ProgramError::InvalidArgument)?;
-    let ix = instructions::load_instruction_at_checked(previous_ix_index, instruction_sysvar)?;
+    let ix = instructions::load_instruction_at_checked(previous_ix_index, instructions_sysvar)?;
     require_eq!(ix.program_id, ed25519_program::ID);
     require_eq!(ix.accounts.len(), 0);
 

@@ -25,17 +25,17 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         expect(fragSOLFund0.supportedTokens.some(s => s.operationReservedAmount.toString() == jitoSolBalance0.value.amount.toString())).eq(true, 'supported ATA balance should be equal');
 
         const {
-            fragSOLFundReserveAccountBalance: fragSOLFundExecutionReservedAccountBalance1,
+            fragSOLFundReserveAccountBalance: fragSOLFundReserveAccountBalance1,
             fragSOLFund: fragSOLFund1
         } = await restaking.runOperatorRun(restaking.keychain.getKeypair('ADMIN'));
         const nSOLPool1 = await restaking.getNSOLTokenPoolAccount();
         const nSOLJitoSOLBalance1 = await restaking.getNSOLSupportedTokenLockAccountBalance('jitoSOL');
         const nSOLMint1 = await restaking.getNSOLTokenMint();
         const jitoVaultNSOLBalance1 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
-        logger.info(`after: fundSupportedTokens=${fragSOLFund1.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund1.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance1}`);
+        logger.info(`after: fundSupportedTokens=${fragSOLFund1.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund1.solOperationReservedAmount}, fundOperationReservedAmount=${fragSOLFundReserveAccountBalance1}`);
         logger.info(`after: nSOLSupportedTokens=${nSOLPool1.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint1.supply.toString()}`);
         logger.info(`after: jitoVaultNSOL=${jitoVaultNSOLBalance1.toString()}`);
-        expect(fragSOLFundExecutionReservedAccountBalance1.toString()).eq('0', 'execution reserved should be zero after operation');
+        expect(fragSOLFundReserveAccountBalance1.toString()).eq('0', 'operation reserved should be zero after operation');
         expect(jitoVaultNSOLBalance1.toString()).eq(nSOLMint1.supply.toString(), 'for now, all nSOL is being deposited to jito vault');
 
         const stakedSOLAmount = fragSOLFund0.solOperationReservedAmount.sub(fragSOLFund1.solOperationReservedAmount);

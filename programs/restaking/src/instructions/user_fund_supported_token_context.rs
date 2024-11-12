@@ -84,5 +84,5 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
-    pub instruction_sysvar: UncheckedAccount<'info>,
+    pub instructions_sysvar: UncheckedAccount<'info>,
 }

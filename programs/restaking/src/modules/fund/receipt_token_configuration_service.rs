@@ -1,15 +1,56 @@
 use anchor_lang::prelude::*;
-use spl_tlv_account_resolution::{account::ExtraAccountMeta, seeds::Seed};
+use anchor_spl::token_interface::*;
+use spl_tlv_account_resolution::account::ExtraAccountMeta;
+use spl_tlv_account_resolution::seeds::Seed;
+use spl_tlv_account_resolution::state::ExtraAccountMetaList;
+use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
 use crate::modules::fund::*;
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
 
-pub(crate) fn extra_account_metas_len() -> Result<usize> {
-    Ok(extra_account_metas()?.len())
+pub struct ReceiptTokenConfigurationService<'info, 'a> where 'info : 'a {
+    _receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+    extra_account_meta_list: &'a AccountInfo<'info>,
 }
 
-pub(in crate::modules) fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
+impl<'info, 'a> ReceiptTokenConfigurationService<'info, 'a> {
+    pub fn new(
+        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+        extra_account_meta_list: &'a AccountInfo<'info>,
+    ) -> Result<Self> {
+        Ok(Self {
+            _receipt_token_mint: receipt_token_mint,
+            extra_account_meta_list,
+        })
+    }
+
+    pub fn process_initialize_extra_account_meta_list(
+        &self,
+    ) -> Result<()> {
+        ExtraAccountMetaList::init::<ExecuteInstruction>(
+            &mut self.extra_account_meta_list.try_borrow_mut_data()?,
+            &receipt_token_extra_account_metas()?,
+        )?;
+        Ok(())
+    }
+
+    pub fn process_update_extra_account_meta_list_if_needed(
+        &self,
+    ) -> Result<()> {
+        ExtraAccountMetaList::update::<ExecuteInstruction>(
+            &mut self.extra_account_meta_list.try_borrow_mut_data()?,
+            &receipt_token_extra_account_metas()?,
+        )?;
+        Ok(())
+    }
+}
+
+pub(crate) fn receipt_token_extra_account_metas_len() -> Result<usize> {
+    Ok(receipt_token_extra_account_metas()?.len())
+}
+
+fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
     let extra_account_metas = vec![
         // index 5, fund account
         ExtraAccountMeta::new_with_seeds(
@@ -101,3 +142,4 @@ pub(in crate::modules) fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>>
 
     Ok(extra_account_metas)
 }
+
