@@ -942,65 +942,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward, rewardPool, reward};
     }
 
-    // migration v0.3.1
-    public async runAdminMigrateAuthorities() {
-        await this.run({
-            instructions: [
-                this.methods.adminUpdateFundAccountIfNeeded()
-                    .accounts({ payer: this.wallet.publicKey })
-                    .instruction(),
-                this.methods.adminUpdateFundReserveAccountIfNeeded()
-                    .instruction(),
-                this.methods.adminUpdateReceiptTokenLockAccount()
-                    .accounts({ payer: this.wallet.publicKey })
-                    .instruction(),
-                this.methods.adminCloseReceiptTokenLockAuthority()
-                    .accounts({ payer: this.wallet.publicKey })
-                    .instruction(),
-                this.methods.adminUpdateReceiptTokenMintAuthority()
-                    .accounts({ payer: this.wallet.publicKey })
-                    .instruction(),
-            ],
-            signerNames: ['ADMIN'],
-        });
-        await this.run({
-            instructions: [
-                ...Object.values(this.supportedTokenMetadata).flatMap((v) => {
-                    return [
-                        this.methods.adminUpdateSupportedTokenAccount()
-                            .accountsPartial({
-                                payer: this.wallet.publicKey,
-                                supportedTokenMint: v.mint,
-                                supportedTokenProgram: v.program,
-                            })
-                            .instruction(),
-                        this.methods.adminCloseSupportedTokenAuthority()
-                            .accountsPartial({
-                                payer: this.wallet.publicKey,
-                                supportedTokenMint: v.mint,
-                            })
-                            .instruction(),
-                    ];
-                })
-            ],
-            signerNames: ['ADMIN'],
-        });
-        await this.run({
-            instructions: [
-                ...Object.values(this.supportedTokenMetadata).map((v) => 
-                    this.methods.adminUpdateSupportedTokenLockAccount()
-                        .accounts({
-                            payer: this.wallet.publicKey,
-                            supportedTokenMint: v.mint,
-                            supportedTokenProgram: v.program,
-                        })
-                        .instruction()
-                )
-            ],
-            signerNames: ['ADMIN'],
-        });
-    }
-
     private async getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user: web3.Keypair) {
         const fragSOLUserRewardAddress = this.knownAddress.fragSOLUserReward(user.publicKey);
         const fragSOLUserFundAddress = this.knownAddress.fragSOLUserFund(user.publicKey);

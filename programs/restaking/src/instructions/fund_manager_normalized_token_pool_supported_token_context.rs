@@ -42,58 +42,6 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-// migration v0.3.1
-#[derive(Accounts)]
-pub struct AdminNormalizedTokenPoolSupportedTokenLockAccountUpdateContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    #[account(
-        mut,
-        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
-        bump = normalized_token_pool_account.get_bump(),
-        has_one = normalized_token_mint,
-    )]
-    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
-
-    #[account(address = NSOL_MINT_ADDRESS)]
-    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub supported_token_program: Interface<'info, TokenInterface>,
-
-    #[account(
-        mut,
-        token::mint = supported_token_mint,
-        token::authority = normalized_token_pool_account,
-        token::token_program = supported_token_program,
-        seeds = [
-            NormalizedTokenPoolAccount::SUPPORTED_TOKEN_LOCK_ACCOUNT_SEED,
-            normalized_token_mint.key().as_ref(),
-            supported_token_mint.key().as_ref()
-        ],
-        bump,
-    )]
-    pub old_supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(
-        init,
-        payer = payer,
-        associated_token::mint = supported_token_mint,
-        associated_token::authority = normalized_token_pool_account,
-        associated_token::token_program = supported_token_program,
-    )]
-    pub new_supported_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-}
-
 #[derive(Accounts)]
 pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]

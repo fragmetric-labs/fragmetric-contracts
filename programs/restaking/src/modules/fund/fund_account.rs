@@ -43,7 +43,6 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
-    pub const EXECUTION_RESERVED_SEED: &'static [u8] = b"fund_execution_reserved";
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
