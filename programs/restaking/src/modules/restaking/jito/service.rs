@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke_signed};
+use anchor_lang::solana_program::program::invoke_signed;
 use jito_vault_core::{vault::Vault, vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket};
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
