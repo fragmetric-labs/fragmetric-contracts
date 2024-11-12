@@ -18,7 +18,7 @@ pub fn process_run<'info>(
     _current_slot: u64,
     command: u8, // 0, 1, 2
 ) -> Result<()> {
-    // temporary authorization
+    // TODO: remove this temporary authorization
     require_eq!(operator.key(), ADMIN_PUBKEY);
 
     // stake sol to jitoSOL

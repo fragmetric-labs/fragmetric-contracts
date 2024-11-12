@@ -489,6 +489,7 @@ pub mod restaking {
                 ctx.remaining_accounts,
                 amount,
                 metadata,
+                &ADMIN_PUBKEY,
             )
     }
 
@@ -580,6 +581,7 @@ pub mod restaking {
                 ctx.remaining_accounts,
                 amount,
                 metadata,
+                &ADMIN_PUBKEY,
             )
     }
 
