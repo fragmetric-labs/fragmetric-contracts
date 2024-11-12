@@ -22,7 +22,7 @@ pub const NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviR
 pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
 
 #[constant]
-pub const JITO_VAULT_PROGRAM_FEE_WALLET: Pubkey = pubkey!("5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF");
+pub const JITO_VAULT_PROGRAM_FEE_WALLET: Pubkey = pubkey!("9eZbWiHsPRsxLSiHxzg2pkXsAuQMwAjQrda7C7e21Fw6");
 
 #[constant]
 pub const FRAGSOL_JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
