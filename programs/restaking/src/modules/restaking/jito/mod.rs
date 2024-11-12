@@ -1,7 +1,7 @@
 pub mod config;
 pub mod service;
-mod initialize;
+pub mod update;
 
 pub use config::*;
 pub use service::*;
-use initialize::*;
+pub use update::*;

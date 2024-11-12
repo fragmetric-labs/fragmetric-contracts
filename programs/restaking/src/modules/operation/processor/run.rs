@@ -318,91 +318,7 @@ pub fn process_run<'info>(
             require_gte!(minted_fund_vrt_amount, restaking_nt_amount);
         }
     }
-    // request_withdraw normalized tokens
-    if command == 5 {
-        let [
-        // normalization
-        normalized_token_mint,
-        normalized_token_program,
-        // restaking
-        jito_vault_program,
-        jito_vault_config,
-        jito_vault_account,
-        jito_vault_receipt_token_mint,
-        jito_vault_receipt_token_program,
-        jito_vault_supported_token_account,
-        jito_vault_withdrawal_ticket,
-        jito_vault_withdrawal_ticket_token_account,
-        fund_jito_vault_receipt_token_account,
-        vault_program_base_account,
-        system_program,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-        let rent = Rent::get()?;
-        let current_lamports = **jito_vault_withdrawal_ticket.try_borrow_lamports()?;
-        let space = 8_u64.checked_add(std::mem::size_of::<VaultStakerWithdrawalTicket>() as u64).unwrap();
-        let required_lamports = rent
-            .minimum_balance(space as usize)
-            .max(1)
-            .saturating_sub(current_lamports);
-        let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
-            &operator.key(),
-            &jito_vault_withdrawal_ticket.key(),
-            required_lamports,
-        );
 
-        anchor_lang::solana_program::program::invoke(
-            &transfer_instruction,
-            &[
-                operator.to_account_info(),
-                jito_vault_withdrawal_ticket.to_account_info(),
-                system_program.to_account_info(),
-            ],
-        )?;
-
-
-        let mut fund_jito_vault_receipt_token_account_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
-        let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
-        let vault_program_base_account_signer_seed = vault_program_base_account;
-        let (vault_program_base_account_address, vault_program_base_account_bump) = Pubkey::find_program_address(
-            &[restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT2_SEED, receipt_token_mint.key().as_ref()], &crate::ID,
-        );
-
-        restaking::jito::request_withdraw(
-            &restaking::jito::JitoRestakingVaultContext {
-                vault_program: jito_vault_program.clone(),
-                vault_config: jito_vault_config.clone(),
-                vault: jito_vault_account.clone(),
-                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-                vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-                vault_supported_token_mint: normalized_token_mint.clone(),
-                vault_supported_token_program: normalized_token_program.clone(),
-                vault_supported_token_account: jito_vault_supported_token_account.clone(),
-            },
-            jito_vault_withdrawal_ticket, // vault_withdrawal_ticket
-            jito_vault_withdrawal_ticket_token_account, // vault_withdrawal_ticket_token_account
-            fund_jito_vault_receipt_token_account, // vault_receipt_token_account,
-            vault_program_base_account,
-            system_program,
-            fund_account.as_ref(), // signer
-            &[fund_account.get_signer_seeds().as_ref(), &[
-                restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT2_SEED,
-                &receipt_token_mint.key().to_bytes(),
-                &[vault_program_base_account_bump],
-            ]],
-            200,
-        )?;
-
-        fund_jito_vault_receipt_token_account_parsed.reload()?;
-
-        msg!(
-                "before_fund_vrt_amount: {}, after_fund_vrt_amount: {}",
-                before_fund_vrt_amount,
-                fund_jito_vault_receipt_token_account_parsed.amount
-            );
-    }
     // request_withdraw normalized tokens
     if command == 3 {
         let [
@@ -478,7 +394,7 @@ pub fn process_run<'info>(
                 &receipt_token_mint.key().to_bytes(),
                 &[vault_program_base_account_bump],
             ]],
-            400,
+            before_fund_vrt_amount,
         )?;
 
         fund_jito_vault_receipt_token_account_parsed.reload()?;

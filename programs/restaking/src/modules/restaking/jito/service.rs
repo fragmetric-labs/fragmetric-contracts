@@ -191,20 +191,6 @@ pub fn undelegation<'info>(
     Ok(())
 }
 
-//
-// pub fn check_is_withdraw_enable_ticket<'info>(ctx: JitoRestakingVaultContext<'info>, vault_base_accounts: &[AccountInfo<'info>]) -> Result<()> {
-//     for vault_base_account in vault_base_accounts {
-//         let vault_withdraw_ticket = VaultStakerWithdrawalTicket::find_program_address(&ctx.vault_program.key, &ctx.vault.key, &vault_base_account.key);
-//         AccountInfo{
-//
-//         }
-//     }
-//
-//     Ok(())
-//
-//
-// }
-
 pub fn request_withdraw<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
     vault_withdrawal_ticket: &AccountInfo<'info>,

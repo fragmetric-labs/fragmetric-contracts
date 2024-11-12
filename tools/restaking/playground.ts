@@ -15,6 +15,7 @@ import {Restaking} from "../../target/types/restaking";
 import {getKeychain, KEYCHAIN_ENV, KEYCHAIN_KEYS} from "./keychain";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 import * as ed25519 from "ed25519";
+import {TransactionConfirmationStrategy, TransactionSignature} from "@solana/web3.js";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
@@ -566,6 +567,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signerNames: ["NSOL_MINT"],
         });
 
+        if (this.isMaybeLocalnet) {
+            const txSig = await this.connection.requestAirdrop(this.keychain.getKeypair("ADMIN").publicKey, 1_000_000_000)
+            await this.connection.confirmTransaction(txSig, 'confirmed');
+        }
+
         if (createMetadata) {
             const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
             const keypair = this.keychain.getKeypair('NSOL_MINT');
@@ -575,10 +581,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
             const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
             umiInstance.use(umi.signerIdentity(authority));
-
-            if (this.isMaybeLocalnet) {
-                await umiInstance.rpc.airdrop(authKeypair.publicKey, umi.sol(1));
-            }
 
             await mpl.createV1(umiInstance, {
                 mint,
@@ -1680,11 +1682,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             return {error: cmd2Tx.error};
         }
         logger.notice(`operator run#2: restaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
-
-        logger.notice(`operator run#3: start request_withdraw`);
-        logger.notice(`operator run#3: `,this.knownAddress.vaultBaseAccount1);
-        logger.notice(`operator run#3: `,this.knownAddress.vaultWithdrawalTicketAccount1);
-        logger.notice(`operator run#3: `,this.knownAddress.vaultWithdrawalTicketTokenAccount1);
+        logger.notice(`operator run#3 - baseAccount: `,this.knownAddress.vaultBaseAccount1);
+        logger.notice(`operator run#3 - ticketAccount: `,this.knownAddress.vaultWithdrawalTicketAccount1);
+        logger.notice(`operator run#3 - ticketTokenAccount: `,this.knownAddress.vaultWithdrawalTicketTokenAccount1);
 
         const cmd3Accounts: web3.AccountMeta[] = [
             // normalize
@@ -1788,114 +1788,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
         if (cmd3Tx.error) {
             return {error: cmd3Tx.error};
-        }
-
-        logger.notice(`operator run#3-2: start request_withdraw`);
-        logger.notice(`operator run#3-2: `,this.knownAddress.vaultBaseAccount2);
-        logger.notice(`operator run#3-2: `,this.knownAddress.vaultWithdrawalTicketAccount2);
-        logger.notice(`operator run#3-2: `,this.knownAddress.vaultWithdrawalTicketTokenAccount2);
-        const cmd3Accounts2: web3.AccountMeta[] = [
-            // normalize
-            {
-                // normalized_token_mint
-                pubkey: this.knownAddress.nSOLTokenMint,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // normalized_token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isSigner: false,
-                isWritable: false,
-            },
-            // restaking
-            {
-                // jito_vault_program
-                pubkey: this.knownAddress.jitoVaultProgram,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // jito_vault_config
-                pubkey: this.knownAddress.fragSOLJitoVaultConfig,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // jito_vault_account
-                pubkey: this.knownAddress.fragSOLJitoVaultAccount,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // jito_vault_receipt_token_mint
-                pubkey: this.knownAddress.fragSOLJitoVRTMint,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // jito_vault_receipt_token_program
-                pubkey: spl.TOKEN_PROGRAM_ID,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // jito_vault_supported_token_account
-                pubkey: this.knownAddress.fragSOLJitoVaultNSOLAccount,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // jito_vault_withdrawal_ticket
-                pubkey: this.knownAddress.vaultWithdrawalTicketAccount2,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // jito_vault_withdrawal_ticket_token_account
-                pubkey: this.knownAddress.vaultWithdrawalTicketTokenAccount2,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // fund_jito_vault_receipt_token_account
-                pubkey: this.knownAddress.fragSOLFundJitoVRTAccount,
-                isSigner: false,
-                isWritable: true,
-            },
-            {
-                // vault_program_base_account
-                pubkey: this.knownAddress.vaultBaseAccount2,
-                isSigner: false,
-                isWritable: false,
-            },
-            {
-                // system_program
-                pubkey: web3.SystemProgram.programId,
-                isSigner: false,
-                isWritable: false,
-            },
-        ];
-
-
-        const cmd3Tx2 = await this.run({
-            instructions: [
-                web3.ComputeBudgetProgram.setComputeUnitLimit({
-                    units: 800_000,
-                }),
-                this.program.methods
-                    .operatorRun(5)
-                    .accounts({
-                        operator: operator.publicKey,
-                    })
-                    .remainingAccounts(cmd3Accounts2)
-                    .instruction(),
-            ],
-            signers: [operator],
-            events: ["operatorProcessedJob"],
-        });
-        if (cmd3Tx2.error) {
-            return {error: cmd3Tx2.error};
         }
 
         logger.notice(`waiting for burn_withdrawal_ticket`);
