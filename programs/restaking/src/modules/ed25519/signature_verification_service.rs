@@ -5,12 +5,12 @@ use anchor_lang::solana_program::sysvar::instructions;
 use crate::errors::ErrorCode;
 
 /// Verify preceding Ed25519Program instruction data with given payload and payload_signer_key
-pub struct SignatureVerificationService<'info, 'a> {
+pub struct SignatureVerificationService {
 }
 
-impl<'info, 'a> SignatureVerificationService<'info, 'a> {
+impl<'info> SignatureVerificationService {
     pub fn verify(
-        instructions_sysvar: &'a AccountInfo<'info>,
+        instructions_sysvar: &AccountInfo<'info>,
         payload: &[u8],
         payload_signer_key: &Pubkey,
     ) -> Result<()> {

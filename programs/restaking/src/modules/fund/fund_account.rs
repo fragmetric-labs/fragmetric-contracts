@@ -157,9 +157,9 @@ impl FundAccount {
     // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
     pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
         // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
-        self.supported_tokens.iter().try_fold(
-            self.sol_operation_reserved_amount,
-            |sum, token| {
+        self.supported_tokens
+            .iter()
+            .try_fold(self.sol_operation_reserved_amount, |sum, token| {
                 sum.checked_add(
                     token.get_token_amount_as_sol(
                         token
@@ -168,9 +168,8 @@ impl FundAccount {
                             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
                     )?,
                 )
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-            },
-        )
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+            })
     }
 }
 
@@ -295,7 +294,7 @@ impl SupportedTokenInfo {
             self.one_token_as_sol,
             self.get_denominated_amount_per_token()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 
@@ -461,13 +460,13 @@ impl WithdrawalStatus {
             self.sol_withdrawal_reserved_amount,
             self.receipt_token_processed_amount,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
         let sol_fee_amount = crate::utils::get_proportional_amount(
             sol_total_amount,
             self.sol_withdrawal_fee_rate as u64,
             Self::WITHDRAWAL_FEE_RATE_DIVISOR,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         self.receipt_token_processed_amount = self
             .receipt_token_processed_amount
@@ -793,7 +792,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token2,
             Pubkey::default(),
@@ -803,7 +802,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token1,
             Pubkey::default(),
@@ -813,7 +812,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap_err();
+        .unwrap_err();
         assert_eq!(fund.supported_tokens.len(), 2);
         assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
@@ -854,7 +853,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
 
         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);

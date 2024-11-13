@@ -9,7 +9,10 @@ use crate::modules::fund::*;
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
 
-pub struct ReceiptTokenConfigurationService<'info, 'a> where 'info : 'a {
+pub struct ReceiptTokenConfigurationService<'info, 'a>
+where
+    'info: 'a,
+{
     _receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     extra_account_meta_list: &'a AccountInfo<'info>,
 }
@@ -25,9 +28,7 @@ impl<'info, 'a> ReceiptTokenConfigurationService<'info, 'a> {
         })
     }
 
-    pub fn process_initialize_extra_account_meta_list(
-        &self,
-    ) -> Result<()> {
+    pub fn process_initialize_extra_account_meta_list(&self) -> Result<()> {
         ExtraAccountMetaList::init::<ExecuteInstruction>(
             &mut self.extra_account_meta_list.try_borrow_mut_data()?,
             &receipt_token_extra_account_metas()?,
@@ -35,9 +36,7 @@ impl<'info, 'a> ReceiptTokenConfigurationService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_update_extra_account_meta_list_if_needed(
-        &self,
-    ) -> Result<()> {
+    pub fn process_update_extra_account_meta_list_if_needed(&self) -> Result<()> {
         ExtraAccountMetaList::update::<ExecuteInstruction>(
             &mut self.extra_account_meta_list.try_borrow_mut_data()?,
             &receipt_token_extra_account_metas()?,
@@ -142,4 +141,3 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
 
     Ok(extra_account_metas)
 }
-

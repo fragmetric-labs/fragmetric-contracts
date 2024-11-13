@@ -438,7 +438,7 @@ pub mod restaking {
     }
 
     pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
-        modules::fund::FundUserConfigurationService::new(
+        modules::fund::UserFundConfigurationService::new(
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
@@ -455,7 +455,7 @@ pub mod restaking {
     pub fn user_update_fund_account_if_needed(
         ctx: Context<UserFundAccountUpdateContext>,
     ) -> Result<()> {
-        modules::fund::FundUserConfigurationService::new(
+        modules::fund::UserFundConfigurationService::new(
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
@@ -472,7 +472,7 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        modules::fund::FundUserService::new(
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.user,
@@ -497,7 +497,7 @@ pub mod restaking {
         ctx: Context<UserFundContext>,
         receipt_token_amount: u64,
     ) -> Result<()> {
-        modules::fund::FundUserService::new(
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.user,
@@ -517,7 +517,7 @@ pub mod restaking {
         ctx: Context<UserFundContext>,
         request_id: u64,
     ) -> Result<()> {
-        modules::fund::FundUserService::new(
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.user,
@@ -534,7 +534,7 @@ pub mod restaking {
     }
 
     pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
-        modules::fund::FundUserService::new(
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.user,
@@ -562,7 +562,7 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        modules::fund::FundUserService::new(
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.user,

@@ -1,16 +1,21 @@
+use crate::errors::ErrorCode;
+use crate::modules::fund::{
+    DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
+};
+use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::modules::{ed25519, reward};
+use crate::utils::PDASeeds;
+use crate::{events, modules};
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use anchor_spl::{token_2022, token_interface};
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use crate::{events, modules};
-use crate::errors::ErrorCode;
-use crate::modules::{ed25519, reward};
-use crate::modules::fund::{DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount};
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
-use crate::utils::PDASeeds;
+use anchor_spl::{token_2022, token_interface};
 
-pub struct FundUserService<'info, 'a> where 'info : 'a {
+pub struct UserFundService<'info, 'a>
+where
+    'info: 'a,
+{
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
     user: &'a Signer<'info>,
@@ -26,7 +31,7 @@ pub struct FundUserService<'info, 'a> where 'info : 'a {
     current_timestamp: i64,
 }
 
-impl<'info, 'a> FundUserService<'info, 'a> {
+impl<'info, 'a> UserFundService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         receipt_token_program: &'a Program<'info, Token2022>,
@@ -67,29 +72,29 @@ impl<'info, 'a> FundUserService<'info, 'a> {
 
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = &metadata
-            .map(|metadata| metadata.verify(instructions_sysvar, metadata_signer_key, self.current_timestamp))
+            .map(|metadata| {
+                metadata.verify(
+                    instructions_sysvar,
+                    metadata_signer_key,
+                    self.current_timestamp,
+                )
+            })
             .transpose()?
             .unzip();
 
         // calculate receipt token minting amount
         // TODO: use pricing module for checking update, calculating amount
-        FundService::new(
-            self.receipt_token_mint,
-            self.fund_account,
-            pricing_sources,
-        )?.update_asset_prices()?;
+        FundService::new(self.receipt_token_mint, self.fund_account, pricing_sources)?
+            .update_asset_prices()?;
         let receipt_token_mint_amount = crate::utils::get_proportional_amount(
             sol_amount,
             self.receipt_token_mint.supply,
             self.fund_account.get_assets_total_amount_as_sol()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         // mint receipt token to user & update user reward accrual status
-        self.mint_receipt_token_to_user(
-            receipt_token_mint_amount,
-            *contribution_accrual_rate,
-        )?;
+        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user $SOL to fund
         self.fund_account.deposit_sol(sol_amount)?;
@@ -114,10 +119,7 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(
-                self.fund_account,
-                self.receipt_token_mint,
-            ),
+            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint,),
         });
 
         Ok(())
@@ -140,17 +142,20 @@ impl<'info, 'a> FundUserService<'info, 'a> {
 
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = &metadata
-            .map(|metadata| metadata.verify(instructions_sysvar, metadata_signer_key, self.current_timestamp))
+            .map(|metadata| {
+                metadata.verify(
+                    instructions_sysvar,
+                    metadata_signer_key,
+                    self.current_timestamp,
+                )
+            })
             .transpose()?
             .unzip();
 
         // calculate receipt token minting amount
         // TODO: use pricing module for checking update, calculating amount
-        FundService::new(
-            self.receipt_token_mint,
-            self.fund_account,
-            pricing_sources,
-        )?.update_asset_prices()?;
+        FundService::new(self.receipt_token_mint, self.fund_account, pricing_sources)?
+            .update_asset_prices()?;
         let receipt_token_mint_amount = crate::utils::get_proportional_amount(
             self.fund_account
                 .get_supported_token(supported_token_mint.key())?
@@ -158,13 +163,10 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             self.receipt_token_mint.supply,
             self.fund_account.get_assets_total_amount_as_sol()?,
         )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         // mint receipt token to user & update user reward accrual status
-        self.mint_receipt_token_to_user(
-            receipt_token_mint_amount,
-            *contribution_accrual_rate,
-        )?;
+        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user supported token to fund
         self.fund_account
@@ -183,7 +185,7 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             supported_token_amount,
             supported_token_mint.decimals,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         // log deposit event
         emit!(events::UserDepositedSupportedTokenToFund {
@@ -197,10 +199,7 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(
-                self.fund_account,
-                self.receipt_token_mint,
-            ),
+            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint,),
         });
 
         Ok(())
@@ -224,9 +223,10 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             ),
             receipt_token_mint_amount,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
         self.receipt_token_mint.reload()?;
-        self.user_fund_account.sync_receipt_token_amount(self.user_receipt_token_account)?;
+        self.user_fund_account
+            .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
         // TODO: use user reward service
@@ -274,7 +274,7 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             ),
             receipt_token_amount,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         // then, mint receipt token to fund's lock account
         token_2022::mint_to(
@@ -289,11 +289,12 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             ),
             receipt_token_amount,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         self.receipt_token_mint.reload()?;
         receipt_token_lock_account.reload()?;
-        self.user_fund_account.sync_receipt_token_amount(self.user_receipt_token_account)?;
+        self.user_fund_account
+            .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // reduce user's reward accrual rate
         // TODO: use user reward service
@@ -328,8 +329,9 @@ impl<'info, 'a> FundUserService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         // clear pending amount from both user fund account and global fund account
-        let receipt_token_amount =
-            self.user_fund_account.cancel_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
+        let receipt_token_amount = self
+            .user_fund_account
+            .cancel_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -345,7 +347,7 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             ),
             receipt_token_amount,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         // then, mint receipt token to user's receipt token account
         token_2022::mint_to(
@@ -360,11 +362,12 @@ impl<'info, 'a> FundUserService<'info, 'a> {
             ),
             receipt_token_amount,
         )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         self.receipt_token_mint.reload()?;
         receipt_token_lock_account.reload()?;
-        self.user_fund_account.sync_receipt_token_amount(self.user_receipt_token_account)?;
+        self.user_fund_account
+            .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
         // TODO: use user reward service
@@ -401,8 +404,9 @@ impl<'info, 'a> FundUserService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed
-        let (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount) =
-            self.user_fund_account.claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
+        let (sol_withdraw_amount, sol_fee_amount, receipt_token_burn_amount) = self
+            .user_fund_account
+            .claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
 
         // transfer sol_withdraw_amount to user wallet
         let receipt_token_mint_key = self.receipt_token_mint.key();

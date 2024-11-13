@@ -1,7 +1,6 @@
 use super::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use crate::errors::ErrorCode;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {
@@ -26,10 +25,13 @@ impl FundAccountInfo {
     ) -> Self {
         // TODO: use pricing service or.. add one_receipt_token_as_sol to fund account?
         let one_receipt_token_as_sol = crate::utils::get_proportional_amount(
-            10u64.checked_pow(receipt_token_mint.decimals as u32).unwrap(),
+            10u64
+                .checked_pow(receipt_token_mint.decimals as u32)
+                .unwrap(),
             fund_account.get_assets_total_amount_as_sol().unwrap(),
             receipt_token_mint.supply,
-        ).unwrap();
+        )
+        .unwrap();
 
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,

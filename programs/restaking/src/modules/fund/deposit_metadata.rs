@@ -17,7 +17,6 @@ impl DepositMetadata {
         payload_signer_key: &Pubkey,
         current_timestamp: i64,
     ) -> Result<(String, u8)> {
-
         ed25519::SignatureVerificationService::verify(
             instructions_sysvar,
             self.try_to_vec()?.as_slice(),
