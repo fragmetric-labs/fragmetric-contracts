@@ -74,21 +74,17 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
-    pub(in crate::modules) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
+    pub fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
         self.supported_tokens
             .iter()
             .map(|token| (token.mint, token.locked_amount))
             .collect()
     }
 
-    #[inline(always)]
-    pub(super) fn get_supported_tokens_iter_mut(
-        &mut self,
-    ) -> impl Iterator<Item=&mut SupportedToken> {
-        self.supported_tokens.iter_mut()
-    }
-
-    fn get_supported_token(&self, supported_token_mint: Pubkey) -> Result<&SupportedToken> {
+    pub(super) fn get_supported_token(
+        &self,
+        supported_token_mint: Pubkey,
+    ) -> Result<&SupportedToken> {
         self.supported_tokens
             .iter()
             .find(|token| token.mint == supported_token_mint)
@@ -103,30 +99,6 @@ impl NormalizedTokenPoolAccount {
             .iter_mut()
             .find(|token| token.mint == supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
-    }
-
-    pub(super) fn validate_adapter_constructor_accounts(
-        &self,
-        accounts: &[&AccountInfo],
-    ) -> Result<()> {
-        require_gte!(
-            accounts.len(),
-            2,
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.normalized_token_mint,
-            accounts[0].key(),
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.normalized_token_program,
-            accounts[1].key(),
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-
-        self.get_supported_token(accounts[2].key())?
-            .validate_adapter_constructor_accounts(&accounts[2..])
     }
 }
 
@@ -148,31 +120,6 @@ impl SupportedToken {
             locked_amount: 0,
             _reserved: [0; 64],
         }
-    }
-
-    fn validate_adapter_constructor_accounts(&self, accounts: &[&AccountInfo]) -> Result<()> {
-        require_eq!(
-            accounts.len(),
-            3,
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.mint,
-            accounts[0].key(),
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.program,
-            accounts[1].key(),
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-        require_eq!(
-            self.lock_account,
-            accounts[2].key(),
-            ErrorCode::NormalizedTokenPoolInvalidAccountsProvided,
-        );
-
-        Ok(())
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {

@@ -182,9 +182,6 @@ pub enum ErrorCode {
     #[msg("normalization: exceeded max supported tokens")]
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
-    #[msg("normalization: invalid accounts provided")]
-    NormalizedTokenPoolInvalidAccountsProvided,
-
     #[msg("normalization: not enough supported token to unlock")]
     NormalizedTokenPoolNotEnoughLockedToken,
 }

@@ -142,7 +142,7 @@ pub fn process_run<'info>(
             ),
         );
 
-        let normalized_token_pool_account_parsed =
+        let mut normalized_token_pool_account_parsed =
             parse_account_boxed(normalized_token_pool_account)?;
         let mut fund_supported_token_account_to_normalize_parsed =
             parse_interface_account_boxed::<TokenAccount>(
@@ -159,34 +159,34 @@ pub fn process_run<'info>(
             let before_fund_supported_token_amount =
                 fund_supported_token_account_to_normalize_parsed.amount;
             let before_fund_normalized_token_amount = fund_normalized_token_account_parsed.amount;
-            let normalized_token_mint_parsed =
+            let mut normalized_token_mint_parsed =
                 parse_interface_account_boxed(normalized_token_mint)?;
-            let normalized_token_program_parsed = normalized_token_program.try_into()?;
+            let normalized_token_program_parsed = parse_program_boxed::<Token>(normalized_token_program)?;
             let fund_supported_token_mint_to_normalize_parsed =
                 parse_interface_account_boxed(fund_supported_token_mint_to_normalize)?;
-            let fund_supported_token_program_to_normalize_parsed =
-                fund_supported_token_program_to_normalize.try_into()?;
+
+            let fund_supported_token_program_to_normalize_parsed = parse_interface_boxed::<TokenInterface>(fund_supported_token_program_to_normalize)?;
             let mut normalized_token_pool_supported_token_lock_account_parsed =
                 parse_interface_account_boxed::<TokenAccount>(
                     normalized_token_pool_supported_token_lock_account,
                 )?;
-            let mut normalizer = normalization::NormalizedTokenPoolAdapter::new(
-                normalized_token_pool_account_parsed,
-                normalized_token_mint_parsed,
-                normalized_token_program_parsed,
-                fund_supported_token_mint_to_normalize_parsed,
-                fund_supported_token_program_to_normalize_parsed,
-                normalized_token_pool_supported_token_lock_account_parsed.clone(),
+            let mut normalizer = normalization::NormalizedTokenPoolService::new(
+                &mut *normalized_token_pool_account_parsed,
+                &mut normalized_token_mint_parsed,
+                &normalized_token_program_parsed,
             )?;
             let denominated_amount_per_normalized_token =
                 normalizer.get_denominated_amount_per_normalized_token()?;
-            normalization::normalize_supported_token(
-                &mut normalizer,
+            normalizer.normalize_supported_token(
                 &fund_normalized_token_account_parsed,
                 &fund_supported_token_account_to_normalize_parsed,
-                fund_account.to_account_info(),
+                &normalized_token_pool_supported_token_lock_account_parsed,
+                &fund_supported_token_mint_to_normalize_parsed,
+                &fund_supported_token_program_to_normalize_parsed,
+                fund_account.to_account_info().as_ref(),
                 &[fund_account.get_signer_seeds().as_ref()],
                 normalizing_supported_token_amount,
+
                 // TODO: revisit later about pricing interface and dependency graph
                 pricing::calculate_token_amount_as_sol(
                     fund_supported_token_mint_to_normalize.key(),
@@ -239,9 +239,6 @@ pub fn process_run<'info>(
                 fund_supported_token_info_to_normalize.get_operating_amount(),
                 normalized_token_pool_supported_token_lock_account_parsed.amount
             );
-
-            let normalized_token_pool_account = normalizer.into_pool_account();
-            normalized_token_pool_account.exit(&crate::ID)?;
         }
     }
 

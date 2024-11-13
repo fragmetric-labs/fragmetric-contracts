@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, solana_program, CheckOwner, ZeroCopy};
+use anchor_lang::{prelude::*, solana_program, CheckOwner, Ids, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -156,7 +156,7 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
             .checked_mul(numerator as u128)?
             .checked_div(denominator as u128)?,
     )
-        .ok()
+    .ok()
 }
 
 #[inline(never)]
@@ -167,6 +167,26 @@ where
     T: AccountSerialize + AccountDeserialize + Clone + Owner,
 {
     Account::try_from(account).map(Box::new)
+}
+
+#[inline(never)]
+pub fn parse_program_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Box<Program<'info, T>>>
+where
+    T: Id,
+{
+    Program::try_from(account).map(Box::new)
+}
+
+#[inline(never)]
+pub fn parse_interface_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Box<Interface<'info, T>>>
+where
+    T: Ids,
+{
+    Interface::try_from(account).map(Box::new)
 }
 
 #[inline(never)]
@@ -189,7 +209,11 @@ where
     match Account::try_from(account) {
         Ok(account) => Ok(Some(Box::new(account))),
         Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) => Ok(None),
+            if anchor_err.error_code_number
+                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
+        {
+            Ok(None)
+        }
         Err(e) => Err(e),
     }
 }
@@ -204,7 +228,11 @@ where
     match InterfaceAccount::try_from(account) {
         Ok(account) => Ok(Some(Box::new(account))),
         Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) => Ok(None),
+            if anchor_err.error_code_number
+                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
+        {
+            Ok(None)
+        }
         Err(e) => Err(e),
     }
 }
@@ -214,13 +242,16 @@ pub fn parse_optional_account_loader_boxed<'info, T>(
     account: &'info AccountInfo<'info>,
 ) -> Result<Option<Box<AccountLoader<'info, T>>>>
 where
-    T:  ZeroCopyHeader + Owner + Clone,
+    T: ZeroCopyHeader + Owner + Clone,
 {
     match AccountLoader::try_from(account) {
         Ok(account) => Ok(Some(Box::new(account))),
         Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountDiscriminatorNotFound) => Ok(None),
+            if anchor_err.error_code_number
+                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountDiscriminatorNotFound) =>
+        {
+            Ok(None)
+        }
         Err(e) => Err(e),
     }
 }
-

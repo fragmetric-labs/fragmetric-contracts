@@ -6,7 +6,7 @@ pub struct UserRewardService<'info, 'a>
 where
     'info: 'a,
 {
-    receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
+    _receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
 
@@ -16,13 +16,13 @@ where
 
 impl<'info, 'a> UserRewardService<'info, 'a> {
     pub fn new(
-        receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
+        _receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
-            receipt_token_mint,
+            _receipt_token_mint,
             reward_account,
             user_reward_account,
             current_slot: clock.slot,

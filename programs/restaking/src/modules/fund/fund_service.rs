@@ -1,6 +1,8 @@
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{FundAccount, FundAccountInfo, UserFundAccount};
+use crate::modules::fund::{
+    FundAccount, FundAccountInfo, UserFundAccount, UserFundConfigurationService,
+};
 use crate::modules::pricing;
 use crate::modules::pricing::TokenPricingSourceMap;
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
@@ -19,11 +21,20 @@ where
     _current_timestamp: i64,
 }
 
+impl Drop for FundService<'_, '_> {
+    fn drop(&mut self) {
+        self.fund_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'info, 'a> FundService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut Account<'info, FundAccount>,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        'info: 'a,
+    {
         let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
@@ -75,9 +86,9 @@ impl<'info, 'a> FundService<'info, 'a> {
 
     pub fn process_transfer_hook(
         &self,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-        source_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-        destination_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
+        reward_account: &mut AccountLoader<'info, RewardAccount>,
+        source_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+        destination_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
         extra_accounts: &'info [AccountInfo<'info>],
         transfer_amount: u64,
     ) -> Result<()> {

@@ -18,38 +18,45 @@ where
 {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
-    user: &'a Signer<'info>,
-    user_fund_account: &'a mut Account<'info, UserFundAccount>,
     fund_account: &'a mut Account<'info, FundAccount>,
-    user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+
+    user: &'a Signer<'info>,
+    user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
+    user_fund_account: &'a mut Account<'info, UserFundAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
 
     _current_slot: u64,
     current_timestamp: i64,
 }
 
+impl Drop for UserFundService<'_, '_> {
+    fn drop(&mut self) {
+        self.fund_account.exit(&crate::ID).unwrap();
+        self.user_fund_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'info, 'a> UserFundService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         receipt_token_program: &'a Program<'info, Token2022>,
-        user: &'a Signer<'info>,
-        user_fund_account: &'a mut Account<'info, UserFundAccount>,
         fund_account: &'a mut Account<'info, FundAccount>,
-        user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+        user: &'a Signer<'info>,
+        user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
+        user_fund_account: &'a mut Account<'info, UserFundAccount>,
         user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
             receipt_token_program,
-            user,
-            user_fund_account,
             fund_account,
-            user_receipt_token_account,
             reward_account,
+            user,
+            user_receipt_token_account,
+            user_fund_account,
             user_reward_account,
             _current_slot: clock.slot,
             current_timestamp: clock.unix_timestamp,
@@ -58,8 +65,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_deposit_sol(
         &mut self,
-        fund_reserve_account: &'a SystemAccount<'info>,
-        system_program: &'a Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
+        system_program: &Program<'info, System>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
         sol_amount: u64,
@@ -387,7 +394,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_reserve_account: &SystemAccount<'info>,
         fund_reserve_account_bump: u8,
         fund_treasury_account: &SystemAccount<'info>,
-        system_program: &'a Program<'info, System>,
+        system_program: &Program<'info, System>,
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed

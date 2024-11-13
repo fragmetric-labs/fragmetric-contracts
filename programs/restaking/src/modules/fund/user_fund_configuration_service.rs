@@ -12,6 +12,12 @@ where
     user_fund_account: &'a mut Account<'info, UserFundAccount>,
 }
 
+impl Drop for UserFundConfigurationService<'_, '_> {
+    fn drop(&mut self) {
+        self.user_fund_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,

@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
@@ -25,6 +26,8 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext
 
     #[account(address = NSOL_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub normalized_token_program: Program<'info, Token>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -57,6 +60,8 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
         has_one = normalized_token_mint,
     )]
     pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
+
+    pub normalized_token_program: Program<'info, Token>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 

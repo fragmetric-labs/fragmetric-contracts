@@ -1,9 +1,7 @@
-mod processor;
+mod normalized_token_pool_account;
+mod normalized_token_pool_configuration_service;
+mod normalized_token_pool_service;
 
-pub use processor::*;
-
-mod adapter;
-mod pool;
-
-pub use adapter::*;
-pub use pool::*;
+pub use normalized_token_pool_account::*;
+pub use normalized_token_pool_configuration_service::*;
+pub use normalized_token_pool_service::*;

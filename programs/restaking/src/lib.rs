@@ -72,13 +72,15 @@ pub mod restaking {
     pub fn admin_initialize_normalized_token_pool(
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
-        modules::normalization::process_initialize_normalized_token_pool_account(
-            &ctx.accounts.admin,
-            &ctx.accounts.normalized_token_mint,
-            &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.normalized_token_program,
-            ctx.bumps.normalized_token_pool_account,
-        )
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+                &mut ctx.accounts.normalized_token_pool_account,
+                &ctx.accounts.normalized_token_mint,
+                &ctx.accounts.normalized_token_program,
+        )?
+            .process_initialize_normalized_token_pool_account(
+                &ctx.accounts.admin,
+                ctx.bumps.normalized_token_pool_account,
+            )
     }
 
     ////////////////////////////////////////////
@@ -242,6 +244,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
             .process_add_supported_token(
+                &ctx.accounts.supported_token_account,
                 &ctx.accounts.supported_token_mint,
                 &ctx.accounts.supported_token_program,
                 capacity_amount,
@@ -267,12 +270,16 @@ pub mod restaking {
     pub fn fund_manager_add_normalized_token_pool_supported_token(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
     ) -> Result<()> {
-        modules::normalization::process_add_supported_token(
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.supported_token_lock_account,
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
             &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.supported_token_program,
-        )
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+            .process_add_supported_token(
+                &ctx.accounts.supported_token_lock_account,
+                &ctx.accounts.supported_token_mint,
+                &ctx.accounts.supported_token_program,
+            )
     }
 
     ////////////////////////////////////////////
@@ -487,11 +494,11 @@ pub mod restaking {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
-            &ctx.accounts.user,
-            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
             .process_deposit_sol(
@@ -512,11 +519,11 @@ pub mod restaking {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
-            &ctx.accounts.user,
-            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
             .process_request_withdrawal(
@@ -532,11 +539,11 @@ pub mod restaking {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
-            &ctx.accounts.user,
-            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
             .process_cancel_withdrawal_request(
@@ -549,11 +556,11 @@ pub mod restaking {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
-            &ctx.accounts.user,
-            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?.
             process_withdraw(
@@ -577,11 +584,11 @@ pub mod restaking {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
-            &ctx.accounts.user,
-            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
             .process_deposit_supported_token(

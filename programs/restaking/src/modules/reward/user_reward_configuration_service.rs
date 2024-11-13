@@ -47,7 +47,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
     pub fn process_update_user_reward_account_if_needed(
         &self,
-        system_program: &'a Program<'info, System>,
+        system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
         self.user_reward_account.expand_account_size_if_needed(

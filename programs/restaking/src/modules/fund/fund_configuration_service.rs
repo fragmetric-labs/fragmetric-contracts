@@ -14,6 +14,12 @@ where
     fund_account: &'a mut Account<'info, FundAccount>,
 }
 
+impl Drop for FundConfigurationService<'_, '_> {
+    fn drop(&mut self) {
+        self.fund_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'info, 'a> FundConfigurationService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -27,8 +33,8 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_initialize_fund_account(
         &mut self,
-        receipt_token_program: &'a Program<'info, Token2022>,
-        admin: &Signer<'info>,
+        receipt_token_program: &Program<'info, Token2022>,
+        receipt_token_mint_current_authority: &Signer<'info>,
         bump: u8,
     ) -> Result<()> {
         self.fund_account
@@ -39,7 +45,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
             CpiContext::new(
                 receipt_token_program.to_account_info(),
                 token_2022::SetAuthority {
-                    current_authority: admin.to_account_info(),
+                    current_authority: receipt_token_mint_current_authority.to_account_info(),
                     account_or_mint: self.receipt_token_mint.to_account_info(),
                 },
             ),
@@ -100,12 +106,26 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_add_supported_token(
         &mut self,
+        fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
+        require_keys_eq!(
+            fund_supported_token_account.owner,
+            self.fund_account.key(),
+        );
+        require_keys_eq!(
+            fund_supported_token_account.mint,
+            supported_token_mint.key()
+        );
+        require_keys_eq!(
+            *supported_token_mint.to_account_info().owner,
+            supported_token_program.key()
+        );
+
         self.fund_account.add_supported_token(
             supported_token_mint.key(),
             supported_token_program.key(),
