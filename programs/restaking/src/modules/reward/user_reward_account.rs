@@ -102,7 +102,7 @@ impl UserRewardAccount {
     #[inline(always)]
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
-    ) -> impl Iterator<Item=&mut UserRewardPool> {
+    ) -> impl Iterator<Item = &mut UserRewardPool> {
         self.get_user_reward_pools_mut().iter_mut()
     }
 
@@ -114,7 +114,7 @@ impl UserRewardAccount {
 
     pub(super) fn backfill_not_existing_pools<'a>(
         &mut self,
-        reward_pools: impl Iterator<Item=&'a RewardPool>,
+        reward_pools: impl Iterator<Item = &'a RewardPool>,
     ) -> Result<()> {
         let num_user_reward_pools = self.num_user_reward_pools;
         for reward_pool in reward_pools.skip(num_user_reward_pools as usize) {
@@ -191,7 +191,7 @@ impl UserRewardPool {
     #[inline(always)]
     fn get_reward_settlements_iter_mut(
         &mut self,
-    ) -> impl Iterator<Item=&mut UserRewardSettlement> {
+    ) -> impl Iterator<Item = &mut UserRewardSettlement> {
         self.get_reward_settlements_mut().iter_mut()
     }
 
@@ -277,7 +277,7 @@ impl UserRewardPool {
                                 .and_then(|x| x.checked_div(block_contribution))
                                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
                         )
-                            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
+                        .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
                     })
                     .transpose()?
                     .unwrap_or_default();

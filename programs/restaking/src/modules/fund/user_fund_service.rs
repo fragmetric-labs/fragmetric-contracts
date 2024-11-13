@@ -2,7 +2,7 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::{
     DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
 };
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::modules::{ed25519, reward};
 use crate::utils::PDASeeds;
 use crate::{events, modules};
@@ -23,11 +23,10 @@ where
     fund_account: &'a mut Account<'info, FundAccount>,
     user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
 
-    // TODO: use user_reward_service
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
 
-    current_slot: u64,
+    _current_slot: u64,
     current_timestamp: i64,
 }
 
@@ -52,7 +51,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             user_receipt_token_account,
             reward_account,
             user_reward_account,
-            current_slot: clock.slot,
+            _current_slot: clock.slot,
             current_timestamp: clock.unix_timestamp,
         })
     }
@@ -229,17 +228,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        // TODO: use user reward service
-        reward::update_reward_pools_token_allocation(
-            &mut *self.reward_account.load_mut()?,
-            None,
-            Some(&mut *self.user_reward_account.load_mut()?),
-            vec![self.user_reward_account.key()],
-            self.receipt_token_mint.key(),
-            receipt_token_mint_amount,
-            contribution_accrual_rate,
-            self.current_slot,
-        )
+        RewardService::new(
+            self.receipt_token_mint,
+            self.reward_account,
+        )?
+            .update_reward_pools_token_allocation(
+                None,
+                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                receipt_token_mint_amount,
+                contribution_accrual_rate,
+            )
     }
 
     pub fn process_request_withdrawal(
@@ -297,17 +295,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // reduce user's reward accrual rate
-        // TODO: use user reward service
-        reward::update_reward_pools_token_allocation(
-            &mut *self.reward_account.load_mut()?,
-            Some(&mut *self.user_reward_account.load_mut()?),
-            None,
-            vec![self.user_reward_account.key()],
-            self.receipt_token_mint.key(),
-            receipt_token_amount,
-            None,
-            self.current_slot,
-        )?;
+        RewardService::new(
+            self.receipt_token_mint,
+            self.reward_account,
+        )?
+            .update_reward_pools_token_allocation(
+                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                None,
+                receipt_token_amount,
+                None,
+            )?;
 
         // log withdrawal request event
         emit!(events::UserRequestedWithdrawalFromFund {
@@ -370,17 +367,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        // TODO: use user reward service
-        reward::update_reward_pools_token_allocation(
-            &mut *self.reward_account.load_mut()?,
-            None,
-            Some(&mut *self.user_reward_account.load_mut()?),
-            vec![self.user_reward_account.key()],
-            self.receipt_token_mint.key(),
-            receipt_token_amount,
-            None,
-            self.current_slot,
-        )?;
+        RewardService::new(
+            self.receipt_token_mint,
+            self.reward_account,
+        )?
+            .update_reward_pools_token_allocation(
+                None,
+                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                receipt_token_amount,
+                None,
+            )?;
 
         // log withdrawal request canceled event
         emit!(events::UserCanceledWithdrawalRequestFromFund {

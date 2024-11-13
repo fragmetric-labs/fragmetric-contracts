@@ -31,7 +31,7 @@ pub struct UserRewardAccountInitialContext<'info> {
 }
 
 #[derive(Accounts)]
-pub struct UserRewardContext<'info> {
+pub struct UserRewardAccountUpdateContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -58,26 +58,32 @@ pub struct UserRewardContext<'info> {
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
-impl<'info> UserRewardContext<'info> {
-    pub fn check_user_reward_account_constraint(&self) -> Result<()> {
-        let user_reward_account = &*self.user_reward_account.load()?;
-        require_keys_eq!(
-            user_reward_account.receipt_token_mint,
-            self.receipt_token_mint.key(),
-            anchor_lang::error::ErrorCode::ConstraintHasOne,
-        );
+#[derive(Accounts)]
+pub struct UserRewardContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
 
-        require_keys_eq!(
-            user_reward_account.user,
-            self.user.key(),
-            anchor_lang::error::ErrorCode::ConstraintHasOne,
-        );
+    pub system_program: Program<'info, System>,
 
-        require!(
-            self.user_reward_account.load()?.is_latest_version(),
-            ErrorCode::InvalidDataVersionError,
-        );
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-        Ok(())
-    }
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

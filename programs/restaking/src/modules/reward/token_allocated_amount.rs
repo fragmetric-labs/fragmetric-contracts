@@ -46,7 +46,7 @@ impl TokenAllocatedAmount {
     }
 
     #[inline(always)]
-    fn get_records_iter_mut(&mut self) -> impl Iterator<Item=&mut TokenAllocatedAmountRecord> {
+    fn get_records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
         self.get_records_mut().iter_mut()
     }
 

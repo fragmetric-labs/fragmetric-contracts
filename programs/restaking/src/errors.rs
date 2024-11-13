@@ -75,7 +75,7 @@ pub enum ErrorCode {
     RewardInvalidMetadataDescriptionLengthError,
 
     #[msg("reward: invalid reward type")]
-    RewardInvalidRewardType,
+    RewardInvalidRewardTypeError,
 
     #[msg("reward: already existing holder")]
     RewardAlreadyExistingHolderError,

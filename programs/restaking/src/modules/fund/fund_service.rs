@@ -28,7 +28,7 @@ impl<'info, 'a> FundService<'info, 'a> {
     }
 
     // TODO: receive pricing service "to extend pricing source/calculator"?
-    pub fn create_pricing_source_map(&self) -> Result<TokenPricingSourceMap<'info>> {
+    pub(in crate::modules) fn create_pricing_source_map(&self) -> Result<TokenPricingSourceMap<'info>> {
         let mints_and_pricing_sources = self
             .fund_account
             .supported_tokens

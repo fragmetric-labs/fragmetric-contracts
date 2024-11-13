@@ -1,24 +1,31 @@
-mod processor;
-
-pub use processor::*;
-
-mod allocated_amount;
-mod metadata;
+mod reward;
 mod reward_account;
+mod reward_configuration_service;
+mod reward_pool;
+mod reward_pool_holder;
+mod reward_service;
 mod reward_settlement;
+mod token_allocated_amount;
 mod user_reward_account;
+mod user_reward_configuration_service;
 mod user_reward_settlement;
 
-pub use allocated_amount::*;
-pub use metadata::*;
+pub use reward::*;
 pub use reward_account::*;
+pub use reward_configuration_service::*;
+pub use reward_pool::*;
+pub use reward_pool_holder::*;
+pub use reward_service::*;
 pub use reward_settlement::*;
+pub use token_allocated_amount::*;
 pub use user_reward_account::*;
+pub use user_reward_configuration_service::*;
 pub use user_reward_settlement::*;
 
 #[cfg(test)]
 pub mod check_account_init_space {
     use super::*;
+    use crate::modules::reward::reward_pool::RewardPool;
 
     pub const CHECK_REWARD_ACCOUNT_SIZE: usize = std::mem::size_of::<RewardAccount>(); // 342064 ~= 335KB
     pub const CHECK_REWARD_POOL_SIZE: usize = std::mem::size_of::<RewardPool>(); // 83440 ~= 81.5KiB
