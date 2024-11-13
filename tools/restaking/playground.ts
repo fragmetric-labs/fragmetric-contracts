@@ -127,6 +127,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLJitoVaultConfig = this.getConstantAsPublicKey('fragsolJitoVaultConfigAddress');
         const fragSOLJitoVaultAccount = this.getConstantAsPublicKey('fragsolJitoVaultAccountAddress');
         const fragSOLJitoVRTMint = this.getConstantAsPublicKey('fragsolJitoVaultReceiptTokenMintAddress');
+        const vaultUpdateStateTracker = (slot: anchor.BN, epoch_length: anchor.BN) => {
+            let ncn_epoch = slot.div(epoch_length).toBuffer('le', 8);
+            return web3.PublicKey.findProgramAddressSync([Buffer.from('vault_update_state_tracker'), fragSOLJitoVaultAccount.toBuffer(), ncn_epoch], jitoVaultProgram)[0];
+        }
         const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
         const vaultWithdrawalTicketAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoVaultAccount.toBuffer(), vaultBaseAccount1.toBuffer()], jitoVaultProgram)[0];
         const vaultWithdrawalTicketTokenAccount1 = spl.getAssociatedTokenAddressSync(
@@ -207,6 +211,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLFundJitoFeeVRTAccount,
             fragSOLFundJitoVRTAccount,
             fragSOLJitoVaultNSOLAccount,
+            vaultUpdateStateTracker,
             vaultBaseAccount1,
             vaultWithdrawalTicketAccount1,
             vaultWithdrawalTicketTokenAccount1,
@@ -1588,6 +1593,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             logger.notice(`operator run#1: normalized lst ${symbol}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
         }
 
+        let currentSlot = await this.connection.getSlot('confirmed');
         const cmd2Accounts: web3.AccountMeta[] = [
             // normalize
             {
@@ -1646,6 +1652,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 isWritable: true,
             },
             {
+                // jito_vault_update_state_tracker
+                pubkey: this.knownAddress.vaultUpdateStateTracker(
+                    new anchor.BN(currentSlot),
+                    new anchor.BN(32), // TODO now hard-code but use jito vault config
+                ),
+                isSigner: false,
+                isWritable: true,
+            },
+            {
                 // jito_vault_fee_receipt_token_account
                 pubkey: this.knownAddress.fragSOLFundJitoFeeVRTAccount,
                 isSigner: false,
@@ -1656,6 +1671,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 pubkey: this.knownAddress.fragSOLFundJitoVRTAccount,
                 isSigner: false,
                 isWritable: true,
+            },
+            {
+                // system_program
+                pubkey: web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
             },
             ...this.pricingSourceAccounts,
         ];
@@ -1794,6 +1815,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await new Promise((resolve) => setTimeout(resolve, 1000 * 30));
         logger.notice(`start burn_withdrawal_ticket`);
 
+        currentSlot = await this.connection.getSlot('confirmed');
         const cmd4Accounts: web3.AccountMeta[] = [
             // normalize
             {
@@ -1842,6 +1864,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             {
                 // jito_vault_supported_token_account
                 pubkey: this.knownAddress.fragSOLJitoVaultNSOLAccount,
+                isSigner: false,
+                isWritable: true,
+            },
+            {
+                // jito_vault_update_state_tracker
+                pubkey: this.knownAddress.vaultUpdateStateTracker(
+                    new anchor.BN(currentSlot),
+                    new anchor.BN(32), // TODO now hard-code but use jito vault config
+                ),
                 isSigner: false,
                 isWritable: true,
             },

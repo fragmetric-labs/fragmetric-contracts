@@ -10,8 +10,10 @@ use anchor_lang::{prelude::*, solana_program, CheckOwner};
 use anchor_spl::token::accessor::mint;
 use anchor_spl::token::{transfer, Token};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use jito_vault_core::vault::Vault;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 use jito_vault_core::config::Config;
+use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
 use std::clone;
 use anchor_lang::prelude::borsh::BorshDeserialize;
 use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::curve25519::scalar::Zeroable;
@@ -25,7 +27,7 @@ pub fn process_run<'info>(
     fund_account: &mut Account<'info, fund::FundAccount>,
     remaining_accounts: &'info [AccountInfo<'info>],
     _current_timestamp: i64,
-    _current_slot: u64,
+    current_slot: u64,
     command: u8, // 0, 1, 2
 ) -> Result<()> {
     // temporary authorization
@@ -268,8 +270,10 @@ pub fn process_run<'info>(
         jito_vault_receipt_token_mint,
         jito_vault_receipt_token_program,
         jito_vault_supported_token_account,
+        jito_vault_update_state_tracker,
         jito_vault_fee_receipt_token_account,
         fund_jito_vault_receipt_token_account,
+        system_program,
         ..,
         ] = remaining_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys)?;
@@ -284,17 +288,60 @@ pub fn process_run<'info>(
                 parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
             let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
 
+            let ctx = restaking::jito::JitoRestakingVaultContext {
+                vault_program: jito_vault_program.clone(),
+                vault_config: jito_vault_config.clone(),
+                vault: jito_vault_account.clone(),
+                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+                vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
+                vault_supported_token_mint: normalized_token_mint.clone(),
+                vault_supported_token_program: normalized_token_program.clone(),
+                vault_supported_token_account: jito_vault_supported_token_account.clone(),
+            };
+
+            let (current_epoch, updated_epoch) = calculate_epoch(jito_vault_account, jito_vault_config, current_slot)?;
+            if current_epoch > updated_epoch {
+                let rent = Rent::get()?;
+                let current_lamports = jito_vault_update_state_tracker.get_lamports();
+                let space = 8usize.checked_add(std::mem::size_of::<VaultUpdateStateTracker>()).unwrap();
+                let required_lamports = rent
+                    .minimum_balance(space)
+                    .max(1)
+                    .saturating_sub(current_lamports);
+                let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
+                    &operator.key(),
+                    &jito_vault_update_state_tracker.key(),
+                    required_lamports,
+                );
+        
+                anchor_lang::solana_program::program::invoke(
+                    &transfer_instruction,
+                    &[
+                        operator.to_account_info(),
+                        jito_vault_update_state_tracker.to_account_info(),
+                        system_program.to_account_info(),
+                    ],
+                )?;
+    
+                restaking::jito::initialize_vault_update_state_tracker(
+                    &ctx,
+                    fund_account.as_ref(),
+                    &[fund_account.get_signer_seeds().as_ref()],
+                    jito_vault_update_state_tracker,
+                    system_program,
+                )?;
+        
+                restaking::jito::close_vault_update_state_tracker(
+                    &ctx,
+                    fund_account.as_ref(),
+                    &[fund_account.get_signer_seeds().as_ref()],
+                    jito_vault_update_state_tracker,
+                    current_epoch,
+                )?;
+            }
+            
             restaking::jito::deposit(
-                &restaking::jito::JitoRestakingVaultContext {
-                    vault_program: jito_vault_program.clone(),
-                    vault_config: jito_vault_config.clone(),
-                    vault: jito_vault_account.clone(),
-                    vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-                    vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-                    vault_supported_token_mint: normalized_token_mint.clone(),
-                    vault_supported_token_program: normalized_token_program.clone(),
-                    vault_supported_token_account: jito_vault_supported_token_account.clone(),
-                },
+                &ctx,
                 fund_normalized_token_account, // supported_token_account,
                 restaking_nt_amount, // supported_token_amount_in,
 
@@ -418,6 +465,7 @@ pub fn process_run<'info>(
         jito_vault_receipt_token_mint,
         jito_vault_receipt_token_program,
         jito_vault_supported_token_account,
+        jito_vault_update_state_tracker,
         jito_vault_withdrawal_ticket,
         jito_vault_withdrawal_ticket_token_account,
         fund_jito_vault_supported_token_account,
@@ -428,17 +476,60 @@ pub fn process_run<'info>(
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };
 
+        let ctx = restaking::jito::JitoRestakingVaultContext {
+            vault_program: jito_vault_program.clone(),
+            vault_config: jito_vault_config.clone(),
+            vault: jito_vault_account.clone(),
+            vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+            vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
+            vault_supported_token_mint: normalized_token_mint.clone(),
+            vault_supported_token_program: normalized_token_program.clone(),
+            vault_supported_token_account: jito_vault_supported_token_account.clone(),
+        };
+
+        let (current_epoch, updated_epoch) = calculate_epoch(jito_vault_account, jito_vault_config, current_slot)?;
+        if current_epoch > updated_epoch {
+            let rent = Rent::get()?;
+            let current_lamports = jito_vault_update_state_tracker.get_lamports();
+            let space = 8usize.checked_add(std::mem::size_of::<VaultUpdateStateTracker>()).unwrap();
+            let required_lamports = rent
+                .minimum_balance(space)
+                .max(1)
+                .saturating_sub(current_lamports);
+            let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
+                &operator.key(),
+                &jito_vault_update_state_tracker.key(),
+                required_lamports,
+            );
+    
+            anchor_lang::solana_program::program::invoke(
+                &transfer_instruction,
+                &[
+                    operator.to_account_info(),
+                    jito_vault_update_state_tracker.to_account_info(),
+                    system_program.to_account_info(),
+                ],
+            )?;
+
+            restaking::jito::initialize_vault_update_state_tracker(
+                &ctx,
+                fund_account.as_ref(),
+                &[fund_account.get_signer_seeds().as_ref()],
+                jito_vault_update_state_tracker,
+                system_program,
+            )?;
+    
+            restaking::jito::close_vault_update_state_tracker(
+                &ctx,
+                fund_account.as_ref(),
+                &[fund_account.get_signer_seeds().as_ref()],
+                jito_vault_update_state_tracker,
+                current_epoch,
+            )?;
+        }
+        
         restaking::jito::withdraw(
-            &restaking::jito::JitoRestakingVaultContext {
-                vault_program: jito_vault_program.clone(),
-                vault_config: jito_vault_config.clone(),
-                vault: jito_vault_account.clone(),
-                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-                vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-                vault_supported_token_mint: normalized_token_mint.clone(),
-                vault_supported_token_program: normalized_token_program.clone(),
-                vault_supported_token_account: jito_vault_supported_token_account.clone(),
-            },
+            &ctx,
             jito_vault_withdrawal_ticket, // vault_withdrawal_ticket
             jito_vault_withdrawal_ticket_token_account, // vault_withdrawal_ticket_token_account
             fund_jito_vault_supported_token_account,
@@ -455,4 +546,22 @@ pub fn process_run<'info>(
     });
 
     Ok(())
+}
+
+#[inline(never)]
+fn calculate_epoch(
+    vault: &AccountInfo,
+    vault_config: &AccountInfo,
+    current_slot: u64,
+) -> Result<(u64, u64)> {
+    let epoch_length = Config::try_from_slice_unchecked(&vault_config.try_borrow_data()?)?.epoch_length();
+
+    let current_epoch = current_slot.checked_div(epoch_length)
+        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+
+    let updated_slot = Vault::try_from_slice_unchecked(&vault.try_borrow_data()?)?.last_full_state_update_slot();
+    let updated_epoch = updated_slot.checked_div(epoch_length)
+        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+
+    Ok((current_epoch, updated_epoch))
 }

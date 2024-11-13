@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::{invoke_signed};
+use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::mint;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
@@ -7,10 +7,11 @@ use jito_vault_sdk;
 use super::*;
 
 
-fn initialize_vault_update_state_tracker<'info>(
+pub fn initialize_vault_update_state_tracker<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
     signer: &AccountInfo<'info>,
-    vault_update_state_tracker: AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]],
+    vault_update_state_tracker: &AccountInfo<'info>,
     system_program: &AccountInfo<'info>
 ) -> Result<()> {
     let initialize_vault_update_state_tracker_ix = jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
@@ -32,16 +33,17 @@ fn initialize_vault_update_state_tracker<'info>(
             signer.clone(),
             system_program.clone()
         ],
-        &[],
+        signer_seeds,
     )?;
 
     Ok(())
 }
 
-fn close_vault_update_state_tracker<'info>(
+pub fn close_vault_update_state_tracker<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
     signer: &AccountInfo<'info>,
-    vault_update_state_tracker: AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]],
+    vault_update_state_tracker: &AccountInfo<'info>,
     ncn_epoch: u64
 ) -> Result<()> {
     let close_vault_update_state_tracker_ix = jito_vault_sdk::sdk::close_vault_update_state_tracker(
@@ -62,7 +64,7 @@ fn close_vault_update_state_tracker<'info>(
             vault_update_state_tracker.clone(),
             signer.clone(),
         ],
-        &[],
+        signer_seeds,
     )?;
 
     Ok(())

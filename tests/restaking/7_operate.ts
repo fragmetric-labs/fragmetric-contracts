@@ -36,7 +36,8 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         logger.info(`after: nSOLSupportedTokens=${nSOLPool1.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint1.supply.toString()}`);
         logger.info(`after: jitoVaultNSOL=${jitoVaultNSOLBalance1.toString()}`);
         expect(fragSOLFundExecutionReservedAccountBalance1.toString()).eq('0', 'execution reserved should be zero after operation');
-        expect(jitoVaultNSOLBalance1.toString()).eq(nSOLMint1.supply.toString(), 'for now, all nSOL is being deposited to jito vault');
+        const fee = (x: bigint) => BigInt(i) * (x - x * BigInt(999) / BigInt(1000));
+        expect(jitoVaultNSOLBalance1.toString()).eq(fee(nSOLMint1.supply).toString(), 'for now, all nSOL is being deposited to jito vault');
 
         const stakedSOLAmount = fragSOLFund0.solOperationReservedAmount.sub(fragSOLFund1.solOperationReservedAmount);
         expect(stakedSOLAmount.gt(new BN(0))).eq(true, 'executed amount should be greater than zero');
