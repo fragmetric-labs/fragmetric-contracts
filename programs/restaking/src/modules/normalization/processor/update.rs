@@ -5,6 +5,7 @@ use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 use crate::modules::normalization::*;
 use crate::utils::PDASeeds;
 
+#[inline]
 pub fn process_add_supported_token<'info>(
     supported_token_mint: &InterfaceAccount<Mint>,
     supported_token_lock_account: &InterfaceAccount<'info, TokenAccount>,

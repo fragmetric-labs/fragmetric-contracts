@@ -183,4 +183,13 @@ impl SupportedToken {
 
         Ok(())
     }
+
+    pub(super) fn unlock_token(&mut self, token_amount: u64) -> Result<()> {
+        self.locked_amount = self
+            .locked_amount
+            .checked_sub(token_amount)
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotEnoughLockedToken))?;
+
+        Ok(())
+    }
 }
