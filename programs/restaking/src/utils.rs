@@ -178,3 +178,49 @@ where
 {
     InterfaceAccount::try_from(account).map(Box::new)
 }
+
+#[inline(never)]
+pub fn parse_optional_account_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Option<Box<Account<'info, T>>>>
+where
+    T: AccountSerialize + AccountDeserialize + Clone + Owner,
+{
+    match Account::try_from(account) {
+        Ok(account) => Ok(Some(Box::new(account))),
+        Err(Error::AnchorError(anchor_err))
+            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+#[inline(never)]
+pub fn parse_optional_interface_account_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Option<Box<InterfaceAccount<'info, T>>>>
+where
+    T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
+{
+    match InterfaceAccount::try_from(account) {
+        Ok(account) => Ok(Some(Box::new(account))),
+        Err(Error::AnchorError(anchor_err))
+            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+#[inline(never)]
+pub fn parse_optional_account_loader_boxed<'info, T>(
+    account: &'info AccountInfo<'info>,
+) -> Result<Option<Box<AccountLoader<'info, T>>>>
+where
+    T:  ZeroCopyHeader + Owner + Clone,
+{
+    match AccountLoader::try_from(account) {
+        Ok(account) => Ok(Some(Box::new(account))),
+        Err(Error::AnchorError(anchor_err))
+            if anchor_err.error_code_number == <ErrorCode as Into<u32>>::into(ErrorCode::AccountDiscriminatorNotFound) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+

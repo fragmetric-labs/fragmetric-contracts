@@ -33,10 +33,6 @@ impl<'info, 'a> RewardService<'info, 'a> {
             .load_mut()?
             .update_reward_pools(self.current_slot)?;
 
-        self.emit_operator_updated_reward_pools_event()
-    }
-
-    fn emit_operator_updated_reward_pools_event(&self) -> Result<()> {
         emit!(events::OperatorUpdatedRewardPools {
             receipt_token_mint: self.receipt_token_mint.key(),
             reward_account_address: self.reward_account.key(),
@@ -45,37 +41,29 @@ impl<'info, 'a> RewardService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_update_user_reward_pools(
-        &self,
-        user_reward_account: &mut AccountLoader<UserRewardAccount>,
-    ) -> Result<()> {
-        self.reward_account
-            .load_mut()?
-            .update_user_reward_pools(&mut *user_reward_account.load_mut()?, self.current_slot)
-
-        // no events required practically...
-        // emit!(UserUpdatedRewardPool::new(
-        //     receipt_token_mint.key(),
-        //     vec![update],
-        // ));
-    }
-
-    pub fn process_claim_user_rewards(
-        &self,
-        _user_reward_account: &mut AccountLoader<UserRewardAccount>,
-    ) -> Result<()> {
-        unimplemented!()
-    }
-
     pub(in crate::modules) fn update_reward_pools_token_allocation(
         &self,
-        from: Option<(Pubkey, &mut UserRewardAccount)>,
-        to: Option<(Pubkey, &mut UserRewardAccount)>,
+        from_user_reward_account: Option<&'a mut AccountLoader<'info, UserRewardAccount>>,
+        to_user_reward_account: Option<&'a mut AccountLoader<'info, UserRewardAccount>>,
         amount: u64,
         contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {
-        let (from_key, from_account) = from.unzip();
-        let (to_key, to_account) = to.unzip();
+        let from_key = from_user_reward_account
+            .as_ref()
+            .map(|account_loader| account_loader.key());
+        let to_key = to_user_reward_account
+            .as_ref()
+            .map(|account_loader| account_loader.key());
+
+        let mut from_account_ref = from_user_reward_account
+            .map(|loader| loader.load_mut())
+            .transpose()?;
+        let from_account = from_account_ref.as_mut().map(|account| &mut **account);
+
+        let mut to_account_ref = to_user_reward_account
+            .map(|loader| loader.load_mut())
+            .transpose()?;
+        let to_account = to_account_ref.as_mut().map(|account| &mut **account);
 
         self.reward_account
             .load_mut()?

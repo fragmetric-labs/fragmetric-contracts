@@ -421,9 +421,10 @@ pub mod restaking {
         modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            ctx.remaining_accounts,
         )?
-            .process_update_prices()
+            .process_update_prices(
+                ctx.remaining_accounts,
+            )
     }
 
     ////////////////////////////////////////////
@@ -637,13 +638,12 @@ pub mod restaking {
     pub fn user_update_reward_pools(
         ctx: Context<UserRewardContext>,
     ) -> Result<()> {
-        modules::reward::RewardService::new(
+        modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.user_reward_account,
         )?
-            .process_update_user_reward_pools(
-                &mut ctx.accounts.user_reward_account,
-            )
+            .process_update_user_reward_pools()
     }
 
     #[allow(unused_variables)]
@@ -652,13 +652,12 @@ pub mod restaking {
         reward_pool_id: u8,
         reward_id: u8,
     ) -> Result<()> {
-        modules::reward::RewardService::new(
+        modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.user_reward_account,
         )?
-            .process_claim_user_rewards(
-                &mut ctx.accounts.user_reward_account,
-            )
+            .process_claim_user_rewards()
     }
 
     ////////////////////////////////////////////
@@ -666,10 +665,22 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(
-        ctx: Context<UserReceiptTokenTransferContext>,
+    pub fn token_transfer_hook<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserReceiptTokenTransferContext<'info>>,
         amount: u64,
     ) -> Result<()> {
-        UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
+        ctx.accounts.assert_is_transferring()?;
+
+        modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+            .process_transfer_hook(
+                &mut ctx.accounts.reward_account,
+                &mut ctx.accounts.source_receipt_token_account,
+                &mut ctx.accounts.destination_receipt_token_account,
+                ctx.remaining_accounts,
+                amount,
+            )
     }
 }

@@ -83,8 +83,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // calculate receipt token minting amount
         // TODO: use pricing module for checking update, calculating amount
-        FundService::new(self.receipt_token_mint, self.fund_account, pricing_sources)?
-            .update_asset_prices()?;
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_prices(pricing_sources)?;
         let receipt_token_mint_amount = crate::utils::get_proportional_amount(
             sol_amount,
             self.receipt_token_mint.supply,
@@ -153,8 +153,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // calculate receipt token minting amount
         // TODO: use pricing module for checking update, calculating amount
-        FundService::new(self.receipt_token_mint, self.fund_account, pricing_sources)?
-            .update_asset_prices()?;
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_prices(pricing_sources)?;
         let receipt_token_mint_amount = crate::utils::get_proportional_amount(
             self.fund_account
                 .get_supported_token(supported_token_mint.key())?
@@ -228,13 +228,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        RewardService::new(
-            self.receipt_token_mint,
-            self.reward_account,
-        )?
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 None,
-                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                Some(self.user_reward_account),
                 receipt_token_mint_amount,
                 contribution_accrual_rate,
             )
@@ -295,12 +292,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // reduce user's reward accrual rate
-        RewardService::new(
-            self.receipt_token_mint,
-            self.reward_account,
-        )?
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
-                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                Some(self.user_reward_account),
                 None,
                 receipt_token_amount,
                 None,
@@ -367,13 +361,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .sync_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        RewardService::new(
-            self.receipt_token_mint,
-            self.reward_account,
-        )?
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 None,
-                Some((self.user_reward_account.key(), &mut *self.user_reward_account.load_mut()?)),
+                Some(self.user_reward_account),
                 receipt_token_amount,
                 None,
             )?;

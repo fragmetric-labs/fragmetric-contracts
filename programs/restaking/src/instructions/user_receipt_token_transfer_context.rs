@@ -12,7 +12,6 @@ use anchor_spl::{
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::events::UserTransferredReceiptToken;
 use crate::modules::{fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
@@ -57,77 +56,17 @@ pub struct UserReceiptTokenTransferContext<'info> {
 
     #[account(
         mut,
-        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), source_receipt_token_account.owner.as_ref()],
-        bump,
-    )]
-    /// CHECK: will be deserialized in runtime
-    pub source_fund_account: UncheckedAccount<'info>,
-
-    #[account(
-        mut,
-        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), destination_receipt_token_account.owner.as_ref()],
-        bump,
-    )]
-    /// CHECK: will be deserialized in runtime
-    pub destination_fund_account: UncheckedAccount<'info>,
-
-    #[account(
-        mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
         constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
-
-    #[account(
-        mut,
-        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), source_receipt_token_account.owner.as_ref()],
-        bump,
-    )]
-    /// CHECK: will be deserialized in runtime
-    pub source_reward_account: UncheckedAccount<'info>,
-
-    #[account(
-        mut,
-        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), destination_receipt_token_account.owner.as_ref()],
-        bump,
-    )]
-    /// CHECK: will be deserialized in runtime
-    pub destination_reward_account: UncheckedAccount<'info>,
+    // remaining extra accounts shall be provided through remaining_accounts
 }
 
 impl<'info> UserReceiptTokenTransferContext<'info> {
-    pub fn handle_transfer(ctx: Context<Self>, amount: u64) -> Result<()> {
-        ctx.accounts.assert_is_transferring()?;
-
-        /* token transfer is temporarily disabled */
-        err!(ErrorCode::TokenNotTransferableError)?;
-
-        let receipt_token_mint = ctx.accounts.receipt_token_mint.key();
-        emit!(UserTransferredReceiptToken {
-            receipt_token_mint,
-            transferred_receipt_token_amount: amount,
-            source_receipt_token_account: ctx.accounts.source_receipt_token_account.key(),
-            source: ctx.accounts.source_receipt_token_account.owner,
-            source_fund_account: UserFundAccount::placeholder(
-                ctx.accounts.source_fund_account.key(),
-                receipt_token_mint,
-                ctx.accounts.source_receipt_token_account.amount,
-            ),
-            destination_receipt_token_account: ctx.accounts.destination_receipt_token_account.key(),
-            destination: ctx.accounts.destination_receipt_token_account.owner,
-            destination_fund_account: UserFundAccount::placeholder(
-                ctx.accounts.destination_fund_account.key(),
-                receipt_token_mint,
-                ctx.accounts.destination_receipt_token_account.amount,
-            ),
-        });
-
-        Ok(())
-    }
-
-    fn assert_is_transferring(&self) -> Result<()> {
+    pub fn assert_is_transferring(&self) -> Result<()> {
         let source_token_account_info = self.source_receipt_token_account.to_account_info();
         let mut account_data_ref = source_token_account_info.try_borrow_mut_data()?;
         let mut account = PodStateWithExtensionsMut::<PodAccount>::unpack(*account_data_ref)?;
@@ -139,34 +78,4 @@ impl<'info> UserReceiptTokenTransferContext<'info> {
 
         Ok(())
     }
-
-    /*
-    fn update_reward_pools(
-        receipt_token_mint: Pubkey,
-        amount: u64,
-        reward_account: &mut RewardAccount,
-        source_reward_account: &mut UserRewardAccount,
-        destination_reward_account: &mut UserRewardAccount,
-    ) -> Result<()> {
-        let current_slot = Clock::get()?.slot;
-
-        let (from_user_update, to_user_update) = reward_account
-            .update_reward_pools_token_allocation(
-                receipt_token_mint,
-                amount,
-                None,
-                Some(source_reward_account),
-                Some(destination_reward_account),
-                current_slot,
-            )?;
-
-        emit!(UserUpdatedRewardPool::new(
-            receipt_token_mint,
-            from_user_update,
-            to_user_update
-        ));
-
-        Ok(())
-    }
-    */
 }

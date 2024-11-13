@@ -128,8 +128,8 @@ pub fn process_run<'info>(
 
         // create pricing calculator
         // TODO fix `create_pricing_source_map`
-        let mut pricing_source_map = fund::FundService::new(receipt_token_mint, fund_account, pricing_source_accounts)?
-                .create_pricing_source_map()?;
+        let mut pricing_source_map = fund::FundService::new(receipt_token_mint, fund_account)?
+                .create_pricing_source_map(pricing_source_accounts)?;
 
         pricing_source_map.insert(
             normalized_token_mint.key(),

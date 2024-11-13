@@ -62,7 +62,18 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
             false, // is_signer,
             true,  // is_writable
         )?,
-        // index 6, source user fund account
+        // index 6, reward account
+        ExtraAccountMeta::new_with_seeds(
+            &[
+                Seed::Literal {
+                    bytes: RewardAccount::SEED.to_vec(),
+                },
+                Seed::AccountKey { index: 1 }, // receipt_token_mint
+            ],
+            false, // is_signer
+            true,  // is_writable
+        )?,
+        // index 7, source user fund account
         ExtraAccountMeta::new_with_seeds(
             &[
                 Seed::Literal {
@@ -78,34 +89,7 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
             false, // is_signer
             true,  // is_writable
         )?,
-        // index 7, destination user fund account
-        ExtraAccountMeta::new_with_seeds(
-            &[
-                Seed::Literal {
-                    bytes: UserFundAccount::SEED.to_vec(),
-                },
-                Seed::AccountKey { index: 1 }, // receipt_token_mint
-                Seed::AccountData {
-                    account_index: 2,
-                    data_index: 32,
-                    length: 32,
-                }, // destination_token_account.owner
-            ],
-            false, // is_signer
-            true,  // is_writable
-        )?,
-        // index 8, reward account
-        ExtraAccountMeta::new_with_seeds(
-            &[
-                Seed::Literal {
-                    bytes: RewardAccount::SEED.to_vec(),
-                },
-                Seed::AccountKey { index: 1 }, // receipt_token_mint
-            ],
-            false, // is_signer
-            true,  // is_writable
-        )?,
-        // index 9, source user reward account
+        // index 8, source user reward account
         ExtraAccountMeta::new_with_seeds(
             &[
                 Seed::Literal {
@@ -117,6 +101,22 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
                     data_index: 32,
                     length: 32,
                 }, // source_token_account.owner
+            ],
+            false, // is_signer
+            true,  // is_writable
+        )?,
+        // index 9, destination user fund account
+        ExtraAccountMeta::new_with_seeds(
+            &[
+                Seed::Literal {
+                    bytes: UserFundAccount::SEED.to_vec(),
+                },
+                Seed::AccountKey { index: 1 }, // receipt_token_mint
+                Seed::AccountData {
+                    account_index: 2,
+                    data_index: 32,
+                    length: 32,
+                }, // destination_token_account.owner
             ],
             false, // is_signer
             true,  // is_writable

@@ -116,8 +116,8 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
 
         // TODO: get pricing service or?
         // validate pricing source
-        FundService::new(self.receipt_token_mint, self.fund_account, pricing_sources)?
-            .update_asset_prices()?;
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_prices(pricing_sources)?;
 
         self.emit_fund_manager_updated_fund_event()
     }

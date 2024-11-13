@@ -27,7 +27,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
             .assert_withdrawal_threshold_satisfied(current_timestamp)?;
     }
 
-    fund::FundService::new(receipt_token_mint, fund_account, pricing_sources)?.update_asset_prices()?;
+    fund::FundService::new(receipt_token_mint, fund_account)?.update_asset_prices(pricing_sources)?;
 
     fund_account
         .withdrawal
