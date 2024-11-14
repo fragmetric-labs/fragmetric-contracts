@@ -59,8 +59,8 @@ pub enum ErrorCode {
     #[msg("fund: withdrawal request is already in progress")]
     FundProcessingWithdrawalRequestError,
 
-    #[msg("fund: token pricing source is not found")]
-    FundTokenPricingSourceNotFoundException,
+    #[msg("pricing: token pricing source is not found")]
+    TokenPricingSourceAccountNotFoundException,
 
     #[msg("operation: job unmet threshold")]
     OperatorJobUnmetThresholdError,

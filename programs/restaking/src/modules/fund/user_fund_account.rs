@@ -56,9 +56,8 @@ impl UserFundAccount {
         self.initialize(self.bump, receipt_token_mint, user);
     }
 
-    // TODO visibility is currently set to `crate` due to transfer hook
     // create a placeholder to emit event for non existing user account
-    pub(crate) fn placeholder(
+    pub(super) fn placeholder(
         user: Pubkey,
         receipt_token_mint: Pubkey,
         receipt_token_amount: u64,

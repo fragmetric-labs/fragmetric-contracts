@@ -3,6 +3,8 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
+use crate::modules::pricing;
+use crate::modules::pricing::PricingService;
 use crate::utils::PDASeeds;
 
 use super::*;
@@ -35,23 +37,6 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         })
     }
 
-    // TODO: deprecate in favor of pricing service
-    pub(in crate::modules) fn get_denominated_amount_per_normalized_token(&self) -> Result<u64> {
-        10u64
-            .checked_pow(self.normalized_token_mint.decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-
-    // TODO: deprecate in favor of pricing service
-    fn get_denominated_amount_per_supported_token(
-        &self,
-        supported_token_mint: &InterfaceAccount<'info, Mint>,
-    ) -> Result<u64> {
-        10u64
-            .checked_pow(supported_token_mint.decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-
     pub(in crate::modules) fn normalize_supported_token(
         &mut self,
         to_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
@@ -65,9 +50,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         supported_token_amount: u64,
 
-        // TODO: deprecate, using pricing service
-        supported_token_amount_as_sol: u64,
-        one_normalized_token_as_sol: u64,
+        pricing_service: &PricingService,
     ) -> Result<()> {
         require_keys_eq!(
             pool_supported_token_account.owner,
@@ -75,12 +58,12 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         );
         require_gt!(supported_token_amount, 0);
 
-        let normalized_token_amount = crate::utils::get_proportional_amount(
+        let supported_token_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?;
+        let normalized_token_amount = pricing_service.get_sol_amount_as_token(
+            &self.normalized_token_mint.key(),
             supported_token_amount_as_sol,
-            self.get_denominated_amount_per_normalized_token()?,
-            one_normalized_token_as_sol,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        )?;
 
         self.normalized_token_pool_account
             .get_supported_token_mut(supported_token_mint.key())?
@@ -133,9 +116,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         normalized_token_amount: u64,
 
-        // TODO: deprecate
-        normalized_token_amount_as_sol: u64,
-        one_supported_token_as_sol: u64,
+        pricing_service: &PricingService,
     ) -> Result<()> {
         require_keys_eq!(
             pool_supported_token_account.owner,
@@ -143,12 +124,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         );
         require_gt!(normalized_token_amount, 0);
 
-        let supported_token_amount = crate::utils::get_proportional_amount(
-            normalized_token_amount_as_sol,
-            self.get_denominated_amount_per_supported_token(supported_token_mint)?,
-            one_supported_token_as_sol,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let normalized_token_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
+        let supported_token_amount = pricing_service
+            .get_sol_amount_as_token(&supported_token_mint.key(), normalized_token_amount_as_sol)?;
 
         self.normalized_token_pool_account
             .get_supported_token_mut(supported_token_mint.key())?

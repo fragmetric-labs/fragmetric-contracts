@@ -18,24 +18,14 @@ pub struct FundAccountInfo {
 }
 
 impl FundAccountInfo {
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn from(
         fund_account: &Account<FundAccount>,
         receipt_token_mint: &InterfaceAccount<Mint>,
     ) -> Self {
-        // TODO: use pricing service or.. add one_receipt_token_as_sol to fund account?
-        let one_receipt_token_as_sol = crate::utils::get_proportional_amount(
-            10u64
-                .checked_pow(receipt_token_mint.decimals as u32)
-                .unwrap(),
-            fund_account.get_assets_total_amount_as_sol().unwrap(),
-            receipt_token_mint.supply,
-        )
-        .unwrap();
-
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
-            one_receipt_token_as_sol,
+            one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             receipt_token_supply_amount: receipt_token_mint.supply,
             supported_tokens: fund_account.supported_tokens.iter().cloned().collect(),
             sol_capacity_amount: fund_account.sol_capacity_amount,

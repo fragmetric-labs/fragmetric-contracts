@@ -1,9 +1,10 @@
+use super::*;
+use crate::modules::pricing;
+use crate::modules::pricing::PricingService;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
 use anchor_spl::token::{spl_token, Token};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-
-use super::*;
 
 pub struct NormalizedTokenPoolConfigurationService<'info, 'a>
 where
@@ -82,8 +83,8 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             supported_token_mint.key(),
             supported_token_program.key(),
             pool_supported_token_account.key(),
-        )
+        )?;
 
-        // TODO: do pricing for validation
+        Ok(())
     }
 }

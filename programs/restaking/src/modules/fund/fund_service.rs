@@ -4,7 +4,7 @@ use crate::modules::fund::{
     FundAccount, FundAccountInfo, UserFundAccount, UserFundConfigurationService,
 };
 use crate::modules::pricing;
-use crate::modules::pricing::TokenPricingSourceMap;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils;
 use anchor_lang::prelude::*;
@@ -44,26 +44,63 @@ impl<'info, 'a> FundService<'info, 'a> {
         })
     }
 
-    // TODO: receive pricing service "to extend pricing source/calculator"?
-    pub(in crate::modules) fn create_pricing_source_map(
-        &self,
-        pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<TokenPricingSourceMap<'info>> {
-        let mints_and_pricing_sources = self
-            .fund_account
-            .supported_tokens
-            .iter()
-            .map(|token| (token.get_mint(), token.get_pricing_source()))
-            .collect();
+    // create a pricing service and register fund assets' value resolvers
+    pub(in crate::modules) fn new_pricing_service(
+        &mut self,
+        pricing_sources: &[AccountInfo<'info>],
+    ) -> Result<PricingService<'info>> {
+        // ensure any update on fund account written before do pricing
+        self.fund_account.exit(&crate::ID)?;
 
-        pricing::create_pricing_source_map(mints_and_pricing_sources, pricing_sources)
+        let mut pricing_service = PricingService::new(pricing_sources)?;
+        pricing_service
+            .register_token_pricing_source_account(self.fund_account.as_ref())
+            .register_token_pricing_source_account(self.receipt_token_mint.as_ref())
+            .register_token_pricing_source(
+                &self.fund_account.receipt_token_mint.key(),
+                &TokenPricingSource::FundReceiptToken {
+                    mint_address: self.fund_account.receipt_token_mint.key(),
+                    fund_address: self.fund_account.key(),
+                },
+            )?;
+
+        // try to update current underlying assets' price
+        self.update_asset_prices(&pricing_service)?;
+
+        Ok(pricing_service)
+    }
+
+    // values being updated below are informative, only for event emission.
+    fn update_asset_prices(&mut self, pricing_service: &PricingService) -> Result<()> {
+        self.fund_account
+            .supported_tokens
+            .iter_mut()
+            .try_for_each(|supported_token| {
+                supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
+                    &supported_token.get_mint(),
+                    10u64
+                        .checked_pow(supported_token.get_decimals() as u32)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                )?;
+
+                Ok::<(), Error>(())
+            })?;
+
+        self.fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
+            &self.receipt_token_mint.key(),
+            10u64
+                .checked_pow(self.receipt_token_mint.decimals as u32)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        )?;
+
+        Ok(())
     }
 
     pub fn process_update_prices(
         &mut self,
-        pricing_sources: &'info [AccountInfo<'info>],
+        token_pricing_source_accounts: &'a [AccountInfo<'info>],
     ) -> Result<()> {
-        self.update_asset_prices(pricing_sources)?;
+        self.new_pricing_service(token_pricing_source_accounts)?;
 
         emit!(events::OperatorUpdatedFundPrice {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -71,17 +108,6 @@ impl<'info, 'a> FundService<'info, 'a> {
         });
 
         Ok(())
-    }
-
-    pub(in crate::modules) fn update_asset_prices(
-        &mut self,
-        pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<()> {
-        let pricing_source_map = self.create_pricing_source_map(pricing_sources)?;
-        self.fund_account
-            .supported_tokens
-            .iter_mut()
-            .try_for_each(|token| token.update_one_token_as_sol(&pricing_source_map))
     }
 
     pub fn process_transfer_hook(
@@ -160,7 +186,7 @@ impl<'info, 'a> FundService<'info, 'a> {
             ),
         });
 
-        // TODO: token transfer is temporarily disabled
+        // TODO v0.4/transfer: token transfer is temporarily disabled
         err!(ErrorCode::TokenNotTransferableError)?;
 
         Ok(())

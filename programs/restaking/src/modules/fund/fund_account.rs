@@ -1,15 +1,16 @@
-use anchor_lang::prelude::*;
-
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{self, TokenPricingSource, TokenPricingSourceMap};
+use crate::modules::pricing::{self, TokenPricingSource};
 use crate::utils::PDASeeds;
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 #[constant]
 /// ## Version History
 /// * v1: Initial Version
 /// * v2: Change reserve fund structure
 /// * v3: Remove `sol_fee_income_reserved_amount` field
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 3;
+/// * v4: Add `one_receipt_token_as_sol`, `receipt_token_decimals` fields
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
 
@@ -23,11 +24,13 @@ pub struct FundAccount {
     pub(super) supported_tokens: Vec<SupportedTokenInfo>,
     pub(super) sol_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private and use getter
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) sol_operation_reserved_amount: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) withdrawal: WithdrawalStatus,
-    _reserved: [u8; 1280],
+    pub one_receipt_token_as_sol: u64,
+    receipt_token_decimals: u8,
+    _reserved: [u8; 1271],
 }
 
 impl PDASeeds<2> for FundAccount {
@@ -46,7 +49,12 @@ impl FundAccount {
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        receipt_token_decimals: u8,
+    ) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -65,16 +73,30 @@ impl FundAccount {
             self.data_version = 3;
             self.withdrawal._padding = [0; 8];
         }
+
+        if self.data_version == 3 {
+            self.data_version = 4;
+            self.one_receipt_token_as_sol = 0;
+            self.receipt_token_decimals = receipt_token_decimals;
+        }
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
-        self.initialize(self.bump, receipt_token_mint);
+    pub(super) fn update_if_needed(&mut self, receipt_token_mint: &InterfaceAccount<Mint>) {
+        self.initialize(
+            self.bump,
+            receipt_token_mint.key(),
+            receipt_token_mint.decimals,
+        );
     }
 
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
+    }
+
+    pub(super) fn get_receipt_token_decimals(&self) -> u8 {
+        self.receipt_token_decimals
     }
 
     pub(super) fn get_supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
@@ -84,7 +106,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    // TODO: set visibility to super
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_supported_token_mut(
         &mut self,
         token: Pubkey,
@@ -152,25 +174,6 @@ impl FundAccount {
 
         Ok(())
     }
-
-    // TODO: implement pricing adapter for a receipt token
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
-    pub(in crate::modules) fn get_assets_total_amount_as_sol(&self) -> Result<u64> {
-        // TODO: need to add the nt_operation_reserved + vrt_operation_reserved
-        self.supported_tokens
-            .iter()
-            .try_fold(self.sol_operation_reserved_amount, |sum, token| {
-                sum.checked_add(
-                    token.get_token_amount_as_sol(
-                        token
-                            .operation_reserved_amount
-                            .checked_add(token.operating_amount)
-                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-                    )?,
-                )
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-            })
-    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -181,7 +184,7 @@ pub struct SupportedTokenInfo {
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
     operation_reserved_amount: u64,
-    one_token_as_sol: u64,
+    pub(super) one_token_as_sol: u64,
     pricing_source: TokenPricingSource,
     operating_amount: u64,
     _reserved: [u8; 120],
@@ -217,7 +220,7 @@ impl SupportedTokenInfo {
         self.operation_reserved_amount
     }
 
-    // TODO: wtf!
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
         self.operation_reserved_amount = amount;
     }
@@ -226,20 +229,18 @@ impl SupportedTokenInfo {
         self.operating_amount
     }
 
-    // TODO: wtf!
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
         self.operating_amount = amount;
     }
 
-    pub(in crate::modules) fn get_denominated_amount_per_token(&self) -> Result<u64> {
-        10u64
-            .checked_pow(self.decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    pub(super) fn get_decimals(&self) -> u8 {
+        self.decimals
     }
 
     #[inline(always)]
     pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
-        self.pricing_source
+        self.pricing_source.clone()
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -274,28 +275,6 @@ impl SupportedTokenInfo {
 
         Ok(())
     }
-
-    pub(super) fn update_one_token_as_sol(
-        &mut self,
-        pricing_source_map: &TokenPricingSourceMap,
-    ) -> Result<()> {
-        self.one_token_as_sol = pricing::calculate_token_amount_as_sol(
-            self.mint,
-            pricing_source_map,
-            self.get_denominated_amount_per_token()?,
-        )?;
-
-        Ok(())
-    }
-
-    pub(super) fn get_token_amount_as_sol(&self, token_amount: u64) -> Result<u64> {
-        crate::utils::get_proportional_amount(
-            token_amount,
-            self.one_token_as_sol,
-            self.get_denominated_amount_per_token()?,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
 }
 
 const MAX_BATCH_WITHDRAWALS_IN_PROGRESS: usize = 10;
@@ -318,7 +297,7 @@ pub struct WithdrawalStatus {
     // Withdrawal Status = PENDING
     pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
+    // TODO v0.3/operation: visibility
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
     pub(in crate::modules) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
@@ -461,6 +440,7 @@ impl WithdrawalStatus {
             self.receipt_token_processed_amount,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
         let sol_fee_amount = crate::utils::get_proportional_amount(
             sol_total_amount,
             self.sol_withdrawal_fee_rate as u64,
@@ -496,7 +476,7 @@ impl WithdrawalStatus {
         Ok(())
     }
 
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn assert_withdrawal_threshold_satisfied(
         &self,
         current_timestamp: i64,
@@ -530,7 +510,7 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn start_processing_pending_batch_withdrawal(
         &mut self,
         current_timestamp: i64,
@@ -556,7 +536,7 @@ impl WithdrawalStatus {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn end_processing_completed_batch_withdrawals(
         &mut self,
         current_timestamp: i64,
@@ -601,9 +581,9 @@ impl WithdrawalStatus {
 pub struct BatchWithdrawal {
     batch_id: u64,
     num_withdrawal_requests: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) receipt_token_to_process: u64,
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to private
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) receipt_token_being_processed: u64,
     receipt_token_processed: u64,
     sol_reserved: u64,
@@ -653,7 +633,7 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn record_unstaking_start(
         &mut self,
         receipt_token_amount: u64,
@@ -671,7 +651,7 @@ impl BatchWithdrawal {
     }
 
     // Called by operator
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn record_unstaking_end(
         &mut self,
         receipt_token_amount: u64,
@@ -742,7 +722,7 @@ mod tests {
     #[test]
     fn test_initialize_update_fund_account() {
         let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique());
+        fund.initialize(0, Pubkey::new_unique(), 9);
 
         assert_eq!(fund.sol_capacity_amount, 0);
         assert_eq!(fund.withdrawal.sol_withdrawal_fee_rate, 0);
@@ -778,7 +758,7 @@ mod tests {
     #[test]
     fn test_update_token() {
         let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique());
+        fund.initialize(0, Pubkey::new_unique(), 9);
 
         let token1 = Pubkey::new_unique();
         let token2 = Pubkey::new_unique();
@@ -826,7 +806,7 @@ mod tests {
     #[test]
     fn test_deposit_sol() {
         let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique());
+        fund.initialize(0, Pubkey::new_unique(), 9);
         fund.set_sol_capacity_amount(100_000).unwrap();
 
         assert_eq!(fund.sol_operation_reserved_amount, 0);
@@ -842,7 +822,7 @@ mod tests {
     #[test]
     fn test_deposit_token() {
         let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique());
+        fund.initialize(0, Pubkey::new_unique(), 9);
 
         fund.add_supported_token(
             Pubkey::new_unique(),

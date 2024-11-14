@@ -5,6 +5,7 @@ use anchor_spl::token_interface::*;
 use crate::events;
 use crate::modules::fund::*;
 use crate::modules::pricing::TokenPricingSource;
+use crate::modules::{fund, pricing};
 
 pub struct FundConfigurationService<'info, 'a>
 where
@@ -37,8 +38,11 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         receipt_token_mint_current_authority: &Signer<'info>,
         bump: u8,
     ) -> Result<()> {
-        self.fund_account
-            .initialize(bump, self.receipt_token_mint.key());
+        self.fund_account.initialize(
+            bump,
+            self.receipt_token_mint.key(),
+            self.receipt_token_mint.decimals,
+        );
 
         // set token mint authority
         token_2022::set_authority(
@@ -55,8 +59,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
     }
 
     pub fn process_update_fund_account_if_needed(&mut self) -> Result<()> {
-        self.fund_account
-            .update_if_needed(self.receipt_token_mint.key());
+        self.fund_account.update_if_needed(self.receipt_token_mint);
         Ok(())
     }
 
@@ -113,10 +116,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
-        require_keys_eq!(
-            fund_supported_token_account.owner,
-            self.fund_account.key(),
-        );
+        require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key(),);
         require_keys_eq!(
             fund_supported_token_account.mint,
             supported_token_mint.key()
@@ -134,10 +134,9 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
             pricing_source,
         )?;
 
-        // TODO: get pricing service or?
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .update_asset_prices(pricing_sources)?;
+            .new_pricing_service(&pricing_sources)?;
 
         self.emit_fund_manager_updated_fund_event()
     }

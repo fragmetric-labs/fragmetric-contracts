@@ -2,6 +2,7 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::{
     DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
 };
+use crate::modules::pricing::PricingService;
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::modules::{ed25519, reward};
 use crate::utils::PDASeeds;
@@ -68,7 +69,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_reserve_account: &SystemAccount<'info>,
         system_program: &Program<'info, System>,
         instructions_sysvar: &AccountInfo,
-        pricing_sources: &'info [AccountInfo<'info>],
+        pricing_sources: &'a [AccountInfo<'info>],
         sol_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
@@ -89,15 +90,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .unzip();
 
         // calculate receipt token minting amount
-        // TODO: use pricing module for checking update, calculating amount
-        FundService::new(self.receipt_token_mint, self.fund_account)?
-            .update_asset_prices(pricing_sources)?;
-        let receipt_token_mint_amount = crate::utils::get_proportional_amount(
-            sol_amount,
-            self.receipt_token_mint.supply,
-            self.fund_account.get_assets_total_amount_as_sol()?,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(&pricing_sources)?;
+        let receipt_token_mint_amount =
+            pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
 
         // mint receipt token to user & update user reward accrual status
         self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
@@ -138,7 +134,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         supported_token_program: &Interface<'info, TokenInterface>,
         instructions_sysvar: &AccountInfo,
-        pricing_sources: &'info [AccountInfo<'info>],
+        pricing_sources: &'a [AccountInfo<'info>],
         supported_token_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
@@ -159,17 +155,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .unzip();
 
         // calculate receipt token minting amount
-        // TODO: use pricing module for checking update, calculating amount
-        FundService::new(self.receipt_token_mint, self.fund_account)?
-            .update_asset_prices(pricing_sources)?;
-        let receipt_token_mint_amount = crate::utils::get_proportional_amount(
-            self.fund_account
-                .get_supported_token(supported_token_mint.key())?
-                .get_token_amount_as_sol(supported_token_amount)?,
-            self.receipt_token_mint.supply,
-            self.fund_account.get_assets_total_amount_as_sol()?,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(&pricing_sources)?;
+        let receipt_token_mint_amount = pricing_service.get_sol_amount_as_token(
+            &self.receipt_token_mint.key(),
+            pricing_service
+                .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?,
+        )?;
 
         // mint receipt token to user & update user reward accrual status
         self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;

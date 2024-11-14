@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use std::slice::Iter;
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
@@ -14,7 +15,7 @@ pub struct NormalizedTokenPoolAccount {
     pub normalized_token_mint: Pubkey,
     normalized_token_program: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
-    supported_tokens: Vec<SupportedToken>,
+    pub(super) supported_tokens: Vec<SupportedToken>,
     _reserved: [u8; 128],
 }
 
@@ -74,7 +75,7 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
-    pub fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
+    pub(super) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
         self.supported_tokens
             .iter()
             .map(|token| (token.mint, token.locked_amount))
@@ -120,6 +121,14 @@ impl SupportedToken {
             locked_amount: 0,
             _reserved: [0; 64],
         }
+    }
+
+    pub(super) fn get_mint(&self) -> Pubkey {
+        self.mint
+    }
+
+    pub(super) fn get_locked_amount(&self) -> u64 {
+        self.locked_amount
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {

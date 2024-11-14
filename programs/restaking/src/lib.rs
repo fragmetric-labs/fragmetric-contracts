@@ -91,7 +91,7 @@ pub mod restaking {
     pub fn admin_initialize_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
     ) -> Result<()> {
-        modules::fund::ReceiptTokenConfigurationService::new(
+        modules::fund::FundReceiptTokenConfigurationService::new(
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
@@ -105,7 +105,7 @@ pub mod restaking {
     pub fn admin_update_extra_account_meta_list_if_needed(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
     ) -> Result<()> {
-        modules::fund::ReceiptTokenConfigurationService::new(
+        modules::fund::FundReceiptTokenConfigurationService::new(
             &mut *ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
@@ -405,7 +405,7 @@ pub mod restaking {
         )
     }
 
-    // TODO: deprecate
+    // TODO v0.3/operation: deprecate
     pub fn operator_process_fund_withdrawal_job<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         forced: bool,

@@ -32,6 +32,7 @@ jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", ve
 spl-tlv-account-resolution = "0.6.5"
 spl-transfer-hook-interface = "0.6.5"
 spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
+marinade-cpi = { version = "0.3.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-program-test = "1.18.15"
