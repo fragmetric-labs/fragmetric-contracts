@@ -14,9 +14,11 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const fragSOLFundReserveAccountBalance0 = await restaking.getFragSOLFundReserveAccountBalance();
         const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();
         const nSOLMint0 = await restaking.getNSOLTokenMint();
+        const fragSOLFundNSOLBalance0 = await restaking.getFragSOLFundNSOLAccountBalance();
         const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
         logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundReservedAmount=${fragSOLFundReserveAccountBalance0}`);
         logger.info(`before: nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLOperationReservedAmount, nSOLSupply=${nSOLMint0.supply.toString()}`);
+        logger.info(`before: fragSOLFundNSOL=${fragSOLFundNSOLBalance0.toString()}`);
         logger.info(`before: jitoVaultNSOL=${jitoVaultNSOLBalance0.toString()}`);
 
         // TODO: currently staking sol to hard-coded LST, like localnet: jitoSOL
@@ -26,18 +28,26 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
         const {
             fragSOLFundReserveAccountBalance: fragSOLFundExecutionReservedAccountBalance1,
-            fragSOLFund: fragSOLFund1
+            fragSOLFundNSOLAccountBalance: fragSOLFundNSOLBalance1,
+            fragSOLJitoVaultNSOLAccountBalance: jitoVaultNSOLBalance1,
+            fragSOLFund: fragSOLFund1,
+            nSOLTokenPool: nSOLTokenPool1,
         } = await restaking.runOperatorRun(restaking.keychain.getKeypair('ADMIN'));
-        const nSOLPool1 = await restaking.getNSOLTokenPoolAccount();
         const nSOLJitoSOLBalance1 = await restaking.getNSOLSupportedTokenLockAccountBalance('jitoSOL');
         const nSOLMint1 = await restaking.getNSOLTokenMint();
-        const jitoVaultNSOLBalance1 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
         logger.info(`after: fundSupportedTokens=${fragSOLFund1.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, fundSolOperationReservedAmount=${fragSOLFund1.solOperationReservedAmount}, fundExecutionReservedAmount=${fragSOLFundExecutionReservedAccountBalance1}`);
-        logger.info(`after: nSOLSupportedTokens=${nSOLPool1.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint1.supply.toString()}`);
+        logger.info(`after: nSOLSupportedTokens=${nSOLTokenPool1.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLSupply=${nSOLMint1.supply.toString()}`);
+        logger.info(`after: fragSOLFundNSOL=${fragSOLFundNSOLBalance1.toString()}`);
         logger.info(`after: jitoVaultNSOL=${jitoVaultNSOLBalance1.toString()}`);
+
         expect(fragSOLFundExecutionReservedAccountBalance1.toString()).eq('0', 'execution reserved should be zero after operation');
-        const fee = (x: bigint) => BigInt(i) * (x - x * BigInt(999) / BigInt(1000));
-        expect(jitoVaultNSOLBalance1.toString()).eq(fee(nSOLMint1.supply).toString(), 'for now, all nSOL is being deposited to jito vault');
+        const fee = (x: bigint) => x - x * BigInt(999) / BigInt(1000);
+        const nSOLMintedAmount = nSOLMint1.supply - nSOLMint0.supply;
+        const restakedNSOLAmount = nSOLMintedAmount + BigInt(fragSOLFundNSOLBalance0.toNumber());
+        const unstakingFeeAmount = fee(restakedNSOLAmount);
+        const unstakedNSOLAmount = restakedNSOLAmount - unstakingFeeAmount;
+        expect(fragSOLFundNSOLBalance1.toString()).eq(unstakedNSOLAmount.toString(), 'unstaked amount should be in fund');
+        expect(jitoVaultNSOLBalance1.sub(jitoVaultNSOLBalance0).toString()).eq(unstakingFeeAmount.toString(), 'unstaking fee 0.1% should be in jito vault');
 
         const stakedSOLAmount = fragSOLFund0.solOperationReservedAmount.sub(fragSOLFund1.solOperationReservedAmount);
         expect(stakedSOLAmount.gt(new BN(0))).eq(true, 'executed amount should be greater than zero');

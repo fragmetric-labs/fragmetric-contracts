@@ -1,544 +1,62 @@
-use crate::constants::ADMIN_PUBKEY;
-use crate::errors;
-use crate::events;
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::{self, AssociatedToken};
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+use crate::{constants::*, events};
+use crate::errors::ErrorCode;
 use crate::modules::{fund, normalization, pricing, restaking, staking};
 use crate::utils::*;
-use bytemuck::{from_bytes_mut, cast_slice};
-use base64::{decode, encode};
-use jito_bytemuck::{AccountDeserialize, Discriminator};
-use anchor_lang::{prelude::*, solana_program, CheckOwner};
-use anchor_spl::token::accessor::mint;
-use anchor_spl::token::{transfer, Token};
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use jito_vault_core::vault::Vault;
-use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
-use jito_vault_core::config::Config;
-use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
-use std::clone;
-use anchor_lang::prelude::borsh::BorshDeserialize;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::curve25519::scalar::Zeroable;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::instruction::Pod;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::zk_token_elgamal::pod::{PodU16, PodU64};
-use borsh::BorshSerialize;
 
+#[inline]
 pub fn process_run<'info>(
     operator: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
     fund_account: &mut Account<'info, fund::FundAccount>,
-    remaining_accounts: &'info [AccountInfo<'info>],
+    mut remaining_accounts: &'info [AccountInfo<'info>],
     _current_timestamp: i64,
     current_slot: u64,
-    command: u8, // 0, 1, 2
+    command: u8,
 ) -> Result<()> {
     // temporary authorization
-    require_eq!(operator.key(), ADMIN_PUBKEY);
+    require_keys_eq!(operator.key(), ADMIN_PUBKEY);
 
-    // stake sol to jitoSOL
-    if command == 0 {
-        // accounts
-        let [
-        // staking
-        fund_reserve_account,
-        stake_pool_program,
-        stake_pool,
-        stake_pool_withdraw_authority,
-        reserve_stake_account,
-        manager_fee_account,
-        pool_mint,
-        token_program,
-        fund_supported_token_account_to_stake,
-        ..,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-
-        let (fund_reserve_account_address, fund_reserve_account_bump) = Pubkey::find_program_address(
-            &[fund::FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()], &crate::ID,
-        );
-        require_eq!(fund_reserve_account_address, fund_reserve_account.key());
-
-        let mut fund_supported_token_account_to_stake_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_supported_token_account_to_stake)?;
-
-        let staking_lamports = fund_account.sol_operation_reserved_amount;
-        if staking_lamports > 0 {
-            let before_fund_supported_token_amount =
-                fund_supported_token_account_to_stake_parsed.amount;
-            staking::deposit_sol_to_spl_stake_pool(
-                &staking::SPLStakePoolContext {
-                    program: stake_pool_program.clone(),
-                    stake_pool: stake_pool.clone(),
-                    sol_deposit_authority: None,
-                    stake_pool_withdraw_authority: stake_pool_withdraw_authority.clone(),
-                    reserve_stake_account: reserve_stake_account.clone(),
-                    manager_fee_account: manager_fee_account.clone(),
-                    pool_mint: pool_mint.clone(),
-                    token_program: token_program.clone(),
-                },
-                staking_lamports,
-                fund_reserve_account,
-                fund_supported_token_account_to_stake,
-                &[&[
-                    fund::FundAccount::RESERVE_SEED,
-                    &fund_account.receipt_token_mint.to_bytes(),
-                    &[fund_reserve_account_bump],
-                ]],
-            )?;
-            fund_supported_token_account_to_stake_parsed.reload()?;
-            fund_account.sol_operation_reserved_amount = fund_account
-                .sol_operation_reserved_amount
-                .checked_sub(staking_lamports)
-                .ok_or_else(|| {
-                    error!(
-                        errors::ErrorCode::FundUnexpectedReserveAccountBalanceException
-                    )
-                })?;
-
-            let minted_supported_token_amount = fund_supported_token_account_to_stake_parsed.amount
-                - before_fund_supported_token_amount;
-            let fund_supported_token_info = fund_account
-                .get_supported_token_mut(fund_supported_token_account_to_stake_parsed.mint)?;
-            fund_supported_token_info.set_operation_reserved_amount(
-                fund_supported_token_info
-                    .get_operation_reserved_amount()
-                    .checked_add(minted_supported_token_amount)
-                    .unwrap(),
-            );
-            msg!(
-                "staked {} sol to mint {} tokens",
-                staking_lamports,
-                minted_supported_token_amount
-            );
-
-            require_gte!(minted_supported_token_amount, staking_lamports.div_ceil(2));
-            require_eq!(
-                fund_supported_token_info.get_operation_reserved_amount(),
-                fund_supported_token_account_to_stake_parsed.amount
-            );
-        }
-    }
-
-
-    // normalize supported tokens
-    // TODO: apply fund_account.nt_operation_reserved_amount
-    if command == 1 {
-        let [
-        // normalization
-        normalized_token_pool_account,
-        normalized_token_mint,
-        normalized_token_program,
-        fund_normalized_token_account,
-        fund_supported_token_account_to_normalize,
-        fund_supported_token_mint_to_normalize,
-        fund_supported_token_program_to_normalize,
-        normalized_token_pool_supported_token_lock_account,
-        // pricing
-        pricing_source_accounts @ ..,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-
-        // create pricing calculator
-        // TODO fix `create_pricing_source_map`
-        let mut pricing_source_map =
-            fund::create_pricing_source_map(fund_account, pricing_source_accounts)?;
-        pricing_source_map.insert(
-            normalized_token_mint.key(),
-            (
-                pricing::TokenPricingSource::NormalizedTokenPool {
-                    mint_address: normalized_token_mint.key(),
-                    pool_address: normalized_token_pool_account.key(),
-                },
-                vec![normalized_token_mint, normalized_token_pool_account],
-            ),
-        );
-
-        let normalized_token_pool_account_parsed =
-            parse_account_boxed(normalized_token_pool_account)?;
-        let mut fund_supported_token_account_to_normalize_parsed =
-            parse_interface_account_boxed::<TokenAccount>(
-                fund_supported_token_account_to_normalize,
-            )?;
-        let fund_supported_token_info_to_normalize = fund_account
-            .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
-        let mut fund_normalized_token_account_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_normalized_token_account)?;
-
-        let normalizing_supported_token_amount =
-            fund_supported_token_info_to_normalize.get_operation_reserved_amount();
-        if normalizing_supported_token_amount > 0 {
-            let before_fund_supported_token_amount =
-                fund_supported_token_account_to_normalize_parsed.amount;
-            let before_fund_normalized_token_amount = fund_normalized_token_account_parsed.amount;
-            let normalized_token_mint_parsed =
-                parse_interface_account_boxed(normalized_token_mint)?;
-            let normalized_token_program_parsed = normalized_token_program.try_into()?;
-            let fund_supported_token_mint_to_normalize_parsed =
-                parse_interface_account_boxed(fund_supported_token_mint_to_normalize)?;
-            let fund_supported_token_program_to_normalize_parsed =
-                fund_supported_token_program_to_normalize.try_into()?;
-            let mut normalized_token_pool_supported_token_lock_account_parsed =
-                parse_interface_account_boxed::<TokenAccount>(
-                    normalized_token_pool_supported_token_lock_account,
-                )?;
-            let mut normalizer = normalization::NormalizedTokenPoolAdapter::new(
-                normalized_token_pool_account_parsed,
-                normalized_token_mint_parsed,
-                normalized_token_program_parsed,
-                fund_supported_token_mint_to_normalize_parsed,
-                fund_supported_token_program_to_normalize_parsed,
-                normalized_token_pool_supported_token_lock_account_parsed.clone(),
-            )?;
-            let denominated_amount_per_normalized_token =
-                normalizer.get_denominated_amount_per_normalized_token()?;
-            normalization::normalize_supported_token(
-                &mut normalizer,
-                &fund_normalized_token_account_parsed,
-                &fund_supported_token_account_to_normalize_parsed,
-                fund_account.to_account_info(),
-                &[fund_account.get_signer_seeds().as_ref()],
-                normalizing_supported_token_amount,
-                // TODO: revisit later about pricing interface and dependency graph
-                pricing::calculate_token_amount_as_sol(
-                    fund_supported_token_mint_to_normalize.key(),
-                    &pricing_source_map,
-                    normalizing_supported_token_amount,
-                )?,
-                pricing::calculate_token_amount_as_sol(
-                    normalized_token_mint.key(),
-                    &pricing_source_map,
-                    denominated_amount_per_normalized_token,
-                )?,
-            )?;
-            fund_supported_token_account_to_normalize_parsed.reload()?;
-            let fund_supported_token_info_to_normalize = fund_account
-                .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
-            fund_supported_token_info_to_normalize.set_operation_reserved_amount(
-                fund_supported_token_info_to_normalize.get_operation_reserved_amount()
-                    - normalizing_supported_token_amount,
-            );
-            let normalized_fund_supported_token_amount = before_fund_supported_token_amount
-                - fund_supported_token_account_to_normalize_parsed.amount;
-            require_eq!(
-                normalized_fund_supported_token_amount,
-                normalizing_supported_token_amount
-            );
-
-            fund_normalized_token_account_parsed.reload()?;
-            let minted_normalized_token_amount =
-                fund_normalized_token_account_parsed.amount - before_fund_normalized_token_amount;
-            fund_supported_token_info_to_normalize.set_operating_amount(
-                fund_supported_token_info_to_normalize.get_operating_amount()
-                    + normalizing_supported_token_amount,
-            );
-            msg!(
-                "normalized {} tokens to mint {} normalized tokens",
-                normalizing_supported_token_amount,
-                minted_normalized_token_amount
-            );
-
-            normalized_token_pool_supported_token_lock_account_parsed.reload()?;
-            require_gte!(
-                minted_normalized_token_amount,
-                normalizing_supported_token_amount.div_ceil(2)
-            );
-            require_eq!(
-                fund_supported_token_info_to_normalize.get_operation_reserved_amount(),
-                fund_supported_token_account_to_normalize_parsed.amount
-            );
-            require_eq!(
-                fund_supported_token_info_to_normalize.get_operating_amount(),
-                normalized_token_pool_supported_token_lock_account_parsed.amount
-            );
-
-            let normalized_token_pool_account = normalizer.into_pool_account();
-            normalized_token_pool_account.exit(&crate::ID)?;
-        }
-    }
-
-    // restake normalized tokens
-    if command == 2 {
-        let [
-        // normalization
-        normalized_token_mint,
-        normalized_token_program,
-        fund_normalized_token_account,
-        // restaking
-        jito_vault_program,
-        jito_vault_config,
-        jito_vault_account,
-        jito_vault_receipt_token_mint,
-        jito_vault_receipt_token_program,
-        jito_vault_supported_token_account,
-        jito_vault_update_state_tracker,
-        jito_vault_fee_receipt_token_account,
-        fund_jito_vault_receipt_token_account,
-        system_program,
-        ..,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-
-        let fund_normalized_token_account_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_normalized_token_account)?;
-        let restaking_nt_amount = fund_normalized_token_account_parsed.amount;
-
-        if restaking_nt_amount > 0 {
-            let mut fund_jito_vault_receipt_token_account_parsed =
-                parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
-            let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
-
-            let ctx = restaking::jito::JitoRestakingVaultContext {
-                vault_program: jito_vault_program.clone(),
-                vault_config: jito_vault_config.clone(),
-                vault: jito_vault_account.clone(),
-                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-                vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-                vault_supported_token_mint: normalized_token_mint.clone(),
-                vault_supported_token_program: normalized_token_program.clone(),
-                vault_supported_token_account: jito_vault_supported_token_account.clone(),
-            };
-
-            let (current_epoch, updated_epoch) = calculate_epoch(jito_vault_account, jito_vault_config, current_slot)?;
-            if current_epoch > updated_epoch {
-                let rent = Rent::get()?;
-                let current_lamports = jito_vault_update_state_tracker.get_lamports();
-                let space = 8usize.checked_add(std::mem::size_of::<VaultUpdateStateTracker>()).unwrap();
-                let required_lamports = rent
-                    .minimum_balance(space)
-                    .max(1)
-                    .saturating_sub(current_lamports);
-                let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
-                    &operator.key(),
-                    &jito_vault_update_state_tracker.key(),
-                    required_lamports,
-                );
-        
-                anchor_lang::solana_program::program::invoke(
-                    &transfer_instruction,
-                    &[
-                        operator.to_account_info(),
-                        jito_vault_update_state_tracker.to_account_info(),
-                        system_program.to_account_info(),
-                    ],
-                )?;
-    
-                restaking::jito::initialize_vault_update_state_tracker(
-                    &ctx,
-                    fund_account.as_ref(),
-                    &[fund_account.get_signer_seeds().as_ref()],
-                    jito_vault_update_state_tracker,
-                    system_program,
-                )?;
-        
-                restaking::jito::close_vault_update_state_tracker(
-                    &ctx,
-                    fund_account.as_ref(),
-                    &[fund_account.get_signer_seeds().as_ref()],
-                    jito_vault_update_state_tracker,
-                    current_epoch,
-                )?;
-            }
-            
-            restaking::jito::deposit(
-                &ctx,
-                fund_normalized_token_account, // supported_token_account,
-                restaking_nt_amount, // supported_token_amount_in,
-
-                jito_vault_fee_receipt_token_account,
-                fund_jito_vault_receipt_token_account, // vault_receipt_token_account,
-                restaking_nt_amount, // vault_receipt_token_min_amount_out,
-
-                fund_account.as_ref(), // signer
-
-                &[fund_account.get_signer_seeds().as_ref()],
-            )?;
-
-            fund_jito_vault_receipt_token_account_parsed.reload()?;
-            let minted_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount - before_fund_vrt_amount;
-
-            msg!(
-                "restaked {} nt to mint {} vrt",
-                restaking_nt_amount,
-                minted_fund_vrt_amount
-            );
-            require_gte!(minted_fund_vrt_amount, restaking_nt_amount);
-        }
-    }
-
-    // request_withdraw normalized tokens
-    if command == 3 {
-        let [
-        // normalization
-        normalized_token_mint,
-        normalized_token_program,
-        // restaking
-        jito_vault_program,
-        jito_vault_config,
-        jito_vault_account,
-        jito_vault_receipt_token_mint,
-        jito_vault_receipt_token_program,
-        jito_vault_supported_token_account,
-        jito_vault_withdrawal_ticket,
-        jito_vault_withdrawal_ticket_token_account,
-        fund_jito_vault_receipt_token_account,
-        vault_program_base_account,
-        system_program,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-
-        let rent = Rent::get()?;
-        let current_lamports = **jito_vault_withdrawal_ticket.try_borrow_lamports()?;
-        let space = 8_u64.checked_add(std::mem::size_of::<VaultStakerWithdrawalTicket>() as u64).unwrap();
-        let required_lamports = rent
-            .minimum_balance(space as usize)
-            .max(1)
-            .saturating_sub(current_lamports);
-        let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
-            &operator.key(),
-            &jito_vault_withdrawal_ticket.key(),
-            required_lamports,
-        );
-
-        anchor_lang::solana_program::program::invoke(
-            &transfer_instruction,
-            &[
-                operator.to_account_info(),
-                jito_vault_withdrawal_ticket.to_account_info(),
-                system_program.to_account_info(),
-            ],
-        )?;
-
-
-        let mut fund_jito_vault_receipt_token_account_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_jito_vault_receipt_token_account)?;
-        let before_fund_vrt_amount = fund_jito_vault_receipt_token_account_parsed.amount;
-        let vault_program_base_account_signer_seed = vault_program_base_account;
-        let (vault_program_base_account_address, vault_program_base_account_bump) = Pubkey::find_program_address(
-            &[restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT1_SEED, receipt_token_mint.key().as_ref()], &crate::ID,
-        );
-
-        restaking::jito::request_withdraw(
-            &restaking::jito::JitoRestakingVaultContext {
-                vault_program: jito_vault_program.clone(),
-                vault_config: jito_vault_config.clone(),
-                vault: jito_vault_account.clone(),
-                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-                vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-                vault_supported_token_mint: normalized_token_mint.clone(),
-                vault_supported_token_program: normalized_token_program.clone(),
-                vault_supported_token_account: jito_vault_supported_token_account.clone(),
-            },
-            jito_vault_withdrawal_ticket, // vault_withdrawal_ticket
-            jito_vault_withdrawal_ticket_token_account, // vault_withdrawal_ticket_token_account
-            fund_jito_vault_receipt_token_account, // vault_receipt_token_account,
-            vault_program_base_account,
-            system_program,
-            fund_account.as_ref(), // signer
-            &[fund_account.get_signer_seeds().as_ref(), &[
-                restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT1_SEED,
-                &receipt_token_mint.key().to_bytes(),
-                &[vault_program_base_account_bump],
-            ]],
-            before_fund_vrt_amount,
-        )?;
-
-        fund_jito_vault_receipt_token_account_parsed.reload()?;
-
-        msg!(
-                "before_fund_vrt_amount: {}, after_fund_vrt_amount: {}",
-                before_fund_vrt_amount,
-                fund_jito_vault_receipt_token_account_parsed.amount
-            );
-    }
-
-    if command == 4 {
-        let [
-        // normalization
-        normalized_token_mint,
-        normalized_token_program,
-        // restaking
-        jito_vault_program,
-        jito_vault_config,
-        jito_vault_account,
-        jito_vault_receipt_token_mint,
-        jito_vault_receipt_token_program,
-        jito_vault_supported_token_account,
-        jito_vault_update_state_tracker,
-        jito_vault_withdrawal_ticket,
-        jito_vault_withdrawal_ticket_token_account,
-        fund_jito_vault_supported_token_account,
-        jito_vault_fee_receipt_token_account,
-        jito_vault_program_fee_wallet_vrt_account,
-        system_program,
-        ] = remaining_accounts else {
-            return Err(ProgramError::NotEnoughAccountKeys)?;
-        };
-
-        let ctx = restaking::jito::JitoRestakingVaultContext {
-            vault_program: jito_vault_program.clone(),
-            vault_config: jito_vault_config.clone(),
-            vault: jito_vault_account.clone(),
-            vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
-            vault_receipt_token_program: jito_vault_receipt_token_program.clone(),
-            vault_supported_token_mint: normalized_token_mint.clone(),
-            vault_supported_token_program: normalized_token_program.clone(),
-            vault_supported_token_account: jito_vault_supported_token_account.clone(),
-        };
-
-        let (current_epoch, updated_epoch) = calculate_epoch(jito_vault_account, jito_vault_config, current_slot)?;
-        if current_epoch > updated_epoch {
-            let rent = Rent::get()?;
-            let current_lamports = jito_vault_update_state_tracker.get_lamports();
-            let space = 8usize.checked_add(std::mem::size_of::<VaultUpdateStateTracker>()).unwrap();
-            let required_lamports = rent
-                .minimum_balance(space)
-                .max(1)
-                .saturating_sub(current_lamports);
-            let transfer_instruction = anchor_lang::solana_program::system_instruction::transfer(
-                &operator.key(),
-                &jito_vault_update_state_tracker.key(),
-                required_lamports,
-            );
-    
-            anchor_lang::solana_program::program::invoke(
-                &transfer_instruction,
-                &[
-                    operator.to_account_info(),
-                    jito_vault_update_state_tracker.to_account_info(),
-                    system_program.to_account_info(),
-                ],
-            )?;
-
-            restaking::jito::initialize_vault_update_state_tracker(
-                &ctx,
-                fund_account.as_ref(),
-                &[fund_account.get_signer_seeds().as_ref()],
-                jito_vault_update_state_tracker,
-                system_program,
-            )?;
-    
-            restaking::jito::close_vault_update_state_tracker(
-                &ctx,
-                fund_account.as_ref(),
-                &[fund_account.get_signer_seeds().as_ref()],
-                jito_vault_update_state_tracker,
-                current_epoch,
-            )?;
-        }
-        
-        restaking::jito::withdraw(
-            &ctx,
-            jito_vault_withdrawal_ticket, // vault_withdrawal_ticket
-            jito_vault_withdrawal_ticket_token_account, // vault_withdrawal_ticket_token_account
-            fund_jito_vault_supported_token_account,
-            jito_vault_fee_receipt_token_account,
-            jito_vault_program_fee_wallet_vrt_account,
-            fund_account.as_ref(), // signer
-            system_program,
-        )?;
-    }
+    match command {
+        // stake sol to jitoSOL
+        0 => stake_sol(
+            receipt_token_mint,
+            fund_account,
+            &mut remaining_accounts,
+        )?,
+        // normalize supported tokens
+        // TODO: apply fund_account.nt_operation_reserved_amount
+        1 => normalize_supported_tokens(
+            fund_account,
+            &mut remaining_accounts,
+        )?,
+        // restake normalized tokens
+        2 => restake_normalized_tokens(
+            operator,
+            fund_account,
+            &mut remaining_accounts,
+            current_slot,
+        )?,
+        // request_withdraw normalized tokens
+        3 => request_withdraw_normalized_tokens(
+            operator,
+            receipt_token_mint,
+            fund_account,
+            &mut remaining_accounts,
+        )?,
+        4 => withdraw_normalized_tokens(
+            operator,
+            receipt_token_mint,
+            fund_account,
+            &mut remaining_accounts,
+            current_slot,
+        )?,
+        _ => (),
+    };
 
     emit!(events::OperatorProcessedJob {
         receipt_token_mint: receipt_token_mint.key(),
@@ -548,20 +66,963 @@ pub fn process_run<'info>(
     Ok(())
 }
 
-#[inline(never)]
-fn calculate_epoch(
-    vault: &AccountInfo,
-    vault_config: &AccountInfo,
+fn stake_sol<'info>(
+    receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+    fund_account: &mut Account<'info, fund::FundAccount>,
+    remaining_accounts: &mut &'info [AccountInfo<'info>],
+) -> Result<()> {
+    let (fund_reserve_account, fund_reserve_account_bump) = remaining_accounts.pop_fund_reserve_account(receipt_token_mint.as_ref())?;
+    let spl_stake_pool_program = remaining_accounts.pop_spl_stake_pool_program()?;
+    let spl_stake_pool = remaining_accounts.pop_spl_stake_pool()?;
+    let spl_stake_pool_withdraw_authority = remaining_accounts.pop_spl_stake_pool_withdraw_authority()?;
+    let spl_reserve_stake_account = remaining_accounts.pop_spl_reserve_stake_account()?;
+    let spl_manager_fee_account = remaining_accounts.pop_spl_manager_fee_account()?;
+    let fund_supported_token_program = remaining_accounts.pop_fund_supported_token_program()?;
+    let fund_supported_token_mint = remaining_accounts.pop_fund_supported_token_mint(fund_supported_token_program.key)?;
+    let mut fund_supported_token_account_to_stake = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_fund_supported_token_account(
+        fund_account.as_ref(),
+        fund_supported_token_mint.key,
+        fund_supported_token_program.key,
+    )?)?;
+
+    let staking_lamports = fund_account.sol_operation_reserved_amount;
+    if staking_lamports > 0 {
+        let before_fund_supported_amount = fund_supported_token_account_to_stake.amount;
+        staking::deposit_sol_to_spl_stake_pool(
+            &staking::SPLStakePoolContext {
+                program: spl_stake_pool_program.clone(),
+                stake_pool: spl_stake_pool.clone(),
+                sol_deposit_authority: None,
+                stake_pool_withdraw_authority: spl_stake_pool_withdraw_authority.clone(),
+                reserve_stake_account: spl_reserve_stake_account.clone(),
+                manager_fee_account: spl_manager_fee_account.clone(),
+                pool_mint: fund_supported_token_mint.clone(),
+                token_program: fund_supported_token_program.to_account_info(),
+            },
+            staking_lamports,
+            fund_reserve_account,
+            fund_supported_token_account_to_stake.as_ref().as_ref(),
+            &[&[
+                fund::FundAccount::RESERVE_SEED,
+                receipt_token_mint.key().as_ref(),
+                &[fund_reserve_account_bump],
+            ]],
+        )?;
+
+        fund_supported_token_account_to_stake.reload()?;
+        let minted_supported_token_amount = fund_supported_token_account_to_stake.amount - before_fund_supported_amount;
+
+        fund_account.sol_operation_reserved_amount = 0;
+        let fund_supported_token_info = fund_account
+            .get_supported_token_mut(fund_supported_token_mint.key())?;
+        fund_supported_token_info.set_operation_reserved_amount(
+            fund_supported_token_info
+                .get_operation_reserved_amount()
+                .checked_add(minted_supported_token_amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        );
+        msg!(
+            "staked {} sol to mint {} tokens",
+            staking_lamports,
+            minted_supported_token_amount,
+        );
+
+        require_gte!(minted_supported_token_amount, staking_lamports.div_ceil(2));
+        require_eq!(
+            fund_supported_token_info.get_operation_reserved_amount(),
+            fund_supported_token_account_to_stake.amount,
+        );
+        require_eq!(fund_reserve_account.lamports(), fund_account.sol_operation_reserved_amount);
+    }
+
+    Ok(())
+}
+
+fn normalize_supported_tokens<'info>(
+    fund_account: &mut Account<'info, fund::FundAccount>,
+    remaining_accounts: &mut &'info [AccountInfo<'info>],
+) -> Result<()> {
+    let normalized_token_program = remaining_accounts.pop_normalized_token_program()?;
+    let normalized_token_mint = remaining_accounts.pop_normalized_token_mint(normalized_token_program.key)?;
+    let normalized_token_pool_account = remaining_accounts.pop_normalized_token_pool_account(normalized_token_mint.key)?.0;
+    let mut fund_normalized_token_account = parse_interface_account_boxed::<TokenAccount>(
+        remaining_accounts.pop_fund_normalized_token_account(
+            fund_account.as_ref(),
+            normalized_token_mint.key,
+            normalized_token_program.key,
+        )?
+    )?;
+    let fund_supported_token_program_to_normalize = remaining_accounts.pop_fund_supported_token_program()?;
+    let fund_supported_token_mint_to_normalize = remaining_accounts.pop_fund_supported_token_mint(fund_supported_token_program_to_normalize.key)?;
+    let mut fund_supported_token_account_to_normalize = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_fund_supported_token_account(
+        fund_account.as_ref(),
+        fund_supported_token_mint_to_normalize.key,
+        fund_supported_token_program_to_normalize.key,
+    )?)?;
+    let mut normalized_token_pool_supported_token_lock_account = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_normalized_token_pool_supported_token_lock_account(
+        normalized_token_pool_account.key,
+        fund_supported_token_mint_to_normalize.key,
+        fund_supported_token_program_to_normalize.key,
+    )?)?;
+    let pricing_source_accounts = *remaining_accounts;
+
+    // create pricing calculator
+    // TODO fix `create_pricing_source_map`
+    let mut pricing_source_map = fund::create_pricing_source_map(
+        fund_account,
+        pricing_source_accounts
+    )?;
+    pricing_source_map.insert(
+        normalized_token_mint.key(),
+        (
+            pricing::TokenPricingSource::NormalizedTokenPool {
+                mint_address: normalized_token_mint.key(),
+                pool_address: normalized_token_pool_account.key(),
+            },
+            vec![normalized_token_mint, normalized_token_pool_account],
+        ),
+    );
+
+    let normalizing_supported_token_amount = fund_account
+        .get_supported_token_mut(fund_supported_token_account_to_normalize.mint)?
+        .get_operation_reserved_amount();
+    if normalizing_supported_token_amount > 0 {
+        let mut normalized_token_pool_account_parsed = parse_account_boxed(normalized_token_pool_account)?;
+        let normalized_token_mint_parsed = parse_interface_account_boxed(normalized_token_mint)?;
+        let fund_supported_token_mint_to_normalize_parsed = parse_interface_account_boxed(fund_supported_token_mint_to_normalize)?;
+        let mut normalizer = normalization::NormalizedTokenPoolAdapter::new(
+            normalized_token_pool_account_parsed,
+            normalized_token_mint_parsed,
+            normalized_token_program,
+            fund_supported_token_mint_to_normalize_parsed,
+            fund_supported_token_program_to_normalize,
+            normalized_token_pool_supported_token_lock_account.clone(),
+        )?;
+
+        let before_fund_normalized_token_amount = fund_normalized_token_account.amount;
+        let denominated_amount_per_normalized_token = normalizer.get_denominated_amount_per_normalized_token()?;
+        normalization::normalize_supported_token(
+            &mut normalizer,
+            &fund_normalized_token_account,
+            &fund_supported_token_account_to_normalize,
+            fund_account.to_account_info(),
+            &[fund_account.get_signer_seeds().as_ref()],
+            normalizing_supported_token_amount,
+            // TODO: revisit later about pricing interface and dependency graph
+            pricing::calculate_token_amount_as_sol(
+                fund_supported_token_mint_to_normalize.key(),
+                &pricing_source_map,
+                normalizing_supported_token_amount,
+            )?,
+            pricing::calculate_token_amount_as_sol(
+                normalized_token_mint.key(),
+                &pricing_source_map,
+                denominated_amount_per_normalized_token,
+            )?,
+        )?;
+
+        fund_supported_token_account_to_normalize.reload()?;
+        fund_normalized_token_account.reload()?;
+        normalized_token_pool_supported_token_lock_account.reload()?;
+        let minted_normalized_token_amount = fund_normalized_token_account.amount - before_fund_normalized_token_amount;
+
+        let fund_supported_token_info_to_normalize = fund_account
+            .get_supported_token_mut(fund_supported_token_account_to_normalize.mint)?;
+        fund_supported_token_info_to_normalize.set_operation_reserved_amount(0);
+        fund_supported_token_info_to_normalize.set_operating_amount(
+            fund_supported_token_info_to_normalize.get_operating_amount()
+                + normalizing_supported_token_amount
+        );
+
+        msg!(
+            "normalized {} tokens to mint {} normalized tokens",
+            normalizing_supported_token_amount,
+            minted_normalized_token_amount,
+        );
+
+        require_gte!(
+            normalizing_supported_token_amount,
+            minted_normalized_token_amount.div_ceil(2),
+        );
+        require_eq!(
+            fund_supported_token_info_to_normalize.get_operation_reserved_amount(),
+            fund_supported_token_account_to_normalize.amount,
+        );
+        require_eq!(
+            fund_supported_token_info_to_normalize.get_operating_amount(),
+            normalized_token_pool_supported_token_lock_account.amount,
+        );
+
+        normalized_token_pool_account_parsed = normalizer.into_pool_account();
+        normalized_token_pool_account_parsed.exit(&crate::ID)?;
+    }
+
+    Ok(())
+}
+
+fn restake_normalized_tokens<'info>(
+    operator: &Signer<'info>,
+    fund_account: &mut Account<'info, fund::FundAccount>,
+    remaining_accounts: &mut &'info [AccountInfo<'info>],
     current_slot: u64,
-) -> Result<(u64, u64)> {
-    let epoch_length = Config::try_from_slice_unchecked(&vault_config.try_borrow_data()?)?.epoch_length();
+) -> Result<()> {
+    let normalized_token_program = remaining_accounts.pop_normalized_token_program()?;
+    let normalized_token_mint = remaining_accounts.pop_normalized_token_mint(normalized_token_program.key)?;
+    let mut fund_normalized_token_account = parse_interface_account_boxed::<TokenAccount>(
+        remaining_accounts.pop_fund_normalized_token_account(
+            fund_account.as_ref(),
+            normalized_token_mint.key,
+            normalized_token_program.key,
+        )?
+    )?;
+    let jito_vault_program = remaining_accounts.pop_jito_vault_program()?;
+    let jito_vault_config = remaining_accounts.pop_jito_vault_config()?;
+    let jito_vault_account = remaining_accounts.pop_jito_vault_account()?;
+    let jito_vault_receipt_token_program = remaining_accounts.pop_jito_vault_receipt_token_program()?;
+    let jito_vault_receipt_token_mint = remaining_accounts.pop_jito_vault_receipt_token_mint()?;
+    let mut jito_vault_supported_token_account = parse_interface_account_boxed::<TokenAccount>(
+        remaining_accounts.pop_jito_vault_supported_token_account(
+            normalized_token_mint.key,
+            normalized_token_program.key,
+        )?
+    )?;
+    let jito_vault_update_state_tracker = remaining_accounts.pop_jito_vault_update_state_tracker(jito_vault_config, current_slot)?;
+    let jito_vault_fee_wallet_token_account = remaining_accounts.pop_jito_vault_fee_wallet_token_account()?;
+    let mut fund_jito_vault_receipt_token_account = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?)?;
+    let system_program = remaining_accounts.pop_system_program()?;
 
-    let current_epoch = current_slot.checked_div(epoch_length)
-        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+    let restaking_nt_amount = fund_normalized_token_account.amount;
+    if restaking_nt_amount > 0 {
+        let before_fund_vrt_amount = fund_jito_vault_receipt_token_account.amount;
 
-    let updated_slot = Vault::try_from_slice_unchecked(&vault.try_borrow_data()?)?.last_full_state_update_slot();
-    let updated_epoch = updated_slot.checked_div(epoch_length)
-        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+        let ctx = restaking::jito::JitoRestakingVaultContext {
+            vault_program: jito_vault_program.clone(),
+            vault_config: jito_vault_config.clone(),
+            vault: jito_vault_account.clone(),
+            vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+            vault_receipt_token_program: jito_vault_receipt_token_program.to_account_info(),
+            vault_supported_token_program: normalized_token_program.to_account_info(),
+            vault_supported_token_mint: normalized_token_mint.clone(),
+            vault_supported_token_account: jito_vault_supported_token_account.to_account_info(),
+        };
 
-    Ok((current_epoch, updated_epoch))
+        restaking::jito::update_vault_if_needed(
+            &ctx,
+            operator,
+            fund_account.as_ref(),
+            &[fund_account.get_signer_seeds().as_ref()],
+            jito_vault_update_state_tracker,
+            system_program.as_ref(),
+            current_slot,
+        )?;
+
+        restaking::jito::deposit(
+            &ctx,
+            fund_normalized_token_account.as_ref().as_ref(),
+            restaking_nt_amount,
+            jito_vault_fee_wallet_token_account,
+            fund_jito_vault_receipt_token_account.as_ref().as_ref(),
+            restaking_nt_amount,
+            fund_account.as_ref(),
+            &[fund_account.get_signer_seeds().as_ref()],
+        )?;
+
+        jito_vault_supported_token_account.reload()?;
+        fund_normalized_token_account.reload()?;
+        fund_jito_vault_receipt_token_account.reload()?;
+        let minted_fund_vrt_amount = fund_jito_vault_receipt_token_account.amount - before_fund_vrt_amount;
+
+        msg!(
+            "restaked {} nt to mint {} vrt",
+            restaking_nt_amount,
+            minted_fund_vrt_amount
+        );
+
+        require_gte!(minted_fund_vrt_amount, restaking_nt_amount);
+    }
+
+    Ok(())
+}
+
+fn request_withdraw_normalized_tokens<'info>(
+    operator: &Signer<'info>,
+    receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+    fund_account: &mut Account<'info, fund::FundAccount>,
+    remaining_accounts: &mut &'info [AccountInfo<'info>],
+) -> Result<()> {
+    let normalized_token_program = remaining_accounts.pop_normalized_token_program()?;
+    let normalized_token_mint = remaining_accounts.pop_normalized_token_mint(normalized_token_program.key)?;
+    let jito_vault_program = remaining_accounts.pop_jito_vault_program()?;
+    let jito_vault_config = remaining_accounts.pop_jito_vault_config()?;
+    let jito_vault_account = remaining_accounts.pop_jito_vault_account()?;
+    let jito_vault_receipt_token_program = remaining_accounts.pop_jito_vault_receipt_token_program()?;
+    let jito_vault_receipt_token_mint = remaining_accounts.pop_jito_vault_receipt_token_mint()?;
+    let jito_vault_supported_token_account = remaining_accounts.pop_jito_vault_supported_token_account(
+        normalized_token_mint.key,
+        normalized_token_program.key,
+    )?;
+    let (vault_base_account, vault_base_account_bump) = remaining_accounts.pop_vault_base_account(receipt_token_mint.as_ref())?;
+    let jito_vault_withdrawal_ticket = remaining_accounts.pop_jito_vault_withdrawal_ticket(
+        vault_base_account.key,
+        Some(false),
+    )?;
+    let jito_vault_withdrawal_ticket_token_account = remaining_accounts.pop_jito_vault_withdrawal_ticket_token_account(
+        jito_vault_withdrawal_ticket.key,
+        Some(false),
+    )?;
+    let mut fund_jito_vault_receipt_token_account = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?)?;
+    let system_program = remaining_accounts.pop_system_program()?;
+    let associated_token_program = remaining_accounts.pop_associated_token_program()?;
+
+    let unrestaking_fund_vrt_amount = fund_jito_vault_receipt_token_account.amount;
+    if unrestaking_fund_vrt_amount > 0 {
+        restaking::jito::request_withdraw(
+            &restaking::jito::JitoRestakingVaultContext {
+                vault_program: jito_vault_program.clone(),
+                vault_config: jito_vault_config.clone(),
+                vault: jito_vault_account.clone(),
+                vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+                vault_receipt_token_program: jito_vault_receipt_token_program.to_account_info(),
+                vault_supported_token_program: normalized_token_program.to_account_info(),
+                vault_supported_token_mint: normalized_token_mint.clone(),
+                vault_supported_token_account: jito_vault_supported_token_account.clone(),
+            },
+            operator,
+            jito_vault_withdrawal_ticket,
+            jito_vault_withdrawal_ticket_token_account,
+            fund_jito_vault_receipt_token_account.as_ref().as_ref(),
+            vault_base_account,
+            system_program.as_ref(),
+            associated_token_program.as_ref(),
+            fund_account.as_ref(),
+            &[
+                fund_account.get_signer_seeds().as_ref(),
+                &[
+                    restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT1_SEED,
+                    &receipt_token_mint.key().to_bytes(),
+                    &[vault_base_account_bump],
+                ]
+            ],
+            unrestaking_fund_vrt_amount,
+        )?;
+
+        fund_jito_vault_receipt_token_account.reload()?;
+        
+        require_eq!(
+            fund_jito_vault_receipt_token_account.amount,
+            0,
+        );
+        
+        msg!(
+            "requested unrestaking {} vrt",
+            unrestaking_fund_vrt_amount,
+        );
+    }
+
+    Ok(())
+}
+
+fn withdraw_normalized_tokens<'info>(
+    operator: &Signer<'info>,
+    receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+    fund_account: &mut Account<'info, fund::FundAccount>,
+    remaining_accounts: &mut &'info [AccountInfo<'info>],
+    current_slot: u64,
+) -> Result<()> {
+    let normalized_token_program = remaining_accounts.pop_normalized_token_program()?;
+    let normalized_token_mint = remaining_accounts.pop_normalized_token_mint(normalized_token_program.key)?;
+    let fund_normalized_token_account = remaining_accounts.pop_fund_normalized_token_account(
+        fund_account.as_ref(),
+        normalized_token_mint.key,
+        normalized_token_program.key,
+    )?;
+    let jito_vault_program = remaining_accounts.pop_jito_vault_program()?;
+    let jito_vault_config = remaining_accounts.pop_jito_vault_config()?;
+    let jito_vault_account = remaining_accounts.pop_jito_vault_account()?;
+    let jito_vault_receipt_token_program = remaining_accounts.pop_jito_vault_receipt_token_program()?;
+    let jito_vault_receipt_token_mint = remaining_accounts.pop_jito_vault_receipt_token_mint()?;
+    let jito_vault_supported_token_account = remaining_accounts.pop_jito_vault_supported_token_account(
+        normalized_token_mint.key,
+        normalized_token_program.key,
+    )?;
+    let jito_vault_update_state_tracker = remaining_accounts.pop_jito_vault_update_state_tracker(jito_vault_config, current_slot)?;
+    let jito_vault_withdrawal_ticket = remaining_accounts.pop_jito_vault_withdrawal_ticket(
+        &find_vault_base_account_address(receipt_token_mint.as_ref()).0,
+        Some(true),
+    )?;
+    let jito_vault_withdrawal_ticket_token_account = parse_interface_account_boxed::<TokenAccount>(remaining_accounts.pop_jito_vault_withdrawal_ticket_token_account(
+        jito_vault_withdrawal_ticket.key,
+        Some(true),
+    )?)?;
+    let jito_vault_fee_wallet_token_account = remaining_accounts.pop_jito_vault_fee_wallet_token_account()?;
+    let jito_vault_program_fee_wallet_token_account = remaining_accounts.pop_jito_vault_program_fee_wallet_token_account()?;
+    let system_program = remaining_accounts.pop_system_program()?;
+
+    
+    let ctx = restaking::jito::JitoRestakingVaultContext {
+        vault_program: jito_vault_program.clone(),
+        vault_config: jito_vault_config.clone(),
+        vault: jito_vault_account.clone(),
+        vault_receipt_token_mint: jito_vault_receipt_token_mint.clone(),
+        vault_receipt_token_program: jito_vault_receipt_token_program.to_account_info(),
+        vault_supported_token_mint: normalized_token_mint.clone(),
+        vault_supported_token_program: normalized_token_program.to_account_info(),
+        vault_supported_token_account: jito_vault_supported_token_account.to_account_info(),
+    };
+
+    let withdrawing_vrt_amount = jito_vault_withdrawal_ticket_token_account.amount;
+    if withdrawing_vrt_amount > 0 {
+        restaking::jito::update_vault_if_needed(
+            &ctx,
+            operator,
+            fund_account.as_ref(),
+            &[fund_account.get_signer_seeds().as_ref()],
+            jito_vault_update_state_tracker,
+            system_program.as_ref(),
+            current_slot,
+        )?;
+    
+        restaking::jito::withdraw(
+            &ctx,
+            jito_vault_withdrawal_ticket, // vault_withdrawal_ticket
+            jito_vault_withdrawal_ticket_token_account.as_ref().as_ref(), // vault_withdrawal_ticket_token_account
+            fund_normalized_token_account,
+            jito_vault_fee_wallet_token_account,
+            jito_vault_program_fee_wallet_token_account,
+            fund_account.as_ref(), // signer
+            system_program.as_ref(),
+        )?;
+    }
+
+    Ok(())
+}
+
+trait RemainingAccounts<'info> {
+    fn pop_account_info_with_seeds(
+        &mut self,
+        seeds: &[&[u8]],
+        program_id: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy
+    ) -> Result<(&'info AccountInfo<'info>, u8)>;
+    fn pop_account_info_with_address(
+        &mut self,
+        address: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_account_info(
+        &mut self,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_associated_token_account_info(
+        &mut self,
+        mint: &Pubkey,
+        authority: &Pubkey,
+        token_program: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>>;
+
+    fn pop_system_program(&mut self) -> Result<Program<'info, System>>;
+    fn pop_associated_token_program(&mut self) -> Result<Program<'info, AssociatedToken>>;
+
+    // Fund
+
+    fn pop_fund_reserve_account(
+        &mut self,
+        receipt_token_mint: &AccountInfo,
+    ) -> Result<(&'info AccountInfo<'info>, u8)>;
+
+    // SPL
+
+    fn pop_spl_stake_pool_program(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_spl_stake_pool(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_spl_stake_pool_withdraw_authority(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_spl_reserve_stake_account(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_spl_manager_fee_account(&mut self) -> Result<&'info AccountInfo<'info>>;
+
+    // Supported Tokens
+
+    fn pop_fund_supported_token_program(&mut self) -> Result<Interface<'info, TokenInterface>>;
+    fn pop_fund_supported_token_mint(
+        &mut self,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_fund_supported_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+        supported_token_mint: &Pubkey,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_normalized_token_pool_supported_token_lock_account(
+        &mut self,
+        normalized_token_pool_account: &Pubkey,
+        supported_token_mint: &Pubkey,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+
+    // NTP
+
+    fn pop_normalized_token_pool_account(
+        &mut self,
+        normalized_token_mint: &Pubkey,
+    ) -> Result<(&'info AccountInfo<'info>, u8)>;
+
+    // Normalized Tokens
+
+    fn pop_normalized_token_program(&mut self) -> Result<Program<'info, Token>>;
+    fn pop_normalized_token_mint(
+        &mut self,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_fund_normalized_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+        normalized_token_mint: &Pubkey,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_supported_token_account(
+        &mut self,
+        normalized_token_mint: &Pubkey,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>>;
+
+    // Restaking
+
+    fn pop_vault_base_account(
+        &mut self,
+        receipt_token_mint: &AccountInfo,
+    ) -> Result<(&'info AccountInfo<'info>, u8)>;
+
+    // Jito
+
+    fn pop_jito_vault_program(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_config(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_account(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_update_state_tracker(
+        &mut self,
+        jito_vault_config: &AccountInfo,
+        current_slot: u64,
+    ) -> Result<&'info AccountInfo<'info>>;
+
+    fn pop_jito_vault_withdrawal_ticket(
+        &mut self,
+        vault_base_account: &Pubkey,
+        initialized: Option<bool>,
+    ) -> Result<&'info AccountInfo<'info>>;
+
+    fn pop_jito_vault_receipt_token_program(&mut self) -> Result<Program<'info, Token>>;
+    fn pop_jito_vault_receipt_token_mint(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_fee_wallet_token_account(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_program_fee_wallet_token_account(&mut self) -> Result<&'info AccountInfo<'info>>;
+    fn pop_fund_jito_vault_receipt_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+    ) -> Result<&'info AccountInfo<'info>>;
+    fn pop_jito_vault_withdrawal_ticket_token_account(
+        &mut self,
+        jito_vault_withdrawal_ticket: &Pubkey,
+        initialized: Option<bool>,
+    ) -> Result<&'info AccountInfo<'info>>;
+}
+
+impl<'info> RemainingAccounts<'info> for &'info [AccountInfo<'info>] {
+    fn pop_account_info_with_seeds(
+        &mut self,
+        seeds: &[&[u8]],
+        program_id: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy
+    ) -> Result<(&'info AccountInfo<'info>, u8)> {
+        let (address, bump) = Pubkey::find_program_address(seeds, program_id);
+        Ok((self.pop_account_info_with_address(&address, owner, account_name)?, bump))
+    }
+
+    fn pop_account_info_with_address(
+        &mut self,
+        address: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>> {
+        use anchor_lang::error::*;
+    
+        let account = self.pop_account_info(owner, account_name)?;
+        if account.key != address {
+            return Err(
+                Error::from(ErrorCode::ConstraintAddress)
+                    .with_pubkeys((*account.key, *address))
+                    .with_account_name(account_name)
+            )?;
+        }
+    
+        Ok(account)
+    }
+
+    fn pop_account_info(
+        &mut self,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>> {
+        use anchor_lang::error::*;
+
+        if self.is_empty() {
+            return Err(Error::from(ErrorCode::AccountNotEnoughKeys).with_account_name(account_name));
+        }
+        let account = &self[0];
+        *self = &self[1..];
+
+        if let Some(owner) = owner {
+            if account.owner != owner {
+                return Err(
+                    Error::from(ErrorCode::ConstraintOwner)
+                        .with_pubkeys((*account.owner, *owner))
+                        .with_account_name(account_name)
+                );
+            }
+        }
+
+        Ok(account)
+    }
+
+    fn pop_associated_token_account_info(
+        &mut self,
+        mint: &Pubkey,
+        authority: &Pubkey,
+        token_program: &Pubkey,
+        owner: Option<&Pubkey>,
+        account_name: impl ToString + Copy,
+    ) -> Result<&'info AccountInfo<'info>> {
+        let address = associated_token::get_associated_token_address_with_program_id(
+            authority,
+            mint,
+            token_program,
+        );
+        self.pop_account_info_with_address(&address, owner, account_name)
+    }
+
+    #[inline(never)]
+    fn pop_system_program(&mut self) -> Result<Program<'info, System>> {
+        Ok(Program::try_from(self.pop_account_info(None, "system_program")?)?)
+    }
+
+    #[inline(never)]
+    fn pop_associated_token_program(&mut self) -> Result<Program<'info, AssociatedToken>> {
+        Ok(Program::try_from(self.pop_account_info(None, "associated_token_program")?)?)
+    }
+
+    #[inline(never)]
+    fn pop_fund_reserve_account(
+        &mut self,
+        receipt_token_mint: &AccountInfo,
+    ) -> Result<(&'info AccountInfo<'info>, u8)> {
+        self.pop_account_info_with_seeds(
+            &[
+                fund::FundAccount::RESERVE_SEED,
+                receipt_token_mint.key().as_ref()
+            ],
+            &crate::ID,
+            Some(&Pubkey::default()),
+            "fund_reserve_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_spl_stake_pool_program(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info_with_address(
+            &spl_stake_pool::ID,
+            None,
+            "spl_stake_pool_program",
+        )
+    }
+    
+    #[inline(never)]
+    fn pop_spl_stake_pool(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(
+            Some(&spl_stake_pool::ID),
+            "spl_stake_pool",
+        )
+    }
+    
+    #[inline(never)]
+    fn pop_spl_stake_pool_withdraw_authority(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(None, "spl_stake_pool_withdraw_authority")
+    }
+    
+    #[inline(never)]
+    fn pop_spl_reserve_stake_account(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(None, "spl_reserve_stake_account")
+    }
+    
+    #[inline(never)]
+    fn pop_spl_manager_fee_account(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(None, "spl_manager_fee_account")
+    }
+    
+    #[inline(never)]
+    fn pop_fund_supported_token_program(&mut self) -> Result<Interface<'info, TokenInterface>> {
+        Interface::try_from(self.pop_account_info(None, "fund_supported_token_program")?)
+            .map_err(|e| {
+                anchor_lang::error::Error::from(e).with_account_name("fund_supported_token_program")
+            })
+    }
+    
+    #[inline(never)]
+    fn pop_fund_supported_token_mint(
+        &mut self,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(
+            Some(supported_token_program),
+            "fund_supported_token_mint",
+        )
+    }
+    
+    #[inline(never)]
+    fn pop_fund_supported_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+        supported_token_mint: &Pubkey,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            supported_token_mint,
+            fund_account.key,
+            supported_token_program,
+            Some(supported_token_program),
+            "fund_supported_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_normalized_token_pool_supported_token_lock_account(
+        &mut self,
+        normalized_token_pool_account: &Pubkey,
+        supported_token_mint: &Pubkey,
+        supported_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            supported_token_mint,
+            normalized_token_pool_account,
+            supported_token_program,
+            Some(supported_token_program),
+            "normalized_token_pool_supported_token_lock_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_normalized_token_pool_account(
+        &mut self,
+        normalized_token_mint: &Pubkey,
+    ) -> Result<(&'info AccountInfo<'info>, u8)> {
+        self.pop_account_info_with_seeds(
+            &[
+                normalization::NormalizedTokenPoolAccount::SEED,
+                normalized_token_mint.as_ref(),
+            ],
+            &crate::ID,
+            Some(&crate::ID),
+            "normalized_token_pool_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_normalized_token_program(&mut self) -> Result<Program<'info, Token>> {
+        Program::try_from(self.pop_account_info(None, "normalized_token_program")?)
+            .map_err(|e| anchor_lang::error::Error::from(e).with_account_name("normalized_token_program"))
+    }
+
+    #[inline(never)]
+    fn pop_normalized_token_mint(
+        &mut self,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info(Some(normalized_token_program), "normalized_token_mint")
+    }
+
+    #[inline(never)]
+    fn pop_fund_normalized_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+        normalized_token_mint: &Pubkey,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            normalized_token_mint,
+            fund_account.key,
+            normalized_token_program,
+            Some(normalized_token_program),
+            "fund_normalized_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_supported_token_account(
+        &mut self,
+        normalized_token_mint: &Pubkey,
+        normalized_token_program: &Pubkey,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            normalized_token_mint,
+            &FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS,
+            normalized_token_program,
+            Some(normalized_token_program),
+            "jito_vault_supported_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_vault_base_account(
+        &mut self,
+        receipt_token_mint: &AccountInfo,
+    ) -> Result<(&'info AccountInfo<'info>, u8)> {
+        let (address, bump) = find_vault_base_account_address(receipt_token_mint);
+        Ok((self.pop_account_info_with_address(
+            &address,
+            Some(&Pubkey::default()),
+            "vault_base_account",
+        )?, bump))
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_program(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info_with_address(&JITO_VAULT_PROGRAM_ID, None, "jito_vault_program")
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_config(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info_with_address(&FRAGSOL_JITO_VAULT_CONFIG_ADDRESS, None, "jito_vault_config")
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_account(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info_with_address(&FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS, None, "jito_vault_account")
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_update_state_tracker(
+        &mut self,
+        jito_vault_config: &AccountInfo,
+        current_slot: u64,
+    ) -> Result<&'info AccountInfo<'info>> {
+        use anchor_lang::error::*;
+        use jito_bytemuck::AccountDeserialize;
+        use jito_vault_core::config::Config;
+
+        let data = jito_vault_config.try_borrow_data()
+            .map_err(|e| Error::from(e).with_account_name("jito_vault_cupdate_state_tracker"))?;
+        let config = Config::try_from_slice_unchecked(&data)
+            .map_err(|e| Error::from(e).with_account_name("jito_vault_cupdate_state_tracker"))?;
+        let ncn_epoch = current_slot.checked_div(config.epoch_length())
+            .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+        msg!("Current epoch: {}", ncn_epoch);
+        
+        Ok(self.pop_account_info_with_seeds(
+            &[
+                b"vault_update_state_tracker",
+                FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS.as_ref(),
+                &ncn_epoch.to_le_bytes(),
+            ],
+            &JITO_VAULT_PROGRAM_ID,
+            Some(&Pubkey::default()),
+            "jito_vault_update_state_tracker",
+        )?.0)
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_withdrawal_ticket(
+        &mut self,
+        vault_base_account: &Pubkey,
+        initialized: Option<bool>,
+    ) -> Result<&'info AccountInfo<'info>> {
+        Ok(self.pop_account_info_with_seeds(
+            &[
+                b"vault_staker_withdrawal_ticket",
+                FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS.as_ref(),
+                vault_base_account.as_ref(),
+            ],
+            &JITO_VAULT_PROGRAM_ID,
+            initialized.map(|initialized| initialized.then_some(JITO_VAULT_PROGRAM_ID).unwrap_or(Pubkey::default())).as_ref(),
+            "jito_vault_withdrawal_ticket",
+        )?.0)
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_receipt_token_program(&mut self) -> Result<Program<'info, Token>> {
+        Program::try_from(self.pop_account_info(None, "jito_vault_receipt_token_program")?)
+            .map_err(|e| anchor_lang::error::Error::from(e).with_account_name("jito_vault_receipt_token_program"))
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_receipt_token_mint(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_account_info_with_address(
+            &FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS,
+            Some(&Token::id()),
+            "jito_vault_receipt_token_mint",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_fee_wallet_token_account(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            &FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS,
+            &ADMIN_PUBKEY,
+            &Token::id(),
+            Some(&Token::id()),
+            "jito_vault_fee_wallet_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_program_fee_wallet_token_account(&mut self) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            &FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS,
+            &JITO_VAULT_PROGRAM_FEE_WALLET,
+            &Token::id(),
+            Some(&Token::id()),
+            "jito_vault_program_fee_wallet_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_fund_jito_vault_receipt_token_account(
+        &mut self,
+        fund_account: &AccountInfo,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            &FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS,
+            fund_account.key,
+            &Token::id(),
+            Some(&Token::id()),
+            "fund_jito_vault_receipt_token_account",
+        )
+    }
+
+    #[inline(never)]
+    fn pop_jito_vault_withdrawal_ticket_token_account(
+        &mut self,
+        jito_vault_withdrawal_ticket: &Pubkey,
+        initialized: Option<bool>,
+    ) -> Result<&'info AccountInfo<'info>> {
+        self.pop_associated_token_account_info(
+            &FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS,
+            jito_vault_withdrawal_ticket,
+            &Token::id(),
+            initialized.map(|initialized| initialized.then_some(Token::id()).unwrap_or(Pubkey::default())).as_ref(),
+            "jito_vault_withdrawal_ticket_token_account",
+        )
+    }
+}
+
+fn find_vault_base_account_address(
+    receipt_token_mint: &AccountInfo,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT1_SEED,
+            receipt_token_mint.key.as_ref(),
+        ],
+        &crate::ID,
+    )
 }

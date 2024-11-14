@@ -193,15 +193,53 @@ pub fn undelegation<'info>(
 
 pub fn request_withdraw<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
+    operator: &Signer<'info>,
     vault_withdrawal_ticket: &AccountInfo<'info>,
     vault_withdrawal_ticket_token_account: &AccountInfo<'info>,
     vault_receipt_token_account: &AccountInfo<'info>,
-    vault_program_base_account: &AccountInfo<'info>,
+    vault_base_account: &AccountInfo<'info>,
     system_program: &AccountInfo<'info>,
+    associated_token_program: &AccountInfo<'info>,
     signer: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]],
     vrt_token_amount_out: u64,
 ) -> Result<()> {
+    // TODO create token account
+    anchor_spl::associated_token::create(
+        CpiContext::new(
+            associated_token_program.clone(),
+            anchor_spl::associated_token::Create {
+                payer: operator.to_account_info(),
+                associated_token: vault_withdrawal_ticket_token_account.clone(),
+                authority: vault_withdrawal_ticket.clone(),
+                mint: ctx.vault_receipt_token_mint.clone(),
+                system_program: system_program.clone(),
+                token_program: ctx.vault_receipt_token_program.clone(),
+            }
+        )
+    )?;
+
+    let rent = Rent::get()?;
+    let current_lamports = vault_withdrawal_ticket.lamports();
+    let space = 8 + std::mem::size_of::<VaultStakerWithdrawalTicket>();
+    let required_lamports = rent
+        .minimum_balance(space as usize)
+        .max(1)
+        .saturating_sub(current_lamports);
+
+    if required_lamports > 0 {
+        anchor_lang::system_program::transfer(
+            CpiContext::new(
+                system_program.clone(),
+                anchor_lang::system_program::Transfer {
+                    from: operator.to_account_info(),
+                    to: vault_withdrawal_ticket.clone(),
+                }
+            ),
+            required_lamports,
+        )?;
+    }
+
     let enqueue_withdraw_ix = jito_vault_sdk::sdk::enqueue_withdrawal(
         ctx.vault_program.key,
         ctx.vault_config.key,
@@ -210,7 +248,7 @@ pub fn request_withdraw<'info>(
         vault_withdrawal_ticket_token_account.key,
         signer.key,
         vault_receipt_token_account.key,
-        vault_program_base_account.key,
+        vault_base_account.key,
         vrt_token_amount_out,
     );
 
@@ -224,7 +262,7 @@ pub fn request_withdraw<'info>(
             vault_withdrawal_ticket_token_account.clone(),
             signer.clone(),
             vault_receipt_token_account.clone(),
-            vault_program_base_account.clone(),
+            vault_base_account.clone(),
             ctx.vault_receipt_token_program.clone(),
             system_program.clone()
         ],

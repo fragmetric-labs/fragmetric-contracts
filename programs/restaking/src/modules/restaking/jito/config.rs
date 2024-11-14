@@ -27,19 +27,7 @@ pub struct JitoRestakingVaultContext<'info> {
     pub vault_supported_token_account: AccountInfo<'info>,
 }
 
-
-pub struct JitoRestakingVaultWithdrawalContext<'info> {
-    pub vault_program: AccountInfo<'info>,
-    pub vault_config: AccountInfo<'info>,
-    pub vault: AccountInfo<'info>,
-    pub vault_receipt_token_mint: AccountInfo<'info>,
-    pub vault_receipt_token_program: AccountInfo<'info>,
-    pub vault_supported_token_mint: AccountInfo<'info>,
-    pub vault_supported_token_program: AccountInfo<'info>,
-    pub vault_supported_token_account: AccountInfo<'info>,
-}
-
-impl<'info> JitoRestakingVaultWithdrawalContext<'info> {
+impl<'info> JitoRestakingVaultContext<'info> {
     pub fn get_vault_withdrawal_tickets(&self, vault_withdrawal_tickets: &'info [AccountInfo<'info>], slot: u64) -> Result<Vec<&'info AccountInfo<'info>>>{
         let vault_config_data = &**self.vault_config.try_borrow_data()?;
         let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
