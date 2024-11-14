@@ -16,3 +16,6 @@ keypairs/**/*
 !keypairs/shared_*
 !keypairs/restaking/
 !keypairs/restaking/shared_*
+
+# test snapshots
+tests/restaking.snapshot.txt
