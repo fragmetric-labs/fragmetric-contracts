@@ -77,6 +77,7 @@ address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
 [[test.validator.clone]]
 address = "7GgPYjS5Dza89wV6FpZ23kUJRG5vbQ1GM25ezspYFSoE"
 
+# *jitoVRT
 # clone mainnet Jito restaking protocol to localnet
 [[test.validator.clone]]
 address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
@@ -85,14 +86,10 @@ address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
 [[test.validator.clone]]
 address = "96nH6npzmaAWpmraLaN2F55h27TMEtJrsjo881dCc2Dt"
 
-## clone mainnet Jito restaking protocol Config to localnet
-#[[test.validator.clone]]
-#address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-
 # clone mainnet Jito restaking protocol Config to localnet
 [[test.validator.account]]
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-filename = "./tests/mocks/mainnet/jito_vault_local_config.json"
+filename = "./tests/mocks/mainnet/jito_vault_config.json"
 
 [[test.validator.account]]
 address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
