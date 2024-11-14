@@ -38,7 +38,7 @@ impl<'info> PricingService<'info> {
         self
     }
 
-    pub fn register_token_pricing_source(
+    pub fn resolve_token_pricing_source(
         &mut self,
         token_mint: &Pubkey,
         token_pricing_source: &TokenPricingSource,
@@ -110,7 +110,7 @@ impl<'info> PricingService<'info> {
         // expand supported tokens recursively
         token_value.numerator.iter().try_for_each(|asset| {
             if let Asset::TOKEN(token_mint, Some(token_pricing_source), _) = asset {
-                self.register_token_pricing_source(token_mint, token_pricing_source)?;
+                self.resolve_token_pricing_source(token_mint, token_pricing_source)?;
             }
             Ok::<(), Error>(())
         })?;

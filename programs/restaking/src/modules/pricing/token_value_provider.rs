@@ -89,7 +89,7 @@ mod tests {
 
         let mock_mint_10_10 = Pubkey::new_unique();
         pricing_service
-            .register_token_pricing_source(
+            .resolve_token_pricing_source(
                 &mock_mint_10_10,
                 &TokenPricingSource::Mock {
                     numerator: vec![MockAsset::SOL(10)],
@@ -112,7 +112,7 @@ mod tests {
 
         let mock_mint_12_10 = Pubkey::new_unique();
         pricing_service
-            .register_token_pricing_source(
+            .resolve_token_pricing_source(
                 &mock_mint_12_10,
                 &TokenPricingSource::Mock {
                     numerator: vec![
@@ -145,10 +145,10 @@ mod tests {
             denominator: 10_000,
         };
         pricing_service
-            .register_token_pricing_source(&mock_mint_10_10, mock_source_14_10)
-            .expect_err("register_token_pricing_source fails for already registered token");
+            .resolve_token_pricing_source(&mock_mint_10_10, mock_source_14_10)
+            .expect_err("resolve_token_pricing_source fails for already registered token");
         pricing_service
-            .register_token_pricing_source(&mock_mint_14_10, mock_source_14_10)
+            .resolve_token_pricing_source(&mock_mint_14_10, mock_source_14_10)
             .unwrap();
         assert_eq!(
             pricing_service

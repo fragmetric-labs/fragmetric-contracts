@@ -171,7 +171,7 @@ pub fn process_run<'info>(
             pricing_service
                 .register_token_pricing_source_account(normalized_token_mint.as_ref())
                 .register_token_pricing_source_account(normalized_token_pool_account.as_ref())
-                .register_token_pricing_source(
+                .resolve_token_pricing_source(
                     &normalized_token_mint.key(),
                     &pricing::TokenPricingSource::NormalizedTokenPool {
                         mint_address: normalized_token_mint.key(),

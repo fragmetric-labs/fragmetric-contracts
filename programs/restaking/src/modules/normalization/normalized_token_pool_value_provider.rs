@@ -31,6 +31,7 @@ impl<'a> TokenValueProvider for NormalizedTokenPoolValueProvider<'a> {
             numerator: normalized_token_pool_account
                 .supported_tokens
                 .iter()
+                .filter(|supported_token| supported_token.get_locked_amount() > 0)
                 .map(|supported_token| {
                     Asset::TOKEN(
                         supported_token.get_mint(),

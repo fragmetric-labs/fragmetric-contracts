@@ -56,7 +56,7 @@ impl<'info, 'a> FundService<'info, 'a> {
         pricing_service
             .register_token_pricing_source_account(self.fund_account.as_ref())
             .register_token_pricing_source_account(self.receipt_token_mint.as_ref())
-            .register_token_pricing_source(
+            .resolve_token_pricing_source(
                 &self.fund_account.receipt_token_mint.key(),
                 &TokenPricingSource::FundReceiptToken {
                     mint_address: self.fund_account.receipt_token_mint.key(),
