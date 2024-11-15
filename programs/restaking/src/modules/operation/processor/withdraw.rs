@@ -7,9 +7,10 @@ use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::{self, FundAccount, FundAccountInfo};
+use crate::modules::pricing;
 use crate::utils::PDASeeds;
 
-// TODO: deprecate
+// TODO v0.3/operation: rewrite withdrawal job as command
 pub fn process_process_fund_withdrawal_job<'info>(
     operator: &Signer,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
@@ -20,19 +21,20 @@ pub fn process_process_fund_withdrawal_job<'info>(
     forced: bool,
     current_timestamp: i64,
 ) -> Result<()> {
+    // TODO v0.3/operation: don't use hardcoded key in modules
     if !(forced && operator.key() == ADMIN_PUBKEY) {
         fund_account
             .withdrawal
             .assert_withdrawal_threshold_satisfied(current_timestamp)?;
     }
 
-    fund::update_asset_prices(fund_account, pricing_sources)?;
+    let pricing_service = fund::FundService::new(receipt_token_mint, fund_account)?
+        .new_pricing_service(&pricing_sources)?;
 
     fund_account
         .withdrawal
         .start_processing_pending_batch_withdrawal(current_timestamp)?;
 
-    let assets_total_amount_as_sol = fund_account.get_assets_total_amount_as_sol()?;
     let mut receipt_token_amount_to_burn: u64 = 0;
     for batch in &mut fund_account.withdrawal.batch_withdrawals_in_progress {
         let amount = batch.receipt_token_to_process;
@@ -55,12 +57,8 @@ pub fn process_process_fund_withdrawal_job<'info>(
         );
         receipt_token_amount_not_burned -= receipt_token_amount; // guaranteed to be safe
 
-        let sol_reserved_amount = crate::utils::get_proportional_amount(
-            receipt_token_amount,
-            assets_total_amount_as_sol,
-            receipt_token_mint.supply,
-        )
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let sol_reserved_amount = pricing_service
+            .get_token_amount_as_sol(&receipt_token_mint.key(), receipt_token_amount)?;
         total_sol_reserved_amount = total_sol_reserved_amount
             .checked_add(sol_reserved_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;

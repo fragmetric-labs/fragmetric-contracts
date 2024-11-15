@@ -75,3 +75,12 @@ $ JUST_INIT=1 anchor test --detach -p restaking
 $ tsx tools/restaking/repl_entrypoint.ts -- local
 ...
 ```
+
+## Example of taking snapshot of testing log
+```
+$ CI=true anchor test -p restaking | sed "s|$(pwd)||g" | sed -e "s|slot=[0-9]*|slot=*|g" | grep -v "anchor" > ./tests/restaking.snapshot.txt
+...
+
+# can compare it manually for now...
+$ git diff --no-index tests/restaking.snapshot.v0.3.1.txt tests/restaking.snapshot.txt
+```

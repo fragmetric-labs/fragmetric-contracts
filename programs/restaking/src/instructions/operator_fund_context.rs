@@ -7,7 +7,7 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
 use crate::utils::PDASeeds;
 
-// TODO: deprecate
+// TODO v0.3/operation: deprecate
 #[derive(Accounts)]
 pub struct OperatorFundContext<'info> {
     pub operator: Signer<'info>,

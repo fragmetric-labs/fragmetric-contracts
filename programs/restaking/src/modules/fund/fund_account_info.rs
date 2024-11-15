@@ -18,19 +18,19 @@ pub struct FundAccountInfo {
 }
 
 impl FundAccountInfo {
-    // TODO visibility is currently set to `in crate::modules` due to operation module - change to `super`
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn from(
         fund_account: &Account<FundAccount>,
         receipt_token_mint: &InterfaceAccount<Mint>,
     ) -> Self {
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
-            one_receipt_token_as_sol: get_one_receipt_token_as_sol(receipt_token_mint, fund_account).unwrap(),
+            one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             receipt_token_supply_amount: receipt_token_mint.supply,
-            supported_tokens: fund_account.get_supported_tokens_iter().cloned().collect(),
-            sol_capacity_amount: fund_account.get_sol_capacity_amount(),
-            sol_accumulated_deposit_amount: fund_account.get_sol_accumulated_deposit_amount(),
-            sol_operation_reserved_amount: fund_account.get_sol_operation_reserved_amount(),
+            supported_tokens: fund_account.supported_tokens.iter().cloned().collect(),
+            sol_capacity_amount: fund_account.sol_capacity_amount,
+            sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
+            sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
             sol_withdrawal_reserved_amount: fund_account
                 .withdrawal
                 .get_sol_withdrawal_reserved_amount(),

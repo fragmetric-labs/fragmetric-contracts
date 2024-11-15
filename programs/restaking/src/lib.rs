@@ -28,13 +28,15 @@ pub mod restaking {
     pub fn admin_initialize_fund_account(
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::process_initialize_fund_account(
-            &ctx.accounts.admin,
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-            &ctx.accounts.receipt_token_program,
-            ctx.bumps.fund_account,
-        )
+        modules::fund::FundConfigurationService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &mut *ctx.accounts.fund_account,
+        )?
+            .process_initialize_fund_account(
+                &ctx.accounts.receipt_token_program,
+                &ctx.accounts.admin,
+                ctx.bumps.fund_account,
+            )
     }
 
     pub fn admin_initialize_fund_normalized_token_account(
@@ -56,10 +58,11 @@ pub mod restaking {
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
     ) -> Result<()> {
-        modules::fund::process_update_fund_account_if_needed(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )
+        modules::fund::FundConfigurationService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &mut *ctx.accounts.fund_account,
+        )?
+            .process_update_fund_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -69,13 +72,15 @@ pub mod restaking {
     pub fn admin_initialize_normalized_token_pool(
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
-        modules::normalization::process_initialize_normalized_token_pool_account(
-            &ctx.accounts.admin,
-            &ctx.accounts.normalized_token_mint,
-            &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.normalized_token_program,
-            ctx.bumps.normalized_token_pool_account,
-        )
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+                &mut ctx.accounts.normalized_token_pool_account,
+                &ctx.accounts.normalized_token_mint,
+                &ctx.accounts.normalized_token_program,
+        )?
+            .process_initialize_normalized_token_pool_account(
+                &ctx.accounts.admin,
+                ctx.bumps.normalized_token_pool_account,
+            )
     }
 
     ////////////////////////////////////////////
@@ -86,9 +91,11 @@ pub mod restaking {
     pub fn admin_initialize_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
     ) -> Result<()> {
-        modules::fund::process_initialize_extra_account_meta_list(
-            ctx.accounts.extra_account_meta_list.as_ref(),
-        )
+        modules::fund::FundReceiptTokenConfigurationService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &ctx.accounts.extra_account_meta_list,
+        )?
+            .process_initialize_extra_account_meta_list()
     }
 
     ////////////////////////////////////////////
@@ -98,9 +105,11 @@ pub mod restaking {
     pub fn admin_update_extra_account_meta_list_if_needed(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
     ) -> Result<()> {
-        modules::fund::process_update_extra_account_meta_list_if_needed(
-            ctx.accounts.extra_account_meta_list.as_ref(),
-        )
+        modules::fund::FundReceiptTokenConfigurationService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &ctx.accounts.extra_account_meta_list,
+        )?
+            .process_update_extra_account_meta_list_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -110,11 +119,13 @@ pub mod restaking {
     pub fn admin_initialize_reward_account(
         ctx: Context<AdminRewardAccountInitialContext>,
     ) -> Result<()> {
-        modules::reward::process_initialize_reward_account(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            ctx.bumps.reward_account,
-        )
+        )?
+            .process_initialize_reward_account(
+                ctx.bumps.reward_account,
+            )
     }
 
     ////////////////////////////////////////////
@@ -125,13 +136,15 @@ pub mod restaking {
         ctx: Context<AdminRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        modules::reward::process_update_reward_account_if_needed(
-            &ctx.accounts.payer,
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.reward_account,
-            &ctx.accounts.system_program,
-            desired_account_size,
-        )
+            &mut ctx.accounts.reward_account,
+        )?
+            .process_update_reward_account_if_needed(
+                &ctx.accounts.payer,
+                &ctx.accounts.system_program,
+                desired_account_size,
+            )
     }
 
     ////////////////////////////////////////////
@@ -142,11 +155,13 @@ pub mod restaking {
         ctx: Context<FundManagerFundContext>,
         capacity_amount: u64,
     ) -> Result<()> {
-        modules::fund::process_update_sol_capacity_amount(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            capacity_amount,
-        )
+        )?
+            .process_update_sol_capacity_amount(
+                capacity_amount,
+            )
     }
 
     pub fn fund_manager_update_supported_token_capacity_amount(
@@ -154,34 +169,40 @@ pub mod restaking {
         token: Pubkey,
         capacity_amount: u64,
     ) -> Result<()> {
-        modules::fund::process_update_supported_token_capacity_amount(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            token,
-            capacity_amount,
-        )
+        )?
+            .process_update_supported_token_capacity_amount(
+                token,
+                capacity_amount,
+            )
     }
 
     pub fn fund_manager_update_withdrawal_enabled_flag(
         ctx: Context<FundManagerFundContext>,
         enabled: bool,
     ) -> Result<()> {
-        modules::fund::process_update_withdrawal_enabled_flag(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            enabled,
-        )
+        )?
+            .process_update_withdrawal_enabled_flag(
+                enabled,
+            )
     }
 
     pub fn fund_manager_update_sol_withdrawal_fee_rate(
         ctx: Context<FundManagerFundContext>,
         sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        modules::fund::process_update_sol_withdrawal_fee_rate(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            sol_withdrawal_fee_rate,
-        )
+        )?
+            .process_update_sol_withdrawal_fee_rate(
+                sol_withdrawal_fee_rate,
+            )
     }
 
     pub fn fund_manager_update_batch_processing_threshold(
@@ -189,12 +210,14 @@ pub mod restaking {
         amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
-        modules::fund::process_update_batch_processing_threshold(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            amount,
-            duration,
-        )
+        )?
+            .process_update_batch_processing_threshold(
+                amount,
+                duration,
+            )
     }
 
     ////////////////////////////////////////////
@@ -216,15 +239,18 @@ pub mod restaking {
         capacity_amount: u64,
         pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
-        modules::fund::process_add_supported_token(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.supported_token_mint,
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            &ctx.accounts.supported_token_program,
-            capacity_amount,
-            pricing_source,
-            ctx.remaining_accounts,
-        )
+        )?
+            .process_add_supported_token(
+                &ctx.accounts.supported_token_account,
+                &ctx.accounts.supported_token_mint,
+                &ctx.accounts.supported_token_program,
+                capacity_amount,
+                pricing_source,
+                ctx.remaining_accounts,
+            )
     }
 
     ////////////////////////////////////////////
@@ -244,12 +270,16 @@ pub mod restaking {
     pub fn fund_manager_add_normalized_token_pool_supported_token(
         ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
     ) -> Result<()> {
-        modules::normalization::process_add_supported_token(
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.supported_token_lock_account,
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
             &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.supported_token_program,
-        )
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+            .process_add_supported_token(
+                &ctx.accounts.supported_token_lock_account,
+                &ctx.accounts.supported_token_mint,
+                &ctx.accounts.supported_token_program,
+            )
     }
 
     ////////////////////////////////////////////
@@ -262,13 +292,15 @@ pub mod restaking {
         description: String,
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
-        modules::reward::process_add_reward_pool_holder(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            name,
-            description,
-            pubkeys,
-        )
+        )?
+            .process_add_reward_pool_holder(
+                name,
+                description,
+                pubkeys,
+            )
     }
 
     pub fn fund_manager_add_reward_pool(
@@ -277,26 +309,28 @@ pub mod restaking {
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
-        modules::reward::process_add_reward_pool(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            name,
-            holder_id,
-            custom_contribution_accrual_rate_enabled,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_add_reward_pool(
+                name,
+                holder_id,
+                custom_contribution_accrual_rate_enabled,
+            )
     }
 
     pub fn fund_manager_close_reward_pool(
         ctx: Context<FundManagerRewardContext>,
         reward_pool_id: u8,
     ) -> Result<()> {
-        modules::reward::process_close_reward_pool(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            reward_pool_id,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_close_reward_pool(
+                reward_pool_id,
+            )
     }
 
     ////////////////////////////////////////////
@@ -309,15 +343,17 @@ pub mod restaking {
         description: String,
         reward_type: modules::reward::RewardType,
     ) -> Result<()> {
-        modules::reward::process_add_reward(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            ctx.accounts.reward_token_mint.as_deref(),
             &mut ctx.accounts.reward_account,
-            ctx.accounts.reward_token_program.as_ref(),
-            name,
-            description,
-            reward_type,
-        )
+        )?
+            .process_add_reward(
+                ctx.accounts.reward_token_mint.as_deref(),
+                ctx.accounts.reward_token_program.as_ref(),
+                name,
+                description,
+                reward_type,
+            )
     }
 
     pub fn fund_manager_settle_reward(
@@ -326,14 +362,15 @@ pub mod restaking {
         reward_id: u16,
         amount: u64,
     ) -> Result<()> {
-        modules::reward::process_settle_reward(
+        modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            reward_pool_id,
-            reward_id,
-            amount,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_settle_reward(
+                reward_pool_id,
+                reward_id,
+                amount,
+            )
     }
 
     ////////////////////////////////////////////
@@ -368,7 +405,7 @@ pub mod restaking {
         )
     }
 
-    // TODO: deprecate
+    // TODO v0.3/operation: deprecate
     pub fn operator_process_fund_withdrawal_job<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         forced: bool,
@@ -388,11 +425,13 @@ pub mod restaking {
     pub fn operator_update_prices<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
     ) -> Result<()> {
-        modules::fund::process_update_prices(
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            ctx.remaining_accounts,
-        )
+        )?
+            .process_update_prices(
+                ctx.remaining_accounts,
+            )
     }
 
     ////////////////////////////////////////////
@@ -400,11 +439,11 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn operator_update_reward_pools(ctx: Context<OperatorRewardContext>) -> Result<()> {
-        modules::reward::process_update_reward_pools(
+        modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_update_reward_pools()
     }
 
     ////////////////////////////////////////////
@@ -418,12 +457,14 @@ pub mod restaking {
     }
 
     pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
-        modules::fund::process_initialize_user_fund_account(
+        modules::fund::UserFundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.user_fund_account,
-            ctx.bumps.user_fund_account,
-        )
+        )?
+            .process_initialize_user_fund_account(
+                ctx.bumps.user_fund_account,
+            )
     }
 
     ////////////////////////////////////////////
@@ -433,11 +474,12 @@ pub mod restaking {
     pub fn user_update_fund_account_if_needed(
         ctx: Context<UserFundAccountUpdateContext>,
     ) -> Result<()> {
-        modules::fund::process_update_user_fund_account_if_needed(
+        modules::fund::UserFundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.user_fund_account,
-        )
+        )?
+            .process_update_user_fund_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -449,81 +491,85 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        modules::fund::process_deposit_sol(
-            &ctx.accounts.user,
-            &ctx.accounts.fund_reserve_account,
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
-            &ctx.accounts.system_program,
-            &ctx.accounts.receipt_token_program,
-            &ctx.accounts.instructions_sysvar,
-            ctx.remaining_accounts,
-            amount,
-            metadata,
-            Clock::get()?.slot,
-            Clock::get()?.unix_timestamp,
-        )
+        )?
+            .process_deposit_sol(
+                &ctx.accounts.fund_reserve_account,
+                &ctx.accounts.system_program,
+                &ctx.accounts.instructions_sysvar,
+                ctx.remaining_accounts,
+                amount,
+                metadata,
+                &ADMIN_PUBKEY,
+            )
     }
 
     pub fn user_request_withdrawal(
         ctx: Context<UserFundContext>,
         receipt_token_amount: u64,
     ) -> Result<()> {
-        modules::fund::process_request_withdrawal(
-            &ctx.accounts.user,
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_account,
-            &mut ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
-            &ctx.accounts.receipt_token_program,
-            receipt_token_amount,
-            Clock::get()?.slot,
-            Clock::get()?.unix_timestamp,
-        )
+        )?
+            .process_request_withdrawal(
+                &mut ctx.accounts.receipt_token_lock_account,
+                receipt_token_amount,
+            )
     }
 
     pub fn user_cancel_withdrawal_request(
         ctx: Context<UserFundContext>,
         request_id: u64,
     ) -> Result<()> {
-        modules::fund::process_cancel_withdrawal_request(
-            &ctx.accounts.user,
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_account,
-            &mut ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
-            &ctx.accounts.receipt_token_program,
-            request_id,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_cancel_withdrawal_request(
+                &mut ctx.accounts.receipt_token_lock_account,
+                request_id,
+            )
     }
 
     pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
-        modules::fund::process_withdraw(
-            &ctx.accounts.user,
-            &ctx.accounts.fund_reserve_account,
-            &ctx.accounts.fund_treasury_account,
-            &ctx.accounts.receipt_token_mint,
+        modules::fund::UserFundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
+            &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
-            &ctx.accounts.system_program,
-            &[&[
-                modules::fund::FundAccount::RESERVE_SEED,
-                ctx.accounts.receipt_token_mint.key().as_ref(),
-                &[ctx.bumps.fund_reserve_account],
-            ]],
-            request_id,
-        )
+            &mut ctx.accounts.user_reward_account,
+        )?.
+            process_withdraw(
+                &ctx.accounts.fund_reserve_account,
+                ctx.bumps.fund_reserve_account,
+                &ctx.accounts.fund_treasury_account,
+                &ctx.accounts.system_program,
+                request_id,
+            )
     }
 
     ////////////////////////////////////////////
@@ -535,26 +581,27 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        modules::fund::process_deposit_supported_token(
-            &ctx.accounts.user,
+        modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.user_receipt_token_account,
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_supported_token_account,
-            &ctx.accounts.user_supported_token_account,
+            &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
-            &ctx.accounts.receipt_token_program,
-            &ctx.accounts.supported_token_program,
-            &ctx.accounts.instruction_sysvar,
-            ctx.remaining_accounts,
-            amount,
-            metadata,
-            Clock::get()?.slot,
-            Clock::get()?.unix_timestamp,
-        )
+        )?
+            .process_deposit_supported_token(
+                &ctx.accounts.supported_token_mint,
+                &ctx.accounts.fund_supported_token_account,
+                &ctx.accounts.user_supported_token_account,
+                &ctx.accounts.supported_token_program,
+                &ctx.accounts.instructions_sysvar,
+                ctx.remaining_accounts,
+                amount,
+                metadata,
+                &ADMIN_PUBKEY,
+            )
     }
 
     ////////////////////////////////////////////
@@ -564,12 +611,14 @@ pub mod restaking {
     pub fn user_initialize_reward_account(
         ctx: Context<UserRewardAccountInitialContext>,
     ) -> Result<()> {
-        modules::reward::process_initialize_user_reward_account(
-            &ctx.accounts.user,
+        modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.user,
             &mut ctx.accounts.user_reward_account,
-            ctx.bumps.user_reward_account,
-        )
+        )?
+            .process_initialize_user_reward_account(
+                ctx.bumps.user_reward_account,
+            )
     }
 
     ////////////////////////////////////////////
@@ -578,26 +627,30 @@ pub mod restaking {
 
     #[allow(unused_variables)]
     pub fn user_update_reward_accounts_if_needed(
-        ctx: Context<UserRewardContext>,
+        ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
         initialize: bool, // deprecated
     ) -> Result<()> {
-        modules::reward::process_update_user_reward_account_if_needed(
-            &ctx.accounts.user,
+        modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_reward_account,
-            &ctx.accounts.system_program,
-            desired_account_size,
-        )
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_reward_account,
+        )?
+            .process_update_user_reward_account_if_needed(
+                &ctx.accounts.system_program,
+                desired_account_size,
+            )
     }
 
-    pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
-        ctx.accounts.check_user_reward_account_constraint()?;
-        modules::reward::process_update_user_reward_pools(
+    pub fn user_update_reward_pools(
+        ctx: Context<UserRewardContext>,
+    ) -> Result<()> {
+        modules::reward::UserRewardService::new(
+            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
-            Clock::get()?.slot,
-        )
+        )?
+            .process_update_user_reward_pools()
     }
 
     #[allow(unused_variables)]
@@ -606,8 +659,12 @@ pub mod restaking {
         reward_pool_id: u8,
         reward_id: u8,
     ) -> Result<()> {
-        ctx.accounts.check_user_reward_account_constraint()?;
-        modules::reward::process_claim_rewards()
+        modules::reward::UserRewardService::new(
+            &ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.user_reward_account,
+        )?
+            .process_claim_user_rewards()
     }
 
     ////////////////////////////////////////////
@@ -615,10 +672,22 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     #[interface(spl_transfer_hook_interface::execute)]
-    pub fn token_transfer_hook(
-        ctx: Context<UserReceiptTokenTransferContext>,
+    pub fn token_transfer_hook<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserReceiptTokenTransferContext<'info>>,
         amount: u64,
     ) -> Result<()> {
-        UserReceiptTokenTransferContext::handle_transfer(ctx, amount)
+        ctx.accounts.assert_is_transferring()?;
+
+        modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+            .process_transfer_hook(
+                &mut ctx.accounts.reward_account,
+                &mut ctx.accounts.source_receipt_token_account,
+                &mut ctx.accounts.destination_receipt_token_account,
+                ctx.remaining_accounts,
+                amount,
+            )
     }
 }
