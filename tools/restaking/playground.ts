@@ -1329,6 +1329,77 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
+    private async runOperatorRunSingle(operator: web3.Keypair = this.wallet) {
+        // prepare accounts according to the current state of operation.
+        // - can contain 28/32 accounts including reserved four accounts.
+        // - order doesn't matter, no need to put duplicate.
+        // - contain accounts as many as possible to execute multiple commands in a single tx.
+        const requiredAccounts: web3.AccountMeta[] = this.pricingSourceAccounts.slice();
+        const containedAccounts = new Set(
+            [
+                operator.publicKey,
+                web3.SystemProgram.programId,
+                this.knownAddress.fragSOLTokenMint,
+                this.knownAddress.fragSOLFund,
+            ]
+                .concat(this.pricingSourceAccounts.map(account => account.pubkey)),
+        );
+        let fragSOLFund = await this.getFragSOLFundAccount();
+        OUTER: for (const command of fragSOLFund.operation.commands) {
+            for (const pubkey of command.requiredAccounts) {
+                if (containedAccounts.size == 32) break OUTER;
+                if (!containedAccounts.has(pubkey)) {
+                    containedAccounts.add(pubkey);
+                    requiredAccounts.push({
+                        pubkey,
+                        isSigner: false,
+                        isWritable: true,
+                    });
+                }
+            }
+        }
+        // logger.debug(`remaining commands before run (${fragSOLFund.operation.commands.length})`.padEnd(LOG_PAD_SMALL), fragSOLFund.operation.commands.map(c => JSON.stringify(c.command)).join(', '))
+
+        const tx = await this.run({
+            instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 2_000_000,
+                }),
+                this.program.methods
+                    .operatorRunTodo()
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(requiredAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+            skipPreflight: true,
+        });
+
+        fragSOLFund = await this.getFragSOLFundAccount();
+        const remainingCommandsCount = tx.event.operatorProcessedJob.fundAccount.remainingCommandsCount;
+        logger.notice(`remaining commands after run (${remainingCommandsCount})`.padEnd(LOG_PAD_SMALL), fragSOLFund.operation.commands.map(c => JSON.stringify(c.command)).join(', '));
+        return {
+            event: tx.event,
+            fragSOLFund,
+            remainingCommandsCount,
+        };
+    }
+
+    public async runOperatorRunTODO(operator: web3.Keypair = this.wallet, maxRunCount = 100) {
+        let runCount = 0;
+        while (runCount++ <= maxRunCount) {
+            logger.debug(`operator run attempt#${runCount}`);
+            const { remainingCommandsCount } = await this.runOperatorRunSingle(operator);
+            if (remainingCommandsCount == 0) {
+                logger.debug(`operator finished current operation cycle`);
+                break
+            }
+        }
+    }
+
     public async runOperatorRun(operator: web3.Keypair = this.wallet) {
         // command=0. staking once x2
         // command=1. normalize lst x(#supported tokens)

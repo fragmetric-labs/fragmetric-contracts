@@ -8,9 +8,9 @@ mod cmd3_process_withdrawal_batch;
 mod cmd4_claim_unrestaked_vst;
 mod cmd5_denormalize_nt;
 mod cmd6_undelegate_vst;
-mod cmd7_unrestake_vst;
+mod cmd7_unrestake_vrt;
 mod cmd8_unstake_lst;
-mod cmd9_stake_lst;
+mod cmd9_stake_sol;
 
 pub use cmd0_initialize::*;
 pub use cmd10_normalize_lst::*;
@@ -22,20 +22,22 @@ pub use cmd3_process_withdrawal_batch::*;
 pub use cmd4_claim_unrestaked_vst::*;
 pub use cmd5_denormalize_nt::*;
 pub use cmd6_undelegate_vst::*;
-pub use cmd7_unrestake_vst::*;
+pub use cmd7_unrestake_vrt::*;
 pub use cmd8_unstake_lst::*;
-pub use cmd9_stake_lst::*;
+pub use cmd9_stake_sol::*;
 
 use crate::modules::fund;
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 // propagate common accounts and values to all commands
 pub(super) struct OperationCommandContext<'info, 'a>
 where
     'info: 'a,
 {
+    pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
-    pub(super) receipt_token_mint: Pubkey,
+    pub(super) system_program: &'a Program<'info, System>,
 }
 
 // enum to hold all command variants
@@ -48,45 +50,35 @@ pub(super) enum OperationCommand {
     ClaimUnrestakedVST(ClaimUnrestakedVSTCommand),
     DenormalizeNT(DenormalizeNTCommand),
     UndelegateVST(UndelegateVSTCommand),
-    UnrestakeVST(UnrestakeVSTCommand),
+    UnrestakeVRT(UnrestakeVRTCommand),
     UnstakeLST(UnstakeLSTCommand),
-    StakeLST(StakeLSTCommand),
+    StakeSOL(StakeSOLCommand),
     NormalizeLST(NormalizeLSTCommand),
     RestakeVST(RestakeVSTCommand),
     DelegateVST(DelegateVSTCommand),
 }
 
-impl OperationCommand {
-    fn get_inner(&self) -> &dyn SelfExecutable {
-        match self {
-            OperationCommand::Initialize(command) => command,
-            OperationCommand::ClaimUnstakedSOL(command) => command,
-            OperationCommand::EnqueueWithdrawalBatch(command) => command,
-            OperationCommand::ProcessWithdrawalBatch(command) => command,
-            OperationCommand::ClaimUnrestakedVST(command) => command,
-            OperationCommand::DenormalizeNT(command) => command,
-            OperationCommand::UndelegateVST(command) => command,
-            OperationCommand::UnrestakeVST(command) => command,
-            OperationCommand::UnstakeLST(command) => command,
-            OperationCommand::StakeLST(command) => command,
-            OperationCommand::NormalizeLST(command) => command,
-            OperationCommand::RestakeVST(command) => command,
-            OperationCommand::DelegateVST(command) => command,
-        }
-    }
-}
-
 impl SelfExecutable for OperationCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
-        self.get_inner().execute(context, accounts)
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        self.get_inner().compute_required_accounts(context)
+        match self {
+            OperationCommand::Initialize(command) => command.execute(ctx, accounts),
+            OperationCommand::ClaimUnstakedSOL(command) => command.execute(ctx, accounts),
+            OperationCommand::EnqueueWithdrawalBatch(command) => command.execute(ctx, accounts),
+            OperationCommand::ProcessWithdrawalBatch(command) => command.execute(ctx, accounts),
+            OperationCommand::ClaimUnrestakedVST(command) => command.execute(ctx, accounts),
+            OperationCommand::DenormalizeNT(command) => command.execute(ctx, accounts),
+            OperationCommand::UndelegateVST(command) => command.execute(ctx, accounts),
+            OperationCommand::UnrestakeVRT(command) => command.execute(ctx, accounts),
+            OperationCommand::UnstakeLST(command) => command.execute(ctx, accounts),
+            OperationCommand::StakeSOL(command) => command.execute(ctx, accounts),
+            OperationCommand::NormalizeLST(command) => command.execute(ctx, accounts),
+            OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
+            OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
+        }
     }
 }
 
@@ -100,20 +92,18 @@ pub(super) struct OperationCommandEntry {
 }
 
 impl OperationCommand {
-    pub fn build(&self, context: &OperationCommandContext) -> Result<OperationCommandEntry> {
-        Ok(OperationCommandEntry {
-            command: self.clone(),
-            required_accounts: self.compute_required_accounts(context)?,
-        })
+    pub fn with_required_accounts(self, required_accounts: Vec<Pubkey>) -> OperationCommandEntry {
+        OperationCommandEntry {
+            command: self,
+            required_accounts,
+        }
     }
 }
 
 pub(super) trait SelfExecutable {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>>;
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>>;
 }

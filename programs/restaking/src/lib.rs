@@ -1,3 +1,5 @@
+extern crate core;
+
 use anchor_lang::prelude::*;
 
 mod constants;
@@ -365,12 +367,11 @@ pub mod restaking {
     // OperatorFundContext
     ////////////////////////////////////////////
 
-    // TODO v0.3/operation: integrate service
+    // TODO v0.3/operation: deprecate old run
     pub fn operator_run<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         command: u8,
     ) -> Result<()> {
-        // TODO v0.3/operation: deprecate original process_run
         let clock = Clock::get()?;
         modules::operation::process_run(
             &ctx.accounts.operator,
@@ -381,12 +382,22 @@ pub mod restaking {
             clock.slot,
             command,
         )
+    }
 
-        // modules::fund::FundService::new(
-        //     &mut ctx.accounts.receipt_token_mint,
-        //     &mut ctx.accounts.fund_account,
-        // )?
-        //     .process_run(ctx.remaining_accounts)
+    // TODO v0.3/operation: remove the temporary authorization...
+    pub fn operator_run_todo<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
+    ) -> Result<()> {
+        require_eq!(ctx.accounts.operator.key(), ADMIN_PUBKEY);
+
+        modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+            .process_run(
+                &ctx.accounts.system_program,
+                ctx.remaining_accounts,
+            )
     }
 
     // TODO v0.3/operation: deprecate

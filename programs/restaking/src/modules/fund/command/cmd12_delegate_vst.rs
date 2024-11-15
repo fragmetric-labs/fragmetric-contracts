@@ -9,15 +9,10 @@ pub(super) struct DelegateVSTCommand {
 impl SelfExecutable for DelegateVSTCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
         // TODO: DelegateVSTCommand.execute
-        Ok(vec![])
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        // TODO: DelegateVSTCommand.compute_required_accounts
         Ok(vec![])
     }
 }

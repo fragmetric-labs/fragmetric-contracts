@@ -9,15 +9,10 @@ pub(super) struct EnqueueWithdrawalBatchCommand {
 impl SelfExecutable for EnqueueWithdrawalBatchCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
         // TODO: EnqueueWithdrawalBatchCommand.execute
-        Ok(vec![])
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        // TODO: EnqueueWithdrawalBatchCommand.compute_required_accounts
         Ok(vec![])
     }
 }

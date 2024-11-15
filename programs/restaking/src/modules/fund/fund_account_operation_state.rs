@@ -5,9 +5,9 @@ use super::command::{
 use crate::errors::ErrorCode;
 use crate::modules::operation;
 use anchor_lang::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-const OPERATION_COMMANDS_STACK_SIZE: usize = 4;
+const OPERATION_COMMANDS_STACK_SIZE: usize = 2;
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
@@ -31,7 +31,6 @@ impl OperationState {
 
     fn reset_commands_if_needed(
         &mut self,
-        context: &OperationCommandContext,
         current_timestamp: i64,
         forced_reset: bool,
     ) -> Result<()> {
@@ -39,7 +38,7 @@ impl OperationState {
             self.commands.clear();
 
             let init_command_entry =
-                OperationCommand::Initialize(InitializeCommand {}).build(context)?;
+                OperationCommand::Initialize(InitializeCommand {}).with_required_accounts(vec![]);
             self.push_commands(vec![init_command_entry], current_timestamp);
         }
         Ok(())
@@ -51,15 +50,18 @@ impl OperationState {
         self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
     }
 
+    pub(super) fn get_remaining_commands_count(&self) -> u8 {
+        self.commands.len() as u8
+    }
+
     pub(super) fn run_commands(
         &mut self,
-        context: &OperationCommandContext,
-        remaining_accounts: Vec<AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        remaining_accounts: &[AccountInfo],
         current_timestamp: i64,
         _current_slot: u64,
-        forced_reset: bool,
     ) -> Result<()> {
-        self.reset_commands_if_needed(context, current_timestamp, forced_reset)?;
+        self.reset_commands_if_needed(current_timestamp, false)?;
 
         let mut run_count = 0;
         let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
@@ -72,35 +74,72 @@ impl OperationState {
                 command,
                 required_accounts,
             } = command_entry;
-            let given_accounts: std::result::Result<Vec<&AccountInfo>, ProgramError> =
-                required_accounts
-                    .iter()
-                    .map(|key| {
-                        remaining_accounts_map
-                            .get(key)
-                            .copied()
-                            .ok_or(ProgramError::NotEnoughAccountKeys)
-                    })
-                    .collect();
 
-            if let Err(err) = given_accounts {
-                if run_count > 0 {
-                    // gracefully stop executing commands
-                    return Ok(());
+            // rearrange given accounts in required order
+            let mut required_account_infos = Vec::new();
+            let mut unused_account_keys = BTreeSet::new();
+            remaining_accounts_map.keys().for_each(|key| {
+                unused_account_keys.insert(*key);
+            });
+
+            for account_key in required_accounts.iter() {
+                // reject invalid requirements from command to prevent redundant account info creation
+                if *account_key == ctx.fund_account.key()
+                    || *account_key == ctx.receipt_token_mint.key()
+                {
+                    return err!(ErrorCode::OperationCommandAccountComputationException);
                 }
-                // fail if it is the first command in this tx
-                return Err(err.into());
+
+                // append required accounts in exact order
+                match remaining_accounts_map.get(&account_key) {
+                    Some(account) => {
+                        required_account_infos.push((*account).clone());
+                        unused_account_keys.remove(&account_key);
+                    }
+                    None => {
+                        if run_count > 0 {
+                            // restore the current command and gracefully stop executing commands
+                            msg!(
+                                "COMMAND: {:?} has not enough accounts after {} run(s)",
+                                command,
+                                run_count
+                            );
+                            self.commands.insert(
+                                0,
+                                OperationCommandEntry {
+                                    command,
+                                    required_accounts,
+                                },
+                            );
+                            return Ok(());
+                        }
+                        // error if it is the first command in this tx
+                        msg!(
+                            "COMMAND: {:?} has not enough accounts at the first run",
+                            command
+                        );
+                        return err!(ErrorCode::OperationCommandAccountComputationException);
+                    }
+                }
             }
 
-            match command.execute(context, given_accounts?) {
+            // append all unused accounts
+            for unused_account_key in unused_account_keys.iter() {
+                let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
+                required_account_infos.push((*remaining_account).clone().clone());
+            }
+
+            match command.execute(ctx, required_account_infos.as_slice()) {
                 Ok(next_commands) => {
-                    msg!("succeeded to execute command: {:?}", command);
+                    // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
+                    msg!("COMMAND: {:?} passed", command);
                     self.push_commands(next_commands, current_timestamp);
                     run_count += 1;
                 }
                 Err(error) => {
-                    msg!("failed to execute command: {}", error);
-                    err!(ErrorCode::OperationCommandExecutionFailedException)?;
+                    // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
+                    msg!("COMMAND: {:?} failed", command);
+                    return Err(error);
                 }
             };
         }

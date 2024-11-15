@@ -9,15 +9,10 @@ pub(super) struct NormalizeLSTCommand {
 impl SelfExecutable for NormalizeLSTCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
         // TODO: NormalizeLSTCommand.execute
-        Ok(vec![])
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        // TODO: NormalizeLSTCommand.compute_required_accounts
         Ok(vec![])
     }
 }

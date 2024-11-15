@@ -190,13 +190,15 @@ where
 }
 
 #[inline(never)]
-pub fn parse_interface_account_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Box<InterfaceAccount<'info, T>>>
+pub fn parse_interface_account_boxed<'info: 'a, 'a, T>(
+    account: &'a AccountInfo<'info>,
+) -> Result<Box<InterfaceAccount<'a, T>>>
 where
     T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
 {
-    InterfaceAccount::try_from(account).map(Box::new)
+    // CHECKED: to narrow down 'info lifetime of AccountInfos to 'a due to signature of try_from
+    InterfaceAccount::try_from(unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(account) })
+        .map(Box::new)
 }
 
 #[inline(never)]

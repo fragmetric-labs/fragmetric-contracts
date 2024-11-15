@@ -194,29 +194,32 @@ impl<'info, 'a> FundService<'info, 'a> {
         Ok(())
     }
 
-    // TODO v0.3/operation: integrate into lib.rs
-    pub fn process_run(&mut self, remaining_accounts: &'info [AccountInfo<'info>]) -> Result<()>
+    pub fn process_run(
+        &mut self,
+        system_program: &Program<'info, System>,
+        remaining_accounts: &'info [AccountInfo<'info>],
+    ) -> Result<()>
     where
         'info: 'a,
     {
         let mut operation_state = std::mem::take(&mut self.fund_account.operation);
 
         operation_state.run_commands(
-            &OperationCommandContext {
+            &mut OperationCommandContext {
+                receipt_token_mint: self.receipt_token_mint,
                 fund_account: self.fund_account,
-                receipt_token_mint: self.receipt_token_mint.key(),
+                system_program,
             },
-            remaining_accounts.to_vec(),
+            remaining_accounts,
             self.current_timestamp,
             self.current_slot,
-            false,
         )?;
 
         self.fund_account.operation = operation_state;
 
         emit!(events::OperatorProcessedJob {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: fund::FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
+            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
         });
 
         Ok(())

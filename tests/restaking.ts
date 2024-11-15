@@ -17,7 +17,11 @@ process.on('unhandledRejection', (err) => {
 
 require('./restaking/1_initialize');
 
-if (!process.env.JUST_INIT) {
+if (process.env.JUST_OPERATE) {
+    require('./restaking/2_deposit_sol')(1);
+    require('./restaking/7_operate_todo')(1);
+
+} else if (!process.env.JUST_INIT) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/3_deposit_token')(1);
     require('./restaking/4_withdraw');

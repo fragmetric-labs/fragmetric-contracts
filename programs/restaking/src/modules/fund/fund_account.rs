@@ -1,8 +1,10 @@
 use super::*;
 use crate::errors::ErrorCode;
+use crate::modules::fund;
 use crate::modules::pricing::TokenPricingSource;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::Mint;
 
 #[constant]
@@ -51,6 +53,47 @@ impl PDASeeds<2> for FundAccount {
 impl FundAccount {
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
+
+    pub(super) fn find_account_address(&self) -> Pubkey {
+        Pubkey::create_program_address(&*self.get_signer_seeds(), &crate::ID).unwrap()
+    }
+
+    pub(super) fn find_reserve_account_address(&self) -> (Pubkey, u8) {
+        Pubkey::find_program_address(
+            &[Self::RESERVE_SEED, self.receipt_token_mint.as_ref()],
+            &crate::ID,
+        )
+    }
+
+    pub(super) fn find_reserve_account_seeds(&self) -> [&[u8]; 3] {
+        [
+            FundAccount::RESERVE_SEED,
+            self.receipt_token_mint.as_ref(),
+            Box::leak(Box::new([self.find_reserve_account_address().1])),
+        ]
+    }
+
+    pub(super) fn find_treasury_account_address(&self) -> (Pubkey, u8) {
+        Pubkey::find_program_address(
+            &[Self::TREASURY_SEED, self.receipt_token_mint.as_ref()],
+            &crate::ID,
+        )
+    }
+
+    pub(super) fn find_supported_token_account_address(
+        &self,
+        token: &Pubkey,
+    ) -> Result<(Pubkey, u8)> {
+        let supported_token = self.get_supported_token(token)?;
+        Ok(Pubkey::find_program_address(
+            &[
+                self.find_account_address().as_ref(),
+                supported_token.program.as_ref(),
+                supported_token.mint.as_ref(),
+            ],
+            &spl_associated_token_account::ID,
+        ))
+    }
 
     pub(super) fn initialize(
         &mut self,
@@ -105,10 +148,10 @@ impl FundAccount {
         self.receipt_token_decimals
     }
 
-    pub(super) fn get_supported_token(&self, token: Pubkey) -> Result<&SupportedTokenInfo> {
+    pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedTokenInfo> {
         self.supported_tokens
             .iter()
-            .find(|info| info.mint == token)
+            .find(|info| info.mint == *token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 

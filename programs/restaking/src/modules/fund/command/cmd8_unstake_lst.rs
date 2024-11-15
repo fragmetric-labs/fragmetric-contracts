@@ -9,15 +9,10 @@ pub(super) struct UnstakeLSTCommand {
 impl SelfExecutable for UnstakeLSTCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
         // TODO: UnstakeLSTCommand.execute
-        Ok(vec![])
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        // TODO: UnstakeLSTCommand.compute_required_accounts
         Ok(vec![])
     }
 }

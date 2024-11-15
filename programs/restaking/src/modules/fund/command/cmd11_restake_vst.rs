@@ -9,15 +9,10 @@ pub(super) struct RestakeVSTCommand {
 impl SelfExecutable for RestakeVSTCommand {
     fn execute(
         &self,
-        context: &OperationCommandContext,
-        accounts: Vec<&AccountInfo>,
+        ctx: &mut OperationCommandContext,
+        accounts: &[AccountInfo],
     ) -> Result<Vec<OperationCommandEntry>> {
         // TODO: RestakeVSTCommand.execute
-        Ok(vec![])
-    }
-
-    fn compute_required_accounts(&self, context: &OperationCommandContext) -> Result<Vec<Pubkey>> {
-        // TODO: RestakeVSTCommand.compute_required_accounts
         Ok(vec![])
     }
 }
