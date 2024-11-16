@@ -13,9 +13,7 @@ use instructions::*;
 
 #[program]
 pub mod restaking {
-    use modules::fund::FundAccount; // TODO temporary for test
-    use utils::PDASeeds; // TODO temporary for test
-
+    use crate::utils::PDASeeds;
     use super::*;
 
     ////////////////////////////////////////////
@@ -368,8 +366,9 @@ pub mod restaking {
     // OperatorFundContext
     ////////////////////////////////////////////
 
+    // TODO v0.3/operation: deprecate old run
     pub fn operator_run<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext2<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         command: u8,
     ) -> Result<()> {
         let clock = Clock::get()?;
@@ -384,9 +383,22 @@ pub mod restaking {
         )
     }
 
+    // TODO v0.3/operation: remove the temporary authorization...
+    pub fn operator_run_todo<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
+    ) -> Result<()> {
+        require_eq!(ctx.accounts.operator.key(), ADMIN_PUBKEY);
+
+        modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_run(&ctx.accounts.system_program, ctx.remaining_accounts)
+    }
+
     // TODO v0.3/operation: deprecate
     pub fn operator_process_fund_withdrawal_job<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContextDeprecated<'info>>,
         forced: bool,
     ) -> Result<()> {
         modules::operation::process_process_fund_withdrawal_job(
@@ -423,8 +435,9 @@ pub mod restaking {
         .process_update_reward_pools()
     }
 
+    // TODO v0.3/operation: deprecate
     ////////////////////////////////////////////
-    // OperatorStakingContext (TODO TEMPORARY FOR INTEGRATION TEST)
+    // OperatorStakingContext
     ////////////////////////////////////////////
 
     pub fn operator_deposit_sol_to_spl_stake_pool<'info>(

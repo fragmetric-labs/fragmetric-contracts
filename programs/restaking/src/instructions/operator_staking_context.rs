@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::fund::*;
 use crate::utils::PDASeeds;
 
+// TODO v0.3/operation/staking: deprecate
 #[derive(Accounts)]
 pub struct OperatorStakingContext<'info> {
     pub operator: Signer<'info>,

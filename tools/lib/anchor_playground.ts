@@ -56,11 +56,12 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         signers?: web3.Signer[],
         signerNames?: KEYS[],
         events?: EVENTS[],
+        skipPreflight?: boolean,
     }) {
         let txSig: string | null = null;
         try {
             // prepare instructions
-            let {instructions, signers = [], signerNames = []} = args;
+            let {instructions, signers = [], signerNames = [], skipPreflight = false} = args;
             const tx = new web3.Transaction()
                 .add(
                     ...await Promise.all(instructions)
@@ -99,7 +100,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                     signature: txSig,
                 },
                 {
-                    skipPreflight: false,
+                    skipPreflight,
                     commitment: 'confirmed',
                 }
             );

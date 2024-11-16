@@ -11,7 +11,7 @@ mod fund_manager_reward_context;
 mod operator_empty_context;
 mod operator_fund_context;
 mod operator_reward_context;
-mod operator_staking_context; // TODO temporary for staking integration
+mod operator_staking_context;
 
 mod user_fund_context;
 mod user_fund_supported_token_context;

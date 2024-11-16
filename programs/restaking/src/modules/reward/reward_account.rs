@@ -56,18 +56,18 @@ impl ZeroCopyHeader for RewardAccount {
 impl RewardAccount {
     pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
         if self.data_version == 0 {
-            self.data_version = 34;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.max_holders = REWARD_ACCOUNT_HOLDERS_MAX_LEN_1 as u8;
             self.max_rewards = REWARD_ACCOUNT_REWARDS_MAX_LEN_1 as u16;
             self.max_reward_pools = REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1 as u8;
+            self.data_version = 34;
         }
 
         // example of scale out
         // if self.data_version == 34 {
-        //     self.data_version = 43;
         //     self.max_reward_pools += REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_2 as u8;
+        //     self.data_version = 43;
         // }
     }
 

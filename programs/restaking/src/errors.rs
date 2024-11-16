@@ -184,4 +184,10 @@ pub enum ErrorCode {
 
     #[msg("normalization: not enough supported token to unlock")]
     NormalizedTokenPoolNotEnoughLockedToken,
+
+    #[msg("operation: failed to compute required accounts for the next command")]
+    OperationCommandAccountComputationException,
+
+    #[msg("operation: failed to execute the operation command")]
+    OperationCommandExecutionFailedException,
 }

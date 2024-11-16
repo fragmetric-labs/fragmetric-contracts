@@ -18,6 +18,7 @@ import * as ed25519 from "ed25519";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
+// TODO v0.3/operation: deprecate
 enum SplStakePoolFeeType {
     DEPOSIT_SOL,
     DEPOSIT_STAKE,
@@ -286,6 +287,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
+    // TODO v0.3/operation: deprecate --- move to onchain command
     public get jitoStakePoolDepositAccounts() {
         if (this._jitoStakePoolDepositAccounts) return this._jitoStakePoolDepositAccounts;
         return (this._jitoStakePoolDepositAccounts = this._getJitoStakePoolDepositAccounts());
@@ -435,6 +437,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             },
         ];
     }
+    // TODO v0.3/operation: --- deprecate
 
     public async tryAirdropSupportedTokens(account: web3.PublicKey, amount = 100) {
         await this.tryAirdrop(account, amount);
@@ -580,12 +583,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    // TODO v0.3/operation/staking: deprecate
     public async getSplStakePoolFee(stakePoolAddress: web3.PublicKey, feeType: SplStakePoolFeeType) {
         const stakePoolInfo = await splStakePool.stakePoolInfo(
             this.connection,
             stakePoolAddress,
         );
-        let fee;
+        let fee: typeof stakePoolInfo.solDepositFee;
         switch (feeType) {
             case SplStakePoolFeeType.DEPOSIT_SOL:
                 fee = stakePoolInfo.solDepositFee;
@@ -600,7 +604,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 fee = stakePoolInfo.stakeWithdrawalFee;
                 break;
         }
-        fee = fee.denominator == new BN(0) ? 0 : fee.numerator.toNumber() / fee.denominator.toNumber();
+        // fee = fee.denominator == new BN(0) ? 0 : fee.numerator.toNumber() / fee.denominator.toNumber();
         return fee;
     }
 
@@ -945,7 +949,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMaybeMainnetBeta ? new BN(27_000) : new BN(27_000)).mul(new BN(web3.LAMPORTS_PER_SOL)),
+            solCapacity: (this.isMaybeMainnetBeta ? new BN(27_000) : new BN(1_000)).mul(new BN(web3.LAMPORTS_PER_SOL)),
             solWithdrawalFeedRateBPS: this.isMaybeMainnetBeta ? 10 : 10,
             withdrawalEnabled: this.isMaybeMainnetBeta ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMaybeMainnetBeta ? 0 : 0),
@@ -1510,6 +1514,78 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
+    private async runOperatorRunSingle(operator: web3.Keypair = this.wallet) {
+        // prepare accounts according to the current state of operation.
+        // - can contain 28/32 accounts including reserved four accounts.
+        // - order doesn't matter, no need to put duplicate.
+        // - contain accounts as many as possible to execute multiple commands in a single tx.
+        const requiredAccounts: web3.AccountMeta[] = this.pricingSourceAccounts.slice();
+        const containedAccounts = new Set(
+            [
+                operator.publicKey,
+                web3.SystemProgram.programId,
+                this.knownAddress.fragSOLTokenMint,
+                this.knownAddress.fragSOLFund,
+            ]
+                .concat(this.pricingSourceAccounts.map(account => account.pubkey)),
+        );
+        let fragSOLFund = await this.getFragSOLFundAccount();
+        OUTER: for (const command of fragSOLFund.operation.commands) {
+            for (const pubkey of command.requiredAccounts) {
+                if (containedAccounts.size == 32) break OUTER;
+                if (!containedAccounts.has(pubkey)) {
+                    containedAccounts.add(pubkey);
+                    requiredAccounts.push({
+                        pubkey,
+                        isSigner: false,
+                        isWritable: true,
+                    });
+                }
+            }
+        }
+        // logger.debug(`remaining commands before run (${fragSOLFund.operation.commands.length})`.padEnd(LOG_PAD_SMALL), fragSOLFund.operation.commands.map(c => JSON.stringify(c.command)).join(', '))
+
+        const tx = await this.run({
+            instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 2_000_000,
+                }),
+                this.program.methods
+                    .operatorRunTodo()
+                    .accounts({
+                        operator: operator.publicKey,
+                    })
+                    .remainingAccounts(requiredAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorProcessedJob"],
+            skipPreflight: true,
+        });
+
+        fragSOLFund = await this.getFragSOLFundAccount();
+        const remainingCommandsCount = tx.event.operatorProcessedJob.fundAccount.remainingCommandsCount;
+        logger.notice(`remaining commands after run (${remainingCommandsCount})`.padEnd(LOG_PAD_SMALL), fragSOLFund.operation.commands.map(c => JSON.stringify(c.command)).join(', '));
+        return {
+            event: tx.event,
+            fragSOLFund,
+            remainingCommandsCount,
+        };
+    }
+
+    public async runOperatorRunTODO(operator: web3.Keypair = this.wallet, maxRunCount = 100) {
+        let runCount = 0;
+        while (runCount++ <= maxRunCount) {
+            logger.debug(`operator run attempt#${runCount}`);
+            const { remainingCommandsCount } = await this.runOperatorRunSingle(operator);
+            if (remainingCommandsCount == 0) {
+                logger.debug(`operator finished current operation cycle`);
+                break
+            }
+        }
+    }
+
+    // TODO v0.3/operation: deprecate
     public async runOperatorRun(operator: web3.Keypair = this.wallet) {
         // command=0. staking once x2
         // command=1. normalize lst x(#supported tokens)
@@ -1774,6 +1850,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFund, fragSOLFundReserveAccountBalance};
     }
 
+    // TODO v0.3/operation: deprecate
     public async runOperatorDepositSolToSplStakePool(operator: web3.Keypair = this.wallet, splStakePoolProgram: web3.PublicKey, splPoolTokenMint: web3.PublicKey, supportedTokenProgram: web3.PublicKey) {
         const { error } = await this.run({
             instructions: [

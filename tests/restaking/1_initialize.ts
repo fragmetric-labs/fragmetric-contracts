@@ -1,4 +1,4 @@
-import {BN} from '@coral-xyz/anchor';
+import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
@@ -67,12 +67,13 @@ describe("initialize", async () => {
 
         expect(res0.fragSOLFund.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
         let i = 0;
-        for (const v of Object.values(restaking.supportedTokenMetadata)) {
+        for (const [symbol, v] of Object.entries(restaking.supportedTokenMetadata)) {
             const supported = res0.fragSOLFund.supportedTokens[i++];
             expect(supported.mint.toString()).eq(v.mint.toString());
             expect(supported.program.toString()).eq(v.program.toString());
-            expect(supported.oneTokenAsSol.toNumber()).greaterThan(0);
+            expect(supported.oneTokenAsSol.toNumber()).greaterThan(web3.LAMPORTS_PER_SOL).lessThan(2 * web3.LAMPORTS_PER_SOL);
             expect(supported.operationReservedAmount.toNumber()).eq(0);
+            // console.log(restaking.knownAddress.fragSOLSupportedTokenAccount(symbol as any));
         }
     });
 

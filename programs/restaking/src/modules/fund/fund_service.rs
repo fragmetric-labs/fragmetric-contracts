@@ -1,11 +1,13 @@
+use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
+use crate::modules::fund::command::OperationCommandContext;
 use crate::modules::fund::{
     FundAccount, FundAccountInfo, UserFundAccount, UserFundConfigurationService,
 };
-use crate::modules::pricing;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
+use crate::modules::{fund, pricing};
 use crate::utils;
 use anchor_lang::prelude::*;
 use anchor_spl::token::accessor::amount;
@@ -17,8 +19,8 @@ where
 {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut Account<'info, FundAccount>,
-    _current_slot: u64,
-    _current_timestamp: i64,
+    current_slot: u64,
+    current_timestamp: i64,
 }
 
 impl Drop for FundService<'_, '_> {
@@ -39,8 +41,8 @@ impl<'info, 'a> FundService<'info, 'a> {
         Ok(Self {
             receipt_token_mint,
             fund_account,
-            _current_slot: clock.slot,
-            _current_timestamp: clock.unix_timestamp,
+            current_slot: clock.slot,
+            current_timestamp: clock.unix_timestamp,
         })
     }
 
@@ -188,6 +190,37 @@ impl<'info, 'a> FundService<'info, 'a> {
 
         // TODO v0.4/transfer: token transfer is temporarily disabled
         err!(ErrorCode::TokenNotTransferableError)?;
+
+        Ok(())
+    }
+
+    pub fn process_run(
+        &mut self,
+        system_program: &Program<'info, System>,
+        remaining_accounts: &'info [AccountInfo<'info>],
+    ) -> Result<()>
+    where
+        'info: 'a,
+    {
+        let mut operation_state = std::mem::take(&mut self.fund_account.operation);
+
+        operation_state.run_commands(
+            &mut OperationCommandContext {
+                receipt_token_mint: self.receipt_token_mint,
+                fund_account: self.fund_account,
+                system_program,
+            },
+            remaining_accounts,
+            self.current_timestamp,
+            self.current_slot,
+        )?;
+
+        self.fund_account.operation = operation_state;
+
+        emit!(events::OperatorProcessedJob {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
+        });
 
         Ok(())
     }
