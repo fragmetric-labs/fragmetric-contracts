@@ -9,7 +9,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use std::clone;
 
-// TODO v0.3/operation: rewrite
+// TODO v0.3/operation: rewrite into fund::command::...
 pub fn process_run<'info>(
     operator: &Signer<'info>,
     receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
@@ -19,7 +19,6 @@ pub fn process_run<'info>(
     _current_slot: u64,
     command: u8, // 0, 1, 2
 ) -> Result<()> {
-    // TODO v0.3/operation: remove this temporary authorization
     require_eq!(operator.key(), ADMIN_PUBKEY);
 
     // stake sol to jitoSOL

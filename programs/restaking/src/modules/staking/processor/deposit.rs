@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use spl_stake_pool;
 
 use crate::errors::ErrorCode;
-use crate::modules::fund::{FundAccount, FUND_ACCOUNT_CURRENT_VERSION};
+use crate::modules::fund::{FundAccount};
 use crate::modules::staking::spl;
 
 pub fn process_move_fund_to_operation_reserve_account<'info>(
