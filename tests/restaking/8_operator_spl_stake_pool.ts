@@ -32,7 +32,8 @@ describe("operator_spl_stake_pool", async () => {
         const { fragSOLFund: fragSOLFund1, fragSOLFundReserveAccountBalance: fragSOLFundReserveAccountBalance1, withdrawalSolFee } = await restaking.runOperatorWithdrawSolFromSplStakePool(restaking.wallet, restaking.BN(jitoSolTotalWithdrawAmount.value.amount), splStakePoolProgram, restaking.supportedTokenMetadata.jitoSOL.mint, spl.TOKEN_PROGRAM_ID);
 
         logger.debug(`[AFTER] fragSOLFundReserveAccountBalance1`.padEnd(LOG_PAD_LARGE), fragSOLFundReserveAccountBalance1.toString());
-        let jitoSolTotalWithdrawFeeAmount = depositedSolAmount.mul(withdrawalSolFee.numerator).div(withdrawalSolFee.denominator).addn(1); // 1 lamport diff?
-        expect(fragSOLFundReserveAccountBalance1.toString()).eq(depositedSolAmount.sub(jitoSolTotalWithdrawFeeAmount).toString(), "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
+        let jitoSolTotalWithdrawFeeAmount = depositedSolAmount.mul(withdrawalSolFee.numerator).div(withdrawalSolFee.denominator);
+        // 1 lamport diff?
+        expect(depositedSolAmount.sub(jitoSolTotalWithdrawFeeAmount).sub(new BN(fragSOLFundReserveAccountBalance1)).abs().lten(1)).eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 });

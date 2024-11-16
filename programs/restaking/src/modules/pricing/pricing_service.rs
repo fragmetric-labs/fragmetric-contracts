@@ -132,17 +132,20 @@ impl<'info> PricingService<'info> {
             .token_value_map
             .get(token_mint)
             .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-        let mut total_sol_amount = 0;
+        let mut total_sol_amount = 0u64;
 
         for asset in &token_value.numerator {
             match asset {
                 Asset::SOL(sol_amount) => {
-                    total_sol_amount += sol_amount;
+                    total_sol_amount = total_sol_amount.checked_add(*sol_amount)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                 }
                 Asset::TOKEN(nested_token_mint, _, nested_token_amount) => {
                     let nested_sol_amount =
                         self.get_token_amount_as_sol(nested_token_mint, *nested_token_amount)?;
-                    total_sol_amount += nested_sol_amount;
+                    total_sol_amount = total_sol_amount
+                        .checked_add(nested_sol_amount)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                 }
             }
         }
@@ -153,14 +156,22 @@ impl<'info> PricingService<'info> {
     pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.resolve_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(sol_amount, total_token_amount, total_token_value_as_sol)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        let token_amount = utils::get_proportional_amount(sol_amount, total_token_amount, total_token_value_as_sol)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        if sol_amount > 0 {
+            msg!("PRICING: {} / {} SOL => {} / {} {:?}", sol_amount, total_token_value_as_sol, token_amount, total_token_amount, token_mint);
+        }
+        Ok(token_amount)
     }
 
     pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.resolve_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(token_amount, total_token_value_as_sol, total_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        let sol_amount = utils::get_proportional_amount(token_amount, total_token_value_as_sol, total_token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        if token_amount > 0 {
+            msg!("PRICING: {} / {} SOL <= {} / {} {:?}", sol_amount, total_token_value_as_sol, token_amount, total_token_amount, token_mint);
+        }
+        Ok(sol_amount)
     }
 }

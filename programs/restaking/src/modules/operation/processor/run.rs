@@ -27,52 +27,36 @@ pub fn process_run<'info>(
         let [
             // staking
             fund_reserve_account,
-            stake_pool_program,
-            stake_pool,
-            stake_pool_withdraw_authority,
+            pool_program,
+            pool_account,
+            withdraw_authority,
             reserve_stake_account,
             manager_fee_account,
             pool_mint,
-            token_program,
+            pool_token_program,
             fund_supported_token_account_to_stake,
             ..,
         ] = remaining_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys)?;
         };
 
-        let (fund_reserve_account_address, fund_reserve_account_bump) = Pubkey::find_program_address(
-            &[fund::FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()], &crate::ID
-        );
-        require_eq!(fund_reserve_account_address, fund_reserve_account.key());
-
-        let mut fund_supported_token_account_to_stake_parsed =
-            parse_interface_account_boxed::<TokenAccount>(fund_supported_token_account_to_stake)?;
-
         let staking_lamports = fund_account.sol_operation_reserved_amount;
         if staking_lamports > 0 {
-            let before_fund_supported_token_amount =
-                fund_supported_token_account_to_stake_parsed.amount;
-            staking::deposit_sol_to_spl_stake_pool(
-                &staking::SPLStakePoolContext {
-                    program: stake_pool_program.clone(),
-                    stake_pool: stake_pool.clone(),
-                    sol_deposit_authority: None,
-                    stake_pool_withdraw_authority: stake_pool_withdraw_authority.clone(),
-                    reserve_stake_account: reserve_stake_account.clone(),
-                    manager_fee_account: manager_fee_account.clone(),
-                    pool_mint: pool_mint.clone(),
-                    token_program: token_program.clone(),
-                },
-                staking_lamports,
-                fund_reserve_account,
-                fund_supported_token_account_to_stake,
-                &[&[
-                    fund::FundAccount::RESERVE_SEED,
-                    &fund_account.receipt_token_mint.to_bytes(),
-                    &[fund_reserve_account_bump],
-                ]],
-            )?;
-            fund_supported_token_account_to_stake_parsed.reload()?;
+            let (to_pool_token_account_amount, minted_supported_token_amount) = staking::SPLStakePoolService::new(
+                pool_program,
+                pool_account,
+                pool_mint,
+                pool_token_program,
+            )?
+                .deposit_sol(
+                    withdraw_authority,
+                    reserve_stake_account,
+                    manager_fee_account,
+                    fund_reserve_account,
+                    fund_supported_token_account_to_stake,
+                    &fund_account.find_reserve_account_seeds(),
+                    staking_lamports,
+                )?;
             fund_account.sol_operation_reserved_amount = fund_account
                 .sol_operation_reserved_amount
                 .checked_sub(staking_lamports)
@@ -82,10 +66,8 @@ pub fn process_run<'info>(
                     )
                 })?;
 
-            let minted_supported_token_amount = fund_supported_token_account_to_stake_parsed.amount
-                - before_fund_supported_token_amount;
             let fund_supported_token_info = fund_account
-                .get_supported_token_mut(fund_supported_token_account_to_stake_parsed.mint)?;
+                .get_supported_token_mut(&pool_mint.key())?;
             fund_supported_token_info.set_operation_reserved_amount(
                 fund_supported_token_info
                     .get_operation_reserved_amount()
@@ -101,7 +83,7 @@ pub fn process_run<'info>(
             require_gte!(minted_supported_token_amount, staking_lamports.div_ceil(2));
             require_eq!(
                 fund_supported_token_info.get_operation_reserved_amount(),
-                fund_supported_token_account_to_stake_parsed.amount
+                to_pool_token_account_amount,
             );
         }
     }
@@ -139,7 +121,7 @@ pub fn process_run<'info>(
                 fund_supported_token_account_to_normalize,
             )?;
         let fund_supported_token_info_to_normalize = fund_account
-            .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
+            .get_supported_token_mut(&fund_supported_token_account_to_normalize_parsed.mint)?;
         let mut fund_normalized_token_account_parsed =
             parse_interface_account_boxed::<TokenAccount>(fund_normalized_token_account)?;
 
@@ -192,7 +174,7 @@ pub fn process_run<'info>(
             )?;
             fund_supported_token_account_to_normalize_parsed.reload()?;
             let fund_supported_token_info_to_normalize = fund_account
-                .get_supported_token_mut(fund_supported_token_account_to_normalize_parsed.mint)?;
+                .get_supported_token_mut(&fund_supported_token_account_to_normalize_parsed.mint)?;
             fund_supported_token_info_to_normalize.set_operation_reserved_amount(
                 fund_supported_token_info_to_normalize.get_operation_reserved_amount()
                     - normalizing_supported_token_amount,

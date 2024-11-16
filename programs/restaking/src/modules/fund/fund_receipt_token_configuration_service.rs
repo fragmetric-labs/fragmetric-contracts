@@ -9,10 +9,7 @@ use crate::modules::fund::*;
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
 use crate::utils::PDASeeds;
 
-pub struct FundReceiptTokenConfigurationService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct FundReceiptTokenConfigurationService<'info: 'a, 'a> {
     _receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     extra_account_meta_list: &'a AccountInfo<'info>,
 }

@@ -7,10 +7,7 @@ use crate::modules::fund::*;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::{fund, pricing};
 
-pub struct FundConfigurationService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct FundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut Account<'info, FundAccount>,
 }
@@ -70,11 +67,11 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_supported_token_capacity_amount(
         &mut self,
-        token: Pubkey,
+        token_mint: &Pubkey,
         capacity_amount: u64,
     ) -> Result<()> {
         self.fund_account
-            .get_supported_token_mut(token)?
+            .get_supported_token_mut(token_mint)?
             .set_capacity_amount(capacity_amount)?;
         self.emit_fund_manager_updated_fund_event()
     }
@@ -114,7 +111,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         supported_token_program: &Interface<TokenInterface>,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
-        pricing_sources: &'info [AccountInfo<'info>],
+        pricing_sources: &'a [AccountInfo<'info>],
     ) -> Result<()> {
         require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key(),);
         require_keys_eq!(

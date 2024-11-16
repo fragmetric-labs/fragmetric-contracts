@@ -1,7 +1,7 @@
 use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
 use crate::utils;
 use anchor_lang::prelude::*;
-use spl_stake_pool::state::StakePool as SPLStakePoolAccount;
+use crate::modules::staking::SPLStakePoolService;
 
 pub struct SPLStakePoolValueProvider;
 
@@ -12,11 +12,7 @@ impl TokenValueProvider for SPLStakePoolValueProvider {
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let pool_account =
-            SPLStakePoolAccount::deserialize(&mut &**pricing_source_accounts[0].try_borrow_data()?)
-                .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
-        require_eq!(pool_account.is_valid(), true);
-
+        let pool_account = SPLStakePoolService::deserialize_pool_account(pricing_source_accounts[0])?;
         Ok(TokenValue {
             numerator: vec![Asset::SOL(pool_account.total_lamports)],
             denominator: pool_account.pool_token_supply,

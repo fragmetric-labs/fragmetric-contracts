@@ -65,12 +65,13 @@ impl FundAccount {
         )
     }
 
-    pub(super) fn find_reserve_account_seeds(&self) -> [&[u8]; 3] {
-        [
-            FundAccount::RESERVE_SEED,
-            self.receipt_token_mint.as_ref(),
-            Box::leak(Box::new([self.find_reserve_account_address().1])),
-        ]
+    // TODO v0.3/operation: visibility
+    pub fn find_reserve_account_seeds(&self) -> Vec<&[u8]> {
+        let mut vec = Vec::new();
+        vec.push(FundAccount::RESERVE_SEED);
+        vec.push(self.receipt_token_mint.as_ref());
+        vec.push(Box::leak(Box::new([self.find_reserve_account_address().1])));
+        vec
     }
 
     pub(super) fn find_treasury_account_address(&self) -> (Pubkey, u8) {
@@ -158,11 +159,11 @@ impl FundAccount {
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_supported_token_mut(
         &mut self,
-        token: Pubkey,
+        token_mint: &Pubkey,
     ) -> Result<&mut SupportedTokenInfo> {
         self.supported_tokens
             .iter_mut()
-            .find(|info| info.mint == token)
+            .find(|info| info.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
@@ -414,7 +415,7 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
         fund.supported_tokens[0].accumulated_deposit_amount = 1_000_000_000;
-        fund.get_supported_token_mut(token1)
+        fund.get_supported_token_mut(&token1)
             .unwrap()
             .set_capacity_amount(0)
             .unwrap_err();

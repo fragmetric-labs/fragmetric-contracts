@@ -1,33 +1,83 @@
 use anchor_lang::{
-    prelude::*,
-    solana_program::{program::invoke_signed, sysvar},
+    prelude::*
+    ,
+    solana_program::program::invoke_signed,
 };
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::errors::ErrorCode;
-use crate::modules::fund::{FundAccount, FUND_ACCOUNT_CURRENT_VERSION};
-use crate::utils::PDASeeds;
-
 pub fn process_withdraw_sol_from_spl_stake_pool<'info>(
-    remaining_accounts: &'info [AccountInfo<'info>],
+    pool_account: &AccountInfo<'info>,
+    withdraw_authority: &AccountInfo<'info>,
+    reserve_stake_account: &AccountInfo<'info>,
+    manager_fee_account: &AccountInfo<'info>,
+    sysvar_clock_program: &AccountInfo<'info>,
+    sysvar_stake_history_program: &AccountInfo<'info>,
+    stake_program: &AccountInfo<'info>,
     spl_stake_pool_program: &AccountInfo<'info>,
-    fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-    fund_reserve_account: &SystemAccount<'info>,
+    pool_token_account_from: &InterfaceAccount<'info, TokenAccount>,
+    lamport_account_to: &AccountInfo<'info>,
     spl_pool_token_mint: &InterfaceAccount<'info, Mint>,
     supported_token_program: &Interface<'info, TokenInterface>,
-    fund_account: &Account<'info, FundAccount>,
+    signer: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]],
     token_amount: u64,
 ) -> Result<()> {
+    /*
+    // { // stake pool program id
+            //     pubkey: new anchor.web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
+            //     isSigner: false,
+            //     isWritable: false,
+            // },
+            { // jito stake pool address
+                pubkey: new anchor.web3.PublicKey("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
+                isSigner: false,
+                isWritable: true,
+            },
+            { // stake_pool_withdraw_authority
+                pubkey: jitoStakePoolWithdrawAuthority,
+                isSigner: false,
+                isWritable: false,
+            },
+            // user_transfer_authority
+            // pool_tokens_from
+            { // reserve_stake_account
+                pubkey: new anchor.web3.PublicKey("BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
+                isSigner: false,
+                isWritable: true,
+            },
+            // lamports_to
+            { // manager_fee_account
+                pubkey: new anchor.web3.PublicKey("feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
+                isSigner: false,
+                isWritable: true,
+            },
+            // pool_mint
+            // token_program_id
+            { // sysvar_clock_id ???
+                pubkey: anchor.web3.SYSVAR_CLOCK_PUBKEY,
+                isSigner: false,
+                isWritable: false,
+            },
+            { // sysvar_stake_history_id ???
+                pubkey: anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+                isSigner: false,
+                isWritable: false,
+            },
+            { // stake_program_id ???
+                pubkey: anchor.web3.StakeProgram.programId,
+                isSigner: false,
+                isWritable: false,
+            },
+     */
     let withdraw_sol_ix = spl_stake_pool::instruction::withdraw_sol(
         spl_stake_pool_program.key,
-        remaining_accounts[0].key,
-        remaining_accounts[1].key,
-        &fund_account.key(),
-        &fund_supported_token_account.key(),
-        remaining_accounts[2].key,
-        fund_reserve_account.key,
-        remaining_accounts[3].key,
+        pool_account.key,
+        withdraw_authority.key,
+        signer.key,
+        &pool_token_account_from.key(),
+        reserve_stake_account.key,
+        lamport_account_to.key,
+        manager_fee_account.key,
         &spl_pool_token_mint.key(),
         supported_token_program.key,
         token_amount,
@@ -40,20 +90,20 @@ pub fn process_withdraw_sol_from_spl_stake_pool<'info>(
     invoke_signed(
         &withdraw_sol_ix,
         &[
-            remaining_accounts[0].clone(),
-            remaining_accounts[1].clone(),
-            fund_account.to_account_info(),
-            fund_supported_token_account.to_account_info(),
-            remaining_accounts[2].clone(),
-            fund_reserve_account.to_account_info(),
-            remaining_accounts[3].clone(),
+            pool_account.clone(),
+            withdraw_authority.clone(),
+            signer.clone(),
+            pool_token_account_from.to_account_info(),
+            reserve_stake_account.clone(),
+            lamport_account_to.clone(),
+            manager_fee_account.clone(),
             spl_pool_token_mint.to_account_info(),
-            remaining_accounts[4].clone(),
-            remaining_accounts[5].clone(),
-            remaining_accounts[6].clone(),
+            sysvar_clock_program.clone(),
+            sysvar_stake_history_program.clone(),
+            stake_program.clone(),
             supported_token_program.to_account_info(),
         ],
-        signer_seeds
+        signer_seeds,
     )?;
 
     Ok(())

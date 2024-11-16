@@ -1,6 +1,7 @@
 use crate::constants;
 use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
 use crate::utils;
+use crate::errors;
 use anchor_lang::prelude::*;
 use marinade_cpi::state::State as MarinadeStakePoolAccount;
 
@@ -25,11 +26,15 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
         require_keys_eq!(pool_account.msol_mint, constants::DEVNET_MSOL_MINT_ADDRESS);
 
         let total_cooling_down =
-            pool_account.stake_system.delayed_unstake_cooling_down + pool_account.emergency_cooling_down;
+            pool_account.stake_system.delayed_unstake_cooling_down
+                .checked_add(pool_account.emergency_cooling_down)
+                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
 
         let total_lamports_under_control = pool_account.validator_system.total_active_balance
-            + total_cooling_down
-            + pool_account.available_reserve_balance;
+            .checked_add(total_cooling_down)
+            .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+            .checked_add(pool_account.available_reserve_balance)
+            .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
 
         let total_value_staked_lamports =
             total_lamports_under_control.saturating_sub(pool_account.circulating_ticket_balance);

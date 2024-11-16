@@ -3,10 +3,7 @@ use anchor_spl::token_interface::*;
 
 use crate::modules::fund::*;
 
-pub struct UserFundConfigurationService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct UserFundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     user: &'a Signer<'info>,
     user_fund_account: &'a mut Account<'info, UserFundAccount>,
