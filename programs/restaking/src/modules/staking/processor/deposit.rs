@@ -4,24 +4,6 @@ use spl_stake_pool;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, FUND_ACCOUNT_CURRENT_VERSION};
-use crate::modules::staking::spl;
-
-pub fn process_move_fund_to_operation_reserve_account<'info>(
-    fund_account: &mut Account<'info, FundAccount>,
-    operation_reserve_account: &SystemAccount<'info>,
-) -> Result<()> {
-    let total_moving_sol_amount = fund_account.sol_operation_reserved_amount;
-
-    fund_account.sub_lamports(total_moving_sol_amount)?;
-    operation_reserve_account.add_lamports(total_moving_sol_amount)?;
-
-    fund_account.sol_operation_reserved_amount = fund_account
-        .sol_operation_reserved_amount
-        .checked_sub(total_moving_sol_amount)
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-    Ok(())
-}
 
 pub struct SPLStakePoolContext<'info> {
     pub program: AccountInfo<'info>,
@@ -49,7 +31,7 @@ pub fn deposit_sol_to_spl_stake_pool<'info>(
 ) -> Result<()> {
     require_eq!(spl_stake_pool::ID, ctx.program.key());
 
-    let ix = spl::deposit_sol(
+    let ix = spl_stake_pool::instruction::deposit_sol(
         ctx.program.key,
         ctx.stake_pool.key,
         ctx.stake_pool_withdraw_authority.key,
@@ -60,9 +42,7 @@ pub fn deposit_sol_to_spl_stake_pool<'info>(
         pool_tokens_to.key,
         ctx.pool_mint.key,
         ctx.token_program.key,
-        None,
         lamports,
-        None,
     );
 
     invoke_signed(

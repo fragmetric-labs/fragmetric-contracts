@@ -27,4 +27,5 @@ if (!process.env.JUST_INIT) {
     require('./restaking/2_deposit_sol')(2);
     require('./restaking/3_deposit_token')(2);
     require('./restaking/7_operate')(2);
+    require('./restaking/8_operator_spl_stake_pool');
 }
