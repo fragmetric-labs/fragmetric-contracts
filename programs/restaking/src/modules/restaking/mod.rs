@@ -1,2 +1,2 @@
-pub mod jito;
 pub mod config;
+pub mod jito;

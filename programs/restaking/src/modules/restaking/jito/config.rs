@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
-use jito_vault_core::{config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation, vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket};
 use jito_bytemuck::AccountDeserialize;
+use jito_vault_core::{
+    config::Config, vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket,
+};
 
 pub struct JitoVaultOperatorDelegation {
     pub operator_supported_token_delegated_amount: u64,
@@ -28,11 +30,15 @@ pub struct JitoRestakingVaultContext<'info> {
 }
 
 impl<'info> JitoRestakingVaultContext<'info> {
-    pub fn get_vault_withdrawal_tickets(&self, vault_withdrawal_tickets: &'info [AccountInfo<'info>], slot: u64) -> Result<Vec<&'info AccountInfo<'info>>>{
+    pub fn get_vault_withdrawal_tickets(
+        &self,
+        vault_withdrawal_tickets: &'info [AccountInfo<'info>],
+        slot: u64,
+    ) -> Result<Vec<&'info AccountInfo<'info>>> {
         let vault_config_data = &**self.vault_config.try_borrow_data()?;
         let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
         let epoch_length = vault_config.epoch_length();
-        let mut tickets= Vec::new();
+        let mut tickets = Vec::new();
         for vault_withdrawal_ticket in vault_withdrawal_tickets {
             if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
                 continue;

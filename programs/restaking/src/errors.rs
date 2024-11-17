@@ -59,8 +59,8 @@ pub enum ErrorCode {
     #[msg("fund: withdrawal request is already in progress")]
     FundProcessingWithdrawalRequestError,
 
-    #[msg("fund: token pricing source is not found")]
-    FundTokenPricingSourceNotFoundException,
+    #[msg("pricing: token pricing source is not found")]
+    TokenPricingSourceAccountNotFoundException,
 
     #[msg("operation: job unmet threshold")]
     OperatorJobUnmetThresholdError,
@@ -75,7 +75,7 @@ pub enum ErrorCode {
     RewardInvalidMetadataDescriptionLengthError,
 
     #[msg("reward: invalid reward type")]
-    RewardInvalidRewardType,
+    RewardInvalidRewardTypeError,
 
     #[msg("reward: already existing holder")]
     RewardAlreadyExistingHolderError,
@@ -182,6 +182,12 @@ pub enum ErrorCode {
     #[msg("normalization: exceeded max supported tokens")]
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
-    #[msg("normalization: invalid accounts provided")]
-    NormalizedTokenPoolInvalidAccountsProvided,
+    #[msg("normalization: not enough supported token to unlock")]
+    NormalizedTokenPoolNotEnoughLockedToken,
+
+    #[msg("operation: failed to compute required accounts for the next command")]
+    OperationCommandAccountComputationException,
+
+    #[msg("operation: failed to execute the operation command")]
+    OperationCommandExecutionFailedException,
 }

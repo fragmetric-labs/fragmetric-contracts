@@ -31,10 +31,10 @@ jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", ve
 jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", version = "0.0.3", tag = "v0.0.3" }
 base64 = "0.13.0"
 shank = "0.4.2"
-#pyth-solana-receiver-sdk = "0.2.0"
 spl-tlv-account-resolution = "0.6.5"
 spl-transfer-hook-interface = "0.6.5"
 spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
+marinade-cpi = { version = "0.3.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-program-test = "1.18.15"

@@ -1,7 +1,7 @@
-use anchor_lang::prelude::*;
+mod pricing_service;
+mod token_pricing_source;
+mod token_value_provider;
 
-mod processor;
-mod source;
-
-pub use processor::*;
-pub use source::*;
+pub use pricing_service::*;
+pub use token_pricing_source::*;
+pub use token_value_provider::*;

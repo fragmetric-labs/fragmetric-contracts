@@ -1,3 +1,3 @@
-mod processor;
+mod signature_verification_service;
 
-pub use processor::*;
+pub use signature_verification_service::*;

@@ -7,9 +7,9 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
 use crate::utils::PDASeeds;
 
-// TODO: deprecate
+// TODO v0.3/operation: deprecate
 #[derive(Accounts)]
-pub struct OperatorFundContext<'info> {
+pub struct OperatorFundContextDeprecated<'info> {
     pub operator: Signer<'info>,
 
     #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
@@ -36,7 +36,7 @@ pub struct OperatorFundContext<'info> {
 }
 
 #[derive(Accounts)]
-pub struct OperatorFundContext2<'info> {
+pub struct OperatorFundContext<'info> {
     #[account(mut)]
     pub operator: Signer<'info>,
 

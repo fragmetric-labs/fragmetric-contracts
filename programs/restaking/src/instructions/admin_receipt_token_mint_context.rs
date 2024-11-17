@@ -26,7 +26,7 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
         seeds = [b"extra-account-metas", receipt_token_mint.key().as_ref()],
         bump,
         space = ExtraAccountMetaList::size_of(
-            extra_account_metas_len()? + 2, // 2 is reserved space
+            receipt_token_extra_account_metas_len()? + 2, // 2 is reserved space
         )?,
     )]
     pub extra_account_meta_list: UncheckedAccount<'info>,

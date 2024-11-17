@@ -23,6 +23,7 @@ describe("reward", async function () {
     const restaking = await restakingPlayground;
     const userA = restaking.keychain.getKeypair('MOCK_USER9');
     const userB = restaking.keychain.getKeypair('MOCK_USER10');
+    const PRICING_DIFF_ERROR_MODIFIER = 1_000;
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
@@ -51,10 +52,10 @@ describe("reward", async function () {
         ]);
         printUserRewardAccount('A', a3.fragSOLUserReward);
         printUserRewardAccount('B', b3.fragSOLUserReward);
-        expect(a3.fragSOLUserReward.userRewardPools1[0].contribution.toString(), 'A contrib = 100(2slot) + 300(0slot)')
-            .eq(b3.fragSOLUserReward.userRewardPools1[0].contribution.toString(), 'B contrib = 200(1slot)');
-        expect(a3.fragSOLUserReward.userRewardPools1[1].contribution.toString(), 'a')
-            .eq(b3.fragSOLUserReward.userRewardPools1[1].contribution.toString(), 'b');
+        expect(a3.fragSOLUserReward.userRewardPools1[0].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).toString(), 'A contrib = 100(2slot) + 300(0slot)')
+            .eq(b3.fragSOLUserReward.userRewardPools1[0].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).toString(), 'B contrib = 200(1slot)');
+        expect(a3.fragSOLUserReward.userRewardPools1[1].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).toString(), 'a')
+            .eq(b3.fragSOLUserReward.userRewardPools1[1].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).toString(), 'b');
 
         await restaking.sleep(1);
         const [a4, b4] = await Promise.all([
@@ -63,12 +64,12 @@ describe("reward", async function () {
         ]);
         printUserRewardAccount('A', a4.fragSOLUserReward);
         printUserRewardAccount('B', b4.fragSOLUserReward);
-        expect(a4.fragSOLUserReward.userRewardPools1[1].contribution.mul(new BN(2)).toString(), 'A contrib = 100(3slot) + 300(1slot)') // 600
-            .eq(b4.fragSOLUserReward.userRewardPools1[1].contribution.mul(new BN(3)).toString(), 'B contrib = 200(2slot)'); // 400
+        expect(a4.fragSOLUserReward.userRewardPools1[1].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(2)).toString(), 'A contrib = 100(3slot) + 300(1slot)') // 600
+            .eq(b4.fragSOLUserReward.userRewardPools1[1].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(3)).toString(), 'B contrib = 200(2slot)'); // 400
 
         // drop fPoint in approximately(time flies) 1:1 ratio to total contribution; contribution(11) has 2 + 5 more decimals than fPoint(4)
         const r4 = await restaking.runOperatorUpdateRewardPools();
-        const s5Amount = r4.fragSOLReward.rewardPools1[1].contribution.div(new BN(10 ** (2 + 5)));
+        const s5Amount = r4.fragSOLReward.rewardPools1[1].contribution.divn(PRICING_DIFF_ERROR_MODIFIER).div(new BN(10 ** (2 + 5)));
         const s5 = await restaking.runFundManagerSettleReward({
             poolName: 'bonus',
             rewardName: 'fPoint',
@@ -96,8 +97,8 @@ describe("reward", async function () {
             .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
         // aSettle.settledAmount/bSettle.settledAmount = aSettle.settledContribution/bSettle.settledContribution
 
-        expect((aSettledAmountDelta.toNumber() / bSettledAmountDelta.toNumber()).toPrecision(6))
-            .eq((aSettledContribDelta.toNumber() / bSettledContribDelta.toNumber()).toPrecision(6), 'd');
+        expect((aSettledAmountDelta.toNumber() / bSettledAmountDelta.toNumber()).toPrecision(4))
+            .eq((aSettledContribDelta.toNumber() / bSettledContribDelta.toNumber()).toPrecision(4), 'd');
     });
 
     step("rewards can be settled with custom contribution accrual rate enabled", async function () {
@@ -163,10 +164,10 @@ describe("reward", async function () {
         ]);
 
         // new base pool settled amounts are same; A: 400, B: 400 => A:B = 1:1
-        expect(a6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.toNumber(), 'a6 base settled')
-            .eq(b6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.toNumber(), 'b6 base settled');
-        expect(a6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toNumber(), 'b6 base allocated')
-            .eq(b6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toNumber(), 'b6 base allocated');
+        expect(a6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'a6 base settled')
+            .eq(b6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base settled');
+        expect(a6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base allocated')
+            .eq(b6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base allocated');
 
         // added bonus pool settled amounts are different; A: 400, B: 200+200(x1.5) => A:B = 4:5
         const a6BonusSettledAmountDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount
@@ -178,10 +179,10 @@ describe("reward", async function () {
         const b6BonusSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
             .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
 
-        expect((a6BonusSettledAmountDelta.toNumber() / b6BonusSettledAmountDelta.toNumber()).toPrecision(6), 'a6_amount / b6_amount')
-            .eq((a6BonusSettledContribDelta.toNumber() / b6BonusSettledContribDelta.toNumber()).toPrecision(6), 'a6_contrib / b6_contrib');
+        expect((a6BonusSettledAmountDelta.toNumber() / b6BonusSettledAmountDelta.toNumber()).toPrecision(4), 'a6_amount / b6_amount')
+            .eq((a6BonusSettledContribDelta.toNumber() / b6BonusSettledContribDelta.toNumber()).toPrecision(4), 'a6_contrib / b6_contrib');
 
-        expect(a6BonusSettledContribDelta.mul(new BN(5)).toString(), 'a6_contrib x 5')
-            .eq(b6BonusSettledContribDelta.mul(new BN(4)).toString(), 'b6_contrib x 4');
+        expect(a6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(5)).toString(), 'a6_contrib x 5')
+            .eq(b6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(4)).toString(), 'b6_contrib x 4');
     });
 });

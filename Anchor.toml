@@ -23,6 +23,10 @@ startup_wait = 10000
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 program = "./tests/mocks/mainnet/mpl-token-metadata.so"
 
+# [[test.genesis]]
+# address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
+# program = "./tools/restaking/modules/staking/spl_stake_pool.so"
+
 [test.validator]
 url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
 slots_per_epoch = "32"
@@ -51,9 +55,21 @@ address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
 [[test.validator.clone]]
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 
-# clone mainnet jitoSOL stake pool to localnet
+# clone mainnet jito stake pool to localnet
 [[test.validator.clone]]
 address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+
+# clone mainnet jito stake pool's validator list account to localnet
+[[test.validator.clone]]
+address = "3R3nGZpQs2aZo5FDQvd2MUQ6R7KhAPainds6uT6uE2mn"
+
+# clone mainnet jitoSOL stake pool reserve stake account to localnet
+[[test.validator.clone]]
+address = "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"
+
+# clone mainnet jitoSOL stake pool fee account to localnet
+[[test.validator.clone]]
+address = "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"
 
 # *mSOL
 # ref: https://docs.marinade.finance/developers/contract-addresses#tokens

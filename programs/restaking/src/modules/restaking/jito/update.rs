@@ -1,3 +1,4 @@
+use super::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::mint;
@@ -8,7 +9,6 @@ use jito_vault_core::config::Config;
 use jito_vault_core::vault::Vault;
 use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
 use jito_vault_sdk;
-use super::*;
 
 pub fn update_vault_if_needed<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
@@ -19,13 +19,17 @@ pub fn update_vault_if_needed<'info>(
     system_program: &AccountInfo<'info>,
     current_slot: u64,
 ) -> Result<()> {
-    let epoch_length = Config::try_from_slice_unchecked(&ctx.vault_config.try_borrow_data()?)?.epoch_length();
+    let epoch_length =
+        Config::try_from_slice_unchecked(&ctx.vault_config.try_borrow_data()?)?.epoch_length();
 
-    let current_epoch = current_slot.checked_div(epoch_length)
+    let current_epoch = current_slot
+        .checked_div(epoch_length)
         .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
 
-    let updated_slot = Vault::try_from_slice_unchecked(&ctx.vault.try_borrow_data()?)?.last_full_state_update_slot();
-    let updated_epoch = updated_slot.checked_div(epoch_length)
+    let updated_slot = Vault::try_from_slice_unchecked(&ctx.vault.try_borrow_data()?)?
+        .last_full_state_update_slot();
+    let updated_epoch = updated_slot
+        .checked_div(epoch_length)
         .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
 
     if current_epoch > updated_epoch {
@@ -73,16 +77,17 @@ pub fn initialize_vault_update_state_tracker<'info>(
     signer: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]],
     vault_update_state_tracker: &AccountInfo<'info>,
-    system_program: &AccountInfo<'info>
+    system_program: &AccountInfo<'info>,
 ) -> Result<()> {
-    let initialize_vault_update_state_tracker_ix = jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
-        ctx.vault_program.key,
-        ctx.vault_config.key,
-        ctx.vault.key,
-        &vault_update_state_tracker.key,
-        signer.key,
-        TryFrom::try_from(0u8).unwrap(), // WithdrawalAllocationMethod
-    );
+    let initialize_vault_update_state_tracker_ix =
+        jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
+            ctx.vault_program.key,
+            ctx.vault_config.key,
+            ctx.vault.key,
+            &vault_update_state_tracker.key,
+            signer.key,
+            TryFrom::try_from(0u8).unwrap(), // WithdrawalAllocationMethod
+        );
 
     invoke_signed(
         &initialize_vault_update_state_tracker_ix,
@@ -92,7 +97,7 @@ pub fn initialize_vault_update_state_tracker<'info>(
             ctx.vault.clone(),
             vault_update_state_tracker.clone(),
             signer.clone(),
-            system_program.clone()
+            system_program.clone(),
         ],
         signer_seeds,
     )?;
@@ -105,7 +110,7 @@ pub fn close_vault_update_state_tracker<'info>(
     signer: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]],
     vault_update_state_tracker: &AccountInfo<'info>,
-    ncn_epoch: u64
+    ncn_epoch: u64,
 ) -> Result<()> {
     let close_vault_update_state_tracker_ix = jito_vault_sdk::sdk::close_vault_update_state_tracker(
         ctx.vault_program.key,
@@ -133,7 +138,7 @@ pub fn close_vault_update_state_tracker<'info>(
 
 fn update_vault_balance<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
-    vault_fee_receipt_token_account: &AccountInfo<'info>
+    vault_fee_receipt_token_account: &AccountInfo<'info>,
 ) -> Result<()> {
     let update_vault_balance_ix = jito_vault_sdk::sdk::update_vault_balance(
         ctx.vault_program.key,
@@ -161,7 +166,6 @@ fn update_vault_balance<'info>(
 
     Ok(())
 }
-
 
 pub fn initialize_vault_operator_delegation<'info>(
     ctx: JitoRestakingVaultContext<'info>,
@@ -194,7 +198,7 @@ pub fn initialize_vault_operator_delegation<'info>(
             vault_operator_delegation.clone(),
             signer.clone(), // vault_operator_admin
             signer.clone(), // payer
-            system_program.clone()
+            system_program.clone(),
         ],
         signer_seeds,
     )?;

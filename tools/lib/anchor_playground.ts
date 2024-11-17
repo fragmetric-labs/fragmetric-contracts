@@ -56,13 +56,20 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         signers?: web3.Signer[],
         signerNames?: KEYS[],
         events?: EVENTS[],
+        skipPreflight?: boolean,
+        computeUnitLimit?: number,
     }) {
         let txSig: string | null = null;
         try {
             // prepare instructions
-            let {instructions, signers = [], signerNames = []} = args;
+            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit} = args;
             const tx = new web3.Transaction()
                 .add(
+                    ...(computeUnitLimit ? [
+                            web3.ComputeBudgetProgram.setComputeUnitLimit({
+                                units: computeUnitLimit,
+                            })
+                        ] : []),
                     ...await Promise.all(instructions)
                 );
 
@@ -99,7 +106,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                     signature: txSig,
                 },
                 {
-                    skipPreflight: false,
+                    skipPreflight,
                     commitment: 'confirmed',
                 }
             );

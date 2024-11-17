@@ -107,7 +107,7 @@ impl RewardSettlement {
 
     pub(super) fn get_settlement_blocks_iter_mut(
         &mut self,
-    ) -> impl Iterator<Item=&mut RewardSettlementBlock> {
+    ) -> impl Iterator<Item = &mut RewardSettlementBlock> {
         if self.is_settlement_blocks_queue_partitioned() {
             let (front, back) = self
                 .settlement_blocks
