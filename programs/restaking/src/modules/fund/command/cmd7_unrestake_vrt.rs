@@ -2,17 +2,17 @@ use super::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use anchor_lang::prelude::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub(super) struct UnrestakeVRTCommand {
+pub struct UnrestakeVRTCommand {
     // TODO: UnrestakeVRTCommand
 }
 
 impl SelfExecutable for UnrestakeVRTCommand {
     fn execute(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
-    ) -> Result<Vec<OperationCommandEntry>> {
+        _ctx: &mut OperationCommandContext,
+        _accounts: &[AccountInfo],
+    ) -> Result<Option<OperationCommandEntry>> {
         // TODO: UnrestakeVRTCommand.execute
-        Ok(vec![])
+        Ok(None)
     }
 }

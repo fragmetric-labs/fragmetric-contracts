@@ -9,10 +9,7 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-pub struct NormalizedTokenPoolService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct NormalizedTokenPoolService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
     normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,

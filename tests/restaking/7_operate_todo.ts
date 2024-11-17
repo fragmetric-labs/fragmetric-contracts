@@ -9,7 +9,7 @@ const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
     const restaking = await restakingPlayground;
 
-    step("fund operation one cycle", async function () {
-        await restaking.runOperatorRunTODO(restaking.keychain.getKeypair('ADMIN'), 100);
+    step("fund operation for a single cycle", async function () {
+        await restaking.runOperatorRunTODO(restaking.keychain.getKeypair('ADMIN'));
     });
 });

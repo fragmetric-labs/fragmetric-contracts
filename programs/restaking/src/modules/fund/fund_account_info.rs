@@ -15,7 +15,7 @@ pub struct FundAccountInfo {
     sol_withdrawal_fee_rate: f32,
     withdrawal_enabled: bool,
     withdrawal_last_completed_batch_id: u64,
-    remaining_commands_count: u8,
+    operation_sequence: u16,
 }
 
 impl FundAccountInfo {
@@ -40,7 +40,7 @@ impl FundAccountInfo {
             withdrawal_last_completed_batch_id: fund_account
                 .withdrawal
                 .get_last_completed_batch_id(),
-            remaining_commands_count: fund_account.operation.get_remaining_commands_count(),
+            operation_sequence: fund_account.operation.get_sequence(),
         }
     }
 }

@@ -31,18 +31,14 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 // propagate common accounts and values to all commands
-pub(super) struct OperationCommandContext<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct OperationCommandContext<'info, 'a> {
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
-    pub(super) system_program: &'a Program<'info, System>,
 }
 
 // enum to hold all command variants
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub(super) enum OperationCommand {
+pub enum OperationCommand {
     Initialize(InitializeCommand),
     ClaimUnstakedSOL(ClaimUnstakedSOLCommand),
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommand),
@@ -63,7 +59,7 @@ impl SelfExecutable for OperationCommand {
         &self,
         ctx: &mut OperationCommandContext,
         accounts: &[AccountInfo],
-    ) -> Result<Vec<OperationCommandEntry>> {
+    ) -> Result<Option<OperationCommandEntry>> {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
             OperationCommand::ClaimUnstakedSOL(command) => command.execute(ctx, accounts),
@@ -85,10 +81,17 @@ impl SelfExecutable for OperationCommand {
 const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub(super) struct OperationCommandEntry {
-    pub command: OperationCommand,
+pub struct OperationCommandEntry {
+    command: OperationCommand,
     #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
-    pub required_accounts: Vec<Pubkey>,
+    required_accounts: Vec<Pubkey>,
+}
+
+
+impl OperationCommandEntry {
+    pub fn into(&self) -> (&OperationCommand, &[Pubkey]) {
+        (&self.command, self.required_accounts.as_slice())
+    }
 }
 
 impl OperationCommand {
@@ -100,10 +103,10 @@ impl OperationCommand {
     }
 }
 
-pub(super) trait SelfExecutable {
+pub trait SelfExecutable {
     fn execute(
         &self,
         ctx: &mut OperationCommandContext,
         accounts: &[AccountInfo],
-    ) -> Result<Vec<OperationCommandEntry>>;
+    ) -> Result<Option<OperationCommandEntry>>;
 }

@@ -21,6 +21,11 @@ if (process.env.JUST_OPERATE) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/7_operate_todo')(1);
 
+} else if (process.env.JUST_STAKE) {
+    require('./restaking/2_deposit_sol')(1);
+    require('./restaking/7_operate')(1);
+    require('./restaking/8_operator_spl_stake_pool');
+
 } else if (!process.env.JUST_INIT) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/3_deposit_token')(1);

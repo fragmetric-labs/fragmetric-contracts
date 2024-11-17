@@ -1,5 +1,3 @@
-extern crate core;
-
 use anchor_lang::prelude::*;
 
 mod constants;
@@ -164,14 +162,14 @@ pub mod restaking {
 
     pub fn fund_manager_update_supported_token_capacity_amount(
         ctx: Context<FundManagerFundContext>,
-        token: Pubkey,
+        token_mint: Pubkey,
         capacity_amount: u64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_supported_token_capacity_amount(token, capacity_amount)
+        .process_update_supported_token_capacity_amount(&token_mint, capacity_amount)
     }
 
     pub fn fund_manager_update_withdrawal_enabled_flag(
@@ -394,10 +392,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-            .process_run(
-                &ctx.accounts.system_program,
-                ctx.remaining_accounts,
-            )
+        .process_run(ctx.remaining_accounts, None, None)
     }
 
     // TODO v0.3/operation: deprecate
@@ -437,6 +432,90 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
         )?
         .process_update_reward_pools()
+    }
+
+    // TODO v0.3/operation: deprecate
+    ////////////////////////////////////////////
+    // OperatorStakingContext
+    ////////////////////////////////////////////
+
+    pub fn operator_deposit_sol_to_spl_stake_pool<'info>(
+        ctx: Context<'_, '_, '_, 'info, OperatorStakingContext<'info>>,
+    ) -> Result<()> {
+        let mut accounts = vec![
+            ctx.accounts.spl_stake_pool_program.to_account_info(),
+            ctx.remaining_accounts[0].to_account_info(),
+            ctx.accounts.spl_pool_token_mint.to_account_info(),
+            ctx.accounts.supported_token_program.to_account_info(),
+            ctx.remaining_accounts[1].to_account_info(),
+            ctx.remaining_accounts[2].to_account_info(),
+            ctx.remaining_accounts[3].to_account_info(),
+            ctx.accounts.fund_reserve_account.to_account_info(),
+            ctx.accounts.fund_supported_token_account.to_account_info(),
+        ];
+        accounts.extend_from_slice(ctx.remaining_accounts);
+
+        modules::fund::FundService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &mut *ctx.accounts.fund_account,
+        )?
+        .process_run(
+            &*accounts,
+            Some(3),
+            Some(
+                modules::fund::command::OperationCommand::StakeSOL(
+                    modules::fund::command::StakeSOLCommand {
+                        lst_mints: vec![ctx.accounts.spl_pool_token_mint.key()],
+                        staking_sol_amounts: vec![ctx.accounts.fund_reserve_account.get_lamports()],
+                        state: modules::fund::command::StakeSOLCommandState::Init,
+                    },
+                )
+                .with_required_accounts(vec![]),
+            ),
+        )
+    }
+
+    pub fn operator_withdraw_sol_from_spl_stake_pool<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorStakingContext<'info>>,
+        _token_amount: u64,
+    ) -> Result<()> {
+        let mut accounts = vec![
+            ctx.accounts.spl_stake_pool_program.to_account_info(),
+            ctx.remaining_accounts[0].to_account_info(),
+            ctx.accounts.spl_pool_token_mint.to_account_info(),
+            ctx.accounts.supported_token_program.to_account_info(),
+            ctx.remaining_accounts[1].to_account_info(),
+            ctx.remaining_accounts[2].to_account_info(),
+            ctx.remaining_accounts[3].to_account_info(),
+            ctx.remaining_accounts[4].to_account_info(),
+            ctx.remaining_accounts[5].to_account_info(),
+            ctx.remaining_accounts[6].to_account_info(),
+            ctx.accounts.fund_supported_token_account.to_account_info(),
+            ctx.accounts.fund_reserve_account.to_account_info(),
+            ctx.accounts.fund_account.to_account_info(),
+        ];
+        accounts.extend_from_slice(ctx.remaining_accounts);
+
+        modules::fund::FundService::new(
+            &mut *ctx.accounts.receipt_token_mint,
+            &mut *ctx.accounts.fund_account,
+        )?
+        .process_run(
+            &*accounts,
+            Some(3),
+            Some(
+                modules::fund::command::OperationCommand::UnstakeLST(
+                    modules::fund::command::UnstakeLSTCommand {
+                        remaining_lst_mints: vec![ctx.accounts.spl_pool_token_mint.key()],
+                        unstaking_lst_amounts: vec![
+                            ctx.accounts.fund_supported_token_account.amount,
+                        ],
+                        state: modules::fund::command::UnstakeLSTCommandState::Init,
+                    },
+                )
+                .with_required_accounts(vec![]),
+            ),
+        )
     }
 
     ////////////////////////////////////////////

@@ -6,10 +6,7 @@ use anchor_spl::token;
 use anchor_spl::token::{spl_token, Token};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-pub struct NormalizedTokenPoolConfigurationService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct NormalizedTokenPoolConfigurationService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
     normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,

@@ -1,7 +1,10 @@
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::command::OperationCommandContext;
+use crate::modules::fund::command::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+    StakeSOLCommand,
+};
 use crate::modules::fund::{
     FundAccount, FundAccountInfo, UserFundAccount, UserFundConfigurationService,
 };
@@ -12,14 +15,13 @@ use crate::utils;
 use anchor_lang::prelude::*;
 use anchor_spl::token::accessor::amount;
 use anchor_spl::token_interface::{Mint, TokenAccount};
+use spl_transfer_hook_interface::instruction::execute;
+use std::collections::{BTreeMap, BTreeSet};
 
-pub struct FundService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct FundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut Account<'info, FundAccount>,
-    current_slot: u64,
+    _current_slot: u64,
     current_timestamp: i64,
 }
 
@@ -29,19 +31,16 @@ impl Drop for FundService<'_, '_> {
     }
 }
 
-impl<'info, 'a> FundService<'info, 'a> {
+impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut Account<'info, FundAccount>,
-    ) -> Result<Self>
-    where
-        'info: 'a,
-    {
+    ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
             fund_account,
-            current_slot: clock.slot,
+            _current_slot: clock.slot,
             current_timestamp: clock.unix_timestamp,
         })
     }
@@ -196,25 +195,91 @@ impl<'info, 'a> FundService<'info, 'a> {
 
     pub fn process_run(
         &mut self,
-        system_program: &Program<'info, System>,
-        remaining_accounts: &'info [AccountInfo<'info>],
-    ) -> Result<()>
-    where
-        'info: 'a,
-    {
+        remaining_accounts: &[AccountInfo<'info>],
+        max_execution_count: Option<u8>,
+        reset_command: Option<OperationCommandEntry>,
+    ) -> Result<()> {
         let mut operation_state = std::mem::take(&mut self.fund_account.operation);
 
-        operation_state.run_commands(
-            &mut OperationCommandContext {
+        operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
+
+        let max_execution_count_ = max_execution_count.unwrap_or(100);
+        let mut execution_count = 0;
+        let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
+            .iter()
+            .map(|info| (info.key.clone(), info))
+            .collect();
+
+        'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
+        {
+            if max_execution_count_ <= execution_count {
+                break;
+            }
+            let sequence = operation_state.get_sequence();
+
+            // rearrange given accounts in required order
+            let mut required_account_infos = Vec::new();
+            let mut unused_account_keys = BTreeSet::new();
+            remaining_accounts_map.keys().for_each(|key| {
+                unused_account_keys.insert(*key);
+            });
+
+            for account_key in required_accounts.iter() {
+                // append required accounts in exact order
+                match remaining_accounts_map.get(&account_key) {
+                    Some(account) => {
+                        required_account_infos.push((*account).clone());
+                        unused_account_keys.remove(&account_key);
+                    }
+                    None => {
+                        if execution_count > 0 {
+                            // maintain the current command and gracefully stop executing commands
+                            msg!(
+                                "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
+                                sequence,
+                                command,
+                                execution_count
+                            );
+                            break 'command_loop;
+                        }
+
+                        // error if it is the first command in this tx
+                        msg!(
+                            "COMMAND#{}: {:?} has not enough accounts at the first execution",
+                            sequence,
+                            command
+                        );
+                        return err!(ErrorCode::OperationCommandAccountComputationException);
+                    }
+                }
+            }
+
+            // append all unused accounts
+            for unused_account_key in unused_account_keys.iter() {
+                let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
+                required_account_infos.push((*remaining_account).clone().clone());
+            }
+
+            let mut ctx = OperationCommandContext {
                 receipt_token_mint: self.receipt_token_mint,
                 fund_account: self.fund_account,
-                system_program,
-            },
-            remaining_accounts,
-            self.current_timestamp,
-            self.current_slot,
-        )?;
+            };
+            match command.execute(&mut ctx, required_account_infos.as_slice()) {
+                Ok(next_command) => {
+                    // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
+                    msg!("COMMAND#{}: {:?} passed", sequence, command,);
+                    operation_state.set_command(next_command, self.current_timestamp);
+                    execution_count += 1;
+                }
+                Err(error) => {
+                    // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
+                    msg!("COMMAND#{}: {:?} failed", sequence, command);
+                    return Err(error);
+                }
+            };
+        }
 
+        // write back operation state
         self.fund_account.operation = operation_state;
 
         emit!(events::OperatorProcessedJob {

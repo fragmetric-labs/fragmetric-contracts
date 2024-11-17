@@ -4,10 +4,7 @@ use crate::utils::AccountLoaderExt;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-pub struct UserRewardConfigurationService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct UserRewardConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     user: &'a Signer<'info>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,

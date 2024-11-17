@@ -13,10 +13,7 @@ use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
 
-pub struct UserFundService<'info, 'a>
-where
-    'info: 'a,
-{
+pub struct UserFundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
     fund_account: &'a mut Account<'info, FundAccount>,
@@ -168,7 +165,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // transfer user supported token to fund
         self.fund_account
-            .get_supported_token_mut(supported_token_mint.key())?
+            .get_supported_token_mut(&supported_token_mint.key())?
             .deposit_token(supported_token_amount)?;
         token_interface::transfer_checked(
             CpiContext::new(
@@ -390,9 +387,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed
-        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = self
-            .user_fund_account
-            .claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
+        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
+            self.user_fund_account
+                .claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
 
         // transfer sol_user_amount to user wallet
         let receipt_token_mint_key = self.receipt_token_mint.key();
