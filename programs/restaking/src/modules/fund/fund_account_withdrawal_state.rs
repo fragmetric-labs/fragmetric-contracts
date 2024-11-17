@@ -6,7 +6,7 @@ use anchor_lang::{
 
 const MAX_BATCH_WITHDRAWALS_IN_PROGRESS: usize = 10;
 
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct WithdrawalState {
     next_batch_id: u64,
     next_request_id: u64,
@@ -31,7 +31,9 @@ pub struct WithdrawalState {
     sol_withdrawal_reserved_amount: u64,
     _padding: [u8; 8],
     receipt_token_processed_amount: u64,
-    _reserved: [u8; 88],
+    _reserved: [u8; 32],
+    _reserved2: [u8; 32],
+    _reserved3: [u8; 24],
 }
 
 impl WithdrawalState {
@@ -52,11 +54,15 @@ impl WithdrawalState {
             self.sol_withdrawal_reserved_amount = Default::default();
             self._padding = Default::default();
             self.receipt_token_processed_amount = Default::default();
-            self._reserved = [0; 88];
+            self._reserved = [0; 32];
+            self._reserved2 = [0; 32];
+            self._reserved3 = [0; 24];
         } else if fund_account_data_version == 1 {
             self.sol_withdrawal_reserved_amount = 0;
             self.receipt_token_processed_amount = 0;
-            self._reserved = [0; 88];
+            self._reserved = [0; 32];
+            self._reserved2 = [0; 32];
+            self._reserved3 = [0; 24];
         } else if fund_account_data_version == 2 {
             self._padding = [0; 8];
         }
@@ -320,7 +326,7 @@ impl WithdrawalState {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub struct BatchWithdrawal {
     batch_id: u64,
     num_withdrawal_requests: u64,

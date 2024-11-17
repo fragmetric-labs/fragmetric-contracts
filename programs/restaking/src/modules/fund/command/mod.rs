@@ -31,7 +31,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 // propagate common accounts and values to all commands
-pub struct OperationCommandContext<'info, 'a> {
+pub struct OperationCommandContext<'info: 'a, 'a> {
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
 }

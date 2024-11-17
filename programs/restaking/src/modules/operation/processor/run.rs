@@ -74,7 +74,7 @@ fn stake_sol<'info>(
     let manager_fee_account = remaining_accounts.pop_spl_manager_fee_account()?;
     let pool_token_program = remaining_accounts.pop_fund_supported_token_program()?;
     let pool_mint = remaining_accounts.pop_fund_supported_token_mint(pool_token_program.key)?;
-    let mut fund_supported_token_account_to_stake = parse_interface_account_boxed::<TokenAccount>(
+    let fund_supported_token_account_to_stake = parse_interface_account_boxed::<TokenAccount>(
         remaining_accounts.pop_fund_supported_token_account(
             fund_account.as_ref(),
             pool_mint.key,

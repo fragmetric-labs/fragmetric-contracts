@@ -5,6 +5,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token_2022;
 use anchor_spl::token_interface::Mint;
 
 #[constant]
@@ -91,6 +92,22 @@ impl FundAccount {
                 self.find_account_address().as_ref(),
                 supported_token.program.as_ref(),
                 supported_token.mint.as_ref(),
+            ],
+            &spl_associated_token_account::ID,
+        ))
+    }
+
+    #[inline]
+    pub(super) fn find_receipt_token_program_address(&self) -> Pubkey {
+        token_2022::ID
+    }
+
+    pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<(Pubkey, u8)> {
+        Ok(Pubkey::find_program_address(
+            &[
+                self.find_account_address().as_ref(),
+                self.find_receipt_token_program_address().as_ref(),
+                self.receipt_token_mint.as_ref(),
             ],
             &spl_associated_token_account::ID,
         ))
