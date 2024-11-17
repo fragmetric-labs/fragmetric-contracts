@@ -33,10 +33,7 @@ impl SelfExecutable for StakeSOLCommand {
         ctx: &mut OperationCommandContext,
         accounts: &[AccountInfo],
     ) -> Result<Option<OperationCommandEntry>> {
-        require_eq!(
-            self.lst_mints.len(),
-            self.staking_sol_amounts.len()
-        );
+        require_eq!(self.lst_mints.len(), self.staking_sol_amounts.len());
 
         // there are remaining tokens to handle
         if let Some(lst_mint) = self.lst_mints.get(0) {
@@ -172,12 +169,7 @@ impl SelfExecutable for StakeSOLCommand {
             if self.lst_mints.len() > 1 {
                 return Ok(Some(
                     OperationCommand::StakeSOL(StakeSOLCommand {
-                        lst_mints: self
-                            .lst_mints
-                            .iter()
-                            .skip(1)
-                            .copied()
-                            .collect(),
+                        lst_mints: self.lst_mints.iter().skip(1).copied().collect(),
                         staking_sol_amounts: self
                             .staking_sol_amounts
                             .iter()

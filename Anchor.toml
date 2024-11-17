@@ -29,6 +29,7 @@ program = "./tests/mocks/mainnet/mpl-token-metadata.so"
 
 [test.validator]
 url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
+slots_per_epoch = "32"
 bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
@@ -92,6 +93,7 @@ address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
 [[test.validator.clone]]
 address = "7GgPYjS5Dza89wV6FpZ23kUJRG5vbQ1GM25ezspYFSoE"
 
+# *jitoVRT
 # clone mainnet Jito restaking protocol to localnet
 [[test.validator.clone]]
 address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
@@ -101,13 +103,18 @@ address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
 address = "96nH6npzmaAWpmraLaN2F55h27TMEtJrsjo881dCc2Dt"
 
 # clone mainnet Jito restaking protocol Config to localnet
-[[test.validator.clone]]
+[[test.validator.account]]
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
+filename = "./tests/mocks/mainnet/jito_vault_config.json"
 
 [[test.validator.account]]
-address = "Fr5Xvta98284hu9HkMUixWRRW7pSK3nS19goGTYUzHpf"
-filename = "./tests/mocks/mainnet/jito_nsol_vault.json"#
+address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
+filename = "./tests/mocks/mainnet/jito_vault.json"
 
 [[test.validator.account]]
-address = "DXHvJfVP9dHmjP4m4GGD6ujyj8dj7BjvKgwHguqw3mD9"
+address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
 filename = "./tests/mocks/mainnet/jito_vault_vrt.json"
+
+[[test.validator.account]]
+address = "7N3VJBtCAm5vgUBG3kTAdhMMe4PzPFTT5wF3aGye6kDh"
+filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"

@@ -37,6 +37,7 @@ pub struct OperatorFundContextDeprecated<'info> {
 
 #[derive(Accounts)]
 pub struct OperatorFundContext<'info> {
+    #[account(mut)]
     pub operator: Signer<'info>,
 
     pub system_program: Program<'info, System>,

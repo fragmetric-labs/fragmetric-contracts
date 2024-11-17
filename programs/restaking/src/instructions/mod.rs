@@ -31,7 +31,8 @@ pub use fund_manager_reward_context::*;
 pub use operator_empty_context::*;
 pub use operator_fund_context::*;
 pub use operator_reward_context::*;
-pub use operator_staking_context::*; // TODO temporary for staking integration
+pub use operator_staking_context::*;
+// TODO temporary for staking integration
 
 pub use user_fund_context::*;
 pub use user_fund_supported_token_context::*;

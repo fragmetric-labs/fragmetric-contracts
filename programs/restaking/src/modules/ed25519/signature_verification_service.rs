@@ -5,8 +5,7 @@ use anchor_lang::solana_program::sysvar::instructions;
 use crate::errors::ErrorCode;
 
 /// Verify preceding Ed25519Program instruction data with given payload and payload_signer_key
-pub struct SignatureVerificationService {
-}
+pub struct SignatureVerificationService {}
 
 impl<'info> SignatureVerificationService {
     pub fn verify(
@@ -89,4 +88,3 @@ impl<'info> SignatureVerificationService {
         Ok(())
     }
 }
-

@@ -12,6 +12,7 @@ use anchor_spl::token::accessor::{amount, mint};
 use anchor_spl::token_interface::Mint;
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
 pub struct PricingService<'info> {
     token_pricing_source_accounts_map: BTreeMap<Pubkey, AccountInfo<'info>>,
     token_value_map: BTreeMap<Pubkey, TokenValue>,
@@ -43,7 +44,7 @@ impl<'info> PricingService<'info> {
         &mut self,
         token_mint: &Pubkey,
         token_pricing_source: &TokenPricingSource,
-    ) -> Result<()> {
+    ) -> Result<&mut Self> {
         let token_value = match token_pricing_source {
             TokenPricingSource::SPLStakePool { address } => {
                 let account1 = self
@@ -119,7 +120,7 @@ impl<'info> PricingService<'info> {
         // check already registered token
         if self.token_value_map.contains_key(token_mint) {
             require_eq!(self.token_value_map.get(token_mint).unwrap(), &token_value);
-            return Ok(());
+            return Ok(self);
         }
 
         // store resolved token value
@@ -127,7 +128,7 @@ impl<'info> PricingService<'info> {
         //     msg!("PRICING: {:?} => {:?}", token_mint, token_value);
         // }
         self.token_value_map.insert(*token_mint, token_value);
-        Ok(())
+        Ok(self)
     }
 
     // returns (total sol value of the token, total token amount)

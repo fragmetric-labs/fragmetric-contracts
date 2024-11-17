@@ -1,6 +1,7 @@
 pub mod config;
-pub mod deposit;
-pub mod protocol;
+pub mod service;
+pub mod update;
 
-pub use deposit::*;
-pub use protocol::*;
+pub use config::*;
+pub use service::*;
+pub use update::*;

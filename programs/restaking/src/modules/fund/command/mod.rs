@@ -87,7 +87,6 @@ pub struct OperationCommandEntry {
     required_accounts: Vec<Pubkey>,
 }
 
-
 impl OperationCommandEntry {
     pub fn into(&self) -> (&OperationCommand, &[Pubkey]) {
         (&self.command, self.required_accounts.as_slice())
