@@ -10,6 +10,6 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
     const restaking = await restakingPlayground;
 
     step("fund operation for a single cycle", async function () {
-        await restaking.runOperatorRunTODO(restaking.keychain.getKeypair('ADMIN'));
+        await restaking.runOperatorRun();
     });
 });

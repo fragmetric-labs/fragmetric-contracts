@@ -4,14 +4,19 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
+use anchor_spl::token::accessor::mint;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnstakeLSTCommand {
     #[max_len(10)]
-    pub remaining_lst_mints: Vec<Pubkey>,
-    #[max_len(10)]
-    pub unstaking_lst_amounts: Vec<u64>,
+    pub items: Vec<UnstakeLSTCommandItem>,
     pub state: UnstakeLSTCommandState,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+pub struct UnstakeLSTCommandItem {
+    pub mint: Pubkey,
+    pub token_amount: u64,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -27,19 +32,14 @@ impl SelfExecutable for UnstakeLSTCommand {
         ctx: &mut OperationCommandContext,
         accounts: &[AccountInfo],
     ) -> Result<Option<OperationCommandEntry>> {
-        require_eq!(
-            self.remaining_lst_mints.len(),
-            self.unstaking_lst_amounts.len()
-        );
 
         // there are remaining tokens to handle
-        if let Some(lst_mint) = self.remaining_lst_mints.get(0) {
-            let supported_token = ctx.fund_account.get_supported_token(lst_mint)?;
+        if let Some(item) = self.items.get(0) {
+            let supported_token = ctx.fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
                 UnstakeLSTCommandState::Init => {
-                    let unstaking_sol_amount = *self.unstaking_lst_amounts.get(0).unwrap();
-                    if unstaking_sol_amount > 0 {
+                    if item.token_amount > 0 {
                         // request to read pool account
 
                         match supported_token.get_pricing_source() {
@@ -87,7 +87,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 .push(ctx.fund_account.find_reserve_account_address().0);
                             required_accounts.push(
                                 ctx.fund_account
-                                    .find_supported_token_account_address(lst_mint)?
+                                    .find_supported_token_account_address(&item.mint)?
                                     .0,
                             );
                             required_accounts.push(ctx.fund_account.key());
@@ -110,7 +110,6 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let unstaking_lst_amount = *self.unstaking_lst_amounts.get(0).unwrap();
                     let (to_sol_account_amount, returned_sol_amount) =
                         staking::SPLStakePoolService::new(
                             pool_program,
@@ -129,7 +128,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                             fund_reserve_account,
                             fund_account,
                             &ctx.fund_account.get_signer_seeds(),
-                            unstaking_lst_amount,
+                            item.token_amount,
                         )?;
 
                     ctx.fund_account.sol_operation_reserved_amount = ctx
@@ -146,17 +145,17 @@ impl SelfExecutable for UnstakeLSTCommand {
                     fund_supported_token_info.set_operation_reserved_amount(
                         fund_supported_token_info
                             .get_operation_reserved_amount()
-                            .checked_sub(unstaking_lst_amount)
+                            .checked_sub(item.token_amount)
                             .unwrap(),
                     );
 
                     msg!(
                         "unstaked {} tokens to get {} sol",
-                        unstaking_lst_amount,
+                        item.token_amount,
                         returned_sol_amount
                     );
 
-                    require_gte!(returned_sol_amount, unstaking_lst_amount);
+                    require_gte!(returned_sol_amount, item.token_amount);
                     require_eq!(
                         ctx.fund_account.sol_operation_reserved_amount,
                         to_sol_account_amount
@@ -165,21 +164,10 @@ impl SelfExecutable for UnstakeLSTCommand {
             }
 
             // proceed to next token
-            if self.remaining_lst_mints.len() > 1 {
+            if self.items.len() > 1 {
                 return Ok(Some(
                     OperationCommand::UnstakeLST(UnstakeLSTCommand {
-                        remaining_lst_mints: self
-                            .remaining_lst_mints
-                            .iter()
-                            .skip(1)
-                            .copied()
-                            .collect(),
-                        unstaking_lst_amounts: self
-                            .unstaking_lst_amounts
-                            .iter()
-                            .skip(1)
-                            .copied()
-                            .collect(),
+                        items: self.items.iter().skip(1).copied().collect(),
                         state: UnstakeLSTCommandState::Init,
                     })
                     .with_required_accounts(vec![]),

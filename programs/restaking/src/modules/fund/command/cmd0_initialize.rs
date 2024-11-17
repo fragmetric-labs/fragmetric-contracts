@@ -1,4 +1,4 @@
-use super::{ClaimUnstakedSOLCommand, OperationCommandEntry};
+use super::{ClaimUnstakedSOLCommand, OperationCommandEntry, StakeSOLCommandItem};
 use super::{OperationCommand, OperationCommandContext, SelfExecutable};
 use crate::constants::{MAINNET_JITOSOL_MINT_ADDRESS, MAINNET_JITOSOL_STAKE_POOL_ADDRESS};
 use crate::errors;
@@ -17,24 +17,31 @@ impl SelfExecutable for InitializeCommand {
         ctx: &mut OperationCommandContext,
         _accounts: &[AccountInfo],
     ) -> Result<Option<OperationCommandEntry>> {
-        let mut lst_mints = Vec::new();
-        let mut staking_sol_amounts = Vec::new();
+        let mut items = Vec::new();
         for supported_token in ctx.fund_account.supported_tokens.clone() {
             match supported_token.get_pricing_source() {
                 TokenPricingSource::SPLStakePool { .. } => {
                     let mint = supported_token.get_mint();
-                    lst_mints.push(mint);
 
                     // TODO v0.3/operation: stake according to the strategy
                     if mint == MAINNET_JITOSOL_MINT_ADDRESS {
-                        staking_sol_amounts.push(ctx.fund_account.sol_operation_reserved_amount);
+                        items.push(StakeSOLCommandItem{
+                            mint,
+                            sol_amount: ctx.fund_account.sol_operation_reserved_amount,
+                        });
                     } else {
-                        staking_sol_amounts.push(0);
+                        items.push(StakeSOLCommandItem{
+                            mint,
+                            sol_amount: 0,
+                        });
                     }
                 }
                 TokenPricingSource::MarinadeStakePool { .. } => {
-                    lst_mints.push(supported_token.get_mint());
-                    staking_sol_amounts.push(0);
+                    // TODO v0.3/staking: support marinade..
+                    items.push(StakeSOLCommandItem{
+                        mint: supported_token.get_mint(),
+                        sol_amount: 0,
+                    });
                 }
                 _ => {
                     err!(errors::ErrorCode::OperationCommandAccountComputationException)?;
@@ -45,8 +52,7 @@ impl SelfExecutable for InitializeCommand {
         // TODO v0.3/operation: follow valid circulation flow...
         Ok(Some(
             OperationCommand::StakeSOL(StakeSOLCommand {
-                lst_mints,
-                staking_sol_amounts,
+                items,
                 state: StakeSOLCommandState::Init,
             })
             .with_required_accounts(vec![]),

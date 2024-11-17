@@ -1,43 +1,88 @@
-import { BN, web3 } from "@coral-xyz/anchor";
-import { expect } from "chai";
-import { step } from "mocha-steps";
+import {BN, web3} from "@coral-xyz/anchor";
+import {expect} from "chai";
+import {step} from "mocha-steps";
 // @ts-ignore
 import * as spl from "@solana/spl-token-3.x";
-import { restakingPlayground } from "../restaking";
-import { getLogger } from '../../tools/lib';
+import {restakingPlayground} from "../restaking";
+import {getLogger} from '../../tools/lib';
 
-const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
+const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
 describe("operator_spl_stake_pool", async () => {
     const restaking = await restakingPlayground;
 
-    const splStakePoolProgram = new web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
+    const depositSolAmount = new BN(500 * web3.LAMPORTS_PER_SOL);
 
-    step("Wallet deposit SOL to fund", async function () {
-        const depositSolAmount = new BN(10**9 * 500); // 500 SOL
-
+    step("stake SOL to jito stake pool", async function () {
         await restaking.runUserDepositSOL(restaking.wallet, depositSolAmount, null);
-        await restaking.runOperatorDepositSolToSplStakePool(restaking.wallet, splStakePoolProgram, restaking.supportedTokenMetadata.jitoSOL.mint, restaking.supportedTokenMetadata.jitoSOL.program);
+        await restaking.runOperatorRun({
+            command: {
+                stakeSol: {
+                    0: {
+                        items: [
+                            {
+                                mint: restaking.supportedTokenMetadata.jitoSOL.mint,
+                                solAmount: depositSolAmount,
+                            },
+                        ],
+                        state: {
+                            init: {},
+                        },
+                    }
+                },
+            },
+            requiredAccounts: [],
+        }, 2);
     });
 
-    step("Withdraw SOL from Jito stake pool", async function () {
+    step("withdraw SOL from jito stake pool", async function () {
         await restaking.sleep(1); // ...block hash not found?
 
-        const depositedSolAmount = new BN(10**9 * 500); // 500 SOL
-
         const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");
-        let jitoSolTotalWithdrawAmount = await restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed");
-        logger.debug(`[BEFORE] jitoSol total withdrawal amount`.padEnd(LOG_PAD_LARGE), jitoSolTotalWithdrawAmount);
+        const [
+            fragSOLFundReserveAccountBalance0,
+            jitoSolSupportedTokenBalance0_,
+        ] = await Promise.all([
+            restaking.getFragSOLFundReserveAccountBalance(),
+            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed"),
+        ]);
+        const jitoSolSupportedTokenBalance0 = new BN(jitoSolSupportedTokenBalance0_.value.amount)
+        logger.debug(`before withdraw-sol from jito stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance0}, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance0}`);
 
-        const { fragSOLFund: fragSOLFund1, fragSOLFundReserveAccountBalance: fragSOLFundReserveAccountBalance1, withdrawalSolFee } = await restaking.runOperatorWithdrawSolFromSplStakePool(restaking.wallet, restaking.BN(jitoSolTotalWithdrawAmount.value.amount), splStakePoolProgram, restaking.supportedTokenMetadata.jitoSOL.mint, spl.TOKEN_PROGRAM_ID);
+        await restaking.runOperatorRun({
+            command: {
+                unstakeLst: {
+                    0: {
+                        items: [
+                            {
+                                mint: restaking.supportedTokenMetadata.jitoSOL.mint,
+                                tokenAmount: jitoSolSupportedTokenBalance0,
+                            },
+                        ],
+                        state: {
+                            init: {},
+                        },
+                    }
+                },
+            },
+            requiredAccounts: [],
+        }, 2);
+        
+        const [
+            fragSOLFundReserveAccountBalance1,
+            jitoSolSupportedTokenBalance1_,
+            jitoStakePoolInfo,
+        ] = await Promise.all([
+            restaking.getFragSOLFundReserveAccountBalance(),
+            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed"),
+            restaking.getSplStakePoolInfo(new web3.PublicKey(restaking.getConstant('mainnetJitosolStakePoolAddress'))),
+        ]);
+        const jitoSolSupportedTokenBalance1 = new BN(jitoSolSupportedTokenBalance1_.value.amount);
+        const WithdrawFeeAmount = depositSolAmount.mul(jitoStakePoolInfo.solWithdrawalFee.numerator).div(jitoStakePoolInfo.solWithdrawalFee.denominator);
 
-        logger.debug(`[AFTER] fragSOLFundReserveAccountBalance1`.padEnd(LOG_PAD_LARGE), fragSOLFundReserveAccountBalance1.toString());
-        let jitoSolTotalWithdrawFeeAmount = depositedSolAmount.mul(withdrawalSolFee.numerator).div(withdrawalSolFee.denominator);
-        // 1 lamport diff?
-        expect(
-            depositedSolAmount.sub(new BN(fragSOLFundReserveAccountBalance1)).divn(10)
-                .eq(jitoSolTotalWithdrawFeeAmount.divn(10))
-        )
-            .eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
+        logger.debug(`after withdraw-sol from jito stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance1}, WithdrawFeeAmount=${WithdrawFeeAmount} fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance1}`);
+
+        expect(new BN(fragSOLFundReserveAccountBalance1).sub(new BN(fragSOLFundReserveAccountBalance0)).divn(10).toString()) // 1 lamport diff?
+            .eq(depositSolAmount.sub(WithdrawFeeAmount).divn(10).toString(), "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 });

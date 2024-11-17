@@ -196,14 +196,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub fn process_run(
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
-        max_execution_count: Option<u8>,
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
         let mut operation_state = std::mem::take(&mut self.fund_account.operation);
 
         operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
-        let max_execution_count_ = max_execution_count.unwrap_or(100);
         let mut execution_count = 0;
         let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
             .iter()
@@ -212,9 +210,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
         {
-            if max_execution_count_ <= execution_count {
-                break;
-            }
             let sequence = operation_state.get_sequence();
 
             // rearrange given accounts in required order
@@ -267,7 +262,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
                 Ok(next_command) => {
                     // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} passed", sequence, command,);
+                    msg!("COMMAND#{}: {:?} passed", sequence, command);
                     operation_state.set_command(next_command, self.current_timestamp);
                     execution_count += 1;
                 }

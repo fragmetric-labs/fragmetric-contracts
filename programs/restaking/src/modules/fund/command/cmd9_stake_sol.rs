@@ -14,10 +14,14 @@ use spl_stake_pool::state::StakePool as SPLStakePoolAccount;
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct StakeSOLCommand {
     #[max_len(10)]
-    pub lst_mints: Vec<Pubkey>,
-    #[max_len(10)]
-    pub staking_sol_amounts: Vec<u64>,
+    pub items: Vec<StakeSOLCommandItem>,
     pub state: StakeSOLCommandState,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+pub struct StakeSOLCommandItem {
+    pub mint: Pubkey,
+    pub sol_amount: u64,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -33,16 +37,13 @@ impl SelfExecutable for StakeSOLCommand {
         ctx: &mut OperationCommandContext,
         accounts: &[AccountInfo],
     ) -> Result<Option<OperationCommandEntry>> {
-        require_eq!(self.lst_mints.len(), self.staking_sol_amounts.len());
-
         // there are remaining tokens to handle
-        if let Some(lst_mint) = self.lst_mints.get(0) {
-            let supported_token = ctx.fund_account.get_supported_token(lst_mint)?;
+        if let Some(item) = self.items.get(0) {
+            let supported_token = ctx.fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
                 StakeSOLCommandState::Init => {
-                    let staking_sol_amount = *self.staking_sol_amounts.get(0).unwrap();
-                    if staking_sol_amount > 0 {
+                    if item.sol_amount > 0 {
                         // request to read pool account
 
                         match supported_token.get_pricing_source() {
@@ -90,7 +91,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 .push(ctx.fund_account.find_reserve_account_address().0);
                             required_accounts.push(
                                 ctx.fund_account
-                                    .find_supported_token_account_address(lst_mint)?
+                                    .find_supported_token_account_address(&item.mint)?
                                     .0,
                             );
 
@@ -112,7 +113,6 @@ impl SelfExecutable for StakeSOLCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let staking_sol_amount = *self.staking_sol_amounts.get(0).unwrap();
                     let (to_pool_token_account_amount, minted_supported_token_amount) =
                         staking::SPLStakePoolService::new(
                             pool_program,
@@ -127,13 +127,13 @@ impl SelfExecutable for StakeSOLCommand {
                             fund_reserve_account,
                             fund_supported_token_account,
                             &ctx.fund_account.find_reserve_account_seeds(),
-                            staking_sol_amount,
+                            item.sol_amount,
                         )?;
 
                     ctx.fund_account.sol_operation_reserved_amount = ctx
                         .fund_account
                         .sol_operation_reserved_amount
-                        .checked_sub(staking_sol_amount)
+                        .checked_sub(item.sol_amount)
                         .ok_or_else(|| {
                             error!(errors::ErrorCode::FundUnexpectedReserveAccountBalanceException)
                         })?;
@@ -150,13 +150,13 @@ impl SelfExecutable for StakeSOLCommand {
 
                     msg!(
                         "staked {} sol to mint {} tokens",
-                        staking_sol_amount,
+                        item.sol_amount,
                         minted_supported_token_amount
                     );
 
                     require_gte!(
                         minted_supported_token_amount,
-                        staking_sol_amount.div_ceil(2)
+                        item.sol_amount.div_ceil(2)
                     );
                     require_eq!(
                         fund_supported_token_info.get_operation_reserved_amount(),
@@ -166,16 +166,10 @@ impl SelfExecutable for StakeSOLCommand {
             }
 
             // proceed to next token
-            if self.lst_mints.len() > 1 {
+            if self.items.len() > 1 {
                 return Ok(Some(
                     OperationCommand::StakeSOL(StakeSOLCommand {
-                        lst_mints: self.lst_mints.iter().skip(1).copied().collect(),
-                        staking_sol_amounts: self
-                            .staking_sol_amounts
-                            .iter()
-                            .skip(1)
-                            .copied()
-                            .collect(),
+                        items: self.items.iter().skip(1).copied().collect(),
                         state: StakeSOLCommandState::Init,
                     })
                     .with_required_accounts(vec![]),

@@ -33,7 +33,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
             fragSOLJitoVaultNSOLAccountBalance: jitoVaultNSOLBalance1,
             fragSOLFund: fragSOLFund1,
             nSOLTokenPool: nSOLTokenPool1,
-        } = await restaking.runOperatorRun(restaking.keychain.getKeypair('ADMIN'));
+        } = await restaking.runOperatorDeprecatingRun(restaking.keychain.getKeypair('ADMIN'));
         const nSOLJitoSOLBalance1 = await restaking.getNSOLSupportedTokenLockAccountBalance('jitoSOL');
         const nSOLMint1 = await restaking.getNSOLTokenMint();
         logger.info(
