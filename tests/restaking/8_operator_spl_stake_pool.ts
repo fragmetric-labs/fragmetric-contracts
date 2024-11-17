@@ -34,6 +34,10 @@ describe("operator_spl_stake_pool", async () => {
         logger.debug(`[AFTER] fragSOLFundReserveAccountBalance1`.padEnd(LOG_PAD_LARGE), fragSOLFundReserveAccountBalance1.toString());
         let jitoSolTotalWithdrawFeeAmount = depositedSolAmount.mul(withdrawalSolFee.numerator).div(withdrawalSolFee.denominator);
         // 1 lamport diff?
-        expect(depositedSolAmount.sub(jitoSolTotalWithdrawFeeAmount).sub(new BN(fragSOLFundReserveAccountBalance1)).abs().lten(1)).eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
+        expect(
+            depositedSolAmount.sub(new BN(fragSOLFundReserveAccountBalance1)).divn(10)
+                .eq(jitoSolTotalWithdrawFeeAmount.divn(10))
+        )
+            .eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 });

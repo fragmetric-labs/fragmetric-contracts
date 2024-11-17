@@ -1,3 +1,4 @@
+use crate::constants::FRAGSOL_MINT_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
@@ -122,6 +123,9 @@ impl<'info> PricingService<'info> {
         }
 
         // store resolved token value
+        // if *token_mint == FRAGSOL_MINT_ADDRESS {
+        //     msg!("PRICING: {:?} => {:?}", token_mint, token_value);
+        // }
         self.token_value_map.insert(*token_mint, token_value);
         Ok(())
     }
@@ -137,7 +141,8 @@ impl<'info> PricingService<'info> {
         for asset in &token_value.numerator {
             match asset {
                 Asset::SOL(sol_amount) => {
-                    total_sol_amount = total_sol_amount.checked_add(*sol_amount)
+                    total_sol_amount = total_sol_amount
+                        .checked_add(*sol_amount)
                         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                 }
                 Asset::TOKEN(nested_token_mint, _, nested_token_amount) => {
@@ -156,22 +161,30 @@ impl<'info> PricingService<'info> {
     pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.resolve_token_total_value_as_sol(token_mint)?;
-        let token_amount = utils::get_proportional_amount(sol_amount, total_token_amount, total_token_value_as_sol)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if sol_amount > 0 {
-            msg!("PRICING: {} / {} SOL => {} / {} {:?}", sol_amount, total_token_value_as_sol, token_amount, total_token_amount, token_mint);
-        }
+        let token_amount = utils::get_proportional_amount(
+            sol_amount,
+            total_token_amount,
+            total_token_value_as_sol,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        // if *token_mint == FRAGSOL_MINT_ADDRESS {
+        //     msg!("PRICING: {} SOL => {} {:?} ({} SOL / {} TOKEN)", sol_amount, token_amount, token_mint, total_token_value_as_sol, total_token_amount);
+        // }
         Ok(token_amount)
     }
 
     pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.resolve_token_total_value_as_sol(token_mint)?;
-        let sol_amount = utils::get_proportional_amount(token_amount, total_token_value_as_sol, total_token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        if token_amount > 0 {
-            msg!("PRICING: {} / {} SOL <= {} / {} {:?}", sol_amount, total_token_value_as_sol, token_amount, total_token_amount, token_mint);
-        }
+        let sol_amount = utils::get_proportional_amount(
+            token_amount,
+            total_token_value_as_sol,
+            total_token_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        // if *token_mint == FRAGSOL_MINT_ADDRESS {
+        //     msg!("PRICING: {} SOL <= {} {:?} ({} SOL / {} TOKEN)", sol_amount, token_amount, token_mint, total_token_value_as_sol, total_token_amount);
+        // }
         Ok(sol_amount)
     }
 }
