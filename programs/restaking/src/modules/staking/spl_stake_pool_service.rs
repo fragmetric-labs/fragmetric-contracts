@@ -51,7 +51,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     ) -> [Pubkey; 4] {
         [
             // for Self::new
-            spl_stake_pool::id(),
+            spl_stake_pool::ID,
             pool_account_info.key(),
             pool_account.pool_mint,
             pool_account.token_program_id,
@@ -67,7 +67,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             [
                 // for self.deposit_sol
                 spl_stake_pool::find_withdraw_authority_program_address(
-                    &spl_stake_pool::id(),
+                    &spl_stake_pool::ID,
                     &pool_account_info.key(),
                 )
                 .0,

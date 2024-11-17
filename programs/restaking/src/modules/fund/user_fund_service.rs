@@ -94,7 +94,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // mint receipt token to user & update user reward accrual status
         self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
-        msg!("FUND: mint {}", receipt_token_mint_amount);
 
         // transfer user $SOL to fund
         self.fund_account.deposit_sol(sol_amount)?;
@@ -162,7 +161,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         )?;
 
         // mint receipt token to user & update user reward accrual status
-        msg!("FUND: mint {}", receipt_token_mint_amount);
         self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user supported token to fund
