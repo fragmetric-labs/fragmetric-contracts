@@ -352,7 +352,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         for (const {instructions, signers} of txData) {
             await this.run({instructions, signers});
         }
-        
+
         for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
             const ata = await this.getUserSupportedTokenAccount(account, symbol as any);
             const balance = new BN(ata.amount.toString());
@@ -780,7 +780,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMaybeMainnetBeta ? new BN(4_419_694) : new BN(100_000)).mul(new BN(web3.LAMPORTS_PER_SOL/100)),
+            solCapacity: (this.isMaybeMainnetBeta ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
             solWithdrawalFeedRateBPS: this.isMaybeMainnetBeta ? 10 : 10,
             withdrawalEnabled: this.isMaybeMainnetBeta ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMaybeMainnetBeta ? 0 : 0),
@@ -790,13 +790,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 capacity: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 0 : 90).mul(new BN(10 ** v.decimals));
+                            return new BN(this.isMaybeMainnetBeta ? 0 : 90_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "jitoSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 2_268_037 : 8_000).mul(new BN(10 ** (v.decimals - 2)));
+                            return new BN(this.isMaybeMainnetBeta ? 22_680_370 : 80_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "mSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 4_500 : 70).mul(new BN(10 ** v.decimals));
+                            return new BN(this.isMaybeMainnetBeta ? 4_500_000 : 70_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "BNSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 261_717 : 6_000).mul(new BN(10 ** (v.decimals - 2)));
+                            return new BN(this.isMaybeMainnetBeta ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
                         default:
                             throw `invalid cap for ${symbol}`;
                     }
@@ -1063,7 +1063,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
         await this.run({
             instructions: [
-                ...Object.values(this.supportedTokenMetadata).map((v) => 
+                ...Object.values(this.supportedTokenMetadata).map((v) =>
                     this.methods.adminUpdateSupportedTokenLockAccount()
                         .accounts({
                             payer: this.wallet.publicKey,
