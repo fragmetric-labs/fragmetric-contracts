@@ -780,7 +780,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMaybeMainnetBeta ? new BN(27_000) : new BN(1_000)).mul(new BN(web3.LAMPORTS_PER_SOL)),
+            solCapacity: (this.isMaybeMainnetBeta ? new BN(4_419_694) : new BN(100_000)).mul(new BN(web3.LAMPORTS_PER_SOL/100)),
             solWithdrawalFeedRateBPS: this.isMaybeMainnetBeta ? 10 : 10,
             withdrawalEnabled: this.isMaybeMainnetBeta ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMaybeMainnetBeta ? 0 : 0),
@@ -792,11 +792,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(this.isMaybeMainnetBeta ? 0 : 90).mul(new BN(10 ** v.decimals));
                         case "jitoSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 13_500 : 80).mul(new BN(10 ** v.decimals));
+                            return new BN(this.isMaybeMainnetBeta ? 2_268_037 : 8_000).mul(new BN(10 ** (v.decimals - 2)));
                         case "mSOL":
                             return new BN(this.isMaybeMainnetBeta ? 4_500 : 70).mul(new BN(10 ** v.decimals));
                         case "BNSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 0 : 60).mul(new BN(10 ** v.decimals));
+                            return new BN(this.isMaybeMainnetBeta ? 261_717 : 6_000).mul(new BN(10 ** (v.decimals - 2)));
                         default:
                             throw `invalid cap for ${symbol}`;
                     }
