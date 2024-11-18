@@ -1388,7 +1388,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(operator: web3.Keypair = this.wallet) {
+    public async runOperatorRun(operator: web3.Keypair = this.wallet, prioritizationFee = 0) {
         // command=0. staking once x2
         // command=1. normalize lst x(#supported tokens)
         // command=2. restaking nsol x1
@@ -1452,9 +1452,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
         const cmd0Tx = await this.run({
             instructions: [
-                // web3.ComputeBudgetProgram.setComputeUnitPrice({
-                //     microLamports: 0,
-                // }),
+                web3.ComputeBudgetProgram.setComputeUnitPrice({
+                    microLamports: prioritizationFee,
+                }),
                 web3.ComputeBudgetProgram.setComputeUnitLimit({
                     units: 800_000,
                 }),
@@ -1529,9 +1529,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ];
             const cmd1Tx = await this.run({
                 instructions: [
-                    // web3.ComputeBudgetProgram.setComputeUnitPrice({
-                    //     microLamports: 0,
-                    // }),
+                    web3.ComputeBudgetProgram.setComputeUnitPrice({
+                        microLamports: prioritizationFee,
+                    }),
                     web3.ComputeBudgetProgram.setComputeUnitLimit({
                         units: 800_000,
                     }),
@@ -1625,9 +1625,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
         const cmd2Tx = await this.run({
             instructions: [
-                // web3.ComputeBudgetProgram.setComputeUnitPrice({
-                //     microLamports: 0,
-                // }),
+                web3.ComputeBudgetProgram.setComputeUnitPrice({
+                    microLamports: prioritizationFee,
+                }),
                 web3.ComputeBudgetProgram.setComputeUnitLimit({
                     units: 800_000,
                 }),

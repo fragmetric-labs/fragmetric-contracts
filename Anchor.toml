@@ -54,6 +54,14 @@ address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
 [[test.validator.clone]]
 address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
 
+# clone mainnet BNSOL mint to localnet
+[[test.validator.clone]]
+address = "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85"
+
+# clone mainnet BNSOL stake pool to localnet
+[[test.validator.clone]]
+address = "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r"
+
 # *mSOL
 # ref: https://docs.marinade.finance/developers/contract-addresses#tokens
 # clone mainnet Marinade stake pool program to localnet
