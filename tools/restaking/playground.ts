@@ -246,6 +246,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     },
                     decimals: 9,
                 },
+                BNSOL: {
+                    mint: this.getConstantAsPublicKey("mainnetBnsolMintAddress"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    pricingSourceAddress: this.getConstantAsPublicKey("mainnetBnsolStakePoolAddress"),
+                    pricingSource: {
+                        splStakePool: {
+                            address: this.getConstantAsPublicKey("mainnetBnsolStakePoolAddress"),
+                        },
+                    },
+                    decimals: 9,
+                },
             };
         }
     }
@@ -282,66 +293,66 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async tryAirdropSupportedTokens(account: web3.PublicKey, amount = 100) {
         await this.tryAirdrop(account, amount);
 
-        const signers: web3.Signer[] = [];
-        await this.run({
-            instructions: [
-                ...(
-                    await Promise.all(
-                        Object.values(this.supportedTokenMetadata).map(async (token) => {
-                            const ata = await spl.getOrCreateAssociatedTokenAccount(
-                                this.connection,
-                                this.wallet,
-                                token.mint,
-                                account,
-                                false,
-                                "confirmed",
-                                {
-                                    skipPreflight: false,
-                                    commitment: "confirmed",
-                                },
-                                token.program
-                            );
-                            const splStakePoolAddress: web3.PublicKey | null = token.pricingSource["splStakePool"]?.address ?? null;
-                            if (splStakePoolAddress) {
-                                const res = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, amount * web3.LAMPORTS_PER_SOL, ata.address);
-                                signers.push(...res.signers);
-                                return res.instructions;
-                            }
+        const txData = await Promise.all(
+            Object.values(this.supportedTokenMetadata).map(async (token) => {
+                const ata = await spl.getOrCreateAssociatedTokenAccount(
+                    this.connection,
+                    this.wallet,
+                    token.mint,
+                    account,
+                    false,
+                    "confirmed",
+                    {
+                        skipPreflight: false,
+                        commitment: "confirmed",
+                    },
+                    token.program
+                );
+                const splStakePoolAddress: web3.PublicKey | null = token.pricingSource["splStakePool"]?.address ?? null;
+                if (splStakePoolAddress) {
+                    const res = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, amount * web3.LAMPORTS_PER_SOL, ata.address);
+                    return {
+                        instructions: res.instructions,
+                        signers: res.signers,
+                    };
+                }
 
-                            const marinadeStakePoolAddress: web3.PublicKey | null = token.pricingSource["marinadeStakePool"]?.address ?? null;
-                            if (marinadeStakePoolAddress) {
-                                const marinadeStakePool = new marinade.Marinade(
-                                    new marinade.MarinadeConfig({
-                                        connection: this.connection as unknown as anchor.web3.Connection,
-                                        publicKey: this.wallet.publicKey,
-                                    })
-                                );
-                                const res = await marinadeStakePool.deposit(new BN(amount * web3.LAMPORTS_PER_SOL), {
-                                    mintToOwnerAddress: account,
-                                });
-                                return res.transaction.instructions;
-                            }
-
-                            return [];
-                            // return [
-                            //     spl.createMintToCheckedInstruction(
-                            //         token.mint,
-                            //         ata.address,
-                            //         this.keychain.getPublicKey('MOCK_ALL_MINT_AUTHORITY'),
-                            //         amount * (10 ** token.decimals),
-                            //         token.decimals,
-                            //         [],
-                            //         token.program,
-                            //     ),
-                            // ];
+                const marinadeStakePoolAddress: web3.PublicKey | null = token.pricingSource["marinadeStakePool"]?.address ?? null;
+                if (marinadeStakePoolAddress) {
+                    const marinadeStakePool = new marinade.Marinade(
+                        new marinade.MarinadeConfig({
+                            connection: this.connection as unknown as anchor.web3.Connection,
+                            publicKey: this.wallet.publicKey,
                         })
-                    )
-                ).flat(),
-            ],
-            // signerNames: ['MOCK_ALL_MINT_AUTHORITY'],
-            signers,
-        });
+                    );
+                    const res = await marinadeStakePool.deposit(new BN(amount * web3.LAMPORTS_PER_SOL), {
+                        mintToOwnerAddress: account,
+                    });
+                    return {
+                        instructions: res.transaction.instructions,
+                        signers: [],
+                    };
+                }
 
+                return { instructions: [], signers: [] };
+                // return [
+                //     spl.createMintToCheckedInstruction(
+                //         token.mint,
+                //         ata.address,
+                //         this.keychain.getPublicKey('MOCK_ALL_MINT_AUTHORITY'),
+                //         amount * (10 ** token.decimals),
+                //         token.decimals,
+                //         [],
+                //         token.program,
+                //     ),
+                // ];
+            })
+        );
+
+        for (const {instructions, signers} of txData) {
+            await this.run({instructions, signers});
+        }
+        
         for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
             const ata = await this.getUserSupportedTokenAccount(account, symbol as any);
             const balance = new BN(ata.amount.toString());
@@ -719,7 +730,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runFundManagerInitializeFundConfigurations() {
-        const {event, error} = await this.run({
+        await this.run({
             instructions: [
                 this.program.methods.fundManagerUpdateSolCapacityAmount(new BN(0)).instruction(),
                 this.program.methods
@@ -732,27 +743,32 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         new BN(10) // batchProcessingThresholdDuration (seconds)
                     )
                     .instruction(),
-                ...Object.values(this.supportedTokenMetadata).flatMap((v) => {
-                    return [
-                        this.program.methods
-                            .fundManagerInitializeSupportedTokenAccount()
-                            .accountsPartial({
-                                payer: this.wallet.publicKey,
-                                supportedTokenMint: v.mint,
-                                supportedTokenProgram: v.program,
-                            })
-                            .instruction(),
-                        this.program.methods
-                            .fundManagerAddSupportedToken(new BN(0), v.pricingSource)
-                            .accountsPartial({
-                                supportedTokenMint: v.mint,
-                                supportedTokenProgram: v.program,
-                            })
-                            .remainingAccounts(this.pricingSourceAccounts)
-                            .instruction(),
-                    ];
-                }),
             ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        const {event, error} = await this.run({
+            instructions: Object.values(this.supportedTokenMetadata).flatMap((v) => {
+                return [
+                    this.program.methods
+                        .fundManagerInitializeSupportedTokenAccount()
+                        .accountsPartial({
+                            payer: this.wallet.publicKey,
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .instruction(),
+                    this.program.methods
+                        .fundManagerAddSupportedToken(new BN(0), v.pricingSource)
+                        .accountsPartial({
+                            supportedTokenMint: v.mint,
+                            supportedTokenProgram: v.program,
+                        })
+                        .remainingAccounts(this.pricingSourceAccounts)
+                        .instruction(),
+                ];
+            }),
             signerNames: ["FUND_MANAGER"],
             events: ["fundManagerUpdatedFund"],
         });
@@ -779,12 +795,44 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             return new BN(this.isMaybeMainnetBeta ? 13_500 : 80).mul(new BN(10 ** v.decimals));
                         case "mSOL":
                             return new BN(this.isMaybeMainnetBeta ? 4_500 : 70).mul(new BN(10 ** v.decimals));
+                        case "BNSOL":
+                            return new BN(this.isMaybeMainnetBeta ? 0 : 60).mul(new BN(10 ** v.decimals));
                         default:
                             throw `invalid cap for ${symbol}`;
                     }
                 })(),
             })),
         };
+    }
+
+    public async runFundManagerAddSupportedTokens(symbol: keyof typeof this.supportedTokenMetadata) {
+        const token = this.supportedTokenMetadata[symbol];
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .fundManagerInitializeSupportedTokenAccount()
+                    .accountsPartial({
+                        payer: this.wallet.publicKey,
+                        supportedTokenMint: token.mint,
+                        supportedTokenProgram: token.program,
+                    })
+                    .instruction(),
+                this.methods
+                    .fundManagerAddSupportedToken(new BN(0), token.pricingSource)
+                    .accountsPartial({
+                        supportedTokenMint: token.mint,
+                        supportedTokenProgram: token.program,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added fragSOL fund supported token`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+        const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, 'confirmed');
+        return {event, error, fragSOLFund};
     }
 
     // update capacity and configurations
@@ -836,6 +884,34 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`configured nSOL supported tokens`.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
+        const nSOLTokenPool = await this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
+        return {nSOLTokenPool};
+    }
+
+    public async runFundManagerAddNormalizeTokenPoolSupportedToken(symbol: keyof typeof this.supportedTokenMetadata) {
+        const token = this.supportedTokenMetadata[symbol];
+        await this.run({
+            instructions: [
+                this.program.methods
+                .fundManagerInitializeSupportedTokenLockAccount()
+                .accounts({
+                    payer: this.wallet.publicKey,
+                    supportedTokenMint: token.mint,
+                    supportedTokenProgram: token.program,
+                })
+                .instruction(),
+                this.program.methods
+                    .fundManagerAddNormalizedTokenPoolSupportedToken()
+                    .accounts({
+                        supportedTokenMint: token.mint,
+                        supportedTokenProgram: token.program,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+        });
+
+        logger.notice(`added nSOL supported tokens`.padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
         const nSOLTokenPool = await this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool);
         return {nSOLTokenPool};
     }
