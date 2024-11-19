@@ -32,6 +32,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    public get isMaybeLocalnet(): boolean {
+        const endpoint = this.connection.rpcEndpoint;
+        return endpoint.startsWith('http://') && endpoint.endsWith('8899') || endpoint == RestakingPlayground.clusterURL.local;
+    }
+
+    public get isMaybeDevnet(): boolean {
+        return this.connection.rpcEndpoint == RestakingPlayground.clusterURL.devnet;
+    }
+
+    public get isMaybeMainnetBeta(): boolean {
+        return this.connection.rpcEndpoint == RestakingPlayground.clusterURL.mainnet;
+    }
+
     private static readonly clusterURL: { [env in KEYCHAIN_ENV]: string } = {
         local: "http://0.0.0.0:8899",
         devnet: web3.clusterApiUrl("devnet"),
@@ -1968,7 +1981,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             return {error: cmd4Tx.error};
         }
 
-        logger.notice(`operator run#3: unrestaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        logger.notice(`operator run#4: unrestaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
         const [
             fragSOLFund,

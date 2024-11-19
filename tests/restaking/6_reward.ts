@@ -14,7 +14,7 @@ function printUserRewardAccount(alias: string, account: IdlAccounts<Restaking>['
         logger.debug(`[slot=${pool.updatedSlot.toString()}] ${alias}-pool#${pool.rewardPoolId}: allocated=${pool.tokenAllocatedAmount.totalAmount.toNumber().toLocaleString()}, contribution=${pool.contribution.toNumber().toLocaleString()}`);
         for (let j = 0; j < pool.numRewardSettlements; j++) {
             const settle = pool.rewardSettlements1[j];
-            logger.debug(`> ${alias}-pool#${pool.rewardPoolId}-reward#${settle.rewardId}: settled-slot=${settle.settledSlot.toString()}, settled-amount=${settle.settledAmount.toNumber().toLocaleString()}, settled-contribution=${settle.settledContribution.toNumber().toLocaleString()}`);
+            logger.debug(`> ${alias}-pool#${pool.rewardPoolId}-reward#${settle.rewardId}: settled-slot=${settle.settledSlot.toNumber().toLocaleString()}, settled-amount=${settle.settledAmount.toNumber().toLocaleString()}, settled-contribution=${settle.settledContribution.toNumber().toLocaleString()}`);
         }
     }
 }
