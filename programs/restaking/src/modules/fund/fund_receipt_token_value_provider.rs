@@ -6,14 +6,12 @@ use crate::utils;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-pub struct FundReceiptTokenValueProvider<'a> {
-    _marker: std::marker::PhantomData<&'a ()>,
-}
+pub struct FundReceiptTokenValueProvider;
 
-impl<'a> TokenValueProvider for FundReceiptTokenValueProvider<'a> {
-    fn resolve_underlying_assets(
+impl TokenValueProvider for FundReceiptTokenValueProvider {
+    fn resolve_underlying_assets<'a, 'info: 'a>(
         _token_pricing_source: &TokenPricingSource,
-        pricing_source_accounts: Vec<&AccountInfo>,
+        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 2);
 

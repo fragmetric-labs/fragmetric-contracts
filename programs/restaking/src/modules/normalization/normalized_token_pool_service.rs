@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::errors::ErrorCode;
-use crate::modules::pricing;
 use crate::modules::pricing::PricingService;
 use crate::utils::PDASeeds;
 
@@ -66,10 +64,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             .get_supported_token_mut(supported_token_mint.key())?
             .lock_token(supported_token_amount)?;
 
-        token_interface::transfer_checked(
+        anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 supported_token_program.to_account_info(),
-                token_interface::TransferChecked {
+                anchor_spl::token_interface::TransferChecked {
                     from: from_supported_token_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     to: pool_supported_token_account.to_account_info(),
@@ -81,10 +79,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             supported_token_mint.decimals,
         )?;
 
-        token_interface::mint_to(
+        anchor_spl::token_interface::mint_to(
             CpiContext::new_with_signer(
                 self.normalized_token_program.to_account_info(),
-                token_interface::MintTo {
+                anchor_spl::token_interface::MintTo {
                     mint: self.normalized_token_mint.to_account_info(),
                     to: to_normalized_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
@@ -130,10 +128,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             .get_supported_token_mut(supported_token_mint.key())?
             .unlock_token(supported_token_amount)?;
 
-        token_interface::burn(
+        anchor_spl::token_interface::burn(
             CpiContext::new_with_signer(
                 self.normalized_token_program.to_account_info(),
-                token_interface::Burn {
+                anchor_spl::token_interface::Burn {
                     mint: self.normalized_token_mint.to_account_info(),
                     from: from_normalized_token_account.to_account_info(),
                     authority: signer.to_account_info(),
@@ -143,10 +141,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             normalized_token_amount,
         )?;
 
-        token_interface::transfer_checked(
+        anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 supported_token_program.to_account_info(),
-                token_interface::TransferChecked {
+                anchor_spl::token_interface::TransferChecked {
                     from: pool_supported_token_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     to: to_supported_token_account.to_account_info(),

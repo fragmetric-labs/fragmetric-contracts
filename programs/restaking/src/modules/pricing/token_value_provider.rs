@@ -4,9 +4,9 @@ use anchor_lang::prelude::*;
 
 /// A type that can calculate the token amount as sol with its data.
 pub trait TokenValueProvider {
-    fn resolve_underlying_assets(
+    fn resolve_underlying_assets<'a, 'info: 'a>(
         token_pricing_source: &TokenPricingSource,
-        pricing_source_accounts: Vec<&AccountInfo>,
+        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue>;
 }
 
@@ -51,9 +51,9 @@ pub struct MockPricingSourceValueProvider;
 
 #[cfg(test)]
 impl TokenValueProvider for MockPricingSourceValueProvider {
-    fn resolve_underlying_assets(
+    fn resolve_underlying_assets<'a, 'info: 'a>(
         token_pricing_source: &TokenPricingSource,
-        pricing_source_accounts: Vec<&AccountInfo>,
+        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 0);
 

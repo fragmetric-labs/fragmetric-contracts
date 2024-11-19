@@ -9,9 +9,9 @@ use marinade_cpi::state::State;
 pub struct MarinadeStakePoolValueProvider;
 
 impl TokenValueProvider for MarinadeStakePoolValueProvider {
-    fn resolve_underlying_assets(
+    fn resolve_underlying_assets<'a, 'info: 'a>(
         _token_pricing_source: &TokenPricingSource,
-        pricing_source_accounts: Vec<&AccountInfo>,
+        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 
