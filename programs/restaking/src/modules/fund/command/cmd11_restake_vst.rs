@@ -7,10 +7,10 @@ pub struct RestakeVSTCommand {
 }
 
 impl SelfExecutable for RestakeVSTCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        _ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        _ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: RestakeVSTCommand.execute
         Ok(None)

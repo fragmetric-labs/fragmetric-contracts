@@ -1,7 +1,6 @@
 use crate::events;
 use crate::modules::fund::FundAccount;
 use crate::modules::reward::*;
-use crate::utils::parse_interface_account_boxed;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;

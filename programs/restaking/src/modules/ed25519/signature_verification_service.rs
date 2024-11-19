@@ -9,7 +9,7 @@ pub struct SignatureVerificationService {}
 
 impl<'info> SignatureVerificationService {
     pub fn verify(
-        instructions_sysvar: &AccountInfo<'info>,
+        instructions_sysvar: &AccountInfo,
         payload: &[u8],
         payload_signer_key: &Pubkey,
     ) -> Result<()> {

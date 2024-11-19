@@ -1,6 +1,7 @@
-use super::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
+
+use super::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct FundAccountInfo {

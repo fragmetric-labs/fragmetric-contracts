@@ -7,10 +7,10 @@ pub struct NormalizeLSTCommand {
 }
 
 impl SelfExecutable for NormalizeLSTCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        _ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        _ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: NormalizeLSTCommand.execute
         Ok(None)

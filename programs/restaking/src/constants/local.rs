@@ -1,5 +1,4 @@
-use anchor_lang::prelude::Pubkey;
-use anchor_lang::{constant, declare_id, pubkey};
+use anchor_lang::prelude::*;
 
 declare_id!("4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5");
 

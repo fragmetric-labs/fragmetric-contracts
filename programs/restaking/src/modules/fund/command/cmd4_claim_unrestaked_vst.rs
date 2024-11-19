@@ -7,10 +7,10 @@ pub struct ClaimUnrestakedVSTCommand {
 }
 
 impl SelfExecutable for ClaimUnrestakedVSTCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        _ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        _ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: ClaimUnrestakedVSTCommand.execute
         Ok(None)

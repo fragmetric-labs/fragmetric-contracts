@@ -1,5 +1,4 @@
-use anchor_lang::prelude::Pubkey;
-use anchor_lang::{constant, declare_id, pubkey};
+use anchor_lang::prelude::*;
 
 declare_id!("fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3");
 
@@ -18,7 +17,6 @@ pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg
 #[constant]
 pub const NSOL_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 
-// TODO: replace it
 #[constant]
 pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
 

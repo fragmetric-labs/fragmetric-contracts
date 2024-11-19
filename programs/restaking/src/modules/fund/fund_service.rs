@@ -1,3 +1,11 @@
+use std::collections::{BTreeMap, BTreeSet};
+
+use anchor_lang::prelude::*;
+use anchor_spl::token::accessor::amount;
+use anchor_spl::token_2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
+use spl_transfer_hook_interface::instruction::execute;
+
 use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
@@ -11,13 +19,7 @@ use crate::modules::fund::{
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::modules::{fund, pricing};
-use crate::utils;
-use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::amount;
-use anchor_spl::token_interface::{Mint, TokenAccount};
-use spl_transfer_hook_interface::instruction::execute;
-use std::collections::{BTreeMap, BTreeSet};
-use anchor_spl::token_2022;
+use crate::utils::AccountInfoExt;
 use crate::utils::PDASeeds;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -126,34 +128,28 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .get(0)
             .ok_or(ProgramError::NotEnoughAccountKeys)?;
         let source_fund_account_option =
-            utils::parse_optional_account_boxed::<UserFundAccount>(source_fund_account_info)?;
+            source_fund_account_info.parse_optional_account_boxed::<UserFundAccount>()?;
         let source_reward_account_info = extra_accounts
             .get(1)
             .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let mut source_reward_account_option = utils::parse_optional_account_loader_boxed::<
-            UserRewardAccount,
-        >(source_reward_account_info)?;
+        let mut source_reward_account_option =
+            source_reward_account_info.parse_optional_account_loader::<UserRewardAccount>()?;
         let destination_fund_account_info = extra_accounts
             .get(2)
             .ok_or(ProgramError::NotEnoughAccountKeys)?;
         let destination_fund_account_option =
-            utils::parse_optional_account_boxed::<UserFundAccount>(destination_fund_account_info)?;
+            destination_fund_account_info.parse_optional_account_boxed::<UserFundAccount>()?;
         let destination_reward_account_info = extra_accounts
             .get(3)
             .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let mut destination_reward_account_option = utils::parse_optional_account_loader_boxed::<
-            UserRewardAccount,
-        >(destination_reward_account_info)?;
+        let mut destination_reward_account_option =
+            destination_reward_account_info.parse_optional_account_loader::<UserRewardAccount>()?;
 
         // transfer source's reward accrual rate to destination
         RewardService::new(self.receipt_token_mint, reward_account)?
             .update_reward_pools_token_allocation(
-                source_reward_account_option
-                    .as_mut()
-                    .map(|account_loader| &mut **account_loader),
-                destination_reward_account_option
-                    .as_mut()
-                    .map(|account_loader| &mut **account_loader),
+                source_reward_account_option.as_mut(),
+                destination_reward_account_option.as_mut(),
                 transfer_amount,
                 None,
             )?;
@@ -289,8 +285,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub(super) fn enqueue_withdrawal_batch(
         &mut self,
-        receipt_token_program: AccountInfo<'info>,
-        receipt_token_lock_account: AccountInfo<'info>,
+        receipt_token_program: &AccountInfo<'info>,
+        receipt_token_lock_account: &AccountInfo<'info>,
         pricing_sources: &[AccountInfo<'info>],
     ) -> Result<()> {
         let mut withdrawal_state = std::mem::take(&mut self.fund_account.withdrawal);

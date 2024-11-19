@@ -65,7 +65,7 @@ fn stake_sol<'info>(
     fund_account: &mut Account<'info, fund::FundAccount>,
     remaining_accounts: &mut &'info [AccountInfo<'info>],
 ) -> Result<()> {
-    let (fund_reserve_account, fund_reserve_account_bump) =
+    let (fund_reserve_account, _) =
         remaining_accounts.pop_fund_reserve_account(receipt_token_mint.as_ref())?;
     let pool_program = remaining_accounts.pop_spl_stake_pool_program()?;
     let pool_account = remaining_accounts.pop_spl_stake_pool()?;
@@ -74,13 +74,13 @@ fn stake_sol<'info>(
     let manager_fee_account = remaining_accounts.pop_spl_manager_fee_account()?;
     let pool_token_program = remaining_accounts.pop_fund_supported_token_program()?;
     let pool_mint = remaining_accounts.pop_fund_supported_token_mint(pool_token_program.key)?;
-    let fund_supported_token_account_to_stake = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_fund_supported_token_account(
+    let fund_supported_token_account_to_stake = remaining_accounts
+        .pop_fund_supported_token_account(
             fund_account.as_ref(),
             pool_mint.key,
             pool_token_program.key,
-        )?,
-    )?;
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
 
     let staking_lamports = fund_account.sol_operation_reserved_amount;
     if staking_lamports > 0 {
@@ -143,33 +143,31 @@ fn normalize_supported_tokens<'info>(
     let normalized_token_pool_account = remaining_accounts
         .pop_normalized_token_pool_account(normalized_token_mint.key)?
         .0;
-    let mut fund_normalized_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_fund_normalized_token_account(
+    let mut fund_normalized_token_account = remaining_accounts
+        .pop_fund_normalized_token_account(
             fund_account.as_ref(),
             normalized_token_mint.key,
             normalized_token_program.key,
-        )?,
-    )?;
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let fund_supported_token_program_to_normalize =
         remaining_accounts.pop_fund_supported_token_program()?;
     let fund_supported_token_mint_to_normalize = remaining_accounts
         .pop_fund_supported_token_mint(fund_supported_token_program_to_normalize.key)?;
-    let mut fund_supported_token_account_to_normalize =
-        parse_interface_account_boxed::<TokenAccount>(
-            remaining_accounts.pop_fund_supported_token_account(
-                fund_account.as_ref(),
-                fund_supported_token_mint_to_normalize.key,
-                fund_supported_token_program_to_normalize.key,
-            )?,
-        )?;
-    let mut normalized_token_pool_supported_token_lock_account =
-        parse_interface_account_boxed::<TokenAccount>(
-            remaining_accounts.pop_normalized_token_pool_supported_token_lock_account(
-                normalized_token_pool_account.key,
-                fund_supported_token_mint_to_normalize.key,
-                fund_supported_token_program_to_normalize.key,
-            )?,
-        )?;
+    let mut fund_supported_token_account_to_normalize = remaining_accounts
+        .pop_fund_supported_token_account(
+            fund_account.as_ref(),
+            fund_supported_token_mint_to_normalize.key,
+            fund_supported_token_program_to_normalize.key,
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
+    let mut normalized_token_pool_supported_token_lock_account = remaining_accounts
+        .pop_normalized_token_pool_supported_token_lock_account(
+            normalized_token_pool_account.key,
+            fund_supported_token_mint_to_normalize.key,
+            fund_supported_token_program_to_normalize.key,
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let pricing_source_accounts = *remaining_accounts;
 
     let normalizing_supported_token_amount = fund_account
@@ -177,11 +175,11 @@ fn normalize_supported_tokens<'info>(
         .get_operation_reserved_amount();
     if normalizing_supported_token_amount > 0 {
         let mut normalized_token_pool_account_parsed =
-            parse_account_boxed(normalized_token_pool_account)?;
+            normalized_token_pool_account.parse_account_boxed()?;
         let mut normalized_token_mint_parsed =
-            parse_interface_account_boxed(normalized_token_mint)?;
+            normalized_token_mint.parse_interface_account_boxed()?;
         let fund_supported_token_mint_to_normalize_parsed =
-            parse_interface_account_boxed(fund_supported_token_mint_to_normalize)?;
+            fund_supported_token_mint_to_normalize.parse_interface_account_boxed()?;
 
         // TODO v0.3/fund: register normalized token's pricing source from FundService::new_pricing_service_checked
         let mut pricing_service = fund::FundService::new(receipt_token_mint, fund_account)?
@@ -199,7 +197,7 @@ fn normalize_supported_tokens<'info>(
 
         let before_fund_normalized_token_amount = fund_normalized_token_account.amount;
 
-        let normalized_token_pool_service = normalization::NormalizedTokenPoolService::new(
+        normalization::NormalizedTokenPoolService::new(
             &mut *normalized_token_pool_account_parsed,
             &mut normalized_token_mint_parsed,
             &normalized_token_program,
@@ -262,32 +260,32 @@ fn restake_normalized_tokens<'info>(
     let normalized_token_program = remaining_accounts.pop_normalized_token_program()?;
     let normalized_token_mint =
         remaining_accounts.pop_normalized_token_mint(normalized_token_program.key)?;
-    let mut fund_normalized_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_fund_normalized_token_account(
+    let mut fund_normalized_token_account = remaining_accounts
+        .pop_fund_normalized_token_account(
             fund_account.as_ref(),
             normalized_token_mint.key,
             normalized_token_program.key,
-        )?,
-    )?;
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let jito_vault_program = remaining_accounts.pop_jito_vault_program()?;
     let jito_vault_config = remaining_accounts.pop_jito_vault_config()?;
     let jito_vault_account = remaining_accounts.pop_jito_vault_account()?;
     let jito_vault_receipt_token_program =
         remaining_accounts.pop_jito_vault_receipt_token_program()?;
     let jito_vault_receipt_token_mint = remaining_accounts.pop_jito_vault_receipt_token_mint()?;
-    let mut jito_vault_supported_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_jito_vault_supported_token_account(
+    let mut jito_vault_supported_token_account = remaining_accounts
+        .pop_jito_vault_supported_token_account(
             normalized_token_mint.key,
             normalized_token_program.key,
-        )?,
-    )?;
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let jito_vault_update_state_tracker =
         remaining_accounts.pop_jito_vault_update_state_tracker(jito_vault_config, current_slot)?;
     let jito_vault_fee_wallet_token_account =
         remaining_accounts.pop_jito_vault_fee_wallet_token_account()?;
-    let mut fund_jito_vault_receipt_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?,
-    )?;
+    let mut fund_jito_vault_receipt_token_account = remaining_accounts
+        .pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let system_program = remaining_accounts.pop_system_program()?;
 
     let restaking_nt_amount = fund_normalized_token_account.amount;
@@ -373,9 +371,9 @@ fn request_withdraw_normalized_tokens<'info>(
             jito_vault_withdrawal_ticket.key,
             Some(false),
         )?;
-    let mut fund_jito_vault_receipt_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?,
-    )?;
+    let mut fund_jito_vault_receipt_token_account = remaining_accounts
+        .pop_fund_jito_vault_receipt_token_account(fund_account.as_ref())?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let system_program = remaining_accounts.pop_system_program()?;
     let associated_token_program = remaining_accounts.pop_associated_token_program()?;
 
@@ -453,12 +451,12 @@ fn withdraw_normalized_tokens<'info>(
         &find_vault_base_account_address(receipt_token_mint.as_ref()).0,
         Some(true),
     )?;
-    let jito_vault_withdrawal_ticket_token_account = parse_interface_account_boxed::<TokenAccount>(
-        remaining_accounts.pop_jito_vault_withdrawal_ticket_token_account(
+    let jito_vault_withdrawal_ticket_token_account = remaining_accounts
+        .pop_jito_vault_withdrawal_ticket_token_account(
             jito_vault_withdrawal_ticket.key,
             Some(true),
-        )?,
-    )?;
+        )?
+        .parse_interface_account_boxed::<TokenAccount>()?;
     let jito_vault_fee_wallet_token_account =
         remaining_accounts.pop_jito_vault_fee_wallet_token_account()?;
     let jito_vault_program_fee_wallet_token_account =

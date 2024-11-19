@@ -27,12 +27,11 @@ pub enum UnstakeLSTCommandState {
 }
 
 impl SelfExecutable for UnstakeLSTCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
-
         // there are remaining tokens to handle
         if let Some(item) = self.items.get(0) {
             let supported_token = ctx.fund_account.get_supported_token(&item.mint)?;

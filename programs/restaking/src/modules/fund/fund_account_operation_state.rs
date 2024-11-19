@@ -1,5 +1,6 @@
-use super::command::{InitializeCommand, OperationCommand, OperationCommandEntry};
 use anchor_lang::prelude::*;
+
+use super::command::{InitializeCommand, OperationCommand, OperationCommandEntry};
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
@@ -23,6 +24,7 @@ impl OperationState {
         }
     }
 
+    /// Initialize current operation command to `reset_command` or default.
     pub(super) fn initialize_command_if_needed(
         &mut self,
         current_timestamp: i64,
@@ -43,7 +45,8 @@ impl OperationState {
         Ok(())
     }
 
-    pub(crate) fn set_command(
+    /// Sets next operation command and increment sequence number.
+    pub(super) fn set_command(
         &mut self,
         command: Option<OperationCommandEntry>,
         current_timestamp: i64,

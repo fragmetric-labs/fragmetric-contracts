@@ -1,12 +1,14 @@
-use super::*;
-use crate::errors::ErrorCode;
-use crate::modules::fund;
-use crate::modules::pricing::TokenPricingSource;
-use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::Mint;
+
+use crate::errors::ErrorCode;
+use crate::modules::fund;
+use crate::modules::pricing::TokenPricingSource;
+use crate::utils::PDASeeds;
+
+use super::*;
 
 #[constant]
 /// ## Version History
@@ -55,8 +57,15 @@ impl FundAccount {
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
-    pub(super) fn find_account_address(&self) -> Pubkey {
-        Pubkey::create_program_address(&*self.get_signer_seeds(), &crate::ID).unwrap()
+    pub(super) fn find_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&*self.get_signer_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
+        vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
     pub(super) fn find_reserve_account_address(&self) -> (Pubkey, u8) {
@@ -89,7 +98,7 @@ impl FundAccount {
         let supported_token = self.get_supported_token(token)?;
         Ok(Pubkey::find_program_address(
             &[
-                self.find_account_address().as_ref(),
+                self.find_account_address()?.as_ref(),
                 supported_token.program.as_ref(),
                 supported_token.mint.as_ref(),
             ],
@@ -105,7 +114,7 @@ impl FundAccount {
     pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<(Pubkey, u8)> {
         Ok(Pubkey::find_program_address(
             &[
-                self.find_account_address().as_ref(),
+                self.find_account_address()?.as_ref(),
                 self.find_receipt_token_program_address().as_ref(),
                 self.receipt_token_mint.as_ref(),
             ],

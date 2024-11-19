@@ -12,10 +12,10 @@ use spl_stake_pool::state::StakePool as SPLStakePoolAccount;
 pub struct InitializeCommand {}
 
 impl SelfExecutable for InitializeCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         let mut items = Vec::new();
         for supported_token in ctx.fund_account.supported_tokens.clone() {
@@ -25,12 +25,12 @@ impl SelfExecutable for InitializeCommand {
 
                     // TODO v0.3/operation: stake according to the strategy
                     if mint == MAINNET_JITOSOL_MINT_ADDRESS {
-                        items.push(StakeSOLCommandItem{
+                        items.push(StakeSOLCommandItem {
                             mint,
                             sol_amount: ctx.fund_account.sol_operation_reserved_amount,
                         });
                     } else {
-                        items.push(StakeSOLCommandItem{
+                        items.push(StakeSOLCommandItem {
                             mint,
                             sol_amount: 0,
                         });
@@ -38,7 +38,7 @@ impl SelfExecutable for InitializeCommand {
                 }
                 TokenPricingSource::MarinadeStakePool { .. } => {
                     // TODO v0.3/staking: support marinade..
-                    items.push(StakeSOLCommandItem{
+                    items.push(StakeSOLCommandItem {
                         mint: supported_token.get_mint(),
                         sol_amount: 0,
                     });

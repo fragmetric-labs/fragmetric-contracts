@@ -1356,21 +1356,34 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.wallet, forced: boolean = false) {
-        const {event, error} = await this.run({
-            instructions: [
-                this.program.methods
-                    .operatorProcessFundWithdrawalJob(forced)
-                    .accounts({
-                        operator: operator.publicKey,
-                    })
-                    .remainingAccounts(this.pricingSourceAccounts)
-                    .instruction(),
-            ],
-            signers: [operator],
-            events: ["operatorProcessedJob"], // , 'operatorUpdatedFundPrice'
-        });
+        // const {event, error} = await this.run({
+        //     instructions: [
+        //         this.program.methods
+        //             .operatorProcessFundWithdrawalJob(forced)
+        //             .accounts({
+        //                 operator: operator.publicKey,
+        //             })
+        //             .remainingAccounts(this.pricingSourceAccounts)
+        //             .instruction(),
+        //     ],
+        //     signers: [operator],
+        //     events: ["operatorProcessedJob"], // , 'operatorUpdatedFundPrice'
+        // });
 
-        logger.notice(`operator processed withdrawal job: #${event.operatorProcessedJob.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        await this.runOperatorRun({
+            command: {
+                enqueueWithdrawalBatch: {
+                    0: {
+                        state: {
+                            init: {},
+                        }
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, 2);
+
+        logger.notice(`operator processed withdrawal job: #`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
@@ -1378,7 +1391,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getFragSOLLockAccount(),
         ]);
 
-        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
+        return {fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
     public async runUserWithdraw(user: web3.Keypair, requestId: BN) {

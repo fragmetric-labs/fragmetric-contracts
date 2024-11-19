@@ -3,7 +3,7 @@ use crate::errors;
 use crate::modules::fund::SupportedTokenInfo;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::{fund, staking};
-use crate::utils::parse_interface_account_boxed;
+use crate::utils::AccountInfoExt;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
 use anchor_spl::token::accessor::mint;
@@ -32,10 +32,10 @@ pub enum StakeSOLCommandState {
 }
 
 impl SelfExecutable for StakeSOLCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // there are remaining tokens to handle
         if let Some(item) = self.items.get(0) {
@@ -154,10 +154,7 @@ impl SelfExecutable for StakeSOLCommand {
                         minted_supported_token_amount
                     );
 
-                    require_gte!(
-                        minted_supported_token_amount,
-                        item.sol_amount.div_ceil(2)
-                    );
+                    require_gte!(minted_supported_token_amount, item.sol_amount.div_ceil(2));
                     require_eq!(
                         fund_supported_token_info.get_operation_reserved_amount(),
                         to_pool_token_account_amount

@@ -55,10 +55,10 @@ pub enum OperationCommand {
 }
 
 impl SelfExecutable for OperationCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
@@ -103,9 +103,9 @@ impl OperationCommand {
 }
 
 pub trait SelfExecutable {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &'a [AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>>;
 }
