@@ -320,6 +320,7 @@
     "@solana/spl-memo" "^0.2.3"
     "@solana/web3.js" "^1.74.0"
     bn.js "^5.2.1"
+
 "@metaplex-foundation/mpl-token-metadata@^3.2.1":
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/@metaplex-foundation/mpl-token-metadata/-/mpl-token-metadata-3.2.1.tgz#d424e378a1ee441a6431d2641d66873118d6dc67"
@@ -472,6 +473,11 @@
   resolved "https://registry.npmjs.org/@noble/hashes/-/hashes-1.4.0.tgz"
   integrity sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==
 
+"@noble/hashes@1.5.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.5.0.tgz#abadc5ca20332db2b1b2aa3e496e9af1213570b0"
+  integrity sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==
+
 "@project-serum/borsh@^0.2.2":
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/@project-serum/borsh/-/borsh-0.2.5.tgz#6059287aa624ecebbfc0edd35e4c28ff987d8663"
@@ -479,10 +485,6 @@
   dependencies:
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
-"@noble/hashes@1.5.0":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.5.0.tgz#abadc5ca20332db2b1b2aa3e496e9af1213570b0"
-  integrity sha512-1j6kQFb7QRru7eKN3ZDvRcP13rugwdxZqCjbiAVZfIJwgj2A65UmT4TgARXGlXgnRkORLTDTrO19ZErt7+QXgA==
 
 "@solana/buffer-layout-utils@^0.2.0":
   version "0.2.0"
@@ -1026,7 +1028,7 @@ chalk@^4.0.0, chalk@^4.1.0, chalk@^4.1.1:
 
 chalk@^5.3.0:
   version "5.3.0"
-  resolved "https://registry.npmjs.org/chalk/-/chalk-5.3.0.tgz"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.3.0.tgz#67c20a7ebef70e7f3970a01f90fa210cb6860385"
   integrity sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==
 
 check-error@^1.0.2, check-error@^1.0.3:

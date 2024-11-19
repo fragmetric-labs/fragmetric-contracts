@@ -13,6 +13,7 @@ A complete list will be provided to client via address lookup table later.
 #[constant]
 pub const MAINNET_BSOL_MINT_ADDRESS: Pubkey =
     pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
+
 #[constant]
 pub const DEVNET_BSOL_MINT_ADDRESS: Pubkey = MAINNET_BSOL_MINT_ADDRESS;
 #[constant]
@@ -39,6 +40,11 @@ pub const MAINNET_JITOSOL_MINT_ADDRESS: Pubkey =
 #[constant]
 pub const MAINNET_JITOSOL_STAKE_POOL_ADDRESS: Pubkey =
     pubkey!("Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb");
+
+#[constant]
+pub const MAINNET_BNSOL_MINT_ADDRESS: Pubkey = pubkey!("BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85");
+#[constant]
+pub const MAINNET_BNSOL_STAKE_POOL_ADDRESS: Pubkey = pubkey!("Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r");
 
 #[constant]
 pub const MAINNET_NSOL_MINT_ADDRESS: Pubkey =
