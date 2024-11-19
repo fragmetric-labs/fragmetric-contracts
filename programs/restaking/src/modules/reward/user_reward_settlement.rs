@@ -6,10 +6,10 @@ use crate::errors::ErrorCode;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct UserRewardSettlement {
-    reward_id: u16,
+    pub(super) reward_id: u16,
     _padding: [u8; 6],
     settled_amount: u64,
-    settled_contribution: u128,
+    pub(super) settled_contribution: u128,
     settled_slot: u64,
     claimed_amount: u64,
 }
@@ -21,16 +21,6 @@ impl UserRewardSettlement {
         self.settled_contribution = 0;
         self.settled_slot = reward_pool_initial_slot;
         self.claimed_amount = 0;
-    }
-
-    #[inline(always)]
-    pub(super) fn get_reward_id(&self) -> u16 {
-        self.reward_id
-    }
-
-    #[inline(always)]
-    pub(super) fn get_settled_contribution(&self) -> u128 {
-        self.settled_contribution
     }
 
     pub(super) fn settle_reward(

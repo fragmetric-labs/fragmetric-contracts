@@ -12,7 +12,7 @@ const HOLDER_PUBKEYS_MAX_LEN_1: usize = 8;
 #[repr(C)]
 pub struct RewardPoolHolder {
     /// ID is determined by reward account.
-    id: u8,
+    pub(super) id: u8,
     name: [u8; HOLDER_NAME_MAX_LEN],
     description: [u8; HOLDER_DESCRIPTION_MAX_LEN],
 
@@ -66,11 +66,6 @@ impl RewardPoolHolder {
         self.pubkeys_1[..pubkeys.len()].copy_from_slice(pubkeys);
 
         Ok(())
-    }
-
-    #[inline(always)]
-    pub(super) fn get_id(&self) -> u8 {
-        self.id
     }
 
     pub(super) fn get_name(&self) -> Result<&str> {

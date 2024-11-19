@@ -7,7 +7,7 @@ use crate::errors::ErrorCode;
 /// Verify preceding Ed25519Program instruction data with given payload and payload_signer_key
 pub struct SignatureVerificationService {}
 
-impl<'info> SignatureVerificationService {
+impl SignatureVerificationService {
     pub fn verify(
         instructions_sysvar: &AccountInfo,
         payload: &[u8],

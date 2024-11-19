@@ -1,7 +1,7 @@
-use crate::errors::ErrorCode;
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::curve25519::scalar::Zeroable;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::instruction::Pod;
+use bytemuck::{Pod, Zeroable};
+
+use crate::errors::ErrorCode;
 
 const REWARD_NAME_MAX_LEN: usize = 14;
 const REWARD_DESCRIPTION_MAX_LEN: usize = 128;
