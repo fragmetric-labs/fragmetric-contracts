@@ -19,9 +19,6 @@ import * as ed25519 from "ed25519";
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
-    // The term "local" in the "KEYCHAIN_ENV" context doesn't necessarily refer to the localnet.
-    // It can also be applied in devnet or mainnet environments while utilizing existing local keypairs.
-    // and a different Anchor provider. This allows for flexibility in testing across various networks.
     public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider">) {
         return getKeychain(env).then((keychain) => {
             return new RestakingPlayground({
@@ -33,9 +30,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     private static readonly clusterURL: { [env in KEYCHAIN_ENV]: string } = {
         local: "http://0.0.0.0:8899",
-        devnet: web3.clusterApiUrl("devnet"),
-        mainnet: web3.clusterApiUrl("mainnet-beta"),
+        devnet: "https://api.devnet.solana.com",
+        mainnet: "https://api.mainnet-beta.solana.com",
     };
+
+    public get isLocalnet(): boolean {
+        return this.connection.rpcEndpoint == RestakingPlayground.clusterURL.local;
+    }
+
+    public get isDevnet(): boolean {
+        return this.connection.rpcEndpoint == RestakingPlayground.clusterURL.devnet;
+    }
+
+    public get isMainnet(): boolean {
+        return this.connection.rpcEndpoint == RestakingPlayground.clusterURL.mainnet;
+    }
 
     private constructor(args: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider" | "keychain">) {
         super({
@@ -43,10 +52,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             keychain: args.keychain,
             idl: require("../../target/idl/restaking.json") as Restaking,
         });
-    }
-
-    public BN(x: number | string | number[] | Uint8Array | Buffer | BN): BN {
-        return new BN(x);
     }
 
     public get initializeSteps() {
@@ -72,10 +77,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardName: "fPoint",
                     amount: new BN(0),
                 }),
-            () => this.runAdminInitializeNSOLTokenMint(), // 8*****
-            () => this.runAdminInitializeNormalizeTokenPool(), // 9****
-            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10*******
-            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11***
+            () => this.runAdminInitializeNSOLTokenMint(), // 8
+            () => this.runAdminInitializeNormalizeTokenPool(), // 9
+            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10
+            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11
         ];
     }
 
@@ -185,7 +190,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     private _supportedTokenMetadata: ReturnType<typeof this._getSupportedTokenMetadata>;
 
     private _getSupportedTokenMetadata() {
-        if (this.isMaybeDevnet) {
+        if (this.isDevnet) {
             return {
                 bSOL: {
                     mint: this.getConstantAsPublicKey("devnetBsolMintAddress"),
@@ -546,7 +551,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
             umiInstance.use(umi.signerIdentity(authority));
 
-            if (this.isMaybeLocalnet) {
+            if (this.isLocalnet) {
                 await umiInstance.rpc.airdrop(authKeypair.publicKey, umi.sol(1));
             }
 
@@ -780,23 +785,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMaybeMainnetBeta ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
-            solWithdrawalFeedRateBPS: this.isMaybeMainnetBeta ? 10 : 10,
-            withdrawalEnabled: this.isMaybeMainnetBeta ? false : true,
-            withdrawalBatchProcessingThresholdAmount: new BN(this.isMaybeMainnetBeta ? 0 : 0),
-            withdrawalBatchProcessingThresholdDuration: new BN(this.isMaybeMainnetBeta ? 60 : 60), // seconds
+            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
+            solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
+            withdrawalEnabled: this.isMainnet ? false : true,
+            withdrawalBatchProcessingThresholdAmount: new BN(this.isMainnet ? 0 : 0),
+            withdrawalBatchProcessingThresholdDuration: new BN(this.isMainnet ? 60 : 60), // seconds
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 mint: v.mint,
                 capacity: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 0 : 90_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 0 : 90_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "jitoSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 22_680_370 : 80_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 22_680_370 : 80_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "mSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 4_500_000 : 70_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 4_500_000 : 70_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "BNSOL":
-                            return new BN(this.isMaybeMainnetBeta ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
                         default:
                             throw `invalid cap for ${symbol}`;
                     }
@@ -1479,49 +1484,49 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             },
             {
                 // stake_pool_program
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy" : "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy" : "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
                 isSigner: false,
                 isWritable: false,
             },
             {
                 // stake_pool
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9" : "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9" : "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"),
                 isSigner: false,
                 isWritable: true,
             },
             {
                 // stake_pool_withdraw_authority
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "4vJJQTSApqig3DEZbLRNuWscQfE6GVisSgRPraiPn1Fz" : "6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "4vJJQTSApqig3DEZbLRNuWscQfE6GVisSgRPraiPn1Fz" : "6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS"),
                 isSigner: false,
                 isWritable: false,
             },
             {
                 // reserve_stake_account
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "aRkys1kVHeysrcn9bJFat9FkvoyyYD8M1kK286X3Aro" : "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "aRkys1kVHeysrcn9bJFat9FkvoyyYD8M1kK286X3Aro" : "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"),
                 isSigner: false,
                 isWritable: true,
             },
             {
                 // manager_fee_account
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1" : "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1" : "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"),
                 isSigner: false,
                 isWritable: true,
             },
             {
                 // pool_mint
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1" : "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1" : "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
                 isSigner: false,
                 isWritable: true,
             },
             {
                 // token_program
-                pubkey: new anchor.web3.PublicKey(this.isMaybeDevnet ? "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" : "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+                pubkey: new anchor.web3.PublicKey(this.isDevnet ? "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" : "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
                 isSigner: false,
                 isWritable: false,
             },
             {
                 // supported_token_account
-                pubkey: this.isMaybeDevnet ? this.knownAddress.fragSOLSupportedTokenAccount("bSOL") : this.knownAddress.fragSOLSupportedTokenAccount("jitoSOL"),
+                pubkey: this.isDevnet ? this.knownAddress.fragSOLSupportedTokenAccount("bSOL") : this.knownAddress.fragSOLSupportedTokenAccount("jitoSOL"),
                 isSigner: false,
                 isWritable: true,
             },

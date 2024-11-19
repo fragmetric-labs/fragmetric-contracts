@@ -1,9 +1,9 @@
 import {getKeychain, KEYCHAIN_ENV} from "./keychain";
 import {askOnce, startREPL} from "../lib/repl";
 import {RestakingPlayground} from "./playground";
-import * as anchor from "@coral-xyz/anchor";
-import {BN} from "@coral-xyz/anchor";
 import * as web3 from "@solana/web3.js";
+import * as anchor from '@coral-xyz/anchor';
+import chalk from 'chalk';
 
 if (process.argv.length > 2) {
     run(process.argv[process.argv.length - 1] as KEYCHAIN_ENV);
@@ -14,14 +14,25 @@ if (process.argv.length > 2) {
 }
 
 function run(env: KEYCHAIN_ENV) {
+    anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
+        return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));
+    }
+    web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = anchor.web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
+        return chalk.blue(this.toString());
+    }
+
     RestakingPlayground.create(env)
         .then(restaking => {
+            const cluster = restaking.isMainnet ? chalk.bgRed.white('mainnet') : (restaking.isDevnet ? chalk.bgYellow.black('devnet') : chalk.bgWhite.black('local'));
+            const endpoint = chalk.dim(`${restaking.connection.rpcEndpoint.length > 35 ? restaking.connection.rpcEndpoint.substring(0, 33) + '..' : restaking.connection.rpcEndpoint}`);
+
             console.log(`[!] Type 'restaking.' and press TAB to start...`);
             startREPL({
-                prompt: `${restaking.connection.rpcEndpoint} > `,
+                prompt: `${cluster} ${endpoint} > `,
                 context: {
+                    web3,
+                    BN: anchor.BN,
                     restaking,
-                    BN,
                 },
             });
         })

@@ -166,19 +166,6 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         logger.debug(`SOL airdropped (+${sol}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
     }
 
-    public get isMaybeLocalnet(): boolean {
-        const endpoint = this.connection.rpcEndpoint;
-        return endpoint.startsWith('http://') && endpoint.endsWith('8899');
-    }
-
-    public get isMaybeDevnet(): boolean {
-        return this.connection.rpcEndpoint == web3.clusterApiUrl('devnet');
-    }
-
-    public get isMaybeMainnetBeta(): boolean {
-        return this.connection.rpcEndpoint == web3.clusterApiUrl("mainnet-beta");
-    }
-
     public getConstant(name: ExtractConstantNames<IDL>): string {
         return this.program.idl.constants.find(a => a.name == name).value;
     }
