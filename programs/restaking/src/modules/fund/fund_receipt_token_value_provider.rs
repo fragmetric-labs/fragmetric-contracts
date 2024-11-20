@@ -8,21 +8,15 @@ use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 pub struct FundReceiptTokenValueProvider;
 
 impl TokenValueProvider for FundReceiptTokenValueProvider {
-    fn resolve_underlying_assets<'a, 'info: 'a>(
+    #[inline(never)]
+    fn resolve_underlying_assets<'info>(
         self,
-        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
+        pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 2);
 
-        // CHECKED: to narrow down 'info lifetime of AccountInfos to 'a due to signature of try_from. below AccountInfos are dropped after this function returns.
-        let receipt_token_mint_info = pricing_source_accounts[0].clone();
-        let receipt_token_mint = InterfaceAccount::<Mint>::try_from(unsafe {
-            std::mem::transmute::<_, &'a AccountInfo<'a>>(&receipt_token_mint_info)
-        })?;
-        let fund_account_info = pricing_source_accounts[1].clone();
-        let fund_account = Account::<FundAccount>::try_from(unsafe {
-            std::mem::transmute::<_, &'a AccountInfo<'a>>(&fund_account_info)
-        })?;
+        let receipt_token_mint = InterfaceAccount::<Mint>::try_from(pricing_source_accounts[0])?;
+        let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[1])?;
 
         let mut assets = Vec::new();
         for supported_token in &fund_account.supported_tokens {

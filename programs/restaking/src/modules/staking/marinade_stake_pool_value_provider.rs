@@ -1,23 +1,22 @@
 use anchor_lang::prelude::*;
+use marinade_cpi::state::State;
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-use super::MarinadeStakePoolService;
-
 pub struct MarinadeStakePoolValueProvider;
 
 impl TokenValueProvider for MarinadeStakePoolValueProvider {
-    fn resolve_underlying_assets<'a, 'info: 'a>(
+    #[inline(never)]
+    fn resolve_underlying_assets<'info>(
         self,
-        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
+        pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 
         // ref: https://docs.rs/marinade-cpi/latest/marinade_cpi/state/struct.State.html
-        let pool_account =
-            MarinadeStakePoolService::deserialize_pool_account(pricing_source_accounts[0])?;
+        let pool_account = Account::<State>::try_from(pricing_source_accounts[0])?;
 
         #[cfg(feature = "devnet")]
         require_keys_eq!(pool_account.msol_mint, MAINNET_MSOL_MINT_ADDRESS);

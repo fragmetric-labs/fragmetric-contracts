@@ -183,17 +183,16 @@ fn normalize_supported_tokens<'info>(
 
         // TODO v0.3/fund: register normalized token's pricing source from FundService::new_pricing_service_checked
         let mut pricing_service = fund::FundService::new(receipt_token_mint, fund_account)?
-            .new_pricing_service(&pricing_source_accounts)?;
-        pricing_service
+            .new_pricing_service(pricing_source_accounts)?
             .register_token_pricing_source_account(normalized_token_mint)
-            .register_token_pricing_source_account(normalized_token_pool_account)
-            .resolve_token_pricing_source(
-                &normalized_token_mint.key(),
-                &pricing::TokenPricingSource::NormalizedTokenPool {
-                    mint_address: normalized_token_mint.key(),
-                    pool_address: normalized_token_pool_account.key(),
-                },
-            )?;
+            .register_token_pricing_source_account(normalized_token_pool_account);
+        pricing_service.resolve_token_pricing_source(
+            &normalized_token_mint.key(),
+            &pricing::TokenPricingSource::NormalizedTokenPool {
+                mint_address: normalized_token_mint.key(),
+                pool_address: normalized_token_pool_account.key(),
+            },
+        )?;
 
         let before_fund_normalized_token_amount = fund_normalized_token_account.amount;
 

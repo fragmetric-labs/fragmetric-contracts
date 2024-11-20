@@ -7,9 +7,10 @@ use super::SPLStakePoolService;
 pub struct SPLStakePoolValueProvider;
 
 impl TokenValueProvider for SPLStakePoolValueProvider {
-    fn resolve_underlying_assets<'a, 'info: 'a>(
+    #[inline(never)]
+    fn resolve_underlying_assets<'info>(
         self,
-        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
+        pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 

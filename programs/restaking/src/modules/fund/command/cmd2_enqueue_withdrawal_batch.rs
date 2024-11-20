@@ -20,7 +20,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &'a [AccountInfo<'info>],
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self.state {
             EnqueueWithdrawalBatchCommandState::Init => {
@@ -48,7 +48,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                 fund_service.enqueue_withdrawal_batch(
                     receipt_token_program,
                     receipt_token_lock_account,
-                    remaining_accounts,
+                    remaining_accounts.iter().cloned(),
                 )?;
             }
         }

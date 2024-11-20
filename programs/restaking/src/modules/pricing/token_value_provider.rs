@@ -7,9 +7,9 @@ use super::TokenPricingSource;
 
 /// A type that can calculate the token amount as sol with its data.
 pub trait TokenValueProvider {
-    fn resolve_underlying_assets<'a, 'info: 'a>(
+    fn resolve_underlying_assets<'info>(
         self,
-        pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
+        pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue>;
 }
 
@@ -91,9 +91,9 @@ mod mock {
     }
 
     impl<'b> TokenValueProvider for MockPricingSourceValueProvider<'b> {
-        fn resolve_underlying_assets<'a, 'info: 'a>(
+        fn resolve_underlying_assets<'info>(
             self,
-            pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
+            pricing_source_accounts: &[&'info AccountInfo<'info>],
         ) -> Result<TokenValue> {
             require_eq!(pricing_source_accounts.len(), 0);
 

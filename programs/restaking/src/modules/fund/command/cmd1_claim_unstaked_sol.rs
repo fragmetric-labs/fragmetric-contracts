@@ -10,7 +10,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         _ctx: &mut OperationCommandContext<'info, 'a>,
-        _accounts: &'a [AccountInfo<'info>],
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: ClaimUnstakedSOLCommand.execute
         Ok(None)

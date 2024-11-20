@@ -10,7 +10,7 @@ impl SelfExecutable for NormalizeLSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         _ctx: &mut OperationCommandContext<'info, 'a>,
-        _accounts: &'a [AccountInfo<'info>],
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: NormalizeLSTCommand.execute
         Ok(None)

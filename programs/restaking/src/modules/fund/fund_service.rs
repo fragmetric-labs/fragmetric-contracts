@@ -1,31 +1,22 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::amount;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
-use spl_transfer_hook_interface::instruction::execute;
 
-use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::command::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable,
-    StakeSOLCommand,
+    OperationCommandContext, OperationCommandEntry, SelfExecutable,
 };
-use crate::modules::fund::{
-    FundAccount, FundAccountInfo, UserFundAccount, UserFundConfigurationService,
-};
+use crate::modules::fund::{FundAccount, FundAccountInfo, UserFundAccount};
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
-use crate::modules::{fund, pricing};
-use crate::utils::AccountInfoExt;
-use crate::utils::PDASeeds;
+use crate::utils::*;
 
 pub struct FundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut Account<'info, FundAccount>,
-    _current_slot: u64,
     current_timestamp: i64,
 }
 
@@ -44,7 +35,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(Self {
             receipt_token_mint,
             fund_account,
-            _current_slot: clock.slot,
             current_timestamp: clock.unix_timestamp,
         })
     }
@@ -52,22 +42,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     // create a pricing service and register fund assets' value resolvers
     pub(in crate::modules) fn new_pricing_service(
         &mut self,
-        pricing_sources: &[AccountInfo<'info>],
+        pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<PricingService<'info>> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
 
-        let mut pricing_service = PricingService::new(pricing_sources)?;
-        pricing_service
-            .register_token_pricing_source_account(self.fund_account.as_ref())
-            .register_token_pricing_source_account(self.receipt_token_mint.as_ref())
-            .resolve_token_pricing_source(
-                &self.fund_account.receipt_token_mint.key(),
-                &TokenPricingSource::FundReceiptToken {
-                    mint_address: self.fund_account.receipt_token_mint.key(),
-                    fund_address: self.fund_account.key(),
-                },
-            )?;
+        let mut pricing_service = PricingService::new(pricing_sources)?
+            .register_token_pricing_source_account(self.fund_account.as_account_info())
+            .register_token_pricing_source_account(self.receipt_token_mint.as_account_info());
+        pricing_service.resolve_token_pricing_source(
+            &self.fund_account.receipt_token_mint.key(),
+            &TokenPricingSource::FundReceiptToken {
+                mint_address: self.fund_account.receipt_token_mint.key(),
+                fund_address: self.fund_account.key(),
+            },
+        )?;
 
         // try to update current underlying assets' price
         self.update_asset_prices(&pricing_service)?;
@@ -103,7 +92,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub fn process_update_prices(
         &mut self,
-        token_pricing_source_accounts: &'a [AccountInfo<'info>],
+        token_pricing_source_accounts: &'info [AccountInfo<'info>],
     ) -> Result<()> {
         self.new_pricing_service(token_pricing_source_accounts)?;
 
@@ -193,7 +182,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub fn process_run(
         &mut self,
-        remaining_accounts: &[AccountInfo<'info>],
+        remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
         let mut operation_state = std::mem::take(&mut self.fund_account.operation);
@@ -221,7 +210,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 // append required accounts in exact order
                 match remaining_accounts_map.get(&account_key) {
                     Some(account) => {
-                        required_account_infos.push((*account).clone());
+                        required_account_infos.push(*account);
                         unused_account_keys.remove(&account_key);
                     }
                     None => {
@@ -250,7 +239,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             // append all unused accounts
             for unused_account_key in unused_account_keys.iter() {
                 let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
-                required_account_infos.push((*remaining_account).clone().clone());
+                required_account_infos.push(*remaining_account);
             }
 
             let mut ctx = OperationCommandContext {
@@ -287,7 +276,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         &mut self,
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
-        pricing_sources: &[AccountInfo<'info>],
+        pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<()> {
         let mut withdrawal_state = std::mem::take(&mut self.fund_account.withdrawal);
 

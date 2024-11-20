@@ -58,7 +58,7 @@ impl SelfExecutable for OperationCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &'a [AccountInfo<'info>],
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
@@ -106,6 +106,6 @@ pub trait SelfExecutable {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &'a [AccountInfo<'info>],
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>>;
 }

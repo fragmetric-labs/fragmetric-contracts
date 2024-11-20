@@ -228,79 +228,45 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
     }
 }
 
-// #[inline(never)]
-// pub fn parse_account_boxed<'info, T>(
-//     account: &'info AccountInfo<'info>,
-// ) -> Result<Box<Account<'info, T>>>
-// where
-//     T: AccountSerialize + AccountDeserialize + Clone + Owner,
-// {
-//     Account::try_from(account).map(Box::new)
-// }
+pub trait AccountExt<'info> {
+    /// SAFETY: `info: &'info AccountInfo<'info>` field of `Account` type
+    /// is returned by `AsRef::<AccountInfo<'info>>::as_ref()`, but due to
+    /// the trait's signature, its lifetime('info) is narrowed down to `'a`.
+    ///
+    /// Therefore it is absolutely safe to restore `&'a AccountInfo<'info>`
+    /// back to `&'info AccountInfo<'info>`.
+    ///
+    /// ```rs
+    /// pub struct Account<'info, T> {
+    ///     account: T,
+    ///     info: &'info AccountInfo<'info>,
+    /// }
+    ///
+    /// impl<'info, T> AsRef<AccountInfo<'info>> for Account<'info, T> {
+    ///     // lifetime of return value('info) is narrowed down to the
+    ///     // lifetime of `self`('1) due to the method signature.
+    ///     fn as_ref(&self) -> &AccountInfo<'info> {
+    ///         self.info
+    ///     }
+    /// }
+    /// ```
+    fn as_account_info(&self) -> &'info AccountInfo<'info>;
+}
 
-// #[inline(never)]
-// pub fn parse_interface_account_boxed<'info, T>(
-//     account: &'info AccountInfo<'info>,
-// ) -> Result<Box<InterfaceAccount<'info, T>>>
-// where
-//     T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
-// {
-//     InterfaceAccount::try_from(account).map(Box::new)
-// }
+impl<'info, T> AccountExt<'info> for Account<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
 
-// #[inline(never)]
-// pub fn parse_optional_account_boxed<'info, T>(
-//     account: &'info AccountInfo<'info>,
-// ) -> Result<Option<Box<Account<'info, T>>>>
-// where
-//     T: AccountSerialize + AccountDeserialize + Clone + Owner,
-// {
-//     match Account::try_from(account) {
-//         Ok(account) => Ok(Some(Box::new(account))),
-//         Err(Error::AnchorError(anchor_err))
-//             if anchor_err.error_code_number
-//                 == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
-//         {
-//             Ok(None)
-//         }
-//         Err(e) => Err(e),
-//     }
-// }
-
-// #[inline(never)]
-// pub fn parse_optional_interface_account_boxed<'info, T>(
-//     account: &'info AccountInfo<'info>,
-// ) -> Result<Option<Box<InterfaceAccount<'info, T>>>>
-// where
-//     T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
-// {
-//     match InterfaceAccount::try_from(account) {
-//         Ok(account) => Ok(Some(Box::new(account))),
-//         Err(Error::AnchorError(anchor_err))
-//             if anchor_err.error_code_number
-//                 == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
-//         {
-//             Ok(None)
-//         }
-//         Err(e) => Err(e),
-//     }
-// }
-
-// #[inline(never)]
-// pub fn parse_optional_account_loader_boxed<'info, T>(
-//     account: &'info AccountInfo<'info>,
-// ) -> Result<Option<Box<AccountLoader<'info, T>>>>
-// where
-//     T: ZeroCopyHeader + Owner + Clone,
-// {
-//     match AccountLoader::try_from(account) {
-//         Ok(account) => Ok(Some(Box::new(account))),
-//         Err(Error::AnchorError(anchor_err))
-//             if anchor_err.error_code_number
-//                 == <ErrorCode as Into<u32>>::into(ErrorCode::AccountDiscriminatorNotFound) =>
-//         {
-//             Ok(None)
-//         }
-//         Err(e) => Err(e),
-//     }
-// }
+impl<'info, T> AccountExt<'info> for InterfaceAccount<'info, T>
+where
+    T: AccountSerialize + AccountDeserialize + Clone,
+{
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}

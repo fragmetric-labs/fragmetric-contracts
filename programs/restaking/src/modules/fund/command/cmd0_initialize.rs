@@ -15,7 +15,7 @@ impl SelfExecutable for InitializeCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
-        _accounts: &'a [AccountInfo<'info>],
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         let mut items = Vec::new();
         for supported_token in ctx.fund_account.supported_tokens.clone() {

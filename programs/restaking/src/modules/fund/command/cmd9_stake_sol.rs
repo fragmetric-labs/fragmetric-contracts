@@ -35,7 +35,7 @@ impl SelfExecutable for StakeSOLCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &'a [AccountInfo<'info>],
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // there are remaining tokens to handle
         if let Some(item) = self.items.get(0) {
