@@ -11,6 +11,7 @@ mod fund_service;
 mod user_fund_account;
 mod user_fund_configuration_service;
 mod user_fund_service;
+mod weighted_allocation_strategy;
 
 pub use deposit_metadata::*;
 pub use fund_account::*;
