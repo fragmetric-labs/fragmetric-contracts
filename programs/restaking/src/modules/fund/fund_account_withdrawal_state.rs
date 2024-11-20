@@ -1,8 +1,6 @@
-use crate::errors::ErrorCode;
 use anchor_lang::prelude::*;
-use anchor_lang::{
-    err, error, require_gt, require_gte, AnchorDeserialize, AnchorSerialize, InitSpace,
-};
+
+use crate::errors::ErrorCode;
 
 const MAX_BATCH_WITHDRAWALS_IN_PROGRESS: usize = 10;
 
@@ -12,14 +10,14 @@ pub struct WithdrawalState {
     next_request_id: u64,
 
     num_withdrawal_requests_in_progress: u64,
-    last_completed_batch_id: u64,
+    pub(super) last_completed_batch_id: u64,
     last_batch_processing_started_at: Option<i64>,
     last_batch_processing_completed_at: Option<i64>,
 
     sol_withdrawal_fee_rate: u16,
-    withdrawal_enabled_flag: bool,
-    batch_processing_threshold_amount: u64,
-    batch_processing_threshold_duration: i64,
+    pub(super) withdrawal_enabled_flag: bool,
+    pub(super) batch_processing_threshold_amount: u64,
+    pub(super) batch_processing_threshold_duration: i64,
 
     // Withdrawal Status = PENDING
     pending_batch_withdrawal: BatchWithdrawal,
@@ -28,12 +26,10 @@ pub struct WithdrawalState {
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
     pub(in crate::modules) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
-    sol_withdrawal_reserved_amount: u64,
+    pub(super) sol_withdrawal_reserved_amount: u64,
     _padding: [u8; 8],
     receipt_token_processed_amount: u64,
-    _reserved: [u8; 32],
-    _reserved2: [u8; 32],
-    _reserved3: [u8; 24],
+    _reserved: [[u8; 8]; 11],
 }
 
 impl WithdrawalState {
@@ -54,15 +50,11 @@ impl WithdrawalState {
             self.sol_withdrawal_reserved_amount = Default::default();
             self._padding = Default::default();
             self.receipt_token_processed_amount = Default::default();
-            self._reserved = [0; 32];
-            self._reserved2 = [0; 32];
-            self._reserved3 = [0; 24];
+            self._reserved = Default::default();
         } else if fund_account_data_version == 1 {
             self.sol_withdrawal_reserved_amount = 0;
             self.receipt_token_processed_amount = 0;
-            self._reserved = [0; 32];
-            self._reserved2 = [0; 32];
-            self._reserved3 = [0; 24];
+            self._reserved = Default::default();
         } else if fund_account_data_version == 2 {
             self._padding = [0; 8];
         }
@@ -72,23 +64,8 @@ impl WithdrawalState {
     const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
 
     #[inline(always)]
-    pub(super) fn get_last_completed_batch_id(&self) -> u64 {
-        self.last_completed_batch_id
-    }
-
-    #[inline(always)]
     pub(super) fn get_sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
         self.sol_withdrawal_fee_rate as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
-    }
-
-    #[inline(always)]
-    pub(super) fn get_withdrawal_enabled_flag(&self) -> bool {
-        self.withdrawal_enabled_flag
-    }
-
-    #[inline(always)]
-    pub(super) fn get_sol_withdrawal_reserved_amount(&self) -> u64 {
-        self.sol_withdrawal_reserved_amount
     }
 
     pub(super) fn set_sol_withdrawal_fee_rate(
@@ -122,16 +99,6 @@ impl WithdrawalState {
         if let Some(duration) = duration {
             self.batch_processing_threshold_duration = duration;
         }
-    }
-
-    #[inline(always)]
-    pub(super) fn get_batch_processing_threshold_amount(&self) -> u64 {
-        self.batch_processing_threshold_amount
-    }
-
-    #[inline(always)]
-    pub(super) fn get_batch_processing_threshold_duration(&self) -> i64 {
-        self.batch_processing_threshold_duration
     }
 
     pub(super) fn issue_new_withdrawal_request(
@@ -364,7 +331,7 @@ impl BatchWithdrawal {
         Ok(())
     }
 
-    pub(super) fn remove_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
+    fn remove_receipt_token_to_process(&mut self, amount: u64) -> Result<()> {
         self.num_withdrawal_requests -= 1;
         self.receipt_token_to_process = self
             .receipt_token_to_process
@@ -425,8 +392,8 @@ impl BatchWithdrawal {
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct WithdrawalRequest {
-    batch_id: u64,
-    request_id: u64,
+    pub(super) batch_id: u64,
+    pub(super) request_id: u64,
     receipt_token_amount: u64,
     created_at: i64,
     _reserved: [u8; 16],
@@ -446,15 +413,5 @@ impl WithdrawalRequest {
             created_at: current_timestamp,
             _reserved: [0; 16],
         }
-    }
-
-    #[inline(always)]
-    pub(super) fn get_batch_id(&self) -> u64 {
-        self.batch_id
-    }
-
-    #[inline(always)]
-    pub(super) fn get_request_id(&self) -> u64 {
-        self.request_id
     }
 }

@@ -21,8 +21,8 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         let mut assets = Vec::new();
         for supported_token in &fund_account.supported_tokens {
             assets.push(Asset::TOKEN(
-                supported_token.get_mint(),
-                Some(supported_token.get_pricing_source()),
+                supported_token.mint,
+                Some(supported_token.pricing_source.clone()),
                 supported_token
                     .get_operation_reserved_amount()
                     .checked_add(supported_token.get_operating_amount())

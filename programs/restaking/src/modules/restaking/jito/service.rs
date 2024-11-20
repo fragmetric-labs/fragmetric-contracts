@@ -1,11 +1,12 @@
-use crate::modules::restaking::jito::{
-    JitoRestakingVault, JitoRestakingVaultContext, JitoVaultOperatorDelegation,
-};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use jito_vault_core::{vault::Vault, vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket};
+
+use crate::modules::restaking::jito::{
+    JitoRestakingVault, JitoRestakingVaultContext, JitoVaultOperatorDelegation,
+};
 
 impl JitoRestakingVault {
     pub const VAULT_BASE_ACCOUNT1_SEED: &'static [u8] = b"vault_base_account1";
@@ -243,7 +244,7 @@ pub fn request_withdraw<'info>(
     let current_lamports = vault_withdrawal_ticket.lamports();
     let space = 8 + std::mem::size_of::<VaultStakerWithdrawalTicket>();
     let required_lamports = rent
-        .minimum_balance(space as usize)
+        .minimum_balance(space)
         .max(1)
         .saturating_sub(current_lamports);
 

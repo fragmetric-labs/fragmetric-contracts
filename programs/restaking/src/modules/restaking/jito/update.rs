@@ -1,14 +1,12 @@
-use super::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
-use anchor_spl::mint;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount};
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::config::Config;
 use jito_vault_core::vault::Vault;
 use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
 use jito_vault_sdk;
+
+use super::*;
 
 pub fn update_vault_if_needed<'info>(
     ctx: &JitoRestakingVaultContext<'info>,
@@ -53,7 +51,7 @@ pub fn update_vault_if_needed<'info>(
         )?;
 
         initialize_vault_update_state_tracker(
-            &ctx,
+            ctx,
             signer,
             signer_seeds,
             vault_update_state_tracker,
@@ -61,7 +59,7 @@ pub fn update_vault_if_needed<'info>(
         )?;
 
         close_vault_update_state_tracker(
-            &ctx,
+            ctx,
             signer,
             signer_seeds,
             vault_update_state_tracker,
@@ -84,7 +82,7 @@ pub fn initialize_vault_update_state_tracker<'info>(
             ctx.vault_program.key,
             ctx.vault_config.key,
             ctx.vault.key,
-            &vault_update_state_tracker.key,
+            vault_update_state_tracker.key,
             signer.key,
             TryFrom::try_from(0u8).unwrap(), // WithdrawalAllocationMethod
         );
@@ -116,7 +114,7 @@ pub fn close_vault_update_state_tracker<'info>(
         ctx.vault_program.key,
         ctx.vault_config.key,
         ctx.vault.key,
-        &vault_update_state_tracker.key,
+        vault_update_state_tracker.key,
         signer.key,
         ncn_epoch, // Clock::get()?.slot.checked_div(432000).unwrap(), need to change 432000 -> config.epoch_length
     );

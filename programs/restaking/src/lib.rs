@@ -28,9 +28,11 @@ pub mod restaking {
     pub fn admin_initialize_fund_account(
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_initialize_fund_account(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+        )?
+        .process_initialize_fund_account(
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.admin,
             ctx.bumps.fund_account,
@@ -56,10 +58,11 @@ pub mod restaking {
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_fund_account_if_needed(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-        )
+        )?
+        .process_update_fund_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -150,11 +153,11 @@ pub mod restaking {
         ctx: Context<FundManagerFundContext>,
         capacity_amount: u64,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_sol_capacity_amount(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            capacity_amount,
-        )
+        )?
+        .process_update_sol_capacity_amount(capacity_amount)
     }
 
     pub fn fund_manager_update_supported_token_capacity_amount(
@@ -162,34 +165,33 @@ pub mod restaking {
         token_mint: Pubkey,
         capacity_amount: u64,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_supported_token_capacity_amount(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            &token_mint,
-            capacity_amount,
-        )
+        )?
+        .process_update_supported_token_capacity_amount(&token_mint, capacity_amount)
     }
 
     pub fn fund_manager_update_withdrawal_enabled_flag(
         ctx: Context<FundManagerFundContext>,
         enabled: bool,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_withdrawal_enabled_flag(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            enabled,
-        )
+        )?
+        .process_update_withdrawal_enabled_flag(enabled)
     }
 
     pub fn fund_manager_update_sol_withdrawal_fee_rate(
         ctx: Context<FundManagerFundContext>,
         sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_sol_withdrawal_fee_rate(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            sol_withdrawal_fee_rate,
-        )
+        )?
+        .process_update_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
     }
 
     pub fn fund_manager_update_batch_processing_threshold(
@@ -197,12 +199,11 @@ pub mod restaking {
         amount: Option<u64>,
         duration: Option<i64>,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_update_batch_processing_threshold(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
-            amount,
-            duration,
-        )
+        )?
+        .process_update_batch_processing_threshold(amount, duration)
     }
 
     ////////////////////////////////////////////
@@ -224,9 +225,11 @@ pub mod restaking {
         capacity_amount: u64,
         pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::process_add_supported_token(
+        modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
+        )?
+        .process_add_supported_token(
             &ctx.accounts.supported_token_account,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,

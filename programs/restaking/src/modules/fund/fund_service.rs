@@ -6,13 +6,12 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::command::{
-    OperationCommandContext, OperationCommandEntry, SelfExecutable,
-};
-use crate::modules::fund::{FundAccount, FundAccountInfo, UserFundAccount};
 use crate::modules::pricing::{PricingService, TokenPricingSource};
-use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
+use crate::modules::reward;
 use crate::utils::*;
+
+use super::command::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -71,9 +70,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .iter_mut()
             .try_for_each(|supported_token| {
                 supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
-                    &supported_token.get_mint(),
+                    &supported_token.mint,
                     10u64
-                        .checked_pow(supported_token.get_decimals() as u32)
+                        .checked_pow(supported_token.decimals as u32)
                         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
                 )?;
 
@@ -106,36 +105,33 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub fn process_transfer_hook(
         &self,
-        reward_account: &mut AccountLoader<'info, RewardAccount>,
-        source_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
-        destination_receipt_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
+        source_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
+        destination_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
         extra_accounts: &'info [AccountInfo<'info>],
         transfer_amount: u64,
     ) -> Result<()> {
+        let mut extra_accounts = extra_accounts.iter();
         // parse extra accounts
-        let source_fund_account_info = extra_accounts
-            .get(0)
-            .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let source_fund_account_option =
-            source_fund_account_info.parse_optional_account_boxed::<UserFundAccount>()?;
-        let source_reward_account_info = extra_accounts
-            .get(1)
-            .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let mut source_reward_account_option =
-            source_reward_account_info.parse_optional_account_loader::<UserRewardAccount>()?;
-        let destination_fund_account_info = extra_accounts
-            .get(2)
-            .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let destination_fund_account_option =
-            destination_fund_account_info.parse_optional_account_boxed::<UserFundAccount>()?;
-        let destination_reward_account_info = extra_accounts
-            .get(3)
-            .ok_or(ProgramError::NotEnoughAccountKeys)?;
-        let mut destination_reward_account_option =
-            destination_reward_account_info.parse_optional_account_loader::<UserRewardAccount>()?;
+        let source_fund_account_option = extra_accounts
+            .next()
+            .ok_or(ProgramError::NotEnoughAccountKeys)?
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+        let mut source_reward_account_option = extra_accounts
+            .next()
+            .ok_or(ProgramError::NotEnoughAccountKeys)?
+            .parse_optional_account_loader::<reward::UserRewardAccount>()?;
+        let destination_fund_account_option = extra_accounts
+            .next()
+            .ok_or(ProgramError::NotEnoughAccountKeys)?
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+        let mut destination_reward_account_option = extra_accounts
+            .next()
+            .ok_or(ProgramError::NotEnoughAccountKeys)?
+            .parse_optional_account_loader::<reward::UserRewardAccount>()?;
 
         // transfer source's reward accrual rate to destination
-        RewardService::new(self.receipt_token_mint, reward_account)?
+        reward::RewardService::new(self.receipt_token_mint, reward_account)?
             .update_reward_pools_token_allocation(
                 source_reward_account_option.as_mut(),
                 destination_reward_account_option.as_mut(),
@@ -192,33 +188,31 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let mut execution_count = 0;
         let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
             .iter()
-            .map(|info| (info.key.clone(), info))
+            .map(|info| (*info.key, info))
             .collect();
 
         'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
         {
-            let sequence = operation_state.get_sequence();
-
             // rearrange given accounts in required order
             let mut required_account_infos = Vec::new();
-            let mut unused_account_keys = BTreeSet::new();
-            remaining_accounts_map.keys().for_each(|key| {
-                unused_account_keys.insert(*key);
-            });
+            let mut unused_account_keys = remaining_accounts_map
+                .keys()
+                .cloned()
+                .collect::<BTreeSet<_>>();
 
-            for account_key in required_accounts.iter() {
+            for account_key in required_accounts {
                 // append required accounts in exact order
-                match remaining_accounts_map.get(&account_key) {
+                match remaining_accounts_map.get(account_key) {
                     Some(account) => {
                         required_account_infos.push(*account);
-                        unused_account_keys.remove(&account_key);
+                        unused_account_keys.remove(account_key);
                     }
                     None => {
                         if execution_count > 0 {
                             // maintain the current command and gracefully stop executing commands
                             msg!(
                                 "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
-                                sequence,
+                                operation_state.sequence,
                                 command,
                                 execution_count
                             );
@@ -228,7 +222,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         // error if it is the first command in this tx
                         msg!(
                             "COMMAND#{}: {:?} has not enough accounts at the first execution",
-                            sequence,
+                            operation_state.sequence,
                             command
                         );
                         return err!(ErrorCode::OperationCommandAccountComputationException);
@@ -237,7 +231,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             // append all unused accounts
-            for unused_account_key in unused_account_keys.iter() {
+            // TODO v0.3/operation: write pricing sources in command?
+            for unused_account_key in &unused_account_keys {
+                // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
                 let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
                 required_account_infos.push(*remaining_account);
             }
@@ -249,13 +245,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
                 Ok(next_command) => {
                     // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} passed", sequence, command);
+                    msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
                     operation_state.set_command(next_command, self.current_timestamp);
                     execution_count += 1;
                 }
                 Err(error) => {
                     // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} failed", sequence, command);
+                    msg!("COMMAND#{}: {:?} failed", operation_state.sequence, command);
                     return Err(error);
                 }
             };

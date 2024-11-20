@@ -40,8 +40,8 @@ impl<'info, 'a> RewardService<'info, 'a> {
 
     pub(in crate::modules) fn update_reward_pools_token_allocation(
         &self,
-        from_user_reward_account: Option<&mut AccountLoader<'info, UserRewardAccount>>,
-        to_user_reward_account: Option<&mut AccountLoader<'info, UserRewardAccount>>,
+        from_user_reward_account: Option<&mut AccountLoader<UserRewardAccount>>,
+        to_user_reward_account: Option<&mut AccountLoader<UserRewardAccount>>,
         amount: u64,
         contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {

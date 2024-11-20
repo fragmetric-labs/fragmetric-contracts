@@ -1,16 +1,16 @@
 use anchor_lang::prelude::*;
 
-use super::command::{InitializeCommand, OperationCommand, OperationCommandEntry};
+use super::command::*;
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
-pub(super) struct OperationState {
+pub struct OperationState {
     updated_at: i64,
     expired_at: i64,
-    sequence: u16,
+    pub(super) sequence: u16,
     command: Option<OperationCommandEntry>,
-    _reserved: [[u8; 32]; 8],
+    _reserved: [[u8; 8]; 32],
 }
 
 impl OperationState {
@@ -60,14 +60,8 @@ impl OperationState {
         self.command = command;
     }
 
+    #[inline(always)]
     pub(super) fn get_command(&self) -> Option<(&OperationCommand, &[Pubkey])> {
-        match self.command {
-            Some(ref command) => Some(command.into()),
-            None => None,
-        }
-    }
-
-    pub(super) fn get_sequence(&self) -> u16 {
-        self.sequence
+        self.command.as_ref().map(Into::into)
     }
 }

@@ -31,9 +31,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                     OperationCommand::EnqueueWithdrawalBatch(command).with_required_accounts(vec![
                         ctx.fund_account.key(),
                         ctx.fund_account.find_receipt_token_program_address(),
-                        ctx.fund_account
-                            .find_receipt_token_lock_account_address()?
-                            .0,
+                        ctx.fund_account.find_receipt_token_lock_account_address()?,
                     ]),
                 ));
             }

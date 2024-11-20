@@ -4,7 +4,6 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::mint;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnstakeLSTCommand {
@@ -41,7 +40,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                     if item.token_amount > 0 {
                         // request to read pool account
 
-                        match supported_token.get_pricing_source() {
+                        match supported_token.pricing_source {
                             TokenPricingSource::SPLStakePool {
                                 address: pool_address,
                             } => {
@@ -61,7 +60,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                     }
                 }
                 UnstakeLSTCommandState::ReadPoolState => {
-                    match supported_token.get_pricing_source() {
+                    match supported_token.pricing_source {
                         TokenPricingSource::SPLStakePool {
                             address: pool_address,
                         } => {
@@ -86,8 +85,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 .push(ctx.fund_account.find_reserve_account_address().0);
                             required_accounts.push(
                                 ctx.fund_account
-                                    .find_supported_token_account_address(&item.mint)?
-                                    .0,
+                                    .find_supported_token_account_address(&item.mint)?,
                             );
                             required_accounts.push(ctx.fund_account.key());
 

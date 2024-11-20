@@ -5,9 +5,10 @@ use spl_tlv_account_resolution::seeds::Seed;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
-use crate::modules::fund::*;
-use crate::modules::reward::{RewardAccount, UserRewardAccount};
+use crate::modules::reward;
 use crate::utils::PDASeeds;
+
+use super::*;
 
 pub struct FundReceiptTokenConfigurationService<'info: 'a, 'a> {
     _receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -63,7 +64,7 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
         ExtraAccountMeta::new_with_seeds(
             &[
                 Seed::Literal {
-                    bytes: RewardAccount::SEED.to_vec(),
+                    bytes: reward::RewardAccount::SEED.to_vec(),
                 },
                 Seed::AccountKey { index: 1 }, // receipt_token_mint
             ],
@@ -90,7 +91,7 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
         ExtraAccountMeta::new_with_seeds(
             &[
                 Seed::Literal {
-                    bytes: UserRewardAccount::SEED.to_vec(),
+                    bytes: reward::UserRewardAccount::SEED.to_vec(),
                 },
                 Seed::AccountKey { index: 1 }, // receipt_token_mint
                 Seed::AccountData {
@@ -122,7 +123,7 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
         ExtraAccountMeta::new_with_seeds(
             &[
                 Seed::Literal {
-                    bytes: UserRewardAccount::SEED.to_vec(),
+                    bytes: reward::UserRewardAccount::SEED.to_vec(),
                 },
                 Seed::AccountKey { index: 1 }, // receipt_token_mint
                 Seed::AccountData {
