@@ -5,6 +5,7 @@ use crate::modules::ed25519;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct DepositMetadata {
+    user: Pubkey,
     wallet_provider: String,
     contribution_accrual_rate: u8, // 100 is 1.0
     expired_at: i64,
@@ -15,6 +16,7 @@ impl DepositMetadata {
         self,
         instructions_sysvar: &AccountInfo,
         payload_signer_key: &Pubkey,
+        user_key: &Pubkey,
         current_timestamp: i64,
     ) -> Result<(String, u8)> {
         ed25519::SignatureVerificationService::verify(
@@ -28,6 +30,8 @@ impl DepositMetadata {
             current_timestamp,
             ErrorCode::FundDepositMetadataSignatureExpiredError,
         );
+
+        require_keys_eq!(*user_key, self.user);
 
         Ok((self.wallet_provider, self.contribution_accrual_rate))
     }
