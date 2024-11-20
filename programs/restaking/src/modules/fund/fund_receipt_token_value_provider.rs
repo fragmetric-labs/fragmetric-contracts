@@ -1,37 +1,28 @@
-use crate::errors::ErrorCode;
-use crate::modules::fund::FundAccount;
-use crate::modules::normalization::NormalizedTokenPoolAccount;
-use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
-use crate::utils;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-pub struct FundReceiptTokenValueProvider<'a> {
-    _marker: std::marker::PhantomData<&'a ()>,
-}
+use crate::errors::ErrorCode;
+use crate::modules::fund::FundAccount;
+use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-impl<'a> TokenValueProvider for FundReceiptTokenValueProvider<'a> {
-    fn resolve_underlying_assets(
-        _token_pricing_source: &TokenPricingSource,
-        pricing_source_accounts: Vec<&AccountInfo>,
+pub struct FundReceiptTokenValueProvider;
+
+impl TokenValueProvider for FundReceiptTokenValueProvider {
+    #[inline(never)]
+    fn resolve_underlying_assets<'info>(
+        self,
+        pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 2);
 
-        // CHECKED: to narrow down 'info lifetime of AccountInfos to 'a due to signature of try_from. below AccountInfos are dropped after this function returns.
-        let receipt_token_mint_info = pricing_source_accounts[0].clone();
-        let receipt_token_mint = InterfaceAccount::<Mint>::try_from(unsafe {
-            std::mem::transmute::<_, &'a AccountInfo<'a>>(&receipt_token_mint_info)
-        })?;
-        let fund_account_info = pricing_source_accounts[1].clone();
-        let fund_account = Account::<FundAccount>::try_from(unsafe {
-            std::mem::transmute::<_, &'a AccountInfo<'a>>(&fund_account_info)
-        })?;
+        let receipt_token_mint = InterfaceAccount::<Mint>::try_from(pricing_source_accounts[0])?;
+        let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[1])?;
 
         let mut assets = Vec::new();
         for supported_token in &fund_account.supported_tokens {
             assets.push(Asset::TOKEN(
-                supported_token.get_mint(),
-                Some(supported_token.get_pricing_source()),
+                supported_token.mint,
+                Some(supported_token.pricing_source.clone()),
                 supported_token
                     .get_operation_reserved_amount()
                     .checked_add(supported_token.get_operating_amount())

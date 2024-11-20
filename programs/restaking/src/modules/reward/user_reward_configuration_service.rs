@@ -1,8 +1,10 @@
-use crate::events;
-use crate::modules::reward::*;
-use crate::utils::AccountLoaderExt;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
+
+use crate::events;
+use crate::utils::AccountLoaderExt;
+
+use super::*;
 
 pub struct UserRewardConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,

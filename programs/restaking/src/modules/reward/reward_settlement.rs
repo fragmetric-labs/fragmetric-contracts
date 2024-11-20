@@ -8,7 +8,7 @@ const REWARD_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct RewardSettlement {
-    reward_id: u16,
+    pub(super) reward_id: u16,
     reward_pool_id: u8,
     num_settlement_blocks: u8,
     settlement_blocks_head: u8,
@@ -45,11 +45,6 @@ impl RewardSettlement {
         self.settled_amount = 0;
         self.settlement_blocks_last_slot = reward_pool_initial_slot;
         self.settlement_blocks_last_reward_pool_contribution = 0;
-    }
-
-    #[inline(always)]
-    pub(super) fn get_reward_id(&self) -> u16 {
-        self.reward_id
     }
 
     #[inline(always)]
@@ -168,11 +163,11 @@ impl RewardSettlement {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct RewardSettlementBlock {
-    amount: u64,
-    starting_slot: u64,
+    pub(super) amount: u64,
+    pub(super) starting_slot: u64,
     starting_reward_pool_contribution: u128,
     ending_reward_pool_contribution: u128,
-    ending_slot: u64,
+    pub(super) ending_slot: u64,
     user_settled_amount: u64,
     user_settled_contribution: u128,
 }
@@ -209,21 +204,6 @@ impl RewardSettlementBlock {
         self.user_settled_contribution = 0;
 
         Ok(())
-    }
-
-    #[inline(always)]
-    pub(super) fn get_amount(&self) -> u64 {
-        self.amount
-    }
-
-    #[inline(always)]
-    pub(super) fn get_starting_slot(&self) -> u64 {
-        self.starting_slot
-    }
-
-    #[inline(always)]
-    pub(super) fn get_ending_slot(&self) -> u64 {
-        self.ending_slot
     }
 
     #[inline(always)]

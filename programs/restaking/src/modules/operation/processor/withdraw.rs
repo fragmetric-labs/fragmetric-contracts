@@ -7,7 +7,6 @@ use crate::constants::ADMIN_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::{self, FundAccount, FundAccountInfo};
-use crate::modules::pricing;
 use crate::utils::PDASeeds;
 
 // TODO v0.3/operation: rewrite withdrawal job as command
@@ -29,7 +28,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
     }
 
     let pricing_service = fund::FundService::new(receipt_token_mint, fund_account)?
-        .new_pricing_service(&pricing_sources)?;
+        .new_pricing_service(pricing_sources)?;
 
     fund_account
         .withdrawal

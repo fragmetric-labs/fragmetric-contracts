@@ -7,10 +7,10 @@ pub struct ClaimUnstakedSOLCommand {
 }
 
 impl SelfExecutable for ClaimUnstakedSOLCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        _ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        _ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: ClaimUnstakedSOLCommand.execute
         Ok(None)

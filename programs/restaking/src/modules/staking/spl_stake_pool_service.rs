@@ -1,12 +1,7 @@
-use crate::events;
-use crate::modules::fund::FundAccount;
-use crate::modules::reward::*;
-use crate::utils::parse_interface_account_boxed;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
-use anchor_spl::token_interface;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::TokenAccount;
 use spl_stake_pool::state::StakePool;
 
 pub struct SPLStakePoolService<'info: 'a, 'a> {

@@ -1,4 +1,6 @@
-use anchor_lang::{prelude::*, solana_program, CheckOwner, Ids, ZeroCopy};
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{entrypoint, system_program};
+use anchor_lang::{CheckOwner, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -40,7 +42,7 @@ pub trait AccountLoaderExt<'info> {
     /// Realloc account to increase extra amount of data size.
     /// It will add at most 10KB([`MAX_PERMITTED_DATA_INCREASE`]).
     ///
-    /// [`MAX_PERMITTED_DATA_INCREASE`]: solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
+    /// [`MAX_PERMITTED_DATA_INCREASE`]: MAX_PERMITTED_DATA_INCREASE
     fn expand_account_size_if_needed(
         &self,
         payer: &Signer<'info>,
@@ -127,8 +129,10 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
                 msg!("realloc account lamports: added={}", required_lamports);
             }
 
-            let max_increase = solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE;
-            let increase = std::cmp::min(required_realloc_size, max_increase);
+            let increase = std::cmp::min(
+                required_realloc_size,
+                entrypoint::MAX_PERMITTED_DATA_INCREASE,
+            );
             let new_account_size = current_account_size + increase;
 
             account_info.realloc(new_account_size, false)?;
@@ -159,99 +163,110 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
     .ok()
 }
 
-#[inline(never)]
-pub fn parse_account_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Box<Account<'info, T>>>
-where
-    T: AccountSerialize + AccountDeserialize + Clone + Owner,
-{
-    Account::try_from(account).map(Box::new)
+pub trait AccountInfoExt<'info> {
+    fn is_initialized(&self) -> bool;
+
+    fn parse_account_boxed<T>(&'info self) -> Result<Box<Account<'info, T>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + Owner;
+
+    fn parse_interface_account_boxed<T>(&'info self) -> Result<Box<InterfaceAccount<'info, T>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + CheckOwner;
+
+    fn parse_optional_account_boxed<T>(&'info self) -> Result<Option<Box<Account<'info, T>>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + Owner;
+
+    fn parse_optional_account_loader<T>(&'info self) -> Result<Option<AccountLoader<'info, T>>>
+    where
+        T: ZeroCopy + Owner;
 }
 
-#[inline(never)]
-pub fn parse_program_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Box<Program<'info, T>>>
-where
-    T: Id,
-{
-    Program::try_from(account).map(Box::new)
-}
+impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
+    fn is_initialized(&self) -> bool {
+        self.lamports() != 0 || self.owner != &system_program::ID
+    }
 
-#[inline(never)]
-pub fn parse_interface_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Box<Interface<'info, T>>>
-where
-    T: Ids,
-{
-    Interface::try_from(account).map(Box::new)
-}
+    #[inline(never)]
+    fn parse_account_boxed<T>(&'info self) -> Result<Box<Account<'info, T>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + Owner,
+    {
+        Account::try_from(self).map(Box::new)
+    }
 
-#[inline(never)]
-pub fn parse_interface_account_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Box<InterfaceAccount<'info, T>>>
-where
-    T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
-{
-    InterfaceAccount::try_from(account).map(Box::new)
-}
+    #[inline(never)]
+    fn parse_interface_account_boxed<T>(&'info self) -> Result<Box<InterfaceAccount<'info, T>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
+    {
+        InterfaceAccount::try_from(self).map(Box::new)
+    }
 
-#[inline(never)]
-pub fn parse_optional_account_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Option<Box<Account<'info, T>>>>
-where
-    T: AccountSerialize + AccountDeserialize + Clone + Owner,
-{
-    match Account::try_from(account) {
-        Ok(account) => Ok(Some(Box::new(account))),
-        Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number
-                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
-        {
-            Ok(None)
+    #[inline(never)]
+    fn parse_optional_account_boxed<T>(&'info self) -> Result<Option<Box<Account<'info, T>>>>
+    where
+        T: AccountSerialize + AccountDeserialize + Clone + Owner,
+    {
+        if !self.is_initialized() {
+            return Ok(None);
         }
-        Err(e) => Err(e),
+
+        Account::try_from(self).map(Box::new).map(Some)
+    }
+
+    fn parse_optional_account_loader<T>(&'info self) -> Result<Option<AccountLoader<'info, T>>>
+    where
+        T: ZeroCopy + Owner,
+    {
+        if !self.is_initialized() {
+            return Ok(None);
+        }
+
+        AccountLoader::try_from(self).map(Some)
     }
 }
 
-#[inline(never)]
-pub fn parse_optional_interface_account_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Option<Box<InterfaceAccount<'info, T>>>>
+pub trait AccountExt<'info> {
+    /// SAFETY: `info: &'info AccountInfo<'info>` field of `Account` type
+    /// is returned by `AsRef::<AccountInfo<'info>>::as_ref()`, but due to
+    /// the trait's signature, its lifetime('info) is narrowed down to `'a`.
+    ///
+    /// Therefore it is absolutely safe to restore `&'a AccountInfo<'info>`
+    /// back to `&'info AccountInfo<'info>`.
+    ///
+    /// ```rs
+    /// pub struct Account<'info, T> {
+    ///     account: T,
+    ///     info: &'info AccountInfo<'info>,
+    /// }
+    ///
+    /// impl<'info, T> AsRef<AccountInfo<'info>> for Account<'info, T> {
+    ///     // lifetime of return value('info) is narrowed down to the
+    ///     // lifetime of `self`('1) due to the method signature.
+    ///     fn as_ref(&self) -> &AccountInfo<'info> {
+    ///         self.info
+    ///     }
+    /// }
+    /// ```
+    fn as_account_info(&self) -> &'info AccountInfo<'info>;
+}
+
+impl<'info, T> AccountExt<'info> for Account<'info, T>
 where
-    T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
+    T: AccountSerialize + AccountDeserialize + Clone,
 {
-    match InterfaceAccount::try_from(account) {
-        Ok(account) => Ok(Some(Box::new(account))),
-        Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number
-                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountNotInitialized) =>
-        {
-            Ok(None)
-        }
-        Err(e) => Err(e),
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
-#[inline(never)]
-pub fn parse_optional_account_loader_boxed<'info, T>(
-    account: &'info AccountInfo<'info>,
-) -> Result<Option<Box<AccountLoader<'info, T>>>>
+impl<'info, T> AccountExt<'info> for InterfaceAccount<'info, T>
 where
-    T: ZeroCopyHeader + Owner + Clone,
+    T: AccountSerialize + AccountDeserialize + Clone,
 {
-    match AccountLoader::try_from(account) {
-        Ok(account) => Ok(Some(Box::new(account))),
-        Err(Error::AnchorError(anchor_err))
-            if anchor_err.error_code_number
-                == <ErrorCode as Into<u32>>::into(ErrorCode::AccountDiscriminatorNotFound) =>
-        {
-            Ok(None)
-        }
-        Err(e) => Err(e),
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }

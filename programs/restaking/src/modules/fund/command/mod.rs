@@ -26,12 +26,13 @@ pub use cmd7_unrestake_vrt::*;
 pub use cmd8_unstake_lst::*;
 pub use cmd9_stake_sol::*;
 
-use crate::modules::fund;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
+use crate::modules::fund;
+
 // propagate common accounts and values to all commands
-pub struct OperationCommandContext<'info, 'a> {
+pub struct OperationCommandContext<'info: 'a, 'a> {
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
 }
@@ -55,10 +56,10 @@ pub enum OperationCommand {
 }
 
 impl SelfExecutable for OperationCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
@@ -87,9 +88,9 @@ pub struct OperationCommandEntry {
     required_accounts: Vec<Pubkey>,
 }
 
-impl OperationCommandEntry {
-    pub fn into(&self) -> (&OperationCommand, &[Pubkey]) {
-        (&self.command, self.required_accounts.as_slice())
+impl<'a> From<&'a OperationCommandEntry> for (&'a OperationCommand, &'a [Pubkey]) {
+    fn from(value: &'a OperationCommandEntry) -> Self {
+        (&value.command, value.required_accounts.as_slice())
     }
 }
 
@@ -103,9 +104,9 @@ impl OperationCommand {
 }
 
 pub trait SelfExecutable {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>>;
 }

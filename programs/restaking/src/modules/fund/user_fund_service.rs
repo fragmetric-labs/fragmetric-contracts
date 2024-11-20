@@ -1,17 +1,16 @@
-use crate::errors::ErrorCode;
-use crate::modules::fund::{
-    DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
-};
-use crate::modules::pricing::PricingService;
-use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
-use crate::modules::{ed25519, reward};
-use crate::utils::PDASeeds;
-use crate::{events, modules};
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
+
+use crate::errors::ErrorCode;
+use crate::events;
+use crate::modules::fund::{
+    DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
+};
+use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
+use crate::utils::PDASeeds;
 
 pub struct UserFundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -66,7 +65,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_reserve_account: &SystemAccount<'info>,
         system_program: &Program<'info, System>,
         instructions_sysvar: &AccountInfo,
-        pricing_sources: &'a [AccountInfo<'info>],
+        pricing_sources: &'info [AccountInfo<'info>],
         sol_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
@@ -88,7 +87,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // calculate receipt token minting amount
         let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(&pricing_sources)?;
+            .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount =
             pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
 
@@ -131,7 +130,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         supported_token_program: &Interface<'info, TokenInterface>,
         instructions_sysvar: &AccountInfo,
-        pricing_sources: &'a [AccountInfo<'info>],
+        pricing_sources: &'info [AccountInfo<'info>],
         supported_token_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
@@ -153,7 +152,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // calculate receipt token minting amount
         let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(&pricing_sources)?;
+            .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount = pricing_service.get_sol_amount_as_token(
             &self.receipt_token_mint.key(),
             pricing_service

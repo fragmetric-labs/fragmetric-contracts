@@ -1,10 +1,9 @@
-use crate::errors::ErrorCode;
-use crate::modules::reward::token_allocated_amount::TokenAllocatedAmountDelta;
-use crate::modules::reward::{RewardSettlement, TokenAllocatedAmount};
 use anchor_lang::prelude::*;
-use anchor_lang::{err, error, require_gt, require_gte, AnchorDeserialize, AnchorSerialize};
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::curve25519::scalar::Zeroable;
-use anchor_spl::token_2022::spl_token_2022::solana_zk_token_sdk::instruction::Pod;
+use bytemuck::{Pod, Zeroable};
+
+use crate::errors::ErrorCode;
+
+use super::*;
 
 const REWARD_POOL_NAME_MAX_LEN: usize = 14;
 const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
@@ -14,7 +13,7 @@ const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 #[repr(C)]
 pub struct RewardPool {
     /// ID is determined by reward account.
-    id: u8,
+    pub(super) id: u8,
     name: [u8; REWARD_POOL_NAME_MAX_LEN],
 
     // bit 0: custom contribution accrual rate enabled?
@@ -25,7 +24,7 @@ pub struct RewardPool {
     token_allocated_amount: TokenAllocatedAmount,
     contribution: u128,
 
-    initial_slot: u64,
+    pub(super) initial_slot: u64,
     updated_slot: u64,
     closed_slot: u64,
 
@@ -88,11 +87,6 @@ impl RewardPool {
         Ok(())
     }
 
-    #[inline(always)]
-    pub(super) fn get_id(&self) -> u8 {
-        self.id
-    }
-
     pub(super) fn get_name(&self) -> Result<&str> {
         Ok(std::str::from_utf8(&self.name)
             .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUtf8FormatException)?
@@ -105,11 +99,6 @@ impl RewardPool {
     }
 
     #[inline(always)]
-    pub(super) fn get_initial_slot(&self) -> u64 {
-        self.initial_slot
-    }
-
-    #[inline(always)]
     pub(super) fn get_closed_slot(&self) -> Option<u64> {
         self.is_closed().then_some(self.closed_slot)
     }
@@ -119,6 +108,7 @@ impl RewardPool {
         self.reward_pool_bitmap & Self::IS_CLOSED_BIT > 0
     }
 
+    #[inline(always)]
     fn set_closed(&mut self, closed_slot: u64) {
         self.reward_pool_bitmap |= Self::IS_CLOSED_BIT;
         self.closed_slot = closed_slot;
@@ -163,7 +153,7 @@ impl RewardPool {
 
     fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
         self.get_reward_settlements_iter_mut()
-            .find(|s| s.get_reward_id() == reward_id)
+            .find(|s| s.reward_id == reward_id)
     }
 
     pub(super) fn settle_reward(
@@ -195,6 +185,11 @@ impl RewardPool {
         let elapsed_slot = updated_slot
             .checked_sub(self.updated_slot)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        if elapsed_slot == 0 {
+            return Ok(());
+        }
+
         let total_contribution_accrual_rate = self
             .token_allocated_amount
             .get_total_contribution_accrual_rate()?;

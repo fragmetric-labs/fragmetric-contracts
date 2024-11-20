@@ -1,17 +1,17 @@
-use crate::errors::ErrorCode;
-use crate::events;
-use crate::modules::fund::FundAccount;
-use crate::modules::reward::*;
-use crate::utils::AccountLoaderExt;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenInterface};
+
+use crate::errors::ErrorCode;
+use crate::events;
+use crate::utils::AccountLoaderExt;
+
+use super::*;
 
 pub struct RewardConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
 
     current_slot: u64,
-    _current_timestamp: i64,
 }
 
 impl<'info, 'a> RewardConfigurationService<'info, 'a> {
@@ -24,7 +24,6 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
             receipt_token_mint,
             reward_account,
             current_slot: clock.slot,
-            _current_timestamp: clock.unix_timestamp,
         })
     }
 

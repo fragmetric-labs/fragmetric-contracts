@@ -29,8 +29,8 @@ pub mod restaking {
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
-            &mut *ctx.accounts.receipt_token_mint,
-            &mut *ctx.accounts.fund_account,
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
         )?
         .process_initialize_fund_account(
             &ctx.accounts.receipt_token_program,
@@ -59,8 +59,8 @@ pub mod restaking {
         ctx: Context<AdminFundAccountUpdateContext>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
-            &mut *ctx.accounts.receipt_token_mint,
-            &mut *ctx.accounts.fund_account,
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_account_if_needed()
     }
@@ -92,7 +92,7 @@ pub mod restaking {
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
     ) -> Result<()> {
         modules::fund::FundReceiptTokenConfigurationService::new(
-            &mut *ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
         .process_initialize_extra_account_meta_list()
@@ -106,7 +106,7 @@ pub mod restaking {
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
     ) -> Result<()> {
         modules::fund::FundReceiptTokenConfigurationService::new(
-            &mut *ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
         .process_update_extra_account_meta_list_if_needed()
@@ -377,10 +377,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_run(
-            ctx.remaining_accounts,
-            force_reset_command,
-        )
+        .process_run(ctx.remaining_accounts, force_reset_command)
     }
 
     // TODO v0.3/operation: deprecate old run
@@ -630,7 +627,6 @@ pub mod restaking {
 
     pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
         modules::reward::UserRewardService::new(
-            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
@@ -644,7 +640,6 @@ pub mod restaking {
         reward_id: u8,
     ) -> Result<()> {
         modules::reward::UserRewardService::new(
-            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?

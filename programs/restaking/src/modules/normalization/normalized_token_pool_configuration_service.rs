@@ -1,10 +1,9 @@
-use super::*;
-use crate::modules::pricing;
-use crate::modules::pricing::PricingService;
 use anchor_lang::prelude::*;
-use anchor_spl::token;
-use anchor_spl::token::{spl_token, Token};
+use anchor_spl::token::spl_token;
+use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+use super::*;
 
 pub struct NormalizedTokenPoolConfigurationService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
@@ -42,10 +41,10 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             self.normalized_token_program.key(),
         );
 
-        token::set_authority(
+        anchor_spl::token::set_authority(
             CpiContext::new(
                 self.normalized_token_program.to_account_info(),
-                token::SetAuthority {
+                anchor_spl::token::SetAuthority {
                     current_authority: normalized_token_mint_current_authority.to_account_info(),
                     account_or_mint: self.normalized_token_mint.to_account_info(),
                 },

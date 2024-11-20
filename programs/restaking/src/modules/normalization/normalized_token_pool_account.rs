@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use std::slice::Iter;
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
@@ -8,7 +7,6 @@ const MAX_SUPPORTED_TOKENS: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
-
 pub struct NormalizedTokenPoolAccount {
     data_version: u16,
     bump: u8,
@@ -75,23 +73,6 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
-    pub(super) fn get_supported_tokens_locked_amount(&self) -> Vec<(Pubkey, u64)> {
-        self.supported_tokens
-            .iter()
-            .map(|token| (token.mint, token.locked_amount))
-            .collect()
-    }
-
-    pub(super) fn get_supported_token(
-        &self,
-        supported_token_mint: Pubkey,
-    ) -> Result<&SupportedToken> {
-        self.supported_tokens
-            .iter()
-            .find(|token| token.mint == supported_token_mint)
-            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
-    }
-
     pub(super) fn get_supported_token_mut(
         &mut self,
         supported_token_mint: Pubkey,
@@ -105,10 +86,10 @@ impl NormalizedTokenPoolAccount {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub(super) struct SupportedToken {
-    mint: Pubkey,
+    pub(super) mint: Pubkey,
     program: Pubkey,
     lock_account: Pubkey,
-    locked_amount: u64,
+    pub(super) locked_amount: u64,
     _reserved: [u8; 64],
 }
 
@@ -121,14 +102,6 @@ impl SupportedToken {
             locked_amount: 0,
             _reserved: [0; 64],
         }
-    }
-
-    pub(super) fn get_mint(&self) -> Pubkey {
-        self.mint
-    }
-
-    pub(super) fn get_locked_amount(&self) -> u64 {
-        self.locked_amount
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {

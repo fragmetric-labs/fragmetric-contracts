@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
-use crate::modules::reward::reward::Reward;
-use crate::modules::reward::reward_pool::RewardPool;
 use crate::utils::{PDASeeds, ZeroCopyHeader};
 
 use super::*;
@@ -213,23 +210,6 @@ impl RewardAccount {
         Ok(())
     }
 
-    pub(super) fn update_user_reward_pools(
-        &mut self,
-        user: &mut UserRewardAccount,
-        current_slot: u64,
-    ) -> Result<()> {
-        user.backfill_not_existing_pools(self.get_reward_pools_iter())?;
-
-        user.get_user_reward_pools_iter_mut()
-            .zip(self.get_reward_pools_iter_mut())
-            .try_for_each(|(user_reward_pool, reward_pool)| {
-                user_reward_pool.update(reward_pool, vec![], current_slot)?;
-                Ok::<(), Error>(())
-            })?;
-
-        Ok(())
-    }
-
     pub(super) fn update_reward_pools_token_allocation(
         &mut self,
         receipt_token_mint: Pubkey,
@@ -245,10 +225,10 @@ impl RewardAccount {
 
         if let Some(from) = from {
             // back-fill not existing pools
-            from.backfill_not_existing_pools(self.get_reward_pools_iter())?;
+            from.backfill_not_existing_pools(self)?;
             // find "from user" related reward pools
             for reward_pool in self.get_related_pools(&from.user, receipt_token_mint)? {
-                let user_reward_pool = from.get_user_reward_pool_mut(reward_pool.get_id())?;
+                let user_reward_pool = from.get_user_reward_pool_mut(reward_pool.id)?;
                 let deltas = vec![TokenAllocatedAmountDelta::new_negative(amount)];
 
                 let effective_deltas =
@@ -259,10 +239,10 @@ impl RewardAccount {
 
         if let Some(to) = to {
             // back-fill not existing pools
-            to.backfill_not_existing_pools(self.get_reward_pools_iter())?;
+            to.backfill_not_existing_pools(self)?;
             // find "to user" related reward pools
             for reward_pool in self.get_related_pools(&to.user, receipt_token_mint)? {
-                let user_reward_pool = to.get_user_reward_pool_mut(reward_pool.get_id())?;
+                let user_reward_pool = to.get_user_reward_pool_mut(reward_pool.id)?;
                 let effective_contribution_accrual_rate = reward_pool
                     .is_custom_contribution_accrual_rate_enabled()
                     .then_some(contribution_accrual_rate)
@@ -291,7 +271,7 @@ impl RewardAccount {
 
         let user_related_holders_ids = self
             .get_holders_iter()
-            .filter_map(|holder| holder.has_pubkey(user).then_some(holder.get_id()))
+            .filter_map(|holder| holder.has_pubkey(user).then_some(holder.id))
             .collect::<Vec<_>>();
 
         let reward_pools = self.get_reward_pools_iter_mut();
@@ -360,12 +340,12 @@ impl RewardAccount {
     }
 
     #[inline(always)]
-    fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
+    pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
         self.get_reward_pools().iter()
     }
 
     #[inline(always)]
-    fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
+    pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
         self.get_reward_pools_mut().iter_mut()
     }
 

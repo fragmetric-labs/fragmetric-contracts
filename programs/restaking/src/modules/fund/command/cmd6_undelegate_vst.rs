@@ -7,10 +7,10 @@ pub struct UndelegateVSTCommand {
 }
 
 impl SelfExecutable for UndelegateVSTCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        _ctx: &mut OperationCommandContext,
-        _accounts: &[AccountInfo],
+        _ctx: &mut OperationCommandContext<'info, 'a>,
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // TODO: UndelegateVSTCommand.execute
         Ok(None)

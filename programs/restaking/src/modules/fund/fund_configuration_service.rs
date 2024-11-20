@@ -3,9 +3,9 @@ use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
 
 use crate::events;
-use crate::modules::fund::*;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::{fund, pricing};
+
+use super::*;
 
 pub struct FundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -18,7 +18,7 @@ impl Drop for FundConfigurationService<'_, '_> {
     }
 }
 
-impl<'info, 'a> FundConfigurationService<'info, 'a> {
+impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut Account<'info, FundAccount>,
@@ -73,6 +73,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         self.fund_account
             .get_supported_token_mut(token_mint)?
             .set_capacity_amount(capacity_amount)?;
+
         self.emit_fund_manager_updated_fund_event()
     }
 
@@ -80,6 +81,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         self.fund_account
             .withdrawal
             .set_withdrawal_enabled_flag(enabled);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
@@ -90,6 +92,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         self.fund_account
             .withdrawal
             .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)?;
+
         self.emit_fund_manager_updated_fund_event()
     }
 
@@ -101,19 +104,20 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
         self.fund_account
             .withdrawal
             .set_batch_processing_threshold(amount, duration);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
     pub fn process_add_supported_token(
         &mut self,
-        fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        fund_supported_token_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
-        pricing_sources: &'a [AccountInfo<'info>],
+        pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
-        require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key(),);
+        require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key());
         require_keys_eq!(
             fund_supported_token_account.mint,
             supported_token_mint.key()
@@ -133,7 +137,7 @@ impl<'info, 'a> FundConfigurationService<'info, 'a> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(&pricing_sources)?;
+            .new_pricing_service(pricing_sources)?;
 
         self.emit_fund_manager_updated_fund_event()
     }

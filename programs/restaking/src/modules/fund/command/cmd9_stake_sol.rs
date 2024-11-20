@@ -1,15 +1,8 @@
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use crate::errors;
-use crate::modules::fund::SupportedTokenInfo;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::{fund, staking};
-use crate::utils::parse_interface_account_boxed;
+use crate::modules::staking;
 use anchor_lang::prelude::*;
-use anchor_spl::token;
-use anchor_spl::token::accessor::mint;
-use anchor_spl::token_interface;
-use spl_stake_pool::instruction::deposit_sol;
-use spl_stake_pool::state::StakePool as SPLStakePoolAccount;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct StakeSOLCommand {
@@ -32,10 +25,10 @@ pub enum StakeSOLCommandState {
 }
 
 impl SelfExecutable for StakeSOLCommand {
-    fn execute(
+    fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext,
-        accounts: &[AccountInfo],
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // there are remaining tokens to handle
         if let Some(item) = self.items.get(0) {
@@ -46,7 +39,7 @@ impl SelfExecutable for StakeSOLCommand {
                     if item.sol_amount > 0 {
                         // request to read pool account
 
-                        match supported_token.get_pricing_source() {
+                        match supported_token.pricing_source {
                             TokenPricingSource::SPLStakePool {
                                 address: pool_address,
                             } => {
@@ -66,7 +59,7 @@ impl SelfExecutable for StakeSOLCommand {
                     }
                 }
                 StakeSOLCommandState::ReadPoolState => {
-                    match supported_token.get_pricing_source() {
+                    match supported_token.pricing_source {
                         TokenPricingSource::SPLStakePool {
                             address: pool_address,
                         } => {
@@ -91,8 +84,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 .push(ctx.fund_account.find_reserve_account_address().0);
                             required_accounts.push(
                                 ctx.fund_account
-                                    .find_supported_token_account_address(&item.mint)?
-                                    .0,
+                                    .find_supported_token_account_address(&item.mint)?,
                             );
 
                             return Ok(Some(
@@ -154,10 +146,7 @@ impl SelfExecutable for StakeSOLCommand {
                         minted_supported_token_amount
                     );
 
-                    require_gte!(
-                        minted_supported_token_amount,
-                        item.sol_amount.div_ceil(2)
-                    );
+                    require_gte!(minted_supported_token_amount, item.sol_amount.div_ceil(2));
                     require_eq!(
                         fund_supported_token_info.get_operation_reserved_amount(),
                         to_pool_token_account_amount

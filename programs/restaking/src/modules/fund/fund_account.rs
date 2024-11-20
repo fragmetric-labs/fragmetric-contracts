@@ -1,11 +1,13 @@
-use super::*;
-use crate::errors::ErrorCode;
-use crate::modules::fund;
-use crate::modules::pricing::TokenPricingSource;
-use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token_2022;
 use anchor_spl::token_interface::Mint;
+
+use crate::errors::ErrorCode;
+use crate::modules::pricing::TokenPricingSource;
+use crate::utils::PDASeeds;
+
+use super::*;
 
 #[constant]
 /// ## Version History
@@ -54,24 +56,31 @@ impl FundAccount {
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
-    pub(super) fn find_account_address(&self) -> Pubkey {
-        Pubkey::create_program_address(&*self.get_signer_seeds(), &crate::ID).unwrap()
+    pub(super) fn find_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_signer_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
+        vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
     pub(super) fn find_reserve_account_address(&self) -> (Pubkey, u8) {
-        Pubkey::find_program_address(
-            &[Self::RESERVE_SEED, self.receipt_token_mint.as_ref()],
-            &crate::ID,
-        )
+        Pubkey::find_program_address(&self.get_reserve_account_seeds(), &crate::ID)
     }
 
     // TODO v0.3/operation: visibility
     pub fn find_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        let mut vec = Vec::new();
-        vec.push(FundAccount::RESERVE_SEED);
-        vec.push(self.receipt_token_mint.as_ref());
-        vec.push(Box::leak(Box::new([self.find_reserve_account_address().1])));
-        vec
+        [
+            self.get_reserve_account_seeds(),
+            // TODO v0.3/general: leak??
+            vec![std::slice::from_ref(Box::leak(Box::new(
+                self.find_reserve_account_address().1,
+            )))],
+        ]
+        .concat()
     }
 
     pub(super) fn find_treasury_account_address(&self) -> (Pubkey, u8) {
@@ -81,19 +90,30 @@ impl FundAccount {
         )
     }
 
-    pub(super) fn find_supported_token_account_address(
-        &self,
-        token: &Pubkey,
-    ) -> Result<(Pubkey, u8)> {
+    pub(super) fn find_supported_token_account_address(&self, token: &Pubkey) -> Result<Pubkey> {
         let supported_token = self.get_supported_token(token)?;
-        Ok(Pubkey::find_program_address(
-            &[
-                self.find_account_address().as_ref(),
-                supported_token.program.as_ref(),
-                supported_token.mint.as_ref(),
-            ],
-            &spl_associated_token_account::ID,
-        ))
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &supported_token.mint,
+                &supported_token.program,
+            ),
+        )
+    }
+
+    #[inline]
+    pub(super) fn find_receipt_token_program_address(&self) -> Pubkey {
+        token_2022::ID
+    }
+
+    pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &self.receipt_token_mint,
+                &self.find_receipt_token_program_address(),
+            ),
+        )
     }
 
     pub(super) fn initialize(
@@ -143,10 +163,6 @@ impl FundAccount {
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
-    }
-
-    pub(super) fn get_receipt_token_decimals(&self) -> u8 {
-        self.receipt_token_decimals
     }
 
     pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedTokenInfo> {
@@ -228,14 +244,14 @@ impl FundAccount {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedTokenInfo {
-    mint: Pubkey,
+    pub(super) mint: Pubkey,
     program: Pubkey,
-    decimals: u8,
+    pub(super) decimals: u8,
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
     operation_reserved_amount: u64,
     pub(super) one_token_as_sol: u64,
-    pricing_source: TokenPricingSource,
+    pub(super) pricing_source: TokenPricingSource,
     operating_amount: u64,
     _reserved: [u8; 120],
 }
@@ -262,10 +278,6 @@ impl SupportedTokenInfo {
         }
     }
 
-    pub(in crate::modules) fn get_mint(&self) -> Pubkey {
-        self.mint
-    }
-
     pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
         self.operation_reserved_amount
     }
@@ -282,15 +294,6 @@ impl SupportedTokenInfo {
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
         self.operating_amount = amount;
-    }
-
-    pub(super) fn get_decimals(&self) -> u8 {
-        self.decimals
-    }
-
-    #[inline(always)]
-    pub(super) fn get_pricing_source(&self) -> TokenPricingSource {
-        self.pricing_source.clone()
     }
 
     pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
@@ -344,9 +347,9 @@ mod tests {
 
         assert_eq!(fund.sol_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_withdrawal_fee_rate_as_f32(), 0.);
-        assert!(fund.withdrawal.get_withdrawal_enabled_flag());
-        assert_eq!(fund.withdrawal.get_batch_processing_threshold_amount(), 0);
-        assert_eq!(fund.withdrawal.get_batch_processing_threshold_duration(), 0);
+        assert!(fund.withdrawal.withdrawal_enabled_flag);
+        assert_eq!(fund.withdrawal.batch_processing_threshold_amount, 0);
+        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
         fund.set_sol_capacity_amount(0).unwrap_err();
@@ -356,19 +359,19 @@ mod tests {
         fund.withdrawal
             .set_batch_processing_threshold(Some(new_amount), None);
         assert_eq!(
-            fund.withdrawal.get_batch_processing_threshold_amount(),
+            fund.withdrawal.batch_processing_threshold_amount,
             new_amount
         );
-        assert_eq!(fund.withdrawal.get_batch_processing_threshold_duration(), 0);
+        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
 
         fund.withdrawal
             .set_batch_processing_threshold(None, Some(new_duration));
         assert_eq!(
-            fund.withdrawal.get_batch_processing_threshold_amount(),
+            fund.withdrawal.batch_processing_threshold_amount,
             new_amount
         );
         assert_eq!(
-            fund.withdrawal.get_batch_processing_threshold_duration(),
+            fund.withdrawal.batch_processing_threshold_duration,
             new_duration
         );
     }
