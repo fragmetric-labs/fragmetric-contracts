@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
+use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
 use super::*;
 
@@ -10,7 +10,7 @@ pub struct NormalizedTokenPoolValueProvider;
 impl TokenValueProvider for NormalizedTokenPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'a, 'info: 'a>(
-        _token_pricing_source: &TokenPricingSource,
+        self,
         pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 2);

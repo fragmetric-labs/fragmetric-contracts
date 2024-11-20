@@ -97,7 +97,6 @@ pub enum RewardType {
         program: Pubkey,
         decimals: u8,
     },
-    #[allow(clippy::upper_case_acronyms)]
     SOL,
 }
 

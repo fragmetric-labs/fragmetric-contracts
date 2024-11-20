@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 #[cfg(test)]
 use crate::modules::pricing::MockAsset;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, PartialEq)]
+#[derive(Clone, Debug, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq)]
 #[non_exhaustive]
 pub enum TokenPricingSource {
     SPLStakePool {

@@ -1,13 +1,14 @@
-use super::SPLStakePoolService;
-use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
-use crate::utils;
 use anchor_lang::prelude::*;
+
+use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
+
+use super::SPLStakePoolService;
 
 pub struct SPLStakePoolValueProvider;
 
 impl TokenValueProvider for SPLStakePoolValueProvider {
     fn resolve_underlying_assets<'a, 'info: 'a>(
-        _token_pricing_source: &TokenPricingSource,
+        self,
         pricing_source_accounts: Vec<&'a AccountInfo<'info>>,
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);

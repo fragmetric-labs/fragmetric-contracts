@@ -1,18 +1,17 @@
-use crate::constants::FRAGSOL_MINT_ADDRESS;
+use std::collections::BTreeMap;
+
+use anchor_lang::prelude::*;
+
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
-use crate::modules::pricing::{
-    Asset, MockPricingSourceValueProvider, TokenPricingSource, TokenValue, TokenValueProvider,
-};
 use crate::modules::staking::{MarinadeStakePoolValueProvider, SPLStakePoolValueProvider};
 use crate::utils;
-use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::{amount, mint};
-use anchor_spl::token_interface::Mint;
-use std::collections::BTreeMap;
 
-#[derive(Debug)]
+#[cfg(test)]
+use super::MockPricingSourceValueProvider;
+use super::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
+
 pub struct PricingService<'info> {
     token_pricing_source_accounts_map: BTreeMap<Pubkey, AccountInfo<'info>>,
     token_value_map: BTreeMap<Pubkey, TokenValue>,
@@ -51,20 +50,14 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                SPLStakePoolValueProvider::resolve_underlying_assets(
-                    token_pricing_source,
-                    vec![account1],
-                )?
+                SPLStakePoolValueProvider.resolve_underlying_assets(vec![account1])?
             }
             TokenPricingSource::MarinadeStakePool { address } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                MarinadeStakePoolValueProvider::resolve_underlying_assets(
-                    token_pricing_source,
-                    vec![account1],
-                )?
+                MarinadeStakePoolValueProvider.resolve_underlying_assets(vec![account1])?
             }
             TokenPricingSource::NormalizedTokenPool {
                 mint_address,
@@ -78,10 +71,8 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(pool_address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                NormalizedTokenPoolValueProvider::resolve_underlying_assets(
-                    token_pricing_source,
-                    vec![account1, account2],
-                )?
+                NormalizedTokenPoolValueProvider
+                    .resolve_underlying_assets(vec![account1, account2])?
             }
             TokenPricingSource::FundReceiptToken {
                 mint_address,
@@ -95,18 +86,14 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(fund_address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                FundReceiptTokenValueProvider::resolve_underlying_assets(
-                    token_pricing_source,
-                    vec![account1, account2],
-                )?
+                FundReceiptTokenValueProvider.resolve_underlying_assets(vec![account1, account2])?
             }
             #[cfg(test)]
-            TokenPricingSource::Mock { .. } => {
-                MockPricingSourceValueProvider::resolve_underlying_assets(
-                    token_pricing_source,
-                    vec![],
-                )?
-            }
+            TokenPricingSource::Mock {
+                numerator,
+                denominator,
+            } => MockPricingSourceValueProvider::new(numerator, denominator)
+                .resolve_underlying_assets(vec![])?,
         };
 
         // expand supported tokens recursively
@@ -118,8 +105,8 @@ impl<'info> PricingService<'info> {
         })?;
 
         // check already registered token
-        if self.token_value_map.contains_key(token_mint) {
-            require_eq!(self.token_value_map.get(token_mint).unwrap(), &token_value);
+        if let Some(registered_token_value) = self.token_value_map.get(token_mint) {
+            require_eq!(registered_token_value, &token_value);
             return Ok(self);
         }
 
@@ -187,5 +174,94 @@ impl<'info> PricingService<'info> {
         //     msg!("PRICING: {} SOL <= {} {:?} ({} SOL / {} TOKEN)", sol_amount, token_amount, token_mint, total_token_value_as_sol, total_token_amount);
         // }
         Ok(sol_amount)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::modules::pricing::MockAsset;
+
+    use super::*;
+
+    #[test]
+    fn test_mock_pricing_source() {
+        let mut pricing_service = PricingService::new(&[]).unwrap();
+
+        let mock_mint_10_10 = Pubkey::new_unique();
+        pricing_service
+            .resolve_token_pricing_source(
+                &mock_mint_10_10,
+                &TokenPricingSource::Mock {
+                    numerator: vec![MockAsset::SOL(10)],
+                    denominator: 10,
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            pricing_service
+                .get_sol_amount_as_token(&mock_mint_10_10, 1_000)
+                .unwrap(),
+            1_000
+        );
+        assert_eq!(
+            pricing_service
+                .get_token_amount_as_sol(&mock_mint_10_10, 2_000)
+                .unwrap(),
+            2_000
+        );
+
+        let mock_mint_12_10 = Pubkey::new_unique();
+        pricing_service
+            .resolve_token_pricing_source(
+                &mock_mint_12_10,
+                &TokenPricingSource::Mock {
+                    numerator: vec![
+                        MockAsset::SOL(10_000),
+                        MockAsset::TOKEN(mock_mint_10_10, 2_000),
+                    ],
+                    denominator: 10_000,
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            pricing_service
+                .get_sol_amount_as_token(&mock_mint_12_10, 1_200)
+                .unwrap(),
+            1_000
+        );
+        assert_eq!(
+            pricing_service
+                .get_token_amount_as_sol(&mock_mint_12_10, 2_000)
+                .unwrap(),
+            2_400
+        );
+
+        let mock_mint_14_10 = Pubkey::new_unique();
+        let mock_source_14_10 = &TokenPricingSource::Mock {
+            numerator: vec![
+                MockAsset::SOL(2_000),
+                MockAsset::TOKEN(mock_mint_12_10, 10_000),
+            ],
+            denominator: 10_000,
+        };
+        pricing_service
+            .resolve_token_pricing_source(&mock_mint_10_10, mock_source_14_10)
+            .map(|_| ())
+            .expect_err("resolve_token_pricing_source fails for already registered token");
+        pricing_service
+            .resolve_token_pricing_source(&mock_mint_14_10, mock_source_14_10)
+            .unwrap();
+        assert_eq!(
+            pricing_service
+                .get_sol_amount_as_token(&mock_mint_14_10, 1_400)
+                .unwrap(),
+            1_000
+        );
+        assert_eq!(
+            pricing_service
+                .get_token_amount_as_sol(&mock_mint_14_10, 2_000)
+                .unwrap(),
+            2_800
+        );
     }
 }
