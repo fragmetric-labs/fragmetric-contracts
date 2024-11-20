@@ -3,15 +3,16 @@ import chaiAsPromised from 'chai-as-promised';
 import {RestakingPlayground} from "../tools/restaking/playground";
 import * as anchor from "@coral-xyz/anchor";
 
-export const restakingPlayground = RestakingPlayground.create('local', {
-    provider: anchor.AnchorProvider.env(),
-});
-
 chai.use(chaiAsPromised);
 process.on('unhandledRejection', (err) => {
     console.error(err);
     process.exit(1);
 });
+
+export const restakingPlayground = RestakingPlayground.create('local', {
+    provider: anchor.AnchorProvider.env(),
+});
+
 
 /** define test suites here **/
 

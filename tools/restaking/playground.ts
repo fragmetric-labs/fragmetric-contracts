@@ -85,6 +85,39 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
+    public async getOrCreateKnownAddressLookupTable() {
+        if (this._knownAddressLookupTableAddress) {
+            return this._knownAddressLookupTableAddress;
+        }
+
+        const authority = this.keychain.getKeypair('ADMIN').publicKey;
+        const payer = this.wallet.publicKey;
+
+        // TODO: Use PDA as ALT address if possible
+        const [createIx, lookupTable] = web3.AddressLookupTableProgram.createLookupTable({
+            authority,
+            payer,
+            recentSlot: this.isLocalnet ? 0 : await this.connection.getSlot(),
+        });
+        const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
+            lookupTable,
+            authority,
+            payer,
+            addresses: [
+                // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
+                ...Object.values(this.knownAddress).filter(a => typeof a != 'function') as web3.PublicKey[],
+            ],
+        });
+
+        await this.run({
+            instructions: [createIx, updateIx],
+            signerNames: ['ADMIN'],
+        });
+        this._knownAddressLookupTableAddress = lookupTable;
+        logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
+    }
+    private _knownAddressLookupTableAddress?: web3.PublicKey;
+
     public get knownAddress() {
         if (this._knownAddress) return this._knownAddress;
         return (this._knownAddress = this._getKnownAddress());
@@ -1245,6 +1278,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [user],
             events: ["userDepositedSupportedTokenToFund", "userUpdatedRewardPool"],
+            lookupTables: [
+                await this.getOrCreateKnownAddressLookupTable(),
+            ],
         });
 
         logger.notice(`user deposited: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)}`.padEnd(LOG_PAD_LARGE), userSupportedTokenAddress.toString());
@@ -1575,7 +1611,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // TODO v0.3/operation: deprecate below
-    public async runOperatorDeprecatingRun(operator: web3.Keypair = this.wallet, prioritizationFee = 4_000) {
+    public async runOperatorDeprecatingRun(operator: web3.Keypair = this.wallet, computeUnitLimit = 800_000, prioritizationFeeMicroLamports?: number) {
         // command=0. staking once x2
         // command=1. normalize lst x(#supported tokens)
         // command=2. restaking nsol x1
@@ -1638,9 +1674,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
         const cmd0Tx = await this.run({
             instructions: [
-                web3.ComputeBudgetProgram.setComputeUnitPrice({
-                    microLamports: prioritizationFee,
-                }),
                 this.program.methods
                     .operatorDeprecatingRun(0)
                     .accounts({
@@ -1651,8 +1684,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [operator],
             events: ["operatorProcessedJob"],
-            computeUnitLimit: 800_000,
             skipPreflight: true,
+            computeUnitLimit,
+            prioritizationFeeMicroLamports,
         });
         if (cmd0Tx.error) {
             return {error: cmd0Tx.error};
@@ -1714,9 +1748,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ];
             const cmd1Tx = await this.run({
                 instructions: [
-                    web3.ComputeBudgetProgram.setComputeUnitPrice({
-                        microLamports: prioritizationFee,
-                    }),
                     this.program.methods
                         .operatorDeprecatingRun(1)
                         .accounts({
@@ -1727,8 +1758,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ],
                 signers: [operator],
                 events: ["operatorProcessedJob"],
-                computeUnitLimit: 800_000,
                 skipPreflight: true,
+                computeUnitLimit,
+                prioritizationFeeMicroLamports,
             });
             if (cmd1Tx.error) {
                 return {error: cmd1Tx.error};
@@ -1828,9 +1860,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
         const cmd2Tx = await this.run({
             instructions: [
-                web3.ComputeBudgetProgram.setComputeUnitPrice({
-                    microLamports: prioritizationFee,
-                }),
                 this.program.methods
                     .operatorDeprecatingRun(2)
                     .accounts({
@@ -1841,8 +1870,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [operator],
             events: ["operatorProcessedJob"],
-            computeUnitLimit: 800_000,
             skipPreflight: true,
+            computeUnitLimit,
+            prioritizationFeeMicroLamports,
         });
         if (cmd2Tx.error) {
             return {error: cmd2Tx.error};
@@ -1941,9 +1971,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const cmd3Tx = await this.run({
             instructions: [
-                web3.ComputeBudgetProgram.setComputeUnitPrice({
-                    microLamports: prioritizationFee,
-                }),
                 this.program.methods
                     .operatorDeprecatingRun(3)
                     .accounts({
@@ -1954,8 +1981,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [operator],
             events: ["operatorProcessedJob"],
-            computeUnitLimit: 800_000,
             skipPreflight: true,
+            computeUnitLimit,
+            prioritizationFeeMicroLamports,
         });
         if (cmd3Tx.error) {
             return {error: cmd3Tx.error};
@@ -2067,9 +2095,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
         const cmd4Tx = await this.run({
             instructions: [
-                web3.ComputeBudgetProgram.setComputeUnitLimit({
-                    units: 800_000,
-                }),
                 this.program.methods
                     .operatorDeprecatingRun(4)
                     .accounts({
@@ -2081,12 +2106,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorProcessedJob"],
             skipPreflight: true,
+            computeUnitLimit,
+            prioritizationFeeMicroLamports,
         });
         if (cmd4Tx.error) {
             return {error: cmd4Tx.error};
         }
 
-        logger.notice(`operator run#3: unrestaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        logger.notice(`operator run#4: unrestaked nt`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
         const [
             fragSOLFund,

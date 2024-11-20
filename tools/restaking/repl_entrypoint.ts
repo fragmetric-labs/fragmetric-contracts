@@ -3,6 +3,7 @@ import {askOnce, startREPL} from "../lib/repl";
 import {RestakingPlayground} from "./playground";
 import * as web3 from "@solana/web3.js";
 import * as anchor from '@coral-xyz/anchor';
+// @ts-ignore
 import chalk from 'chalk';
 
 if (process.argv.length > 2) {
@@ -26,13 +27,14 @@ function run(env: KEYCHAIN_ENV) {
             const cluster = restaking.isMainnet ? chalk.bgRed.white('mainnet') : (restaking.isDevnet ? chalk.bgYellow.black('devnet') : chalk.bgWhite.black('local'));
             const endpoint = chalk.dim(`${restaking.connection.rpcEndpoint.length > 35 ? restaking.connection.rpcEndpoint.substring(0, 33) + '..' : restaking.connection.rpcEndpoint}`);
 
-            console.log(`[!] Type 'restaking.' and press TAB to start...`);
+            console.log(`[!] Type 'restaking.' or 'r.' and press TAB to start...\n[!] Can use _ to refer the previous expression.`);
             startREPL({
                 prompt: `${cluster} ${endpoint} > `,
                 context: {
                     web3,
                     BN: anchor.BN,
                     restaking,
+                    r: restaking,
                 },
             });
         })

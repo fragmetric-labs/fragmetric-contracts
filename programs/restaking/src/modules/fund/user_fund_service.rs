@@ -79,6 +79,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 metadata.verify(
                     instructions_sysvar,
                     metadata_signer_key,
+                    self.user.key,
                     self.current_timestamp,
                 )
             })
@@ -144,6 +145,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 metadata.verify(
                     instructions_sysvar,
                     metadata_signer_key,
+                    self.user.key,
                     self.current_timestamp,
                 )
             })

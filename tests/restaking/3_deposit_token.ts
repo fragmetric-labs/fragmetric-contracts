@@ -7,6 +7,11 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
     const restaking = await restakingPlayground;
     const user3 = restaking.keychain.getKeypair('MOCK_USER3');
     const user4 = restaking.keychain.getKeypair('MOCK_USER4');
+    
+    step("create known address lookup table", async function () {
+        // TODO: ... it takes more than 10 seconds, where it should be placed?
+        await restaking.getOrCreateKnownAddressLookupTable();
+    });
 
     step("try airdrop SOL and supported tokens to mock accounts", async function () {
         await Promise.all([
@@ -69,6 +74,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
         const amount1 = new BN(6 * decimals);
         const currentTimestamp = new BN(Math.floor(Date.now() / 1000) + 5);
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
+            user: user4.publicKey,
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
             expiredAt: currentTimestamp,
@@ -88,6 +94,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
 
         const amount2 = new BN(4 * decimals);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
+            user: user4.publicKey,
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
             expiredAt: currentTimestamp,

@@ -59,6 +59,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         const amount1 = new BN(6 * anchor.web3.LAMPORTS_PER_SOL);
         const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
+            user: user2.publicKey,
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
             expiredAt: currentTimestamp,
@@ -78,6 +79,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
         const amount2 = new BN(4 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
+            user: user2.publicKey,
             walletProvider: "FRONTPACK",
             contributionAccrualRate: 110,
             expiredAt: currentTimestamp,
@@ -102,17 +104,24 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
         const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
+            user: user1.publicKey,
             walletProvider: "MYPACK",
             contributionAccrualRate: 200,
             expiredAt: currentTimestamp,
         });
+
+        // invalid signer
         await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1, user2)).rejectedWith('InvalidSignatureError');
+
+        // invalid user key
+        await expect(restaking.runUserDepositSOL(user2, amount1, depositMetadata1)).rejectedWith('RequireKeysEqViolated');
     });
 
     step("signature verification has to fail when after expiration", async function () {
         const amount1 = new BN(5 * anchor.web3.LAMPORTS_PER_SOL);
         const expirationTimestamp = new BN(Math.floor(Date.now() / 1000) - 5); // expired 2 sec ago
         const depositMetadata1 = restaking.asType<'depositMetadata'>({
+            user: user2.publicKey,
             walletProvider: "BACKPACK",
             contributionAccrualRate: 130,
             expiredAt: expirationTimestamp,

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {exec} from "node:child_process";
 import {web3} from '@coral-xyz/anchor';
+import * as sweb3 from '@solana/web3.js';
 import {KeychainLedgerAdapter} from "./keychain_ledger_adapter";
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {getLogger} from "./logger";
@@ -55,7 +56,7 @@ export class Keychain<KEYS extends string> {
             null;
     }
 
-    public async signTransaction(name: KEYS, tx: web3.Transaction): Promise<{
+    public async signTransaction(name: KEYS, tx: sweb3.VersionedTransaction | sweb3.Transaction): Promise<{
         local?: web3.Keypair,
         ledger?: web3.SignaturePubkeyPair
     }> {
@@ -68,14 +69,12 @@ export class Keychain<KEYS extends string> {
 
             } else if (this.keypairs.ledger.has(name)) {
                 const keypair = this.keypairs.ledger.get(name);
-                const txBuffer = tx.serializeMessage();
-
                 return {
                     ledger: {
                         publicKey: keypair.publicKey,
                         signature: Keychain.ledgerAdapter ? await Keychain.ledgerAdapter.getSignature(
                             keypair.bip32Path,
-                            txBuffer,
+                            tx,
                         ) : Buffer.alloc(0),
                     },
                 };
@@ -148,13 +147,18 @@ export class Keychain<KEYS extends string> {
         };
 
         if (!Keychain.ledgerAdapter && Object.values(keypairs).some(k => (k as string | null)?.startsWith(LEDGER_PATH_PREFIX))) {
-            Keychain.ledgerAdapter = await KeychainLedgerAdapter.create().catch(async (err) => {
-                if (await askYesNo('[?] failed to initialize ledger connection, ignore and continue?')) {
-                    Keychain.ledgerAdapter = null;
-                } else {
-                    throw err;
+            while (Keychain.ledgerAdapter == null) {
+                try {
+                    Keychain.ledgerAdapter = await KeychainLedgerAdapter.create();
+                } catch (err) {
+                    if (await askYesNo('[?] failed to initialize ledger connection, ignore(y) or retry(n)?')) {
+                        Keychain.ledgerAdapter = null;
+                        break
+                    } else {
+                        logger.debug('retrying to initialize ledger connection');
+                    }
                 }
-            });
+            }
         }
 
         logger.notice(`loading ${program} program keypairs`);

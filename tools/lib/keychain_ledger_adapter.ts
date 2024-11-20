@@ -69,16 +69,16 @@ export class KeychainLedgerAdapter {
         return new web3.PublicKey(r.address);
     }
 
-    public async getSignature(bip32Path: string, txBuffer: Buffer): Promise<Buffer> {
+    public async getSignature(bip32Path: string, tx: web3.VersionedTransaction | web3.Transaction): Promise<Buffer> {
         let account = `${(await this.getPublicKey(bip32Path)).toString()} (${bip32Path})`;
         logger.notice(`singing with ledger`.padEnd(LOG_PAD_LARGE), account);
         try {
-            const r = await this.solanaApp.signTransaction(bip32Path, txBuffer);
+            const buffer = 'version' in tx ? Buffer.from((tx as web3.VersionedTransaction).message.serialize()) : (tx as web3.Transaction).serializeMessage();
+            const r = await this.solanaApp.signTransaction(bip32Path, buffer);
             return r.signature;
         } catch (e) {
-            if (e.statusCode == 27265) {
-                logger.error(`invalid signer for the transaction`.padEnd(LOG_PAD_LARGE), account);
-            }
+            logger.error(`failed to sign the transaction with ledger for:`.padEnd(LOG_PAD_LARGE), account);
+            throw e;
         }
     }
 }

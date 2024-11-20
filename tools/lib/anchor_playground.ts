@@ -4,7 +4,6 @@ import * as sweb3 from '@solana/web3.js';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
-import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes/index';
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
@@ -58,27 +57,41 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         events?: EVENTS[],
         skipPreflight?: boolean,
         computeUnitLimit?: number,
+        prioritizationFeeMicroLamports?: number,
+        lookupTables?: web3.PublicKey[],
     }) {
         let txSig: string | null = null;
         try {
             // prepare instructions
-            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit} = args;
-            const tx = new web3.Transaction()
-                .add(
-                    ...(computeUnitLimit ? [
+            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit, prioritizationFeeMicroLamports, lookupTables = []} = args;
+
+            // get recent block hash
+            const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+            const tx = new sweb3.VersionedTransaction(
+                new sweb3.TransactionMessage({
+                    payerKey: this.keychain.wallet.publicKey,
+                    recentBlockhash: blockhash,
+                    instructions: [
+                        ...(typeof prioritizationFeeMicroLamports != 'undefined' ? [
+                            web3.ComputeBudgetProgram.setComputeUnitPrice({
+                                microLamports: prioritizationFeeMicroLamports,
+                            }),
+                        ] : []),
+                        ...(typeof computeUnitLimit != 'undefined' ? [
                             web3.ComputeBudgetProgram.setComputeUnitLimit({
                                 units: computeUnitLimit,
                             })
                         ] : []),
-                    ...await Promise.all(instructions)
-                );
-
-            // set recent block hash
-            const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+                        ...await Promise.all(instructions),
+                    ]
+                }).compileToV0Message(
+                    await Promise.all(
+                        lookupTables.map(address => this.connection.getAddressLookupTable(address).then(res => res.value)),
+                    ),
+                )
+            );
 
             // sign with wallet to pay fee
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = this.keychain.wallet.publicKey;
             signers.push(this.keychain.wallet);
 
             // sign from keypair loader
@@ -92,28 +105,27 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                     logger.debug(`${keypairName} (signer)`.padEnd(LOG_PAD_LARGE), `${ledger.publicKey.toString()}`)
                 }
             }
-            tx.partialSign(...signers);
+
+            // sign with given signers
+            tx.sign(signers);
 
             // send transaction
-            txSig = bs58.encode(tx.signature);
-            await web3.sendAndConfirmRawTransaction(
-                this.provider.connection,
-                tx.serialize(),
-                {
-                    abortSignal: undefined,
-                    lastValidBlockHeight,
-                    blockhash,
-                    signature: txSig,
-                },
-                {
-                    skipPreflight,
-                    commitment: 'confirmed',
-                }
-            );
+            txSig = await this.connection.sendTransaction(tx, {
+                skipPreflight,
+            });
+            await this.connection.confirmTransaction({
+                abortSignal: undefined,
+                lastValidBlockHeight,
+                blockhash,
+                signature: txSig,
+            }, 'confirmed');
 
             // get result and parse events and errors
-            const txResult = await this.connection.getParsedTransaction(txSig, 'confirmed');
-            logger.info(`transaction confirmed:`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
+            const txResult = await this.connection.getParsedTransaction(txSig, {
+                commitment: 'confirmed',
+                maxSupportedTransactionVersion: 0,
+            });
+            logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
 
             const result = {
                 txSig,
