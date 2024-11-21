@@ -1537,27 +1537,45 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         // - can contain 28/32 accounts including reserved four accounts.
         // - order doesn't matter, no need to put duplicate.
         // - contain accounts as many as possible to execute multiple commands in a single tx.
-        const requiredAccounts: web3.AccountMeta[] = this.pricingSourceAccounts.slice();
-        const containedAccounts = new Set(
-            [
-                operator.publicKey,
-                web3.SystemProgram.programId,
-                this.knownAddress.fragSOLTokenMint,
-                this.knownAddress.fragSOLFund,
-            ]
-                .concat(this.pricingSourceAccounts.map(account => account.pubkey)),
-        );
+        const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
+        this.pricingSourceAccounts.forEach(accoutMeta => {
+            requiredAccounts.set(accoutMeta.pubkey, accoutMeta);
+        });
+        requiredAccounts.set(operator.publicKey, {
+            pubkey: operator.publicKey,
+            isWritable: true,
+            isSigner: true,
+        });
+        requiredAccounts.set(web3.SystemProgram.programId, {
+            pubkey: web3.SystemProgram.programId,
+            isWritable: false,
+            isSigner: false,
+        });
+        requiredAccounts.set(this.knownAddress.fragSOLTokenMint, {
+            pubkey: this.knownAddress.fragSOLTokenMint,
+            isWritable: true,
+            isSigner: false,
+        });
+        requiredAccounts.set(this.knownAddress.fragSOLFund, {
+            pubkey: this.knownAddress.fragSOLFund,
+            isWritable: true,
+            isSigner: false,
+        });
+
         let fragSOLFund = await this.getFragSOLFundAccount();
         let nextOperationSequence = fragSOLFund.operation.nextSequence;
         let nextOperationCommand = resetCommand ?? fragSOLFund.operation.nextCommand;
         if (nextOperationCommand) {
-            for (const pubkey of nextOperationCommand.requiredAccounts) {
-                if (!containedAccounts.has(pubkey)) {
-                    containedAccounts.add(pubkey);
-                    requiredAccounts.push({
-                        pubkey,
+            for (const accountMeta of nextOperationCommand.requiredAccounts) {
+                if (requiredAccounts.has(accountMeta.pubkey)) {
+                    if (accountMeta.isWritable) {
+                        requiredAccounts.get(accountMeta.pubkey).isWritable = true;
+                    }
+                } else {
+                    requiredAccounts.set(accountMeta.pubkey, {
+                        pubkey: accountMeta.pubkey,
+                        isWritable: accountMeta.isWritable,
                         isSigner: false,
-                        isWritable: true,
                     });
                 }
             }
@@ -1570,7 +1588,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .accounts({
                         operator: operator.publicKey,
                     })
-                    .remainingAccounts(requiredAccounts)
+                    .remainingAccounts(Array.from(requiredAccounts.values()))
                     .instruction(),
             ],
             signers: [operator],
