@@ -1,8 +1,10 @@
 use std::ops::Deref;
+
 use anchor_lang::prelude::*;
-use crate::utils;
+
 use crate::errors;
 use crate::modules::fund::weighted_allocation_strategy;
+use crate::utils;
 
 #[derive(Clone, Debug)]
 pub struct Participant {
@@ -13,7 +15,11 @@ pub struct Participant {
 
 impl Participant {
     fn new(weight: u64, allocated_amount: u64, capacity_amount: u64) -> Self {
-        Self { weight, allocated_amount, capacity_amount }
+        Self {
+            weight,
+            allocated_amount,
+            capacity_amount,
+        }
     }
 
     fn is_full(&self) -> bool {
@@ -24,13 +30,13 @@ impl Participant {
 pub struct WeightedAllocationStrategy;
 
 impl WeightedAllocationStrategy {
-    
     /// returns remaining_resource after the allocation made
-    fn put(participants: &mut Vec<Participant>, total_resource: u64) -> u64 {
+    fn put(participants: &mut [Participant], total_resource: u64) -> u64 {
         let mut remaining_resource = total_resource;
 
         while remaining_resource > 0 {
-            let mut target_participants: Vec<_> = participants.iter_mut()
+            let mut target_participants: Vec<_> = participants
+                .iter_mut()
                 .filter(|p| p.weight > 0 && !p.is_full())
                 .collect();
 
@@ -39,14 +45,21 @@ impl WeightedAllocationStrategy {
             }
 
             // find the basis participant
-            let basis_participant = target_participants.iter()
+            let basis_participant = target_participants
+                .iter()
                 .max_by_key(|p| p.allocated_amount)
                 .unwrap();
 
             // calculate shortages
-            let shortages = target_participants.iter()
+            let shortages = target_participants
+                .iter()
                 .map(|p| {
-                    let target_amount = utils::get_proportional_amount(basis_participant.allocated_amount, p.weight, basis_participant.weight).unwrap();
+                    let target_amount = utils::get_proportional_amount(
+                        basis_participant.allocated_amount,
+                        p.weight,
+                        basis_participant.weight,
+                    )
+                    .unwrap();
                     target_amount.saturating_sub(p.allocated_amount)
                 })
                 .collect::<Vec<_>>();
@@ -61,9 +74,13 @@ impl WeightedAllocationStrategy {
                         continue;
                     }
                     let p = &mut target_participants[i];
-                    let allocating_resource = utils::get_proportional_amount(allocatable_resource, shortage, total_shortages)
-                        .unwrap()
-                        .min(p.capacity_amount - p.allocated_amount);
+                    let allocating_resource = utils::get_proportional_amount(
+                        allocatable_resource,
+                        shortage,
+                        total_shortages,
+                    )
+                    .unwrap()
+                    .min(p.capacity_amount - p.allocated_amount);
                     p.allocated_amount += allocating_resource;
                     allocated_amount += allocating_resource;
                 }
@@ -77,25 +94,28 @@ impl WeightedAllocationStrategy {
             let total_weights = target_participants.iter().map(|p| p.weight).sum();
             let mut allocated_amount = 0;
             for p in target_participants.iter_mut() {
-                let allocating_resource = utils::get_proportional_amount(remaining_resource, p.weight, total_weights)
-                    .unwrap()
-                    .min(p.capacity_amount - p.allocated_amount);
+                let allocating_resource =
+                    utils::get_proportional_amount(remaining_resource, p.weight, total_weights)
+                        .unwrap()
+                        .min(p.capacity_amount - p.allocated_amount);
                 p.allocated_amount += allocating_resource;
                 allocated_amount += allocating_resource;
             }
 
             if remaining_resource == 1 {
                 // cannot allocate more due to precision
-                let max_weighted_target_participant = target_participants.iter_mut().filter(|p| !p.is_full()).max_by_key(|p| p.weight);
+                let max_weighted_target_participant = target_participants
+                    .iter_mut()
+                    .filter(|p| !p.is_full())
+                    .max_by_key(|p| p.weight);
                 if let Some(max_weighted_target_participant) = max_weighted_target_participant {
                     max_weighted_target_participant.allocated_amount += 1;
                     remaining_resource = 0;
                 }
                 break;
-
             } else if allocated_amount == 0 {
                 // cannot allocate more due to maxed capacity
-                break
+                break;
             }
 
             remaining_resource -= allocated_amount;
@@ -105,11 +125,14 @@ impl WeightedAllocationStrategy {
     }
 
     /// returns required_resource after the de-allocation made
-    fn cut(participants: &mut Vec<Participant>, total_resource: u64) -> u64 {
+    fn cut(participants: &mut [Participant], total_resource: u64) -> u64 {
         let mut required_resource = total_resource;
 
         // cut from non-zero weighted participants first
-        let weighted_participants = &mut participants.iter_mut().filter(|p| p.weight > 0).collect::<Vec<_>>();
+        let weighted_participants = &mut participants
+            .iter_mut()
+            .filter(|p| p.weight > 0)
+            .collect::<Vec<_>>();
         weighted_participants.sort_by_key(|p| p.weight);
         for p in weighted_participants.iter_mut() {
             if required_resource == 0 {
@@ -124,14 +147,24 @@ impl WeightedAllocationStrategy {
 
         // cut from zero weighted participants if needed
         if required_resource > 0 {
-            let non_weighted_participants = &mut participants.iter_mut().filter(|p| p.weight == 0).collect::<Vec<_>>();
-            let total_allocated_amount = non_weighted_participants.iter().map(|p| p.allocated_amount).sum();
+            let non_weighted_participants = &mut participants
+                .iter_mut()
+                .filter(|p| p.weight == 0)
+                .collect::<Vec<_>>();
+            let total_allocated_amount = non_weighted_participants
+                .iter()
+                .map(|p| p.allocated_amount)
+                .sum();
 
             let mut deallocated_resource = 0;
             for p in non_weighted_participants.iter_mut() {
-                let deallocating_resource = utils::get_proportional_amount(required_resource, p.allocated_amount, total_allocated_amount)
-                    .unwrap()
-                    .min(p.allocated_amount);
+                let deallocating_resource = utils::get_proportional_amount(
+                    required_resource,
+                    p.allocated_amount,
+                    total_allocated_amount,
+                )
+                .unwrap()
+                .min(p.allocated_amount);
                 p.allocated_amount -= deallocating_resource;
                 deallocated_resource += deallocating_resource;
             }

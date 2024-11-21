@@ -58,14 +58,14 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
-        accounts.extend(vec![
+        accounts.extend([
             // for self.deposit_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
                     &spl_stake_pool::ID,
                     &pool_account_info.key(),
                 )
-                    .0,
+                .0,
                 false,
             ),
             (pool_account.reserve_stake, true),
@@ -138,14 +138,14 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
-        accounts.extend(vec![
+        accounts.extend([
             // for self.withdraw_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
                     &spl_stake_pool::id(),
                     &pool_account_info.key(),
                 )
-                    .0,
+                .0,
                 false,
             ),
             (pool_account.reserve_stake, true),

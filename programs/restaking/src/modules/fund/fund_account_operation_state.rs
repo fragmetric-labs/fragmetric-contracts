@@ -1,4 +1,5 @@
 use std::mem::discriminant;
+
 use anchor_lang::prelude::*;
 
 use super::command::*;
@@ -36,7 +37,7 @@ impl OperationState {
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
-        
+
         if has_reset_command || self.next_command.is_none() || current_timestamp > self.expired_at {
             self.no_transition = false;
             self.next_sequence = 0;
@@ -63,25 +64,23 @@ impl OperationState {
     ) {
         // deal with no_transition state, to adjust next command.
         if self.no_transition {
-            if let Some(prev_command_entry) = &self.next_command {
-                if let Some(next_command_entry) = &command {
-                    if discriminant(&prev_command_entry.command) != discriminant(&next_command_entry.command) {
-                        // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
-                        msg!("COMMAND#{} reset due to no_transition state", self.next_sequence);
-                        self.no_transition = false;
-                        command = None;
-                    }
-                    // otherwise, meaning retaining on same the same command type, still maintains no_transition state.
-                } else {
-                    // if there is no next command, clear no_transition state.
+            if let (Some(prev_entry), Some(next_entry)) = (&self.next_command, &command) {
+                if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
+                    // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
+                    msg!(
+                        "COMMAND#{} reset due to no_transition state",
+                        self.next_sequence
+                    );
                     self.no_transition = false;
+                    command = None;
                 }
+                // otherwise, meaning retaining on same the same command type, still maintains no_transition state.
             } else {
-                // if there is no previous command (unexpected flow), clear no_transition state.
+                // if there is no previous command (unexpected flow) or next command, clear no_transition state.
                 self.no_transition = false;
             }
         }
-        
+
         self.updated_at = current_timestamp;
         self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
         self.next_sequence = match command {
@@ -92,7 +91,9 @@ impl OperationState {
     }
 
     #[inline(always)]
-    pub(super) fn get_command(&self) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
+    pub(super) fn get_command(
+        &self,
+    ) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
         self.next_command.as_ref().map(Into::into)
     }
 }

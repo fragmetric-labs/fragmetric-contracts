@@ -94,7 +94,9 @@ pub struct OperationCommandAccountMeta {
     pub(super) is_writable: bool,
 }
 
-impl<'a> From<&'a OperationCommandEntry> for (&'a OperationCommand, &'a [OperationCommandAccountMeta]) {
+impl<'a> From<&'a OperationCommandEntry>
+    for (&'a OperationCommand, &'a [OperationCommandAccountMeta])
+{
     fn from(value: &'a OperationCommandEntry) -> Self {
         (&value.command, value.required_accounts.as_slice())
     }

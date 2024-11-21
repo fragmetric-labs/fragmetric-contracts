@@ -253,7 +253,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 }
                 Err(error) => {
                     // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} failed", operation_state.next_sequence, command);
+                    msg!(
+                        "COMMAND#{}: {:?} failed",
+                        operation_state.next_sequence,
+                        command
+                    );
                     return Err(error);
                 }
             };
