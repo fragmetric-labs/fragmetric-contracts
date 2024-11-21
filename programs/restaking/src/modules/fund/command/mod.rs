@@ -98,17 +98,23 @@ impl<'a> From<&'a OperationCommandEntry>
     for (&'a OperationCommand, &'a [OperationCommandAccountMeta])
 {
     fn from(value: &'a OperationCommandEntry) -> Self {
-        (&value.command, value.required_accounts.as_slice())
+        (&value.command, &value.required_accounts)
     }
 }
 
-impl OperationCommand {
-    pub fn with_required_accounts(
+pub(super) trait SelfExecutable: Into<OperationCommand> {
+    fn execute<'a, 'info: 'a>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, 'a>,
+        accounts: &[&'info AccountInfo<'info>],
+    ) -> Result<Option<OperationCommandEntry>>;
+
+    fn with_required_accounts(
         self,
-        required_accounts: Vec<(Pubkey, bool)>,
+        required_accounts: impl IntoIterator<Item = (Pubkey, bool)>,
     ) -> OperationCommandEntry {
         OperationCommandEntry {
-            command: self,
+            command: self.into(),
             required_accounts: required_accounts
                 .into_iter()
                 .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
@@ -118,12 +124,4 @@ impl OperationCommand {
                 .collect(),
         }
     }
-}
-
-pub trait SelfExecutable {
-    fn execute<'a, 'info: 'a>(
-        &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>>;
 }

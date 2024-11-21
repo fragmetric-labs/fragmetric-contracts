@@ -42,12 +42,7 @@ impl OperationState {
             self.no_transition = false;
             self.next_sequence = 0;
             self.set_command(
-                reset_command.or_else(|| {
-                    Some(
-                        OperationCommand::Initialize(InitializeCommand {})
-                            .with_required_accounts(vec![]),
-                    )
-                }),
+                reset_command.or_else(|| Some(InitializeCommand {}.with_required_accounts([]))),
                 current_timestamp,
             );
             self.no_transition = has_reset_command;

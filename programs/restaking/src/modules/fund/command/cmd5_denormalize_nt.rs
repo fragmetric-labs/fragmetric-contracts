@@ -1,9 +1,16 @@
-use super::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use anchor_lang::prelude::*;
+
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct DenormalizeNTCommand {
     // TODO: DenormalizeNTCommand
+}
+
+impl From<DenormalizeNTCommand> for OperationCommand {
+    fn from(command: DenormalizeNTCommand) -> Self {
+        Self::DenormalizeNT(command)
+    }
 }
 
 impl SelfExecutable for DenormalizeNTCommand {

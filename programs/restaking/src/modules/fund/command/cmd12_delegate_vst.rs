@@ -1,9 +1,16 @@
-use super::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use anchor_lang::prelude::*;
+
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct DelegateVSTCommand {
     // TODO: DelegateVSTCommand
+}
+
+impl From<DelegateVSTCommand> for OperationCommand {
+    fn from(command: DelegateVSTCommand) -> Self {
+        Self::DelegateVST(command)
+    }
 }
 
 impl SelfExecutable for DelegateVSTCommand {

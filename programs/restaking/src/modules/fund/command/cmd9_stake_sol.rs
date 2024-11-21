@@ -1,20 +1,43 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use anchor_lang::prelude::*;
+
 use crate::errors;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
-use anchor_lang::prelude::*;
+
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct StakeSOLCommand {
     #[max_len(10)]
-    pub items: Vec<StakeSOLCommandItem>,
-    pub state: StakeSOLCommandState,
+    items: Vec<StakeSOLCommandItem>,
+    state: StakeSOLCommandState,
+}
+
+impl From<StakeSOLCommand> for OperationCommand {
+    fn from(command: StakeSOLCommand) -> Self {
+        Self::StakeSOL(command)
+    }
+}
+
+impl StakeSOLCommand {
+    pub(super) fn new_init(items: Vec<StakeSOLCommandItem>) -> Self {
+        Self {
+            items,
+            state: StakeSOLCommandState::Init,
+        }
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
 pub struct StakeSOLCommandItem {
-    pub mint: Pubkey,
-    pub sol_amount: u64,
+    mint: Pubkey,
+    sol_amount: u64,
+}
+
+impl StakeSOLCommandItem {
+    pub(super) fn new(mint: Pubkey, sol_amount: u64) -> Self {
+        Self { mint, sol_amount }
+    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -31,69 +54,56 @@ impl SelfExecutable for StakeSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         // there are remaining tokens to handle
-        if let Some(item) = self.items.get(0) {
-            let supported_token = ctx.fund_account.get_supported_token(&item.mint)?;
+        if let Some(item) = self.items.first() {
+            let token = ctx.fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
-                StakeSOLCommandState::Init => {
-                    if item.sol_amount > 0 {
-                        // request to read pool account
+                StakeSOLCommandState::Init if item.sol_amount > 0 => {
+                    let mut command = self.clone();
+                    command.state = StakeSOLCommandState::ReadPoolState;
 
-                        match supported_token.pricing_source {
-                            TokenPricingSource::SPLStakePool {
-                                address: pool_address,
-                            } => {
-                                let mut command = self.clone();
-                                command.state = StakeSOLCommandState::ReadPoolState;
-
-                                return Ok(Some(
-                                    OperationCommand::StakeSOL(command)
-                                        .with_required_accounts(vec![(pool_address, false)]),
-                                ));
-                            }
-                            TokenPricingSource::MarinadeStakePool { .. } => {
-                                // TODO: support marinade..
-                            }
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
-                        }
-                    }
-                }
-                StakeSOLCommandState::ReadPoolState => {
-                    match supported_token.pricing_source {
-                        TokenPricingSource::SPLStakePool {
-                            address: pool_address,
-                        } => {
-                            let [pool_account_info, _remaining_accounts @ ..] = accounts else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
-                            require_keys_eq!(pool_address, *pool_account_info.key);
-
-                            let mut command = self.clone();
-                            command.state = StakeSOLCommandState::Stake;
-
-                            let mut required_accounts =
-                                staking::SPLStakePoolService::find_accounts_to_deposit_sol(
-                                    pool_account_info,
-                                )?;
-                            required_accounts.extend(vec![
-                                (ctx.fund_account.find_reserve_account_address().0, true),
-                                (
-                                    ctx.fund_account
-                                        .find_supported_token_account_address(&item.mint)?,
-                                    true,
-                                ),
-                            ]);
-
-                            return Ok(Some(
-                                OperationCommand::StakeSOL(command)
-                                    .with_required_accounts(required_accounts),
-                            ));
-                        }
-                        TokenPricingSource::MarinadeStakePool { .. } => {
-                            // TODO: support marinade..
+                    match token.pricing_source {
+                        TokenPricingSource::SPLStakePool { address }
+                        | TokenPricingSource::MarinadeStakePool { address } => {
+                            return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     }
+                }
+                StakeSOLCommandState::ReadPoolState => {
+                    let mut command = self.clone();
+                    command.state = StakeSOLCommandState::Stake;
+
+                    let [pool_account_info, _remaining_accounts @ ..] = accounts else {
+                        err!(ErrorCode::AccountNotEnoughKeys)?
+                    };
+
+                    let mut required_accounts = match token.pricing_source {
+                        TokenPricingSource::SPLStakePool { address } => {
+                            require_keys_eq!(address, *pool_account_info.key);
+
+                            staking::SPLStakePoolService::find_accounts_to_deposit_sol(
+                                pool_account_info,
+                            )?
+                        }
+                        TokenPricingSource::MarinadeStakePool { address } => {
+                            require_keys_eq!(address, *pool_account_info.key);
+
+                            todo!() // TODO: support marinade..
+                        }
+                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                    };
+
+                    required_accounts.extend([
+                        (ctx.fund_account.find_reserve_account_address().0, true),
+                        (
+                            ctx.fund_account
+                                .find_supported_token_account_address(&item.mint)?,
+                            true,
+                        ),
+                    ]);
+
+                    return Ok(Some(command.with_required_accounts(required_accounts)));
                 }
                 StakeSOLCommandState::Stake => {
                     let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, fund_reserve_account, fund_supported_token_account, _remaining_accounts @ ..] =
@@ -103,21 +113,33 @@ impl SelfExecutable for StakeSOLCommand {
                     };
 
                     let (to_pool_token_account_amount, minted_supported_token_amount) =
-                        staking::SPLStakePoolService::new(
-                            pool_program,
-                            pool_account,
-                            pool_token_mint,
-                            pool_token_program,
-                        )?
-                        .deposit_sol(
-                            withdraw_authority,
-                            reserve_stake_account,
-                            manager_fee_account,
-                            fund_reserve_account,
-                            fund_supported_token_account,
-                            &ctx.fund_account.find_reserve_account_seeds(),
-                            item.sol_amount,
-                        )?;
+                        match token.pricing_source {
+                            TokenPricingSource::SPLStakePool { address } => {
+                                require_keys_eq!(address, *pool_account.key);
+
+                                staking::SPLStakePoolService::new(
+                                    pool_program,
+                                    pool_account,
+                                    pool_token_mint,
+                                    pool_token_program,
+                                )?
+                                .deposit_sol(
+                                    withdraw_authority,
+                                    reserve_stake_account,
+                                    manager_fee_account,
+                                    fund_reserve_account,
+                                    fund_supported_token_account,
+                                    &ctx.fund_account.find_reserve_account_seeds(),
+                                    item.sol_amount,
+                                )?
+                            }
+                            TokenPricingSource::MarinadeStakePool { address } => {
+                                require_keys_eq!(address, *pool_account.key);
+
+                                todo!() // TODO: support marinade..
+                            }
+                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        };
 
                     ctx.fund_account.sol_operation_reserved_amount = ctx
                         .fund_account
@@ -149,16 +171,13 @@ impl SelfExecutable for StakeSOLCommand {
                         to_pool_token_account_amount
                     );
                 }
+                _ => (),
             }
 
             // proceed to next token
             if self.items.len() > 1 {
                 return Ok(Some(
-                    OperationCommand::StakeSOL(StakeSOLCommand {
-                        items: self.items.iter().skip(1).copied().collect(),
-                        state: StakeSOLCommandState::Init,
-                    })
-                    .with_required_accounts(vec![]),
+                    StakeSOLCommand::new_init(self.items[1..].to_vec()).with_required_accounts([]),
                 ));
             }
         }

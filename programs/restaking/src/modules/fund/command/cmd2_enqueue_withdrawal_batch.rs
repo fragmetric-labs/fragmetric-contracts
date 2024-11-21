@@ -10,6 +10,12 @@ pub struct EnqueueWithdrawalBatchCommand {
     forced: bool,
 }
 
+impl From<EnqueueWithdrawalBatchCommand> for OperationCommand {
+    fn from(command: EnqueueWithdrawalBatchCommand) -> Self {
+        Self::EnqueueWithdrawalBatch(command)
+    }
+}
+
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum EnqueueWithdrawalBatchCommandState {
     #[default]
@@ -28,15 +34,13 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                 let mut command = self.clone();
                 command.state = EnqueueWithdrawalBatchCommandState::Enqueue;
 
-                return Ok(Some(
-                    OperationCommand::EnqueueWithdrawalBatch(command).with_required_accounts(vec![
-                        (ctx.fund_account.find_receipt_token_program_address(), false),
-                        (
-                            ctx.fund_account.find_receipt_token_lock_account_address()?,
-                            true,
-                        ),
-                    ]),
-                ));
+                return Ok(Some(command.with_required_accounts([
+                    (ctx.fund_account.find_receipt_token_program_address(), false),
+                    (
+                        ctx.fund_account.find_receipt_token_lock_account_address()?,
+                        true,
+                    ),
+                ])));
             }
             EnqueueWithdrawalBatchCommandState::Enqueue => {
                 let [receipt_token_program, receipt_token_lock_account, remaining_accounts @ ..] =
