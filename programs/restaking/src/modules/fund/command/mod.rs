@@ -85,20 +85,35 @@ const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
 pub struct OperationCommandEntry {
     pub(super) command: OperationCommand,
     #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
-    required_accounts: Vec<Pubkey>,
+    required_accounts: Vec<OperationCommandAccountMeta>,
 }
 
-impl<'a> From<&'a OperationCommandEntry> for (&'a OperationCommand, &'a [Pubkey]) {
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct OperationCommandAccountMeta {
+    pub(super) pubkey: Pubkey,
+    pub(super) is_writable: bool,
+}
+
+impl<'a> From<&'a OperationCommandEntry> for (&'a OperationCommand, &'a [OperationCommandAccountMeta]) {
     fn from(value: &'a OperationCommandEntry) -> Self {
         (&value.command, value.required_accounts.as_slice())
     }
 }
 
 impl OperationCommand {
-    pub fn with_required_accounts(self, required_accounts: Vec<Pubkey>) -> OperationCommandEntry {
+    pub fn with_required_accounts(
+        self,
+        required_accounts: Vec<(Pubkey, bool)>,
+    ) -> OperationCommandEntry {
         OperationCommandEntry {
             command: self,
-            required_accounts,
+            required_accounts: required_accounts
+                .into_iter()
+                .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
+                    pubkey,
+                    is_writable,
+                })
+                .collect(),
         }
     }
 }

@@ -43,33 +43,35 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     fn find_accounts_for_new(
         pool_account_info: &AccountInfo,
         pool_account: &StakePool,
-    ) -> [Pubkey; 4] {
-        [
+    ) -> Vec<(Pubkey, bool)> {
+        vec![
             // for Self::new
-            spl_stake_pool::ID,
-            pool_account_info.key(),
-            pool_account.pool_mint,
-            pool_account.token_program_id,
+            (spl_stake_pool::ID, false),
+            (pool_account_info.key(), true),
+            (pool_account.pool_mint, true),
+            (pool_account.token_program_id, false),
         ]
     }
 
     pub fn find_accounts_to_deposit_sol(
         pool_account_info: &'a AccountInfo<'info>,
-    ) -> Result<([Pubkey; 4], [Pubkey; 3])> {
+    ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        Ok((
-            Self::find_accounts_for_new(pool_account_info, &pool_account),
-            [
-                // for self.deposit_sol
+        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        accounts.extend(vec![
+            // for self.deposit_sol
+            (
                 spl_stake_pool::find_withdraw_authority_program_address(
                     &spl_stake_pool::ID,
                     &pool_account_info.key(),
                 )
-                .0,
-                pool_account.reserve_stake,
-                pool_account.manager_fee_account,
-            ],
-        ))
+                    .0,
+                false,
+            ),
+            (pool_account.reserve_stake, true),
+            (pool_account.manager_fee_account, true),
+        ]);
+        Ok(accounts)
     }
 
     /// gives (to_pool_token_account_amount, minted_pool_token_amount)
@@ -91,6 +93,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account_narrowed)?;
         let to_pool_token_account_amount_before = to_pool_token_account_parsed.amount;
 
+        // TODO: consider using spl_stake_pool::instruction::deposit_sol_with_slippage
         let ix = spl_stake_pool::instruction::deposit_sol(
             self.spl_stake_pool_program.key,
             self.pool_account.key,
@@ -132,24 +135,26 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
 
     pub fn find_accounts_to_withdraw_sol(
         pool_account_info: &'a AccountInfo<'info>,
-    ) -> Result<([Pubkey; 4], [Pubkey; 6])> {
+    ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        Ok((
-            Self::find_accounts_for_new(pool_account_info, &pool_account),
-            [
-                // for self.deposit_sol
+        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        accounts.extend(vec![
+            // for self.withdraw_sol
+            (
                 spl_stake_pool::find_withdraw_authority_program_address(
                     &spl_stake_pool::id(),
                     &pool_account_info.key(),
                 )
-                .0,
-                pool_account.reserve_stake,
-                pool_account.manager_fee_account,
-                solana_program::sysvar::clock::ID,
-                solana_program::sysvar::stake_history::ID,
-                solana_program::stake::program::ID,
-            ],
-        ))
+                    .0,
+                false,
+            ),
+            (pool_account.reserve_stake, true),
+            (pool_account.manager_fee_account, true),
+            (solana_program::sysvar::clock::ID, false),
+            (solana_program::sysvar::stake_history::ID, false),
+            (solana_program::stake::program::ID, false),
+        ]);
+        Ok(accounts)
     }
 
     /// gives (to_sol_account_amount, returned_sol_amount)

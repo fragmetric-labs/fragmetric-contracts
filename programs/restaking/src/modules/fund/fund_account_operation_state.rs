@@ -92,7 +92,7 @@ impl OperationState {
     }
 
     #[inline(always)]
-    pub(super) fn get_command(&self) -> Option<(&OperationCommand, &[Pubkey])> {
+    pub(super) fn get_command(&self) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
         self.next_command.as_ref().map(Into::into)
     }
 }

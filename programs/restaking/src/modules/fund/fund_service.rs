@@ -201,12 +201,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .cloned()
                 .collect::<BTreeSet<_>>();
 
-            for account_key in required_accounts {
+            for account_meta in required_accounts {
                 // append required accounts in exact order
-                match remaining_accounts_map.get(account_key) {
+                match remaining_accounts_map.get(&account_meta.pubkey) {
                     Some(account) => {
                         required_account_infos.push(*account);
-                        unused_account_keys.remove(account_key);
+                        unused_account_keys.remove(&account_meta.pubkey);
                     }
                     None => {
                         if execution_count > 0 {

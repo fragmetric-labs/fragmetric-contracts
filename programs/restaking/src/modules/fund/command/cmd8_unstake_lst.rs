@@ -51,7 +51,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                                 return Ok(Some(
                                     OperationCommand::UnstakeLST(command)
-                                        .with_required_accounts(vec![pool_address]),
+                                        .with_required_accounts(vec![(pool_address, false)]),
                                 ));
                             }
                             TokenPricingSource::MarinadeStakePool { .. } => {
@@ -74,22 +74,19 @@ impl SelfExecutable for UnstakeLSTCommand {
                             let mut command = self.clone();
                             command.state = UnstakeLSTCommandState::Unstake;
 
-                            let required_accounts_from_service =
+                            let mut required_accounts =
                                 staking::SPLStakePoolService::find_accounts_to_withdraw_sol(
                                     pool_account_info,
                                 )?;
-                            let mut required_accounts = Vec::new();
-                            required_accounts
-                                .extend_from_slice(required_accounts_from_service.0.as_slice());
-                            required_accounts
-                                .extend_from_slice(required_accounts_from_service.1.as_slice());
-                            required_accounts
-                                .push(ctx.fund_account.find_reserve_account_address().0);
-                            required_accounts.push(
-                                ctx.fund_account
-                                    .find_supported_token_account_address(&item.mint)?,
-                            );
-                            required_accounts.push(ctx.fund_account.key());
+                            required_accounts.extend(vec![
+                                (ctx.fund_account.find_reserve_account_address().0, true),
+                                (
+                                    ctx.fund_account
+                                        .find_supported_token_account_address(&item.mint)?,
+                                    true,
+                                ),
+                                (ctx.fund_account.key(), true),
+                            ]);
 
                             return Ok(Some(
                                 OperationCommand::UnstakeLST(command)
