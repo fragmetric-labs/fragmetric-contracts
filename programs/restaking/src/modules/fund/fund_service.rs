@@ -190,6 +190,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .iter()
             .map(|info| (*info.key, info))
             .collect();
+        let mut executed_commands = Vec::new();
 
         'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
         {
@@ -212,7 +213,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                             // maintain the current command and gracefully stop executing commands
                             msg!(
                                 "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
-                                operation_state.sequence,
+                                operation_state.next_sequence,
                                 command,
                                 execution_count
                             );
@@ -222,7 +223,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         // error if it is the first command in this tx
                         msg!(
                             "COMMAND#{}: {:?} has not enough accounts at the first execution",
-                            operation_state.sequence,
+                            operation_state.next_sequence,
                             command
                         );
                         return err!(ErrorCode::OperationCommandAccountComputationException);
@@ -245,13 +246,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
                 Ok(next_command) => {
                     // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
+                    // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
+                    executed_commands.push(command.clone());
                     operation_state.set_command(next_command, self.current_timestamp);
                     execution_count += 1;
                 }
                 Err(error) => {
                     // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!("COMMAND#{}: {:?} failed", operation_state.sequence, command);
+                    msg!("COMMAND#{}: {:?} failed", operation_state.next_sequence, command);
                     return Err(error);
                 }
             };
@@ -260,9 +262,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         // write back operation state
         self.fund_account.operation = operation_state;
 
-        emit!(events::OperatorProcessedJob {
+        emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
+            executed_commands,
         });
 
         Ok(())

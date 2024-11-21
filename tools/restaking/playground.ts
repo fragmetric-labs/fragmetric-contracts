@@ -18,7 +18,6 @@ import * as ed25519 from "ed25519";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
-
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
     public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider">) {
         return getKeychain(env).then((keychain) => {
@@ -1391,23 +1390,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.wallet, forced: boolean = false) {
-        const {event, error, fragSOLFund} = await this.runOperatorRun({
+    public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+        const {event, error} = await this.runOperatorRun({
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
                         state: {
                             init: {},
                         },
-                        forced: operator.publicKey.toString() == this.keychain.getPublicKey('FUND_MANAGER').toString() && forced,
+                        forced: forced,
                     }
                 }
             },
             requiredAccounts: [],
-        });
+            events: ["operatorRanFund"],
+        }, operator);
 
-        logger.notice(`operator processed withdrawal job: #${event.operatorProcessedJob.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
-        const [fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
+        logger.notice(`operator processed withdrawal job: #${event.operatorRanFund.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance().then((v) => new BN(v)),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.getFragSOLLockAccount(),
@@ -1519,15 +1520,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number, maxTxCount = 100, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER')) {
+    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
-            const { event, error, fragSOLFund, operationSequence } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
+            const { event, error } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
             txCount++;
-            logger.debug(`operator run tx#${txCount}, next sequence#${operationSequence}`);
-            if (txCount == maxTxCount || operationSequence == 0) {
-                logger.debug(`operator finished active operation cycle`);
-                return { event, error, fragSOLFund }
+            logger.debug(`operator ran tx#${txCount}`);
+            if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
+                return { event, error }
             }
         }
     }
@@ -1547,18 +1547,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ]
                 .concat(this.pricingSourceAccounts.map(account => account.pubkey)),
         );
-
-        let fragSOLFund: Awaited<ReturnType<typeof this.getFragSOLFundAccount>>;
-        let command: typeof fragSOLFund.operation.command;
-        if (resetCommand) {
-            command = resetCommand;
-        } else {
-            fragSOLFund = await this.getFragSOLFundAccount();
-            command = fragSOLFund.operation.command;
-        }
-
-        if (command) {
-            for (const pubkey of command.requiredAccounts) {
+        let fragSOLFund = await this.getFragSOLFundAccount();
+        let nextOperationSequence = fragSOLFund.operation.nextSequence;
+        let nextOperationCommand = resetCommand ?? fragSOLFund.operation.nextCommand;
+        if (nextOperationCommand) {
+            for (const pubkey of nextOperationCommand.requiredAccounts) {
                 if (!containedAccounts.has(pubkey)) {
                     containedAccounts.add(pubkey);
                     requiredAccounts.push({
@@ -1581,19 +1574,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorProcessedJob"],
+            events: ["operatorRanFund"],
+            skipPreflight: true,
             computeUnitLimit,
             prioritizationFeeMicroLamports,
         });
 
-        fragSOLFund = await this.getFragSOLFundAccount();
-        const operationSequence = tx.event.operatorProcessedJob.fundAccount.operationSequence;
-        logger.notice(`remaining commands: sequence#${tx.event.operatorProcessedJob.fundAccount.operationSequence}`.padEnd(LOG_PAD_SMALL), JSON.stringify(fragSOLFund.operation.command));
+        for (const command of tx.event.operatorRanFund.executedCommands) {
+            const commandName = Object.keys(command)[0];
+            const commandArgs = command[commandName][0];
+            logger.notice(`operator ran command#${nextOperationSequence++}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
+        }
+        nextOperationSequence = tx.event.operatorRanFund.fundAccount.nextOperationSequence;
+        if (nextOperationSequence == 0) {
+            logger.debug(`operator finished active operation cycle`);
+        } else {
+            logger.info(`operator has remaining command#${nextOperationSequence}`.padEnd(LOG_PAD_LARGE));
+        }
+
         return {
             event: tx.event,
             error: tx.error,
-            fragSOLFund,
-            operationSequence,
         };
     }
 
@@ -1670,7 +1671,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorProcessedJob"],
+            events: ["operatorRanFund"],
             skipPreflight: true,
             computeUnitLimit,
             prioritizationFeeMicroLamports,
@@ -1744,7 +1745,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         .instruction(),
                 ],
                 signers: [operator],
-                events: ["operatorProcessedJob"],
+                events: ["operatorRanFund"],
                 skipPreflight: true,
                 computeUnitLimit,
                 prioritizationFeeMicroLamports,
@@ -1856,7 +1857,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorProcessedJob"],
+            events: ["operatorRanFund"],
             skipPreflight: true,
             computeUnitLimit,
             prioritizationFeeMicroLamports,
@@ -1967,7 +1968,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorProcessedJob"],
+            events: ["operatorRanFund"],
             skipPreflight: true,
             computeUnitLimit,
             prioritizationFeeMicroLamports,
@@ -2091,7 +2092,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorProcessedJob"],
+            events: ["operatorRanFund"],
             skipPreflight: true,
             computeUnitLimit,
             prioritizationFeeMicroLamports,

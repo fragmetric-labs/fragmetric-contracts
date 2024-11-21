@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-
+use crate::modules::fund::command::OperationCommand;
 use super::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -16,7 +16,7 @@ pub struct FundAccountInfo {
     sol_withdrawal_fee_rate: f32,
     withdrawal_enabled: bool,
     withdrawal_last_completed_batch_id: u64,
-    operation_sequence: u16,
+    next_operation_sequence: u16,
 }
 
 impl FundAccountInfo {
@@ -37,7 +37,7 @@ impl FundAccountInfo {
             sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_withdrawal_fee_rate_as_f32(),
             withdrawal_enabled: fund_account.withdrawal.withdrawal_enabled_flag,
             withdrawal_last_completed_batch_id: fund_account.withdrawal.last_completed_batch_id,
-            operation_sequence: fund_account.operation.sequence,
+            next_operation_sequence: fund_account.operation.next_sequence,
         }
     }
 }
