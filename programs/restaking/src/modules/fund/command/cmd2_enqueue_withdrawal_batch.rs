@@ -1,9 +1,8 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
-use crate::modules::fund;
-use crate::modules::fund::FundService;
-use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022;
+
+use crate::modules::fund;
+
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct EnqueueWithdrawalBatchCommand {
@@ -41,7 +40,8 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
 
-                let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                let mut fund_service =
+                    fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
                 fund_service.enqueue_withdrawal_batch(
                     receipt_token_program,
                     receipt_token_lock_account,
