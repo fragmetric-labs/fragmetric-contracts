@@ -227,7 +227,6 @@ pub fn request_withdraw<'info>(
     signer_seeds: &[&[&[u8]]],
     vrt_token_amount_out: u64,
 ) -> Result<()> {
-    // TODO create token account
     anchor_spl::associated_token::create(CpiContext::new(
         associated_token_program.clone(),
         anchor_spl::associated_token::Create {

@@ -15,13 +15,6 @@ if (process.argv.length > 2) {
 }
 
 function run(env: KEYCHAIN_ENV) {
-    anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
-        return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));
-    }
-    web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = anchor.web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
-        return chalk.blue(this.toString());
-    }
-
     RestakingPlayground.create(env)
         .then(restaking => {
             const cluster = restaking.isMainnet ? chalk.bgRed.white('mainnet') : (restaking.isDevnet ? chalk.bgYellow.black('devnet') : chalk.bgWhite.black('local'));

@@ -32,12 +32,11 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_amount: u64,
     // TODO v0.3/operation: visibility
     pub(in crate::modules) sol_operation_reserved_amount: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) withdrawal: WithdrawalState,
+    pub(super) withdrawal: WithdrawalState,
     pub(super) one_receipt_token_as_sol: u64,
     receipt_token_decimals: u8,
     pub(super) operation: OperationState,
-    _reserved: [u8; 256], // TODO: is it okay to just reduce to arbitrary number ... in wip?, was _reserved: [u8; 1271],
+    _reserved: [u8; 256],
 }
 
 impl PDASeeds<2> for FundAccount {
@@ -72,7 +71,7 @@ impl FundAccount {
     }
 
     // TODO v0.3/operation: visibility
-    pub fn find_reserve_account_seeds(&self) -> Vec<&[u8]> {
+    pub(in crate::modules) fn find_reserve_account_seeds(&self) -> Vec<&[u8]> {
         [
             self.get_reserve_account_seeds(),
             // TODO v0.3/general: leak??
@@ -278,6 +277,7 @@ impl SupportedTokenInfo {
         }
     }
 
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
         self.operation_reserved_amount
     }
@@ -287,6 +287,7 @@ impl SupportedTokenInfo {
         self.operation_reserved_amount = amount;
     }
 
+    // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
         self.operating_amount
     }

@@ -9,8 +9,8 @@ const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 pub struct OperationState {
     updated_at: i64,
     expired_at: i64,
-    pub(super) sequence: u16,
-    command: Option<OperationCommandEntry>,
+    pub(super) next_sequence: u16,
+    next_command: Option<OperationCommandEntry>,
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
     no_transition: bool,
@@ -22,8 +22,8 @@ impl OperationState {
         if fund_account_data_version == 4 {
             self.updated_at = 0;
             self.expired_at = 0;
-            self.sequence = 0;
-            self.command = None;
+            self.next_sequence = 0;
+            self.next_command = None;
             self.no_transition = false;
             self._reserved = Default::default();
         }
@@ -37,9 +37,9 @@ impl OperationState {
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
         
-        if has_reset_command || self.command.is_none() || current_timestamp > self.expired_at {
+        if has_reset_command || self.next_command.is_none() || current_timestamp > self.expired_at {
             self.no_transition = false;
-            self.sequence = 0;
+            self.next_sequence = 0;
             self.set_command(
                 reset_command.or_else(|| {
                     Some(
@@ -63,11 +63,11 @@ impl OperationState {
     ) {
         // deal with no_transition state, to adjust next command.
         if self.no_transition {
-            if let Some(prev_command_entry) = &self.command {
+            if let Some(prev_command_entry) = &self.next_command {
                 if let Some(next_command_entry) = &command {
                     if discriminant(&prev_command_entry.command) != discriminant(&next_command_entry.command) {
                         // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
-                        msg!("COMMAND#{} reset due to no_transition state", self.sequence);
+                        msg!("COMMAND#{} reset due to no_transition state", self.next_sequence);
                         self.no_transition = false;
                         command = None;
                     }
@@ -84,15 +84,15 @@ impl OperationState {
         
         self.updated_at = current_timestamp;
         self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
-        self.sequence = match command {
-            Some(_) => self.sequence + 1,
+        self.next_sequence = match command {
+            Some(_) => self.next_sequence + 1,
             None => 0,
         };
-        self.command = command;
+        self.next_command = command;
     }
 
     #[inline(always)]
     pub(super) fn get_command(&self) -> Option<(&OperationCommand, &[Pubkey])> {
-        self.command.as_ref().map(Into::into)
+        self.next_command.as_ref().map(Into::into)
     }
 }

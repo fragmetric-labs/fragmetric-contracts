@@ -1,12 +1,24 @@
 import * as anchor from '@coral-xyz/anchor';
-import {web3, AnchorError, IdlEvents} from '@coral-xyz/anchor';
+import {web3, AnchorError, IdlEvents, BN} from '@coral-xyz/anchor';
 import * as sweb3 from '@solana/web3.js';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
+// @ts-ignore
+import chalk from "chalk";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
+
+BN.prototype.toJSON = function() {
+    return this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
+}
+anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
+    return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));
+}
+web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = anchor.web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
+    return chalk.blue(this.toString());
+}
 
 export type AnchorPlaygroundConfig<IDL extends anchor.Idl, KEYS extends string> = {
     provider: anchor.Provider,
@@ -20,6 +32,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     protected readonly provider: anchor.Provider;
     protected readonly program: anchor.Program<IDL>;
     protected readonly eventParser: anchor.EventParser;
+    protected readonly idlErrorsMap: Map<number, string>;
 
     constructor(args: AnchorPlaygroundConfig<IDL, KEYS>) {
         let {idl, keychain, provider} = args;
@@ -46,6 +59,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
         this.program = new anchor.Program<IDL>(idl, this.provider);
         this.eventParser = new anchor.EventParser(this.program.programId, this.program.coder);
+        this.idlErrorsMap = anchor.parseIdlErrors(this.program.idl);
 
         logger.info(`loaded program ${this.programName}:`.padEnd(LOG_PAD_LARGE), programAddress);
     }
@@ -125,16 +139,16 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 commitment: 'confirmed',
                 maxSupportedTransactionVersion: 0,
             });
-            logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
 
-            const result = {
-                txSig,
-                error: txResult != null ? AnchorError.parse(txResult.meta.logMessages) : null,
+            if (txResult.meta.err) {
+                throw anchor.translateError({ logs: txResult.meta.logMessages }, this.idlErrorsMap);
             }
 
+            logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
             return {
-                ...result,
-                event: txResult != null ? this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events) : {} as {[k in EVENTS]: IdlEvents<IDL>[k]},
+                txSig,
+                error: AnchorError.parse(txResult.meta.logMessages),
+                event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
             };
 
         } catch (err) {

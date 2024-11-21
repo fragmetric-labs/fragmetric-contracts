@@ -79,7 +79,7 @@ describe("withdraw", async () => {
     });
 
     step("user5 (operator) processes queued withdrawals", async () => {
-        const res1 = await restaking.runOperatorProcessFundWithdrawalJob(user5);
+        const res1 = await restaking.runOperatorProcessFundWithdrawalJob();
 
         expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
         expect(res1.fragSOLFund.withdrawal.pendingBatchWithdrawal.numWithdrawalRequests.toNumber()).eq(0);
@@ -87,13 +87,13 @@ describe("withdraw", async () => {
         expect(res1.fragSOLFund.withdrawal.pendingBatchWithdrawal.batchId.toNumber()).eq(2);
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessFundWithdrawalJob(user5)).rejectedWith('OperatorJobUnmetThresholdError');
+        await expect(restaking.runOperatorProcessFundWithdrawalJob()).rejectedWith('OperatorJobUnmetThresholdError');
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessFundWithdrawalJob(user5, true)).rejectedWith('OperatorJobUnmetThresholdError');
+        await expect(restaking.runOperatorProcessFundWithdrawalJob(user5, true)).rejectedWith('RequireEqViolated');
 
         await restaking.sleep(1);
-        const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('ADMIN'), true);
+        const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
         expect(res2.fragSOLFund.withdrawal.lastCompletedBatchId.toNumber()).eq(2);
         expect(res2.fragSOLFund.withdrawal.receiptTokenProcessedAmount.toString()).eq(amountFragSOLWithdrawalEach.mul(new BN(2)).toString(), 'in this test, fragSOL unit price is still 1SOL');
