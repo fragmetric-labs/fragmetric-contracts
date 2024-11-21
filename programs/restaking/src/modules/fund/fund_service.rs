@@ -273,10 +273,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
         pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
+        forced: bool,
     ) -> Result<()> {
         let mut withdrawal_state = std::mem::take(&mut self.fund_account.withdrawal);
 
-        withdrawal_state.assert_withdrawal_threshold_satisfied(self.current_timestamp)?;
+        if !forced {
+            withdrawal_state.assert_withdrawal_threshold_satisfied(self.current_timestamp)?;
+        }
         withdrawal_state.start_processing_pending_batch_withdrawal(self.current_timestamp)?;
 
         let pricing_service = self.new_pricing_service(pricing_sources)?;

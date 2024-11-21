@@ -4,13 +4,15 @@ use crate::modules::fund;
 
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct EnqueueWithdrawalBatchCommand {
-    pub(crate) state: EnqueueWithdrawalBatchCommandState,
+    state: EnqueueWithdrawalBatchCommandState,
+    forced: bool,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum EnqueueWithdrawalBatchCommandState {
+    #[default]
     Init,
     Enqueue,
 }
@@ -46,6 +48,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                     receipt_token_program,
                     receipt_token_lock_account,
                     remaining_accounts.iter().cloned(),
+                    self.forced,
                 )?;
             }
         }

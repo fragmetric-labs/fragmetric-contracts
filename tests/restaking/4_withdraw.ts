@@ -93,7 +93,7 @@ describe("withdraw", async () => {
         await expect(restaking.runOperatorProcessFundWithdrawalJob(user5, true)).rejectedWith('OperatorJobUnmetThresholdError');
 
         await restaking.sleep(1);
-        const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('ADMIN'), true);
+        const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
         expect(res2.fragSOLFund.withdrawal.lastCompletedBatchId.toNumber()).eq(2);
         expect(res2.fragSOLFund.withdrawal.receiptTokenProcessedAmount.toString()).eq(amountFragSOLWithdrawalEach.mul(new BN(2)).toString(), 'in this test, fragSOL unit price is still 1SOL');
