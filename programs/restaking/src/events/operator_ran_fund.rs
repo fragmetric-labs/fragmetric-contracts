@@ -5,8 +5,7 @@ use crate::modules::fund::FundAccountInfo;
 
 #[event]
 pub struct OperatorRanFund {
+    pub executed_commands: Vec<OperationCommand>,
     pub receipt_token_mint: Pubkey,
     pub fund_account: FundAccountInfo,
-    pub executed_operation_commands: Vec<OperationCommand>,
-    pub next_operation_sequence: u16,
 }

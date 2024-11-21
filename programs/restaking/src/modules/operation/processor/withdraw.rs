@@ -90,8 +90,7 @@ pub fn process_process_fund_withdrawal_job<'info>(
     emit!(events::OperatorRanFund {
         receipt_token_mint: receipt_token_mint.key(),
         fund_account: FundAccountInfo::from(fund_account, receipt_token_mint),
-        next_operation_sequence: 0,
-        executed_operation_commands: vec![],
+        executed_commands: vec![],
     });
 
     Ok(())

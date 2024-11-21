@@ -265,8 +265,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
-            executed_operation_commands: executed_commands,
-            next_operation_sequence: self.fund_account.operation.next_sequence,
+            executed_commands,
         });
 
         Ok(())

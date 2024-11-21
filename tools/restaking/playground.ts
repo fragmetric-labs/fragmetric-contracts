@@ -1546,9 +1546,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         while (txCount <= maxTxCount) {
             const { event } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit, prioritizationFeeMicroLamports);
             txCount++;
-            logger.debug(`operator run tx#${txCount}`);
-            if (event.operatorRanFund.nextOperationSequence == 0) {
-                logger.debug(`operator finished active operation cycle`);
+            logger.debug(`operator ran tx#${txCount}`);
+            if (event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
                 break
             }
         }
@@ -1601,11 +1600,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             prioritizationFeeMicroLamports,
         });
 
-        fragSOLFund = await this.getFragSOLFundAccount();
-        for (const command of tx.event.operatorRanFund.commands) {
-            logger.notice(`operator ran command#${nextOperationSequence++}`.padEnd(LOG_PAD_LARGE), JSON.stringify(command));
+        for (const command of tx.event.operatorRanFund.executedCommands) {
+            const commandName = Object.keys(command)[0];
+            const commandArgs = command[commandName][0];
+            logger.notice(`operator ran command#${nextOperationSequence++}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
         }
-        logger.info(`remaining next command#${fragSOLFund.operation.nextSequence}${fragSOLFund.operation.noTransition ? ' (no transition)':''}`.padEnd(LOG_PAD_LARGE), JSON.stringify(fragSOLFund.operation.nextCommand?.command ?? null));
+        nextOperationSequence = tx.event.operatorRanFund.fundAccount.nextOperationSequence;
+        if (nextOperationSequence == 0) {
+            logger.debug(`operator finished active operation cycle`);
+        } else {
+            logger.info(`operator has remaining command#${nextOperationSequence}`.padEnd(LOG_PAD_LARGE));
+        }
         return {
             event: tx.event,
             fragSOLFund,
