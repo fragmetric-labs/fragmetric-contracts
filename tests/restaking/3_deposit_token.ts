@@ -7,11 +7,6 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
     const restaking = await restakingPlayground;
     const user3 = restaking.keychain.getKeypair('MOCK_USER3');
     const user4 = restaking.keychain.getKeypair('MOCK_USER4');
-    
-    step("create known address lookup table", async function () {
-        // TODO: ... it takes more than 10 seconds, where it should be placed?
-        await restaking.getOrCreateKnownAddressLookupTable();
-    });
 
     step("try airdrop SOL and supported tokens to mock accounts", async function () {
         await Promise.all([

@@ -1,3 +1,4 @@
+use std::mem::discriminant;
 use anchor_lang::prelude::*;
 
 use super::command::*;
@@ -10,6 +11,9 @@ pub struct OperationState {
     expired_at: i64,
     pub(super) sequence: u16,
     command: Option<OperationCommandEntry>,
+    /// when the no_transition flag turned on, current command should not be transitioned to other command.
+    /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
+    no_transition: bool,
     _reserved: [[u8; 8]; 32],
 }
 
@@ -20,6 +24,7 @@ impl OperationState {
             self.expired_at = 0;
             self.sequence = 0;
             self.command = None;
+            self.no_transition = false;
             self._reserved = Default::default();
         }
     }
@@ -30,8 +35,11 @@ impl OperationState {
         current_timestamp: i64,
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
-        if reset_command.is_some() || current_timestamp > self.expired_at || self.command.is_none()
-        {
+        let has_reset_command = reset_command.is_some();
+        
+        if has_reset_command || self.command.is_none() || current_timestamp > self.expired_at {
+            self.no_transition = false;
+            self.sequence = 0;
             self.set_command(
                 reset_command.or_else(|| {
                     Some(
@@ -41,16 +49,39 @@ impl OperationState {
                 }),
                 current_timestamp,
             );
+            self.no_transition = has_reset_command;
         }
+
         Ok(())
     }
 
     /// Sets next operation command and increment sequence number.
     pub(super) fn set_command(
         &mut self,
-        command: Option<OperationCommandEntry>,
+        mut command: Option<OperationCommandEntry>,
         current_timestamp: i64,
     ) {
+        // deal with no_transition state, to adjust next command.
+        if self.no_transition {
+            if let Some(prev_command_entry) = &self.command {
+                if let Some(next_command_entry) = &command {
+                    if discriminant(&prev_command_entry.command) != discriminant(&next_command_entry.command) {
+                        // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
+                        msg!("COMMAND#{} reset due to no_transition state", self.sequence);
+                        self.no_transition = false;
+                        command = None;
+                    }
+                    // otherwise, meaning retaining on same the same command type, still maintains no_transition state.
+                } else {
+                    // if there is no next command, clear no_transition state.
+                    self.no_transition = false;
+                }
+            } else {
+                // if there is no previous command (unexpected flow), clear no_transition state.
+                self.no_transition = false;
+            }
+        }
+        
         self.updated_at = current_timestamp;
         self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
         self.sequence = match command {

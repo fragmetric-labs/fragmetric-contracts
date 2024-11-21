@@ -1,4 +1,4 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{EnqueueWithdrawalBatchCommand, EnqueueWithdrawalBatchCommandState, OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use crate::errors;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
@@ -173,6 +173,10 @@ impl SelfExecutable for UnstakeLSTCommand {
         }
 
         // TODO v0.3/operation: next step ... stake sol
-        Ok(None)
+        Ok(Some(
+            OperationCommand::EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommand {
+                state: EnqueueWithdrawalBatchCommandState::Init,
+            }).with_required_accounts(vec![]),
+        ))
     }
 }

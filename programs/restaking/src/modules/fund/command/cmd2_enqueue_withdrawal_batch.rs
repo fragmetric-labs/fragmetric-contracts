@@ -7,7 +7,7 @@ use anchor_spl::token_2022;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct EnqueueWithdrawalBatchCommand {
-    state: EnqueueWithdrawalBatchCommandState,
+    pub(crate) state: EnqueueWithdrawalBatchCommandState,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]

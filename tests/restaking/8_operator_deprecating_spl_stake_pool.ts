@@ -32,7 +32,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, 2);
+        });
     });
 
     step("withdraw SOL from jito stake pool", async function () {
@@ -66,7 +66,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, 2);
+        });
         
         const [
             fragSOLFundReserveAccountBalance1,
@@ -82,7 +82,9 @@ describe("operator_spl_stake_pool", async () => {
 
         logger.debug(`after withdraw-sol from jito stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance1}, WithdrawFeeAmount=${WithdrawFeeAmount} fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance1}`);
 
-        expect(new BN(fragSOLFundReserveAccountBalance1).sub(new BN(fragSOLFundReserveAccountBalance0)).divn(10).toString()) // 1 lamport diff?
-            .eq(depositSolAmount.sub(WithdrawFeeAmount).divn(10).toString(), "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
+        const actualReserveDiff = new BN(fragSOLFundReserveAccountBalance1).sub(new BN(fragSOLFundReserveAccountBalance0));
+        const expectedReserveDiff = depositSolAmount.sub(WithdrawFeeAmount);
+        expect(actualReserveDiff.sub(expectedReserveDiff).abs().lte(new BN(1))) // 1 lamport diff?
+            .eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 });

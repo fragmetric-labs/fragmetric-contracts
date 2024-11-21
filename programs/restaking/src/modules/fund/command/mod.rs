@@ -83,7 +83,7 @@ const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandEntry {
-    command: OperationCommand,
+    pub(super) command: OperationCommand,
     #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
     required_accounts: Vec<Pubkey>,
 }

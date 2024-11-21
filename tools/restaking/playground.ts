@@ -1542,10 +1542,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, maxTxCount = 100, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER')) {
+    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number, maxTxCount = 100, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER')) {
         let txCount = 0;
         while (txCount <= maxTxCount) {
-            const { operationSequence } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
+            const { operationSequence } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit, prioritizationFeeMicroLamports);
             txCount++;
             logger.debug(`operator run tx#${txCount}, sequence#${operationSequence}`);
             if (operationSequence == 0) {
@@ -1555,7 +1555,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
     }
 
-    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0]) {
+    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
         // prepare accounts according to the current state of operation.
         // - can contain 28/32 accounts including reserved four accounts.
         // - order doesn't matter, no need to put duplicate.
@@ -1597,12 +1597,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorProcessedJob"],
             skipPreflight: true,
-            computeUnitLimit: 800_000,
+            computeUnitLimit,
+            prioritizationFeeMicroLamports,
         });
 
         fragSOLFund = await this.getFragSOLFundAccount();
         const operationSequence = tx.event.operatorProcessedJob.fundAccount.operationSequence;
-        logger.notice(`remaining commands after sequence#${tx.event.operatorProcessedJob.fundAccount.operationSequence}`.padEnd(LOG_PAD_SMALL), JSON.stringify(fragSOLFund.operation.command));
+        logger.notice(`remaining commands after sequence#${tx.event.operatorProcessedJob.fundAccount.operationSequence}${fragSOLFund.operation.noTransition ? ' (no transition)':''}`.padEnd(LOG_PAD_SMALL), JSON.stringify(fragSOLFund.operation.command));
         return {
             event: tx.event,
             fragSOLFund,

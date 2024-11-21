@@ -7,6 +7,10 @@ import {restakingPlayground} from "../restaking";
 describe("initialize", async () => {
     const restaking = await restakingPlayground;
 
+    step("create known address lookup table", async function () {
+        await restaking.getOrCreateKnownAddressLookupTable();
+    });
+
     step("create fragSOL token mint with extensions", async function () {
         const res0 = await restaking.runAdminInitializeFragSOLTokenMint();
         expect(res0.fragSOLMint.address.toString()).eq(restaking.knownAddress.fragSOLTokenMint.toString());
