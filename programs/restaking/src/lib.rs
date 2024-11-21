@@ -397,23 +397,6 @@ pub mod restaking {
         )
     }
 
-    // TODO v0.3/operation: deprecate
-    pub fn operator_process_fund_withdrawal_job<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContextDeprecated<'info>>,
-        forced: bool,
-    ) -> Result<()> {
-        modules::operation::process_process_fund_withdrawal_job(
-            &ctx.accounts.operator,
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.receipt_token_lock_account,
-            &mut ctx.accounts.fund_account,
-            &ctx.accounts.receipt_token_program,
-            ctx.remaining_accounts,
-            forced,
-            Clock::get()?.unix_timestamp,
-        )
-    }
-
     pub fn operator_update_prices<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
     ) -> Result<()> {

@@ -22,9 +22,8 @@ pub struct WithdrawalState {
     // Withdrawal Status = PENDING
     pending_batch_withdrawal: BatchWithdrawal,
     // Withdrawal Status = IN PROGRESS
-    // TODO v0.3/operation: visibility
     #[max_len(MAX_BATCH_WITHDRAWALS_IN_PROGRESS)]
-    pub(in crate::modules) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
+    pub(super) batch_withdrawals_in_progress: Vec<BatchWithdrawal>,
     // Withdrawal Status = COMPLETED
     pub(super) sol_withdrawal_reserved_amount: u64,
     _padding: [u8; 8],
@@ -192,8 +191,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn assert_withdrawal_threshold_satisfied(
+    pub(super) fn assert_withdrawal_threshold_satisfied(
         &self,
         current_timestamp: i64,
     ) -> Result<()> {
@@ -225,9 +223,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    // Called by operator
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn start_processing_pending_batch_withdrawal(
+    pub(super) fn start_processing_pending_batch_withdrawal(
         &mut self,
         current_timestamp: i64,
     ) -> Result<()> {
@@ -251,9 +247,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    // Called by operator
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn end_processing_completed_batch_withdrawals(
+    pub(super) fn end_processing_completed_batch_withdrawals(
         &mut self,
         current_timestamp: i64,
     ) -> Result<()> {
@@ -297,10 +291,8 @@ impl WithdrawalState {
 pub struct BatchWithdrawal {
     batch_id: u64,
     num_withdrawal_requests: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) receipt_token_to_process: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) receipt_token_being_processed: u64,
+    pub(super) receipt_token_to_process: u64,
+    pub(super) receipt_token_being_processed: u64,
     receipt_token_processed: u64,
     sol_reserved: u64,
     processing_started_at: Option<i64>,
@@ -348,12 +340,7 @@ impl BatchWithdrawal {
             && self.receipt_token_being_processed == 0
     }
 
-    // Called by operator
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn record_unstaking_start(
-        &mut self,
-        receipt_token_amount: u64,
-    ) -> Result<()> {
+    pub(super) fn record_unstaking_start(&mut self, receipt_token_amount: u64) -> Result<()> {
         self.receipt_token_to_process = self
             .receipt_token_to_process
             .checked_sub(receipt_token_amount)
@@ -366,9 +353,7 @@ impl BatchWithdrawal {
         Ok(())
     }
 
-    // Called by operator
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn record_unstaking_end(
+    pub(super) fn record_unstaking_end(
         &mut self,
         receipt_token_amount: u64,
         sol_amount: u64,

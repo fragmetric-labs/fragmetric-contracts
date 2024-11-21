@@ -32,8 +32,7 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_amount: u64,
     // TODO v0.3/operation: visibility
     pub(in crate::modules) sol_operation_reserved_amount: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) withdrawal: WithdrawalState,
+    pub(super) withdrawal: WithdrawalState,
     pub(super) one_receipt_token_as_sol: u64,
     receipt_token_decimals: u8,
     pub(super) operation: OperationState,
