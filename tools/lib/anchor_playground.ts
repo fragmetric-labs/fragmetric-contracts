@@ -1,12 +1,24 @@
 import * as anchor from '@coral-xyz/anchor';
-import {web3, AnchorError, IdlEvents} from '@coral-xyz/anchor';
+import {web3, AnchorError, IdlEvents, BN} from '@coral-xyz/anchor';
 import * as sweb3 from '@solana/web3.js';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
+// @ts-ignore
+import chalk from "chalk";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
+
+BN.prototype.toJSON = function() {
+    return this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
+}
+anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
+    return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));
+}
+web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = anchor.web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
+    return chalk.blue(this.toString());
+}
 
 export type AnchorPlaygroundConfig<IDL extends anchor.Idl, KEYS extends string> = {
     provider: anchor.Provider,
