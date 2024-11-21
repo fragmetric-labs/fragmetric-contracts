@@ -108,10 +108,10 @@ impl OperationCommand {
         OperationCommandEntry {
             command: self,
             required_accounts: required_accounts
-                .iter()
+                .into_iter()
                 .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
-                    pubkey: *pubkey,
-                    is_writable: *is_writable,
+                    pubkey,
+                    is_writable,
                 })
                 .collect(),
         }
