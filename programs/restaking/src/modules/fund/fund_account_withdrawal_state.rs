@@ -61,6 +61,7 @@ impl WithdrawalState {
 
     /// 1 fee rate = 1bps = 0.01%
     const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
+    const WITHDRAWAL_FEE_RATE_LIMIT: u64 = 500;
 
     #[inline(always)]
     pub(super) fn get_sol_withdrawal_fee_rate_as_f32(&self) -> f32 {
@@ -72,7 +73,7 @@ impl WithdrawalState {
         sol_withdrawal_fee_rate: u16,
     ) -> Result<()> {
         require_gte!(
-            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
+            Self::WITHDRAWAL_FEE_RATE_LIMIT,
             sol_withdrawal_fee_rate as u64,
             ErrorCode::FundInvalidSolWithdrawalFeeRateError
         );
