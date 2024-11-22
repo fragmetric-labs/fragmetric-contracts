@@ -15,7 +15,7 @@ use super::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
 pub struct PricingService<'info> {
     token_pricing_source_accounts_map: BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     token_pricing_source_map: BTreeMap<Pubkey, TokenPricingSource>,
-    /// the boolean flag indicates "atomic", meaning is the token not a kind of basket as like normalized token, so the value can be resolved by one self.
+    /// the boolean flag indicates "atomic", meaning whether the token is not a kind of basket such as normalized token, so the value of the token can be resolved by one self.
     token_value_map: BTreeMap<Pubkey, (TokenValue, bool)>,
 }
 

@@ -20,7 +20,7 @@ pub struct OperationState {
 
 impl OperationState {
     pub(super) fn initialize(&mut self, fund_account_data_version: u16) {
-        if fund_account_data_version == 4 {
+        if fund_account_data_version == 3 {
             self.updated_at = 0;
             self.expired_at = 0;
             self.next_sequence = 0;

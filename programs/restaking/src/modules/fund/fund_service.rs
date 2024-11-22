@@ -88,6 +88,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )?;
 
+        self.fund_account.receipt_token_value =
+            pricing_service.get_token_total_value_as_atomic(&self.receipt_token_mint.key())?;
+
+        self.fund_account.receipt_token_value_updated_at = self.current_timestamp;
+
         Ok(())
     }
 

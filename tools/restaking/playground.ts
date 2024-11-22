@@ -464,6 +464,30 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getFragSOLSupportedTokenAccount(symbol: keyof typeof this.supportedTokenMetadata) {
+        return spl.getAccount(
+            // @ts-ignore
+            this.connection,
+            this.knownAddress.fragSOLSupportedTokenAccount(symbol),
+            "confirmed",
+            this.supportedTokenMetadata[symbol].program
+        );
+    }
+
+    public getFragSOLSupportedTokenAccountByMintAddress(mint: web3.PublicKey) {
+        for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
+            if (mint.toString() != token.mint.toString()) continue;
+            return spl.getAccount(
+                // @ts-ignore
+                this.connection,
+                this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
+                "confirmed",
+                token.program,
+            );
+        }
+        throw new Error("fund supported token account not found")
+    }
+
     public getFragSOLLockAccount() {
         return spl.getAccount(
             // @ts-ignore
@@ -520,6 +544,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.knownAddress.nSOLTokenMint,
             "confirmed",
             spl.TOKEN_PROGRAM_ID
+        );
+    }
+
+    public getFragSOLTokenMint() {
+        return spl.getMint(
+            // @ts-ignore
+            this.connection,
+            this.knownAddress.fragSOLTokenMint,
+            "confirmed",
+            spl.TOKEN_2022_PROGRAM_ID
         );
     }
 
