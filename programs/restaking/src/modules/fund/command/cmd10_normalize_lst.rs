@@ -1,9 +1,16 @@
-use super::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use anchor_lang::prelude::*;
+
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct NormalizeLSTCommand {
     // TODO: NormalizeLSTCommand
+}
+
+impl From<NormalizeLSTCommand> for OperationCommand {
+    fn from(command: NormalizeLSTCommand) -> Self {
+        Self::NormalizeLST(command)
+    }
 }
 
 impl SelfExecutable for NormalizeLSTCommand {
