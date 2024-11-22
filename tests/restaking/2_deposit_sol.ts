@@ -19,19 +19,30 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
     });
 
     step("user1 deposits SOL without metadata to mint fragSOL", async function () {
-        const res0 = await restaking.runOperatorUpdatePrices();
-        expect(res0.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toNumber())
+        const [
+            fragSOLFund0,
+            fragSOLFundReserveAccountBalance0,
+        ] = await Promise.all([
+            restaking.getFragSOLFundAccount(),
+            restaking.getFragSOLFundReserveAccountBalance(),
+        ]);
+        expect(fragSOLFund0.oneReceiptTokenAsSol.toNumber())
             .greaterThan(0, 'fragSOL price is not zero');
-        expect(res0.fragSOLFund.solOperationReservedAmount.add(res0.fragSOLFund.withdrawal.solWithdrawalReservedAmount).toNumber())
-            .eq(res0.fragSOLFundReserveAccountBalance.toNumber(), 'fund records correct amount of SOL reserved');
-        const userFundAccount0 = await restaking.getUserFragSOLFundAccount(user1.publicKey).catch(v => null);
-        const userRewardAccount0 = await restaking.getUserFragSOLRewardAccount(user1.publicKey).catch(v => null);
+        expect(fragSOLFund0.solOperationReservedAmount.add(fragSOLFund0.withdrawal.solWithdrawalReservedAmount).toString())
+            .eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
+        const [
+            userFundAccount0,
+            userRewardAccount0,
+        ] = await Promise.all([
+            restaking.getUserFragSOLFundAccount(user1.publicKey).catch(v => null),
+            restaking.getUserFragSOLRewardAccount(user1.publicKey).catch(v => null)
+        ]);
 
         const amount = new BN(10 * anchor.web3.LAMPORTS_PER_SOL);
         const res1 = await restaking.runUserDepositSOL(user1, amount, null);
 
-        expect(res1.fragSOLFundReserveAccountBalance.sub(res0.fragSOLFundReserveAccountBalance).toNumber()).eq(amount.toNumber(), 'SOL is transferred to fund reserve account');
-        expect(res1.fragSOLFund.solOperationReservedAmount.sub(res0.fragSOLFund.solOperationReservedAmount).toString()).eq(amount.toString(), 'fund records correct amount of deposited SOL');
+        expect(res1.fragSOLFundReserveAccountBalance.sub(fragSOLFundReserveAccountBalance0).toString()).eq(amount.toString(), 'SOL is transferred to fund reserve account');
+        expect(res1.fragSOLFund.solOperationReservedAmount.sub(fragSOLFund0.solOperationReservedAmount).toString()).eq(amount.toString(), 'fund records correct amount of deposited SOL');
 
         expect(res1.fragSOLUserFund.user.toString()).eq(user1.publicKey.toString(), 'user check');
         expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString(), 'user fund records correct amount of minted fragSOL');
@@ -46,15 +57,28 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[0].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated base pool');
         expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[1].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated bonus pool');
 
-        const res2 = await restaking.runOperatorUpdatePrices();
+        const [
+            // fragSOLFund2,
+            fragSOLFundReserveAccountBalance2,
+        ] = await Promise.all([
+            // restaking.getFragSOLFundAccount(),
+            restaking.getFragSOLFundReserveAccountBalance(),
+        ]);
+
         // expect(res2.event.operatorUpdatedFundPrice.fundAccount.oneReceiptTokenAsSol.toString()).eq((mintedAmount.div(new BN(res1.fragSOLUserTokenAccount.amount.toString())).mul(new BN(10 ** restaking.fragSOLDecimals))).toString(), '11');
-        expect(res2.fragSOLFundReserveAccountBalance.sub(res0.fragSOLFundReserveAccountBalance).toString()).eq(amount.toString(), '11');
+        expect(fragSOLFundReserveAccountBalance2.sub(fragSOLFundReserveAccountBalance0).toString()).eq(amount.toString(), '11');
     });
 
     step("user2 deposits SOL with metadata to mint fragSOL", async function () {
-        const res0 = await restaking.runOperatorUpdatePrices();
-        const userFundAccount0 = await restaking.getUserFragSOLFundAccount(user2.publicKey).catch(v => null);
-        const userRewardAccount0 = await restaking.getUserFragSOLRewardAccount(user2.publicKey).catch(v => null);
+        const [
+            fragSOLFundReserveAccountBalance0,
+            userFundAccount0,
+            userRewardAccount0,
+        ] = await Promise.all([
+            restaking.getFragSOLFundReserveAccountBalance(),
+            restaking.getUserFragSOLFundAccount(user2.publicKey).catch(v => null),
+            restaking.getUserFragSOLRewardAccount(user2.publicKey).catch(v => null),
+        ]);
 
         const amount1 = new BN(6 * anchor.web3.LAMPORTS_PER_SOL);
         const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
@@ -66,7 +90,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         });
         const res1 = await restaking.runUserDepositSOL(user2, amount1, depositMetadata1);
 
-        expect(res1.fragSOLFundReserveAccountBalance.sub(res0.fragSOLFundReserveAccountBalance).toString()).eq(amount1.toString(), 'SOL is transferred to fund reserve account');
+        expect(res1.fragSOLFundReserveAccountBalance.sub(fragSOLFundReserveAccountBalance0).toString()).eq(amount1.toString(), 'SOL is transferred to fund reserve account');
         expect(res1.event.userDepositedSolToFund.walletProvider).eq(depositMetadata1.walletProvider, 'wallet provider is correct');
         expect(res1.event.userDepositedSolToFund.contributionAccrualRate.toString()).eq(depositMetadata1.contributionAccrualRate.toString(), 'contribution accrual rate is correct');
         expect(res1.event.userDepositedSolToFund.userFundAccount.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString(), 'fragSOL mint amount in event is valid');

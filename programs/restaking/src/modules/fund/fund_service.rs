@@ -96,20 +96,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_update_prices(
-        &mut self,
-        token_pricing_source_accounts: &'info [AccountInfo<'info>],
-    ) -> Result<()> {
-        self.new_pricing_service(token_pricing_source_accounts)?;
-
-        emit!(events::OperatorUpdatedFundPrice {
-            receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
-        });
-
-        Ok(())
-    }
-
     pub fn process_transfer_hook(
         &self,
         reward_account: &mut AccountLoader<'info, reward::RewardAccount>,

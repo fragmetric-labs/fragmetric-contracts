@@ -397,16 +397,6 @@ pub mod restaking {
         )
     }
 
-    pub fn operator_update_prices<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-    ) -> Result<()> {
-        modules::fund::FundService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )?
-        .process_update_prices(ctx.remaining_accounts)
-    }
-
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////
