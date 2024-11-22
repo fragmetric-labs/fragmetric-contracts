@@ -69,7 +69,7 @@ impl OperationState {
                     self.no_transition = false;
                     command = None;
                 }
-                // otherwise, meaning retaining on same the same command type, still maintains no_transition state.
+                // otherwise, retaining on the same command type, still maintains no_transition state.
             } else {
                 // if there is no previous command (unexpected flow) or next command, clear no_transition state.
                 self.no_transition = false;
