@@ -43,12 +43,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         &mut self,
         pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<PricingService<'info>> {
-        // ensure any update on fund account written before do pricing
-        self.fund_account.exit(&crate::ID)?;
-
         let mut pricing_service = PricingService::new(pricing_sources)?
             .register_token_pricing_source_account(self.fund_account.as_account_info())
             .register_token_pricing_source_account(self.receipt_token_mint.as_account_info());
+
+        // try to update current underlying assets' price
+        self.update_asset_values(&mut pricing_service)?;
+
+        Ok(pricing_service)
+    }
+    
+    pub(super) fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
+        // ensure any update on fund account written before do pricing
+        self.fund_account.exit(&crate::ID)?;
+        
+        // update fund asset values
         pricing_service.resolve_token_pricing_source(
             &self.fund_account.receipt_token_mint.key(),
             &TokenPricingSource::FundReceiptToken {
@@ -57,14 +66,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             },
         )?;
 
-        // try to update current underlying assets' price
-        self.update_asset_prices(&pricing_service)?;
-
-        Ok(pricing_service)
-    }
-
-    // values being updated below are informative, only for event emission.
-    fn update_asset_prices(&mut self, pricing_service: &PricingService) -> Result<()> {
+        // the values being written below are informative, only for event emission.
         self.fund_account
             .supported_tokens
             .iter_mut()

@@ -9,13 +9,15 @@ use super::TokenPricingSource;
 pub trait TokenValueProvider {
     fn resolve_underlying_assets<'info>(
         self,
+        token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue>;
 }
 
 /// a value representing total asset value of a pricing source.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenValue {
+    #[max_len(20)]
     pub numerator: Vec<Asset>,
     pub denominator: u64,
 }
@@ -34,7 +36,7 @@ impl std::fmt::Display for TokenValue {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum Asset {
     // amount
     SOL(u64),
@@ -63,14 +65,14 @@ mod mock {
         // amount
         SOL(u64),
         // mint, amount
-        TOKEN(Pubkey, u64),
+        Token(Pubkey, u64),
     }
 
     impl std::fmt::Display for MockAsset {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::SOL(amount) => write!(f, "{} SOL", amount),
-                Self::TOKEN(mint, amount) => write!(f, "{} TOKEN({})", amount, mint),
+                Self::Token(mint, amount) => write!(f, "{} TOKEN({})", amount, mint),
             }
         }
     }
@@ -93,6 +95,7 @@ mod mock {
     impl<'b> TokenValueProvider for MockPricingSourceValueProvider<'b> {
         fn resolve_underlying_assets<'info>(
             self,
+            _token_mint: &Pubkey,
             pricing_source_accounts: &[&'info AccountInfo<'info>],
         ) -> Result<TokenValue> {
             require_eq!(pricing_source_accounts.len(), 0);
@@ -103,7 +106,7 @@ mod mock {
                     .iter()
                     .map(|&asset| match asset {
                         MockAsset::SOL(amount) => Asset::SOL(amount),
-                        MockAsset::TOKEN(mint, amount) => Asset::TOKEN(mint, None, amount),
+                        MockAsset::Token(mint, amount) => Asset::TOKEN(mint, None, amount),
                     })
                     .collect(),
                 denominator: *self.denominator,

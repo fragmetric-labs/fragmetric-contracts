@@ -11,6 +11,7 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
+        token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
@@ -18,10 +19,7 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
         // ref: https://docs.rs/marinade-cpi/latest/marinade_cpi/state/struct.State.html
         let pool_account = Account::<State>::try_from(pricing_source_accounts[0])?;
 
-        #[cfg(feature = "devnet")]
-        require_keys_eq!(pool_account.msol_mint, MAINNET_MSOL_MINT_ADDRESS);
-        #[cfg(not(feature = "devnet"))]
-        require_keys_eq!(pool_account.msol_mint, DEVNET_MSOL_MINT_ADDRESS);
+        require_keys_eq!(pool_account.msol_mint, *token_mint);
 
         let total_cooling_down = pool_account
             .stake_system

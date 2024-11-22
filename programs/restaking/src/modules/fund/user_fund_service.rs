@@ -87,7 +87,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .unzip();
 
         // calculate receipt token minting amount
-        let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+        let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount =
             pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
@@ -108,6 +108,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             sol_amount,
         )?;
 
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_values(&mut pricing_service)?;
+
         // log deposit event
         emit!(events::UserDepositedSOLToFund {
             user: self.user.key(),
@@ -118,7 +121,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint,),
+            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
         });
 
         Ok(())
@@ -153,7 +156,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .unzip();
 
         // calculate receipt token minting amount
-        let pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+        let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount = pricing_service.get_sol_amount_as_token(
             &self.receipt_token_mint.key(),
@@ -182,6 +185,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             supported_token_mint.decimals,
         )
         .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+
+        // update fund asset value
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_values(&mut pricing_service)?;
 
         // log deposit event
         emit!(events::UserDepositedSupportedTokenToFund {
