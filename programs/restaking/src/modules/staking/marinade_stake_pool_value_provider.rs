@@ -14,6 +14,7 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
+        #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
 
         // ref: https://docs.rs/marinade-cpi/latest/marinade_cpi/state/struct.State.html

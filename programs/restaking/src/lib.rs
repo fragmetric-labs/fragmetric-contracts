@@ -69,7 +69,7 @@ pub mod restaking {
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_normalized_token_pool(
+    pub fn admin_initialize_normalized_token_pool_account(
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
@@ -81,6 +81,17 @@ pub mod restaking {
             &ctx.accounts.admin,
             ctx.bumps.normalized_token_pool_account,
         )
+    }
+
+    pub fn admin_update_normalized_token_pool_account_if_needed(
+        ctx: Context<AdminNormalizedTokenPoolUpdateContext>,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+            .process_update_normalized_token_pool_account_if_needed()
     }
 
     ////////////////////////////////////////////

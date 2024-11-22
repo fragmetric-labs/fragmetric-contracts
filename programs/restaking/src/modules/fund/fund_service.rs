@@ -38,7 +38,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         })
     }
 
-    // create a pricing service and register fund assets' value resolvers
+    // create a pricing service and register fund assets' value resolver
     pub(in crate::modules) fn new_pricing_service(
         &mut self,
         pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
@@ -62,8 +62,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         // update fund asset values
         pricing_service.resolve_token_pricing_source(
             &self.fund_account.receipt_token_mint.key(),
-            &TokenPricingSource::FundReceiptToken {
-                fund_address: self.fund_account.key(),
+            &TokenPricingSource::FragmetricRestakingFund {
+                address: self.fund_account.key(),
             },
         )?;
 
@@ -82,15 +82,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Ok::<(), Error>(())
             })?;
 
+        let receipt_token_mint_key = &self.receipt_token_mint.key();
         self.fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
-            &self.receipt_token_mint.key(),
+            receipt_token_mint_key,
             10u64
                 .checked_pow(self.receipt_token_mint.decimals as u32)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )?;
 
         self.fund_account.receipt_token_value =
-            pricing_service.get_token_total_value_as_atomic(&self.receipt_token_mint.key())?;
+            pricing_service.get_token_total_value_as_atomic(receipt_token_mint_key)?;
 
         self.fund_account.receipt_token_value_updated_at = self.current_timestamp;
 
@@ -332,10 +333,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             ),
             receipt_token_amount_to_burn,
         )?;
-        
+
         // TODO: receipt_token_lock_account.reload()?;
-        self.fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
-        
+        self.fund_account
+            .reload_receipt_token_supply(self.receipt_token_mint)?;
+
         withdrawal_state.end_processing_completed_batch_withdrawals(self.current_timestamp)?;
 
         // write back operation state

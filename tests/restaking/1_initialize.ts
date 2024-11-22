@@ -26,7 +26,6 @@ describe("initialize", async () => {
         const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
 
         expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
-        expect(fragSOLFundAccount.dataVersion).gt(0);
 
         await restaking.runAdminUpdateFundAccounts();
 
@@ -104,9 +103,13 @@ describe("initialize", async () => {
     })
 
     step("initialize normalized token pool", async () => {
-        const {nSOLTokenPoolAccount} = await restaking.runAdminInitializeNormalizeTokenPool();
+        const {nSOLTokenPoolAccount} = await restaking.runAdminInitializeNormalizedTokenPoolAccounts();
 
         expect(nSOLTokenPoolAccount.normalizedTokenMint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
+
+        await restaking.runAdminUpdateNormalizedTokenPoolAccounts();
+
+        expect(nSOLTokenPoolAccount.dataVersion).gt(1);
     })
 
     step("initialize normalized token pool supported tokens configuration", async function () {

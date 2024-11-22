@@ -37,8 +37,7 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
     ) -> Result<()> {
         self.normalized_token_pool_account.initialize(
             normalized_token_pool_account_bump,
-            self.normalized_token_mint.key(),
-            self.normalized_token_program.key(),
+            self.normalized_token_mint,
         );
 
         anchor_spl::token::set_authority(
@@ -53,6 +52,12 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             Some(self.normalized_token_pool_account.key()),
         )?;
 
+        Ok(())
+    }
+
+    pub fn process_update_normalized_token_pool_account_if_needed(&mut self) -> Result<()> {
+        self.normalized_token_pool_account
+            .update_if_needed(self.normalized_token_mint);
         Ok(())
     }
 

@@ -14,11 +14,11 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
-        require_eq!(pricing_source_accounts.len(), 2);
+        #[cfg(debug_assertions)]
+        require_eq!(pricing_source_accounts.len(), 1);
 
-        let normalized_token_mint = InterfaceAccount::<Mint>::try_from(pricing_source_accounts[0])?;
         let normalized_token_pool_account =
-            Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[1])?;
+            Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[0])?;
 
         require_keys_eq!(
             normalized_token_pool_account.normalized_token_mint,
@@ -34,7 +34,7 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
                     Asset::TOKEN(supported_token.mint, None, supported_token.locked_amount)
                 })
                 .collect(),
-            denominator: normalized_token_mint.supply,
+            denominator: normalized_token_pool_account.normalized_token_supply_amount,
         })
     }
 }

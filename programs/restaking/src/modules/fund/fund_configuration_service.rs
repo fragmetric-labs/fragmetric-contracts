@@ -37,9 +37,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     ) -> Result<()> {
         self.fund_account.initialize(
             bump,
-            self.receipt_token_mint.key(),
-            self.receipt_token_mint.decimals,
-            self.receipt_token_mint.supply,
+            self.receipt_token_mint,
         );
 
         // set token mint authority

@@ -35,7 +35,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                 command.state = EnqueueWithdrawalBatchCommandState::Enqueue;
 
                 return Ok(Some(command.with_required_accounts([
-                    (ctx.fund_account.find_receipt_token_program_address(), false),
+                    (ctx.fund_account.receipt_token_program, false),
                     (
                         ctx.fund_account.find_receipt_token_lock_account_address()?,
                         true,

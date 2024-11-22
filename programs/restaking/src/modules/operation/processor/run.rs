@@ -189,9 +189,8 @@ fn normalize_supported_tokens<'info>(
             .register_token_pricing_source_account(normalized_token_pool_account);
         pricing_service.resolve_token_pricing_source(
             &normalized_token_mint.key(),
-            &pricing::TokenPricingSource::NormalizedTokenPool {
-                mint_address: normalized_token_mint.key(),
-                pool_address: normalized_token_pool_account.key(),
+            &pricing::TokenPricingSource::FragmetricNormalizedTokenPool {
+                address: normalized_token_pool_account.key(),
             },
         )?;
 
@@ -211,7 +210,7 @@ fn normalize_supported_tokens<'info>(
             &fund_account.to_account_info(),
             &[fund_account.get_signer_seeds().as_ref()],
             normalizing_supported_token_amount,
-            &pricing_service,
+            &mut pricing_service,
         )?;
 
         fund_supported_token_account_to_normalize.reload()?;

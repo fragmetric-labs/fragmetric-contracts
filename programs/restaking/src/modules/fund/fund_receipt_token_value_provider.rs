@@ -14,6 +14,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
+        #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
 
         let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[0])?;

@@ -104,7 +104,7 @@ mod tests {
     fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + FundAccount::INIT_SPACE];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
-        fund.initialize(0, Pubkey::new_unique(), 9, 0);
+        fund.update(0, Pubkey::new_unique(), 9, 0);
         fund
     }
 

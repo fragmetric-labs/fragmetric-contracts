@@ -14,7 +14,7 @@ use super::*;
 /// * v1: Initial Version
 /// * v2: Change reserve fund structure
 /// * v3: Remove `sol_fee_income_reserved_amount` field
-/// * v4: Add `receipt_token_decimals`, .., `one_receipt_token_as_sol`, `restaking_vaults`, `operation` fields
+/// * v4: Add `receipt_token_program`, .., `one_receipt_token_as_sol`, `restaking_vaults`, `operation` fields
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
@@ -34,6 +34,7 @@ pub struct FundAccount {
     pub(in crate::modules) sol_operation_reserved_amount: u64,
     pub(super) withdrawal: WithdrawalState,
 
+    pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
     pub(super) receipt_token_supply_amount: u64,
     pub(super) receipt_token_value: TokenValue,
@@ -110,22 +111,17 @@ impl FundAccount {
         )
     }
 
-    #[inline]
-    pub(super) fn find_receipt_token_program_address(&self) -> Pubkey {
-        token_2022::ID
-    }
-
     pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.find_account_address()?,
                 &self.receipt_token_mint,
-                &self.find_receipt_token_program_address(),
+                &self.receipt_token_program,
             ),
         )
     }
 
-    pub(super) fn initialize(
+    pub(super) fn update(
         &mut self,
         bump: u8,
         receipt_token_mint: Pubkey,
@@ -150,6 +146,7 @@ impl FundAccount {
         }
 
         if self.data_version == 3 {
+            self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
             self.receipt_token_value = TokenValue {
@@ -159,8 +156,8 @@ impl FundAccount {
             self.receipt_token_value_updated_at = 0;
             self.one_receipt_token_as_sol = 0;
 
-            // self.normalized_token;
-            // self.restaking_vaults;
+            // TODO: self.normalized_token;
+            // TODO: self.restaking_vaults;
             self.operation.initialize(self.data_version);
 
             self.data_version = 4;
@@ -168,12 +165,20 @@ impl FundAccount {
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: &InterfaceAccount<Mint>) {
-        self.initialize(
-            self.bump,
+    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: &InterfaceAccount<Mint>) {
+        self.update(
+            bump,
             receipt_token_mint.key(),
             receipt_token_mint.decimals,
             receipt_token_mint.supply,
+        );
+    }
+
+    #[inline(always)]
+    pub(super) fn update_if_needed(&mut self, receipt_token_mint: &InterfaceAccount<Mint>) {
+        self.initialize(
+            self.bump,
+            receipt_token_mint,
         );
     }
 

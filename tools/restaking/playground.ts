@@ -78,7 +78,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     amount: new BN(0),
                 }),
             () => this.runAdminInitializeNSOLTokenMint(), // 8
-            () => this.runAdminInitializeNormalizeTokenPool(), // 9
+            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 9
             () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10
             () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11
         ];
@@ -801,16 +801,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundAccount};
     }
 
-    public async runAdminInitializeNormalizeTokenPool() {
+    public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
-                this.program.methods.adminInitializeNormalizedTokenPool().accounts({payer: this.wallet.publicKey}).instruction(),
+                this.program.methods.adminInitializeNormalizedTokenPoolAccount().accounts({payer: this.wallet.publicKey}).instruction(),
                 this.program.methods.adminInitializeFundNormalizedTokenAccount().accounts({payer: this.wallet.publicKey}).instruction(),
             ],
             signerNames: ["ADMIN"],
         });
         const nSOLTokenPoolAccount = await this.getNSOLTokenPoolAccount();
-        logger.notice("nSOL token pool created".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
+        logger.notice("nSOL token pool account created".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
+
+        return {nSOLTokenPoolAccount};
+    }
+
+    public async runAdminUpdateNormalizedTokenPoolAccounts() {
+        await this.run({
+            instructions: [this.program.methods.adminUpdateNormalizedTokenPoolAccountIfNeeded().accounts({payer: this.wallet.publicKey}).instruction()],
+            signerNames: ["ADMIN"],
+        });
+        const nSOLTokenPoolAccount = await this.getNSOLTokenPoolAccount();
+        logger.notice("nSOL token pool account updated".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
 
         return {nSOLTokenPoolAccount};
     }

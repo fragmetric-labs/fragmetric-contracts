@@ -64,30 +64,20 @@ impl<'info> PricingService<'info> {
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
                 MarinadeStakePoolValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
-            TokenPricingSource::NormalizedTokenPool {
-                mint_address,
-                pool_address,
-            } => {
+            TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
-                    .get(mint_address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                let account2 = self
-                    .token_pricing_source_accounts_map
-                    .get(pool_address)
+                    .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
                 NormalizedTokenPoolValueProvider
-                    .resolve_underlying_assets(token_mint, &[account1, account2])?
+                    .resolve_underlying_assets(token_mint, &[account1])?
             }
-            TokenPricingSource::FundReceiptToken {
-                fund_address,
-            } => {
+            TokenPricingSource::FragmetricRestakingFund { address } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
-                    .get(fund_address)
+                    .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                FundReceiptTokenValueProvider
-                    .resolve_underlying_assets(token_mint, &[account1])?
+                FundReceiptTokenValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
             #[cfg(test)]
             TokenPricingSource::Mock {
@@ -253,14 +243,22 @@ impl<'info> PricingService<'info> {
             }
         }
 
-        let mut numerator = vec![Asset::SOL(total_sol_amount)];
-        numerator.extend(total_tokens.into_iter().map(|(token_mint, token_amount)| {
-            Asset::TOKEN(
-                token_mint,
-                self.token_pricing_source_map.get(&token_mint).cloned(),
-                token_amount,
-            )
-        }));
+        let mut numerator = Vec::new();
+        if total_sol_amount > 0 {
+            numerator.push(Asset::SOL(total_sol_amount));
+        }
+        numerator.extend(
+            total_tokens
+                .into_iter()
+                .filter(|(_, token_amount)| *token_amount > 0)
+                .map(|(token_mint, token_amount)| {
+                    Asset::TOKEN(
+                        token_mint,
+                        self.token_pricing_source_map.get(&token_mint).cloned(),
+                        token_amount,
+                    )
+                }),
+        );
 
         Ok(TokenValue {
             numerator,

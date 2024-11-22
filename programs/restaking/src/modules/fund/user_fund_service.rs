@@ -227,7 +227,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_mint_amount,
         )
         .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
-        
+
         self.fund_account
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
@@ -294,7 +294,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
 
         receipt_token_lock_account.reload()?;
-        
+
         self.fund_account
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
@@ -369,7 +369,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         self.fund_account
             .reload_receipt_token_supply(self.receipt_token_mint)?;
-        
+
         self.user_fund_account
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
