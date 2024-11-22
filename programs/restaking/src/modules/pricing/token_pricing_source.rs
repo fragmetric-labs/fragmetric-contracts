@@ -17,7 +17,6 @@ pub enum TokenPricingSource {
         pool_address: Pubkey,
     },
     FundReceiptToken {
-        mint_address: Pubkey,
         fund_address: Pubkey,
     },
     #[cfg(test)]

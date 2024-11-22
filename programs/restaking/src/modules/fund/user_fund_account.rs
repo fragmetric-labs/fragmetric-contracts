@@ -73,22 +73,28 @@ impl UserFundAccount {
         }
     }
 
+    pub(super) fn reload_receipt_token_amount(
+        &mut self,
+        user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
+    ) -> Result<()> {
+        #[cfg(debug_assertions)]
+        require_keys_eq!(self.user, user_receipt_token_account.owner);
+
+        #[cfg(debug_assertions)]
+        require_keys_eq!(self.receipt_token_mint, user_receipt_token_account.mint);
+
+        user_receipt_token_account.reload()?;
+        self.receipt_token_amount = user_receipt_token_account.amount;
+
+        Ok(())
+    }
+
     fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
         let index = self
             .withdrawal_requests
             .binary_search_by_key(&request_id, |req| req.request_id)
             .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
-    }
-
-    pub(super) fn sync_receipt_token_amount(
-        &mut self,
-        user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
-    ) -> Result<()> {
-        user_receipt_token_account.reload()?;
-        self.receipt_token_amount = user_receipt_token_account.amount;
-
-        Ok(())
     }
 
     /// Returns (batch_id, request_id)

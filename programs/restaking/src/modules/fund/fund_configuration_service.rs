@@ -39,6 +39,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             bump,
             self.receipt_token_mint.key(),
             self.receipt_token_mint.decimals,
+            self.receipt_token_mint.supply,
         );
 
         // set token mint authority
@@ -145,7 +146,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
+            fund_account: FundAccountInfo::from(self.fund_account),
         });
 
         Ok(())

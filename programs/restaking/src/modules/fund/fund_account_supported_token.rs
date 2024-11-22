@@ -101,15 +101,16 @@ mod tests {
     use super::*;
     use crate::modules::pricing::TokenPricingSource;
 
-    fn create_uninitialized_fund_account() -> FundAccount {
+    fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + FundAccount::INIT_SPACE];
-        FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap()
+        let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
+        fund.initialize(0, Pubkey::new_unique(), 9, 0);
+        fund
     }
 
     #[test]
     fn test_initialize_update_fund_account() {
-        let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique(), 9);
+        let mut fund = create_initialized_fund_account();
 
         assert_eq!(fund.sol_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_withdrawal_fee_rate_as_f32(), 0.);
@@ -144,8 +145,7 @@ mod tests {
 
     #[test]
     fn test_update_token() {
-        let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique(), 9);
+        let mut fund = create_initialized_fund_account();
 
         let token1 = Pubkey::new_unique();
         let token2 = Pubkey::new_unique();
@@ -192,8 +192,7 @@ mod tests {
 
     #[test]
     fn test_deposit_sol() {
-        let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique(), 9);
+        let mut fund = create_initialized_fund_account();
         fund.set_sol_capacity_amount(100_000).unwrap();
 
         assert_eq!(fund.sol_operation_reserved_amount, 0);
@@ -208,9 +207,8 @@ mod tests {
 
     #[test]
     fn test_deposit_token() {
-        let mut fund = create_uninitialized_fund_account();
-        fund.initialize(0, Pubkey::new_unique(), 9);
-
+        let mut fund = create_initialized_fund_account();
+        
         fund.add_supported_token(
             Pubkey::new_unique(),
             Pubkey::default(),

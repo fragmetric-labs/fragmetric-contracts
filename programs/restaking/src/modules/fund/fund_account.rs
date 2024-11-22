@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue};
@@ -35,6 +35,7 @@ pub struct FundAccount {
     pub(super) withdrawal: WithdrawalState,
 
     pub(super) receipt_token_decimals: u8,
+    pub(super) receipt_token_supply_amount: u64,
     pub(super) receipt_token_value: TokenValue,
     pub(super) receipt_token_value_updated_at: i64,
     pub(super) one_receipt_token_as_sol: u64,
@@ -129,6 +130,7 @@ impl FundAccount {
         bump: u8,
         receipt_token_mint: Pubkey,
         receipt_token_decimals: u8,
+        receipt_token_supply: u64,
     ) {
         if self.data_version == 0 {
             self.bump = bump;
@@ -149,6 +151,7 @@ impl FundAccount {
 
         if self.data_version == 3 {
             self.receipt_token_decimals = receipt_token_decimals;
+            self.receipt_token_supply_amount = receipt_token_supply;
             self.receipt_token_value = TokenValue {
                 numerator: Vec::new(),
                 denominator: 0,
@@ -170,6 +173,7 @@ impl FundAccount {
             self.bump,
             receipt_token_mint.key(),
             receipt_token_mint.decimals,
+            receipt_token_mint.supply,
         );
     }
 
@@ -229,6 +233,19 @@ impl FundAccount {
         let token_info =
             SupportedToken::new(mint, program, decimals, capacity_amount, pricing_source);
         self.supported_tokens.push(token_info);
+
+        Ok(())
+    }
+
+    pub(super) fn reload_receipt_token_supply(
+        &mut self,
+        receipt_token_mint: &mut InterfaceAccount<Mint>,
+    ) -> Result<()> {
+        #[cfg(debug_assertions)]
+        require_keys_eq!(self.receipt_token_mint, receipt_token_mint.key());
+
+        receipt_token_mint.reload()?;
+        self.receipt_token_supply_amount = receipt_token_mint.supply;
 
         Ok(())
     }

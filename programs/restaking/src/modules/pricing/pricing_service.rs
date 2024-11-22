@@ -80,19 +80,14 @@ impl<'info> PricingService<'info> {
                     .resolve_underlying_assets(token_mint, &[account1, account2])?
             }
             TokenPricingSource::FundReceiptToken {
-                mint_address,
                 fund_address,
             } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
-                    .get(mint_address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                let account2 = self
-                    .token_pricing_source_accounts_map
                     .get(fund_address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
                 FundReceiptTokenValueProvider
-                    .resolve_underlying_assets(token_mint, &[account1, account2])?
+                    .resolve_underlying_assets(token_mint, &[account1])?
             }
             #[cfg(test)]
             TokenPricingSource::Mock {

@@ -14,13 +14,11 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
-        require_eq!(pricing_source_accounts.len(), 2);
+        require_eq!(pricing_source_accounts.len(), 1);
 
-        let receipt_token_mint = InterfaceAccount::<Mint>::try_from(pricing_source_accounts[0])?;
-        let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[1])?;
+        let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[0])?;
 
         require_keys_eq!(fund_account.receipt_token_mint, *token_mint);
-        require_keys_eq!(fund_account.receipt_token_mint, receipt_token_mint.key());
 
         let mut assets = Vec::new();
         for supported_token in &fund_account.supported_tokens {
@@ -39,7 +37,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         Ok(TokenValue {
             numerator: assets,
-            denominator: receipt_token_mint.supply,
+            denominator: fund_account.receipt_token_supply_amount,
         })
     }
 }

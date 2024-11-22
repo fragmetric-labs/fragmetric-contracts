@@ -44,24 +44,25 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<PricingService<'info>> {
         let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(self.fund_account.as_account_info())
-            .register_token_pricing_source_account(self.receipt_token_mint.as_account_info());
+            .register_token_pricing_source_account(self.fund_account.as_account_info());
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;
 
         Ok(pricing_service)
     }
-    
-    pub(super) fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
+
+    pub(super) fn update_asset_values(
+        &mut self,
+        pricing_service: &mut PricingService,
+    ) -> Result<()> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
-        
+
         // update fund asset values
         pricing_service.resolve_token_pricing_source(
             &self.fund_account.receipt_token_mint.key(),
             &TokenPricingSource::FundReceiptToken {
-                mint_address: self.fund_account.receipt_token_mint.key(),
                 fund_address: self.fund_account.key(),
             },
         )?;
@@ -134,12 +135,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // sync user fund accounts
         if let Some(mut source_fund_account) = source_fund_account_option {
-            source_fund_account.sync_receipt_token_amount(source_receipt_token_account)?;
+            source_fund_account.reload_receipt_token_amount(source_receipt_token_account)?;
             source_fund_account.exit(&crate::ID)?;
         }
         if let Some(mut destination_fund_account) = destination_fund_account_option {
             destination_fund_account
-                .sync_receipt_token_amount(destination_receipt_token_account)?;
+                .reload_receipt_token_amount(destination_receipt_token_account)?;
             destination_fund_account.exit(&crate::ID)?;
         }
 
@@ -261,7 +262,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account, self.receipt_token_mint),
+            fund_account: FundAccountInfo::from(self.fund_account),
             executed_commands,
         });
 
@@ -331,9 +332,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             ),
             receipt_token_amount_to_burn,
         )?;
-        self.receipt_token_mint.reload()?;
+        
         // TODO: receipt_token_lock_account.reload()?;
-
+        self.fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
+        
         withdrawal_state.end_processing_completed_batch_withdrawals(self.current_timestamp)?;
 
         // write back operation state

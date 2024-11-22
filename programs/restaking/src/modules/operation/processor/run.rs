@@ -54,7 +54,7 @@ pub fn process_run<'info>(
 
     emit!(events::OperatorRanFund {
         receipt_token_mint: receipt_token_mint.key(),
-        fund_account: fund::FundAccountInfo::from(fund_account, receipt_token_mint),
+        fund_account: fund::FundAccountInfo::from(fund_account),
         executed_commands: vec![],
     });
 
