@@ -51,7 +51,7 @@ impl UserRewardPool {
         require_gt!(
             USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
             self.num_reward_settlements as usize,
-            ErrorCode::RewardExceededMaxRewardSettlementException,
+            ErrorCode::RewardExceededMaxRewardSettlementError,
         );
 
         let settlement = &mut self.reward_settlements_1[self.num_reward_settlements as usize];

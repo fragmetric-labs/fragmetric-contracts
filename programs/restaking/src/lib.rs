@@ -13,6 +13,7 @@ use instructions::*;
 
 #[program]
 pub mod restaking {
+    use anchor_spl::token_interface::{TokenAccount, TokenInterface};
     use super::*;
     use crate::modules::normalization::NormalizedTokenPoolAccount;
     use crate::utils::AccountInfoExt;
@@ -57,10 +58,27 @@ pub mod restaking {
         )
     }
 
-    pub fn admin_initialize_jito_restaking_vault_receipt_token_account(
-        _ctx: Context<AdminFundJitoRestakingProtocolAccountInitialContext>,
+    pub fn admin_initialize_jito_restaking_vault_receipt_token_account<'info>(
+        ctx: Context<'_, '_, 'info, 'info, AdminFundJitoRestakingProtocolAccountInitialContext<'info>>,
     ) -> Result<()> {
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+            .process_add_restaking_vault(
+                &ctx.accounts.fund_vault_supported_token_account,
+                &ctx.accounts.fund_vault_receipt_token_account,
+
+                &ctx.accounts.vault_supported_token_mint,
+                &ctx.accounts.vault_supported_token_program,
+
+                &ctx.accounts.vault,
+                &ctx.accounts.vault_program,
+                &ctx.accounts.vault_receipt_token_mint,
+                &ctx.accounts.vault_receipt_token_program,
+                
+                ctx.remaining_accounts,
+            )
     }
 
     ////////////////////////////////////////////

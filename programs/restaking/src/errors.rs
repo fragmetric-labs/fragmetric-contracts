@@ -29,7 +29,7 @@ pub enum ErrorCode {
     #[msg("fund: already supported token")]
     FundAlreadySupportedTokenError,
 
-    #[msg("fund: not supported the token")]
+    #[msg("fund: not supported token")]
     FundNotSupportedTokenError,
 
     #[msg("fund: exceeded sol capacity amount")]
@@ -117,25 +117,25 @@ pub enum ErrorCode {
     RewardInvalidAllocatedAmountDeltaException,
 
     #[msg("reward: exceeded max holders")]
-    RewardExceededMaxHoldersException,
+    RewardExceededMaxHoldersError,
 
     #[msg("reward: exceeded max rewards")]
-    RewardExceededMaxRewardsException,
+    RewardExceededMaxRewardsError,
 
     #[msg("reward: exceeded max reward pools")]
-    RewardExceededMaxRewardPoolsException,
+    RewardExceededMaxRewardPoolsError,
 
     #[msg("reward: exceeded max user reward pools")]
-    RewardExceededMaxUserRewardPoolsException,
+    RewardExceededMaxUserRewardPoolsError,
 
     #[msg("reward: exceeded max pubkeys per holder")]
-    RewardExceededMaxHolderPubkeysException,
+    RewardExceededMaxHolderPubkeysError,
 
     #[msg("reward: exceeded max token allocated amount record")]
     RewardExceededMaxTokenAllocatedAmountRecordException,
 
     #[msg("reward: exceeded max reward settlements per pool")]
-    RewardExceededMaxRewardSettlementException,
+    RewardExceededMaxRewardSettlementError,
 
     #[msg("reward: stale settlement block not exist")]
     RewardStaleSettlementBlockNotExistError,
@@ -183,7 +183,7 @@ pub enum ErrorCode {
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
     #[msg("normalization: not enough supported token to unlock")]
-    NormalizedTokenPoolNotEnoughLockedToken,
+    NormalizedTokenPoolNotEnoughLockedTokenException,
 
     #[msg("operation: failed to compute required accounts for the next command")]
     OperationCommandAccountComputationException,
@@ -192,5 +192,14 @@ pub enum ErrorCode {
     OperationCommandExecutionFailedException,
 
     #[msg("fund: normalized token already set")]
-    FundNormalizedTokenAlreadySet,
+    FundNormalizedTokenAlreadySetError,
+    
+    #[msg("fund: restaking vault already registered")]
+    FundRestakingVaultAlreadyRegisteredError,
+    
+    #[msg("reward: exceeded max restaking vaults")]
+    FundExceededMaxRestakingVaultsError,
+    
+    #[msg("fund: not supported restaking vault")]
+    FundNotSupportedRestakingVaultError,
 }

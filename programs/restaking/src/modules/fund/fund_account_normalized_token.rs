@@ -1,25 +1,29 @@
 use anchor_lang::prelude::*;
+use crate::modules::pricing::TokenPricingSource;
+use crate::modules::reward::RewardType::Token;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct NormalizedToken {
-    pub(super) mint: Pubkey,
-    pub(super) program: Pubkey,
-    pub(super) decimals: u8,
-    pub(super) pool: Pubkey,
-    pub(super) one_token_as_sol: u64,
-    pub(super) operation_reserved_amount: u64,
+pub(super) struct NormalizedToken {
+    pub mint: Pubkey,
+    pub program: Pubkey,
+    pub decimals: u8,
+    pub one_token_as_sol: u64,
+    pub pricing_source: TokenPricingSource,
+    pub operation_reserved_amount: u64,
     _reserved: [u8; 64],
 }
 
 impl NormalizedToken {
-    pub(super) fn new(mint: Pubkey, program: Pubkey, decimals: u8, pool: Pubkey) -> Self {
+    pub fn new(mint: Pubkey, program: Pubkey, decimals: u8, pool: Pubkey, operation_reserved_amount: u64) -> Self {
         Self {
             mint,
             program,
             decimals,
-            pool,
             one_token_as_sol: 0,
-            operation_reserved_amount: 0,
+            pricing_source: TokenPricingSource::FragmetricNormalizedTokenPool {
+                address: pool,
+            },
+            operation_reserved_amount,
             _reserved: [0; 64],
         }
     }

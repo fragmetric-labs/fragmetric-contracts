@@ -171,9 +171,73 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             normalized_token_program.key(),
             normalized_token_mint.decimals,
             normalized_token_pool.key(),
+            fund_normalized_token_account.amount,
         )?;
 
         // do pricing as a validation
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_restaking_vault(
+        &mut self,
+        fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
+        fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
+
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_supported_token_program: &Interface<TokenInterface>,
+
+        vault: &UncheckedAccount,
+        vault_program: &UncheckedAccount,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_program: &Interface<TokenInterface>,
+
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<()> {
+        require_keys_eq!(
+            fund_vault_supported_token_account.owner,
+            self.fund_account.key()
+        );
+        require_keys_eq!(
+            fund_vault_supported_token_account.mint,
+            vault_supported_token_mint.key()
+        );
+        require_keys_eq!(
+            *vault_supported_token_mint.to_account_info().owner,
+            vault_supported_token_program.key()
+        );
+
+        require_keys_eq!(
+            fund_vault_receipt_token_account.owner,
+            self.fund_account.key()
+        );
+        require_keys_eq!(
+            fund_vault_receipt_token_account.mint,
+            vault_receipt_token_mint.key()
+        );
+        require_keys_eq!(
+            *fund_vault_receipt_token_account.to_account_info().owner,
+            vault_receipt_token_program.key()
+        );
+
+        require_keys_eq!(
+            *vault.to_account_info().owner,
+            vault_program.key()
+        );
+
+        self.fund_account.add_restaking_vault(
+            vault.key(),
+            vault_program.key(),
+            vault_supported_token_mint.key(),
+            vault_receipt_token_mint.key(),
+            vault_receipt_token_program.key(),
+            vault_receipt_token_mint.decimals,
+            fund_vault_receipt_token_account.amount,
+        )?;
+
+        // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 

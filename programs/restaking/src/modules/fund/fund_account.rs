@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token::accessor::mint;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
+use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
@@ -32,6 +34,7 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_amount: u64,
     // TODO v0.3/operation: visibility
     pub(in crate::modules) sol_operation_reserved_amount: u64,
+
     pub(super) withdrawal: WithdrawalState,
 
     pub(super) receipt_token_program: Pubkey,
@@ -232,9 +235,13 @@ impl FundAccount {
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        let token_info =
-            SupportedToken::new(mint, program, decimals, capacity_amount, pricing_source);
-        self.supported_tokens.push(token_info);
+        self.supported_tokens.push(SupportedToken::new(
+            mint,
+            program,
+            decimals,
+            capacity_amount,
+            pricing_source,
+        )?);
 
         Ok(())
     }
@@ -245,12 +252,56 @@ impl FundAccount {
         program: Pubkey,
         decimals: u8,
         pool: Pubkey,
+        operation_reserved_amount: u64,
     ) -> Result<()> {
         if self.normalized_token.is_some() {
-            err!(ErrorCode::FundNormalizedTokenAlreadySet)?
+            err!(ErrorCode::FundNormalizedTokenAlreadySetError)?
         }
 
-        self.normalized_token = Some(NormalizedToken::new(mint, program, decimals, pool));
+        self.normalized_token = Some(NormalizedToken::new(
+            mint,
+            program,
+            decimals,
+            pool,
+            operation_reserved_amount,
+        ));
+
+        Ok(())
+    }
+
+    pub(super) fn add_restaking_vault(
+        &mut self,
+        vault: Pubkey,
+        program: Pubkey,
+        supported_token_mint: Pubkey,
+        receipt_token_mint: Pubkey,
+        receipt_token_program: Pubkey,
+        receipt_token_decimals: u8,
+        receipt_token_operation_reserved_amount: u64,
+    ) -> Result<()> {
+        if self
+            .restaking_vaults
+            .iter()
+            .any(|v| v.vault == vault && v.supported_token_mint == supported_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultAlreadyRegisteredError)?
+        }
+
+        require_gt!(
+            MAX_RESTAKING_VAULTS,
+            self.restaking_vaults.len(),
+            ErrorCode::FundExceededMaxRestakingVaultsError
+        );
+
+        self.restaking_vaults.push(RestakingVault::new(
+            vault,
+            program,
+            supported_token_mint,
+            receipt_token_mint,
+            receipt_token_program,
+            receipt_token_decimals,
+            receipt_token_operation_reserved_amount,
+        )?);
 
         Ok(())
     }

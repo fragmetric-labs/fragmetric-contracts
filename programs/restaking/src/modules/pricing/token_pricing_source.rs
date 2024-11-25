@@ -12,6 +12,9 @@ pub enum TokenPricingSource {
     MarinadeStakePool {
         address: Pubkey,
     },
+    JitoRestakingVault {
+        address: Pubkey,
+    },
     FragmetricNormalizedTokenPool {
         address: Pubkey,
     },

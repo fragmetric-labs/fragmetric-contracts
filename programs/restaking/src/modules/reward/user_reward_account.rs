@@ -81,7 +81,7 @@ impl UserRewardAccount {
         require_gt!(
             self.max_user_reward_pools,
             self.num_user_reward_pools,
-            ErrorCode::RewardExceededMaxUserRewardPoolsException,
+            ErrorCode::RewardExceededMaxUserRewardPoolsError,
         );
 
         let pool = &mut self.user_reward_pools_1[self.num_user_reward_pools as usize];

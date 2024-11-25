@@ -39,14 +39,19 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         if let Some(normalized_token) = &fund_account.normalized_token {
             assets.push(Asset::TOKEN(
                 normalized_token.mint,
-                Some(TokenPricingSource::FragmetricNormalizedTokenPool {
-                    address: normalized_token.pool,
-                }),
+                Some(normalized_token.pricing_source.clone()),
                 normalized_token.operation_reserved_amount,
             ));
         }
 
-        // TODO v0.3/operation: need to reflect vrt_operation_reserved/operating amount to pricing
+        // vrt_operation_reserved + vrt_operating_amount (pending unrestaking)
+        for restaking_vault in &fund_account.restaking_vaults {
+            assets.push(Asset::TOKEN(
+                restaking_vault.receipt_token_mint,
+                Some(restaking_vault.receipt_token_pricing_source.clone()),
+                restaking_vault.receipt_token_operation_reserved_amount + restaking_vault.receipt_token_operating_amount,
+            ));
+        }
 
         Ok(TokenValue {
             numerator: assets,

@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
+use crate::modules::restaking::JitoRestakingVaultValueProvider;
 use crate::modules::staking::{MarinadeStakePoolValueProvider, SPLStakePoolValueProvider};
 use crate::utils;
 
@@ -63,6 +64,13 @@ impl<'info> PricingService<'info> {
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
                 MarinadeStakePoolValueProvider.resolve_underlying_assets(token_mint, &[account1])?
+            }
+            TokenPricingSource::JitoRestakingVault { address } => {
+                let account1 = self
+                    .token_pricing_source_accounts_map
+                    .get(address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                JitoRestakingVaultValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let account1 = self

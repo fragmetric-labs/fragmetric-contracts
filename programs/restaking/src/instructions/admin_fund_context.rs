@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
@@ -132,6 +132,7 @@ pub struct AdminFundJitoRestakingProtocolAccountInitialContext<'info> {
     pub system_program: Program<'info, System>,
 
     #[account(
+        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
@@ -142,19 +143,45 @@ pub struct AdminFundJitoRestakingProtocolAccountInitialContext<'info> {
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
+    /// CHECK: just need to validate vault state is owned by the vault program
+    #[account(address = JITO_VAULT_PROGRAM_ID)]
+    pub vault_program: UncheckedAccount<'info>,
+
+    /// CHECK: will be validated by pricing service
+    #[account(address = FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS)]
+    pub vault: UncheckedAccount<'info>,
+
     #[account(address = FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS)]
-    pub jito_vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub jito_vault_receipt_token_program: Program<'info, Token>,
+    #[account(address = anchor_spl::token::ID)]
+    pub vault_receipt_token_program: Interface<'info, TokenInterface>,
 
+    #[account(address = NSOL_MINT_ADDRESS)]
+    pub vault_supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(address = anchor_spl::token::ID)]
+    pub vault_supported_token_program: Interface<'info, TokenInterface>,
+
+    // TODO(v0.4): replace init_if_needed to init after v0.3 migration
     #[account(
-        init,
+        init_if_needed,
         payer = payer,
-        associated_token::mint = jito_vault_receipt_token_mint,
+        associated_token::mint = vault_receipt_token_mint,
         associated_token::authority = fund_account,
-        associated_token::token_program = jito_vault_receipt_token_program,
+        associated_token::token_program = vault_receipt_token_program,
     )]
-    pub fund_jito_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    // TODO(v0.4): replace init_if_needed to init after v0.3 migration
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = vault_supported_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = vault_supported_token_program,
+    )]
+    pub fund_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
 }

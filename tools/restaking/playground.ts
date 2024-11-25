@@ -848,7 +848,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.nSOLTokenMint,
                 ),
                 this.program.methods.adminInitializeJitoRestakingVaultReceiptTokenAccount()
-                    .accounts({payer: this.wallet.publicKey}).instruction(),
+                    .accounts({payer: this.wallet.publicKey})
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
             ],
             signerNames: ["ADMIN"],
         });

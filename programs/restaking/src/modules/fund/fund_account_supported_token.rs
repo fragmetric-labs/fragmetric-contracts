@@ -5,6 +5,7 @@ use crate::modules::pricing::TokenPricingSource;
 
 use super::FundAccount;
 
+// TODO v0.3/operation: visibility
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedToken {
     pub(super) mint: Pubkey,
@@ -16,8 +17,8 @@ pub struct SupportedToken {
     pub(super) one_token_as_sol: u64,
     pub(super) pricing_source: TokenPricingSource,
 
-    /// the amount being unstaked
     pub(super) operating_amount: u64,
+    /// the amount being unstaked
 
     /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
     pub(super) rebalancing_amount: u64,
@@ -25,7 +26,7 @@ pub struct SupportedToken {
     /// configuration: used for staking allocation strategy.
     pub(super) sol_allocation_weight: u64,
     pub(super) sol_allocation_capacity_amount: u64,
-    
+
     _reserved: [u8; 96],
 }
 
@@ -36,8 +37,16 @@ impl SupportedToken {
         decimals: u8,
         capacity_amount: u64,
         pricing_source: TokenPricingSource,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        match pricing_source {
+            TokenPricingSource::SPLStakePool { .. }
+            | TokenPricingSource::MarinadeStakePool { .. } => {}
+            _ => {
+                err!(ErrorCode::FundNotSupportedTokenError)?;
+            }
+        }
+
+        Ok(Self {
             mint,
             program,
             decimals,
@@ -51,7 +60,7 @@ impl SupportedToken {
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
             _reserved: [0; 96],
-        }
+        })
     }
 
     // TODO v0.3/operation: visibility

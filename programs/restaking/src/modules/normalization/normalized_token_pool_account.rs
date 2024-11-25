@@ -189,7 +189,7 @@ impl SupportedToken {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)
-            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotEnoughLockedToken))?;
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotEnoughLockedTokenException))?;
 
         Ok(())
     }
