@@ -15,8 +15,18 @@ pub struct SupportedToken {
     pub(super) operation_reserved_amount: u64,
     pub(super) one_token_as_sol: u64,
     pub(super) pricing_source: TokenPricingSource,
+
+    /// the amount being unstaked
     pub(super) operating_amount: u64,
-    _reserved: [u8; 120],
+
+    /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
+    pub(super) rebalancing_amount: u64,
+
+    /// configuration: used for staking allocation strategy.
+    pub(super) sol_allocation_weight: u64,
+    pub(super) sol_allocation_capacity_amount: u64,
+    
+    _reserved: [u8; 96],
 }
 
 impl SupportedToken {
@@ -37,7 +47,10 @@ impl SupportedToken {
             one_token_as_sol: 0,
             pricing_source,
             operating_amount: 0,
-            _reserved: [0; 120],
+            rebalancing_amount: 0,
+            sol_allocation_weight: 0,
+            sol_allocation_capacity_amount: 0,
+            _reserved: [0; 96],
         }
     }
 
