@@ -31,6 +31,14 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             normalized_token_pool_account.is_latest_version(),
             ErrorCode::InvalidDataVersionError
         );
+        require_keys_eq!(
+            normalized_token_pool_account.normalized_token_mint,
+            normalized_token_mint.key(),
+        );
+        require_keys_eq!(
+            normalized_token_pool_account.normalized_token_program,
+            normalized_token_program.key(),
+        );
 
         let clock = Clock::get()?;
         Ok(Self {

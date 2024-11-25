@@ -41,7 +41,7 @@ pub struct FundAccount {
     pub(super) receipt_token_value_updated_at: i64,
     pub(super) one_receipt_token_as_sol: u64,
 
-    pub(super) normalized_token: NormalizedToken,
+    pub(super) normalized_token: Option<NormalizedToken>,
 
     #[max_len(MAX_RESTAKING_VAULTS)]
     pub(super) restaking_vaults: Vec<RestakingVault>,
@@ -156,8 +156,8 @@ impl FundAccount {
             self.receipt_token_value_updated_at = 0;
             self.one_receipt_token_as_sol = 0;
 
-            // TODO: self.normalized_token;
-            // TODO: self.restaking_vaults;
+            self.normalized_token = None;
+            self.restaking_vaults = Vec::new();
             self.operation.initialize(self.data_version);
 
             self.data_version = 4;
@@ -176,10 +176,7 @@ impl FundAccount {
 
     #[inline(always)]
     pub(super) fn update_if_needed(&mut self, receipt_token_mint: &InterfaceAccount<Mint>) {
-        self.initialize(
-            self.bump,
-            receipt_token_mint,
-        );
+        self.initialize(self.bump, receipt_token_mint);
     }
 
     #[inline(always)]
@@ -238,6 +235,22 @@ impl FundAccount {
         let token_info =
             SupportedToken::new(mint, program, decimals, capacity_amount, pricing_source);
         self.supported_tokens.push(token_info);
+
+        Ok(())
+    }
+
+    pub(super) fn set_normalized_token(
+        &mut self,
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
+        pool: Pubkey,
+    ) -> Result<()> {
+        if self.normalized_token.is_some() {
+            err!(ErrorCode::FundNormalizedTokenAlreadySet)?
+        }
+
+        self.normalized_token = Some(NormalizedToken::new(mint, program, decimals, pool));
 
         Ok(())
     }

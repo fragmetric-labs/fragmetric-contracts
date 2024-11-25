@@ -82,6 +82,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Ok::<(), Error>(())
             })?;
 
+        if let Some(fund_account_normalized_token) = &mut self.fund_account.normalized_token {
+            fund_account_normalized_token.one_token_as_sol = pricing_service
+                .get_token_amount_as_sol(
+                    &fund_account_normalized_token.mint,
+                    10u64
+                        .checked_pow(fund_account_normalized_token.decimals as u32)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                )?;
+        }
+
         let receipt_token_mint_key = &self.receipt_token_mint.key();
         self.fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
             receipt_token_mint_key,

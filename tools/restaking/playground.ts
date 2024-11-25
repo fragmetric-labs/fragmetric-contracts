@@ -804,8 +804,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
-                this.program.methods.adminInitializeNormalizedTokenPoolAccount().accounts({payer: this.wallet.publicKey}).instruction(),
-                this.program.methods.adminInitializeFundNormalizedTokenAccount().accounts({payer: this.wallet.publicKey}).instruction(),
+                this.program.methods.adminInitializeNormalizedTokenPoolAccount()
+                    .accounts({payer: this.wallet.publicKey})
+                    .instruction(),
+                this.program.methods.adminInitializeFundNormalizedTokenAccount()
+                    .accounts({payer: this.wallet.publicKey})
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
             ],
             signerNames: ["ADMIN"],
         });

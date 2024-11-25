@@ -7,7 +7,34 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
+
+// will be used only once
+#[derive(Accounts)]
+pub struct AdminFundAccountInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        init,
+        payer = payer,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump,
+        space = 8 + FundAccount::INIT_SPACE,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+}
 
 // will be used only once
 #[derive(Accounts)]
@@ -45,32 +72,6 @@ pub struct AdminFundReceiptTokenLockAccountInitialContext<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-// will be used only once
-#[derive(Accounts)]
-pub struct AdminFundAccountInitialContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = ADMIN_PUBKEY)]
-    pub admin: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub receipt_token_program: Program<'info, Token2022>,
-
-    #[account(
-        init,
-        payer = payer,
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump,
-        space = 8 + FundAccount::INIT_SPACE,
-    )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
-}
-
 #[derive(Accounts)]
 pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
     #[account(mut)]
@@ -82,6 +83,7 @@ pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
     pub system_program: Program<'info, System>,
 
     #[account(
+        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
@@ -97,8 +99,9 @@ pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
 
     pub normalized_token_program: Program<'info, Token>,
 
+    // TODO(v0.4): replace init_if_needed to init after v0.3 migration
     #[account(
-        init,
+        init_if_needed,
         payer = payer,
         associated_token::mint = normalized_token_mint,
         associated_token::authority = fund_account,
@@ -107,6 +110,15 @@ pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
     pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
+
+    #[account(
+        mut,
+        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
+        bump = normalized_token_pool_account.get_bump(),
+        has_one = normalized_token_mint,
+        constraint = normalized_token_pool_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 }
 
 #[derive(Accounts)]

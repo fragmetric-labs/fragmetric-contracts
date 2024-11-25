@@ -14,6 +14,8 @@ use instructions::*;
 #[program]
 pub mod restaking {
     use super::*;
+    use crate::modules::normalization::NormalizedTokenPoolAccount;
+    use crate::utils::AccountInfoExt;
 
     ////////////////////////////////////////////
     // AdminFundInitialContext
@@ -39,10 +41,20 @@ pub mod restaking {
         )
     }
 
-    pub fn admin_initialize_fund_normalized_token_account(
-        _ctx: Context<AdminFundNormalizedTokenAccountInitialContext>,
+    pub fn admin_initialize_fund_normalized_token_account<'info>(
+        ctx: Context<'_, '_, 'info, 'info, AdminFundNormalizedTokenAccountInitialContext<'info>>,
     ) -> Result<()> {
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_set_normalized_token(
+            &ctx.accounts.fund_normalized_token_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+            &mut ctx.accounts.normalized_token_pool_account,
+            ctx.remaining_accounts,
+        )
     }
 
     pub fn admin_initialize_jito_restaking_vault_receipt_token_account(
@@ -91,7 +103,7 @@ pub mod restaking {
             &ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-            .process_update_normalized_token_pool_account_if_needed()
+        .process_update_normalized_token_pool_account_if_needed()
     }
 
     ////////////////////////////////////////////

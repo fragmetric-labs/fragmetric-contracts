@@ -190,4 +190,7 @@ pub enum ErrorCode {
 
     #[msg("operation: failed to execute the operation command")]
     OperationCommandExecutionFailedException,
+
+    #[msg("fund: normalized token already set")]
+    FundNormalizedTokenAlreadySet,
 }

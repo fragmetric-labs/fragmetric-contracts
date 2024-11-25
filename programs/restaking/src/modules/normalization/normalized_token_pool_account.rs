@@ -19,7 +19,7 @@ pub struct NormalizedTokenPoolAccount {
     data_version: u16,
     bump: u8,
     pub normalized_token_mint: Pubkey,
-    normalized_token_program: Pubkey,
+    pub(super) normalized_token_program: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
     pub(super) supported_tokens: Vec<SupportedToken>,
 

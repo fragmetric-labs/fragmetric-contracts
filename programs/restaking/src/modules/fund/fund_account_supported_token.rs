@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::pricing::TokenPricingSource;
 use crate::errors::ErrorCode;
+use crate::modules::pricing::TokenPricingSource;
 
 use super::FundAccount;
 
@@ -12,10 +12,10 @@ pub struct SupportedToken {
     pub(super) decimals: u8,
     capacity_amount: u64,
     accumulated_deposit_amount: u64,
-    operation_reserved_amount: u64,
+    pub(super) operation_reserved_amount: u64,
     pub(super) one_token_as_sol: u64,
     pub(super) pricing_source: TokenPricingSource,
-    operating_amount: u64,
+    pub(super) operating_amount: u64,
     _reserved: [u8; 120],
 }
 
@@ -97,9 +97,9 @@ impl SupportedToken {
 
 #[cfg(test)]
 mod tests {
-    use anchor_lang::{AccountDeserialize, Space};
     use super::*;
     use crate::modules::pricing::TokenPricingSource;
+    use anchor_lang::{AccountDeserialize, Space};
 
     fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + FundAccount::INIT_SPACE];
@@ -159,7 +159,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token2,
             Pubkey::default(),
@@ -169,7 +169,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token1,
             Pubkey::default(),
@@ -179,7 +179,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap_err();
+        .unwrap_err();
         assert_eq!(fund.supported_tokens.len(), 2);
         assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn test_deposit_token() {
         let mut fund = create_initialized_fund_account();
-        
+
         fund.add_supported_token(
             Pubkey::new_unique(),
             Pubkey::default(),
@@ -218,7 +218,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
 
         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);
