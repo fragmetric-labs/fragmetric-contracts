@@ -28,15 +28,25 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
         })
     }
 
-    pub fn process_initialize_user_fund_account(&mut self, bump: u8) -> Result<()> {
-        self.user_fund_account
-            .initialize(bump, self.receipt_token_mint.key(), self.user.key());
+    pub fn process_initialize_user_fund_account(
+        &mut self,
+        bump: u8,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+    ) -> Result<()> {
+        self.user_fund_account.initialize(
+            bump,
+            self.receipt_token_mint,
+            user_receipt_token_account,
+        );
         Ok(())
     }
 
-    pub fn process_update_user_fund_account_if_needed(&mut self) -> Result<()> {
+    pub fn process_update_user_fund_account_if_needed(
+        &mut self,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+    ) -> Result<()> {
         self.user_fund_account
-            .update_if_needed(self.receipt_token_mint.key(), self.user.key());
+            .update_if_needed(self.receipt_token_mint, user_receipt_token_account);
         Ok(())
     }
 }

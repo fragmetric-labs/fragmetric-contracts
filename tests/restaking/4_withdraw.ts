@@ -51,7 +51,7 @@ describe("withdraw", async () => {
         expect(fragSOLFund2.withdrawal.pendingBatchWithdrawal.receiptTokenProcessed.toNumber()).eq(0);
         expect(fragSOLFund0.withdrawal.pendingBatchWithdrawal.batchId.toNumber()).eq(fragSOLFund2.withdrawal.pendingBatchWithdrawal.batchId.toNumber());
 
-        const fragSOLLock = await restaking.getFragSOLLockAccount();
+        const fragSOLLock = await restaking.getFragSOLFundReceiptTokenLockAccount();
         expect(fragSOLFund2.withdrawal.pendingBatchWithdrawal.receiptTokenToProcess.toString()).eq(fragSOLLock.amount.toString());
         expect(fragSOLFund2.withdrawal.pendingBatchWithdrawal.receiptTokenToProcess.sub(res1.fragSOLFund.withdrawal.pendingBatchWithdrawal.receiptTokenToProcess).toString()).eq(amountFragSOLWithdrawalTotal.toString());
     });

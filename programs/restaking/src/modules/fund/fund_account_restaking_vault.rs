@@ -4,7 +4,7 @@ use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 
-const MAX_RESTAKING_VAULT_OPERATORS: usize = 20;
+const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub(super) struct RestakingVault {

@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
@@ -16,7 +16,7 @@ pub struct UserFundAccount {
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
 
-    receipt_token_amount: u64,
+    pub(super) receipt_token_amount: u64,
     _reserved: [u8; 32],
 
     #[max_len(MAX_WITHDRAWAL_REQUESTS_SIZE)]
@@ -42,18 +42,44 @@ impl PDASeeds<3> for UserFundAccount {
 impl UserFundAccount {
     const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = MAX_WITHDRAWAL_REQUESTS_SIZE;
 
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
+    fn migrate(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        receipt_token_amount: u64,
+        user: Pubkey,
+    ) {
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
+            self.receipt_token_amount = receipt_token_amount;
             self.user = user;
         }
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
-        self.initialize(self.bump, receipt_token_mint, user);
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+    ) {
+        self.migrate(
+            bump,
+            receipt_token_mint.key(),
+            user_receipt_token_account.amount,
+            user_receipt_token_account.owner,
+        );
+    }
+
+    #[inline(always)]
+    pub(super) fn update_if_needed(
+        &mut self,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+    ) {
+        self.initialize(self.bump, receipt_token_mint, user_receipt_token_account);
     }
 
     // create a placeholder to emit event for non existing user account

@@ -45,7 +45,7 @@ impl PDASeeds<2> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
-    fn update(
+    fn migrate(
         &mut self,
         bump: u8,
         normalized_token_mint: Pubkey,
@@ -74,7 +74,7 @@ impl NormalizedTokenPoolAccount {
 
     #[inline(always)]
     pub(super) fn initialize(&mut self, bump: u8, normalized_token_mint: &InterfaceAccount<Mint>) {
-        self.update(
+        self.migrate(
             bump,
             normalized_token_mint.key(),
             *normalized_token_mint.to_account_info().owner,

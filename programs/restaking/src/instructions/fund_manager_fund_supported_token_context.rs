@@ -1,48 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::*;
 use crate::utils::PDASeeds;
-
-#[derive(Accounts)]
-pub struct FundManagerFundSupportedTokenAccountInitialContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(address = FUND_MANAGER_PUBKEY)]
-    pub fund_manager: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    #[account(
-        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
-    )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
-
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub supported_token_program: Interface<'info, TokenInterface>,
-
-    #[account(
-        init,
-        payer = payer,
-        associated_token::mint = supported_token_mint,
-        associated_token::authority = fund_account,
-        associated_token::token_program = supported_token_program,
-    )]
-    pub supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
-}
 
 #[derive(Accounts)]
 pub struct FundManagerFundSupportedTokenContext<'info> {
