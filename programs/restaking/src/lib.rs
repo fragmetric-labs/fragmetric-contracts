@@ -392,7 +392,11 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_run(ctx.remaining_accounts, force_reset_command)
+        .process_run(
+            &ctx.accounts.operator,
+            ctx.remaining_accounts,
+            force_reset_command,
+        )
     }
 
     // TODO v0.3/operation: deprecate old run
