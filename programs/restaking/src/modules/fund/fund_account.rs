@@ -114,6 +114,10 @@ impl FundAccount {
                 Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
                     .1;
 
+            for supported_token in &mut self.supported_tokens {
+                supported_token.operating_amount = 0;
+            }
+
             self.data_version = 4;
         }
     }
@@ -147,13 +151,14 @@ impl FundAccount {
 
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
 
+    #[inline(always)]
     fn get_reserve_account_seed_phrase(&self) -> Vec<&[u8]> {
         vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_reserve_account_seed_phrase().to_vec();
+        let mut signer_seeds = self.get_reserve_account_seed_phrase();
         signer_seeds.push(std::slice::from_ref(&self.reserve_account_bump));
         signer_seeds
     }
@@ -167,12 +172,13 @@ impl FundAccount {
 
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
+    #[inline(always)]
     fn get_treasury_account_seed_phrase(&self) -> Vec<&[u8]> {
         vec![Self::TREASURY_SEED, self.receipt_token_mint.as_ref()]
     }
 
     pub(super) fn get_treasury_account_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_treasury_account_seed_phrase().to_vec();
+        let mut signer_seeds = self.get_treasury_account_seed_phrase();
         signer_seeds.push(std::slice::from_ref(&self.treasury_account_bump));
         signer_seeds
     }
@@ -283,7 +289,7 @@ impl FundAccount {
             .find(|info| info.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
-
+ 
     pub(super) fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
         require_gte!(
             capacity_amount,
