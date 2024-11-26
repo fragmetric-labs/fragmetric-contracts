@@ -3,12 +3,6 @@ import readline from "readline";
 import * as util from "node:util";
 
 export function startREPL(args: {prompt?: string, context: object}) {
-    const opt = util.inspect.defaultOptions;
-    opt.depth = 5;
-    opt.colors = true;
-    opt.customInspect = true;
-    opt.maxArrayLength = 10;
-
     const replServer = repl.start({
         preview: true,
         prompt: args.prompt ?? '> ',

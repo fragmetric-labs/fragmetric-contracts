@@ -19,12 +19,6 @@ pub mod restaking {
     // AdminFundInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_receipt_token_lock_account(
-        _ctx: Context<AdminFundReceiptTokenLockAccountInitialContext>,
-    ) -> Result<()> {
-        Ok(())
-    }
-
     pub fn admin_initialize_fund_account(
         ctx: Context<AdminFundAccountInitialContext>,
     ) -> Result<()> {
@@ -39,16 +33,46 @@ pub mod restaking {
         )
     }
 
-    pub fn admin_initialize_fund_normalized_token_account(
-        _ctx: Context<AdminFundNormalizedTokenAccountInitialContext>,
+    pub fn admin_initialize_fund_normalized_token_account<'info>(
+        ctx: Context<'_, '_, 'info, 'info, AdminFundNormalizedTokenAccountInitialContext<'info>>,
     ) -> Result<()> {
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_set_normalized_token(
+            &ctx.accounts.fund_normalized_token_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+            &mut ctx.accounts.normalized_token_pool_account,
+            ctx.remaining_accounts,
+        )
     }
 
-    pub fn admin_initialize_jito_restaking_vault_receipt_token_account(
-        _ctx: Context<AdminFundJitoRestakingProtocolAccountInitialContext>,
+    pub fn admin_initialize_jito_restaking_vault_receipt_token_account<'info>(
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            AdminFundJitoRestakingProtocolAccountInitialContext<'info>,
+        >,
     ) -> Result<()> {
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_add_restaking_vault(
+            &ctx.accounts.fund_vault_supported_token_account,
+            &ctx.accounts.fund_vault_receipt_token_account,
+            &ctx.accounts.vault_supported_token_mint,
+            &ctx.accounts.vault_supported_token_program,
+            &ctx.accounts.vault_account,
+            &ctx.accounts.vault_program,
+            &ctx.accounts.vault_receipt_token_mint,
+            &ctx.accounts.vault_receipt_token_program,
+            ctx.remaining_accounts,
+        )
     }
 
     ////////////////////////////////////////////
@@ -69,7 +93,7 @@ pub mod restaking {
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
 
-    pub fn admin_initialize_normalized_token_pool(
+    pub fn admin_initialize_normalized_token_pool_account(
         ctx: Context<AdminNormalizedTokenPoolInitialContext>,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
@@ -81,6 +105,17 @@ pub mod restaking {
             &ctx.accounts.admin,
             ctx.bumps.normalized_token_pool_account,
         )
+    }
+
+    pub fn admin_update_normalized_token_pool_account_if_needed(
+        ctx: Context<AdminNormalizedTokenPoolUpdateContext>,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+        .process_update_normalized_token_pool_account_if_needed()
     }
 
     ////////////////////////////////////////////
@@ -207,16 +242,6 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerFundSupportedTokenInitialContext
-    ////////////////////////////////////////////
-
-    pub fn fund_manager_initialize_supported_token_account(
-        _ctx: Context<FundManagerFundSupportedTokenAccountInitialContext>,
-    ) -> Result<()> {
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
     // FundManagerFundSupportedTokenContext
     ////////////////////////////////////////////
 
@@ -237,16 +262,6 @@ pub mod restaking {
             pricing_source,
             ctx.remaining_accounts,
         )
-    }
-
-    ////////////////////////////////////////////
-    // FundManagerNormalizedTokenPoolSupportedTokenInitialContext
-    ////////////////////////////////////////////
-
-    pub fn fund_manager_initialize_supported_token_lock_account(
-        _ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenLockAccountInitialContext>,
-    ) -> Result<()> {
-        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -397,16 +412,6 @@ pub mod restaking {
         )
     }
 
-    pub fn operator_update_prices<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-    ) -> Result<()> {
-        modules::fund::FundService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )?
-        .process_update_prices(ctx.remaining_accounts)
-    }
-
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////
@@ -423,19 +428,16 @@ pub mod restaking {
     // UserFundInitialContext
     ////////////////////////////////////////////
 
-    pub fn user_initialize_receipt_token_account(
-        _ctx: Context<UserFundReceiptTokenAccountInitialContext>,
-    ) -> Result<()> {
-        Ok(())
-    }
-
     pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
         modules::fund::UserFundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
         )?
-        .process_initialize_user_fund_account(ctx.bumps.user_fund_account)
+        .process_initialize_user_fund_account(
+            ctx.bumps.user_fund_account,
+            &ctx.accounts.user_receipt_token_account,
+        )
     }
 
     ////////////////////////////////////////////
@@ -450,7 +452,7 @@ pub mod restaking {
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
         )?
-        .process_update_user_fund_account_if_needed()
+        .process_update_user_fund_account_if_needed(&ctx.accounts.user_receipt_token_account)
     }
 
     ////////////////////////////////////////////

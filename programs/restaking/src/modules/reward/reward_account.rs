@@ -35,7 +35,7 @@ pub struct RewardAccount {
 impl PDASeeds<2> for RewardAccount {
     const SEED: &'static [u8] = b"reward";
 
-    fn get_seeds(&self) -> [&[u8]; 2] {
+    fn get_seed_phrase(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
@@ -108,7 +108,7 @@ impl RewardAccount {
         require_gt!(
             self.max_holders,
             self.num_holders,
-            ErrorCode::RewardExceededMaxHoldersException,
+            ErrorCode::RewardExceededMaxHoldersError,
         );
 
         let holder = &mut self.holders_1[self.num_holders as usize];
@@ -135,7 +135,7 @@ impl RewardAccount {
         require_gt!(
             self.max_rewards,
             self.num_rewards,
-            ErrorCode::RewardExceededMaxRewardsException,
+            ErrorCode::RewardExceededMaxRewardsError,
         );
 
         let reward = &mut self.rewards_1[self.num_rewards as usize];
@@ -168,7 +168,7 @@ impl RewardAccount {
         require_gt!(
             self.max_reward_pools,
             self.num_reward_pools,
-            ErrorCode::RewardExceededMaxRewardPoolsException,
+            ErrorCode::RewardExceededMaxRewardPoolsError,
         );
 
         let pool = &mut self.reward_pools_1[self.num_reward_pools as usize];

@@ -12,6 +12,9 @@ mod user_fund_account;
 mod user_fund_configuration_service;
 mod user_fund_service;
 mod weighted_allocation_strategy;
+mod fund_account_supported_token;
+mod fund_account_normalized_token;
+mod fund_account_restaking_vault;
 
 pub use deposit_metadata::*;
 pub use fund_account::*;
@@ -25,3 +28,7 @@ pub use fund_service::*;
 pub use user_fund_account::*;
 pub use user_fund_configuration_service::*;
 pub use user_fund_service::*;
+pub use weighted_allocation_strategy::*;
+pub use fund_account_supported_token::*;
+pub use fund_account_normalized_token::*;
+pub use fund_account_restaking_vault::*;

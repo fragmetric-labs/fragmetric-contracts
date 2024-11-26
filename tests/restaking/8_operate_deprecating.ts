@@ -62,4 +62,12 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
         expect(fragSOLFund1.solOperationReservedAmount.toString()).eq('0', "fund account's solOperationReservedAmount should be 0");
     });
+
+    step("check nsol status after pricing source update", async function() {
+        const [ntpAccount, ntpMint] = await Promise.all([
+            restaking.getNSOLTokenPoolAccount(),
+            restaking.getNSOLTokenMint(),
+        ]);
+        expect(ntpAccount.normalizedTokenSupplyAmount.toString()).eq(new BN(ntpMint.supply.toString()).toString());
+    });
 });

@@ -2,15 +2,17 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::modules::pricing::PricingService;
+use crate::errors::ErrorCode;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::utils::PDASeeds;
 
 use super::*;
 
 pub struct NormalizedTokenPoolService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-    normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
+    normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,
+    current_timestamp: i64,
 }
 
 impl Drop for NormalizedTokenPoolService<'_, '_> {
@@ -22,13 +24,28 @@ impl Drop for NormalizedTokenPoolService<'_, '_> {
 impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-        normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
+        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         normalized_token_program: &'a Program<'info, Token>,
     ) -> Result<Self> {
+        require!(
+            normalized_token_pool_account.is_latest_version(),
+            ErrorCode::InvalidDataVersionError
+        );
+        require_keys_eq!(
+            normalized_token_pool_account.normalized_token_mint,
+            normalized_token_mint.key(),
+        );
+        require_keys_eq!(
+            normalized_token_pool_account.normalized_token_program,
+            normalized_token_program.key(),
+        );
+
+        let clock = Clock::get()?;
         Ok(Self {
             normalized_token_pool_account,
             normalized_token_mint,
             normalized_token_program,
+            current_timestamp: clock.unix_timestamp,
         })
     }
 
@@ -45,11 +62,13 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         supported_token_amount: u64,
 
-        pricing_service: &PricingService,
+        pricing_service: &mut PricingService,
     ) -> Result<()> {
         require_keys_eq!(
-            pool_supported_token_account.owner,
-            self.normalized_token_pool_account.key()
+            pool_supported_token_account.key(),
+            self.normalized_token_pool_account
+                .get_supported_token(supported_token_mint.key())?
+                .lock_account
         );
         require_gt!(supported_token_amount, 0);
 
@@ -89,11 +108,16 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 },
                 &[self
                     .normalized_token_pool_account
-                    .get_signer_seeds()
+                    .get_seeds()
                     .as_ref()],
             ),
             normalized_token_amount,
         )?;
+
+        self.normalized_token_pool_account
+            .reload_normalized_token_supply(self.normalized_token_mint)?;
+
+        self.update_asset_values(pricing_service)?;
 
         Ok(())
     }
@@ -111,11 +135,13 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         normalized_token_amount: u64,
 
-        pricing_service: &PricingService,
+        pricing_service: &mut PricingService,
     ) -> Result<()> {
         require_keys_eq!(
-            pool_supported_token_account.owner,
-            self.normalized_token_pool_account.key()
+            pool_supported_token_account.key(),
+            self.normalized_token_pool_account
+                .get_supported_token(supported_token_mint.key())?
+                .lock_account
         );
         require_gt!(normalized_token_amount, 0);
 
@@ -152,11 +178,49 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 },
                 &[self
                     .normalized_token_pool_account
-                    .get_signer_seeds()
+                    .get_seeds()
                     .as_ref()],
             ),
             supported_token_amount,
             supported_token_mint.decimals,
-        )
+        )?;
+
+        self.normalized_token_pool_account
+            .reload_normalized_token_supply(self.normalized_token_mint)?;
+
+        self.update_asset_values(pricing_service)?;
+
+        Ok(())
+    }
+
+    fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
+        // ensure any update on fund account written before do pricing
+        self.normalized_token_pool_account.exit(&crate::ID)?;
+
+        // update pool asset values
+        let normalized_token_mint_key = &self.normalized_token_mint.key();
+        pricing_service.resolve_token_pricing_source(
+            normalized_token_mint_key,
+            &TokenPricingSource::FragmetricNormalizedTokenPool {
+                address: self.normalized_token_pool_account.key(),
+            },
+        )?;
+
+        // the values being written below are informative, only for event emission.
+        self.normalized_token_pool_account
+            .one_normalized_token_as_sol = pricing_service.get_token_amount_as_sol(
+            normalized_token_mint_key,
+            10u64
+                .checked_pow(self.normalized_token_mint.decimals as u32)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        )?;
+
+        self.normalized_token_pool_account.normalized_token_value =
+            pricing_service.get_token_total_value_as_atomic(normalized_token_mint_key)?;
+
+        self.normalized_token_pool_account
+            .normalized_token_value_updated_at = self.current_timestamp;
+
+        Ok(())
     }
 }

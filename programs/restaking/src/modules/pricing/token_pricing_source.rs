@@ -12,13 +12,14 @@ pub enum TokenPricingSource {
     MarinadeStakePool {
         address: Pubkey,
     },
-    NormalizedTokenPool {
-        mint_address: Pubkey,
-        pool_address: Pubkey,
+    JitoRestakingVault {
+        address: Pubkey,
     },
-    FundReceiptToken {
-        mint_address: Pubkey,
-        fund_address: Pubkey,
+    FragmetricNormalizedTokenPool {
+        address: Pubkey,
+    },
+    FragmetricRestakingFund {
+        address: Pubkey,
     },
     #[cfg(test)]
     Mock {

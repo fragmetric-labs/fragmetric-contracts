@@ -1,6 +1,6 @@
+import util from "node:util";
 import * as anchor from '@coral-xyz/anchor';
-import {web3, AnchorError, IdlEvents, BN} from '@coral-xyz/anchor';
-import * as sweb3 from '@solana/web3.js';
+import * as web3 from '@solana/web3.js';
 import {getLogger} from './logger';
 import {Keychain} from './keychain';
 import {WORKSPACE_PROGRAM_NAME} from "./types";
@@ -10,7 +10,7 @@ import chalk from "chalk";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
-BN.prototype.toJSON = function() {
+anchor.BN.prototype.toJSON = function() {
     return this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
 }
 anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
@@ -19,6 +19,12 @@ anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
 web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = anchor.web3.PublicKey.prototype[Symbol.for("nodejs.util.inspect.custom")] = function () {
     return chalk.blue(this.toString());
 }
+
+const opt = util.inspect.defaultOptions;
+opt.depth = 10;
+opt.colors = true;
+opt.customInspect = true;
+opt.maxArrayLength = 10;
 
 export type AnchorPlaygroundConfig<IDL extends anchor.Idl, KEYS extends string> = {
     provider: anchor.Provider,
@@ -81,8 +87,8 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
             // get recent block hash
             const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
-            const tx = new sweb3.VersionedTransaction(
-                new sweb3.TransactionMessage({
+            const tx = new web3.VersionedTransaction(
+                new web3.TransactionMessage({
                     payerKey: this.keychain.wallet.publicKey,
                     recentBlockhash: blockhash,
                     instructions: [
@@ -147,7 +153,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
             return {
                 txSig,
-                error: AnchorError.parse(txResult.meta.logMessages),
+                error: anchor.AnchorError.parse(txResult.meta.logMessages),
                 event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
             };
 
@@ -165,8 +171,8 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.wallet.publicKey.toString();
     }
 
-    public get connection(): sweb3.Connection {
-        return this.provider.connection as unknown as sweb3.Connection;
+    public get connection(): web3.Connection {
+        return this.provider.connection as unknown as web3.Connection;
     }
 
     public get programId(): web3.PublicKey {
@@ -212,7 +218,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
     }
 
     private parseEvents<K extends ExtractEventNames<IDL>>(logMessages: string[], eventNames: K[] = []) {
-        const events: {[k in K]: IdlEvents<IDL>[k]} = {} as any;
+        const events: {[k in K]: anchor.IdlEvents<IDL>[k]} = {} as any;
         const required = new Set(eventNames);
         const found = new Set();
         const ignored = new Set();

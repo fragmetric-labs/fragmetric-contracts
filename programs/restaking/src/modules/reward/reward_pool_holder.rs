@@ -56,7 +56,7 @@ impl RewardPoolHolder {
         require_gte!(
             HOLDER_PUBKEYS_MAX_LEN_1,
             pubkeys.len(),
-            ErrorCode::RewardExceededMaxHolderPubkeysException
+            ErrorCode::RewardExceededMaxHolderPubkeysError
         );
 
         self.id = id;
