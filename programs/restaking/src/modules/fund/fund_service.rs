@@ -339,7 +339,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     from: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_signer_seeds().as_ref()],
+                &[self.fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount_to_burn,
         )?;

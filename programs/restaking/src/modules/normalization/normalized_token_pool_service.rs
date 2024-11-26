@@ -108,7 +108,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 },
                 &[self
                     .normalized_token_pool_account
-                    .get_signer_seeds()
+                    .get_seeds()
                     .as_ref()],
             ),
             normalized_token_amount,
@@ -178,7 +178,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 },
                 &[self
                     .normalized_token_pool_account
-                    .get_signer_seeds()
+                    .get_seeds()
                     .as_ref()],
             ),
             supported_token_amount,

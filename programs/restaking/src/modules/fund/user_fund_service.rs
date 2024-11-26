@@ -222,7 +222,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: self.user_receipt_token_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_signer_seeds().as_ref()],
+                &[self.fund_account.get_seeds().as_ref()],
             ),
             receipt_token_mint_amount,
         )
@@ -287,7 +287,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_signer_seeds().as_ref()],
+                &[self.fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )
@@ -344,7 +344,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     from: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_signer_seeds().as_ref()],
+                &[self.fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )
@@ -359,7 +359,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: self.user_receipt_token_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_signer_seeds().as_ref()],
+                &[self.fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )

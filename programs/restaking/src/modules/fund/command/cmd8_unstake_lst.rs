@@ -96,7 +96,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                     };
 
                     required_accounts.extend([
-                        (ctx.fund_account.find_reserve_account_address().0, true),
+                        (ctx.fund_account.get_reserve_account_address()?, true),
                         (
                             ctx.fund_account
                                 .find_supported_token_account_address(&item.mint)?,
@@ -134,7 +134,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 fund_supported_token_account,
                                 fund_reserve_account,
                                 fund_account,
-                                &ctx.fund_account.get_signer_seeds(),
+                                &ctx.fund_account.get_seeds(),
                                 item.token_amount,
                             )?
                         }

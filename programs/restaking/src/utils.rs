@@ -5,11 +5,11 @@ use anchor_lang::{CheckOwner, ZeroCopy};
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
 
-    fn get_seeds(&self) -> [&[u8]; N];
+    fn get_seed_phrase(&self) -> [&[u8]; N];
     fn get_bump_ref(&self) -> &u8;
 
-    fn get_signer_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_seeds().to_vec();
+    fn get_seeds(&self) -> Vec<&[u8]> {
+        let mut signer_seeds = self.get_seed_phrase().to_vec();
         signer_seeds.push(std::slice::from_ref(self.get_bump_ref()));
         signer_seeds
     }

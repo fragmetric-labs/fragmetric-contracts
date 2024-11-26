@@ -95,7 +95,7 @@ impl SelfExecutable for StakeSOLCommand {
                     };
 
                     required_accounts.extend([
-                        (ctx.fund_account.find_reserve_account_address().0, true),
+                        (ctx.fund_account.get_reserve_account_address()?, true),
                         (
                             ctx.fund_account
                                 .find_supported_token_account_address(&item.mint)?,
@@ -129,7 +129,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     manager_fee_account,
                                     fund_reserve_account,
                                     fund_supported_token_account,
-                                    &ctx.fund_account.find_reserve_account_seeds(),
+                                    &ctx.fund_account.get_reserve_account_seeds(),
                                     item.sol_amount,
                                 )?
                             }

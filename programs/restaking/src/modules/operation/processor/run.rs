@@ -98,7 +98,7 @@ fn stake_sol<'info>(
                 manager_fee_account,
                 fund_reserve_account,
                 &fund_supported_token_account_to_stake.to_account_info(),
-                &fund_account.find_reserve_account_seeds(),
+                &fund_account.get_reserve_account_seeds(),
                 staking_lamports,
             )?;
         fund_account.sol_operation_reserved_amount = fund_account
@@ -208,7 +208,7 @@ fn normalize_supported_tokens<'info>(
             &*fund_supported_token_mint_to_normalize_parsed,
             &fund_supported_token_program_to_normalize,
             &fund_account.to_account_info(),
-            &[fund_account.get_signer_seeds().as_ref()],
+            &[fund_account.get_seeds().as_ref()],
             normalizing_supported_token_amount,
             &mut pricing_service,
         )?;
@@ -306,7 +306,7 @@ fn restake_normalized_tokens<'info>(
             &ctx,
             operator,
             fund_account.as_ref(),
-            &[fund_account.get_signer_seeds().as_ref()],
+            &[fund_account.get_seeds().as_ref()],
             jito_vault_update_state_tracker,
             system_program.as_ref(),
             current_slot,
@@ -320,7 +320,7 @@ fn restake_normalized_tokens<'info>(
             fund_jito_vault_receipt_token_account.as_ref().as_ref(),
             restaking_nt_amount,
             fund_account.as_ref(),
-            &[fund_account.get_signer_seeds().as_ref()],
+            &[fund_account.get_seeds().as_ref()],
         )?;
 
         jito_vault_supported_token_account.reload()?;
@@ -398,7 +398,7 @@ fn request_withdraw_normalized_tokens<'info>(
             associated_token_program.as_ref(),
             fund_account.as_ref(),
             &[
-                fund_account.get_signer_seeds().as_ref(),
+                fund_account.get_seeds().as_ref(),
                 &[
                     restaking::jito::JitoRestakingVault::VAULT_BASE_ACCOUNT1_SEED,
                     &receipt_token_mint.key().to_bytes(),
@@ -479,7 +479,7 @@ fn withdraw_normalized_tokens<'info>(
             &ctx,
             operator,
             fund_account.as_ref(),
-            &[fund_account.get_signer_seeds().as_ref()],
+            &[fund_account.get_seeds().as_ref()],
             jito_vault_update_state_tracker,
             system_program.as_ref(),
             current_slot,

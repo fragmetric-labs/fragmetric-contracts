@@ -50,13 +50,16 @@ pub struct FundAccount {
     pub(super) restaking_vaults: Vec<RestakingVault>,
 
     pub(super) operation: OperationState,
+
+    reserve_account_bump: u8,
+    treasury_account_bump: u8,
     _reserved: [u8; 256],
 }
 
 impl PDASeeds<2> for FundAccount {
     const SEED: &'static [u8] = b"fund";
 
-    fn get_seeds(&self) -> [&[u8]; 2] {
+    fn get_seed_phrase(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 
@@ -66,64 +69,6 @@ impl PDASeeds<2> for FundAccount {
 }
 
 impl FundAccount {
-    pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
-    pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
-
-    pub(super) fn find_account_address(&self) -> Result<Pubkey> {
-        Ok(
-            Pubkey::create_program_address(&self.get_signer_seeds(), &crate::ID)
-                .map_err(|_| ProgramError::InvalidSeeds)?,
-        )
-    }
-
-    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
-    }
-
-    pub(super) fn find_reserve_account_address(&self) -> (Pubkey, u8) {
-        Pubkey::find_program_address(&self.get_reserve_account_seeds(), &crate::ID)
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn find_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        [
-            self.get_reserve_account_seeds(),
-            // TODO v0.3/general: leak??
-            vec![std::slice::from_ref(Box::leak(Box::new(
-                self.find_reserve_account_address().1,
-            )))],
-        ]
-        .concat()
-    }
-
-    pub(super) fn find_treasury_account_address(&self) -> (Pubkey, u8) {
-        Pubkey::find_program_address(
-            &[Self::TREASURY_SEED, self.receipt_token_mint.as_ref()],
-            &crate::ID,
-        )
-    }
-
-    pub(super) fn find_supported_token_account_address(&self, token: &Pubkey) -> Result<Pubkey> {
-        let supported_token = self.get_supported_token(token)?;
-        Ok(
-            spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
-                &supported_token.mint,
-                &supported_token.program,
-            ),
-        )
-    }
-
-    pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
-        Ok(
-            spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
-                &self.receipt_token_mint,
-                &self.receipt_token_program,
-            ),
-        )
-    }
-
     fn migrate(
         &mut self,
         bump: u8,
@@ -134,17 +79,17 @@ impl FundAccount {
         if self.data_version == 0 {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
-            self.withdrawal.initialize(self.data_version);
+            self.withdrawal.migrate(self.data_version);
             self.data_version = 1;
         }
 
         if self.data_version == 1 {
-            self.withdrawal.initialize(self.data_version);
+            self.withdrawal.migrate(self.data_version);
             self.data_version = 2;
         }
 
         if self.data_version == 2 {
-            self.withdrawal.initialize(self.data_version);
+            self.withdrawal.migrate(self.data_version);
             self.data_version = 3;
         }
 
@@ -161,7 +106,12 @@ impl FundAccount {
 
             self.normalized_token = None;
             self.restaking_vaults = Vec::new();
-            self.operation.initialize(self.data_version);
+            self.operation.migrate(self.data_version);
+
+            self.reserve_account_bump =
+                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
+            self.treasury_account_bump =
+                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID).1;
 
             self.data_version = 4;
         }
@@ -185,6 +135,73 @@ impl FundAccount {
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == FUND_ACCOUNT_CURRENT_VERSION
+    }
+
+    pub(super) fn find_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
+
+    fn get_reserve_account_seed_phrase(&self) -> Vec<&[u8]> {
+        vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
+    }
+
+    // TODO v0.3/operation: visibility
+    pub(in crate::modules) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
+        let mut signer_seeds = self.get_reserve_account_seed_phrase().to_vec();
+        signer_seeds.push(std::slice::from_ref(&self.reserve_account_bump));
+        signer_seeds
+    }
+
+    pub(super) fn get_reserve_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_reserve_account_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
+
+    fn get_treasury_account_seed_phrase(&self) -> Vec<&[u8]> {
+        vec![Self::TREASURY_SEED, self.receipt_token_mint.as_ref()]
+    }
+
+    pub(super) fn get_treasury_account_seeds(&self) -> Vec<&[u8]> {
+        let mut signer_seeds = self.get_treasury_account_seed_phrase().to_vec();
+        signer_seeds.push(std::slice::from_ref(&self.treasury_account_bump));
+        signer_seeds
+    }
+
+    pub(super) fn get_treasury_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_treasury_account_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub(super) fn find_supported_token_account_address(&self, token: &Pubkey) -> Result<Pubkey> {
+        let supported_token = self.get_supported_token(token)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &supported_token.mint,
+                &supported_token.program,
+            ),
+        )
+    }
+
+    pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &self.receipt_token_mint,
+                &self.receipt_token_program,
+            ),
+        )
     }
 
     pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedToken> {
@@ -410,7 +427,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token2,
             Pubkey::default(),
@@ -420,7 +437,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
         fund.add_supported_token(
             token1,
             Pubkey::default(),
@@ -430,7 +447,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap_err();
+        .unwrap_err();
         assert_eq!(fund.supported_tokens.len(), 2);
         assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
 
@@ -469,7 +486,7 @@ mod tests {
                 address: Pubkey::new_unique(),
             },
         )
-            .unwrap();
+        .unwrap();
 
         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);

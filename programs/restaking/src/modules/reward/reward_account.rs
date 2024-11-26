@@ -35,7 +35,7 @@ pub struct RewardAccount {
 impl PDASeeds<2> for RewardAccount {
     const SEED: &'static [u8] = b"reward";
 
-    fn get_seeds(&self) -> [&[u8]; 2] {
+    fn get_seed_phrase(&self) -> [&[u8]; 2] {
         [Self::SEED, self.receipt_token_mint.as_ref()]
     }
 

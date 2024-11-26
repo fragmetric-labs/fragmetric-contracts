@@ -32,7 +32,7 @@ pub struct WithdrawalState {
 }
 
 impl WithdrawalState {
-    pub(super) fn initialize(&mut self, fund_account_data_version: u16) {
+    pub(super) fn migrate(&mut self, fund_account_data_version: u16) {
         if fund_account_data_version == 0 {
             self.next_batch_id = 2;
             self.next_request_id = 1;

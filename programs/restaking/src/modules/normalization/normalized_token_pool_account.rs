@@ -35,7 +35,7 @@ pub struct NormalizedTokenPoolAccount {
 impl PDASeeds<2> for NormalizedTokenPoolAccount {
     const SEED: &'static [u8] = b"nt_pool";
 
-    fn get_seeds(&self) -> [&[u8]; 2] {
+    fn get_seed_phrase(&self) -> [&[u8]; 2] {
         [Self::SEED, self.normalized_token_mint.as_ref()]
     }
 
