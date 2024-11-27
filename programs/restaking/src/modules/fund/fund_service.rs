@@ -299,8 +299,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let pricing_service = self.new_pricing_service(pricing_sources)?;
 
         let mut receipt_token_amount_to_burn: u64 = 0;
-        for batch in &mut withdrawal_state.batch_withdrawals_in_progress {
-            let amount = batch.receipt_token_to_process;
+        for batch in &mut withdrawal_state.queued_batches {
+            let amount = batch.receipt_token_amount;
             batch.record_unstaking_start(amount)?;
             receipt_token_amount_to_burn = receipt_token_amount_to_burn
                 .checked_add(amount)
@@ -309,14 +309,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let mut receipt_token_amount_not_burned = receipt_token_amount_to_burn;
         let mut total_sol_reserved_amount: u64 = 0;
-        for batch in &mut withdrawal_state.batch_withdrawals_in_progress {
+        for batch in &mut withdrawal_state.queued_batches {
             if receipt_token_amount_not_burned == 0 {
                 break;
             }
 
             let receipt_token_amount = std::cmp::min(
                 receipt_token_amount_not_burned,
-                batch.receipt_token_being_processed,
+                batch._receipt_token_being_processed,
             );
             receipt_token_amount_not_burned -= receipt_token_amount; // guaranteed to be safe
 

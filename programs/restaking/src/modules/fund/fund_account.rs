@@ -289,7 +289,7 @@ impl FundAccount {
             .find(|info| info.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
- 
+
     pub(super) fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
         require_gte!(
             capacity_amount,
@@ -450,32 +450,25 @@ mod tests {
 
         assert_eq!(fund.sol_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_withdrawal_fee_rate_as_f32(), 0.);
-        assert!(fund.withdrawal.withdrawal_enabled_flag);
-        assert_eq!(fund.withdrawal.batch_processing_threshold_amount, 0);
-        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
+        assert!(fund.withdrawal.enabled);
+        assert_eq!(
+            fund.withdrawal.batch_threshold_processing_interval_seconds,
+            0
+        );
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
         fund.set_sol_capacity_amount(0).unwrap_err();
 
-        let new_amount = 10;
-        let new_duration = 10;
-        fund.withdrawal
-            .set_batch_processing_threshold(Some(new_amount), None);
+        let creation_interval_seconds = 10;
+        let processing_interval_seconds = 60;
+        fund.withdrawal.set_batch_threshold(creation_interval_seconds, processing_interval_seconds).unwrap();
         assert_eq!(
-            fund.withdrawal.batch_processing_threshold_amount,
-            new_amount
-        );
-        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
-
-        fund.withdrawal
-            .set_batch_processing_threshold(None, Some(new_duration));
-        assert_eq!(
-            fund.withdrawal.batch_processing_threshold_amount,
-            new_amount
+            fund.withdrawal.batch_threshold_creation_interval_seconds,
+            creation_interval_seconds
         );
         assert_eq!(
-            fund.withdrawal.batch_processing_threshold_duration,
-            new_duration
+            fund.withdrawal.batch_threshold_processing_interval_seconds,
+            processing_interval_seconds
         );
     }
 
