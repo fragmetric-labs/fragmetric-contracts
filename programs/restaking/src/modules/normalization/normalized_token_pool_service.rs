@@ -106,10 +106,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     to: to_normalized_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
                 },
-                &[self
-                    .normalized_token_pool_account
-                    .get_seeds()
-                    .as_ref()],
+                &[self.normalized_token_pool_account.get_seeds().as_ref()],
             ),
             normalized_token_amount,
         )?;
@@ -176,10 +173,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     to: to_supported_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
                 },
-                &[self
-                    .normalized_token_pool_account
-                    .get_seeds()
-                    .as_ref()],
+                &[self.normalized_token_pool_account.get_seeds().as_ref()],
             ),
             supported_token_amount,
             supported_token_mint.decimals,

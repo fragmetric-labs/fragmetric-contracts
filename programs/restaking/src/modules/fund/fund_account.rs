@@ -461,7 +461,9 @@ mod tests {
 
         let creation_interval_seconds = 10;
         let processing_interval_seconds = 60;
-        fund.withdrawal.set_batch_threshold(creation_interval_seconds, processing_interval_seconds).unwrap();
+        fund.withdrawal
+            .set_batch_threshold(creation_interval_seconds, processing_interval_seconds)
+            .unwrap();
         assert_eq!(
             fund.withdrawal.batch_threshold_creation_interval_seconds,
             creation_interval_seconds

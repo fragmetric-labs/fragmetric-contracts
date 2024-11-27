@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::reward::RewardType::Token;
 
@@ -14,15 +15,19 @@ pub(super) struct NormalizedToken {
 }
 
 impl NormalizedToken {
-    pub fn new(mint: Pubkey, program: Pubkey, decimals: u8, pool: Pubkey, operation_reserved_amount: u64) -> Self {
+    pub fn new(
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
+        pool: Pubkey,
+        operation_reserved_amount: u64,
+    ) -> Self {
         Self {
             mint,
             program,
             decimals,
             one_token_as_sol: 0,
-            pricing_source: TokenPricingSource::FragmetricNormalizedTokenPool {
-                address: pool,
-            },
+            pricing_source: TokenPricingSource::FragmetricNormalizedTokenPool { address: pool },
             operation_reserved_amount,
             _reserved: [0; 64],
         }

@@ -17,20 +17,18 @@ impl TokenValueProvider for JitoRestakingVaultValueProvider {
     ) -> Result<TokenValue> {
         #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
-        
+
         let vault_data = pricing_source_accounts[0].data.borrow();
         let vault_account = Vault::try_from_slice_unchecked(vault_data.as_ref())?;
 
         require_keys_eq!(vault_account.vrt_mint, *token_mint);
-        
+
         Ok(TokenValue {
-            numerator: vec![
-                Asset::TOKEN(
-                    vault_account.supported_mint,
-                    None,
-                    vault_account.tokens_deposited(),
-                ),
-            ],
+            numerator: vec![Asset::TOKEN(
+                vault_account.supported_mint,
+                None,
+                vault_account.tokens_deposited(),
+            )],
             denominator: vault_account.vrt_supply(),
         })
     }

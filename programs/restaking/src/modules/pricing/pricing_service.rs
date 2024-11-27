@@ -70,7 +70,8 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                JitoRestakingVaultValueProvider.resolve_underlying_assets(token_mint, &[account1])?
+                JitoRestakingVaultValueProvider
+                    .resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let account1 = self

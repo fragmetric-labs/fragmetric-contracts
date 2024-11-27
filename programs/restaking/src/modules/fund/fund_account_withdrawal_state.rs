@@ -85,7 +85,11 @@ impl WithdrawalState {
         self.enabled = enabled;
     }
 
-    pub(super) fn set_batch_threshold(&mut self, creation_interval_seconds: i64, processing_interval_seconds: i64) -> Result<()> {
+    pub(super) fn set_batch_threshold(
+        &mut self,
+        creation_interval_seconds: i64,
+        processing_interval_seconds: i64,
+    ) -> Result<()> {
         require_gte!(creation_interval_seconds, 0);
         require_gte!(processing_interval_seconds, creation_interval_seconds);
         self.batch_threshold_creation_interval_seconds = creation_interval_seconds;
