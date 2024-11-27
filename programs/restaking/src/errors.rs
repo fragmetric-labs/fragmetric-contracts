@@ -205,4 +205,7 @@ pub enum ErrorCode {
 
     #[msg("staking: failed to find uninitialized withdraw ticket")]
     StakingUninitializedWithdrawTicketNotFoundException,
+
+    #[msg("staking: account not matched")]
+    StakingAccountNotMatchedException,
 }

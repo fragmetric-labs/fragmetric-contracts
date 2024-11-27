@@ -17,7 +17,7 @@ download-keypairs = "cd keypairs && (which jq 1>/dev/null || brew install jq) &&
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [test]
-startup_wait = 10000
+startup_wait = 50000
 
 [[test.genesis]]
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
@@ -126,3 +126,8 @@ filename = "./tests/mocks/mainnet/jito_vault_vrt.json"
 [[test.validator.account]]
 address = "7N3VJBtCAm5vgUBG3kTAdhMMe4PzPFTT5wF3aGye6kDh"
 filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"
+
+# *jito staking
+# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.clone]]
+address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"

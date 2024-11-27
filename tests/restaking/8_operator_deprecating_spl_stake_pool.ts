@@ -66,7 +66,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, undefined, undefined, 800_000);
         
         const [
             fragSOLFundReserveAccountBalance1,
