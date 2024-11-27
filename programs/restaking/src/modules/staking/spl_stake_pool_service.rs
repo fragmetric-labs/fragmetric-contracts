@@ -195,9 +195,10 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
 
         let mut validator_list_account_data = validator_list_account_info.try_borrow_mut_data()?;
-        let (_header, validator_list) = spl_stake_pool::state::ValidatorListHeader::deserialize_vec(
-            &mut validator_list_account_data,
-        )?;
+        let (_header, validator_list) =
+            spl_stake_pool::state::ValidatorListHeader::deserialize_vec(
+                &mut validator_list_account_data,
+            )?;
 
         let mut withdraw_lamports =
             Self::calc_withdraw_sol_lamports_by_pool_tokens_amount(&pool_account, pool_tokens)?;
@@ -232,30 +233,26 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                 let mut lamports_out_left = withdraw_lamports;
 
                 loop {
-                    let (available_validator_stake_info_opt, max_active_lamports_from_validator) =
+                    let (available_validator_stake_info_opt, withdraw_lamports_from_validator) =
                         Self::get_available_validator_stake_info(
                             &validator_list,
                             &lamports_out_left,
                         );
-                    if available_validator_stake_info_opt != None {
+                    if let Some(available_validator_stake_info) = available_validator_stake_info_opt
+                    {
                         let available_validator_vote_account_address =
-                            available_validator_stake_info_opt
-                                .unwrap()
-                                .vote_account_address;
+                            available_validator_stake_info.vote_account_address;
                         let (available_validator_stake_account_address, _) =
                             spl_stake_pool::find_stake_program_address(
                                 pool_program_info.key,
                                 &available_validator_vote_account_address,
                                 pool_account_info.key,
                                 NonZeroU32::new(
-                                    available_validator_stake_info_opt
-                                        .unwrap()
-                                        .validator_seed_suffix
-                                        .into(),
+                                    available_validator_stake_info.validator_seed_suffix.into(),
                                 ),
                             );
                         let max_active_pool_tokens_from_lamports = pool_account
-                            .calc_pool_tokens_for_deposit(max_active_lamports_from_validator)
+                            .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator)
                             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
                         available_validators_with_available_lamports
                             .get_or_insert_with(Vec::new)
@@ -263,9 +260,15 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                                 available_validator_stake_account_address,
                                 max_active_pool_tokens_from_lamports,
                             ));
+                    } else {
+                        // then it means there's no available active stakes
+                        available_validators_with_available_lamports
+                            .get_or_insert_with(Vec::new)
+                            .push((Pubkey::default(), 0));
+                        break;
                     }
                     lamports_out_left =
-                        lamports_out_left.saturating_sub(max_active_lamports_from_validator);
+                        lamports_out_left.saturating_sub(withdraw_lamports_from_validator);
                     if lamports_out_left == 0 {
                         break;
                     }
@@ -279,32 +282,28 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             ))?;
         }
 
-        // dev) if you want to test withdraw from validator, uncommit this code and run
+        // dev) if you want to test withdraw from validator, uncomment this code and run
         // withdraw_lamports =
         //     Self::calc_withdraw_stake_lamports_by_pool_tokens_amount(&pool_account, pool_tokens)?;
         // let mut lamports_out_left = withdraw_lamports;
 
         // loop {
-        //     let (available_validator_stake_info_opt, max_active_lamports_from_validator) =
+        //     let (available_validator_stake_info_opt, withdraw_lamports_from_validator) =
         //         Self::get_available_validator_stake_info(&validator_list, &lamports_out_left);
-        //     if available_validator_stake_info_opt != None {
-        //         let available_validator_vote_account_address = available_validator_stake_info_opt
-        //             .unwrap()
-        //             .vote_account_address;
+        //     if let Some(available_validator_stake_info) = available_validator_stake_info_opt {
+        //         let available_validator_vote_account_address =
+        //             available_validator_stake_info.vote_account_address;
         //         let (available_validator_stake_account_address, _) =
         //             spl_stake_pool::find_stake_program_address(
         //                 pool_program_info.key,
         //                 &available_validator_vote_account_address,
         //                 pool_account_info.key,
         //                 NonZeroU32::new(
-        //                     available_validator_stake_info_opt
-        //                         .unwrap()
-        //                         .validator_seed_suffix
-        //                         .into(),
+        //                     available_validator_stake_info.validator_seed_suffix.into(),
         //                 ),
         //             );
         //         let max_active_pool_tokens_from_lamports = pool_account
-        //             .calc_pool_tokens_for_deposit(max_active_lamports_from_validator)
+        //             .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator)
         //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
         //         available_validators_with_available_lamports
         //             .get_or_insert_with(Vec::new)
@@ -312,9 +311,14 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         //                 available_validator_stake_account_address,
         //                 max_active_pool_tokens_from_lamports,
         //             ));
+        //     } else {
+        //         // then it means there's no available active stakes
+        //         available_validators_with_available_lamports
+        //             .get_or_insert_with(Vec::new)
+        //             .push((Pubkey::default(), 0));
+        //         break;
         //     }
-        //     lamports_out_left =
-        //         lamports_out_left.saturating_sub(max_active_lamports_from_validator);
+        //     lamports_out_left = lamports_out_left.saturating_sub(withdraw_lamports_from_validator);
         //     if lamports_out_left == 0 {
         //         break;
         //     }
@@ -361,6 +365,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         Ok(withdraw_lamports)
     }
 
+    // only checks active stakes
     fn get_available_validator_stake_info<'b, 'data>(
         validator_list: &'b BigVec<'data>,
         lamports: &u64,

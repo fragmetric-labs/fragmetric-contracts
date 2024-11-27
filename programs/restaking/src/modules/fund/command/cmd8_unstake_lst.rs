@@ -142,6 +142,11 @@ impl SelfExecutable for UnstakeLSTCommand {
                     if let Some(available_withdrawals_from_reserve_or_validator) =
                         available_withdrawals_from_reserve_or_validator
                     {
+                        require_neq!(
+                            available_withdrawals_from_reserve_or_validator[0].0,
+                            Pubkey::default(),
+                            errors::ErrorCode::StakingSplActiveStakeNotAvailableException
+                        );
                         command.state = UnstakeLSTCommandState::RequestUnstake;
 
                         let fund_stake_accounts: Vec<(Pubkey, bool, u8)> = available_withdrawals_from_reserve_or_validator.iter().enumerate().map(|(account_index, _)| {
@@ -180,6 +185,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                     return Ok(Some(command.with_required_accounts(required_accounts)));
                 }
                 UnstakeLSTCommandState::Unstake => {
+                    // TODO put accounts definition into each token_pricing_source
                     let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
                         accounts
                     else {

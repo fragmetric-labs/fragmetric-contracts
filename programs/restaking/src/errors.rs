@@ -208,4 +208,7 @@ pub enum ErrorCode {
 
     #[msg("staking: account not matched")]
     StakingAccountNotMatchedException,
+
+    #[msg("staking: spl stake pool's active stake not available")]
+    StakingSplActiveStakeNotAvailableException,
 }
