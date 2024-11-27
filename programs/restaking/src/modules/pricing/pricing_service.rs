@@ -129,7 +129,7 @@ impl<'info> PricingService<'info> {
     }
 
     /// returns (total sol value of the token, total token amount)
-    fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
+    pub fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
         let (token_value, _) = self
             .token_value_map
             .get(token_mint)

@@ -25,7 +25,11 @@ pub(super) struct WithdrawalState {
     #[max_len(MAX_QUEUED_WITHDRAWAL_BATCHES)]
     pub queued_batches: Vec<WithdrawalBatch>,
 
-    _reserved: [[u8; 8]; 14],
+    /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
+    pub sol_normal_reserve_rate_bps: u16,
+    pub sol_normal_reserve_max_amount: u64,
+
+    _reserved: [[u8; 8]; 16],
 }
 
 impl WithdrawalState {
@@ -68,6 +72,8 @@ impl WithdrawalState {
             // sol_withdrawal_reserved_amount: u64 -> _reserved
             // _padding: [u8; 8] -> _reserved
             // receipt_token_processed_amount: u64 -> _reserved
+            self.sol_normal_reserve_rate_bps = 100;
+            self.sol_normal_reserve_max_amount = 40_000_000_000_000;
             self._reserved = Default::default();
         }
     }

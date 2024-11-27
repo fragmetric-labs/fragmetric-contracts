@@ -1,11 +1,14 @@
-use anchor_lang::prelude::*;
-
+use crate::constants::MAINNET_JITOSOL_MINT_ADDRESS;
 use crate::errors;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
 use crate::utils::PDASeeds;
+use anchor_lang::prelude::*;
 
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+    StakeSOLCommand, StakeSOLCommandItem,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnstakeLSTCommand {
@@ -188,9 +191,7 @@ impl SelfExecutable for UnstakeLSTCommand {
             }
         }
 
-        // TODO v0.3/operation: next step ... stake sol
-        Ok(Some(
-            OperationCommand::EnqueueWithdrawalBatch(Default::default()).with_required_accounts([]),
-        ))
+        // proceed to stake sol command
+        Ok(Some(StakeSOLCommand::new()))
     }
 }
