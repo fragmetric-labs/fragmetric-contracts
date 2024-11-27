@@ -1,28 +1,325 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program};
+use anchor_spl::{
+    token::Token,
+    token_interface::{Mint, TokenAccount},
+};
+use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
 
-pub struct MarinadeStakePoolService<'info: 'a, 'a> {
-    pub marinade_stake_pool_program: &'a AccountInfo<'info>,
-    pub pool_account: &'a AccountInfo<'info>,
-    pub pool_token_mint: &'a AccountInfo<'info>,
-    pub pool_token_program: &'a AccountInfo<'info>,
+use crate::errors;
+use crate::utils::AccountInfoExt;
+
+pub struct MarinadeStakePoolService<'info> {
+    marinade_stake_pool_program: Program<'info, MarinadeFinance>,
+    pool_account: Account<'info, State>,
+    pool_token_mint: InterfaceAccount<'info, Mint>,
+    pool_token_program: Program<'info, Token>,
+    system_program: Program<'info, System>,
 }
 
-impl<'info, 'a> MarinadeStakePoolService<'info, 'a> {
-    pub fn new(
-        marinade_stake_pool_program: &'a AccountInfo<'info>,
-        pool_account: &'a AccountInfo<'info>,
-        pool_token_mint: &'a AccountInfo<'info>,
-        pool_token_program: &'a AccountInfo<'info>,
-    ) -> Result<Self> {
-        require_eq!(marinade_cpi::ID, marinade_stake_pool_program.key());
+impl<'info> MarinadeStakePoolService<'info> {
+    #[inline(never)]
+    pub(in crate::modules) fn is_claimable_ticket_account(
+        &mut self,
+        clock: &AccountInfo<'info>,
+        ticket_account: &'info AccountInfo<'info>,
+        reserve_pda: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        if !ticket_account.is_initialized() {
+            return Ok(false);
+        }
 
-        Ok(Self {
-            marinade_stake_pool_program,
-            pool_account,
-            pool_token_mint,
-            pool_token_program,
-        })
+        let clock = Clock::from_account_info(clock)?;
+        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
+
+        if clock.epoch < ticket_account.created_epoch + 1 {
+            return Ok(false);
+        } else if clock.epoch == ticket_account.created_epoch + 1
+            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
+        {
+            return Ok(false);
+        }
+
+        if ticket_account.lamports_amount
+            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
+        {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 
-    // TODO: ...
+    #[inline(never)]
+    pub fn new(
+        marinade_stake_pool_program: &'info AccountInfo<'info>,
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &'info AccountInfo<'info>,
+        pool_token_program: &'info AccountInfo<'info>,
+        system_program: &'info AccountInfo<'info>,
+    ) -> Result<Box<Self>> {
+        let pool_account = Account::<State>::try_from(pool_account)?;
+        require_keys_eq!(pool_token_mint.key(), pool_account.msol_mint);
+
+        Ok(Box::new(Self {
+            pool_account,
+            marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
+            pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
+            pool_token_program: Program::try_from(pool_token_program)?,
+            system_program: Program::try_from(system_program)?,
+        }))
+    }
+
+    /// returns (to_pool_token_account_amount, minted_pool_token_amount)
+    #[inline(never)]
+    pub(in crate::modules) fn deposit(
+        &mut self,
+        liq_pool_sol_leg_pda: &AccountInfo<'info>,
+        liq_pool_msol_leg: &AccountInfo<'info>,
+        liq_pool_msol_leg_authority: &AccountInfo<'info>,
+        reserve_pda: &AccountInfo<'info>,
+        msol_mint_authority: &AccountInfo<'info>,
+
+        from_sol_account: &AccountInfo<'info>,
+        to_pool_token_account: &'info AccountInfo<'info>,
+        from_sol_account_seeds: &[&[u8]],
+
+        sol_amount: u64,
+    ) -> Result<(u64, u64)> {
+        let mut to_pool_token_account =
+            InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
+        let to_pool_token_account_amount_before = to_pool_token_account.amount;
+
+        marinade_cpi::cpi::deposit(
+            CpiContext::new_with_signer(
+                self.marinade_stake_pool_program.to_account_info(),
+                marinade_cpi::cpi::accounts::Deposit {
+                    state: self.pool_account.to_account_info(),
+                    msol_mint: self.pool_token_mint.to_account_info(),
+                    liq_pool_sol_leg_pda: liq_pool_sol_leg_pda.clone(),
+                    liq_pool_msol_leg: liq_pool_msol_leg.clone(),
+                    liq_pool_msol_leg_authority: liq_pool_msol_leg_authority.clone(),
+                    reserve_pda: reserve_pda.clone(),
+                    transfer_from: from_sol_account.clone(),
+                    mint_to: to_pool_token_account.to_account_info(),
+                    msol_mint_authority: msol_mint_authority.clone(),
+                    system_program: self.system_program.to_account_info(),
+                    token_program: self.pool_token_program.to_account_info(),
+                },
+                &[from_sol_account_seeds],
+            ),
+            sol_amount,
+        )?;
+
+        to_pool_token_account.reload()?;
+        let to_pool_token_account_amount = to_pool_token_account.amount;
+        let minted_pool_token_amount =
+            to_pool_token_account_amount - to_pool_token_account_amount_before;
+
+        Ok((to_pool_token_account_amount, minted_pool_token_amount))
+    }
+
+    /// returns unstaking_sol_amount
+    #[inline(never)]
+    pub(in crate::modules) fn order_unstake(
+        &mut self,
+        new_ticket_account: &'info AccountInfo<'info>,
+        new_ticket_account_seeds: &[&[u8]],
+        clock: &AccountInfo<'info>,
+        rent: &AccountInfo<'info>,
+
+        operator: &Signer<'info>,
+        from_pool_token_account: &AccountInfo<'info>,
+        from_pool_token_account_authority: &AccountInfo<'info>,
+        from_pool_token_account_authority_seeds: &[&[u8]],
+
+        token_amount: u64,
+    ) -> Result<u64> {
+        self.create_ticket_account(operator, new_ticket_account, new_ticket_account_seeds, rent)?;
+
+        marinade_cpi::cpi::order_unstake(
+            CpiContext::new_with_signer(
+                self.marinade_stake_pool_program.to_account_info(),
+                marinade_cpi::cpi::accounts::OrderUnstake {
+                    state: self.pool_account.to_account_info(),
+                    msol_mint: self.pool_token_mint.to_account_info(),
+                    burn_msol_from: from_pool_token_account.to_account_info(),
+                    burn_msol_authority: from_pool_token_account_authority.to_account_info(),
+                    new_ticket_account: new_ticket_account.to_account_info(),
+                    clock: clock.to_account_info(),
+                    rent: rent.to_account_info(),
+                    token_program: self.pool_token_program.to_account_info(),
+                },
+                &[from_pool_token_account_authority_seeds],
+            ),
+            token_amount,
+        )?;
+
+        let ticket_account = Account::<TicketAccountData>::try_from(new_ticket_account)?;
+        Ok(ticket_account.lamports_amount)
+    }
+
+    fn create_ticket_account(
+        &self,
+        operator: &Signer<'info>,
+        new_ticket_account: &AccountInfo<'info>,
+        new_ticket_account_seeds: &[&[u8]],
+        rent: &AccountInfo<'info>,
+    ) -> Result<()> {
+        let space = 8 + std::mem::size_of::<TicketAccountData>();
+        let lamports = Rent::from_account_info(rent)?.minimum_balance(space);
+        anchor_lang::system_program::create_account(
+            CpiContext::new_with_signer(
+                self.system_program.to_account_info(),
+                anchor_lang::system_program::CreateAccount {
+                    from: operator.to_account_info(),
+                    to: new_ticket_account.to_account_info(),
+                },
+                &[new_ticket_account_seeds],
+            ),
+            lamports,
+            space as u64,
+            self.marinade_stake_pool_program.key,
+        )
+    }
+
+    /// returns unstaked_sol_amount
+    #[inline(never)]
+    pub(in crate::modules) fn claim(
+        &mut self,
+        reserve_pda: &'info AccountInfo<'info>,
+        clock: &AccountInfo<'info>,
+        ticket_account: &'info AccountInfo<'info>,
+
+        to_sol_account: &AccountInfo<'info>,
+        to_sol_account_seeds: &[&[u8]],
+        rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
+    ) -> Result<u64> {
+        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
+        let ticket_account_rent = ticket_account.get_lamports();
+        let unstaked_sol_amount = ticket_account.lamports_amount;
+
+        marinade_cpi::cpi::claim(CpiContext::new(
+            self.marinade_stake_pool_program.to_account_info(),
+            marinade_cpi::cpi::accounts::Claim {
+                state: self.pool_account.to_account_info(),
+                reserve_pda: reserve_pda.clone(),
+                ticket_account: ticket_account.to_account_info(),
+                transfer_sol_to: to_sol_account.clone(),
+                clock: clock.clone(),
+                system_program: self.system_program.to_account_info(),
+            },
+        ))?;
+
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                self.system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: to_sol_account.to_account_info(),
+                    to: rent_refund_account.to_account_info(),
+                },
+                &[to_sol_account_seeds],
+            ),
+            ticket_account_rent,
+        )?;
+
+        Ok(unstaked_sol_amount)
+    }
+
+    fn find_pool_account_related_address(
+        pool_account: &AccountInfo,
+        seed: &'static [u8],
+    ) -> Pubkey {
+        Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
+    }
+
+    fn find_accounts_for_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
+        vec![
+            (marinade_cpi::ID, false),
+            (pool_account.key(), true),
+            (pool_account.msol_mint, true),
+            (Token::id(), false),
+            (System::id(), false),
+        ]
+    }
+
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_deposit(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Account::<State>::try_from(pool_account)?;
+        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        accounts.extend([
+            // liq_pool_sol_leg_pda
+            (
+                Self::find_pool_account_related_address(pool_account.as_ref(), b"liq_sol"),
+                true,
+            ),
+            // liq_pool_msol_leg
+            (pool_account.liq_pool.msol_leg, true),
+            // liq_pool_msol_leg_authority
+            (
+                Self::find_pool_account_related_address(
+                    pool_account.as_ref(),
+                    b"liq_st_sol_authority",
+                ),
+                false,
+            ),
+            // reserve_pda
+            Self::find_reserve_pda_account_meta(pool_account.as_ref()),
+            // msol_mint_authority
+            (
+                Self::find_pool_account_related_address(pool_account.as_ref(), b"st_mint"),
+                false,
+            ),
+        ]);
+        Ok(accounts)
+    }
+
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_order_unstake(
+        pool_account: &'info AccountInfo<'info>,
+        ticket_account: &AccountInfo,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Account::<State>::try_from(pool_account)?;
+        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        accounts.extend([
+            // new_ticket_account
+            (ticket_account.key(), true),
+            // clock
+            (solana_program::sysvar::clock::ID, false),
+            // rent
+            (solana_program::sysvar::rent::ID, false),
+        ]);
+        Ok(accounts)
+    }
+
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_claim<'a>(
+        pool_account_info: &'info AccountInfo<'info>,
+        ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
+    ) -> Result<Vec<(Pubkey, bool)>>
+    where
+        'info: 'a,
+    {
+        let pool_account = Account::<State>::try_from(pool_account_info)?;
+        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        accounts.extend([
+            // reserve_pda
+            Self::find_reserve_pda_account_meta(pool_account.as_ref()),
+            // clock
+            (solana_program::sysvar::clock::ID, false),
+        ]);
+        accounts.extend(
+            ticket_accounts
+                .into_iter()
+                .map(|account| (account.key(), true)),
+        );
+        Ok(accounts)
+    }
+
+    fn find_reserve_pda_account_meta(pool_account: &AccountInfo) -> (Pubkey, bool) {
+        (
+            Self::find_pool_account_related_address(pool_account, b"reserve"),
+            true,
+        )
+    }
 }

@@ -193,13 +193,16 @@ pub enum ErrorCode {
 
     #[msg("fund: normalized token already set")]
     FundNormalizedTokenAlreadySetError,
-    
+
     #[msg("fund: restaking vault already registered")]
     FundRestakingVaultAlreadyRegisteredError,
-    
+
     #[msg("reward: exceeded max restaking vaults")]
     FundExceededMaxRestakingVaultsError,
-    
+
     #[msg("fund: not supported restaking vault")]
     FundNotSupportedRestakingVaultError,
+
+    #[msg("staking: failed to find uninitialized withdraw ticket")]
+    StakingUninitializedWithdrawTicketNotFoundException,
 }

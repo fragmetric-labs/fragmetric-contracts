@@ -183,6 +183,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub fn process_run(
         &mut self,
+        operator: &Signer<'info>,
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
@@ -245,6 +246,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             let mut ctx = OperationCommandContext {
+                operator,
                 receipt_token_mint: self.receipt_token_mint,
                 fund_account: self.fund_account,
             };
