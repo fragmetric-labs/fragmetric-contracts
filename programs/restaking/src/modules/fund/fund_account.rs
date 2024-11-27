@@ -111,7 +111,8 @@ impl FundAccount {
             self.reserve_account_bump =
                 Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
             self.treasury_account_bump =
-                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID).1;
+                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
+                    .1;
 
             self.data_version = 4;
         }
@@ -191,6 +192,67 @@ impl FundAccount {
                 &supported_token.mint,
                 &supported_token.program,
             ),
+        )
+    }
+
+    pub const UNSTAKING_TICKET_SEED: &'static [u8] = b"unstaking_ticket";
+
+    fn get_unstaking_ticket_account_seed_phrase<'this>(
+        &'this self,
+        pool_account: &'this Pubkey,
+        index: u8,
+    ) -> Vec<Vec<u8>> {
+        // Vec<Vec<u8>>
+        // ) -> [Box<dyn AsRef<[u8]> + 'this>; 4] {
+        let mut ret = Vec::with_capacity(5);
+        ret.extend([
+            Self::UNSTAKING_TICKET_SEED.to_vec(),
+            self.receipt_token_mint.as_ref().to_vec(),
+            pool_account.as_ref().to_vec(),
+            vec![index],
+        ]);
+        ret
+    }
+
+    /// usage:
+    /// ```rs
+    /// let seeds: Vec<Vec<u8>> = get_unstaking_ticket_account_seeds();
+    /// let seeds_ref: &[&[u8]] = seeds.iter().map(|word| word.as_slice()).collect::<Vec<_>>().as_slice();
+    /// // ...
+    /// ctx.with_signer_seeds(&[seeds_ref])
+    /// ```
+    pub(super) fn get_unstaking_ticket_account_seeds<'this>(
+        &'this self,
+        pool_account: &'this Pubkey,
+        index: u8,
+    ) -> Vec<Vec<u8>> {
+        let mut seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
+        let bump = Pubkey::find_program_address(
+            seed_phrase
+                .iter()
+                .map(|word| word.as_slice())
+                .collect::<Vec<_>>()
+                .as_slice(),
+            &crate::ID,
+        )
+        .1;
+
+        seed_phrase.push(vec![bump]);
+        seed_phrase
+    }
+
+    pub(super) fn find_unstaking_ticket_account_address<'this>(
+        &'this self,
+        pool_account: &'this Pubkey,
+        index: u8,
+    ) -> (Pubkey, u8) {
+        Pubkey::find_program_address(
+            self.get_unstaking_ticket_account_seed_phrase(pool_account, index)
+                .iter()
+                .map(|word| word.as_slice())
+                .collect::<Vec<_>>()
+                .as_slice(),
+            &crate::ID,
         )
     }
 

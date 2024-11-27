@@ -17,49 +17,6 @@ pub struct MarinadeStakePoolService<'info> {
 }
 
 impl<'info> MarinadeStakePoolService<'info> {
-    const TICKET_ACCOUNT_SEED: &'static [u8] = b"marinade_ticket_account";
-
-    fn get_ticket_account_seeds<'a>(pool_account: &'a AccountInfo, index: &'a u8) -> [&'a [u8]; 3] {
-        [
-            Self::TICKET_ACCOUNT_SEED,
-            pool_account.key.as_ref(),
-            std::slice::from_ref(index),
-        ]
-    }
-
-    fn find_ticket_account_address<'a>(pool_account: &'a AccountInfo, index: u8) -> (Pubkey, u8) {
-        Pubkey::find_program_address(
-            &Self::get_ticket_account_seeds(pool_account, &index),
-            &crate::ID,
-        )
-    }
-
-    fn get_ticket_account_signer_seeds<'a>(
-        pool_account: &'a AccountInfo,
-        index: &'a u8,
-        bump: &'a u8,
-    ) -> [&'a [u8]; 4] {
-        let mut signer_seeds = [b"".as_slice(); 4];
-        signer_seeds.copy_from_slice(&Self::get_ticket_account_seeds(pool_account, index));
-        signer_seeds[3] = std::slice::from_ref(bump);
-        signer_seeds
-    }
-
-    pub(in crate::modules) fn get_uninitialized_ticket_account<'a>(
-        ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
-    ) -> Result<Pubkey>
-    where
-        'info: 'a,
-    {
-        for ticket_account in ticket_accounts {
-            if !ticket_account.is_initialized() {
-                return Ok(ticket_account.key());
-            }
-        }
-
-        err!(errors::ErrorCode::StakingUninitializedWithdrawTicketNotFoundException)?
-    }
-
     #[inline(never)]
     pub(in crate::modules) fn is_claimable_ticket_account(
         &mut self,
@@ -112,6 +69,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     /// returns (to_pool_token_account_amount, minted_pool_token_amount)
+    #[inline(never)]
     pub(in crate::modules) fn deposit(
         &mut self,
         liq_pool_sol_leg_pda: &AccountInfo<'info>,
@@ -122,7 +80,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         from_sol_account: &AccountInfo<'info>,
         to_pool_token_account: &'info AccountInfo<'info>,
-        from_sol_account_signer_seeds: &[&[u8]],
+        from_sol_account_seeds: &[&[u8]],
 
         sol_amount: u64,
     ) -> Result<(u64, u64)> {
@@ -146,7 +104,7 @@ impl<'info> MarinadeStakePoolService<'info> {
                     system_program: self.system_program.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
-                &[from_sol_account_signer_seeds],
+                &[from_sol_account_seeds],
             ),
             sol_amount,
         )?;
@@ -159,22 +117,23 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }
 
-    /// returns
+    /// returns unstaking_sol_amount
+    #[inline(never)]
     pub(in crate::modules) fn order_unstake(
         &mut self,
-        new_ticket_account: &AccountInfo<'info>,
+        new_ticket_account: &'info AccountInfo<'info>,
+        new_ticket_account_seeds: &[&[u8]],
         clock: &AccountInfo<'info>,
         rent: &AccountInfo<'info>,
 
         operator: &Signer<'info>,
         from_pool_token_account: &AccountInfo<'info>,
         from_pool_token_account_authority: &AccountInfo<'info>,
-        from_pool_token_account_authority_signer_seeds: &[&[u8]],
+        from_pool_token_account_authority_seeds: &[&[u8]],
 
-        ticket_account_index: u8,
         token_amount: u64,
-    ) -> Result<()> {
-        self.create_ticket_account(operator, new_ticket_account, rent, ticket_account_index)?;
+    ) -> Result<u64> {
+        self.create_ticket_account(operator, new_ticket_account, new_ticket_account_seeds, rent)?;
 
         marinade_cpi::cpi::order_unstake(
             CpiContext::new_with_signer(
@@ -189,28 +148,22 @@ impl<'info> MarinadeStakePoolService<'info> {
                     rent: rent.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
-                &[from_pool_token_account_authority_signer_seeds],
+                &[from_pool_token_account_authority_seeds],
             ),
             token_amount,
-        )
+        )?;
+
+        let ticket_account = Account::<TicketAccountData>::try_from(new_ticket_account)?;
+        Ok(ticket_account.lamports_amount)
     }
 
     fn create_ticket_account(
         &self,
         operator: &Signer<'info>,
         new_ticket_account: &AccountInfo<'info>,
+        new_ticket_account_seeds: &[&[u8]],
         rent: &AccountInfo<'info>,
-        ticket_account_index: u8,
     ) -> Result<()> {
-        let (ticket_account_address, ticket_account_bump) =
-            Self::find_ticket_account_address(self.pool_account.as_ref(), ticket_account_index);
-
-        require_keys_eq!(new_ticket_account.key(), ticket_account_address);
-        require!(
-            !new_ticket_account.is_initialized(),
-            ErrorCode::AccountOwnedByWrongProgram,
-        );
-
         let space = 8 + std::mem::size_of::<TicketAccountData>();
         let lamports = Rent::from_account_info(rent)?.minimum_balance(space);
         anchor_lang::system_program::create_account(
@@ -220,12 +173,7 @@ impl<'info> MarinadeStakePoolService<'info> {
                     from: operator.to_account_info(),
                     to: new_ticket_account.to_account_info(),
                 },
-                &[Self::get_ticket_account_signer_seeds(
-                    self.pool_account.as_ref(),
-                    &ticket_account_index,
-                    &ticket_account_bump,
-                )
-                .as_ref()],
+                &[new_ticket_account_seeds],
             ),
             lamports,
             space as u64,
@@ -233,33 +181,47 @@ impl<'info> MarinadeStakePoolService<'info> {
         )
     }
 
+    /// returns unstaked_sol_amount
+    #[inline(never)]
     pub(in crate::modules) fn claim(
         &mut self,
         reserve_pda: &'info AccountInfo<'info>,
         clock: &AccountInfo<'info>,
-        ticket_accounts: impl IntoIterator<Item = &'info AccountInfo<'info>>,
+        ticket_account: &'info AccountInfo<'info>,
 
         to_sol_account: &AccountInfo<'info>,
-    ) -> Result<()> {
-        for ticket_account in ticket_accounts {
-            if !self.is_claimable_ticket_account(clock, ticket_account, reserve_pda)? {
-                continue;
-            }
+        to_sol_account_seeds: &[&[u8]],
+        rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
+    ) -> Result<u64> {
+        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
+        let ticket_account_rent = ticket_account.get_lamports();
+        let unstaked_sol_amount = ticket_account.lamports_amount;
 
-            marinade_cpi::cpi::claim(CpiContext::new(
-                self.marinade_stake_pool_program.to_account_info(),
-                marinade_cpi::cpi::accounts::Claim {
-                    state: self.pool_account.to_account_info(),
-                    reserve_pda: reserve_pda.clone(),
-                    ticket_account: ticket_account.clone(),
-                    transfer_sol_to: to_sol_account.clone(),
-                    clock: clock.clone(),
-                    system_program: self.system_program.to_account_info(),
+        marinade_cpi::cpi::claim(CpiContext::new(
+            self.marinade_stake_pool_program.to_account_info(),
+            marinade_cpi::cpi::accounts::Claim {
+                state: self.pool_account.to_account_info(),
+                reserve_pda: reserve_pda.clone(),
+                ticket_account: ticket_account.to_account_info(),
+                transfer_sol_to: to_sol_account.clone(),
+                clock: clock.clone(),
+                system_program: self.system_program.to_account_info(),
+            },
+        ))?;
+
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                self.system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: to_sol_account.to_account_info(),
+                    to: rent_refund_account.to_account_info(),
                 },
-            ))?;
-        }
+                &[to_sol_account_seeds],
+            ),
+            ticket_account_rent,
+        )?;
 
-        Ok(())
+        Ok(unstaked_sol_amount)
     }
 
     fn find_pool_account_related_address(
@@ -269,19 +231,6 @@ impl<'info> MarinadeStakePoolService<'info> {
         Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
     }
 
-    pub(in crate::modules) fn find_ticket_accounts(
-        pool_account: &'info AccountInfo<'info>,
-        is_writable: bool,
-    ) -> impl Iterator<Item = (Pubkey, bool)> + 'info {
-        (0..5).map(move |index| {
-            (
-                Self::find_ticket_account_address(pool_account, index).0,
-                is_writable,
-            )
-        })
-    }
-
-    #[inline(never)]
     fn find_accounts_for_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
         vec![
             (marinade_cpi::ID, false),
@@ -292,6 +241,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         ]
     }
 
+    #[inline(never)]
     pub(in crate::modules) fn find_accounts_to_deposit(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
@@ -324,21 +274,16 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    pub(in crate::modules) fn find_accounts_to_order_unstake<'a>(
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_order_unstake(
         pool_account: &'info AccountInfo<'info>,
-        ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
-    ) -> Result<Vec<(Pubkey, bool)>>
-    where
-        'info: 'a,
-    {
+        ticket_account: &AccountInfo,
+    ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
         let mut accounts = Self::find_accounts_for_new(&pool_account);
         accounts.extend([
             // new_ticket_account
-            (
-                Self::get_uninitialized_ticket_account(ticket_accounts)?,
-                true,
-            ),
+            (ticket_account.key(), true),
             // clock
             (solana_program::sysvar::clock::ID, false),
             // rent
@@ -347,9 +292,14 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    pub(in crate::modules) fn find_accounts_to_claim(
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_claim<'a>(
         pool_account_info: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
+        ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
+    ) -> Result<Vec<(Pubkey, bool)>>
+    where
+        'info: 'a,
+    {
         let pool_account = Account::<State>::try_from(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(&pool_account);
         accounts.extend([
@@ -358,7 +308,11 @@ impl<'info> MarinadeStakePoolService<'info> {
             // clock
             (solana_program::sysvar::clock::ID, false),
         ]);
-        accounts.extend(Self::find_ticket_accounts(pool_account_info, true));
+        accounts.extend(
+            ticket_accounts
+                .into_iter()
+                .map(|account| (account.key(), true)),
+        );
         Ok(accounts)
     }
 
