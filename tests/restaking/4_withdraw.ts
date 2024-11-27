@@ -123,10 +123,16 @@ describe("withdraw", async () => {
     });
 
     step("user5 cannot request withdrawal when withdrawal is disabled", async () => {
+        const fragSOLFundAccount = await restaking.getFragSOLFundAccount();
         await restaking.run({
             instructions: [
                 restaking.methods
-                    .fundManagerUpdateWithdrawalEnabledFlag(false)
+                    .fundManagerUpdateFundStrategy(
+                        fragSOLFundAccount.solAccumulatedDepositCapacityAmount,
+                        fragSOLFundAccount.withdrawal.solWithdrawalFeeRate,
+                        fragSOLFundAccount.withdrawal.batchProcessingThresholdDuration,
+                        false,
+                    )
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
@@ -138,7 +144,12 @@ describe("withdraw", async () => {
         await restaking.run({
             instructions: [
                 restaking.methods
-                    .fundManagerUpdateWithdrawalEnabledFlag(true)
+                    .fundManagerUpdateFundStrategy(
+                        fragSOLFundAccount.solAccumulatedDepositCapacityAmount,
+                        fragSOLFundAccount.withdrawal.solWithdrawalFeeRate,
+                        fragSOLFundAccount.withdrawal.batchProcessingThresholdDuration,
+                        true,
+                    )
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],

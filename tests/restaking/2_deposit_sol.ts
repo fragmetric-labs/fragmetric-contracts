@@ -28,8 +28,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         ]);
         expect(fragSOLFund0.oneReceiptTokenAsSol.toNumber())
             .greaterThan(0, 'fragSOL price is not zero');
-        expect(fragSOLFund0.solOperationReservedAmount.add(fragSOLFund0.withdrawal.solWithdrawalReservedAmount).toString())
-            .eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
+        expect(fragSOLFund0.solOperationReservedAmount.toString()).eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
         const [
             userFundAccount0,
             userRewardAccount0,

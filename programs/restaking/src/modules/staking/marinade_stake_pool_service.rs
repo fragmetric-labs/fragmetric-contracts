@@ -68,15 +68,67 @@ impl<'info> MarinadeStakePoolService<'info> {
         }))
     }
 
+    fn find_pool_account_derived_address(
+        pool_account: &AccountInfo,
+        seed: &'static [u8],
+    ) -> Pubkey {
+        Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
+    }
+
+    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program]
+    fn find_accounts_for_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
+        vec![
+            (marinade_cpi::ID, false),
+            (pool_account.key(), true),
+            (pool_account.msol_mint, true),
+            (Token::id(), false),
+            (System::id(), false),
+        ]
+    }
+
+    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority]
+    #[inline(never)]
+    pub(in crate::modules) fn find_accounts_to_deposit_sol(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Account::<State>::try_from(pool_account)?;
+        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        accounts.extend([
+            // liq_pool_sol_leg
+            (
+                Self::find_pool_account_derived_address(pool_account.as_ref(), b"liq_sol"),
+                true,
+            ),
+            // liq_pool_mint_leg
+            (pool_account.liq_pool.msol_leg, true),
+            // liq_pool_mint_leg_authority
+            (
+                Self::find_pool_account_derived_address(
+                    pool_account.as_ref(),
+                    b"liq_st_sol_authority",
+                ),
+                false,
+            ),
+            // pool_reserve
+            Self::find_pool_reserve_account_meta(pool_account.as_ref()),
+            // pool_mint_authority
+            (
+                Self::find_pool_account_derived_address(pool_account.as_ref(), b"st_mint"),
+                false,
+            ),
+        ]);
+        Ok(accounts)
+    }
+
     /// returns (to_pool_token_account_amount, minted_pool_token_amount)
     #[inline(never)]
-    pub(in crate::modules) fn deposit(
+    pub(in crate::modules) fn deposit_sol(
         &mut self,
-        liq_pool_sol_leg_pda: &AccountInfo<'info>,
-        liq_pool_msol_leg: &AccountInfo<'info>,
-        liq_pool_msol_leg_authority: &AccountInfo<'info>,
-        reserve_pda: &AccountInfo<'info>,
-        msol_mint_authority: &AccountInfo<'info>,
+        liq_pool_sol_leg: &AccountInfo<'info>,
+        liq_pool_token_leg: &AccountInfo<'info>,
+        liq_pool_token_leg_authority: &AccountInfo<'info>,
+        pool_reserve: &AccountInfo<'info>,
+        pool_token_mint_authority: &AccountInfo<'info>,
 
         from_sol_account: &AccountInfo<'info>,
         to_pool_token_account: &'info AccountInfo<'info>,
@@ -94,13 +146,13 @@ impl<'info> MarinadeStakePoolService<'info> {
                 marinade_cpi::cpi::accounts::Deposit {
                     state: self.pool_account.to_account_info(),
                     msol_mint: self.pool_token_mint.to_account_info(),
-                    liq_pool_sol_leg_pda: liq_pool_sol_leg_pda.clone(),
-                    liq_pool_msol_leg: liq_pool_msol_leg.clone(),
-                    liq_pool_msol_leg_authority: liq_pool_msol_leg_authority.clone(),
-                    reserve_pda: reserve_pda.clone(),
+                    liq_pool_sol_leg_pda: liq_pool_sol_leg.clone(),
+                    liq_pool_msol_leg: liq_pool_token_leg.clone(),
+                    liq_pool_msol_leg_authority: liq_pool_token_leg_authority.clone(),
+                    reserve_pda: pool_reserve.clone(),
                     transfer_from: from_sol_account.clone(),
                     mint_to: to_pool_token_account.to_account_info(),
-                    msol_mint_authority: msol_mint_authority.clone(),
+                    msol_mint_authority: pool_token_mint_authority.clone(),
                     system_program: self.system_program.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
@@ -177,7 +229,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
     pub(in crate::modules) fn claim(
         &mut self,
-        reserve_pda: &'info AccountInfo<'info>,
+        pool_reserve_account: &'info AccountInfo<'info>,
         clock: &AccountInfo<'info>,
         ticket_account: &'info AccountInfo<'info>,
 
@@ -193,7 +245,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             self.marinade_stake_pool_program.to_account_info(),
             marinade_cpi::cpi::accounts::Claim {
                 state: self.pool_account.to_account_info(),
-                reserve_pda: reserve_pda.clone(),
+                reserve_pda: pool_reserve_account.clone(),
                 ticket_account: ticket_account.to_account_info(),
                 transfer_sol_to: to_sol_account.clone(),
                 clock: clock.clone(),
@@ -214,56 +266,6 @@ impl<'info> MarinadeStakePoolService<'info> {
         )?;
 
         Ok(unstaked_sol_amount)
-    }
-
-    fn find_pool_account_related_address(
-        pool_account: &AccountInfo,
-        seed: &'static [u8],
-    ) -> Pubkey {
-        Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
-    }
-
-    fn find_accounts_for_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
-        vec![
-            (marinade_cpi::ID, false),
-            (pool_account.key(), true),
-            (pool_account.msol_mint, true),
-            (Token::id(), false),
-            (System::id(), false),
-        ]
-    }
-
-    #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_deposit(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Account::<State>::try_from(pool_account)?;
-        let mut accounts = Self::find_accounts_for_new(&pool_account);
-        accounts.extend([
-            // liq_pool_sol_leg_pda
-            (
-                Self::find_pool_account_related_address(pool_account.as_ref(), b"liq_sol"),
-                true,
-            ),
-            // liq_pool_msol_leg
-            (pool_account.liq_pool.msol_leg, true),
-            // liq_pool_msol_leg_authority
-            (
-                Self::find_pool_account_related_address(
-                    pool_account.as_ref(),
-                    b"liq_st_sol_authority",
-                ),
-                false,
-            ),
-            // reserve_pda
-            Self::find_reserve_pda_account_meta(pool_account.as_ref()),
-            // msol_mint_authority
-            (
-                Self::find_pool_account_related_address(pool_account.as_ref(), b"st_mint"),
-                false,
-            ),
-        ]);
-        Ok(accounts)
     }
 
     #[inline(never)]
@@ -295,8 +297,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         let pool_account = Account::<State>::try_from(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(&pool_account);
         accounts.extend([
-            // reserve_pda
-            Self::find_reserve_pda_account_meta(pool_account.as_ref()),
+            // pool_reserve
+            Self::find_pool_reserve_account_meta(pool_account.as_ref()),
             // clock
             (solana_program::sysvar::clock::ID, false),
         ]);
@@ -308,9 +310,9 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    fn find_reserve_pda_account_meta(pool_account: &AccountInfo) -> (Pubkey, bool) {
+    fn find_pool_reserve_account_meta(pool_account: &AccountInfo) -> (Pubkey, bool) {
         (
-            Self::find_pool_account_related_address(pool_account, b"reserve"),
+            Self::find_pool_account_derived_address(pool_account, b"reserve"),
             true,
         )
     }
