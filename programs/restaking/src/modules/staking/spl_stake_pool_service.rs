@@ -200,7 +200,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                 &mut validator_list_account_data,
             )?;
 
-        let mut withdraw_lamports =
+        let withdraw_lamports =
             Self::calc_withdraw_sol_lamports_by_pool_tokens_amount(&pool_account, pool_tokens)?;
         msg!(
             "pool_tokens {}, withdraw_lamports {}",
@@ -226,10 +226,11 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                 msg!("You should try to withdraw from validators");
 
                 // now we should find the validator_stake_account to withdraw from
-                withdraw_lamports = Self::calc_withdraw_stake_lamports_by_pool_tokens_amount(
-                    &pool_account,
-                    pool_tokens,
-                )?;
+                let (withdraw_lamports, pool_tokens_fee) =
+                    Self::calc_withdraw_stake_lamports_by_pool_tokens_amount(
+                        &pool_account,
+                        pool_tokens,
+                    )?;
                 let mut lamports_out_left = withdraw_lamports;
 
                 loop {
@@ -251,14 +252,22 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                                     available_validator_stake_info.validator_seed_suffix.into(),
                                 ),
                             );
-                        let max_active_pool_tokens_from_lamports = pool_account
-                            .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator)
+                        // should add fee lamports back again
+                        let fee_lamports_by_pool_tokens_fee = pool_account
+                            .calc_lamports_withdraw_amount(pool_tokens_fee)
+                            .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+                        let withdraw_lamports_from_validator_with_fee =
+                            withdraw_lamports_from_validator
+                                .checked_add(fee_lamports_by_pool_tokens_fee)
+                                .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+                        let withdraw_pool_tokens_from_lamports = pool_account
+                            .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator_with_fee)
                             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
                         available_validators_with_available_lamports
                             .get_or_insert_with(Vec::new)
                             .push((
                                 available_validator_stake_account_address,
-                                max_active_pool_tokens_from_lamports,
+                                withdraw_pool_tokens_from_lamports,
                             ));
                     } else {
                         // then it means there's no available active stakes
@@ -283,7 +292,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         }
 
         // dev) if you want to test withdraw from validator, uncomment this code and run
-        // withdraw_lamports =
+        // let (withdraw_lamports, pool_tokens_fee) =
         //     Self::calc_withdraw_stake_lamports_by_pool_tokens_amount(&pool_account, pool_tokens)?;
         // let mut lamports_out_left = withdraw_lamports;
 
@@ -302,14 +311,21 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         //                     available_validator_stake_info.validator_seed_suffix.into(),
         //                 ),
         //             );
-        //         let max_active_pool_tokens_from_lamports = pool_account
-        //             .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator)
+        //         // should add fee lamports back again
+        //         let fee_lamports_by_pool_tokens_fee = pool_account
+        //             .calc_lamports_withdraw_amount(pool_tokens_fee)
+        //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+        //         let withdraw_lamports_from_validator_with_fee = withdraw_lamports_from_validator
+        //             .checked_add(fee_lamports_by_pool_tokens_fee)
+        //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+        //         let withdraw_pool_tokens_from_lamports = pool_account
+        //             .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator_with_fee)
         //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
         //         available_validators_with_available_lamports
         //             .get_or_insert_with(Vec::new)
         //             .push((
         //                 available_validator_stake_account_address,
-        //                 max_active_pool_tokens_from_lamports,
+        //                 withdraw_pool_tokens_from_lamports,
         //             ));
         //     } else {
         //         // then it means there's no available active stakes
@@ -351,7 +367,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     fn calc_withdraw_stake_lamports_by_pool_tokens_amount(
         pool_account: &spl_stake_pool::state::StakePool,
         pool_tokens: u64,
-    ) -> Result<u64> {
+    ) -> Result<(u64, u64)> {
         let pool_tokens_fee = pool_account
             .calc_pool_tokens_stake_withdrawal_fee(pool_tokens)
             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
@@ -362,7 +378,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             .calc_lamports_withdraw_amount(pool_tokens_burnt)
             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
 
-        Ok(withdraw_lamports)
+        Ok((withdraw_lamports, pool_tokens_fee))
     }
 
     // only checks active stakes
