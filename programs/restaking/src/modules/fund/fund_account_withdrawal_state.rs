@@ -122,6 +122,22 @@ impl WithdrawalState {
         Ok(())
     }
 
+    pub fn set_sol_normal_reserve_max_amount(&mut self, sol_amount: u64) {
+        self.sol_normal_reserve_max_amount = sol_amount;
+    }
+
+    pub fn set_sol_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+        require_gte!(
+            10_00, // 10%
+            reserve_rate_bps,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.sol_normal_reserve_rate_bps = reserve_rate_bps;
+
+        Ok(())
+    }
+
     pub fn issue_new_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,

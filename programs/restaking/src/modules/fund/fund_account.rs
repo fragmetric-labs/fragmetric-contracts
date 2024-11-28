@@ -232,8 +232,11 @@ impl FundAccount {
         index: u8,
     ) -> Vec<Vec<u8>> {
         let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
-        let bump =
-            Pubkey::find_program_address(&seed_phrase.each_ref().map(Vec::as_slice), &crate::ID).1;
+        let bump = Pubkey::find_program_address(
+            &seed_phrase.iter().map(Vec::as_slice).collect::<Vec<_>>(),
+            &crate::ID,
+        )
+        .1;
 
         let mut seeds = Vec::with_capacity(5);
         seeds.extend(seed_phrase);
@@ -249,8 +252,9 @@ impl FundAccount {
         Pubkey::find_program_address(
             &self
                 .get_unstaking_ticket_account_seed_phrase(pool_account, index)
-                .each_ref()
-                .map(Vec::as_slice),
+                .iter()
+                .map(Vec::as_slice)
+                .collect::<Vec<_>>(),
             &crate::ID,
         )
     }
@@ -466,9 +470,9 @@ impl FundAccount {
     ) -> Result<u64> {
         let receipt_token_amount = self
             .withdrawal
-            .batch_withdrawals_in_progress
+            .queued_batches
             .iter()
-            .map(|b| b.receipt_token_to_process)
+            .map(|b| b.receipt_token_amount)
             .sum();
         pricing_service
             .get_token_amount_as_sol(&self.receipt_token_mint.key(), receipt_token_amount)
@@ -549,7 +553,7 @@ mod tests {
     fn test_initialize_update_fund_account() {
         let mut fund = create_initialized_fund_account();
 
-        assert_eq!(fund.sol_capacity_amount, 0);
+        assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
         assert!(fund.withdrawal.enabled);
         assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);

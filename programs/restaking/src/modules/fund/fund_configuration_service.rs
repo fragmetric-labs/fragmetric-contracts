@@ -197,14 +197,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault_program: &UncheckedAccount,
         vault_operator: &UncheckedAccount,
     ) -> Result<()> {
-        let restaking_vault = self.fund_account.get_restaking_vault_mut(
-            vault.key,
-        )?;
+        let restaking_vault = self.fund_account.get_restaking_vault_mut(vault.key)?;
 
-        require_keys_eq!(
-            restaking_vault.program,
-            vault_program.key()
-        );
+        require_keys_eq!(restaking_vault.program, vault_program.key());
 
         // TODO: need some validation?
         restaking_vault.add_operator(vault_operator.key)?;
@@ -216,6 +211,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         sol_accumulated_deposit_amount: u64,
         sol_withdrawal_fee_rate_bps: u16,
+        sol_withdrawal_normal_reserve_rate_bps: u16,
+        sol_withdrawal_normal_reserve_max_amount: u64,
         withdrawal_batch_threshold_interval_seconds: i64,
         withdrawal_enabled: bool,
     ) -> Result<()> {
@@ -223,12 +220,19 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             .set_sol_accumulated_deposit_amount(sol_accumulated_deposit_amount)?;
         self.fund_account
             .withdrawal
-            .set_withdrawal_enabled(withdrawal_enabled);
+            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
         self.fund_account
             .withdrawal
-            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
-        self.fund_account.withdrawal
+            .set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
+        self.fund_account
+            .withdrawal
+            .set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
+        self.fund_account
+            .withdrawal
             .set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+        self.fund_account
+            .withdrawal
+            .set_withdrawal_enabled(withdrawal_enabled);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -241,14 +245,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
-        let supported_token = self.fund_account
-            .get_supported_token_mut(token_mint)?;
+        let supported_token = self.fund_account.get_supported_token_mut(token_mint)?;
 
         if let Some(token_amount) = token_rebalancing_amount {
             supported_token.set_rebalancing_strategy(token_amount)?;
         }
-        supported_token.set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
-        supported_token.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+        supported_token
+            .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
+        supported_token
+            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -259,8 +264,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
-        let vault = self.fund_account
-            .get_restaking_vault_mut(vault)?;
+        let vault = self.fund_account.get_restaking_vault_mut(vault)?;
         vault.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 
         self.emit_fund_manager_updated_fund_event()
@@ -286,10 +290,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         token_allocation_capacity_amount: u64,
         token_redelegation_amount: Option<u64>,
     ) -> Result<()> {
-        let operator = self.fund_account
+        let operator = self
+            .fund_account
             .get_restaking_vault_mut(vault)?
             .get_operator_mut(operator)?;
-        operator.set_supported_token_allocation_strategy(token_allocation_weight, token_allocation_capacity_amount)?;
+        operator.set_supported_token_allocation_strategy(
+            token_allocation_weight,
+            token_allocation_capacity_amount,
+        )?;
         if let Some(token_amount) = token_redelegation_amount {
             operator.set_supported_token_redelegation_amount(token_amount)?;
         }
