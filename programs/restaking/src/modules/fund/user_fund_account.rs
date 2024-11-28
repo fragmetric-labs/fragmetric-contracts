@@ -153,7 +153,7 @@ impl UserFundAccount {
         request_id: u64,
     ) -> Result<u64> {
         let request = self.pop_withdrawal_request(request_id)?;
-        withdrawal_status.remove_withdrawal_request_from_batch(request)
+        withdrawal_status.remove_withdrawal_request_from_pending_batch(request)
     }
 
     /// Returns (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
@@ -163,6 +163,7 @@ impl UserFundAccount {
         request_id: u64,
     ) -> Result<(u64, u64, u64)> {
         let request = self.pop_withdrawal_request(request_id)?;
-        withdrawal_status.claim_withdrawal_request(request)
+        // TODO withdrawal_status.claim_withdrawal_request(request)
+        todo!()
     }
 }

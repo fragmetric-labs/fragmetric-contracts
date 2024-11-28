@@ -88,19 +88,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     ) -> Result<()> {
         self.fund_account
             .withdrawal
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)?;
+            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate)?;
 
         self.emit_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_batch_threshold(
-        &mut self,
-        creation_interval_seconds: i64,
-        processing_interval_seconds: i64,
-    ) -> Result<()> {
+    pub fn process_update_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
         self.fund_account
             .withdrawal
-            .set_batch_threshold(creation_interval_seconds, processing_interval_seconds)?;
+            .set_batch_threshold(interval_seconds)?;
 
         self.emit_fund_manager_updated_fund_event()
     }

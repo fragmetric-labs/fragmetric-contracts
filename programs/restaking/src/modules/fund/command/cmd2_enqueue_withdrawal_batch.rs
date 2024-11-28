@@ -49,13 +49,14 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
 
-                fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .enqueue_withdrawal_batch(
-                        receipt_token_program,
-                        receipt_token_lock_account,
-                        remaining_accounts.iter().cloned(),
-                        self.forced,
-                    )?;
+                // fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                //     .enqueue_withdrawal_batch(
+                //         receipt_token_program,
+                //         receipt_token_lock_account,
+                //         remaining_accounts.iter().cloned(),
+                //         self.forced,
+                //     )?;
+                todo!()
             }
         }
 

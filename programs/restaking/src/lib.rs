@@ -231,14 +231,13 @@ pub mod restaking {
 
     pub fn fund_manager_update_batch_processing_threshold(
         ctx: Context<FundManagerFundContext>,
-        creation_interval_seconds: i64,
-        processing_interval_seconds: i64,
+        interval_seconds: i64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_batch_threshold(creation_interval_seconds, processing_interval_seconds)
+        .process_update_batch_threshold(interval_seconds)
     }
 
     ////////////////////////////////////////////
