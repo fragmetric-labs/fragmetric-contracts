@@ -295,14 +295,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         self.fund_account
             .withdrawal
-            .enqueue_pending_batch(self.current_timestamp)
+            .enqueue_pending_batch(self.current_timestamp);
+
+        Ok(())
     }
 
     pub(super) fn process_withdrawal_batch(
         &mut self,
+        operator: &Signer<'info>,
+        system_program: &AccountInfo<'info>,
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
-        pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
+        fund_reserve_account: &AccountInfo<'info>,
+        treasury_account: &AccountInfo<'info>,
+        uninitialized_batch_withdrawal_tickets: &[&'info AccountInfo<'info>],
+        pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
     ) -> Result<()> {
         if !(forced
@@ -315,7 +322,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             return Ok(());
         }
 
-        let pricing_service = self.new_pricing_service(pricing_sources)?;
+        let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
         let available_receipt_token_amount_to_process = pricing_service.get_sol_amount_as_token(
             &self.receipt_token_mint.key(),
             self.fund_account.sol_operation_reserved_amount,
@@ -325,10 +332,104 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             self.current_timestamp,
         );
 
+        #[cfg(debug_assertions)]
+        require_gte!(
+            uninitialized_batch_withdrawal_tickets.len(),
+            processible_batches.len(),
+        );
+
+        let receipt_token_amount_to_burn: u64 = processible_batches
+            .iter()
+            .map(|batch| batch.receipt_token_amount)
+            .sum();
+
+        anchor_spl::token_2022::burn(
+            CpiContext::new_with_signer(
+                receipt_token_program.to_account_info(),
+                anchor_spl::token_2022::Burn {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    from: receipt_token_lock_account.to_account_info(),
+                    authority: self.fund_account.to_account_info(),
+                },
+                &[self.fund_account.get_seeds().as_ref()],
+            ),
+            receipt_token_amount_to_burn,
+        )?;
+
+        self.fund_account
+            .reload_receipt_token_supply(self.receipt_token_mint)?;
+
         let mut sol_withdrawal_fee = 0;
-        // TODO create ticket
-        // TODO transfer withdrawal reserved sol to ticket
-        // TODO transfer withdrawal fee to treasury
+        for (ticket, batch) in uninitialized_batch_withdrawal_tickets
+            .iter()
+            .cloned()
+            .zip(processible_batches)
+        {
+            // create account
+            let space = 8 + FundBatchWithdrawalTicket::INIT_SPACE;
+            let lamports = Rent::get()?.minimum_balance(space);
+            anchor_lang::system_program::create_account(
+                CpiContext::new_with_signer(
+                    system_program.clone(),
+                    anchor_lang::system_program::CreateAccount {
+                        from: operator.to_account_info(),
+                        to: ticket.clone(),
+                    },
+                    &[FundBatchWithdrawalTicket::get_seeds(
+                        &self.receipt_token_mint.key(),
+                        batch.batch_id,
+                    )
+                    .iter()
+                    .map(Vec::as_slice)
+                    .collect::<Vec<_>>()
+                    .as_slice()],
+                ),
+                lamports,
+                space as u64,
+                &crate::ID,
+            )?;
+
+            let mut ticket = Account::<FundBatchWithdrawalTicket>::try_from_unchecked(ticket)?;
+
+            let sol_amount = pricing_service.get_token_amount_as_sol(
+                &self.receipt_token_mint.key(),
+                batch.receipt_token_amount,
+            )?;
+            sol_withdrawal_fee += self.fund_account.initialize_batch_withdrawal_ticket(
+                &mut ticket,
+                batch,
+                sol_amount,
+                self.current_timestamp,
+            )?;
+
+            // transfer withdrawal reserved sol
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.clone(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_reserve_account.clone(),
+                        to: ticket.to_account_info(),
+                    },
+                    &[&self.fund_account.get_reserve_account_seeds()],
+                ),
+                ticket.sol_amount,
+            )?;
+
+            ticket.exit(&crate::ID)?;
+        }
+
+        // transfer fee to treasury
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.clone(),
+                anchor_lang::system_program::Transfer {
+                    from: fund_reserve_account.clone(),
+                    to: treasury_account.clone(),
+                },
+                &[&self.fund_account.get_reserve_account_seeds()],
+            ),
+            sol_withdrawal_fee,
+        )?;
 
         Ok(())
     }

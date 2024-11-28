@@ -81,6 +81,16 @@ impl WithdrawalState {
         self.sol_fee_rate_bps as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
     }
 
+    #[inline(always)]
+    pub fn get_sol_fee_amount(&self, sol_amount: u64) -> Result<u64> {
+        crate::utils::get_proportional_amount(
+            sol_amount,
+            self.sol_fee_rate_bps as u64,
+            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
     pub fn set_sol_fee_rate_bps(&mut self, sol_fee_rate_bps: u16) -> Result<()> {
         require_gte!(
             Self::WITHDRAWAL_FEE_RATE_LIMIT,
@@ -182,9 +192,9 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) -> Result<()> {
+    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) {
         if self.queued_batches.len() == MAX_QUEUED_WITHDRAWAL_BATCHES {
-            return Ok(());
+            return;
         }
 
         let batch_id = self.next_batch_id;
@@ -195,8 +205,6 @@ impl WithdrawalState {
         self.num_requests_in_progress += old_pending_batch.num_requests;
         self.last_batch_enqueued_at = Some(current_timestamp);
         self.queued_batches.push(old_pending_batch);
-
-        Ok(())
     }
 
     pub fn dequeue_processible_batches(

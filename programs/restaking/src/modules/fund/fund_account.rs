@@ -222,7 +222,7 @@ impl FundAccount {
     /// usage:
     /// ```rs
     /// let seeds: Vec<Vec<u8>> = get_unstaking_ticket_account_seeds();
-    /// let seeds_ref: &[&[u8]] = seeds.iter().map(|word| word.as_slice()).collect::<Vec<_>>().as_slice();
+    /// let seeds_ref: &[&[u8]] = seeds.iter().map(Vec::as_slice).collect::<Vec<_>>().as_slice();
     /// // ...
     /// ctx.with_signer_seeds(&[seeds_ref])
     /// ```
@@ -232,11 +232,8 @@ impl FundAccount {
         index: u8,
     ) -> Vec<Vec<u8>> {
         let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
-        let bump = Pubkey::find_program_address(
-            &seed_phrase.each_ref().map(|word| word.as_slice()),
-            &crate::ID,
-        )
-        .1;
+        let bump =
+            Pubkey::find_program_address(&seed_phrase.each_ref().map(Vec::as_slice), &crate::ID).1;
 
         let mut seeds = Vec::with_capacity(5);
         seeds.extend(seed_phrase);
@@ -253,7 +250,7 @@ impl FundAccount {
             &self
                 .get_unstaking_ticket_account_seed_phrase(pool_account, index)
                 .each_ref()
-                .map(|word| word.as_slice()),
+                .map(Vec::as_slice),
             &crate::ID,
         )
     }
@@ -419,6 +416,36 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
+    }
+
+    /// returns sol_withdrawal_fee
+    pub(super) fn initialize_batch_withdrawal_ticket(
+        &mut self,
+        ticket: &mut FundBatchWithdrawalTicket,
+        batch: WithdrawalBatch,
+        sol_amount: u64,
+        current_timestamp: i64,
+    ) -> Result<u64> {
+        let bump = FundBatchWithdrawalTicket::find_account_address(
+            &self.receipt_token_mint,
+            batch.batch_id,
+        )
+        .1;
+
+        let sol_fee_amount = self.withdrawal.get_sol_fee_amount(sol_amount)?;
+        let sol_user_amount = sol_amount - sol_fee_amount;
+
+        self.sol_operation_reserved_amount -= sol_amount;
+        ticket.initialize(
+            bump,
+            self.receipt_token_mint,
+            batch.batch_id,
+            batch.num_requests,
+            batch.receipt_token_amount,
+            sol_user_amount,
+            current_timestamp,
+        );
+        Ok(sol_fee_amount)
     }
 }
 
