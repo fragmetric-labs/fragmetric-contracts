@@ -18,6 +18,8 @@ import * as ed25519 from "ed25519";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
+const MAX_CAPACITY = "18_000_000_000_000_000_000".replace(/_/g, '');
+
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
     public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider">) {
         return getKeychain(env).then((keychain) => {
@@ -68,20 +70,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runAdminUpdateFundAccounts(),
             () => this.runAdminInitializeOrUpdateRewardAccounts(), // 2
             () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 3
-            () => this.runFundManagerInitializeFundConfigurations(), // 4
-            () => this.runFundManagerUpdateFundConfigurations(), // 5
-            () => this.runFundManagerInitializeRewardPools(), // 6
-            () =>
-                this.runFundManagerSettleReward({
-                    // 7
-                    poolName: "bonus",
-                    rewardName: "fPoint",
-                    amount: new BN(0),
-                }),
-            () => this.runAdminInitializeNSOLTokenMint(), // 8
-            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 9
-            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10
-            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11
+            () => this.runAdminInitializeNSOLTokenMint(), // 4
+            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 5
+            () => this.runFundManagerInitializeNormalizeTokenPoolSupportedTokens(), // 6
+            () => this.runFundManagerInitializeRewardPools(), // 7
+            () => this.runFundManagerSettleReward({ poolName: "bonus", rewardName: "fPoint", amount: new BN(0) }), // 8
+            () => this.runFundManagerInitializeFundNormalizedToken(), // 9
+            () => this.runFundManagerInitializeFundJitoRestakingVault(), // 10
+            () => this.runFundManagerUpdateFundConfigurations(), // 11
         ];
     }
 
@@ -352,6 +348,32 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         },
                     },
                     decimals: 9,
+                },
+            };
+        }
+    }
+
+    public get restakingVaultMetadata() {
+        if (this._restakingVaultMetadata) return this._restakingVaultMetadata;
+        return (this._restakingVaultMetadata = this._getRestakingVaultMetadata());
+    }
+
+    private _restakingVaultMetadata: ReturnType<typeof this._getRestakingVaultMetadata>;
+
+    private _getRestakingVaultMetadata() {
+        if (this.isDevnet) {
+            return {
+                jito1: {
+                    vault: this.getConstantAsPublicKey("fragsolJitoVaultAccountAddress"),
+                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                },
+            };
+        } else {
+            // for 'localnet', it would be cloned from mainnet
+            return {
+                jito1: {
+                    vault: this.getConstantAsPublicKey("fragsolJitoVaultAccountAddress"),
+                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                 },
             };
         }
@@ -816,19 +838,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.program.methods.adminInitializeNormalizedTokenPoolAccount()
                     .accounts({payer: this.wallet.publicKey})
                     .instruction(),
-                spl.createAssociatedTokenAccountIdempotentInstruction(
-                    this.wallet.publicKey,
-                    this.knownAddress.fragSOLFundNSOLAccount,
-                    this.knownAddress.fragSOLFund,
-                    this.knownAddress.nSOLTokenMint,
-                ),
-                this.program.methods.adminInitializeFundNormalizedTokenAccount()
-                    .accounts({payer: this.wallet.publicKey})
-                    .remainingAccounts(this.pricingSourceAccounts)
-                    .instruction(),
             ],
             signerNames: ["ADMIN"],
-            events: ['fundManagerUpdatedFund'],
         });
         const nSOLTokenPoolAccount = await this.getNSOLTokenPoolAccount();
         logger.notice("nSOL token pool account created".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenPool.toString());
@@ -851,7 +862,31 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {nSOLTokenPoolAccount};
     }
 
-    public async runAdminInitializeJitoRestakingProtocolAccount() {
+    public async runFundManagerInitializeFundNormalizedToken() {
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLFundNSOLAccount,
+                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.nSOLTokenMint,
+                ),
+                this.program.methods.fundManagerInitializeFundNormalizedToken()
+                    .accounts({payer: this.wallet.publicKey})
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ['fundManagerUpdatedFund'],
+        });
+
+        const fragSOLFundAccount = await this.getFragSOLFundAccount();
+        logger.notice("set fragSOL fund normalized token".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenMint.toString());
+
+        return {fragSOLFundAccount};
+    }
+
+    public async runFundManagerInitializeFundJitoRestakingVault() {
         await this.run({
             instructions: [
                 // TODO v0.3/restaking: adjust authority of fee wallet
@@ -873,12 +908,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.fragSOLFund,
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
-                this.program.methods.adminInitializeJitoRestakingVaultReceiptTokenAccount()
+                this.program.methods.fundManagerInitializeFundJitoRestakingVault()
                     .accounts({payer: this.wallet.publicKey})
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
-            signerNames: ["ADMIN"],
+            signerNames: ["FUND_MANAGER"],
             events: ['fundManagerUpdatedFund'],
         });
 
@@ -920,25 +955,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLExtraAccountMetasAccount};
     }
 
-    public async runFundManagerInitializeFundConfigurations() {
-        await this.run({
-            instructions: [
-                this.program.methods.fundManagerUpdateSolCapacityAmount(new BN(0)).instruction(),
-                this.program.methods
-                    .fundManagerUpdateSolWithdrawalFeeRate(10) // 1 fee rate = 1bps = 0.01%
-                    .instruction(),
-                this.program.methods.fundManagerUpdateWithdrawalEnabledFlag(true).instruction(),
-                this.program.methods
-                    .fundManagerUpdateBatchProcessingThreshold(
-                        new BN(0), // batchProcessingThresholdAmount
-                        new BN(10) // batchProcessingThresholdDuration (seconds)
-                    )
-                    .instruction(),
-            ],
-            signerNames: ["FUND_MANAGER"],
-            events: ["fundManagerUpdatedFund"],
-        });
-
+    public async runFundManagerInitializeFundSupportedTokens() {
         const {event, error} = await this.run({
             instructions: Object.entries(this.supportedTokenMetadata).flatMap(([symbol, v]) => {
                 return [
@@ -950,7 +967,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         v.program,
                     ),
                     this.program.methods
-                        .fundManagerAddSupportedToken(new BN(0), v.pricingSource)
+                        .fundManagerAddSupportedToken(v.pricingSource)
                         .accountsPartial({
                             supportedTokenMint: v.mint,
                             supportedTokenProgram: v.program,
@@ -970,14 +987,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
+            solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
             solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalEnabled: this.isMainnet ? false : true,
-            withdrawalBatchProcessingThresholdAmount: new BN(this.isMainnet ? 0 : 0),
-            withdrawalBatchProcessingThresholdDuration: new BN(this.isMainnet ? 60 : 60), // seconds
+            withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
-                mint: v.mint,
-                capacity: (() => {
+                tokenMint: v.mint,
+                tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "bSOL":
                             return new BN(this.isMainnet ? 0 : 90_000).mul(new BN(10 ** (v.decimals - 3)));
@@ -988,7 +1004,55 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "BNSOL":
                             return new BN(this.isMainnet ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
                         default:
-                            throw `invalid cap for ${symbol}`;
+                            throw `invalid accumulated deposit cap for ${symbol}`;
+                    }
+                })(),
+                tokenRebalancingAmount: null as BN | null,
+                solAllocationWeight: (() => {
+                    switch (symbol) {
+                        case "bSOL":
+                            return new BN(this.isMainnet ? 0 : 0);
+                        case "jitoSOL":
+                            return new BN(this.isMainnet ? 90 : 90);
+                        case "mSOL":
+                            return new BN(this.isMainnet ? 5 : 5);
+                        case "BNSOL":
+                            return new BN(this.isMainnet ? 5 : 5);
+                        default:
+                            throw `invalid sol allocation weight for ${symbol}`;
+                    }
+                })(),
+                solAllocationCapacityAmount: (() => {
+                    switch (symbol) {
+                        case "bSOL":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        case "jitoSOL":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        case "mSOL":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        case "BNSOL":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        default:
+                            throw `invalid sol allocation cap for ${symbol}`;
+                    }
+                })(),
+            })),
+            restakingVaults: Object.entries(this.restakingVaultMetadata).map(([symbol, v]) => ({
+                vault: v.vault,
+                solAllocationWeight: (() => {
+                    switch (symbol) {
+                        case "jito1":
+                            return new BN(this.isMainnet ? 1 : 1);
+                        default:
+                            throw `invalid sol allocation weight for ${symbol}`;
+                    }
+                })(),
+                solAllocationCapacityAmount: (() => {
+                    switch (symbol) {
+                        case "jito1":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        default:
+                            throw `invalid sol allocation cap for ${symbol}`;
                     }
                 })(),
             })),
@@ -1007,7 +1071,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     token.program,
                 ),
                 this.methods
-                    .fundManagerAddSupportedToken(new BN(0), token.pricingSource)
+                    .fundManagerAddSupportedToken(token.pricingSource)
                     .accountsPartial({
                         supportedTokenMint: token.mint,
                         supportedTokenProgram: token.program,
@@ -1029,14 +1093,35 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const config = this.targetFragSOLFundConfiguration;
         const {event, error} = await this.run({
             instructions: [
-                this.program.methods.fundManagerUpdateSolCapacityAmount(config.solCapacity).instruction(),
-                this.program.methods
-                    .fundManagerUpdateSolWithdrawalFeeRate(config.solWithdrawalFeedRateBPS) // 1 fee rate = 1bps = 0.01%
-                    .instruction(),
-                this.program.methods.fundManagerUpdateWithdrawalEnabledFlag(config.withdrawalEnabled).instruction(),
-                this.program.methods.fundManagerUpdateBatchProcessingThreshold(config.withdrawalBatchProcessingThresholdAmount, config.withdrawalBatchProcessingThresholdDuration).instruction(),
+                this.program.methods.fundManagerUpdateFundStrategy(
+                    config.solAccumulatedDepositCapacity,
+                    config.solWithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
+                    config.withdrawalBatchThresholdSeconds,
+                    config.withdrawalEnabled,
+                ).instruction(),
                 ...config.supportedTokens.flatMap((v) => {
-                    return [this.program.methods.fundManagerUpdateSupportedTokenCapacityAmount(v.mint, v.capacity).remainingAccounts(this.pricingSourceAccounts).instruction()];
+                    return [
+                        this.program.methods.fundManagerUpdateSupportedTokenStrategy(
+                            v.tokenMint,
+                            v.tokenAccumulatedDepositCapacity,
+                            v.tokenRebalancingAmount,
+                            v.solAllocationWeight,
+                            v.solAllocationCapacityAmount,
+                        )
+                            .remainingAccounts(this.pricingSourceAccounts)
+                            .instruction(),
+                    ];
+                }),
+                ...config.restakingVaults.flatMap((v) => {
+                    return [
+                        this.program.methods.fundManagerUpdateRestakingVaultStrategy(
+                            v.vault,
+                            v.solAllocationWeight,
+                            v.solAllocationCapacityAmount,
+                        )
+                            .remainingAccounts(this.pricingSourceAccounts)
+                            .instruction(),
+                    ];
                 }),
             ],
             signerNames: ["FUND_MANAGER"],
@@ -1048,7 +1133,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLFund};
     }
 
-    public async runFundManagerInitializeNormalizeTokenPoolConfigurations() {
+    public async runFundManagerInitializeNormalizeTokenPoolSupportedTokens() {
         await this.run({
             instructions: Object.entries(this.supportedTokenMetadata).flatMap(([symbol, v]) => {
                 return [
@@ -1228,7 +1313,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ]),
             ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
                 this.program.methods
-                    .userUpdateRewardAccountsIfNeeded(null, index == arr.length - 1)
+                    .userUpdateRewardAccountsIfNeeded(null)
                     .accounts({user: user.publicKey})
                     .instruction()
             ),
