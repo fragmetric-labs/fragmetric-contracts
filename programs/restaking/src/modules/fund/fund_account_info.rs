@@ -33,7 +33,7 @@ impl FundAccountInfo {
             receipt_token_value: fund_account.receipt_token_value.clone(),
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             supported_tokens: fund_account.supported_tokens.clone(),
-            sol_capacity_amount: fund_account.sol_capacity_amount,
+            sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
             _padding: Default::default(),
