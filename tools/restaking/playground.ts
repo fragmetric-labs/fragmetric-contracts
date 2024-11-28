@@ -115,6 +115,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         this._knownAddressLookupTableAddress = lookupTable;
         logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
     }
+
     private _knownAddressLookupTableAddress?: web3.PublicKey;
 
     public get knownAddress() {
@@ -429,7 +430,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     };
                 }
 
-                return { instructions: [], signers: [] };
+                return {instructions: [], signers: []};
             })
         );
 
@@ -891,17 +892,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice("jito VRT account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundJitoVRTAccount.toString());
 
         await spl.getOrCreateAssociatedTokenAccount(
-                this.connection,
-                this.wallet,
-                this.knownAddress.fragSOLJitoVRTMint,
-                this.knownAddress.jitoVaultProgramFeeWallet,
-                true,
-                "confirmed",
-                {
-                    skipPreflight: false,
-                    commitment: "confirmed",
-                },
-            )
+            this.connection,
+            this.wallet,
+            this.knownAddress.fragSOLJitoVRTMint,
+            this.knownAddress.jitoVaultProgramFeeWallet,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+        )
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount};
     }
 
@@ -969,7 +970,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
+            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL / 1_000)),
             solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalEnabled: this.isMainnet ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMainnet ? 0 : 0),
@@ -1080,13 +1081,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 this.program.methods
-                .fundManagerInitializeSupportedTokenLockAccount()
-                .accounts({
-                    payer: this.wallet.publicKey,
-                    supportedTokenMint: token.mint,
-                    supportedTokenProgram: token.program,
-                })
-                .instruction(),
+                    .fundManagerInitializeSupportedTokenLockAccount()
+                    .accounts({
+                        payer: this.wallet.publicKey,
+                        supportedTokenMint: token.mint,
+                        supportedTokenProgram: token.program,
+                    })
+                    .instruction(),
                 this.program.methods
                     .fundManagerAddNormalizedTokenPoolSupportedToken()
                     .accounts({
@@ -1596,11 +1597,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
-            const { event, error } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
+            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
             txCount++;
             logger.debug(`operator ran tx#${txCount}`);
             if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
-                return { event, error }
+                return {event, error}
             }
         }
     }

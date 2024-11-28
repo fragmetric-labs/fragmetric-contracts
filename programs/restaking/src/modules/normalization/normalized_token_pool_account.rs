@@ -72,6 +72,12 @@ impl NormalizedTokenPoolAccount {
         }
     }
 
+    pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
+        let supported_token_mint_list:Vec<&Pubkey> =  self.supported_tokens.iter().map(|token| &token.mint).collect();
+        supported_token_mint_list.contains(&token)
+    }
+
+
     #[inline(always)]
     pub(super) fn initialize(&mut self, bump: u8, normalized_token_mint: &InterfaceAccount<Mint>) {
         self.migrate(

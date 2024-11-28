@@ -193,6 +193,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         Ok(())
     }
 
+    pub fn find_normalized_token_pool_address(normalized_token_mint: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(&[NormalizedTokenPoolAccount::SEED, normalized_token_mint.to_bytes().as_ref()], &crate::ID).0
+    }
+
     fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
         // ensure any update on fund account written before do pricing
         self.normalized_token_pool_account.exit(&crate::ID)?;

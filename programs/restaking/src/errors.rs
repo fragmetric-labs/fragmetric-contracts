@@ -205,4 +205,10 @@ pub enum ErrorCode {
 
     #[msg("staking: failed to find uninitialized withdraw ticket")]
     StakingUninitializedWithdrawTicketNotFoundException,
+
+    #[msg("restaking: withdrawal ticket is not withdrawable")]
+    RestakingVaultWithdrawalTicketNotWithdrawable,
+
+    #[msg("restaking: withdrawal ticket is already initialized")]
+    RestakingVaultWithdrawalTicketAlreadyInitialized,
 }
