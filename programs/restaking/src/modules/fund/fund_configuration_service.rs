@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::amount;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
@@ -59,54 +58,11 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_update_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
-        self.fund_account.set_sol_capacity_amount(capacity_amount)?;
-        self.emit_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_update_supported_token_capacity_amount(
-        &mut self,
-        token_mint: &Pubkey,
-        capacity_amount: u64,
-    ) -> Result<()> {
-        self.fund_account
-            .get_supported_token_mut(token_mint)?
-            .set_capacity_amount(capacity_amount)?;
-
-        self.emit_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_update_withdrawal_enabled(&mut self, enabled: bool) -> Result<()> {
-        self.fund_account.withdrawal.set_withdrawal_enabled(enabled);
-
-        self.emit_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_update_sol_withdrawal_fee_rate(
-        &mut self,
-        sol_withdrawal_fee_rate: u16,
-    ) -> Result<()> {
-        self.fund_account
-            .withdrawal
-            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate)?;
-
-        self.emit_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_update_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
-        self.fund_account
-            .withdrawal
-            .set_batch_threshold(interval_seconds)?;
-
-        self.emit_fund_manager_updated_fund_event()
-    }
-
     pub fn process_add_supported_token(
         &mut self,
         fund_supported_token_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
-        capacity_amount: u64,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
@@ -124,7 +80,6 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_mint.key(),
             supported_token_program.key(),
             supported_token_mint.decimals,
-            capacity_amount,
             pricing_source,
         )?;
 
@@ -232,6 +187,112 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_restaking_operator(
+        &mut self,
+        vault: &UncheckedAccount,
+        vault_program: &UncheckedAccount,
+        vault_operator: &UncheckedAccount,
+    ) -> Result<()> {
+        let restaking_vault = self.fund_account.get_restaking_vault_mut(
+            vault.key,
+        )?;
+
+        require_keys_eq!(
+            restaking_vault.program,
+            vault_program.key()
+        );
+
+        // TODO: need some validation?
+        restaking_vault.add_operator(vault_operator.key)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_fund_strategy(
+        &mut self,
+        sol_accumulated_deposit_amount: u64,
+        sol_withdrawal_fee_rate_bps: u16,
+        withdrawal_batch_threshold_interval_seconds: i64,
+        withdrawal_enabled: bool,
+    ) -> Result<()> {
+        self.fund_account
+            .set_sol_accumulated_deposit_amount(sol_accumulated_deposit_amount)?;
+        self.fund_account
+            .withdrawal
+            .set_withdrawal_enabled(withdrawal_enabled);
+        self.fund_account
+            .withdrawal
+            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
+        self.fund_account.withdrawal
+            .set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_supported_token_strategy(
+        &mut self,
+        token_mint: &Pubkey,
+        token_accumulated_deposit_capacity_amount: u64,
+        token_rebalancing_amount: Option<u64>,
+        sol_allocation_weight: u64,
+        sol_allocation_capacity_amount: u64,
+    ) -> Result<()> {
+        let supported_token = self.fund_account
+            .get_supported_token_mut(token_mint)?;
+
+        if let Some(token_amount) = token_rebalancing_amount {
+            supported_token.set_rebalancing_strategy(token_amount)?;
+        }
+        supported_token.set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
+        supported_token.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_restaking_vault_strategy(
+        &mut self,
+        vault: &Pubkey,
+        sol_allocation_weight: u64,
+        sol_allocation_capacity_amount: u64,
+    ) -> Result<()> {
+        let vault = self.fund_account
+            .get_restaking_vault_mut(vault)?;
+        vault.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_restaking_vault_operator(
+        &mut self,
+        vault: &Pubkey,
+        operator: &Pubkey,
+    ) -> Result<()> {
+        self.fund_account
+            .get_restaking_vault_mut(vault)?
+            .add_operator(operator)?;
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_restaking_vault_operator_strategy(
+        &mut self,
+        vault: &Pubkey,
+        operator: &Pubkey,
+        token_allocation_weight: u64,
+        token_allocation_capacity_amount: u64,
+        token_redelegation_amount: Option<u64>,
+    ) -> Result<()> {
+        let operator = self.fund_account
+            .get_restaking_vault_mut(vault)?
+            .get_operator_mut(operator)?;
+        operator.set_supported_token_allocation_strategy(token_allocation_weight, token_allocation_capacity_amount)?;
+        if let Some(token_amount) = token_redelegation_amount {
+            operator.set_supported_token_redelegation_amount(token_amount)?;
+        }
 
         self.emit_fund_manager_updated_fund_event()
     }
