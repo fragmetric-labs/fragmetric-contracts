@@ -65,6 +65,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return [
             () => this.runAdminInitializeFragSOLTokenMint(), // 0
             () => this.runAdminInitializeFundAccounts(), // 1
+            () => this.runAdminUpdateFundAccounts(),
             () => this.runAdminInitializeOrUpdateRewardAccounts(), // 2
             () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 3
             () => this.runFundManagerInitializeFundConfigurations(), // 4
@@ -1079,14 +1080,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const token = this.supportedTokenMetadata[symbol];
         await this.run({
             instructions: [
-                this.program.methods
-                .fundManagerInitializeSupportedTokenLockAccount()
-                .accounts({
-                    payer: this.wallet.publicKey,
-                    supportedTokenMint: token.mint,
-                    supportedTokenProgram: token.program,
-                })
-                .instruction(),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.nSOLSupportedTokenLockAccount(symbol as any),
+                    this.knownAddress.nSOLTokenPool,
+                    token.mint,
+                    token.program,
+                ),
                 this.program.methods
                     .fundManagerAddNormalizedTokenPoolSupportedToken()
                     .accounts({
