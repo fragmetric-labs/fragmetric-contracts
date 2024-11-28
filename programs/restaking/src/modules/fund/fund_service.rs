@@ -300,6 +300,39 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(())
     }
 
+    pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
+        let mut accounts =
+            Vec::with_capacity(5 + self.fund_account.withdrawal.queued_batches.len());
+        accounts.extend([
+            (System::id(), false),
+            (self.fund_account.receipt_token_program, false),
+            (
+                self.fund_account
+                    .find_receipt_token_lock_account_address()?,
+                true,
+            ),
+            (self.fund_account.get_reserve_account_address()?, true),
+            (self.fund_account.get_treasury_account_address()?, true),
+        ]);
+        accounts.extend(
+            self.fund_account
+                .withdrawal
+                .queued_batches
+                .iter()
+                .map(|batch| {
+                    (
+                        FundBatchWithdrawalTicket::find_account_address(
+                            &self.receipt_token_mint.key(),
+                            batch.batch_id,
+                        )
+                        .0,
+                        true,
+                    )
+                }),
+        );
+        Ok(accounts)
+    }
+
     pub(super) fn process_withdrawal_batch(
         &mut self,
         operator: &Signer<'info>,
