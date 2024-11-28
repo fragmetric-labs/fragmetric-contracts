@@ -1033,6 +1033,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {
             solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
             solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
+            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
+            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
             withdrawalEnabled: this.isMainnet ? false : true,
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
@@ -1140,6 +1142,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.program.methods.fundManagerUpdateFundStrategy(
                     config.solAccumulatedDepositCapacity,
                     config.solWithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
+                    config.solWithdrawalNormalReserveRateBPS,
+                    config.solWithdrawalNormalReserveMaxAmount,
                     config.withdrawalBatchThresholdSeconds,
                     config.withdrawalEnabled,
                 ).instruction(),

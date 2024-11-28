@@ -147,6 +147,8 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         sol_accumulated_deposit_amount: u64,
         sol_withdrawal_fee_rate_bps: u16,
+        sol_withdrawal_normal_reserve_rate_bps: u16,
+        sol_withdrawal_normal_reserve_max_amount: u64,
         withdrawal_batch_threshold_seconds: i64,
         withdrawal_enabled: bool,
     ) -> Result<()> {
@@ -157,6 +159,8 @@ pub mod restaking {
         .process_update_fund_strategy(
             sol_accumulated_deposit_amount,
             sol_withdrawal_fee_rate_bps,
+            sol_withdrawal_normal_reserve_rate_bps,
+            sol_withdrawal_normal_reserve_max_amount,
             withdrawal_batch_threshold_seconds,
             withdrawal_enabled,
         )
