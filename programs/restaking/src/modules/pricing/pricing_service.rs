@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anchor_lang::prelude::*;
 
@@ -50,6 +50,23 @@ impl<'info> PricingService<'info> {
         token_mint: &Pubkey,
         token_pricing_source: &TokenPricingSource,
     ) -> Result<()> {
+        let resolved_tokens = &mut BTreeSet::new();
+        self.resolve_token_pricing_source_rec(token_mint, token_pricing_source, resolved_tokens)
+    }
+
+    fn resolve_token_pricing_source_rec(
+        &mut self,
+        token_mint: &Pubkey,
+        token_pricing_source: &TokenPricingSource,
+        updated_tokens: &mut BTreeSet<Pubkey>,
+    ) -> Result<()> {
+        // remember updated token during the current recursive updates to skip redundant calculation
+        if updated_tokens.contains(token_mint) {
+            return Ok(());
+        }
+        updated_tokens.insert(*token_mint);
+
+        // resolve underlying assets for each pricing source' value provider adapter
         let token_value = match token_pricing_source {
             TokenPricingSource::SPLStakePool { address } => {
                 let account1 = self
@@ -103,7 +120,7 @@ impl<'info> PricingService<'info> {
                 atomic = false;
             }
             if let Asset::TOKEN(token_mint, Some(token_pricing_source), _) = asset {
-                self.resolve_token_pricing_source(token_mint, token_pricing_source)?;
+                self.resolve_token_pricing_source_rec(token_mint, token_pricing_source, updated_tokens)?;
             }
             Ok::<(), Error>(())
         })?;
@@ -117,12 +134,21 @@ impl<'info> PricingService<'info> {
         //     );
         // }
 
-        // remember resolved token value and pricing source
+        // update resolved token value
         self.token_value_map
             .insert(*token_mint, (token_value, atomic));
-        if !self.token_pricing_source_map.contains_key(token_mint) {
-            self.token_pricing_source_map
-                .insert(*token_mint, token_pricing_source.clone());
+
+        // remember new pricing source
+        match self.token_pricing_source_map.get(token_mint) {
+            #[allow(unused_variables)]
+            Some(old_token_pricing_source) => {
+                #[cfg(not(test))]
+                require_eq!(token_pricing_source, old_token_pricing_source);
+            }
+            None => {
+                self.token_pricing_source_map
+                    .insert(*token_mint, token_pricing_source.clone());
+            }
         }
 
         Ok(())
@@ -278,14 +304,16 @@ impl<'info> PricingService<'info> {
 
 #[cfg(test)]
 mod tests {
-    use crate::modules::fund::FundAccount;
     use crate::modules::pricing::MockAsset;
 
     use super::*;
-    
+
     #[test]
     fn size_token_pricing_source() {
-        println!("token pricing source init size: {}", TokenPricingSource::INIT_SPACE);
+        println!(
+            "token pricing source init size: {}",
+            TokenPricingSource::INIT_SPACE
+        );
     }
 
     #[test]

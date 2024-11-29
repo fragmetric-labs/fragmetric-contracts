@@ -1,9 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
+use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::normalization::{NormalizedTokenWithdrawalTicketAccount, ClaimableToken};
-use crate::modules::pricing::{TokenPricingSource, TokenValue};
+use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalTicketAccount};
+use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -73,7 +74,32 @@ impl NormalizedTokenPoolAccount {
                 .iter_mut()
                 .for_each(|supported_token| {
                     supported_token.withdrawal_reserved_amount = 0;
+                    
+                    supported_token.pricing_source = match supported_token.mint {
+                        MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                            address: MAINNET_MSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_JITOSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_JITOSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_BNSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_BNSOL_STAKE_POOL_ADDRESS,
+                        },
+                        #[allow(unreachable_patterns)]
+                        DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
+                        },
+                        #[allow(unreachable_patterns)]
+                        DEVNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                            address: DEVNET_MSOL_STAKE_POOL_ADDRESS,
+                        },
+                        _ => panic!("normalized token pool pricing source migration failed"),
+                    }
                 });
+            
             self.data_version = 2;
         }
     }
@@ -104,6 +130,7 @@ impl NormalizedTokenPoolAccount {
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
         supported_token_lock_account: Pubkey,
+        supported_token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
         if self
             .supported_tokens
@@ -123,6 +150,7 @@ impl NormalizedTokenPoolAccount {
             supported_token_mint,
             supported_token_program,
             supported_token_lock_account,
+            supported_token_pricing_source,
         ));
 
         Ok(())
@@ -169,19 +197,25 @@ pub(super) struct SupportedToken {
     pub lock_account: Pubkey,
     pub locked_amount: u64,
     pub withdrawal_reserved_amount: u64,
-    // pub pricing_source: TokenPricingSource,
-    _reserved: [u8; 56],
+    pub pricing_source: TokenPricingSource,
+    _reserved: [u8; 23],
 }
 
 impl SupportedToken {
-    fn new(mint: Pubkey, program: Pubkey, lock_account: Pubkey) -> Self {
+    fn new(
+        mint: Pubkey,
+        program: Pubkey,
+        lock_account: Pubkey,
+        pricing_source: TokenPricingSource,
+    ) -> Self {
         Self {
             mint,
             program,
             lock_account,
             locked_amount: 0,
             withdrawal_reserved_amount: 0,
-            _reserved: [0; 56],
+            pricing_source,
+            _reserved: [0; 23],
         }
     }
 
