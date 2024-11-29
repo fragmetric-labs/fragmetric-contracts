@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 
-use super::WithdrawalBatch;
+use crate::errors::ErrorCode;
+
+use super::*;
 
 #[account]
 #[derive(InitSpace)]
@@ -12,24 +14,15 @@ pub struct FundBatchWithdrawalTicketAccount {
     num_requests: u64,
     claimed_requests: u64,
     receipt_token_amount: u64,
-    pub sol_amount: u64,
+    claimed_receipt_token_amount: u64,
+    pub sol_user_amount: u64,
+    claimed_sol_user_amount: u64,
+    /// SOL withdrawal fee is already paid to treasury account.
+    /// This field is just for event.
+    sol_fee_amount: u64,
     processed_at: i64,
     _reserved: [u8; 32],
 }
-
-// impl PDASeeds<3> for FundBatchWithdrawalTicket {
-//     const SEED: &'static [u8] = b"fund_batch_withdrawal_ticket";
-
-//     fn get_seed_phrase(&self) -> [&[u8]; 3] {
-//         // SAFETY: solana runtime is little endian and does not care alignment.
-//         let batch_id = unsafe { &*(self.batch_id as *const u64 as *const [u8; 8]) }.as_slice();
-//         [Self::SEED, self.receipt_token_mint.as_ref(), batch_id]
-//     }
-
-//     fn get_bump_ref(&self) -> &u8 {
-//         &self.bump
-//     }
-// }
 
 impl FundBatchWithdrawalTicketAccount {
     pub const SEED: &'static [u8] = b"batch_withdrawal_ticket";
@@ -83,7 +76,8 @@ impl FundBatchWithdrawalTicketAccount {
         batch_id: u64,
         num_requests: u64,
         receipt_token_amount: u64,
-        sol_amount: u64,
+        sol_user_amount: u64,
+        sol_fee_amount: u64,
         processed_at: i64,
     ) {
         if self.data_version == 0 {
@@ -93,7 +87,10 @@ impl FundBatchWithdrawalTicketAccount {
             self.num_requests = num_requests;
             self.claimed_requests = 0;
             self.receipt_token_amount = receipt_token_amount;
-            self.sol_amount = sol_amount;
+            self.claimed_receipt_token_amount = 0;
+            self.sol_user_amount = sol_user_amount;
+            self.claimed_sol_user_amount = 0;
+            self.sol_fee_amount = sol_fee_amount;
             self.processed_at = processed_at;
             self._reserved = Default::default();
             self.data_version = 1;
@@ -108,12 +105,50 @@ impl FundBatchWithdrawalTicketAccount {
             batch_id,
             self.num_requests,
             self.receipt_token_amount,
-            self.sol_amount,
+            self.sol_user_amount,
+            self.sol_fee_amount,
             self.processed_at,
         );
     }
 
     pub(super) fn is_stale(&self) -> bool {
         self.num_requests == self.claimed_requests
+    }
+
+    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_withdraw_amount)
+    pub(super) fn claim_withdrawal_request(
+        &mut self,
+        request: WithdrawalRequest,
+    ) -> Result<(u64, u64, u64)> {
+        require_eq!(
+            self.batch_id,
+            request.batch_id,
+            ErrorCode::FundWrongWithdrawalBatchError,
+        );
+
+        let sol_user_amount = crate::utils::get_proportional_amount(
+            request.receipt_token_amount,
+            self.sol_user_amount,
+            self.receipt_token_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        // informational
+        let sol_fee_amount = crate::utils::get_proportional_amount(
+            request.receipt_token_amount,
+            self.sol_fee_amount,
+            self.receipt_token_amount,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        self.claimed_requests += 1;
+        self.claimed_receipt_token_amount += request.receipt_token_amount;
+        self.claimed_sol_user_amount += sol_user_amount;
+
+        Ok((
+            sol_user_amount,
+            sol_fee_amount,
+            request.receipt_token_amount,
+        ))
     }
 }

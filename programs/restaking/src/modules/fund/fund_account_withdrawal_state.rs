@@ -282,7 +282,7 @@ impl WithdrawalBatch {
 pub(super) struct WithdrawalRequest {
     pub batch_id: u64,
     pub request_id: u64,
-    receipt_token_amount: u64,
+    pub receipt_token_amount: u64,
     created_at: i64,
     _reserved: [u8; 16],
 }

@@ -159,11 +159,10 @@ impl UserFundAccount {
     /// Returns (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
     pub(super) fn claim_withdrawal_request(
         &mut self,
-        withdrawal_status: &mut WithdrawalState,
+        fund_batch_withdrawal_ticket_account: &mut FundBatchWithdrawalTicketAccount,
         request_id: u64,
     ) -> Result<(u64, u64, u64)> {
         let request = self.pop_withdrawal_request(request_id)?;
-        // TODO withdrawal_status.claim_withdrawal_request(request)
-        todo!()
+        fund_batch_withdrawal_ticket_account.claim_withdrawal_request(request)
     }
 }

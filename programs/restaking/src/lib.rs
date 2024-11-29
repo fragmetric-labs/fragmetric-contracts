@@ -526,7 +526,7 @@ pub mod restaking {
         .process_cancel_withdrawal_request(&mut ctx.accounts.receipt_token_lock_account, request_id)
     }
 
-    pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
+    pub fn user_withdraw(ctx: Context<UserFundWithdrawContext>, request_id: u64) -> Result<()> {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
@@ -538,10 +538,8 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw(
-            &ctx.accounts.fund_reserve_account,
-            ctx.bumps.fund_reserve_account,
+            &mut ctx.accounts.fund_batch_withdrawal_ticket_account,
             &ctx.accounts.fund_treasury_account,
-            &ctx.accounts.system_program,
             request_id,
         )
     }

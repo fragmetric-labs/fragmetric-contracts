@@ -446,7 +446,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     },
                     &[&self.fund_account.get_reserve_account_seeds()],
                 ),
-                ticket.sol_amount,
+                ticket.sol_user_amount,
             )?;
 
             ticket.exit(&crate::ID)?;

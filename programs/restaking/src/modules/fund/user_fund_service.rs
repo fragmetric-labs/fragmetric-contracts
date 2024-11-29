@@ -12,6 +12,8 @@ use crate::modules::fund::{
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
 
+use super::FundBatchWithdrawalTicketAccount;
+
 pub struct UserFundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
@@ -397,49 +399,24 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
-        fund_reserve_account: &SystemAccount<'info>,
-        fund_reserve_account_bump: u8,
+        fund_batch_withdrawal_ticket_account: &mut Account<'info, FundBatchWithdrawalTicketAccount>,
         fund_treasury_account: &SystemAccount<'info>,
-        system_program: &Program<'info, System>,
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed
+        // withdrawal fee is already paid.
         let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
             self.user_fund_account
-                .claim_withdrawal_request(&mut self.fund_account.withdrawal, request_id)?;
+                .claim_withdrawal_request(fund_batch_withdrawal_ticket_account, request_id)?;
 
         // transfer sol_user_amount to user wallet
-        let receipt_token_mint_key = self.receipt_token_mint.key();
-        let fund_reserve_account_signer_seeds: &[&[&[u8]]] = &[&[
-            FundAccount::RESERVE_SEED,
-            receipt_token_mint_key.as_ref(),
-            &[fund_reserve_account_bump],
-        ]];
+        fund_batch_withdrawal_ticket_account.sub_lamports(sol_user_amount)?;
+        self.user.add_lamports(sol_user_amount)?;
 
-        system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                system_program::Transfer {
-                    from: fund_reserve_account.to_account_info(),
-                    to: self.user.to_account_info(),
-                },
-                fund_reserve_account_signer_seeds,
-            ),
-            sol_user_amount,
-        )?;
-
-        // transfer sol_fee_amount to fund treasury account
-        system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: fund_reserve_account.to_account_info(),
-                    to: fund_treasury_account.to_account_info(),
-                },
-                fund_reserve_account_signer_seeds,
-            ),
-            sol_fee_amount,
-        )?;
+        // close ticket and collect rent if stale
+        if fund_batch_withdrawal_ticket_account.is_stale() {
+            fund_batch_withdrawal_ticket_account.close(fund_treasury_account.to_account_info())?;
+        }
 
         // log withdraw event
         emit!(events::UserWithdrewSOLFromFund {

@@ -422,16 +422,17 @@ impl FundAccount {
     /// returns sol_withdrawal_fee
     pub(super) fn initialize_batch_withdrawal_ticket(
         &mut self,
-        ticket: &mut FundBatchWithdrawalTicketAccount,
+        ticket: &mut Account<FundBatchWithdrawalTicketAccount>,
         batch: WithdrawalBatch,
         sol_amount: u64,
         current_timestamp: i64,
     ) -> Result<u64> {
-        let bump = FundBatchWithdrawalTicketAccount::find_account_address(
+        let (ticket_address, bump) = FundBatchWithdrawalTicketAccount::find_account_address(
             &self.receipt_token_mint,
             batch.batch_id,
-        )
-        .1;
+        );
+
+        require_keys_eq!(ticket.key(), ticket_address);
 
         let sol_fee_amount = self.withdrawal.get_sol_fee_amount(sol_amount)?;
         let sol_user_amount = sol_amount - sol_fee_amount;
@@ -444,8 +445,10 @@ impl FundAccount {
             batch.num_requests,
             batch.receipt_token_amount,
             sol_user_amount,
+            sol_fee_amount,
             current_timestamp,
         );
+
         Ok(sol_fee_amount)
     }
 }

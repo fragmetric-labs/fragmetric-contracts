@@ -47,8 +47,8 @@ pub enum ErrorCode {
     #[msg("fund: withdrawal request not found")]
     FundWithdrawalRequestNotFoundError,
 
-    #[msg("fund: withdrawal request not completed yet")]
-    FundPendingWithdrawalRequestError,
+    #[msg("fund: wrong batch")]
+    FundWrongWithdrawalBatchError,
 
     #[msg("fund: withdrawal reserved sol is exhausted")]
     FundWithdrawalReservedSOLExhaustedException,
