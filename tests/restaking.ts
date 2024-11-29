@@ -26,6 +26,11 @@ if (process.env.JUST_OPERATE) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/8_operator_deprecating_spl_stake_pool');
 
+} else if (process.env.JUST_RESTAKE) {
+    require('./restaking/2_deposit_sol')(1);
+    require('./restaking/3_deposit_token')(1);
+    require('./restaking/9_operator_restkaing');
+
 } else if (process.env.JUST_WITHDRAW) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/4_withdraw');

@@ -135,6 +135,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         if supported_token_mint.key() != token.mint {
                             continue;
                         }
+
                         let pricing_service =
                             FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
                                 .new_pricing_service(remaining_accounts.to_vec())?;
