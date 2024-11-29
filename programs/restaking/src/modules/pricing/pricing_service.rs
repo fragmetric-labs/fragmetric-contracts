@@ -70,7 +70,8 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                JitoRestakingVaultValueProvider.resolve_underlying_assets(token_mint, &[account1])?
+                JitoRestakingVaultValueProvider
+                    .resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let account1 = self
@@ -128,7 +129,7 @@ impl<'info> PricingService<'info> {
     }
 
     /// returns (total sol value of the token, total token amount)
-    fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
+    pub fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
         let (token_value, _) = self
             .token_value_map
             .get(token_mint)
@@ -277,9 +278,15 @@ impl<'info> PricingService<'info> {
 
 #[cfg(test)]
 mod tests {
+    use crate::modules::fund::FundAccount;
     use crate::modules::pricing::MockAsset;
 
     use super::*;
+    
+    #[test]
+    fn size_token_pricing_source() {
+        println!("token pricing source init size: {}", TokenPricingSource::INIT_SPACE);
+    }
 
     #[test]
     fn test_resolve_token_pricing_source() {

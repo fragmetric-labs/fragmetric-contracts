@@ -13,6 +13,8 @@ use instructions::*;
 
 #[program]
 pub mod restaking {
+    use crate::modules::normalization::NormalizedTokenWithdrawalTicketAccount;
+    use crate::modules::pricing::PricingService;
     use super::*;
 
     ////////////////////////////////////////////
@@ -428,6 +430,28 @@ pub mod restaking {
         .process_update_reward_pools()
     }
 
+    ////////////////////////////////////////////
+    // SlahsherNormalizedTokenWithdrawalTicketInitialContext
+    ////////////////////////////////////////////
+
+    pub fn slasher_initialize_normalized_token_withdrawal_ticket(
+        ctx: Context<SlasherNormalizedTokenWithdrawalTicketInitialContext>,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+            .process_initialize_withdrawal_ticket(
+                &mut ctx.accounts.slasher_normalized_token_withdrawal_ticket_account,
+                ctx.bumps.slasher_normalized_token_withdrawal_ticket_account,
+                &mut ctx.accounts.slasher_normalized_token_account,
+                
+                &mut ctx.accounts.slasher,
+                &mut crate::modules::pricing::PricingService::new(&[])?,
+            )
+    }
+    
     ////////////////////////////////////////////
     // UserFundInitialContext
     ////////////////////////////////////////////

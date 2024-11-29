@@ -2,7 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenValue;
+use crate::modules::normalization::{NormalizedTokenWithdrawalTicketAccount, ClaimableToken};
+use crate::modules::pricing::{TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -11,7 +12,7 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-const MAX_SUPPORTED_TOKENS: usize = 10;
+pub(super) const MAX_SUPPORTED_TOKENS: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
@@ -68,6 +69,11 @@ impl NormalizedTokenPoolAccount {
             };
             self.normalized_token_value_updated_at = 0;
             self.one_normalized_token_as_sol = 0;
+            self.supported_tokens
+                .iter_mut()
+                .for_each(|supported_token| {
+                    supported_token.withdrawal_reserved_amount = 0;
+                });
             self.data_version = 2;
         }
     }
@@ -124,21 +130,21 @@ impl NormalizedTokenPoolAccount {
 
     pub(super) fn get_supported_token(
         &self,
-        supported_token_mint: Pubkey,
+        supported_token_mint: &Pubkey,
     ) -> Result<&SupportedToken> {
         self.supported_tokens
             .iter()
-            .find(|token| token.mint == supported_token_mint)
+            .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
     pub(super) fn get_supported_token_mut(
         &mut self,
-        supported_token_mint: Pubkey,
+        supported_token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {
         self.supported_tokens
             .iter_mut()
-            .find(|token| token.mint == supported_token_mint)
+            .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
@@ -158,11 +164,13 @@ impl NormalizedTokenPoolAccount {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub(super) struct SupportedToken {
-    pub(super) mint: Pubkey,
-    program: Pubkey,
-    pub(super) lock_account: Pubkey,
-    pub(super) locked_amount: u64,
-    _reserved: [u8; 64],
+    pub mint: Pubkey,
+    pub program: Pubkey,
+    pub lock_account: Pubkey,
+    pub locked_amount: u64,
+    pub withdrawal_reserved_amount: u64,
+    // pub pricing_source: TokenPricingSource,
+    _reserved: [u8; 56],
 }
 
 impl SupportedToken {
@@ -172,7 +180,8 @@ impl SupportedToken {
             program,
             lock_account,
             locked_amount: 0,
-            _reserved: [0; 64],
+            withdrawal_reserved_amount: 0,
+            _reserved: [0; 56],
         }
     }
 
@@ -189,7 +198,26 @@ impl SupportedToken {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)
-            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotEnoughLockedTokenException))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        Ok(())
+    }
+
+    pub(super) fn unlock_withdrawal_reserved_token(&mut self, token_amount: u64) -> Result<()> {
+        self.locked_amount = self
+            .locked_amount
+            .checked_sub(token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.withdrawal_reserved_amount += token_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn settle_withdrawal_reserved_token(&mut self, token_amount: u64) -> Result<()> {
+        self.withdrawal_reserved_amount = self
+            .withdrawal_reserved_amount
+            .checked_sub(token_amount)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }

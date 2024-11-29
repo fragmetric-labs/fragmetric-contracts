@@ -1,0 +1,50 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
+
+use crate::constants::*;
+use crate::modules::normalization::{
+    NormalizedTokenPoolAccount, NormalizedTokenWithdrawalTicketAccount,
+};
+use crate::utils::PDASeeds;
+
+#[derive(Accounts)]
+pub struct SlasherNormalizedTokenWithdrawalTicketInitialContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub slasher: Signer<'info>,
+
+    #[account(mut, address = NSOL_MINT_ADDRESS)]
+    pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
+        bump = normalized_token_pool_account.get_bump(),
+        has_one = normalized_token_mint,
+    )]
+    pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
+
+    pub normalized_token_program: Program<'info, Token>,
+
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + NormalizedTokenWithdrawalTicketAccount::INIT_SPACE,
+        seeds = [NormalizedTokenWithdrawalTicketAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
+        bump,
+    )]
+    pub slasher_normalized_token_withdrawal_ticket_account:
+        Box<Account<'info, NormalizedTokenWithdrawalTicketAccount>>,
+
+    #[account(
+        mut,
+        token::mint = normalized_token_mint,
+        token::token_program = normalized_token_program,
+        token::authority = slasher.key(),
+    )]
+    pub slasher_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    pub system_program: Program<'info, System>,
+}
