@@ -232,8 +232,11 @@ impl FundAccount {
         index: u8,
     ) -> Vec<Vec<u8>> {
         let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
-        let bump =
-            Pubkey::find_program_address(&seed_phrase.each_ref().map(Vec::as_slice), &crate::ID).1;
+        let bump = Pubkey::find_program_address(
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
+            &crate::ID,
+        )
+        .1;
 
         let mut seeds = Vec::with_capacity(5);
         seeds.extend(seed_phrase);
@@ -246,11 +249,9 @@ impl FundAccount {
         pool_account: &Pubkey,
         index: u8,
     ) -> (Pubkey, u8) {
+        let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
         Pubkey::find_program_address(
-            &self
-                .get_unstaking_ticket_account_seed_phrase(pool_account, index)
-                .each_ref()
-                .map(Vec::as_slice),
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
     }

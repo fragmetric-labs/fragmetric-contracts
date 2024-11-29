@@ -56,8 +56,11 @@ impl FundBatchWithdrawalTicket {
     /// ```
     pub(super) fn get_seeds(receipt_token_mint: &Pubkey, batch_id: u64) -> Vec<Vec<u8>> {
         let seed_phrase = Self::get_seed_phrase(receipt_token_mint, batch_id);
-        let bump =
-            Pubkey::find_program_address(&seed_phrase.each_ref().map(Vec::as_slice), &crate::ID).1;
+        let bump = Pubkey::find_program_address(
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
+            &crate::ID,
+        )
+        .1;
 
         let mut seeds = Vec::with_capacity(4);
         seeds.extend(seed_phrase);
@@ -66,10 +69,9 @@ impl FundBatchWithdrawalTicket {
     }
 
     pub(super) fn find_account_address(receipt_token_mint: &Pubkey, batch_id: u64) -> (Pubkey, u8) {
+        let seed_phrase = Self::get_seed_phrase(receipt_token_mint, batch_id);
         Pubkey::find_program_address(
-            &Self::get_seed_phrase(receipt_token_mint, batch_id)
-                .each_ref()
-                .map(Vec::as_slice),
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
     }
