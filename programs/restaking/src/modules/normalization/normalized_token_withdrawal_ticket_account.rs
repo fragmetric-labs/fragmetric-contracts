@@ -17,7 +17,7 @@ pub struct NormalizedTokenWithdrawalTicketAccount {
     data_version: u16,
     bump: u8,
     pub(super) withdrawal_authority: Pubkey,
-    pub(super) normalized_token_mint: Pubkey,
+    pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_pool: Pubkey,
     normalized_token_amount: u64,
     #[max_len(MAX_SUPPORTED_TOKENS)]

@@ -182,8 +182,8 @@ pub enum ErrorCode {
     #[msg("normalization: exceeded max supported tokens")]
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
-    #[msg("normalization: not enough supported token to unlock")]
-    NormalizedTokenPoolNotEnoughLockedTokenException,
+    #[msg("normalization: not enough supported token in the pool")]
+    NormalizedTokenPoolNotEnoughSupportedTokenException,
 
     #[msg("normalization: already settled withdrawal ticket")]
     NormalizedTokenPoolAlreadySettledWithdrawalTicketError,

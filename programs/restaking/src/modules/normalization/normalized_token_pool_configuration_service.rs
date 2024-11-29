@@ -1,13 +1,14 @@
+use super::*;
+use crate::modules::fund::FundService;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
 use anchor_lang::prelude::*;
 use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use super::*;
-
 pub struct NormalizedTokenPoolConfigurationService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-    normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
+    normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,
 }
 
@@ -20,7 +21,7 @@ impl Drop for NormalizedTokenPoolConfigurationService<'_, '_> {
 impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-        normalized_token_mint: &'a InterfaceAccount<'info, Mint>,
+        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         normalized_token_program: &'a Program<'info, Token>,
     ) -> Result<Self> {
         Ok(Self {
@@ -66,6 +67,8 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
         pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
+        pricing_source: TokenPricingSource,
+        pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
         require_keys_eq!(
             pool_supported_token_account.owner,
@@ -84,7 +87,16 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             supported_token_mint.key(),
             supported_token_program.key(),
             pool_supported_token_account.key(),
+            pricing_source,
         )?;
+
+        // validate pricing source
+        NormalizedTokenPoolService::new(
+            self.normalized_token_pool_account,
+            self.normalized_token_mint,
+            self.normalized_token_program,
+        )?
+        .new_pricing_service(pricing_sources)?;
 
         Ok(())
     }
