@@ -321,7 +321,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .iter()
                 .map(|batch| {
                     (
-                        FundBatchWithdrawalTicket::find_account_address(
+                        FundBatchWithdrawalTicketAccount::find_account_address(
                             &self.receipt_token_mint.key(),
                             batch.batch_id,
                         )
@@ -399,7 +399,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .zip(processible_batches)
         {
             // create account
-            let space = 8 + FundBatchWithdrawalTicket::INIT_SPACE;
+            let space = 8 + FundBatchWithdrawalTicketAccount::INIT_SPACE;
             let lamports = Rent::get()?.minimum_balance(space);
             anchor_lang::system_program::create_account(
                 CpiContext::new_with_signer(
@@ -408,7 +408,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         from: operator.to_account_info(),
                         to: ticket.clone(),
                     },
-                    &[FundBatchWithdrawalTicket::get_seeds(
+                    &[FundBatchWithdrawalTicketAccount::get_seeds(
                         &self.receipt_token_mint.key(),
                         batch.batch_id,
                     )
@@ -422,7 +422,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 &crate::ID,
             )?;
 
-            let mut ticket = Account::<FundBatchWithdrawalTicket>::try_from_unchecked(ticket)?;
+            let mut ticket =
+                Account::<FundBatchWithdrawalTicketAccount>::try_from_unchecked(ticket)?;
 
             let sol_amount = pricing_service.get_token_amount_as_sol(
                 &self.receipt_token_mint.key(),

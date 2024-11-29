@@ -4,7 +4,7 @@ use super::WithdrawalBatch;
 
 #[account]
 #[derive(InitSpace)]
-pub struct FundBatchWithdrawalTicket {
+pub struct FundBatchWithdrawalTicketAccount {
     data_version: u16,
     bump: u8,
     pub receipt_token_mint: Pubkey,
@@ -31,7 +31,7 @@ pub struct FundBatchWithdrawalTicket {
 //     }
 // }
 
-impl FundBatchWithdrawalTicket {
+impl FundBatchWithdrawalTicketAccount {
     pub const SEED: &'static [u8] = b"batch_withdrawal_ticket";
 
     pub fn get_bump(&self) -> u8 {
