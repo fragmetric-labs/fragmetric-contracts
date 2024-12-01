@@ -27,11 +27,17 @@ describe("operator_restake_with_normalize", async () => {
                         state: {
                             init: {},
                         },
+                        operationReservedRestakeToken: null
                     }
                 },
             },
             requiredAccounts: [],
-        });
+
+        },
+            restaking.keychain.getKeypair('FUND_MANAGER'),
+            100,
+            300_000,
+        );
     });
     //
     // step("withdraw SOL from jito stake pool", async function () {

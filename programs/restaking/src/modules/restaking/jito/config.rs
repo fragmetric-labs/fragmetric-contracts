@@ -59,7 +59,7 @@ impl<'info> JitoRestakingVaultContext<'info> {
         &self,
         vault_withdrawal_ticket: &'info AccountInfo<'info>,
         slot: u64,
-    ) -> Result<&AccountInfo<'info>> {
+    ) -> Result<bool> {
         let vault_config_data = &**self.vault_config.try_borrow_data()?;
         let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
         let epoch_length = vault_config.epoch_length();
@@ -72,7 +72,7 @@ impl<'info> JitoRestakingVaultContext<'info> {
         let ticket_data = ticket_data_ref.as_ref();
         let ticket = VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
         if ticket.is_withdrawable(slot, epoch_length)? {
-            Ok(vault_withdrawal_ticket)
+            Ok(true)
         } else {
             Err(Error::from(
                 ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawable,
@@ -83,9 +83,9 @@ impl<'info> JitoRestakingVaultContext<'info> {
     pub fn check_withdrawal_ticket_is_empty(
         &self,
         vault_withdrawal_ticket: &'info AccountInfo<'info>,
-    ) -> Result<&AccountInfo<'info>> {
+    ) -> Result<bool> {
         if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
-            Ok(vault_withdrawal_ticket)
+            Ok(true)
         } else {
             Err(Error::from(
                 ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitialized,

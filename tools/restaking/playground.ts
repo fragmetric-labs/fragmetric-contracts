@@ -1597,7 +1597,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
-            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
+            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit);
             txCount++;
             logger.debug(`operator ran tx#${txCount}`);
             if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {

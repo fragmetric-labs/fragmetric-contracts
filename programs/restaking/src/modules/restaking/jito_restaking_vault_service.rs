@@ -1,6 +1,6 @@
 use crate::constants::{
     ADMIN_PUBKEY, FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS, FRAGSOL_JITO_VAULT_CONFIG_ADDRESS,
-    FRAGSOL_MINT_ADDRESS, JITO_VAULT_PROGRAM_ID, NSOL_MINT_ADDRESS,
+    FRAGSOL_MINT_ADDRESS, JITO_VAULT_PROGRAM_FEE_WALLET, JITO_VAULT_PROGRAM_ID, NSOL_MINT_ADDRESS,
 };
 use crate::modules::restaking::jito::{
     JitoRestakingVault, JitoRestakingVaultContext, JitoVaultOperatorDelegation,
@@ -8,11 +8,13 @@ use crate::modules::restaking::jito::{
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::associated_token;
+use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::TokenAccount;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::config::Config;
 use jito_vault_core::vault::Vault;
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
+use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
 
 pub struct JitoRestakingVaultStatus {
@@ -157,6 +159,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             (FRAGSOL_JITO_VAULT_CONFIG_ADDRESS, false),
         ])
     }
+
     pub fn find_accounts_for_restaking_vault(
         fund_account: &AccountInfo,
         jito_vault_program: &AccountInfo,
@@ -243,19 +246,18 @@ impl<'info> JitoRestakingVaultService<'info> {
     }
 
     pub fn find_current_vault_update_state_tracker(
-        vault_staker_withdrawal_ticket: &'info AccountInfo<'info>,
-        next_vault_staker_withdrawal_ticket: &'info AccountInfo<'info>,
+        vault_update_state_tracker: &'info AccountInfo<'info>,
+        next_vault_update_state_tracker: &'info AccountInfo<'info>,
     ) -> Result<&'info AccountInfo<'info>> {
-        let data = vault_staker_withdrawal_ticket
+        let data = vault_update_state_tracker
             .try_borrow_data()
             .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
         let tracker = VaultUpdateStateTracker::try_from_slice_unchecked(&data)
             .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
-
         if Clock::get()?.epoch == tracker.ncn_epoch() {
-            Ok(vault_staker_withdrawal_ticket)
+            Ok(vault_update_state_tracker)
         } else {
-            Ok(next_vault_staker_withdrawal_ticket)
+            Ok(next_vault_update_state_tracker)
         }
     }
 
@@ -314,6 +316,8 @@ impl<'info> JitoRestakingVaultService<'info> {
                 system_program,
             )?;
 
+            // TODO : need to crank_update_state_tracker for each operator
+
             Self::close_vault_update_state_tracker(
                 self,
                 signer,
@@ -352,6 +356,40 @@ impl<'info> JitoRestakingVaultService<'info> {
                 vault_update_state_tracker.clone(),
                 signer.clone(),
                 system_program.clone(),
+            ],
+            signer_seeds,
+        )?;
+
+        Ok(())
+    }
+    pub fn crank_vault_update_state_tracker(
+        self: &Self,
+        signer: &AccountInfo<'info>,
+        signer_seeds: &[&[&[u8]]],
+        restaking_operator: &AccountInfo<'info>,
+        vault_operator_delegation: &AccountInfo<'info>,
+        vault_update_state_tracker: &AccountInfo<'info>,
+    ) -> Result<()> {
+        let initialize_vault_update_state_tracker_ix =
+            jito_vault_sdk::sdk::crank_vault_update_state_tracker(
+                self.vault_program.key,
+                self.vault_config.key,
+                self.vault.key,
+                restaking_operator.key,
+                vault_operator_delegation.key,
+                vault_update_state_tracker.key,
+            );
+
+        invoke_signed(
+            &initialize_vault_update_state_tracker_ix,
+            &[
+                self.vault_program.clone(),
+                self.vault_config.clone(),
+                self.vault.clone(),
+                restaking_operator.clone(),
+                vault_operator_delegation.clone(),
+                vault_update_state_tracker.clone(),
+                signer.clone(),
             ],
             signer_seeds,
         )?;
@@ -447,10 +485,100 @@ impl<'info> JitoRestakingVaultService<'info> {
         Ok(minted_vrt_amount)
     }
 
+    pub fn check_withdrawal_ticket_is_empty(
+        &self,
+        vault_withdrawal_ticket: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
+            Ok(true)
+        } else {
+            Err(Error::from(
+                crate::errors::ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitialized,
+            ))
+        }
+    }
+
+    pub fn request_withdraw(
+        self: &Self,
+        operator: &Signer<'info>,
+        vault_withdrawal_ticket: &AccountInfo<'info>,
+        vault_withdrawal_ticket_token_account: &AccountInfo<'info>,
+        vault_receipt_token_account: &AccountInfo<'info>,
+        vault_base_account: &AccountInfo<'info>,
+        system_program: &AccountInfo<'info>,
+        associated_token_program: &AccountInfo<'info>,
+        signer: &AccountInfo<'info>,
+        signer_seeds: &[&[&[u8]]],
+        vrt_token_amount_out: u64,
+    ) -> Result<()> {
+        anchor_spl::associated_token::create(CpiContext::new(
+            associated_token_program.clone(),
+            anchor_spl::associated_token::Create {
+                payer: operator.to_account_info(),
+                associated_token: vault_withdrawal_ticket_token_account.clone(),
+                authority: vault_withdrawal_ticket.clone(),
+                mint: self.vault_receipt_token_mint.clone(),
+                system_program: system_program.clone(),
+                token_program: self.vault_receipt_token_program.clone(),
+            },
+        ))?;
+
+        let rent = Rent::get()?;
+        let current_lamports = vault_withdrawal_ticket.lamports();
+        let space = 8 + std::mem::size_of::<VaultStakerWithdrawalTicket>();
+        let required_lamports = rent
+            .minimum_balance(space)
+            .max(1)
+            .saturating_sub(current_lamports);
+
+        if required_lamports > 0 {
+            anchor_lang::system_program::transfer(
+                CpiContext::new(
+                    system_program.clone(),
+                    anchor_lang::system_program::Transfer {
+                        from: operator.to_account_info(),
+                        to: vault_withdrawal_ticket.clone(),
+                    },
+                ),
+                required_lamports,
+            )?;
+        }
+
+        let enqueue_withdraw_ix = jito_vault_sdk::sdk::enqueue_withdrawal(
+            self.vault_program.key,
+            self.vault_config.key,
+            self.vault.key,
+            vault_withdrawal_ticket.key,
+            vault_withdrawal_ticket_token_account.key,
+            signer.key,
+            vault_receipt_token_account.key,
+            vault_base_account.key,
+            vrt_token_amount_out,
+        );
+
+        invoke_signed(
+            &enqueue_withdraw_ix,
+            &[
+                self.vault_program.clone(),
+                self.vault_config.clone(),
+                self.vault.clone(),
+                vault_withdrawal_ticket.clone(),
+                vault_withdrawal_ticket_token_account.clone(),
+                signer.clone(),
+                vault_receipt_token_account.clone(),
+                vault_base_account.clone(),
+                self.vault_receipt_token_program.clone(),
+                system_program.clone(),
+            ],
+            signer_seeds,
+        )?;
+
+        Ok(())
+    }
+
     pub fn find_withdrawal_tickets() -> Vec<(Pubkey, bool)> {
         const BASE_ACCOUNTS_LENGTH: u8 = 5;
         let mut withdrawal_tickets = Vec::with_capacity(BASE_ACCOUNTS_LENGTH as usize);
-
         for i in 1..=BASE_ACCOUNTS_LENGTH {
             withdrawal_tickets.push((
                 Self::find_withdrawal_ticket_account(&Self::find_vault_base_account(i)),
@@ -461,21 +589,21 @@ impl<'info> JitoRestakingVaultService<'info> {
     }
 
     pub fn find_vault_base_account(index: u8) -> Pubkey {
-        let base = Pubkey::find_program_address(
+        let (base, _) = Pubkey::find_program_address(
             &[
                 Self::VAULT_BASE_ACCOUNT_SEED,
                 (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),
                 &[index],
             ],
             &JITO_VAULT_PROGRAM_ID,
-        )
-        .0;
+        );
+
         base
     }
 
     pub fn find_withdrawal_ticket_account(base: &Pubkey) -> Pubkey {
         let vault_account: Pubkey = FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS;
-        let withdrawal_ticket_account = Pubkey::find_program_address(
+        let (withdrawal_ticket_account, _) = Pubkey::find_program_address(
             &[
                 Self::VAULT_WITHDRAWAL_TICKET_SEED,
                 vault_account.as_ref(),
@@ -483,7 +611,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             ],
             &JITO_VAULT_PROGRAM_ID,
         );
-        withdrawal_ticket_account.0
+        withdrawal_ticket_account
     }
 
     pub fn find_withdrawal_ticket_token_account(withdrawal_ticket_account: &Pubkey) -> Pubkey {
@@ -494,16 +622,133 @@ impl<'info> JitoRestakingVaultService<'info> {
         withdrawal_ticket_token_account
     }
 
+    pub fn check_ready_to_burn_withdrawal_ticket(
+        vault_config: &'info AccountInfo<'info>,
+        vault_withdrawal_ticket: &'info AccountInfo<'info>,
+        slot: u64,
+    ) -> Result<bool> {
+        let vault_config_data = &vault_config.try_borrow_data()?;
+        let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
+        let epoch_length = vault_config.epoch_length();
+        if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
+            Ok(false)
+        } else {
+            let ticket_data_ref = vault_withdrawal_ticket.data.borrow();
+            let ticket_data = ticket_data_ref.as_ref();
+            let ticket = VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
+            if ticket.is_withdrawable(slot, epoch_length)? {
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
+    }
+
+    pub fn get_claimable_withdrawal_tickets(
+        vault_config: &'info AccountInfo<'info>,
+        withdrawal_tickets: Vec<&'info AccountInfo<'info>>,
+    ) -> Result<(Vec<(Pubkey, Pubkey)>, i32)> {
+        let clock = Clock::get().unwrap();
+        let mut claimable_unrestaked_tickets_len: i32 = 0;
+        let mut claimable_unrestaked_tickets = vec![];
+
+        for withdrawal_ticket in withdrawal_tickets {
+            if JitoRestakingVaultService::check_ready_to_burn_withdrawal_ticket(
+                &vault_config,
+                &withdrawal_ticket,
+                clock.slot,
+            ).unwrap() {
+                let withdrawal_ticket_token_account =
+                    JitoRestakingVaultService::find_withdrawal_ticket_token_account(
+                        &withdrawal_ticket.key(),
+                    );
+                claimable_unrestaked_tickets.push((withdrawal_ticket.key(), withdrawal_ticket_token_account));
+                claimable_unrestaked_tickets_len += 1;
+            }
+        }
+
+        Ok((claimable_unrestaked_tickets, claimable_unrestaked_tickets_len))
+    }
+
+
+    pub fn find_accounts_for_unrestaking_vault(
+        fund_account: &AccountInfo,
+        jito_vault_program: &AccountInfo,
+        jito_vault_account: &AccountInfo,
+        jito_vault_config: &AccountInfo,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let vault_data_ref = jito_vault_account.data.borrow();
+        let vault_data = vault_data_ref.as_ref();
+        let vault = Vault::try_from_slice_unchecked(vault_data)?;
+
+        let vault_vrt_mint = vault.vrt_mint;
+        let vault_vst_mint = vault.supported_mint;
+        let token_program = anchor_spl::token::ID;
+        let system_program = System::id();
+
+        let fund_supported_token_account =
+            spl_associated_token_account::get_associated_token_address(
+                &fund_account.key(),
+                &vault_vst_mint,
+            );
+        let fund_receipt_token_account =
+            associated_token::get_associated_token_address_with_program_id(
+                &fund_account.key(),
+                &vault_vrt_mint,
+                &token_program,
+            );
+
+        let vault_fee_receipt_token_account =
+            spl_associated_token_account::get_associated_token_address(
+                &ADMIN_PUBKEY,
+                &vault_vrt_mint,
+            );
+        let vault_program_fee_wallet_vrt_account =
+            spl_associated_token_account::get_associated_token_address(
+                &JITO_VAULT_PROGRAM_FEE_WALLET,
+                &vault_vrt_mint,
+            );
+
+        let clock = Clock::get()?;
+        let vault_update_state_tracker =
+            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
+
+        let vault_update_state_tracker_prepare_for_delaying =
+            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, true)?;
+
+        Ok(vec![
+            (*jito_vault_program.key, false),
+            (*jito_vault_account.key, false),
+            (*jito_vault_config.key, false),
+            (vault_vrt_mint, false),
+            (vault_vst_mint, false),
+            (fund_supported_token_account, false),
+            (fund_receipt_token_account, false),
+            (vault_fee_receipt_token_account, false),
+            (vault_program_fee_wallet_vrt_account, false),
+            (vault_update_state_tracker, false),
+            (vault_update_state_tracker_prepare_for_delaying, false),
+            (token_program, false),
+            (system_program, false),
+        ])
+    }
+
+
     pub fn withdraw(
         self: &Self,
         vault_withdrawal_ticket: &AccountInfo<'info>,
         vault_withdrawal_ticket_token_account: &AccountInfo<'info>,
-        fund_vault_supported_token_account: &AccountInfo<'info>,
+        fund_vault_supported_token_account: &'info AccountInfo<'info>,
         vault_fee_receipt_token_account: &AccountInfo<'info>,
         vault_program_fee_wallet_vrt_account: &AccountInfo<'info>,
         signer: &AccountInfo<'info>,
         system_program: &AccountInfo<'info>,
-    ) -> Result<()> {
+    ) -> Result<u64> {
+
+        let mut fund_vault_supported_token_account_parsed =
+            InterfaceAccount::<TokenAccount>::try_from(fund_vault_supported_token_account)?;
+        let fund_vault_supported_token_account_amount_before = fund_vault_supported_token_account_parsed.amount;
+
         let enqueue_withdraw_ix = jito_vault_sdk::sdk::burn_withdrawal_ticket(
             self.vault_program.key,
             self.vault_config.key,
@@ -538,6 +783,12 @@ impl<'info> JitoRestakingVaultService<'info> {
             &[],
         )?;
 
-        Ok(())
+
+        fund_vault_supported_token_account_parsed.reload()?;
+        let fund_vault_supported_token_account_amount = fund_vault_supported_token_account_parsed.amount;
+        let unrestaked_vst_amount =
+            fund_vault_supported_token_account_amount - fund_vault_supported_token_account_amount_before;
+
+        Ok(unrestaked_vst_amount)
     }
 }

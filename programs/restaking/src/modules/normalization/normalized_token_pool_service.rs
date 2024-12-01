@@ -116,9 +116,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         self.normalized_token_pool_account
             .reload_normalized_token_supply(self.normalized_token_mint)?;
-
         self.update_asset_values(pricing_service)?;
-
         Ok(())
     }
 

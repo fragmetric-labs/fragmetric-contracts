@@ -29,7 +29,7 @@ if (process.env.JUST_OPERATE) {
 } else if (process.env.JUST_RESTAKE) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/3_deposit_token')(1);
-    require('./restaking/9_operator_restkaing');
+    require('./restaking/9_operator_restaking');
 
 } else if (process.env.JUST_WITHDRAW) {
     require('./restaking/2_deposit_sol')(1);
