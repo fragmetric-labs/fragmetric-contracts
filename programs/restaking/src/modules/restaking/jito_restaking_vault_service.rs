@@ -493,7 +493,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             Ok(true)
         } else {
             Err(Error::from(
-                crate::errors::ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitialized,
+                crate::errors::ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitializedError,
             ))
         }
     }

@@ -212,9 +212,15 @@ pub enum ErrorCode {
     #[msg("staking: failed to find uninitialized withdraw ticket")]
     StakingUninitializedWithdrawTicketNotFoundException,
 
+    #[msg("staking: account not matched")]
+    StakingAccountNotMatchedException,
+
+    #[msg("staking: spl stake pool's active stake not available")]
+    StakingSPLActiveStakeNotAvailableException,
+
     #[msg("restaking: withdrawal ticket is not withdrawable")]
-    RestakingVaultWithdrawalTicketNotWithdrawable,
+    RestakingVaultWithdrawalTicketNotWithdrawableError,
 
     #[msg("restaking: withdrawal ticket is already initialized")]
-    RestakingVaultWithdrawalTicketAlreadyInitialized,
+    RestakingVaultWithdrawalTicketAlreadyInitializedError,
 }

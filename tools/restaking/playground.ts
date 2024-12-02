@@ -98,20 +98,49 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             payer,
             recentSlot: this.isLocalnet ? 0 : await this.connection.getSlot(),
         });
-        const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
+        await this.run({
+            instructions: [createIx],
+            signerNames: ['ADMIN']
+        });
+
+        let addresses = Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[];
+        console.log(`addresses ${addresses.length}:`, addresses);
+        let addressList = [], addressLists = [];
+        addresses.forEach((address, index) => {
+            addressList.push(address);
+            if (index != 0 && index % 32 == 0 || index == addresses.length - 1) {
+                addressLists.push(addressList);
+                addressList = []; // initialize a new chunk
+            }
+        });
+        console.log(`addressLists len(${addressLists.length}):`, addressLists);
+        const updateIxs = addressLists.map(addressList => web3.AddressLookupTableProgram.extendLookupTable({
             lookupTable,
             authority,
             payer,
-            addresses: [
-                // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
-                ...Object.values(this.knownAddress).filter(a => typeof a != 'function') as web3.PublicKey[],
-            ],
-        });
+            addresses: addressList as web3.PublicKey[],
+        }));
+        // const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
+        //     lookupTable,
+        //     authority,
+        //     payer,
+        //     addresses: [
+        //         // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
+        //         ...Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[],
+        //     ],
+        // });
 
-        await this.run({
-            instructions: [createIx, updateIx],
-            signerNames: ['ADMIN'],
-        });
+        for (let updateIx of updateIxs) {
+            await this.run({
+                instructions: [updateIx],
+                signerNames: ['ADMIN'],
+            });
+        }
+
+        // await this.run({
+        //     instructions: [createIx, ...updateIxs],
+        //     signerNames: ['ADMIN'],
+        // });
         this._knownAddressLookupTableAddress = lookupTable;
         logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
     }
@@ -177,6 +206,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
         const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, nSOLTokenPool, true, this.supportedTokenMetadata[symbol].program);
+
+        // staking
+        const fundStakeAccounts = [...Array(5).keys()].map((i) =>
+            web3.PublicKey.findProgramAddressSync(
+                [
+                    fragSOLTokenMint.toBuffer(),
+                    this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
+                    Buffer.from(i.toString()),
+                ],
+                this.programId,
+            )[0]
+        );
+        // console.log(`fundStakeAccounts:`, fundStakeAccounts);
 
         // Restaking
         const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
@@ -251,6 +293,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserReward,
             fragSOLSupportedTokenAccount,
             userSupportedTokenAccount,
+            fundStakeAccounts,
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
             fragSOLJitoVaultProgramFeeWalletTokenAccount,
@@ -970,7 +1013,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL / 1_000)),
+            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL / 1_000)),
             solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalEnabled: this.isMainnet ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMainnet ? 0 : 0),

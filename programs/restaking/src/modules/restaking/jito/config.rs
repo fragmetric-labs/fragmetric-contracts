@@ -65,7 +65,7 @@ impl<'info> JitoRestakingVaultContext<'info> {
         let epoch_length = vault_config.epoch_length();
         if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
             return Err(Error::from(
-                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawable,
+                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawableError,
             ));
         }
         let ticket_data_ref = vault_withdrawal_ticket.data.borrow();
@@ -75,7 +75,7 @@ impl<'info> JitoRestakingVaultContext<'info> {
             Ok(true)
         } else {
             Err(Error::from(
-                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawable,
+                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawableError,
             ))
         }
     }
@@ -88,7 +88,7 @@ impl<'info> JitoRestakingVaultContext<'info> {
             Ok(true)
         } else {
             Err(Error::from(
-                ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitialized,
+                ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitializedError,
             ))
         }
     }
