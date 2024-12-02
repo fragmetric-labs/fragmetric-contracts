@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_lang::system_program;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
-use crate::utils::PDASeeds;
+use crate::utils::{AccountExt, PDASeeds};
 
 use super::*;
 
@@ -57,8 +58,8 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
 
-        signer: &AccountInfo<'info>,
-        signer_seeds: &[&[&[u8]]],
+        from_supported_token_account_signer: &AccountInfo<'info>,
+        from_supported_token_account_signer_seeds: &[&[&[u8]]],
 
         supported_token_amount: u64,
 
@@ -67,7 +68,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         require_keys_eq!(
             pool_supported_token_account.key(),
             self.normalized_token_pool_account
-                .get_supported_token(supported_token_mint.key())?
+                .get_supported_token(&supported_token_mint.key())?
                 .lock_account
         );
         require_gt!(supported_token_amount, 0);
@@ -80,7 +81,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         )?;
 
         self.normalized_token_pool_account
-            .get_supported_token_mut(supported_token_mint.key())?
+            .get_supported_token_mut(&supported_token_mint.key())?
             .lock_token(supported_token_amount)?;
 
         anchor_spl::token_interface::transfer_checked(
@@ -90,9 +91,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     from: from_supported_token_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     to: pool_supported_token_account.to_account_info(),
-                    authority: signer.to_account_info(),
+                    authority: from_supported_token_account_signer.to_account_info(),
                 },
-                signer_seeds,
+                from_supported_token_account_signer_seeds,
             ),
             supported_token_amount,
             supported_token_mint.decimals,
@@ -106,10 +107,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     to: to_normalized_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
                 },
-                &[self
-                    .normalized_token_pool_account
-                    .get_seeds()
-                    .as_ref()],
+                &[self.normalized_token_pool_account.get_seeds().as_ref()],
             ),
             normalized_token_amount,
         )?;
@@ -130,8 +128,8 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
 
-        signer: AccountInfo<'info>,
-        signer_seeds: &[&[&[u8]]],
+        from_normalized_token_account_signer: AccountInfo<'info>,
+        from_normalized_token_account_signer_seeds: &[&[&[u8]]],
 
         normalized_token_amount: u64,
 
@@ -140,7 +138,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         require_keys_eq!(
             pool_supported_token_account.key(),
             self.normalized_token_pool_account
-                .get_supported_token(supported_token_mint.key())?
+                .get_supported_token(&supported_token_mint.key())?
                 .lock_account
         );
         require_gt!(normalized_token_amount, 0);
@@ -151,7 +149,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             .get_sol_amount_as_token(&supported_token_mint.key(), normalized_token_amount_as_sol)?;
 
         self.normalized_token_pool_account
-            .get_supported_token_mut(supported_token_mint.key())?
+            .get_supported_token_mut(&supported_token_mint.key())?
             .unlock_token(supported_token_amount)?;
 
         anchor_spl::token_interface::burn(
@@ -160,9 +158,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 anchor_spl::token_interface::Burn {
                     mint: self.normalized_token_mint.to_account_info(),
                     from: from_normalized_token_account.to_account_info(),
-                    authority: signer.to_account_info(),
+                    authority: from_normalized_token_account_signer.to_account_info(),
                 },
-                signer_seeds,
+                from_normalized_token_account_signer_seeds,
             ),
             normalized_token_amount,
         )?;
@@ -176,10 +174,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     to: to_supported_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
                 },
-                &[self
-                    .normalized_token_pool_account
-                    .get_seeds()
-                    .as_ref()],
+                &[self.normalized_token_pool_account.get_seeds().as_ref()],
             ),
             supported_token_amount,
             supported_token_mint.decimals,
@@ -191,6 +186,198 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         self.update_asset_values(pricing_service)?;
 
         Ok(())
+    }
+
+    pub fn process_initialize_withdrawal_ticket(
+        &mut self,
+        withdrawal_ticket: &mut Account<'info, NormalizedTokenWithdrawalTicketAccount>,
+        withdrawal_ticket_bump: u8,
+        from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
+        from_normalized_token_account_signer: &Signer<'info>,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<()> {
+        withdrawal_ticket.initialize(
+            withdrawal_ticket_bump,
+            from_normalized_token_account_signer.key(),
+            self.normalized_token_mint.key(),
+            self.normalized_token_pool_account.key(),
+        );
+        require!(
+            withdrawal_ticket.is_latest_version(),
+            ErrorCode::InvalidDataVersionError
+        );
+
+        // calculate claimable amount for each supported tokens to withdraw them proportionally relative to the current composition ratio.
+        let normalized_token_amount = from_normalized_token_account.amount;
+        require_gt!(normalized_token_amount, 0);
+
+        let pricing_service = &mut self.new_pricing_service(pricing_sources)?;
+
+        let normalized_token_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
+        let pool_total_value_as_sol = pricing_service
+            .get_token_total_value_as_sol(&self.normalized_token_mint.key())?
+            .0;
+
+        let mut claimable_tokens_value_as_sol = 0u64;
+        let claimable_tokens = self
+            .normalized_token_pool_account
+            .supported_tokens
+            .iter_mut()
+            .map(|supported_token| {
+                let supported_token_total_value_as_sol = pricing_service.get_token_amount_as_sol(
+                    &supported_token.mint,
+                    supported_token.locked_amount,
+                )?;
+                let supported_token_claimable_amount_as_sol =
+                    crate::utils::get_proportional_amount(
+                        normalized_token_amount_as_sol,
+                        supported_token_total_value_as_sol,
+                        pool_total_value_as_sol,
+                    )
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                claimable_tokens_value_as_sol += supported_token_claimable_amount_as_sol;
+
+                let supported_token_claimable_amount = pricing_service.get_sol_amount_as_token(
+                    &supported_token.mint,
+                    supported_token_claimable_amount_as_sol,
+                )?;
+
+                // move locked amount to withdrawal reserved amount
+                supported_token
+                    .unlock_token_to_withdrawal_reserved(supported_token_claimable_amount)?;
+
+                Ok(if supported_token_claimable_amount > 0 {
+                    Some(ClaimableToken::new(
+                        supported_token.mint,
+                        supported_token.program,
+                        supported_token_claimable_amount,
+                    ))
+                } else {
+                    None
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .filter_map(|x| x)
+            .collect::<Vec<_>>();
+
+        // examine the value of the ticket; there can be cutting for the amount of [claimable_tokens.len()] lamports at maximum during evaluation.
+        require_gte!(
+            normalized_token_amount_as_sol,
+            claimable_tokens_value_as_sol
+        );
+        require_gte!(
+            claimable_tokens.len() as u64,
+            normalized_token_amount_as_sol - claimable_tokens_value_as_sol
+        );
+
+        // finalize the ticket state.
+        withdrawal_ticket.set_claimable_tokens(
+            normalized_token_amount,
+            claimable_tokens,
+            self.current_timestamp,
+        )?;
+
+        withdrawal_ticket.exit(&crate::ID)?;
+
+        // burn given normalized token amount
+        anchor_spl::token_interface::burn(
+            CpiContext::new(
+                self.normalized_token_program.to_account_info(),
+                anchor_spl::token_interface::Burn {
+                    mint: self.normalized_token_mint.to_account_info(),
+                    from: from_normalized_token_account.to_account_info(),
+                    authority: from_normalized_token_account_signer.to_account_info(),
+                },
+            ),
+            normalized_token_amount,
+        )?;
+
+        // sync pool account data and pricing information
+        self.normalized_token_pool_account
+            .reload_normalized_token_supply(self.normalized_token_mint)?;
+
+        self.update_asset_values(pricing_service)?;
+
+        Ok(())
+    }
+
+    pub fn process_claim_withdrawal_ticket(
+        &mut self,
+        withdrawal_ticket: &mut Account<'info, NormalizedTokenWithdrawalTicketAccount>,
+        pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        to_rent_lamports_account: &UncheckedAccount<'info>,
+
+        supported_token_mint: &InterfaceAccount<'info, Mint>,
+        supported_token_program: &Interface<'info, TokenInterface>,
+
+        withdrawal_authority_signer: &Signer<'info>,
+    ) -> Result<()> {
+        withdrawal_ticket.update_if_needed();
+        require!(
+            withdrawal_ticket.is_latest_version(),
+            ErrorCode::InvalidDataVersionError
+        );
+        require_keys_eq!(
+            withdrawal_ticket.normalized_token_pool,
+            self.normalized_token_pool_account.key()
+        );
+        require_keys_eq!(
+            withdrawal_ticket.withdrawal_authority,
+            withdrawal_authority_signer.key()
+        );
+
+        // transfer claimable supported token
+        let claimable_token =
+            withdrawal_ticket.get_claimable_token_mut(&supported_token_mint.key())?;
+
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                supported_token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: pool_supported_token_account.to_account_info(),
+                    mint: supported_token_mint.to_account_info(),
+                    to: to_supported_token_account.to_account_info(),
+                    authority: self.normalized_token_pool_account.to_account_info(),
+                },
+                &[self.normalized_token_pool_account.get_seeds().as_ref()],
+            ),
+            claimable_token.claimable_amount,
+            supported_token_mint.decimals,
+        )?;
+
+        // mark the token amount as settled.
+        let supported_token = self
+            .normalized_token_pool_account
+            .get_supported_token_mut(&supported_token_mint.key())?;
+        supported_token.settle_withdrawal_reserved_token(claimable_token.claimable_amount)?;
+        claimable_token.settle()?;
+        withdrawal_ticket.exit(&crate::ID)?;
+
+        // close the ticket account after all tokens are settled.
+        if withdrawal_ticket.is_settled() {
+            withdrawal_ticket.close(to_rent_lamports_account.to_account_info())?;
+        }
+
+        Ok(())
+    }
+
+    // create a pricing service and register pool assets' value resolver
+    pub(super) fn new_pricing_service(
+        &mut self,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<PricingService<'info>> {
+        let mut pricing_service = PricingService::new(pricing_sources)?
+            .register_token_pricing_source_account(
+                self.normalized_token_pool_account.as_account_info(),
+            );
+
+        // try to update current underlying assets' price
+        self.update_asset_values(&mut pricing_service)?;
+
+        Ok(pricing_service)
     }
 
     fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
