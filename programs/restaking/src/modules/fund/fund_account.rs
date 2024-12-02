@@ -301,7 +301,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
     }
 
-    pub(super) fn set_sol_accumulated_deposit_amount(&mut self, sol_amount: u64) -> Result<()> {
+    pub(super) fn set_sol_accumulated_deposit_capacity_amount(&mut self, sol_amount: u64) -> Result<()> {
         require_gte!(
             sol_amount,
             self.sol_accumulated_deposit_amount,
@@ -361,13 +361,6 @@ impl FundAccount {
         ));
 
         Ok(())
-    }
-
-    pub(super) fn get_restaking_vault_mut(&mut self, vault: &Pubkey) -> Result<&mut RestakingVault>{
-        self.restaking_vaults
-            .iter_mut()
-            .find(|info| info.vault == *vault)
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedRestakingVaultError))
     }
 
     pub(super) fn add_restaking_vault(
@@ -556,7 +549,7 @@ mod tests {
         assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
-        fund.set_sol_accumulated_deposit_amount(0).unwrap_err();
+        fund.set_sol_accumulated_deposit_capacity_amount(0).unwrap_err();
 
         let interval_seconds = 60;
         fund.withdrawal
@@ -628,7 +621,7 @@ mod tests {
     #[test]
     fn test_deposit_sol() {
         let mut fund = create_initialized_fund_account();
-        fund.set_sol_accumulated_deposit_amount(100_000).unwrap();
+        fund.set_sol_accumulated_deposit_capacity_amount(100_000).unwrap();
 
         assert_eq!(fund.sol_operation_reserved_amount, 0);
         assert_eq!(fund.sol_accumulated_deposit_amount, 0);

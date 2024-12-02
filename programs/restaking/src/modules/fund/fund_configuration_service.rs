@@ -217,7 +217,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         withdrawal_enabled: bool,
     ) -> Result<()> {
         self.fund_account
-            .set_sol_accumulated_deposit_amount(sol_accumulated_deposit_amount)?;
+            .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
         self.fund_account
             .withdrawal
             .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
