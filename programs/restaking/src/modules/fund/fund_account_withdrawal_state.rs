@@ -207,28 +207,26 @@ impl WithdrawalState {
         self.queued_batches.push(old_pending_batch);
     }
 
-    pub fn dequeue_processible_batches(
+    pub fn dequeue_batches(
         &mut self,
-        mut available_receipt_token_amount_to_process: u64,
+        mut count: usize,
         current_timestamp: i64,
     ) -> Vec<WithdrawalBatch> {
-        let mut count = 0;
-        for batch in &self.queued_batches {
-            if batch.receipt_token_amount <= available_receipt_token_amount_to_process {
-                count += 1;
-                available_receipt_token_amount_to_process -= batch.receipt_token_amount;
-                self.num_requests_in_progress -= batch.num_requests;
-            } else {
-                break;
-            }
+        if count == 0 {
+            return vec![];
         }
 
-        if count > 0 {
-            self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
-            self.last_batch_processed_at = Some(current_timestamp);
-        }
-        let remaining = self.queued_batches.split_off(count);
-        std::mem::replace(&mut self.queued_batches, remaining)
+        count = count.min(self.queued_batches.len());
+        self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
+        self.last_batch_processed_at = Some(current_timestamp);
+        let remaining_batches = self.queued_batches.split_off(count);
+        let processible_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
+
+        processible_batches
+            .iter()
+            .for_each(|batch| self.num_requests_in_progress -= batch.num_requests);
+
+        processible_batches
     }
 }
 

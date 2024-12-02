@@ -356,15 +356,54 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
+
         // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
-        let available_receipt_token_amount_to_process = pricing_service.get_sol_amount_as_token(
-            &self.receipt_token_mint.key(),
-            self.fund_account.sol_operation_reserved_amount,
-        )?;
-        let processible_batches = self.fund_account.withdrawal.dequeue_processible_batches(
-            available_receipt_token_amount_to_process,
-            self.current_timestamp,
-        );
+        let mut operation_reserved_amount = self.fund_account.sol_operation_reserved_amount;
+        // TODO v0.3/operation: later use sol_operation_receivable_expense in fund account
+        let mut operation_receivable_expense = 0;
+        let mut withdrawal_receipt_token_amount = 0;
+        let mut withdrawal_user_amount = 0;
+        let mut withdrawal_fee_amount = 0;
+        let mut available_treasury_balance = treasury_account.lamports();
+
+        let mut count = 0;
+
+        for batch in &self.fund_account.withdrawal.queued_batches {
+            let sol_amount = pricing_service.get_token_amount_as_sol(
+                &self.receipt_token_mint.key(),
+                batch.receipt_token_amount,
+            )?;
+            let sol_fee_amount = self
+                .fund_account
+                .withdrawal
+                .get_sol_fee_amount(sol_amount)?;
+            let sol_user_amount = sol_amount - sol_fee_amount;
+
+            let next_withdrawal_user_amount = withdrawal_user_amount + sol_user_amount;
+            let next_withdrawal_fee_amount = withdrawal_fee_amount + sol_fee_amount;
+
+            if operation_reserved_amount + operation_receivable_expense
+                <= next_withdrawal_user_amount + next_withdrawal_fee_amount
+            {
+                break;
+            }
+
+            if operation_reserved_amount >= next_withdrawal_user_amount
+                || next_withdrawal_user_amount - operation_reserved_amount
+                    >= available_treasury_balance
+            {
+                withdrawal_receipt_token_amount += batch.receipt_token_amount;
+                withdrawal_user_amount = next_withdrawal_user_amount;
+                withdrawal_fee_amount = next_withdrawal_fee_amount;
+                count += 1;
+                continue;
+            }
+        }
+
+        let processible_batches = self
+            .fund_account
+            .withdrawal
+            .dequeue_batches(count, self.current_timestamp);
 
         #[cfg(debug_assertions)]
         require_gte!(
@@ -372,28 +411,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             processible_batches.len(),
         );
 
-        let receipt_token_amount_to_burn: u64 = processible_batches
-            .iter()
-            .map(|batch| batch.receipt_token_amount)
-            .sum();
-
-        anchor_spl::token_2022::burn(
-            CpiContext::new_with_signer(
-                receipt_token_program.to_account_info(),
-                anchor_spl::token_2022::Burn {
-                    mint: self.receipt_token_mint.to_account_info(),
-                    from: receipt_token_lock_account.to_account_info(),
-                    authority: self.fund_account.to_account_info(),
-                },
-                &[self.fund_account.get_seeds().as_ref()],
-            ),
-            receipt_token_amount_to_burn,
-        )?;
-
-        self.fund_account
-            .reload_receipt_token_supply(self.receipt_token_mint)?;
-
-        let mut sol_withdrawal_fee = 0;
         for (ticket, batch) in uninitialized_batch_withdrawal_tickets
             .iter()
             .cloned()
@@ -436,29 +453,49 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 sol_amount,
                 self.current_timestamp,
             )?;
-            sol_withdrawal_fee += ticket.sol_fee_amount;
 
             ticket.exit(&crate::ID)?;
         }
 
-        // transfer fee to treasury
-        // TODO v0.3/operation: use sol_operation_receivable_expense in fund account
-        let mut sol_operation_receivable_expense = 0;
-        let sol_to_transfer = sol_withdrawal_fee.saturating_sub(sol_operation_receivable_expense);
-        sol_operation_receivable_expense -= sol_withdrawal_fee.saturating_sub(sol_to_transfer);
+        anchor_spl::token_2022::burn(
+            CpiContext::new_with_signer(
+                receipt_token_program.to_account_info(),
+                anchor_spl::token_2022::Burn {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    from: receipt_token_lock_account.to_account_info(),
+                    authority: self.fund_account.to_account_info(),
+                },
+                &[self.fund_account.get_seeds().as_ref()],
+            ),
+            withdrawal_receipt_token_amount,
+        )?;
 
-        if sol_to_transfer > 0 {
+        self.fund_account
+            .reload_receipt_token_supply(self.receipt_token_mint)?;
+
+        if operation_reserved_amount < withdrawal_user_amount {
             anchor_lang::system_program::transfer(
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
-                        from: fund_reserve_account.clone(),
-                        to: treasury_account.clone(),
+                        from: treasury_account.clone(),
+                        to: fund_reserve_account.clone(),
                     },
-                    &[&self.fund_account.get_reserve_account_seeds()],
+                    &[&self.fund_account.get_treasury_account_seeds()],
                 ),
-                sol_to_transfer,
+                withdrawal_user_amount - operation_reserved_amount,
             )?;
+            withdrawal_fee_amount += withdrawal_user_amount - operation_reserved_amount;
+
+            self.fund_account.sol_operation_reserved_amount = 0;
+            // TODO v0.3/operation: use operation_receivable_expense in fund account
+            operation_receivable_expense -= withdrawal_fee_amount;
+        } else {
+            self.fund_account.sol_operation_reserved_amount -= withdrawal_user_amount;
+            operation_reserved_amount -= withdrawal_user_amount;
+
+            // 1. use operation_receivable_expense, pay fee
+            // 2. if needed, use operation_reserved_amount, pay fee (need CPI)
         }
 
         Ok(())
