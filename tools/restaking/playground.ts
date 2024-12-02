@@ -65,23 +65,22 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return [
             () => this.runAdminInitializeFragSOLTokenMint(), // 0
             () => this.runAdminInitializeFundAccounts(), // 1
-            () => this.runAdminUpdateFundAccounts(),
-            () => this.runAdminInitializeOrUpdateRewardAccounts(), // 2
-            () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 3
-            () => this.runFundManagerInitializeFundConfigurations(), // 4
-            () => this.runFundManagerUpdateFundConfigurations(), // 5
-            () => this.runFundManagerInitializeRewardPools(), // 6
+            () => this.runAdminUpdateFundAccounts(), // 2
+            () => this.runAdminInitializeOrUpdateRewardAccounts(), // 3
+            () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 4
+            () => this.runFundManagerInitializeFundConfigurations(), // 5
+            () => this.runFundManagerUpdateFundConfigurations(), // 6
+            () => this.runFundManagerInitializeRewardPools(), // 7
             () =>
                 this.runFundManagerSettleReward({
-                    // 7
                     poolName: "bonus",
                     rewardName: "fPoint",
                     amount: new BN(0),
-                }),
-            () => this.runAdminInitializeNSOLTokenMint(), // 8
-            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 9
-            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10
-            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11
+                }), // 8
+            () => this.runAdminInitializeNSOLTokenMint(), // 9
+            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 10
+            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 11
+            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 12
         ];
     }
 
@@ -99,23 +98,53 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             payer,
             recentSlot: this.isLocalnet ? 0 : await this.connection.getSlot(),
         });
-        const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
+        await this.run({
+            instructions: [createIx],
+            signerNames: ['ADMIN']
+        });
+
+        let addresses = Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[];
+        console.log(`addresses ${addresses.length}:`, addresses);
+        let addressList = [], addressLists = [];
+        addresses.forEach((address, index) => {
+            addressList.push(address);
+            if (index != 0 && index % 32 == 0 || index == addresses.length - 1) {
+                addressLists.push(addressList);
+                addressList = []; // initialize a new chunk
+            }
+        });
+        console.log(`addressLists len(${addressLists.length}):`, addressLists);
+        const updateIxs = addressLists.map(addressList => web3.AddressLookupTableProgram.extendLookupTable({
             lookupTable,
             authority,
             payer,
-            addresses: [
-                // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
-                ...Object.values(this.knownAddress).filter(a => typeof a != 'function') as web3.PublicKey[],
-            ],
-        });
+            addresses: addressList as web3.PublicKey[],
+        }));
+        // const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
+        //     lookupTable,
+        //     authority,
+        //     payer,
+        //     addresses: [
+        //         // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
+        //         ...Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[],
+        //     ],
+        // });
 
-        await this.run({
-            instructions: [createIx, updateIx],
-            signerNames: ['ADMIN'],
-        });
+        for (let updateIx of updateIxs) {
+            await this.run({
+                instructions: [updateIx],
+                signerNames: ['ADMIN'],
+            });
+        }
+
+        // await this.run({
+        //     instructions: [createIx, ...updateIxs],
+        //     signerNames: ['ADMIN'],
+        // });
         this._knownAddressLookupTableAddress = lookupTable;
         logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
     }
+
     private _knownAddressLookupTableAddress?: web3.PublicKey;
 
     public get knownAddress() {
@@ -177,6 +206,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
         const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, nSOLTokenPool, true, this.supportedTokenMetadata[symbol].program);
+
+        // staking
+        const fundStakeAccounts = [...Array(5).keys()].map((i) =>
+            web3.PublicKey.findProgramAddressSync(
+                [
+                    fragSOLTokenMint.toBuffer(),
+                    this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
+                    Buffer.from(i.toString()),
+                ],
+                this.programId,
+            )[0]
+        );
+        // console.log(`fundStakeAccounts:`, fundStakeAccounts);
 
         // Restaking
         const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
@@ -251,6 +293,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserReward,
             fragSOLSupportedTokenAccount,
             userSupportedTokenAccount,
+            fundStakeAccounts,
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
             fragSOLJitoVaultProgramFeeWalletTokenAccount,
@@ -430,7 +473,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     };
                 }
 
-                return { instructions: [], signers: [] };
+                return {instructions: [], signers: []};
             })
         );
 
@@ -892,17 +935,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice("jito VRT account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundJitoVRTAccount.toString());
 
         await spl.getOrCreateAssociatedTokenAccount(
-                this.connection,
-                this.wallet,
-                this.knownAddress.fragSOLJitoVRTMint,
-                this.knownAddress.jitoVaultProgramFeeWallet,
-                true,
-                "confirmed",
-                {
-                    skipPreflight: false,
-                    commitment: "confirmed",
-                },
-            )
+            this.connection,
+            this.wallet,
+            this.knownAddress.fragSOLJitoVRTMint,
+            this.knownAddress.jitoVaultProgramFeeWallet,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+        )
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount};
     }
 
@@ -970,7 +1013,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
+            solCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL / 1_000)),
             solWithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalEnabled: this.isMainnet ? false : true,
             withdrawalBatchProcessingThresholdAmount: new BN(this.isMainnet ? 0 : 0),
@@ -1060,11 +1103,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         v.program,
                     ),
                     this.program.methods
-                        .fundManagerAddNormalizedTokenPoolSupportedToken()
+                        .fundManagerAddNormalizedTokenPoolSupportedToken(
+                            v.pricingSource,
+                        )
                         .accounts({
                             supportedTokenMint: v.mint,
                             supportedTokenProgram: v.program,
                         })
+                        .remainingAccounts(this.pricingSourceAccounts)
                         .instruction(),
                 ];
             }),
@@ -1088,7 +1134,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     token.program,
                 ),
                 this.program.methods
-                    .fundManagerAddNormalizedTokenPoolSupportedToken()
+                    .fundManagerAddNormalizedTokenPoolSupportedToken(
+                        token.pricingSource,
+                    )
                     .accounts({
                         supportedTokenMint: token.mint,
                         supportedTokenProgram: token.program,
@@ -1596,11 +1644,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
-            const { event, error } = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null);
+            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit);
             txCount++;
             logger.debug(`operator ran tx#${txCount}`);
             if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
-                return { event, error }
+                return {event, error}
             }
         }
     }

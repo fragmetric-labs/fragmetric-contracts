@@ -189,7 +189,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
         let mut operation_state = std::mem::take(&mut self.fund_account.operation);
-
         operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
         let mut execution_count = 0;

@@ -99,7 +99,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
             &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.normalized_token_mint,
+            &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
         .process_initialize_normalized_token_pool_account(
@@ -113,7 +113,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
             &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.normalized_token_mint,
+            &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
         .process_update_normalized_token_pool_account_if_needed()
@@ -268,18 +268,27 @@ pub mod restaking {
     // FundManagerNormalizedTokenPoolSupportedTokenContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_add_normalized_token_pool_supported_token(
-        ctx: Context<FundManagerNormalizedTokenPoolSupportedTokenContext>,
+    pub fn fund_manager_add_normalized_token_pool_supported_token<'info>(
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            FundManagerNormalizedTokenPoolSupportedTokenContext<'info>,
+        >,
+        pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolConfigurationService::new(
             &mut ctx.accounts.normalized_token_pool_account,
-            &ctx.accounts.normalized_token_mint,
+            &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
         .process_add_supported_token(
-            &ctx.accounts.supported_token_lock_account,
+            &ctx.accounts.normalized_token_pool_supported_token_account,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
+            pricing_source,
+            ctx.remaining_accounts,
         )
     }
 
@@ -427,6 +436,65 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
         )?
         .process_update_reward_pools()
+    }
+
+    ////////////////////////////////////////////
+    // SlahsherNormalizedTokenWithdrawalTicketInitialContext
+    ////////////////////////////////////////////
+
+    // TODO: untested
+    pub fn slasher_initialize_normalized_token_withdrawal_ticket<'info>(
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            SlasherNormalizedTokenWithdrawalTicketInitialContext<'info>,
+        >,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+        .process_initialize_withdrawal_ticket(
+            &mut ctx
+                .accounts
+                .slasher_normalized_token_withdrawal_ticket_account,
+            ctx.bumps.slasher_normalized_token_withdrawal_ticket_account,
+            &mut ctx.accounts.slasher_normalized_token_account,
+            &mut ctx.accounts.slasher,
+            ctx.remaining_accounts,
+        )
+    }
+
+    ////////////////////////////////////////////
+    // SlahsherNormalizedTokenWithdrawalTicketContext
+    ////////////////////////////////////////////
+
+    // TODO: untested
+    pub fn slasher_claim_normalized_token_withdrawal_ticket(
+        ctx: Context<SlasherNormalizedTokenWithdrawalTicketContext>,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+            .process_claim_withdrawal_ticket(
+                &mut ctx
+                    .accounts
+                    .slasher_normalized_token_withdrawal_ticket_account,
+
+                &mut ctx.accounts.normalized_token_pool_supported_token_account,
+                &mut ctx.accounts.destination_supported_token_account,
+                &mut ctx.accounts.destination_rent_lamports_account,
+
+                &ctx.accounts.supported_token_mint,
+                &ctx.accounts.supported_token_program,
+
+                &ctx.accounts.slasher,
+            )
     }
 
     ////////////////////////////////////////////
