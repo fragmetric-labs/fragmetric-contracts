@@ -16,7 +16,7 @@ use super::*;
 /// * v1: Initial Version
 /// * v2: Change reserve fund structure
 /// * v3: Remove `sol_fee_income_reserved_amount` field
-/// * v4: Add `receipt_token_program`, .., `one_receipt_token_as_sol`, `restaking_vaults`, `operation` fields
+/// * v4: Add `receipt_token_program`, .., `one_receipt_token_as_sol`, `normalized_token`, `restaking_vaults`, `operation` fields
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
@@ -114,6 +114,10 @@ impl FundAccount {
                 Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
                     .1;
 
+            for supported_token in &mut self.supported_tokens {
+                supported_token.operating_amount = 0;
+            }
+
             self.data_version = 4;
         }
     }
@@ -147,15 +151,17 @@ impl FundAccount {
 
     pub const RESERVE_SEED: &'static [u8] = b"fund_reserve";
 
-    fn get_reserve_account_seed_phrase(&self) -> Vec<&[u8]> {
-        vec![Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
+    #[inline(always)]
+    fn get_reserve_account_seed_phrase(&self) -> [&[u8]; 2] {
+        [Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_reserve_account_seed_phrase().to_vec();
-        signer_seeds.push(std::slice::from_ref(&self.reserve_account_bump));
-        signer_seeds
+        let mut seeds = Vec::with_capacity(3);
+        seeds.extend(self.get_reserve_account_seed_phrase());
+        seeds.push(std::slice::from_ref(&self.reserve_account_bump));
+        seeds
     }
 
     pub(super) fn get_reserve_account_address(&self) -> Result<Pubkey> {
@@ -167,14 +173,16 @@ impl FundAccount {
 
     pub const TREASURY_SEED: &'static [u8] = b"fund_treasury";
 
-    fn get_treasury_account_seed_phrase(&self) -> Vec<&[u8]> {
-        vec![Self::TREASURY_SEED, self.receipt_token_mint.as_ref()]
+    #[inline(always)]
+    fn get_treasury_account_seed_phrase(&self) -> [&[u8]; 2] {
+        [Self::TREASURY_SEED, self.receipt_token_mint.as_ref()]
     }
 
     pub(super) fn get_treasury_account_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_treasury_account_seed_phrase().to_vec();
-        signer_seeds.push(std::slice::from_ref(&self.treasury_account_bump));
-        signer_seeds
+        let mut seeds = Vec::with_capacity(3);
+        seeds.extend(self.get_treasury_account_seed_phrase());
+        seeds.push(std::slice::from_ref(&self.treasury_account_bump));
+        seeds
     }
 
     pub(super) fn get_treasury_account_address(&self) -> Result<Pubkey> {
@@ -197,61 +205,53 @@ impl FundAccount {
 
     pub const UNSTAKING_TICKET_SEED: &'static [u8] = b"unstaking_ticket";
 
-    fn get_unstaking_ticket_account_seed_phrase<'this>(
-        &'this self,
-        pool_account: &'this Pubkey,
+    #[inline(always)]
+    fn get_unstaking_ticket_account_seed_phrase(
+        &self,
+        pool_account: &Pubkey,
         index: u8,
-    ) -> Vec<Vec<u8>> {
-        // Vec<Vec<u8>>
-        // ) -> [Box<dyn AsRef<[u8]> + 'this>; 4] {
-        let mut ret = Vec::with_capacity(5);
-        ret.extend([
+    ) -> [Vec<u8>; 4] {
+        [
             Self::UNSTAKING_TICKET_SEED.to_vec(),
             self.receipt_token_mint.as_ref().to_vec(),
             pool_account.as_ref().to_vec(),
             vec![index],
-        ]);
-        ret
+        ]
     }
 
     /// usage:
     /// ```rs
     /// let seeds: Vec<Vec<u8>> = get_unstaking_ticket_account_seeds();
-    /// let seeds_ref: &[&[u8]] = seeds.iter().map(|word| word.as_slice()).collect::<Vec<_>>().as_slice();
+    /// let seeds_ref: &[&[u8]] = seeds.iter().map(Vec::as_slice).collect::<Vec<_>>().as_slice();
     /// // ...
     /// ctx.with_signer_seeds(&[seeds_ref])
     /// ```
-    pub(super) fn get_unstaking_ticket_account_seeds<'this>(
-        &'this self,
-        pool_account: &'this Pubkey,
+    pub(super) fn get_unstaking_ticket_account_seeds(
+        &self,
+        pool_account: &Pubkey,
         index: u8,
     ) -> Vec<Vec<u8>> {
-        let mut seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
+        let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
         let bump = Pubkey::find_program_address(
-            seed_phrase
-                .iter()
-                .map(|word| word.as_slice())
-                .collect::<Vec<_>>()
-                .as_slice(),
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
         .1;
 
-        seed_phrase.push(vec![bump]);
-        seed_phrase
+        let mut seeds = Vec::with_capacity(5);
+        seeds.extend(seed_phrase);
+        seeds.push(vec![bump]);
+        seeds
     }
 
-    pub(super) fn find_unstaking_ticket_account_address<'this>(
-        &'this self,
-        pool_account: &'this Pubkey,
+    pub(super) fn find_unstaking_ticket_account_address(
+        &self,
+        pool_account: &Pubkey,
         index: u8,
     ) -> (Pubkey, u8) {
+        let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
         Pubkey::find_program_address(
-            self.get_unstaking_ticket_account_seed_phrase(pool_account, index)
-                .iter()
-                .map(|word| word.as_slice())
-                .collect::<Vec<_>>()
-                .as_slice(),
+            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
     }
@@ -425,6 +425,29 @@ impl FundAccount {
 
         Ok(())
     }
+
+    pub(super) fn set_batch_withdrawal_ticket(
+        &mut self,
+        ticket: &mut Account<FundBatchWithdrawalTicketAccount>,
+        batch: WithdrawalBatch,
+        sol_amount: u64,
+        current_timestamp: i64,
+    ) -> Result<()> {
+        let sol_fee_amount = self.withdrawal.get_sol_fee_amount(sol_amount)?;
+        let sol_user_amount = sol_amount - sol_fee_amount;
+
+        self.sol_operation_reserved_amount -= sol_amount;
+        self.withdrawal.sol_withdrawal_reserved_amount += sol_user_amount;
+        ticket.set_withdrawal_amount(
+            batch.num_requests,
+            batch.receipt_token_amount,
+            sol_user_amount,
+            sol_fee_amount,
+            current_timestamp,
+        );
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -435,7 +458,7 @@ mod tests {
 
     #[test]
     fn size_fund_account() {
-        println!("fund account init size: {}", FundAccount::INIT_SPACE);
+        println!("\nfund account init size: {}", FundAccount::INIT_SPACE);
     }
 
     fn create_initialized_fund_account() -> FundAccount {
@@ -450,33 +473,20 @@ mod tests {
         let mut fund = create_initialized_fund_account();
 
         assert_eq!(fund.sol_capacity_amount, 0);
-        assert_eq!(fund.withdrawal.get_sol_withdrawal_fee_rate_as_f32(), 0.);
-        assert!(fund.withdrawal.withdrawal_enabled_flag);
-        assert_eq!(fund.withdrawal.batch_processing_threshold_amount, 0);
-        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
+        assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
+        assert!(fund.withdrawal.enabled);
+        assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
         fund.set_sol_capacity_amount(0).unwrap_err();
 
-        let new_amount = 10;
-        let new_duration = 10;
+        let interval_seconds = 60;
         fund.withdrawal
-            .set_batch_processing_threshold(Some(new_amount), None);
+            .set_batch_threshold(interval_seconds)
+            .unwrap();
         assert_eq!(
-            fund.withdrawal.batch_processing_threshold_amount,
-            new_amount
-        );
-        assert_eq!(fund.withdrawal.batch_processing_threshold_duration, 0);
-
-        fund.withdrawal
-            .set_batch_processing_threshold(None, Some(new_duration));
-        assert_eq!(
-            fund.withdrawal.batch_processing_threshold_amount,
-            new_amount
-        );
-        assert_eq!(
-            fund.withdrawal.batch_processing_threshold_duration,
-            new_duration
+            fund.withdrawal.batch_threshold_interval_seconds,
+            interval_seconds
         );
     }
 

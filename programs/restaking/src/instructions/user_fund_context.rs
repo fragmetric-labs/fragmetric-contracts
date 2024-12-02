@@ -112,13 +112,6 @@ pub struct UserFundContext<'info> {
 
     #[account(
         mut,
-        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
-        bump,
-    )]
-    pub fund_treasury_account: SystemAccount<'info>,
-
-    #[account(
-        mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,
@@ -148,4 +141,79 @@ pub struct UserFundContext<'info> {
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
     pub instructions_sysvar: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct UserFundWithdrawContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(address = FRAGSOL_MINT_ADDRESS)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub fund_account: Box<Account<'info, FundAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundBatchWithdrawalTicketAccount::SEED, receipt_token_mint.key().as_ref(), &fund_batch_withdrawal_ticket_account.batch_id.to_le_bytes()],
+        bump = fund_batch_withdrawal_ticket_account.get_bump(),
+        has_one = receipt_token_mint,
+    )]
+    pub fund_batch_withdrawal_ticket_account: Box<Account<'info, FundBatchWithdrawalTicketAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_treasury_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        has_one = user,
+    )]
+    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+
+    #[account(
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+    )]
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

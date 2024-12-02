@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::accessor::amount;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
@@ -75,10 +76,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         self.emit_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_withdrawal_enabled_flag(&mut self, enabled: bool) -> Result<()> {
-        self.fund_account
-            .withdrawal
-            .set_withdrawal_enabled_flag(enabled);
+    pub fn process_update_withdrawal_enabled(&mut self, enabled: bool) -> Result<()> {
+        self.fund_account.withdrawal.set_withdrawal_enabled(enabled);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -89,19 +88,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     ) -> Result<()> {
         self.fund_account
             .withdrawal
-            .set_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)?;
+            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate)?;
 
         self.emit_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_batch_processing_threshold(
-        &mut self,
-        amount: Option<u64>,
-        duration: Option<i64>,
-    ) -> Result<()> {
+    pub fn process_update_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
         self.fund_account
             .withdrawal
-            .set_batch_processing_threshold(amount, duration);
+            .set_batch_threshold(interval_seconds)?;
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -222,10 +217,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_receipt_token_program.key()
         );
 
-        require_keys_eq!(
-            *vault.to_account_info().owner,
-            vault_program.key()
-        );
+        require_keys_eq!(*vault.to_account_info().owner, vault_program.key());
 
         self.fund_account.add_restaking_vault(
             vault.key(),

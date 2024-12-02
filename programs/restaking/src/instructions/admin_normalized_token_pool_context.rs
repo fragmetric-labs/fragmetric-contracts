@@ -46,7 +46,7 @@ pub struct AdminNormalizedTokenPoolUpdateContext<'info> {
     pub system_program: Program<'info, System>,
 
     pub normalized_token_program: Program<'info, Token>,
-    
+
     #[account(address = NSOL_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 

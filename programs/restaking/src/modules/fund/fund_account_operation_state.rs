@@ -7,10 +7,10 @@ use super::command::*;
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
-pub struct OperationState {
+pub(super) struct OperationState {
     updated_at: i64,
     expired_at: i64,
-    pub(super) next_sequence: u16,
+    pub next_sequence: u16,
     next_command: Option<OperationCommandEntry>,
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
@@ -19,7 +19,7 @@ pub struct OperationState {
 }
 
 impl OperationState {
-    pub(super) fn migrate(&mut self, fund_account_data_version: u16) {
+    pub fn migrate(&mut self, fund_account_data_version: u16) {
         if fund_account_data_version == 3 {
             self.updated_at = 0;
             self.expired_at = 0;
@@ -31,7 +31,7 @@ impl OperationState {
     }
 
     /// Initialize current operation command to `reset_command` or default.
-    pub(super) fn initialize_command_if_needed(
+    pub fn initialize_command_if_needed(
         &mut self,
         current_timestamp: i64,
         reset_command: Option<OperationCommandEntry>,
@@ -52,7 +52,7 @@ impl OperationState {
     }
 
     /// Sets next operation command and increment sequence number.
-    pub(super) fn set_command(
+    pub fn set_command(
         &mut self,
         mut command: Option<OperationCommandEntry>,
         current_timestamp: i64,
@@ -86,9 +86,7 @@ impl OperationState {
     }
 
     #[inline(always)]
-    pub(super) fn get_command(
-        &self,
-    ) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
+    pub fn get_command(&self) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
         self.next_command.as_ref().map(Into::into)
     }
 }

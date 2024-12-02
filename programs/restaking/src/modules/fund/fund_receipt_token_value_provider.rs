@@ -49,7 +49,8 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
             assets.push(Asset::TOKEN(
                 restaking_vault.receipt_token_mint,
                 Some(restaking_vault.receipt_token_pricing_source.clone()),
-                restaking_vault.receipt_token_operation_reserved_amount + restaking_vault.receipt_token_operating_amount,
+                restaking_vault.receipt_token_operation_reserved_amount
+                    + restaking_vault.receipt_token_operating_amount,
             ));
         }
 

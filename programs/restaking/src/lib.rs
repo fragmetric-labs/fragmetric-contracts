@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "idl-build", allow(unexpected_cfgs))]
 use anchor_lang::prelude::*;
 
 mod constants;
@@ -215,7 +216,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_withdrawal_enabled_flag(enabled)
+        .process_update_withdrawal_enabled(enabled)
     }
 
     pub fn fund_manager_update_sol_withdrawal_fee_rate(
@@ -231,14 +232,13 @@ pub mod restaking {
 
     pub fn fund_manager_update_batch_processing_threshold(
         ctx: Context<FundManagerFundContext>,
-        amount: Option<u64>,
-        duration: Option<i64>,
+        interval_seconds: i64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_batch_processing_threshold(amount, duration)
+        .process_update_batch_threshold(interval_seconds)
     }
 
     ////////////////////////////////////////////
@@ -403,6 +403,7 @@ pub mod restaking {
         )?
         .process_run(
             &ctx.accounts.operator,
+            &ctx.accounts.system_program,
             ctx.remaining_accounts,
             force_reset_command,
         )
@@ -594,7 +595,7 @@ pub mod restaking {
         .process_cancel_withdrawal_request(&mut ctx.accounts.receipt_token_lock_account, request_id)
     }
 
-    pub fn user_withdraw(ctx: Context<UserFundContext>, request_id: u64) -> Result<()> {
+    pub fn user_withdraw(ctx: Context<UserFundWithdrawContext>, request_id: u64) -> Result<()> {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
@@ -606,10 +607,9 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw(
+            &mut ctx.accounts.fund_batch_withdrawal_ticket_account,
             &ctx.accounts.fund_reserve_account,
-            ctx.bumps.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
-            &ctx.accounts.system_program,
             request_id,
         )
     }

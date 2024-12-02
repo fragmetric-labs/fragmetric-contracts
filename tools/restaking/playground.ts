@@ -65,22 +65,22 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return [
             () => this.runAdminInitializeFragSOLTokenMint(), // 0
             () => this.runAdminInitializeFundAccounts(), // 1
-            () => this.runAdminInitializeOrUpdateRewardAccounts(), // 2
-            () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 3
-            () => this.runFundManagerInitializeFundConfigurations(), // 4
-            () => this.runFundManagerUpdateFundConfigurations(), // 5
-            () => this.runFundManagerInitializeRewardPools(), // 6
+            () => this.runAdminUpdateFundAccounts(), // 2
+            () => this.runAdminInitializeOrUpdateRewardAccounts(), // 3
+            () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 4
+            () => this.runFundManagerInitializeFundConfigurations(), // 5
+            () => this.runFundManagerUpdateFundConfigurations(), // 6
+            () => this.runFundManagerInitializeRewardPools(), // 7
             () =>
                 this.runFundManagerSettleReward({
-                    // 7
                     poolName: "bonus",
                     rewardName: "fPoint",
                     amount: new BN(0),
-                }),
-            () => this.runAdminInitializeNSOLTokenMint(), // 8
-            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 9
-            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 10
-            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 11
+                }), // 8
+            () => this.runAdminInitializeNSOLTokenMint(), // 9
+            () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 10
+            () => this.runFundManagerInitializeNormalizeTokenPoolConfigurations(), // 11
+            () => this.runAdminInitializeJitoRestakingProtocolAccount(), // 12
         ];
     }
 

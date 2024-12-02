@@ -19,3 +19,6 @@ keypairs/**/*
 
 # test snapshots
 tests/restaking.snapshot.txt
+
+# rust dev environment
+rust-toolchain

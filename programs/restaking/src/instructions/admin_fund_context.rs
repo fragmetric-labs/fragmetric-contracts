@@ -21,7 +21,12 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(
+        mut,
+        address = FRAGSOL_MINT_ADDRESS,
+        mint::authority = admin,
+        constraint = receipt_token_mint.supply == 0,
+    )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -103,7 +108,6 @@ pub struct AdminFundNormalizedTokenAccountInitialContext<'info> {
     pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_pool_account.get_bump(),
         has_one = normalized_token_mint,

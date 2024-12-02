@@ -270,3 +270,89 @@ where
         unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
+
+pub trait SystemProgramExt<'info> {
+    fn create_account(
+        &self,
+        account_to_create: &AccountInfo<'info>,
+        account_to_create_seeds: &[&[u8]],
+        payer: &(impl ToAccountInfo<'info> + Key),
+        payer_seeds: &[&[u8]],
+        space: usize,
+    ) -> Result<()>;
+}
+
+impl<'info> SystemProgramExt<'info> for Program<'info, System> {
+    fn create_account(
+        &self,
+        account_to_create: &AccountInfo<'info>,
+        account_to_create_seeds: &[&[u8]],
+        payer: &(impl ToAccountInfo<'info> + Key),
+        payer_seeds: &[&[u8]],
+        space: usize,
+    ) -> Result<()> {
+        let rent = Rent::get()?;
+        let current_lamports = account_to_create.lamports();
+        if current_lamports == 0 {
+            anchor_lang::system_program::create_account(
+                CpiContext::new_with_signer(
+                    self.to_account_info(),
+                    anchor_lang::system_program::CreateAccount {
+                        from: payer.to_account_info(),
+                        to: account_to_create.clone(),
+                    },
+                    &[payer_seeds, account_to_create_seeds],
+                ),
+                rent.minimum_balance(space),
+                space as u64,
+                &crate::ID,
+            )?;
+        } else {
+            require_keys_neq!(
+                payer.key(),
+                account_to_create.key(),
+                ErrorCode::TryingToInitPayerAsProgramAccount
+            );
+
+            let required_lamports = rent
+                .minimum_balance(space)
+                .max(1)
+                .saturating_sub(current_lamports);
+            if required_lamports > 0 {
+                anchor_lang::system_program::transfer(
+                    CpiContext::new_with_signer(
+                        self.to_account_info(),
+                        anchor_lang::system_program::Transfer {
+                            from: payer.to_account_info(),
+                            to: account_to_create.clone(),
+                        },
+                        &[payer_seeds],
+                    ),
+                    required_lamports,
+                )?;
+            }
+            anchor_lang::system_program::allocate(
+                CpiContext::new_with_signer(
+                    self.to_account_info(),
+                    anchor_lang::system_program::Allocate {
+                        account_to_allocate: account_to_create.clone(),
+                    },
+                    &[account_to_create_seeds],
+                ),
+                space as u64,
+            )?;
+            anchor_lang::system_program::assign(
+                CpiContext::new_with_signer(
+                    self.to_account_info(),
+                    anchor_lang::system_program::Assign {
+                        account_to_assign: account_to_create.clone(),
+                    },
+                    &[account_to_create_seeds],
+                ),
+                &crate::ID,
+            )?;
+        }
+
+        Ok(())
+    }
+}

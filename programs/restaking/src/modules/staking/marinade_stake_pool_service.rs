@@ -5,8 +5,8 @@ use anchor_spl::{
 };
 use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
 
-use crate::errors;
 use crate::utils::AccountInfoExt;
+use crate::{errors, utils::SystemProgramExt};
 
 pub struct MarinadeStakePoolService<'info> {
     marinade_stake_pool_program: Program<'info, MarinadeFinance>,
@@ -133,7 +133,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         token_amount: u64,
     ) -> Result<u64> {
-        self.create_ticket_account(operator, new_ticket_account, new_ticket_account_seeds, rent)?;
+        self.create_ticket_account(operator, new_ticket_account, new_ticket_account_seeds)?;
 
         marinade_cpi::cpi::order_unstake(
             CpiContext::new_with_signer(
@@ -162,22 +162,14 @@ impl<'info> MarinadeStakePoolService<'info> {
         operator: &Signer<'info>,
         new_ticket_account: &AccountInfo<'info>,
         new_ticket_account_seeds: &[&[u8]],
-        rent: &AccountInfo<'info>,
     ) -> Result<()> {
         let space = 8 + std::mem::size_of::<TicketAccountData>();
-        let lamports = Rent::from_account_info(rent)?.minimum_balance(space);
-        anchor_lang::system_program::create_account(
-            CpiContext::new_with_signer(
-                self.system_program.to_account_info(),
-                anchor_lang::system_program::CreateAccount {
-                    from: operator.to_account_info(),
-                    to: new_ticket_account.to_account_info(),
-                },
-                &[new_ticket_account_seeds],
-            ),
-            lamports,
-            space as u64,
-            self.marinade_stake_pool_program.key,
+        self.system_program.create_account(
+            new_ticket_account,
+            new_ticket_account_seeds,
+            operator,
+            &[],
+            space,
         )
     }
 

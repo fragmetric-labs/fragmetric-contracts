@@ -36,6 +36,7 @@ pub struct OperationCommandContext<'info: 'a, 'a> {
     pub(super) operator: &'a Signer<'info>,
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
+    pub(super) system_program: &'a Program<'info, System>,
 }
 
 // enum to hold all command variants
