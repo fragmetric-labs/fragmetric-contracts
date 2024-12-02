@@ -336,7 +336,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub(super) fn process_withdrawal_batch(
         &mut self,
         operator: &Signer<'info>,
-        system_program: &AccountInfo<'info>,
+        system_program: &'info AccountInfo<'info>,
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
         fund_reserve_account: &AccountInfo<'info>,
@@ -399,31 +399,23 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .zip(processible_batches)
         {
             // create account
-            let space = 8 + FundBatchWithdrawalTicketAccount::INIT_SPACE;
-            let lamports = Rent::get()?.minimum_balance(space);
-            anchor_lang::system_program::create_account(
-                CpiContext::new_with_signer(
-                    system_program.clone(),
-                    anchor_lang::system_program::CreateAccount {
-                        from: operator.to_account_info(),
-                        to: ticket.clone(),
-                    },
-                    &[FundBatchWithdrawalTicketAccount::get_seeds(
+            let mut ticket = {
+                Program::try_from(system_program)?.create_account(
+                    ticket,
+                    FundBatchWithdrawalTicketAccount::get_seeds(
                         &self.receipt_token_mint.key(),
                         batch.batch_id,
                     )
                     .iter()
                     .map(Vec::as_slice)
                     .collect::<Vec<_>>()
-                    .as_slice()],
-                ),
-                lamports,
-                space as u64,
-                &crate::ID,
-            )?;
-
-            let mut ticket =
-                Account::<FundBatchWithdrawalTicketAccount>::try_from_unchecked(ticket)?;
+                    .as_slice(),
+                    operator,
+                    &[],
+                    8 + FundBatchWithdrawalTicketAccount::INIT_SPACE,
+                )?;
+                Account::<FundBatchWithdrawalTicketAccount>::try_from_unchecked(ticket)?
+            };
 
             let sol_amount = pricing_service.get_token_amount_as_sol(
                 &self.receipt_token_mint.key(),
