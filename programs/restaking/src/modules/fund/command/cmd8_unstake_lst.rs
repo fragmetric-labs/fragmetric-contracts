@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::errors;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
 use crate::utils::PDASeeds;
+use crate::{errors, modules::staking::AvailableWithdrawals};
 
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
@@ -12,7 +12,7 @@ pub struct UnstakeLSTCommand {
     #[max_len(10)]
     items: Vec<UnstakeLSTCommandItem>,
     state: UnstakeLSTCommandState,
-    #[max_len(10)]
+    #[max_len(5)]
     spl_withdraw_stake_items: Vec<SplWithdrawStakeItem>,
 }
 
@@ -50,6 +50,8 @@ pub enum UnstakeLSTCommandState {
     ReadPoolState,
     GetAvailableUnstakeAccount,
     Unstake,
+    // PrepareRequestUnstake, // 여기서 item에 남은 돈이 있다면, validator 다시 찾아서 RequestUnstake로
+    // RequestUnstake(#[max_len(10)] Vec<SplWithdrawStakeItem>),
     RequestUnstake,
 }
 
@@ -57,7 +59,7 @@ pub enum UnstakeLSTCommandState {
 pub struct SplWithdrawStakeItem {
     validator_stake_account: Pubkey,
     fund_stake_account: Pubkey, // pda
-    #[max_len(3, 32)] // there would be total 3 seeds, max bytes would be 32 bytes per seed
+    #[max_len(4, 32)] // there would be total 3 seeds, max bytes would be 32 bytes per seed
     fund_stake_account_signer_seeds: Vec<Vec<u8>>,
     token_amount: u64,
 }
@@ -139,8 +141,9 @@ impl SelfExecutable for UnstakeLSTCommand {
                             .map(|account| (*account.key, account.is_writable)),
                     );
 
-                    if let Some(available_withdrawals_from_reserve_or_validator) =
-                        available_withdrawals_from_reserve_or_validator
+                    if let AvailableWithdrawals::Validators(
+                        available_withdrawals_from_reserve_or_validator,
+                    ) = available_withdrawals_from_reserve_or_validator
                     {
                         require_neq!(
                             available_withdrawals_from_reserve_or_validator[0].0,
@@ -150,7 +153,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         command.state = UnstakeLSTCommandState::RequestUnstake;
 
                         let fund_stake_accounts: Vec<(Pubkey, bool, u8)> = available_withdrawals_from_reserve_or_validator.iter().enumerate().map(|(account_index, _)| {
-                            staking::SPLStakePoolService::find_fund_stake_accounts_for_withdraw_stake(&[pool_account.key.as_ref(), &[account_index as u8]])
+                            staking::SPLStakePoolService::find_fund_stake_accounts_for_withdraw_stake(&[item.mint.key().as_ref(), pool_account.key.as_ref(), &[account_index as u8]])
                         }).collect();
 
                         command.spl_withdraw_stake_items =
@@ -162,6 +165,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                         validator_stake_account,
                                         fund_stake_account: fund_stake_accounts[index].0,
                                         fund_stake_account_signer_seeds: vec![
+                                            item.mint.key().as_ref().to_vec(),
                                             pool_account.key.as_ref().to_vec(),
                                             vec![index as u8],
                                             vec![fund_stake_accounts[index].2],
@@ -312,6 +316,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 msg!("returned_sol_amount {}", returned_sol_amount);
 
                                 if command.spl_withdraw_stake_items.len() > 0 {
+                                    command.state = UnstakeLSTCommandState::RequestUnstake;
                                     return Ok(Some(
                                         command.with_required_accounts(required_accounts),
                                     ));

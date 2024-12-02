@@ -9,6 +9,21 @@ use anchor_spl::token_interface::TokenAccount;
 use spl_stake_pool::big_vec::BigVec;
 use spl_stake_pool::state::StakePool;
 
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
+pub enum AvailableWithdrawals {
+    Reserve,
+    Validators(Vec<(Pubkey, u64)>),
+}
+
+impl From<AvailableWithdrawals> for Option<Vec<(Pubkey, u64)>> {
+    fn from(value: AvailableWithdrawals) -> Self {
+        match value {
+            AvailableWithdrawals::Reserve => None,
+            AvailableWithdrawals::Validators(v) => Some(v),
+        }
+    }
+}
+
 pub struct SPLStakePoolService<'info: 'a, 'a> {
     pub spl_stake_pool_program: &'a AccountInfo<'info>,
     pub pool_account: &'a AccountInfo<'info>,
@@ -45,16 +60,15 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         Ok(pool_account)
     }
 
-    pub(super) fn deserialize_reserve_stake_account(
-        reserve_stake_account_info: &'a AccountInfo<'info>,
+    pub(super) fn deserialize_stake_account(
+        stake_account_info: &'a AccountInfo<'info>,
     ) -> Result<StakeStateV2> {
-        let reserve_stake_account_info_narrowed =
-            unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(reserve_stake_account_info) };
-        let reserve_stake_account = StakeStateV2::deserialize(
-            &mut &**reserve_stake_account_info_narrowed.try_borrow_data()?,
-        )
-        .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
-        Ok(reserve_stake_account)
+        let stake_account_info_narrowed =
+            unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(stake_account_info) };
+        let stake_account =
+            StakeStateV2::deserialize(&mut &**stake_account_info_narrowed.try_borrow_data()?)
+                .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
+        Ok(stake_account)
     }
 
     fn find_accounts_for_new(
@@ -190,7 +204,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         reserve_stake_account_info: &'a AccountInfo<'info>,
         validator_list_account_info: &'a AccountInfo<'info>,
         pool_tokens: u64,
-    ) -> Result<Option<Vec<(Pubkey, u64)>>> {
+    ) -> Result<AvailableWithdrawals> {
         // return Vec<(where to withdraw account, how much to withdraw pool tokens)>
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
 
@@ -208,7 +222,8 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             withdraw_lamports
         );
 
-        let mut available_validators_with_available_lamports: Option<Vec<(Pubkey, u64)>> = None;
+        let mut available_validators_with_available_lamports: AvailableWithdrawals =
+            AvailableWithdrawals::Reserve;
         let new_reserve_lamports = reserve_stake_account_info
             .lamports()
             .saturating_sub(withdraw_lamports);
@@ -216,8 +231,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             "reserve stake lamports {}",
             reserve_stake_account_info.lamports()
         );
-        let reserve_stake_state =
-            Self::deserialize_reserve_stake_account(reserve_stake_account_info)?;
+        let reserve_stake_state = Self::deserialize_stake_account(reserve_stake_account_info)?;
         if let StakeStateV2::Initialized(meta) = reserve_stake_state {
             let minimum_reserve_lamports = spl_stake_pool::minimum_reserve_lamports(&meta);
             msg!("minimum_reserve_lamports {}", minimum_reserve_lamports);
@@ -233,12 +247,24 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                     )?;
                 let mut lamports_out_left = withdraw_lamports;
 
+                let stake_minimum_delegation =
+                    solana_program::stake::tools::get_minimum_delegation()?;
+                let reserve_stake_meta = reserve_stake_state.meta().ok_or(ProgramError::from(
+                    spl_stake_pool::error::StakePoolError::WrongStakeStake,
+                ))?;
+                let minimum_required_lamports_for_stake_account =
+                    spl_stake_pool::minimum_stake_lamports(
+                        &reserve_stake_meta,
+                        stake_minimum_delegation,
+                    );
+
                 loop {
-                    let (available_validator_stake_info_opt, withdraw_lamports_from_validator) =
+                    let (available_validator_stake_info_opt, max_withdraw_lamports_from_validator) =
                         Self::get_available_validator_stake_info(
                             &validator_list,
                             &lamports_out_left,
-                        );
+                            &minimum_required_lamports_for_stake_account,
+                        )?;
                     if let Some(available_validator_stake_info) = available_validator_stake_info_opt
                     {
                         let available_validator_vote_account_address =
@@ -252,34 +278,45 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                                     available_validator_stake_info.validator_seed_suffix.into(),
                                 ),
                             );
-                        // should add fee lamports back again
-                        let fee_lamports_by_pool_tokens_fee = pool_account
-                            .calc_lamports_withdraw_amount(pool_tokens_fee)
-                            .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
-                        let withdraw_lamports_from_validator_with_fee =
-                            withdraw_lamports_from_validator
-                                .checked_add(fee_lamports_by_pool_tokens_fee)
-                                .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+                        // should add fee lamports back again for real withdrawal request
                         let withdraw_pool_tokens_from_lamports = pool_account
-                            .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator_with_fee)
+                            .calc_pool_tokens_for_deposit(max_withdraw_lamports_from_validator)
                             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
-                        available_validators_with_available_lamports
-                            .get_or_insert_with(Vec::new)
-                            .push((
+                        if let AvailableWithdrawals::Validators(ref mut validators) =
+                            available_validators_with_available_lamports
+                        {
+                            validators.push((
                                 available_validator_stake_account_address,
                                 withdraw_pool_tokens_from_lamports,
-                            ));
+                            ))
+                        } else {
+                            available_validators_with_available_lamports =
+                                AvailableWithdrawals::Validators(vec![(
+                                    available_validator_stake_account_address,
+                                    withdraw_pool_tokens_from_lamports,
+                                )]);
+                        }
+                        lamports_out_left =
+                            lamports_out_left.saturating_sub(max_withdraw_lamports_from_validator);
                     } else {
                         // then it means there's no available active stakes
-                        available_validators_with_available_lamports
-                            .get_or_insert_with(Vec::new)
-                            .push((Pubkey::default(), 0));
+                        available_validators_with_available_lamports =
+                            AvailableWithdrawals::Validators(vec![]);
                         break;
                     }
-                    lamports_out_left =
-                        lamports_out_left.saturating_sub(withdraw_lamports_from_validator);
                     if lamports_out_left == 0 {
                         break;
+                    }
+                }
+
+                // should add fee lamports back again for real withdrawal request
+                if let AvailableWithdrawals::Validators(ref mut validators) =
+                    available_validators_with_available_lamports
+                {
+                    let count = validators.len() as u64;
+                    let each_fee = pool_tokens_fee / count;
+                    for (validator_key, token_amount) in validators.iter_mut() {
+                        *token_amount += each_fee;
                     }
                 }
             }
@@ -295,11 +332,36 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         // let (withdraw_lamports, pool_tokens_fee) =
         //     Self::calc_withdraw_stake_lamports_by_pool_tokens_amount(&pool_account, pool_tokens)?;
         // let mut lamports_out_left = withdraw_lamports;
+        // msg!(
+        //     "withdraw_lamports {}, pool_tokens_fee {}",
+        //     withdraw_lamports,
+        //     pool_tokens_fee
+        // );
+
+        // let stake_minimum_delegation = solana_program::stake::tools::get_minimum_delegation()?;
+        // let reserve_stake_meta = reserve_stake_state.meta().ok_or(ProgramError::from(
+        //     spl_stake_pool::error::StakePoolError::WrongStakeStake,
+        // ))?;
+        // let minimum_required_lamports_for_stake_account =
+        //     spl_stake_pool::minimum_stake_lamports(&reserve_stake_meta, stake_minimum_delegation);
+        // msg!(
+        //     "minimum_required_lamports_for_stake_account {}",
+        //     minimum_required_lamports_for_stake_account
+        // );
 
         // loop {
-        //     let (available_validator_stake_info_opt, withdraw_lamports_from_validator) =
-        //         Self::get_available_validator_stake_info(&validator_list, &lamports_out_left);
+        //     msg!("lamports_out_left {}", lamports_out_left);
+        //     let (available_validator_stake_info_opt, max_withdraw_lamports_from_validator) =
+        //         Self::get_available_validator_stake_info(
+        //             &validator_list,
+        //             &lamports_out_left,
+        //             &minimum_required_lamports_for_stake_account,
+        //         )?;
         //     if let Some(available_validator_stake_info) = available_validator_stake_info_opt {
+        //         msg!(
+        //             "max_withdraw_lamports_from_validator {}",
+        //             max_withdraw_lamports_from_validator
+        //         );
         //         let available_validator_vote_account_address =
         //             available_validator_stake_info.vote_account_address;
         //         let (available_validator_stake_account_address, _) =
@@ -311,32 +373,55 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         //                     available_validator_stake_info.validator_seed_suffix.into(),
         //                 ),
         //             );
-        //         // should add fee lamports back again
-        //         let fee_lamports_by_pool_tokens_fee = pool_account
-        //             .calc_lamports_withdraw_amount(pool_tokens_fee)
-        //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
-        //         let withdraw_lamports_from_validator_with_fee = withdraw_lamports_from_validator
-        //             .checked_add(fee_lamports_by_pool_tokens_fee)
-        //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+        //         // should add fee lamports back again for real withdrawal request
         //         let withdraw_pool_tokens_from_lamports = pool_account
-        //             .calc_pool_tokens_for_deposit(withdraw_lamports_from_validator_with_fee)
+        //             .calc_pool_tokens_for_deposit(max_withdraw_lamports_from_validator)
         //             .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
-        //         available_validators_with_available_lamports
-        //             .get_or_insert_with(Vec::new)
-        //             .push((
+        //         msg!(
+        //             "withdraw_pool_tokens_from_lamports {}",
+        //             withdraw_pool_tokens_from_lamports
+        //         );
+        //         if let AvailableWithdrawals::Validators(ref mut validators) =
+        //             available_validators_with_available_lamports
+        //         {
+        //             validators.push((
         //                 available_validator_stake_account_address,
         //                 withdraw_pool_tokens_from_lamports,
-        //             ));
+        //             ))
+        //         } else {
+        //             available_validators_with_available_lamports =
+        //                 AvailableWithdrawals::Validators(vec![(
+        //                     available_validator_stake_account_address,
+        //                     withdraw_pool_tokens_from_lamports,
+        //                 )]);
+        //         }
+        //         lamports_out_left =
+        //             lamports_out_left.saturating_sub(max_withdraw_lamports_from_validator);
         //     } else {
         //         // then it means there's no available active stakes
-        //         available_validators_with_available_lamports
-        //             .get_or_insert_with(Vec::new)
-        //             .push((Pubkey::default(), 0));
+        //         available_validators_with_available_lamports =
+        //             AvailableWithdrawals::Validators(vec![]);
         //         break;
         //     }
-        //     lamports_out_left = lamports_out_left.saturating_sub(withdraw_lamports_from_validator);
         //     if lamports_out_left == 0 {
         //         break;
+        //     }
+        // }
+
+        // // should add fee lamports back again for real withdrawal request
+        // if let AvailableWithdrawals::Validators(ref mut validators) =
+        //     available_validators_with_available_lamports
+        // {
+        //     let count = validators.len() as u64;
+        //     let each_fee = pool_tokens_fee / count;
+        //     msg!("validator count {}, each_fee {}", count, each_fee);
+        //     for (validator_key, token_amount) in validators.iter_mut() {
+        //         *token_amount += each_fee;
+        //         msg!(
+        //             "validator key {}, token_amount {}",
+        //             validator_key,
+        //             token_amount
+        //         );
         //     }
         // }
 
@@ -385,7 +470,8 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     fn get_available_validator_stake_info<'b, 'data>(
         validator_list: &'b BigVec<'data>,
         lamports: &u64,
-    ) -> (Option<spl_stake_pool::state::ValidatorStakeInfo>, u64)
+        minimum_required_lamports: &u64,
+    ) -> Result<(Option<spl_stake_pool::state::ValidatorStakeInfo>, u64)>
     where
         'b: 'data,
     {
@@ -397,15 +483,23 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         let mut max_active_lamports_validator =
             spl_stake_pool::state::ValidatorStakeInfo::default();
 
+        let withdraw_tolarance_lamports = lamports
+            .checked_add(*minimum_required_lamports)
+            .ok_or(errors::ErrorCode::CalculationArithmeticException)?;
+        msg!(
+            "withdraw_tolarance_lamports {}",
+            withdraw_tolarance_lamports
+        );
+
         while current != len {
             let end_index =
                 current_index + std::mem::size_of::<spl_stake_pool::state::ValidatorStakeInfo>();
             let current_slice = &validator_list.data[current_index..end_index];
             if spl_stake_pool::state::ValidatorStakeInfo::active_lamports_greater_than(
                 current_slice,
-                &lamports,
+                &withdraw_tolarance_lamports,
             ) {
-                return (
+                return Ok((
                     Some(
                         bytemuck::from_bytes::<spl_stake_pool::state::ValidatorStakeInfo>(
                             current_slice,
@@ -413,24 +507,27 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
                         .clone(),
                     ),
                     lamports.clone(),
-                );
+                ));
             }
-            let active_lamports_of_current = u64::try_from_slice(&current_slice[0..8]).unwrap();
-            if active_lamports_of_current > max_active_lamports {
-                max_active_lamports = active_lamports_of_current;
-                max_active_lamports_validator = bytemuck::from_bytes::<
-                    spl_stake_pool::state::ValidatorStakeInfo,
-                >(current_slice)
-                .clone();
+            let mut active_lamports_of_current = u64::try_from_slice(&current_slice[0..8]).unwrap();
+            if active_lamports_of_current >= *minimum_required_lamports {
+                active_lamports_of_current -= *minimum_required_lamports; // safe
+                if active_lamports_of_current > max_active_lamports {
+                    max_active_lamports = active_lamports_of_current;
+                    max_active_lamports_validator = bytemuck::from_bytes::<
+                        spl_stake_pool::state::ValidatorStakeInfo,
+                    >(current_slice)
+                    .clone();
+                }
             }
             current_index = end_index;
             current += 1;
         }
 
         if max_active_lamports == 0 {
-            return (None, 0);
+            Ok((None, 0))
         } else {
-            return (Some(max_active_lamports_validator), max_active_lamports);
+            Ok((Some(max_active_lamports_validator), max_active_lamports))
         }
     }
 
@@ -551,7 +648,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             withdraw_authority.key,
             validator_stake_account.key,
             to_stake_account.key,
-            to_stake_account.key,
+            to_stake_account.key, // User account to set as a new withdraw authority
             from_pool_token_account_signer.key, // signer
             from_pool_token_account.key,
             manager_fee_account.key,
@@ -582,5 +679,18 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
 
         let returned_sol_amount = to_stake_account.lamports();
         Ok(returned_sol_amount)
+    }
+
+    pub fn claim_sol(&self, stake_account_info: &'info AccountInfo<'info>) -> Result<()> {
+        let stake_account = Self::deserialize_stake_account(stake_account_info)?;
+        let meta = stake_account.meta();
+        msg!("meta {:?}", meta);
+
+        // TODO
+        // 1. check stake_account's lamports is withdrawable
+        // 2. if it is, withdraw sol
+        // 3. if not, skip
+
+        Ok(())
     }
 }
