@@ -230,6 +230,9 @@ pub enum ErrorCode {
     #[msg("staking: spl stake pool's active stake not available")]
     StakingSPLActiveStakeNotAvailableException,
 
+    #[msg("restaking: all withdrawal tickets are already in use")]
+    RestakingVaultWithdrawalTicketsExhaustedError,
+
     #[msg("restaking: withdrawal ticket is not withdrawable")]
     RestakingVaultWithdrawalTicketNotWithdrawableError,
 

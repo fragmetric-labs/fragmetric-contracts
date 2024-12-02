@@ -11,7 +11,7 @@ const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 describe("operator_restake_with_normalize", async () => {
     const restaking = await restakingPlayground;
 
-    const restakeSolAmount = new BN(500 * web3.LAMPORTS_PER_SOL);
+    const restakeSolAmount = new BN(5 * web3.LAMPORTS_PER_SOL);
 
     step("restake LSTs to jito vault through normalizing", async function () {
         await restaking.runOperatorRun({
@@ -36,7 +36,7 @@ describe("operator_restake_with_normalize", async () => {
         },
             restaking.keychain.getKeypair('FUND_MANAGER'),
             100,
-            300_000,
+            350_000,
         );
     });
     //

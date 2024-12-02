@@ -199,16 +199,23 @@ impl SelfExecutable for RestakeVSTCommand {
                         .supported_tokens
                         .iter()
                         .filter_map(|t| {
-                            if normalized_token_pool_account.has_supported_token(&t.mint)
-                                && t.mint != normalized_token_mint.key()
-                            {
-                                let reserved_amount_as_sol = pricing_service
-                                    .get_token_amount_as_sol(&t.mint, t.operation_reserved_amount)
-                                    .unwrap();
-                                total_reserved_amount_as_sol += reserved_amount_as_sol;
-                                Some((t, reserved_amount_as_sol))
-                            } else {
+                            if t.operation_reserved_amount == 0 {
                                 None
+                            } else {
+                                if normalized_token_pool_account.has_supported_token(&t.mint)
+                                    && t.mint != normalized_token_mint.key()
+                                {
+                                    let reserved_amount_as_sol = pricing_service
+                                        .get_token_amount_as_sol(
+                                            &t.mint,
+                                            t.operation_reserved_amount,
+                                        )
+                                        .unwrap();
+                                    total_reserved_amount_as_sol += reserved_amount_as_sol;
+                                    Some((t, reserved_amount_as_sol))
+                                } else {
+                                    None
+                                }
                             }
                         })
                         .collect::<Vec<_>>();
@@ -234,7 +241,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             ),
                         })
                     }
-                    let (restake_supported_token_state, _) = supported_tokens[0];
+                    let (restake_supported_token_state, _) = supported_tokens[1];
                     let pool_supported_token_account =
                         anchor_spl::associated_token::get_associated_token_address(
                             &normalized_token_pool_address.key(),
@@ -245,11 +252,12 @@ impl SelfExecutable for RestakeVSTCommand {
                             &restake_supported_token_state.mint,
                         )?;
 
+
                     command.state =
                         RestakeVSTCommandState::Normalize(restake_supported_tokens_state);
                     let required_accounts = vec![
                         (normalized_token_mint.key(), true),
-                        (normalized_token_pool_address.key(), false),
+                        (normalized_token_pool_address.key(), true),
                         (normalized_token_account.key(), true),
                         (normalized_token_program.key(), false),
                         (pool_supported_token_account, true),
@@ -321,32 +329,33 @@ impl SelfExecutable for RestakeVSTCommand {
                     )?;
 
                     match unused_restake_supported_tokens.first() {
-                        Some(restake_supported_token) => {
+                        Some(next_reserved_restake_token) => {
                             command.state = RestakeVSTCommandState::Normalize(
                                 unused_restake_supported_tokens.clone(),
                             );
-                            let next_reserved_restake_token =
-                                unused_restake_supported_tokens.first().unwrap();
+
                             let next_pool_supported_token_account =
                                 anchor_spl::associated_token::get_associated_token_address(
                                     &normalized_token_pool_address.key(),
                                     &next_reserved_restake_token.token_mint,
                                 );
+
                             let next_reserved_normalize_token_account =
                                 ctx.fund_account.find_supported_token_account_address(
                                     &next_reserved_restake_token.token_mint,
                                 )?;
-
-                            return Ok(Some(command.with_required_accounts([
+                            // ctx.fund_account.operation.
+                            let required_accounts = vec![
                                 (normalized_token_mint.key(), true),
-                                (normalized_token_pool_address.key(), false),
+                                (normalized_token_pool_address.key(), true),
                                 (normalized_token_account.key(), true),
                                 (normalized_token_program.key(), false),
                                 (next_pool_supported_token_account.key(), true),
                                 (next_reserved_restake_token.token_mint, false),
                                 (next_reserved_normalize_token_account, true),
                                 (next_reserved_restake_token.token_program, false),
-                            ])));
+                            ];
+                            return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
                         None => {
                             command.state = RestakeVSTCommandState::ReadVaultState;
