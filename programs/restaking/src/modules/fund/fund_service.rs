@@ -184,6 +184,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub fn process_run(
         &mut self,
         operator: &Signer<'info>,
+        system_program: &Program<'info, System>,
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
@@ -249,6 +250,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 operator,
                 receipt_token_mint: self.receipt_token_mint,
                 fund_account: self.fund_account,
+                system_program,
             };
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
                 Ok(next_command) => {
@@ -302,9 +304,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
         let mut accounts =
-            Vec::with_capacity(5 + self.fund_account.withdrawal.queued_batches.len());
+            Vec::with_capacity(4 + self.fund_account.withdrawal.queued_batches.len());
         accounts.extend([
-            (System::id(), false),
             (self.fund_account.receipt_token_program, false),
             (
                 self.fund_account
@@ -336,7 +337,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub(super) fn process_withdrawal_batch(
         &mut self,
         operator: &Signer<'info>,
-        system_program: &'info AccountInfo<'info>,
+        system_program: &Program<'info, System>,
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
         fund_reserve_account: &AccountInfo<'info>,
@@ -356,6 +357,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
+        // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
         let available_receipt_token_amount_to_process = pricing_service.get_sol_amount_as_token(
             &self.receipt_token_mint.key(),
             self.fund_account.sol_operation_reserved_amount,
@@ -398,9 +400,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .cloned()
             .zip(processible_batches)
         {
+            let (ticket_address, bump) = FundBatchWithdrawalTicketAccount::find_account_address(
+                &self.receipt_token_mint.key(),
+                batch.batch_id,
+            );
+
+            require_keys_eq!(ticket.key(), ticket_address);
+
             // create account
             let mut ticket = {
-                Program::try_from(system_program)?.create_account(
+                system_program.create_account(
                     ticket,
                     FundBatchWithdrawalTicketAccount::get_seeds(
                         &self.receipt_token_mint.key(),
@@ -416,46 +425,42 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 )?;
                 Account::<FundBatchWithdrawalTicketAccount>::try_from_unchecked(ticket)?
             };
+            ticket.initialize(bump, self.receipt_token_mint.key(), batch.batch_id);
 
             let sol_amount = pricing_service.get_token_amount_as_sol(
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
             )?;
-            sol_withdrawal_fee += self.fund_account.initialize_batch_withdrawal_ticket(
+            self.fund_account.set_batch_withdrawal_ticket(
                 &mut ticket,
                 batch,
                 sol_amount,
                 self.current_timestamp,
             )?;
-
-            // transfer withdrawal reserved sol
-            anchor_lang::system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.clone(),
-                    anchor_lang::system_program::Transfer {
-                        from: fund_reserve_account.clone(),
-                        to: ticket.to_account_info(),
-                    },
-                    &[&self.fund_account.get_reserve_account_seeds()],
-                ),
-                ticket.sol_user_amount,
-            )?;
+            sol_withdrawal_fee += ticket.sol_fee_amount;
 
             ticket.exit(&crate::ID)?;
         }
 
         // transfer fee to treasury
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.clone(),
-                anchor_lang::system_program::Transfer {
-                    from: fund_reserve_account.clone(),
-                    to: treasury_account.clone(),
-                },
-                &[&self.fund_account.get_reserve_account_seeds()],
-            ),
-            sol_withdrawal_fee,
-        )?;
+        // TODO v0.3/operation: use sol_operation_receivable_expense in fund account
+        let mut sol_operation_receivable_expense = 0;
+        let sol_to_transfer = sol_withdrawal_fee.saturating_sub(sol_operation_receivable_expense);
+        sol_operation_receivable_expense -= sol_withdrawal_fee.saturating_sub(sol_to_transfer);
+
+        if sol_to_transfer > 0 {
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_reserve_account.clone(),
+                        to: treasury_account.clone(),
+                    },
+                    &[&self.fund_account.get_reserve_account_seeds()],
+                ),
+                sol_to_transfer,
+            )?;
+        }
 
         Ok(())
     }

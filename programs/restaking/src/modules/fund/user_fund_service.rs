@@ -400,17 +400,21 @@ impl<'info, 'a> UserFundService<'info, 'a> {
     pub fn process_withdraw(
         &mut self,
         fund_batch_withdrawal_ticket_account: &mut Account<'info, FundBatchWithdrawalTicketAccount>,
+        fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed
         // withdrawal fee is already paid.
         let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-            self.user_fund_account
-                .claim_withdrawal_request(fund_batch_withdrawal_ticket_account, request_id)?;
+            self.user_fund_account.claim_withdrawal_request(
+                &mut self.fund_account.withdrawal,
+                fund_batch_withdrawal_ticket_account,
+                request_id,
+            )?;
 
         // transfer sol_user_amount to user wallet
-        fund_batch_withdrawal_ticket_account.sub_lamports(sol_user_amount)?;
+        fund_reserve_account.sub_lamports(sol_user_amount)?;
         self.user.add_lamports(sol_user_amount)?;
 
         // close ticket and collect rent if stale

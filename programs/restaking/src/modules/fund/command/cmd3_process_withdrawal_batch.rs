@@ -40,7 +40,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process => {
-                let [system_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, treasury_account, remaining_accounts @ ..] =
+                let [receipt_token_program, receipt_token_lock_account, fund_reserve_account, treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -55,7 +55,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                     .process_withdrawal_batch(
                         ctx.operator,
-                        system_program,
+                        ctx.system_program,
                         receipt_token_program,
                         receipt_token_lock_account,
                         fund_reserve_account,

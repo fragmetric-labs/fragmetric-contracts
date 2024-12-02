@@ -394,6 +394,7 @@ pub mod restaking {
         )?
         .process_run(
             &ctx.accounts.operator,
+            &ctx.accounts.system_program,
             ctx.remaining_accounts,
             force_reset_command,
         )
@@ -539,6 +540,7 @@ pub mod restaking {
         )?
         .process_withdraw(
             &mut ctx.accounts.fund_batch_withdrawal_ticket_account,
+            &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,
         )

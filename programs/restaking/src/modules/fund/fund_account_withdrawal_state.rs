@@ -11,7 +11,6 @@ pub(super) struct WithdrawalState {
 
     /// pending_batch.num_requests + queued_batches[].num_requests
     pub num_requests_in_progress: u64,
-
     pub last_processed_batch_id: u64,
     pub last_batch_enqueued_at: Option<i64>,
     pub last_batch_processed_at: Option<i64>,
@@ -25,7 +24,8 @@ pub(super) struct WithdrawalState {
     #[max_len(MAX_QUEUED_WITHDRAWAL_BATCHES)]
     pub queued_batches: Vec<WithdrawalBatch>,
 
-    _reserved: [[u8; 8]; 14],
+    pub sol_withdrawal_reserved_amount: u64,
+    _reserved: [[u8; 8]; 13],
 }
 
 impl WithdrawalState {
@@ -65,7 +65,6 @@ impl WithdrawalState {
             self.queued_batches
                 .iter_mut()
                 .for_each(|batch| batch.migrate(fund_account_data_version));
-            // sol_withdrawal_reserved_amount: u64 -> _reserved
             // _padding: [u8; 8] -> _reserved
             // receipt_token_processed_amount: u64 -> _reserved
             self._reserved = Default::default();
@@ -200,10 +199,11 @@ impl WithdrawalState {
         let batch_id = self.next_batch_id;
         self.next_batch_id += 1;
         let new_pending_batch = WithdrawalBatch::new(batch_id);
-        let old_pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
+        let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
 
         self.num_requests_in_progress += old_pending_batch.num_requests;
         self.last_batch_enqueued_at = Some(current_timestamp);
+        old_pending_batch.enqueued_at = Some(current_timestamp);
         self.queued_batches.push(old_pending_batch);
     }
 
@@ -217,6 +217,7 @@ impl WithdrawalState {
             if batch.receipt_token_amount <= available_receipt_token_amount_to_process {
                 count += 1;
                 available_receipt_token_amount_to_process -= batch.receipt_token_amount;
+                self.num_requests_in_progress -= batch.num_requests;
             } else {
                 break;
             }
@@ -236,8 +237,9 @@ pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,
-    _reserved: [[u8; 8]; 8],
-    _padding: u8,
+    _padding: [u8; 24],
+    enqueued_at: Option<i64>,
+    _reserved: [u8; 32],
 }
 
 impl WithdrawalBatch {
@@ -258,8 +260,9 @@ impl WithdrawalBatch {
             batch_id,
             num_requests: 0,
             receipt_token_amount: 0,
-            _reserved: Default::default(),
             _padding: Default::default(),
+            enqueued_at: None,
+            _reserved: Default::default(),
         }
     }
 

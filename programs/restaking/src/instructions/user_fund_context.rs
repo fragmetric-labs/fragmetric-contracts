@@ -161,6 +161,7 @@ pub struct UserFundWithdrawContext<'info> {
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
@@ -175,6 +176,13 @@ pub struct UserFundWithdrawContext<'info> {
         has_one = receipt_token_mint,
     )]
     pub fund_batch_withdrawal_ticket_account: Box<Account<'info, FundBatchWithdrawalTicketAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
 
     #[account(
         mut,
