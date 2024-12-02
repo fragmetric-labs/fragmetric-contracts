@@ -358,13 +358,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         // close the ticket account after all tokens are settled.
         if withdrawal_ticket.is_settled() {
-            let withdrawal_ticket_account_info = withdrawal_ticket.to_account_info();
-            let withdrawal_ticket_lamports = withdrawal_ticket_account_info.lamports();
-            **to_rent_lamports_account.lamports.borrow_mut() += withdrawal_ticket_lamports;
-            **withdrawal_ticket_account_info.lamports.borrow_mut() = 0;
-
-            let mut data = withdrawal_ticket_account_info.try_borrow_mut_data()?;
-            data.fill(0);
+            withdrawal_ticket.close(to_rent_lamports_account.to_account_info())?;
         }
 
         Ok(())
