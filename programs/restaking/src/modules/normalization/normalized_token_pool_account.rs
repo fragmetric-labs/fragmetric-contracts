@@ -104,6 +104,15 @@ impl NormalizedTokenPoolAccount {
         }
     }
 
+    pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
+        let supported_token_mint_list: Vec<&Pubkey> = self
+            .supported_tokens
+            .iter()
+            .map(|token| &token.mint)
+            .collect();
+        supported_token_mint_list.contains(&token)
+    }
+
     #[inline(always)]
     pub(super) fn initialize(&mut self, bump: u8, normalized_token_mint: &InterfaceAccount<Mint>) {
         self.migrate(
@@ -123,6 +132,17 @@ impl NormalizedTokenPoolAccount {
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION
+    }
+
+    pub fn find_account_address_by_token_mint(normalized_token_mint: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[
+                NormalizedTokenPoolAccount::SEED,
+                normalized_token_mint.to_bytes().as_ref(),
+            ],
+            &crate::ID,
+        )
+        .0
     }
 
     pub(super) fn add_new_supported_token(

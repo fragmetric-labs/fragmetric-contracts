@@ -1,3 +1,4 @@
+use crate::errors::ErrorCode;
 use anchor_lang::prelude::*;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::{
@@ -30,7 +31,7 @@ pub struct JitoRestakingVaultContext<'info> {
 }
 
 impl<'info> JitoRestakingVaultContext<'info> {
-    pub fn get_vault_withdrawal_tickets(
+    pub fn get_ready_to_burn_withdrawal_tickets(
         &self,
         vault_withdrawal_tickets: &'info [AccountInfo<'info>],
         slot: u64,
@@ -52,5 +53,43 @@ impl<'info> JitoRestakingVaultContext<'info> {
             }
         }
         Ok(tickets)
+    }
+
+    pub fn check_ready_to_burn_withdrawal_ticket(
+        &self,
+        vault_withdrawal_ticket: &'info AccountInfo<'info>,
+        slot: u64,
+    ) -> Result<bool> {
+        let vault_config_data = &**self.vault_config.try_borrow_data()?;
+        let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
+        let epoch_length = vault_config.epoch_length();
+        if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
+            return Err(Error::from(
+                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawable,
+            ));
+        }
+        let ticket_data_ref = vault_withdrawal_ticket.data.borrow();
+        let ticket_data = ticket_data_ref.as_ref();
+        let ticket = VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
+        if ticket.is_withdrawable(slot, epoch_length)? {
+            Ok(true)
+        } else {
+            Err(Error::from(
+                ErrorCode::RestakingVaultWithdrawalTicketNotWithdrawable,
+            ))
+        }
+    }
+
+    pub fn check_withdrawal_ticket_is_empty(
+        &self,
+        vault_withdrawal_ticket: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        if vault_withdrawal_ticket.data_is_empty() && vault_withdrawal_ticket.lamports() == 0 {
+            Ok(true)
+        } else {
+            Err(Error::from(
+                ErrorCode::RestakingVaultWithdrawalTicketAlreadyInitialized,
+            ))
+        }
     }
 }
