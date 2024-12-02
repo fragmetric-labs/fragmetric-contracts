@@ -6,7 +6,7 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
-use crate::modules::normalization::NormalizedTokenPoolService;
+use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ClaimUnrestakedVSTCommand {
@@ -217,7 +217,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                     let normalized_token = &ctx.fund_account.normalized_token.as_ref().unwrap();
                                     if &restaking_vault.supported_token_mint == &normalized_token.mint {
                                         let normalized_token_pool_address =
-                                            NormalizedTokenPoolService::find_normalized_token_pool_address(
+                                            NormalizedTokenPoolAccount::find_account_address_by_token_mint(
                                                 &normalized_token.mint,
                                             );
 

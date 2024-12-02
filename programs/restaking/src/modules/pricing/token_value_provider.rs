@@ -22,6 +22,17 @@ pub struct TokenValue {
     pub denominator: u64,
 }
 
+impl TokenValue {
+    /// indicates whether the token is not a kind of basket such as normalized token,
+    /// so the value of the token can be resolved by one self without other token information.
+    pub fn is_atomic(&self) -> bool {
+        self.numerator.iter().all(|asset| match asset {
+            Asset::TOKEN(..) => false,
+            Asset::SOL(..) => true,
+        })
+    }
+}
+
 impl std::fmt::Display for TokenValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let numerator = self
@@ -30,6 +41,7 @@ impl std::fmt::Display for TokenValue {
             .map(ToString::to_string)
             .collect::<Vec<_>>();
         f.debug_struct("TokenValue")
+            .field("atomic", &self.is_atomic())
             .field("numerator", &numerator)
             .field("denominator", &self.denominator)
             .finish()

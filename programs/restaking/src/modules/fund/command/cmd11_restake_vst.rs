@@ -107,7 +107,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     let normalized_token = &ctx.fund_account.normalized_token.as_ref().unwrap();
                     if &restaking_vault.supported_token_mint == &normalized_token.mint {
                         let normalized_token_pool_address =
-                            NormalizedTokenPoolService::find_normalized_token_pool_address(
+                            NormalizedTokenPoolAccount::find_account_address_by_token_mint(
                                 &normalized_token.mint,
                             );
 

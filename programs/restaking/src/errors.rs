@@ -182,8 +182,14 @@ pub enum ErrorCode {
     #[msg("normalization: exceeded max supported tokens")]
     NormalizedTokenPoolExceededMaxSupportedTokensError,
 
-    #[msg("normalization: not enough supported token to unlock")]
-    NormalizedTokenPoolNotEnoughLockedTokenException,
+    #[msg("normalization: not enough supported token in the pool")]
+    NormalizedTokenPoolNotEnoughSupportedTokenException,
+
+    #[msg("normalization: already settled withdrawal ticket")]
+    NormalizedTokenPoolAlreadySettledWithdrawalTicketError,
+
+    #[msg("normalization: the token is unclaimable for the given withdrawal ticket")]
+    NormalizedTokenPoolUnclaimableTokenError,
 
     #[msg("operation: failed to compute required accounts for the next command")]
     OperationCommandAccountComputationException,

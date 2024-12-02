@@ -1060,11 +1060,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         v.program,
                     ),
                     this.program.methods
-                        .fundManagerAddNormalizedTokenPoolSupportedToken()
+                        .fundManagerAddNormalizedTokenPoolSupportedToken(
+                            v.pricingSource,
+                        )
                         .accounts({
                             supportedTokenMint: v.mint,
                             supportedTokenProgram: v.program,
                         })
+                        .remainingAccounts(this.pricingSourceAccounts)
                         .instruction(),
                 ];
             }),
@@ -1080,16 +1083,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const token = this.supportedTokenMetadata[symbol];
         await this.run({
             instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.nSOLSupportedTokenLockAccount(symbol as any),
+                    this.knownAddress.nSOLTokenPool,
+                    token.mint,
+                    token.program,
+                ),
                 this.program.methods
-                    .fundManagerInitializeSupportedTokenLockAccount()
-                    .accounts({
-                        payer: this.wallet.publicKey,
-                        supportedTokenMint: token.mint,
-                        supportedTokenProgram: token.program,
-                    })
-                    .instruction(),
-                this.program.methods
-                    .fundManagerAddNormalizedTokenPoolSupportedToken()
+                    .fundManagerAddNormalizedTokenPoolSupportedToken(
+                        token.pricingSource,
+                    )
                     .accounts({
                         supportedTokenMint: token.mint,
                         supportedTokenProgram: token.program,
