@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
+use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenValue;
+use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalTicketAccount};
+use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -11,7 +13,7 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-const MAX_SUPPORTED_TOKENS: usize = 10;
+pub(super) const MAX_SUPPORTED_TOKENS: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
@@ -68,8 +70,47 @@ impl NormalizedTokenPoolAccount {
             };
             self.normalized_token_value_updated_at = 0;
             self.one_normalized_token_as_sol = 0;
+            self.supported_tokens
+                .iter_mut()
+                .for_each(|supported_token| {
+                    supported_token.withdrawal_reserved_amount = 0;
+
+                    supported_token.pricing_source = match supported_token.mint {
+                        MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                            address: MAINNET_MSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_JITOSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_JITOSOL_STAKE_POOL_ADDRESS,
+                        },
+                        MAINNET_BNSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: MAINNET_BNSOL_STAKE_POOL_ADDRESS,
+                        },
+                        #[allow(unreachable_patterns)]
+                        DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                            address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
+                        },
+                        #[allow(unreachable_patterns)]
+                        DEVNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                            address: DEVNET_MSOL_STAKE_POOL_ADDRESS,
+                        },
+                        _ => panic!("normalized token pool pricing source migration failed"),
+                    }
+                });
+
             self.data_version = 2;
         }
+    }
+
+    pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
+        let supported_token_mint_list: Vec<&Pubkey> = self
+            .supported_tokens
+            .iter()
+            .map(|token| &token.mint)
+            .collect();
+        supported_token_mint_list.contains(&token)
     }
 
     #[inline(always)]
@@ -93,11 +134,23 @@ impl NormalizedTokenPoolAccount {
         self.data_version == NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION
     }
 
+    pub fn find_account_address_by_token_mint(normalized_token_mint: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[
+                NormalizedTokenPoolAccount::SEED,
+                normalized_token_mint.to_bytes().as_ref(),
+            ],
+            &crate::ID,
+        )
+        .0
+    }
+
     pub(super) fn add_new_supported_token(
         &mut self,
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
         supported_token_lock_account: Pubkey,
+        supported_token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
         if self
             .supported_tokens
@@ -117,6 +170,7 @@ impl NormalizedTokenPoolAccount {
             supported_token_mint,
             supported_token_program,
             supported_token_lock_account,
+            supported_token_pricing_source,
         ));
 
         Ok(())
@@ -124,21 +178,21 @@ impl NormalizedTokenPoolAccount {
 
     pub(super) fn get_supported_token(
         &self,
-        supported_token_mint: Pubkey,
+        supported_token_mint: &Pubkey,
     ) -> Result<&SupportedToken> {
         self.supported_tokens
             .iter()
-            .find(|token| token.mint == supported_token_mint)
+            .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
     pub(super) fn get_supported_token_mut(
         &mut self,
-        supported_token_mint: Pubkey,
+        supported_token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {
         self.supported_tokens
             .iter_mut()
-            .find(|token| token.mint == supported_token_mint)
+            .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
@@ -158,21 +212,30 @@ impl NormalizedTokenPoolAccount {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub(super) struct SupportedToken {
-    pub(super) mint: Pubkey,
-    program: Pubkey,
-    pub(super) lock_account: Pubkey,
-    pub(super) locked_amount: u64,
-    _reserved: [u8; 64],
+    pub mint: Pubkey,
+    pub program: Pubkey,
+    pub lock_account: Pubkey,
+    pub locked_amount: u64,
+    pub withdrawal_reserved_amount: u64,
+    pub pricing_source: TokenPricingSource,
+    _reserved: [u8; 23],
 }
 
 impl SupportedToken {
-    fn new(mint: Pubkey, program: Pubkey, lock_account: Pubkey) -> Self {
+    fn new(
+        mint: Pubkey,
+        program: Pubkey,
+        lock_account: Pubkey,
+        pricing_source: TokenPricingSource,
+    ) -> Self {
         Self {
             mint,
             program,
             lock_account,
             locked_amount: 0,
-            _reserved: [0; 64],
+            withdrawal_reserved_amount: 0,
+            pricing_source,
+            _reserved: [0; 23],
         }
     }
 
@@ -189,7 +252,32 @@ impl SupportedToken {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)
-            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotEnoughLockedTokenException))?;
+            .ok_or_else(|| {
+                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
+            })?;
+
+        Ok(())
+    }
+
+    pub(super) fn unlock_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
+        self.locked_amount = self
+            .locked_amount
+            .checked_sub(token_amount)
+            .ok_or_else(|| {
+                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
+            })?;
+        self.withdrawal_reserved_amount += token_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn settle_withdrawal_reserved_token(&mut self, token_amount: u64) -> Result<()> {
+        self.withdrawal_reserved_amount = self
+            .withdrawal_reserved_amount
+            .checked_sub(token_amount)
+            .ok_or_else(|| {
+                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
+            })?;
 
         Ok(())
     }

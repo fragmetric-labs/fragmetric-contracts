@@ -317,7 +317,7 @@ fn restake_normalized_tokens<'info>(
             fund_normalized_token_account.as_ref().as_ref(),
             restaking_nt_amount,
             jito_vault_fee_wallet_token_account,
-            fund_jito_vault_receipt_token_account.as_ref().as_ref(),
+            fund_jito_vault_receipt_token_account.as_account_info(),
             restaking_nt_amount,
             fund_account.as_ref(),
             &[fund_account.get_seeds().as_ref()],
@@ -925,9 +925,9 @@ impl<'info> RemainingAccounts<'info> for &'info [AccountInfo<'info>] {
 
         let data = jito_vault_config
             .try_borrow_data()
-            .map_err(|e| Error::from(e).with_account_name("jito_vault_cupdate_state_tracker"))?;
+            .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
         let config = Config::try_from_slice_unchecked(&data)
-            .map_err(|e| Error::from(e).with_account_name("jito_vault_cupdate_state_tracker"))?;
+            .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
         let ncn_epoch = current_slot
             .checked_div(config.epoch_length())
             .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;

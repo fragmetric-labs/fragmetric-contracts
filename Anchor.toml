@@ -67,6 +67,10 @@ address = "3R3nGZpQs2aZo5FDQvd2MUQ6R7KhAPainds6uT6uE2mn"
 [[test.validator.clone]]
 address = "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"
 
+# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.clone]]
+address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"
+
 # clone mainnet jitoSOL stake pool fee account to localnet
 [[test.validator.clone]]
 address = "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"
@@ -126,8 +130,3 @@ filename = "./tests/mocks/mainnet/jito_vault_vrt.json"
 [[test.validator.account]]
 address = "7N3VJBtCAm5vgUBG3kTAdhMMe4PzPFTT5wF3aGye6kDh"
 filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"
-
-# *jito staking
-# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
-[[test.validator.clone]]
-address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"

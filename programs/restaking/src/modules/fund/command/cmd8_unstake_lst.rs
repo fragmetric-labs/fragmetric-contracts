@@ -148,7 +148,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         require_neq!(
                             available_withdrawals_from_reserve_or_validator[0].0,
                             Pubkey::default(),
-                            errors::ErrorCode::StakingSplActiveStakeNotAvailableException
+                            errors::ErrorCode::StakingSPLActiveStakeNotAvailableException
                         );
                         command.state = UnstakeLSTCommandState::RequestUnstake;
 

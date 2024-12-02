@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anchor_lang::prelude::*;
 
@@ -16,8 +16,7 @@ use super::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
 pub struct PricingService<'info> {
     token_pricing_source_accounts_map: BTreeMap<Pubkey, &'info AccountInfo<'info>>,
     token_pricing_source_map: BTreeMap<Pubkey, TokenPricingSource>,
-    /// the boolean flag indicates "atomic", meaning whether the token is not a kind of basket such as normalized token, so the value of the token can be resolved by one self.
-    token_value_map: BTreeMap<Pubkey, (TokenValue, bool)>,
+    token_value_map: BTreeMap<Pubkey, TokenValue>,
 }
 
 impl<'info> PricingService<'info> {
@@ -50,6 +49,23 @@ impl<'info> PricingService<'info> {
         token_mint: &Pubkey,
         token_pricing_source: &TokenPricingSource,
     ) -> Result<()> {
+        let resolved_tokens = &mut BTreeSet::new();
+        self.resolve_token_pricing_source_rec(token_mint, token_pricing_source, resolved_tokens)
+    }
+
+    fn resolve_token_pricing_source_rec(
+        &mut self,
+        token_mint: &Pubkey,
+        token_pricing_source: &TokenPricingSource,
+        updated_tokens: &mut BTreeSet<Pubkey>,
+    ) -> Result<()> {
+        // remember updated token during the current recursive updates to skip redundant calculation
+        if updated_tokens.contains(token_mint) {
+            return Ok(());
+        }
+        updated_tokens.insert(*token_mint);
+
+        // resolve underlying assets for each pricing source' value provider adapter
         let token_value = match token_pricing_source {
             TokenPricingSource::SPLStakePool { address } => {
                 let account1 = self
@@ -70,7 +86,8 @@ impl<'info> PricingService<'info> {
                     .token_pricing_source_accounts_map
                     .get(address)
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
-                JitoRestakingVaultValueProvider.resolve_underlying_assets(token_mint, &[account1])?
+                JitoRestakingVaultValueProvider
+                    .resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let account1 = self
@@ -96,13 +113,13 @@ impl<'info> PricingService<'info> {
         };
 
         // expand supported tokens recursively
-        let mut atomic = true;
         token_value.numerator.iter().try_for_each(|asset| {
-            if let Asset::TOKEN(..) = asset {
-                atomic = false;
-            }
             if let Asset::TOKEN(token_mint, Some(token_pricing_source), _) = asset {
-                self.resolve_token_pricing_source(token_mint, token_pricing_source)?;
+                self.resolve_token_pricing_source_rec(
+                    token_mint,
+                    token_pricing_source,
+                    updated_tokens,
+                )?;
             }
             Ok::<(), Error>(())
         })?;
@@ -112,24 +129,31 @@ impl<'info> PricingService<'info> {
         //         "PRICING: {:?} => {:?} (atomic={})",
         //         token_mint,
         //         token_value,
-        //         atomic
         //     );
         // }
 
-        // remember resolved token value and pricing source
-        self.token_value_map
-            .insert(*token_mint, (token_value, atomic));
-        if !self.token_pricing_source_map.contains_key(token_mint) {
-            self.token_pricing_source_map
-                .insert(*token_mint, token_pricing_source.clone());
+        // update resolved token value
+        self.token_value_map.insert(*token_mint, token_value);
+
+        // remember new pricing source
+        match self.token_pricing_source_map.get(token_mint) {
+            #[allow(unused_variables)]
+            Some(old_token_pricing_source) => {
+                #[cfg(not(test))]
+                require_eq!(token_pricing_source, old_token_pricing_source);
+            }
+            None => {
+                self.token_pricing_source_map
+                    .insert(*token_mint, token_pricing_source.clone());
+            }
         }
 
         Ok(())
     }
 
     /// returns (total sol value of the token, total token amount)
-    fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
-        let (token_value, _) = self
+    pub fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
+        let token_value = self
             .token_value_map
             .get(token_mint)
             .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
@@ -187,12 +211,12 @@ impl<'info> PricingService<'info> {
 
     /// returns token value being consist of atomic tokens, either SOL or LSTs
     pub fn get_token_total_value_as_atomic(&self, token_mint: &Pubkey) -> Result<TokenValue> {
-        let (token_value, token_atomic) = self
+        let token_value = self
             .token_value_map
             .get(token_mint)
             .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
 
-        if *token_atomic {
+        if token_value.is_atomic() {
             return Ok(token_value.clone());
         }
 
@@ -205,12 +229,15 @@ impl<'info> PricingService<'info> {
                     total_sol_amount += sol_amount;
                 }
                 Asset::TOKEN(token_mint, _, token_amount) => {
-                    let (_, token_atomic) =
-                        self.token_value_map.get(token_mint).ok_or_else(|| {
+                    let is_token_atomic = self
+                        .token_value_map
+                        .get(token_mint)
+                        .ok_or_else(|| {
                             error!(ErrorCode::TokenPricingSourceAccountNotFoundException)
-                        })?;
+                        })?
+                        .is_atomic();
 
-                    if *token_atomic {
+                    if is_token_atomic {
                         total_tokens.insert(
                             *token_mint,
                             total_tokens.get(token_mint).unwrap_or(&0u64) + token_amount,
@@ -280,6 +307,14 @@ mod tests {
     use crate::modules::pricing::MockAsset;
 
     use super::*;
+
+    #[test]
+    fn size_token_pricing_source() {
+        println!(
+            "token pricing source init size: {}",
+            TokenPricingSource::INIT_SPACE
+        );
+    }
 
     #[test]
     fn test_resolve_token_pricing_source() {
@@ -453,7 +488,7 @@ mod tests {
             .get_token_total_value_as_sol(&basket_mint_24_10)
             .unwrap();
 
-        // println!("{:?} / {:?}", token_vaule_as_atomic, token_value_as_sol,);
+        // println!("{:?} / {:?}", token_vaule_as_atomic, token_value_as_sol);
 
         assert_eq!(token_value_as_sol.0, 49);
         assert_eq!(token_value_as_sol.1, 10);

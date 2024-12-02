@@ -348,6 +348,13 @@ impl FundAccount {
         Ok(())
     }
 
+    pub(super) fn get_restaking_vault_mut(&mut self, vault: &Pubkey) -> Result<&mut RestakingVault>{
+        self.restaking_vaults
+            .iter_mut()
+            .find(|info| info.vault == *vault)
+            .ok_or_else(|| error!(ErrorCode::FundNotSupportedRestakingVaultError))
+    }
+
     pub(super) fn add_restaking_vault(
         &mut self,
         vault: Pubkey,
