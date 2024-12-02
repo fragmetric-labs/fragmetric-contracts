@@ -37,6 +37,12 @@ pub struct FundAccount {
 
     pub(super) withdrawal: WithdrawalState,
 
+    /// A receivable that the fund may charge the users requested the withdrawal.
+    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
+    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
+    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charing the users requesting withdrawals.
+    pub(super) sol_operation_receivable_amount: u64,
+
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
     pub(super) receipt_token_supply_amount: u64,
@@ -94,6 +100,8 @@ impl FundAccount {
         }
 
         if self.data_version == 3 {
+            self.sol_operation_receivable_amount = 0;
+
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
@@ -115,7 +123,7 @@ impl FundAccount {
                     .1;
 
             for supported_token in &mut self.supported_tokens {
-                supported_token.operating_amount = 0;
+                supported_token.operation_receivable_amount = 0;
             }
 
             self.data_version = 4;

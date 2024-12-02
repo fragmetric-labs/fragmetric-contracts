@@ -15,8 +15,8 @@ pub struct SupportedToken {
     pub one_token_as_sol: u64,
     pub pricing_source: TokenPricingSource,
 
-    pub operating_amount: u64,
-    /// the amount being unstaked
+    /// the token amount being unstaked
+    pub operation_receivable_amount: u64,
 
     /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
     pub rebalancing_amount: u64,
@@ -52,7 +52,7 @@ impl SupportedToken {
             operation_reserved_amount: 0,
             one_token_as_sol: 0,
             pricing_source,
-            operating_amount: 0,
+            operation_receivable_amount: 0,
             rebalancing_amount: 0,
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
@@ -72,12 +72,12 @@ impl SupportedToken {
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
-        self.operating_amount
+        self.operation_receivable_amount
     }
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
-        self.operating_amount = amount;
+        self.operation_receivable_amount = amount;
     }
 
     pub(super) fn set_accumulated_deposit_capacity_amount(&mut self, token_amount: u64) -> Result<()> {
