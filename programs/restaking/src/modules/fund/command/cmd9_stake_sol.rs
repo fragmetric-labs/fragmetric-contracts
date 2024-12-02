@@ -33,7 +33,7 @@ pub struct StakeSOLCommandItem {
 pub enum StakeSOLCommandState {
     /// populate a command with items based on the fund state and operational strategy.
     #[default]
-    Default,
+    New,
     /// initialize the command state to process a stacked item.
     Init,
     /// read the stake pool state to determine the required accounts for processing the given item.
@@ -43,12 +43,11 @@ pub enum StakeSOLCommandState {
 }
 
 impl Default for StakeSOLCommand {
-    fn default() -> OperationCommandEntry {
+    fn default() -> StakeSOLCommand {
         Self {
             items: vec![],
             state: StakeSOLCommandState::default(),
         }
-        .with_required_accounts(vec![])
     }
 }
 
@@ -59,13 +58,16 @@ impl SelfExecutable for StakeSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match &self.state {
-            StakeSOLCommandState::Default => {
-                let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.into_iter().cloned())?;
-
-                let sol_staking_reserved_amount = ctx
-                    .fund_account
-                    .get_sol_staking_reserved_amount(&pricing_service)?;
+            StakeSOLCommandState::New => {
+                let (pricing_service, sol_staking_reserved_amount) = {
+                    let mut fund_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                    let pricing_service =
+                        fund_service.new_pricing_service(accounts.into_iter().cloned())?;
+                    let sol_staking_reserved_amount =
+                        fund_service.get_sol_staking_reserved_amount(&pricing_service)?;
+                    (pricing_service, sol_staking_reserved_amount)
+                };
 
                 if sol_staking_reserved_amount > 0 {
                     let mut participants = ctx
@@ -317,7 +319,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 items: self.items[1..].to_vec(),
                                 state: StakeSOLCommandState::Init,
                             }
-                            .with_required_accounts([]),
+                            .without_required_accounts(),
                         ));
                     }
                 }

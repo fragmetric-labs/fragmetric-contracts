@@ -333,6 +333,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(accounts)
     }
 
+    /// returns (receipt_token_amount_processed)
     pub(super) fn process_withdrawal_batch(
         &mut self,
         operator: &Signer<'info>,
@@ -344,7 +345,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         uninitialized_batch_withdrawal_tickets: &[&'info AccountInfo<'info>],
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
-    ) -> Result<()> {
+        receipt_token_amount_to_process: u64,
+    ) -> Result<(u64)> {
         if !(forced
             || self
                 .fund_account
@@ -352,7 +354,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .is_batch_processing_threshold_satisfied(self.current_timestamp))
         {
             // Threshold unmet, skip process
-            return Ok(());
+            return Ok(0);
         }
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
@@ -392,7 +394,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 || next_withdrawal_user_amount - operation_reserved_amount
                     >= available_treasury_balance
             {
-                withdrawal_receipt_token_amount += batch.receipt_token_amount;
+                let new_withdrawal_receipt_token_amount =
+                    withdrawal_receipt_token_amount + batch.receipt_token_amount;
+                if new_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
+                    break;
+                }
+                withdrawal_receipt_token_amount = new_withdrawal_receipt_token_amount;
                 withdrawal_user_amount = next_withdrawal_user_amount;
                 withdrawal_fee_amount = next_withdrawal_fee_amount;
                 count += 1;
@@ -498,6 +505,76 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             // 2. if needed, use operation_reserved_amount, pay fee (need CPI)
         }
 
-        Ok(())
+        Ok(withdrawal_receipt_token_amount)
+    }
+
+    /// estimated $SOL amount to process queued withdrawals.
+    fn get_sol_withdrawal_obligated_reserve_amount(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let receipt_token_amount = self
+            .fund_account
+            .withdrawal
+            .queued_batches
+            .iter()
+            .map(|b| b.receipt_token_amount)
+            .sum();
+        pricing_service
+            .get_token_amount_as_sol(&self.receipt_token_mint.key(), receipt_token_amount)
+    }
+
+    /// based on normal reserve configuration, the normal reserve amount relative to total value of the fund.
+    fn get_sol_withdrawal_normal_reserve_amount(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let (total_token_value_as_sol, _total_token_amount) =
+            pricing_service.get_token_total_value_as_sol(&self.receipt_token_mint.key())?;
+        Ok(get_proportional_amount(
+            total_token_value_as_sol,
+            self.fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
+            10_000,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+        .max(self.fund_account.withdrawal.sol_normal_reserve_max_amount))
+    }
+
+    /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.
+    /// sol_withdrawal_obligated_reserve_amount + MIN(sol_withdrawal_normal_reserve_amount, MAX(0, sol_operation_reserved_amount - sol_withdrawal_obligated_reserve_amount))
+    fn get_sol_withdrawal_reserve_amount(&self, pricing_service: &PricingService) -> Result<u64> {
+        let sol_withdrawal_obligated_reserve_amount =
+            self.get_sol_withdrawal_obligated_reserve_amount(pricing_service)?;
+
+        Ok(sol_withdrawal_obligated_reserve_amount
+            + self
+                .get_sol_withdrawal_normal_reserve_amount(pricing_service)?
+                .min(
+                    self.fund_account
+                        .sol_operation_reserved_amount
+                        .saturating_sub(sol_withdrawal_obligated_reserve_amount),
+                ))
+    }
+
+    /// which is going to be executed in this stage. there can be remains after the execution.
+    /// MIN(sol_withdrawal_obligated_reserve_amount, sol_operation_reserved_amount)
+    pub(super) fn get_sol_withdrawal_execution_amount(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        Ok(self
+            .fund_account
+            .sol_operation_reserved_amount
+            .min(self.get_sol_withdrawal_obligated_reserve_amount(pricing_service)?))
+    }
+
+    /// surplus/shortage will be handled in staking stage.
+    /// sol_operation_reserved_amount - sol_withdrawal_reserve_amount
+    pub(super) fn get_sol_staking_reserved_amount(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<i128> {
+        Ok(self.fund_account.sol_operation_reserved_amount as i128
+            - self.get_sol_withdrawal_reserve_amount(pricing_service)? as i128)
     }
 }

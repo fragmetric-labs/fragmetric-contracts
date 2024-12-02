@@ -123,7 +123,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
             if self.items.len() > 1 {
                 return Ok(Some(
                     ClaimUnstakedSOLCommand::new_init(self.items[1..].to_vec())
-                        .with_required_accounts([]),
+                        .without_required_accounts(),
                 ));
             }
         }

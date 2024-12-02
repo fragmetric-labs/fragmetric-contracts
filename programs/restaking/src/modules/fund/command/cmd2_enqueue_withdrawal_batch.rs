@@ -26,7 +26,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
             .enqueue_withdrawal_batch(self.forced)?;
 
         Ok(Some(
-            ProcessWithdrawalBatchCommand::default().with_required_accounts([]),
+            ProcessWithdrawalBatchCommand::default().without_required_accounts(),
         ))
     }
 }

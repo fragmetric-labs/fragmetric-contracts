@@ -81,6 +81,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
+    // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
+    // TODO: Use PDA as ALT address if possible... -> define constant seed and address at onchain codebase
     public async getOrCreateKnownAddressLookupTable() {
         if (this._knownAddressLookupTableAddress) {
             return this._knownAddressLookupTableAddress;
@@ -88,8 +90,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const authority = this.keychain.getKeypair('ADMIN').publicKey;
         const payer = this.wallet.publicKey;
-
-        // TODO: Use PDA as ALT address if possible
         const [createIx, lookupTable] = web3.AddressLookupTableProgram.createLookupTable({
             authority,
             payer,
@@ -100,44 +100,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signerNames: ['ADMIN']
         });
 
-        let addresses = Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[];
-        console.log(`addresses ${addresses.length}:`, addresses);
-        let addressList = [], addressLists = [];
-        addresses.forEach((address, index) => {
-            addressList.push(address);
-            if (index != 0 && index % 32 == 0 || index == addresses.length - 1) {
-                addressLists.push(addressList);
-                addressList = []; // initialize a new chunk
+        const addresses = Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[];
+        const listOfAddressList = addresses.reduce((listOfAddressList, address) =>  {
+            if (listOfAddressList[0].length == 27) { // 27 (addresses) + 5 (admin/authority, payer, alt_program, alt, system_program)
+                listOfAddressList.unshift([address]);
+            } else {
+                listOfAddressList[0].push(address);
             }
-        });
-        console.log(`addressLists len(${addressLists.length}):`, addressLists);
-        const updateIxs = addressLists.map(addressList => web3.AddressLookupTableProgram.extendLookupTable({
-            lookupTable,
-            authority,
-            payer,
-            addresses: addressList as web3.PublicKey[],
-        }));
-        // const updateIx = web3.AddressLookupTableProgram.extendLookupTable({
-        //     lookupTable,
-        //     authority,
-        //     payer,
-        //     addresses: [
-        //         // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
-        //         ...Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[],
-        //     ],
-        // });
-
-        for (let updateIx of updateIxs) {
+            return listOfAddressList;
+        }, [[]] as web3.PublicKey[][]);
+        for (let addresses of listOfAddressList) {
             await this.run({
-                instructions: [updateIx],
+                instructions: [
+                    web3.AddressLookupTableProgram.extendLookupTable({
+                        lookupTable,
+                        authority,
+                        payer,
+                        addresses,
+                    }),
+                ],
                 signerNames: ['ADMIN'],
             });
         }
 
-        // await this.run({
-        //     instructions: [createIx, ...updateIxs],
-        //     signerNames: ['ADMIN'],
-        // });
         this._knownAddressLookupTableAddress = lookupTable;
         logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
     }
@@ -1603,12 +1588,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
-        const {event, error} = await this.runOperatorRun({
+        const {event: _event, error: _error} = await this.runOperatorRun({
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
+                        forced: forced,
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
+
+        const {event, error} = await this.runOperatorRun({
+            command: {
+                processWithdrawalBatch: {
+                    0: {
                         state: {
-                            init: {},
+                            new: {},
                         },
                         forced: forced,
                     }

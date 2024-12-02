@@ -126,4 +126,11 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
                 .collect(),
         }
     }
+
+    fn without_required_accounts(self) -> OperationCommandEntry {
+        OperationCommandEntry {
+            command: self.into(),
+            required_accounts: Vec::with_capacity(0),
+        }
+    }
 }
