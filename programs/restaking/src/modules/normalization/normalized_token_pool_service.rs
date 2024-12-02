@@ -206,13 +206,13 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             withdrawal_ticket.is_latest_version(),
             ErrorCode::InvalidDataVersionError
         );
-        
+
         // calculate claimable amount for each supported tokens to withdraw them proportionally relative to the current composition ratio.
         let normalized_token_amount = from_normalized_token_account.amount;
         require_gt!(normalized_token_amount, 0);
 
         let pricing_service = &mut self.new_pricing_service(pricing_sources)?;
-        
+
         let normalized_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
         let pool_total_value_as_sol = pricing_service
@@ -243,8 +243,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     supported_token_claimable_amount_as_sol,
                 )?;
 
+                // move locked amount to withdrawal reserved amount
                 supported_token
-                    .unlock_withdrawal_reserved_token(supported_token_claimable_amount)?;
+                    .unlock_token_to_withdrawal_reserved(supported_token_claimable_amount)?;
 
                 Ok(if supported_token_claimable_amount > 0 {
                     Some(ClaimableToken::new(
@@ -361,7 +362,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             let withdrawal_ticket_lamports = withdrawal_ticket_account_info.lamports();
             **to_rent_lamports_account.lamports.borrow_mut() += withdrawal_ticket_lamports;
             **withdrawal_ticket_account_info.lamports.borrow_mut() = 0;
-            
+
             let mut data = withdrawal_ticket_account_info.try_borrow_mut_data()?;
             data.fill(0);
         }
@@ -375,7 +376,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<PricingService<'info>> {
         let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(self.normalized_token_pool_account.as_account_info());
+            .register_token_pricing_source_account(
+                self.normalized_token_pool_account.as_account_info(),
+            );
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;
