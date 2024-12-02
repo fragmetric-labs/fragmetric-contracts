@@ -151,7 +151,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
             } else {
                 const supportedTokenAccount = await restaking.getFragSOLSupportedTokenAccountByMintAddress(asset.token[0]);
                 const supportedTokenData = fragSOLFund.supportedTokens.find(s => s.mint.toString() == asset.token[0].toString());
-                const supportedTokenDataBalance = supportedTokenData.operationReservedAmount.add(supportedTokenData.operatingAmount);
+                const supportedTokenDataBalance = supportedTokenData.operationReservedAmount.add(supportedTokenData.operationReceivableAmount);
                 logger.debug(`${asset.token[0]} balance:`, asset.token[2].toString(), supportedTokenDataBalance.toString());
 
                 // TODO: expect(asset.token[2].toString()).eq(new BN(supportedTokenAccount.amount.toString()).toString(), `correct fund reserved supported token (token account, ${asset.token[0]})`);

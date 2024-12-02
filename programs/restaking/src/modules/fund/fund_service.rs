@@ -361,8 +361,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
         let mut operation_reserved_amount = self.fund_account.sol_operation_reserved_amount;
-        // TODO v0.3/operation: later use sol_operation_receivable_expense in fund account
-        let mut operation_receivable_expense = 0;
         let mut withdrawal_receipt_token_amount = 0;
         let mut withdrawal_user_amount = 0;
         let mut withdrawal_fee_amount = 0;
@@ -384,7 +382,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             let next_withdrawal_user_amount = withdrawal_user_amount + sol_user_amount;
             let next_withdrawal_fee_amount = withdrawal_fee_amount + sol_fee_amount;
 
-            if operation_reserved_amount + operation_receivable_expense
+            if operation_reserved_amount + self.fund_account.sol_operation_receivable_amount
                 <= next_withdrawal_user_amount + next_withdrawal_fee_amount
             {
                 break;
@@ -495,8 +493,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             withdrawal_fee_amount += withdrawal_user_amount - operation_reserved_amount;
 
             self.fund_account.sol_operation_reserved_amount = 0;
-            // TODO v0.3/operation: use operation_receivable_expense in fund account
-            operation_receivable_expense -= withdrawal_fee_amount;
+            self.fund_account.sol_operation_receivable_amount -= withdrawal_fee_amount;
         } else {
             self.fund_account.sol_operation_reserved_amount -= withdrawal_user_amount;
             operation_reserved_amount -= withdrawal_user_amount;

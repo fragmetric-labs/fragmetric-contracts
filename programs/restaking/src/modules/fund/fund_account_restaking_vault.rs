@@ -21,7 +21,7 @@ pub(super) struct RestakingVault {
     pub receipt_token_pricing_source: TokenPricingSource,
     pub receipt_token_operation_reserved_amount: u64,
     /// the amount of vrt being unrestaked
-    pub receipt_token_operating_amount: u64,
+    pub receipt_token_operation_receivable_amount: u64,
 
     /// configuration: used for restaking allocation strategy.
     pub sol_allocation_weight: u64,
@@ -65,7 +65,7 @@ impl RestakingVault {
             one_receipt_token_as_sol: 0,
             receipt_token_pricing_source,
             receipt_token_operation_reserved_amount,
-            receipt_token_operating_amount: 0,
+            receipt_token_operation_receivable_amount: 0,
 
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
