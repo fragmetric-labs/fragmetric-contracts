@@ -25,7 +25,12 @@ pub(super) struct WithdrawalState {
     pub queued_batches: Vec<WithdrawalBatch>,
 
     pub sol_withdrawal_reserved_amount: u64,
-    _reserved: [[u8; 8]; 13],
+
+    /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
+    pub sol_normal_reserve_rate_bps: u16,
+    pub sol_normal_reserve_max_amount: u64,
+
+    _reserved: [[u8; 8]; 16],
 }
 
 impl WithdrawalState {
@@ -67,6 +72,8 @@ impl WithdrawalState {
                 .for_each(|batch| batch.migrate(fund_account_data_version));
             // _padding: [u8; 8] -> _reserved
             // receipt_token_processed_amount: u64 -> _reserved
+            self.sol_normal_reserve_rate_bps = 0;
+            self.sol_normal_reserve_max_amount = 0;
             self._reserved = Default::default();
         }
     }
@@ -111,6 +118,22 @@ impl WithdrawalState {
         require_gte!(interval_seconds, 0);
 
         self.batch_threshold_interval_seconds = interval_seconds;
+
+        Ok(())
+    }
+
+    pub fn set_sol_normal_reserve_max_amount(&mut self, sol_amount: u64) {
+        self.sol_normal_reserve_max_amount = sol_amount;
+    }
+
+    pub fn set_sol_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+        require_gte!(
+            10_00, // 10%
+            reserve_rate_bps,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.sol_normal_reserve_rate_bps = reserve_rate_bps;
 
         Ok(())
     }
@@ -236,7 +259,7 @@ pub(super) struct WithdrawalBatch {
     pub num_requests: u64,
     pub receipt_token_amount: u64,
     _padding: [u8; 24],
-    enqueued_at: Option<i64>,
+    enqueued_at: Option<i64>, // TODO: why?
     _reserved: [u8; 32],
 }
 

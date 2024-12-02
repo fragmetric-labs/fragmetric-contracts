@@ -60,6 +60,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         Ok(pool_account)
     }
 
+    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program]
     pub(super) fn deserialize_stake_account(
         stake_account_info: &'a AccountInfo<'info>,
     ) -> Result<StakeStateV2> {
@@ -84,6 +85,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         ]
     }
 
+    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account]
     pub fn find_accounts_to_deposit_sol(
         pool_account_info: &'a AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {

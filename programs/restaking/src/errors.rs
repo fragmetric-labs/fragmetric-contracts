@@ -60,7 +60,7 @@ pub enum ErrorCode {
     FundProcessingWithdrawalRequestError,
 
     #[msg("pricing: token pricing source is not found")]
-    TokenPricingSourceAccountNotFoundException,
+    TokenPricingSourceAccountNotFoundError,
 
     #[msg("operation: job unmet threshold")]
     OperatorJobUnmetThresholdError,
@@ -207,7 +207,19 @@ pub enum ErrorCode {
     FundExceededMaxRestakingVaultsError,
 
     #[msg("fund: not supported restaking vault")]
-    FundNotSupportedRestakingVaultError,
+    FundRestakingNotSupportedVaultError,
+
+    #[msg("fund: restaking vault not found")]
+    FundRestakingVaultNotFoundError,
+
+    #[msg("fund: restaking vault operator not found")]
+    FundRestakingVaultOperatorNotFoundError,
+
+    #[msg("fund: restaking vault operator already registered")]
+    FundRestakingVaultOperatorAlreadyRegisteredError,
+
+    #[msg("fund: exceeded max restaking vault operators")]
+    FundExceededMaxRestakingVaultOperatorsError,
 
     #[msg("staking: failed to find uninitialized withdraw ticket")]
     StakingUninitializedWithdrawTicketNotFoundException,

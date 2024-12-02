@@ -71,21 +71,21 @@ impl<'info> PricingService<'info> {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 SPLStakePoolValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::MarinadeStakePool { address } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 MarinadeStakePoolValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
             TokenPricingSource::JitoRestakingVault { address } => {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 JitoRestakingVaultValueProvider
                     .resolve_underlying_assets(token_mint, &[account1])?
             }
@@ -93,7 +93,7 @@ impl<'info> PricingService<'info> {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 NormalizedTokenPoolValueProvider
                     .resolve_underlying_assets(token_mint, &[account1])?
             }
@@ -101,7 +101,7 @@ impl<'info> PricingService<'info> {
                 let account1 = self
                     .token_pricing_source_accounts_map
                     .get(address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 FundReceiptTokenValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
             #[cfg(test)]
@@ -156,7 +156,7 @@ impl<'info> PricingService<'info> {
         let token_value = self
             .token_value_map
             .get(token_mint)
-            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
         let mut total_sol_amount = 0u64;
 
         for asset in &token_value.numerator {
@@ -214,7 +214,7 @@ impl<'info> PricingService<'info> {
         let token_value = self
             .token_value_map
             .get(token_mint)
-            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundException))?;
+            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
 
         if token_value.is_atomic() {
             return Ok(token_value.clone());
@@ -233,7 +233,7 @@ impl<'info> PricingService<'info> {
                         .token_value_map
                         .get(token_mint)
                         .ok_or_else(|| {
-                            error!(ErrorCode::TokenPricingSourceAccountNotFoundException)
+                            error!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                         })?
                         .is_atomic();
 
