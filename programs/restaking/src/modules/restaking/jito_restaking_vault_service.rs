@@ -628,16 +628,6 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         base
     }
-    pub fn find_vault_base_accounts() -> Vec<(Pubkey, bool)> {
-        let mut base_accounts = Vec::with_capacity(Self::BASE_ACCOUNTS_LENGTH as usize);
-        for i in 1..=Self::BASE_ACCOUNTS_LENGTH {
-            base_accounts.push((
-                Self::find_vault_base_account(i),
-                false,
-            ));
-        }
-        base_accounts
-    }
 
     pub fn find_withdrawal_ticket_account(base: &Pubkey) -> Pubkey {
         let vault_account: Pubkey = FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS;

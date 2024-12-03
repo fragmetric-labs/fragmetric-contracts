@@ -241,7 +241,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             ),
                         })
                     }
-                    let (restake_supported_token_state, _) = supported_tokens[1];
+                    let (restake_supported_token_state, _) = supported_tokens[0];
                     let pool_supported_token_account =
                         anchor_spl::associated_token::get_associated_token_address(
                             &normalized_token_pool_address.key(),

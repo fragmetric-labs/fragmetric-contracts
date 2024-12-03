@@ -8,8 +8,10 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::jito::JitoRestakingVault;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
+use jito_bytemuck::AccountDeserialize;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnrestakeVRTCommand {
@@ -71,10 +73,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address } => {
-                            let mut required_accounts =
-                                &mut JitoRestakingVaultService::find_vault_base_accounts();
-                            required_accounts
-                                .append(&mut JitoRestakingVaultService::find_withdrawal_tickets());
+                            let required_accounts =  &mut JitoRestakingVaultService::find_withdrawal_tickets();
                             return Ok(Some(
                                 command.with_required_accounts(required_accounts.to_vec()),
                             ));
@@ -90,13 +89,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
-                            let base_accounts = &remaining_accounts[0..5] else {
+                            let withdrawal_tickets = &remaining_accounts[..5] else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
-                            let withdrawal_tickets = &remaining_accounts[5..10] else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
-                            let remaining_accounts = &remaining_accounts[10..] else {
+                            let remaining_accounts = &remaining_accounts[5..] else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
 
@@ -107,10 +103,15 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                 if JitoRestakingVaultService::check_withdrawal_ticket_is_empty(
                                     &withdrawal_ticket,
                                 )? {
+                                    let ticket_data_ref = withdrawal_ticket.data.borrow();
+                                    let ticket_data = ticket_data_ref.as_ref();
+                                    let ticket = VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
+                                    let ticket_token_account = JitoRestakingVaultService::find_withdrawal_ticket_token_account(&withdrawal_ticket.key());
+
                                     ticket_set = (
-                                        base_accounts[index].key(),
+                                        ticket.base.key(),
                                         withdrawal_ticket.key(),
-                                        withdrawal_ticket.key(),
+                                        ticket_token_account,
                                     );
                                     break;
                                 }
@@ -158,7 +159,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                             .new_pricing_service(remaining_accounts.to_vec())?;
 
                     let need_to_withdraw_token_amount = pricing_service.get_sol_amount_as_token(
-                        &vault_supported_token_mint.key(),
+                        &vault_receipt_token_mint.key(),
                         item.sol_amount,
                     )?;
 
