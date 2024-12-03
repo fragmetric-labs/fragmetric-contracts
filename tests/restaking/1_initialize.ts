@@ -7,6 +7,14 @@ import {restakingPlayground} from "../restaking";
 describe("initialize", async () => {
     const restaking = await restakingPlayground;
 
+    step("try airdrop SOL to fund manager", async function () {
+        await Promise.all([
+            restaking.tryAirdrop(restaking.keychain.getPublicKey('FUND_MANAGER'), 100),
+        ]);
+
+        await restaking.sleep(1); // ...block hash not found?
+    });
+
     step("create known address lookup table", async function () {
         await restaking.getOrCreateKnownAddressLookupTable();
     });
