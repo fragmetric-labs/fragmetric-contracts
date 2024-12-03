@@ -177,9 +177,10 @@ impl<'info> JitoRestakingVaultService<'info> {
         let token_program = anchor_spl::token::ID;
         let system_program = System::id();
         let fund_supported_token_account =
-            anchor_spl::associated_token::get_associated_token_address(
-                fund_account.key,
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &fund_account.key(),
                 &vault_vst_mint,
+                &token_program,
             );
         let clock = Clock::get()?;
         let vault_update_state_tracker =
@@ -190,7 +191,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         let vault_fee_wallet_token_account =
             associated_token::get_associated_token_address_with_program_id(
-                &ADMIN_PUBKEY,
+                &vault.fee_wallet,
                 &vault_vrt_mint,
                 &token_program,
             );
@@ -200,18 +201,25 @@ impl<'info> JitoRestakingVaultService<'info> {
                 &vault_vrt_mint,
                 &token_program,
             );
+        let vault_supported_token_account =
+            associated_token::get_associated_token_address_with_program_id(
+                &jito_vault_account.key(),
+                &vault.supported_mint,
+                &token_program,
+            );
 
         Ok(vec![
             (*jito_vault_program.key, false),
-            (*jito_vault_account.key, false),
-            (*jito_vault_config.key, false),
+            (*jito_vault_account.key, true),
+            (*jito_vault_config.key, true),
             (vault_update_state_tracker.key(), false),
             (vault_update_state_tracker_prepare_for_delaying.key(), false),
-            (vault_vrt_mint, false),
-            (vault_vst_mint, false),
-            (fund_supported_token_account, false),
-            (fund_receipt_token_account, false),
-            (vault_fee_wallet_token_account, false),
+            (vault_vrt_mint, true),
+            (vault_vst_mint, true),
+            (fund_supported_token_account, true),
+            (fund_receipt_token_account, true),
+            (vault_supported_token_account, true),
+            (vault_fee_wallet_token_account, true),
             (token_program, false),
             (system_program, false),
         ])
@@ -328,7 +336,6 @@ impl<'info> JitoRestakingVaultService<'info> {
                 current_epoch,
             )?;
         }
-
         Ok(&self)
     }
 
@@ -498,7 +505,6 @@ impl<'info> JitoRestakingVaultService<'info> {
     }
 
     pub fn find_initialize_vault_accounts(
-        fund_account: &AccountInfo,
         vault_program: &AccountInfo,
         vault_account: &AccountInfo,
         vault_config: &AccountInfo,
@@ -511,10 +517,12 @@ impl<'info> JitoRestakingVaultService<'info> {
         let vault_supported_token_mint = vault.supported_mint;
         let token_program = anchor_spl::token::ID;
         let vault_supported_token_account =
-            associated_token::get_associated_token_address(
-                fund_account.key,
-                &vault_supported_token_mint,
+            associated_token::get_associated_token_address_with_program_id(
+                &vault_account.key(),
+                &vault.supported_mint,
+                &token_program,
             );
+
         Ok(vec![
             (vault_program.key(), false),
             (vault_config.key(), false),
@@ -737,6 +745,14 @@ impl<'info> JitoRestakingVaultService<'info> {
                 &vault_vrt_mint,
             );
 
+        let vault_supported_token_account =
+            associated_token::get_associated_token_address_with_program_id(
+                &jito_vault_account.key(),
+                &vault.supported_mint,
+                &token_program,
+            );
+
+
         let clock = Clock::get()?;
         let vault_update_state_tracker =
             Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
@@ -752,6 +768,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             (vault_vst_mint, false),
             (fund_supported_token_account, false),
             (fund_receipt_token_account, false),
+            (vault_supported_token_account, false),
             (vault_fee_receipt_token_account, false),
             (vault_program_fee_wallet_vrt_account, false),
             (vault_update_state_tracker, false),

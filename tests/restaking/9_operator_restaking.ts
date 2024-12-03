@@ -36,7 +36,7 @@ describe("operator_restake_with_normalize", async () => {
         },
             restaking.keychain.getKeypair('FUND_MANAGER'),
             100,
-            350_000,
+            3000_000,
         );
     });
     //

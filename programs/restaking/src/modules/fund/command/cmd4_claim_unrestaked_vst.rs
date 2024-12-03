@@ -154,7 +154,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     let mut command = self.clone();
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address: _ } => {
-                            let [vault_program, vault_account, vault_config, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, token_program, system_program, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
+                            let [vault_program, vault_account, vault_config, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account,vault_supported_token_account,  vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, token_program, system_program, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -179,7 +179,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 token_program.to_account_info(),
                                 vault_vst_mint.to_account_info(),
                                 token_program.to_account_info(),
-                                fund_supported_token_account.to_account_info(),
+                                vault_supported_token_account.to_account_info(),
                             )?
                             .update_vault_if_needed(
                                 ctx.operator,

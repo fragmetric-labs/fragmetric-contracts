@@ -127,7 +127,6 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                 );
                             let mut required_accounts =
                                 JitoRestakingVaultService::find_initialize_vault_accounts(
-                                    &ctx.fund_account.as_ref(),
                                     jito_vault_program,
                                     jito_vault_account,
                                     jito_vault_config,
