@@ -2,15 +2,16 @@ use super::{
     ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, OperationCommand,
     OperationCommandContext, OperationCommandEntry, SelfExecutable,
 };
+use crate::constants::FRAGSOL_MINT_ADDRESS;
 use crate::errors;
 use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::jito::JitoRestakingVault;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
-use jito_bytemuck::AccountDeserialize;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -54,7 +55,7 @@ impl UnrestakeVSTCommandItem {
 pub enum UnrestakeVRTCommandState {
     Init,
     ReadVaultState,
-    Unstake,
+    Unstake(u8),
 }
 
 impl SelfExecutable for UnrestakeVRTCommand {
@@ -73,7 +74,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address } => {
-                            let required_accounts =  &mut JitoRestakingVaultService::find_withdrawal_tickets();
+                            let required_accounts =
+                                &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
+                            required_accounts
+                                .append(&mut JitoRestakingVaultService::find_withdrawal_tickets());
                             return Ok(Some(
                                 command.with_required_accounts(required_accounts.to_vec()),
                             ));
@@ -84,7 +88,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                 UnrestakeVRTCommandState::ReadVaultState => {
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address } => {
-                            let [jito_vault_program, jito_vault_account, jito_vault_config, withdrawal_ticket_account1, withdrawal_ticket_account2, withdrawal_ticket_account3, withdrawal_ticket_account4, withdrawal_ticket_account5, remaining_accounts @ ..] =
+                            let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -92,24 +96,23 @@ impl SelfExecutable for UnrestakeVRTCommand {
                             let withdrawal_tickets = &remaining_accounts[..5] else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
+
                             let remaining_accounts = &remaining_accounts[5..] else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
 
+                            let mut withdrawal_ticket_position = 0;
                             let mut ticket_set: (Pubkey, Pubkey, Pubkey) =
                                 (Pubkey::default(), Pubkey::default(), Pubkey::default());
-                            for (index, withdrawal_ticket) in withdrawal_tickets.iter().enumerate()
-                            {
+                            for (i, withdrawal_ticket) in withdrawal_tickets.iter().enumerate() {
                                 if JitoRestakingVaultService::check_withdrawal_ticket_is_empty(
                                     &withdrawal_ticket,
                                 )? {
-                                    let ticket_data_ref = withdrawal_ticket.data.borrow();
-                                    let ticket_data = ticket_data_ref.as_ref();
-                                    let ticket = VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
-                                    let ticket_token_account = JitoRestakingVaultService::find_withdrawal_ticket_token_account(&withdrawal_ticket.key());
-
+                                    let ticket_token_account = JitoRestakingVaultService::find_withdrawal_ticket_token_account(&withdrawal_ticket.key(), &restaking_vault.receipt_token_mint, &restaking_vault.receipt_token_program);
+                                    withdrawal_ticket_position = i as u8;
                                     ticket_set = (
-                                        ticket.base.key(),
+                                        JitoRestakingVaultService::find_vault_base_account(i as u8)
+                                            .0,
                                         withdrawal_ticket.key(),
                                         ticket_token_account,
                                     );
@@ -132,35 +135,48 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                     jito_vault_config,
                                 )?;
                             required_accounts.append(&mut vec![
-                                (ticket_set.0, true),
-                                (ticket_set.1, false),
-                                (ticket_set.2, false),
-                                (fund_receipt_token_account, false),
+                                (ticket_set.0, false),
+                                (ticket_set.1, true),
+                                (ticket_set.2, true),
+                                (fund_receipt_token_account, true),
+                                (anchor_spl::associated_token::ID, false),
                                 (system_program, false),
                             ]);
 
                             let mut command = self.clone();
-                            command.state = UnrestakeVRTCommandState::Unstake;
+                            command.state =
+                                UnrestakeVRTCommandState::Unstake(withdrawal_ticket_position);
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
                 }
-                UnrestakeVRTCommandState::Unstake => {
-                    let [vault_program, vault_config, vault_account, vault_receipt_token_mint, vault_receipt_token_program, vault_supported_token_mint, vault_supported_token_program, vault_supported_token_account, base_account, withdrawal_ticket_account, withdrawal_ticket_token_account, fund_receipt_token_account, system_program, remaining_accounts @ ..] =
+                UnrestakeVRTCommandState::Unstake(withdrawal_ticket_position) => {
+                    let [vault_program, vault_config, vault_account, vault_receipt_token_mint, vault_receipt_token_program, vault_supported_token_mint, vault_supported_token_program, vault_supported_token_account, base_account, withdrawal_ticket_account, withdrawal_ticket_token_account, fund_receipt_token_account, associated_token_program, system_program, remaining_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
-
+                    let mut pricing_source = remaining_accounts.to_vec();
+                    pricing_source.push(vault_account);
                     let pricing_service =
                         FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
-                            .new_pricing_service(remaining_accounts.to_vec())?;
+                            .new_pricing_service(pricing_source)?;
 
                     let need_to_withdraw_token_amount = pricing_service.get_sol_amount_as_token(
                         &vault_receipt_token_mint.key(),
                         item.sol_amount,
                     )?;
+                    let (base_account_key, base_account_bump) =
+                        JitoRestakingVaultService::find_vault_base_account(
+                            *withdrawal_ticket_position,
+                        );
+                    let ticket_key = JitoRestakingVaultService::find_withdrawal_ticket_account(
+                            &base_account_key,
+                        );
+
+                    require_eq!(base_account.key(), base_account_key);
+                    require_eq!(withdrawal_ticket_account.key(), ticket_key);
 
                     JitoRestakingVaultService::new(
                         vault_program.to_account_info(),
@@ -178,9 +194,18 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         withdrawal_ticket_token_account,
                         fund_receipt_token_account,
                         base_account,
+                        associated_token_program,
                         system_program,
                         &ctx.fund_account.as_ref(),
-                        &[&ctx.fund_account.get_seeds()],
+                        &[
+                            ctx.fund_account.get_seeds().as_ref(),
+                            &[
+                                JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED,
+                                (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),
+                                &[*withdrawal_ticket_position],
+                                &[base_account_bump],
+                            ],
+                        ],
                         need_to_withdraw_token_amount,
                     )?;
                 }

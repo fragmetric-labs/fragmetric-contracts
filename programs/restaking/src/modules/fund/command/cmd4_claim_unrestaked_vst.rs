@@ -101,6 +101,8 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let (claimable_tickets, _) =
                                 JitoRestakingVaultService::get_claimable_withdrawal_tickets(
                                     vault_config,
+                                    &restaking_vault.receipt_token_mint,
+                                    &restaking_vault.receipt_token_program,
                                     withdrawal_tickets.to_vec(),
                                 )?;
 

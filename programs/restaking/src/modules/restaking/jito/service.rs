@@ -295,9 +295,8 @@ impl JitoRestakingVault {
     pub fn find_vault_base_account(index: u8) -> Pubkey {
         let base = Pubkey::find_program_address(
             &[
-                Self::VAULT_BASE_ACCOUNT_SEED,
+                Self::VAULT_BASE_ACCOUNT1_SEED,
                 (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),
-                &[index],
             ],
             &JITO_VAULT_PROGRAM_ID,
         )
