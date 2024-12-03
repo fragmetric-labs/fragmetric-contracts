@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund;
-
+use crate::modules::fund::FundService;
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -19,8 +18,9 @@ impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum ProcessWithdrawalBatchCommandState {
     #[default]
-    Init,
-    Process,
+    New,
+    /// max receipt_token_amount to process withdrawal
+    Process(u64),
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
@@ -30,16 +30,19 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self.state {
-            ProcessWithdrawalBatchCommandState::Init => {
-                let mut command = self.clone();
-                command.state = ProcessWithdrawalBatchCommandState::Process;
+            ProcessWithdrawalBatchCommandState::New => {
+                let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                let pricing_service = fund_service.new_pricing_service(accounts.into_iter().cloned())?;
 
-                let required_accounts =
-                    fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .find_accounts_to_process_withdrawal_batch()?;
+                let receipt_token_amount_to_process = fund_service.get_sol_withdrawal_execution_amount(&pricing_service)?;
+
+                let mut command = self.clone();
+                command.state = ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process);
+
+                let required_accounts = fund_service.find_accounts_to_process_withdrawal_batch()?;
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
-            ProcessWithdrawalBatchCommandState::Process => {
+            ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
                 let [receipt_token_program, receipt_token_lock_account, fund_reserve_account, treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
@@ -52,7 +55,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                 let (uninitialized_batch_withdrawal_tickets, pricing_sources) =
                     remaining_accounts.split_at(ctx.fund_account.withdrawal.queued_batches.len());
-                fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                     .process_withdrawal_batch(
                         ctx.operator,
                         ctx.system_program,
@@ -63,6 +66,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         uninitialized_batch_withdrawal_tickets,
                         pricing_sources,
                         self.forced,
+                        receipt_token_amount_to_process,
                     )?;
             }
         }

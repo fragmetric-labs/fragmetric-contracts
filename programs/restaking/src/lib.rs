@@ -17,7 +17,7 @@ pub mod restaking {
     use super::*;
 
     ////////////////////////////////////////////
-    // AdminFundInitialContext
+    // AdminFundAccountInitialContext
     ////////////////////////////////////////////
 
     pub fn admin_initialize_fund_account(
@@ -34,50 +34,8 @@ pub mod restaking {
         )
     }
 
-    pub fn admin_initialize_fund_normalized_token_account<'info>(
-        ctx: Context<'_, '_, 'info, 'info, AdminFundNormalizedTokenAccountInitialContext<'info>>,
-    ) -> Result<()> {
-        modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )?
-        .process_set_normalized_token(
-            &ctx.accounts.fund_normalized_token_account,
-            &mut ctx.accounts.normalized_token_mint,
-            &ctx.accounts.normalized_token_program,
-            &mut ctx.accounts.normalized_token_pool_account,
-            ctx.remaining_accounts,
-        )
-    }
-
-    pub fn admin_initialize_jito_restaking_vault_receipt_token_account<'info>(
-        ctx: Context<
-            '_,
-            '_,
-            'info,
-            'info,
-            AdminFundJitoRestakingProtocolAccountInitialContext<'info>,
-        >,
-    ) -> Result<()> {
-        modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )?
-        .process_add_restaking_vault(
-            &ctx.accounts.fund_vault_supported_token_account,
-            &ctx.accounts.fund_vault_receipt_token_account,
-            &ctx.accounts.vault_supported_token_mint,
-            &ctx.accounts.vault_supported_token_program,
-            &ctx.accounts.vault_account,
-            &ctx.accounts.vault_program,
-            &ctx.accounts.vault_receipt_token_mint,
-            &ctx.accounts.vault_receipt_token_program,
-            ctx.remaining_accounts,
-        )
-    }
-
     ////////////////////////////////////////////
-    // AdminFundUpdateContext
+    // AdminFundAccountUpdateContext
     ////////////////////////////////////////////
 
     pub fn admin_update_fund_account_if_needed(
@@ -120,7 +78,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminReceiptTokenMintInitialContext
+    // AdminReceiptTokenMintExtraAccountMetaListInitialContext
     ////////////////////////////////////////////
 
     #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
@@ -135,7 +93,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminReceiptTokenMintUpdateContext
+    // AdminReceiptTokenMintExtraAccountMetaListUpdateContext
     ////////////////////////////////////////////
 
     pub fn admin_update_extra_account_meta_list_if_needed(
@@ -149,7 +107,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminRewardInitialContext
+    // AdminRewardAccountInitialContext
     ////////////////////////////////////////////
 
     pub fn admin_initialize_reward_account(
@@ -163,7 +121,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminRewardUpdateContext
+    // AdminRewardAccountUpdateContext
     ////////////////////////////////////////////
 
     pub fn admin_update_reward_accounts_if_needed(
@@ -185,60 +143,130 @@ pub mod restaking {
     // FundManagerFundContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_update_sol_capacity_amount(
-        ctx: Context<FundManagerFundContext>,
-        capacity_amount: u64,
+    pub fn fund_manager_update_fund_strategy<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        sol_accumulated_deposit_amount: u64,
+        sol_withdrawal_fee_rate_bps: u16,
+        sol_withdrawal_normal_reserve_rate_bps: u16,
+        sol_withdrawal_normal_reserve_max_amount: u64,
+        withdrawal_batch_threshold_seconds: i64,
+        withdrawal_enabled: bool,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_sol_capacity_amount(capacity_amount)
+        .process_update_fund_strategy(
+            sol_accumulated_deposit_amount,
+            sol_withdrawal_fee_rate_bps,
+            sol_withdrawal_normal_reserve_rate_bps,
+            sol_withdrawal_normal_reserve_max_amount,
+            withdrawal_batch_threshold_seconds,
+            withdrawal_enabled,
+        )
     }
 
-    pub fn fund_manager_update_supported_token_capacity_amount(
-        ctx: Context<FundManagerFundContext>,
+    pub fn fund_manager_update_supported_token_strategy<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         token_mint: Pubkey,
-        capacity_amount: u64,
+        token_accumulated_deposit_capacity_amount: u64,
+        token_rebalancing_amount: Option<u64>,
+        sol_allocation_weight: u64,
+        sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_supported_token_capacity_amount(&token_mint, capacity_amount)
+        .process_update_supported_token_strategy(
+            &token_mint,
+            token_accumulated_deposit_capacity_amount,
+            token_rebalancing_amount,
+            sol_allocation_weight,
+            sol_allocation_capacity_amount,
+        )
     }
 
-    pub fn fund_manager_update_withdrawal_enabled_flag(
-        ctx: Context<FundManagerFundContext>,
-        enabled: bool,
+    pub fn fund_manager_update_restaking_vault_strategy<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        vault: Pubkey,
+        sol_allocation_weight: u64,
+        sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_withdrawal_enabled(enabled)
+        .process_update_restaking_vault_strategy(
+            &vault,
+            sol_allocation_weight,
+            sol_allocation_capacity_amount,
+        )
     }
 
-    pub fn fund_manager_update_sol_withdrawal_fee_rate(
-        ctx: Context<FundManagerFundContext>,
-        sol_withdrawal_fee_rate: u16,
+    pub fn fund_manager_update_restaking_vault_operator_strategy<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        vault: Pubkey,
+        operator: Pubkey,
+        token_allocation_weight: u64,
+        token_allocation_capacity_amount: u64,
+        token_redelegation_amount: Option<u64>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_sol_withdrawal_fee_rate(sol_withdrawal_fee_rate)
+        .process_update_restaking_vault_operator_strategy(
+            &vault,
+            &operator,
+            token_allocation_weight,
+            token_allocation_capacity_amount,
+            token_redelegation_amount,
+        )
     }
 
-    pub fn fund_manager_update_batch_processing_threshold(
-        ctx: Context<FundManagerFundContext>,
-        interval_seconds: i64,
+    ////////////////////////////////////////////
+    // FundManagerFundNormalizedTokenInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_fund_normalized_token<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundNormalizedTokenInitialContext<'info>>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_batch_threshold(interval_seconds)
+        .process_set_normalized_token(
+            &ctx.accounts.fund_normalized_token_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+            &mut ctx.accounts.normalized_token_pool_account,
+            ctx.remaining_accounts,
+        )
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerFundJitoRestakingVaultInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_fund_jito_restaking_vault<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundJitoRestakingVaultInitialContext<'info>>,
+    ) -> Result<()> {
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_add_restaking_vault(
+            &ctx.accounts.fund_vault_supported_token_account,
+            &ctx.accounts.fund_vault_receipt_token_account,
+            &ctx.accounts.vault_supported_token_mint,
+            &ctx.accounts.vault_supported_token_program,
+            &ctx.accounts.vault_account,
+            &ctx.accounts.vault_program,
+            &ctx.accounts.vault_receipt_token_mint,
+            &ctx.accounts.vault_receipt_token_program,
+            ctx.remaining_accounts,
+        )
     }
 
     ////////////////////////////////////////////
@@ -247,7 +275,6 @@ pub mod restaking {
 
     pub fn fund_manager_add_supported_token<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundSupportedTokenContext<'info>>,
-        capacity_amount: u64,
         pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
@@ -258,7 +285,6 @@ pub mod restaking {
             &ctx.accounts.supported_token_account,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
-            capacity_amount,
             pricing_source,
             ctx.remaining_accounts,
         )
@@ -498,7 +524,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundInitialContext
+    // UserFundAccountInitialContext
     ////////////////////////////////////////////
 
     pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
@@ -514,7 +540,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundUpdateContext
+    // UserFundAccountUpdateContext
     ////////////////////////////////////////////
 
     pub fn user_update_fund_account_if_needed(
@@ -647,7 +673,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserRewardInitialContext
+    // UserRewardAccountInitialContext
     ////////////////////////////////////////////
 
     pub fn user_initialize_reward_account(
@@ -662,14 +688,12 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserRewardContext
+    // UserRewardAccountUpdateContext
     ////////////////////////////////////////////
 
-    #[allow(unused_variables)]
     pub fn user_update_reward_accounts_if_needed(
         ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
-        initialize: bool, // deprecated
     ) -> Result<()> {
         modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,

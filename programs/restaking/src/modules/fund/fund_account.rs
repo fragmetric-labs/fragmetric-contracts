@@ -6,8 +6,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue};
-use crate::utils::PDASeeds;
+use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
+use crate::utils::{get_proportional_amount, PDASeeds};
 
 use super::*;
 
@@ -30,12 +30,18 @@ pub struct FundAccount {
     pub receipt_token_mint: Pubkey,
     #[max_len(MAX_SUPPORTED_TOKENS)]
     pub(super) supported_tokens: Vec<SupportedToken>,
-    pub(super) sol_capacity_amount: u64,
+    pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
     // TODO v0.3/operation: visibility
     pub(in crate::modules) sol_operation_reserved_amount: u64,
 
     pub(super) withdrawal: WithdrawalState,
+
+    /// A receivable that the fund may charge the users requesting withdrawals.
+    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
+    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
+    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
+    pub(super) sol_operation_receivable_amount: u64,
 
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
@@ -94,6 +100,8 @@ impl FundAccount {
         }
 
         if self.data_version == 3 {
+            self.sol_operation_receivable_amount = 0;
+
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
@@ -115,7 +123,7 @@ impl FundAccount {
                     .1;
 
             for supported_token in &mut self.supported_tokens {
-                supported_token.operating_amount = 0;
+                supported_token.operation_receivable_amount = 0;
             }
 
             self.data_version = 4;
@@ -269,7 +277,7 @@ impl FundAccount {
     pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedToken> {
         self.supported_tokens
             .iter()
-            .find(|info| info.mint == *token)
+            .find(|supported_token| supported_token.mint == *token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
@@ -280,18 +288,35 @@ impl FundAccount {
     ) -> Result<&mut SupportedToken> {
         self.supported_tokens
             .iter_mut()
-            .find(|info| info.mint == *token_mint)
+            .find(|supported_token| supported_token.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn set_sol_capacity_amount(&mut self, capacity_amount: u64) -> Result<()> {
+    pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {
+        self.restaking_vaults
+            .iter()
+            .find(|restaking_vault| restaking_vault.vault == *vault)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
+    }
+
+    pub(super) fn get_restaking_vault_mut(
+        &mut self,
+        vault: &Pubkey,
+    ) -> Result<&mut RestakingVault> {
+        self.restaking_vaults
+            .iter_mut()
+            .find(|restaking_vault| restaking_vault.vault == *vault)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
+    }
+
+    pub(super) fn set_sol_accumulated_deposit_capacity_amount(&mut self, sol_amount: u64) -> Result<()> {
         require_gte!(
-            capacity_amount,
+            sol_amount,
             self.sol_accumulated_deposit_amount,
             ErrorCode::FundInvalidUpdateError
         );
 
-        self.sol_capacity_amount = capacity_amount;
+        self.sol_accumulated_deposit_capacity_amount = sol_amount;
 
         Ok(())
     }
@@ -301,7 +326,6 @@ impl FundAccount {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
-        capacity_amount: u64,
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
         if self.supported_tokens.iter().any(|info| info.mint == mint) {
@@ -318,7 +342,6 @@ impl FundAccount {
             mint,
             program,
             decimals,
-            capacity_amount,
             pricing_source,
         )?);
 
@@ -348,13 +371,6 @@ impl FundAccount {
         Ok(())
     }
 
-    pub(super) fn get_restaking_vault_mut(&mut self, vault: &Pubkey) -> Result<&mut RestakingVault>{
-        self.restaking_vaults
-            .iter_mut()
-            .find(|info| info.vault == *vault)
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedRestakingVaultError))
-    }
-
     pub(super) fn add_restaking_vault(
         &mut self,
         vault: Pubkey,
@@ -365,11 +381,7 @@ impl FundAccount {
         receipt_token_decimals: u8,
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
-        if self
-            .restaking_vaults
-            .iter()
-            .any(|v| v.vault == vault && v.supported_token_mint == supported_token_mint)
-        {
+        if self.restaking_vaults.iter().any(|v| v.vault == vault) {
             err!(ErrorCode::FundRestakingVaultAlreadyRegisteredError)?
         }
 
@@ -412,7 +424,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         require_gte!(
-            self.sol_capacity_amount,
+            self.sol_accumulated_deposit_capacity_amount,
             new_sol_accumulated_deposit_amount,
             ErrorCode::FundExceededSOLCapacityAmountError
         );
@@ -472,13 +484,13 @@ mod tests {
     fn test_initialize_update_fund_account() {
         let mut fund = create_initialized_fund_account();
 
-        assert_eq!(fund.sol_capacity_amount, 0);
+        assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
         assert!(fund.withdrawal.enabled);
         assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
-        fund.set_sol_capacity_amount(0).unwrap_err();
+        fund.set_sol_accumulated_deposit_capacity_amount(0).unwrap_err();
 
         let interval_seconds = 60;
         fund.withdrawal
@@ -501,46 +513,56 @@ mod tests {
             token1,
             Pubkey::default(),
             9,
-            1_000_000_000,
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         )
         .unwrap();
+        fund.get_supported_token_mut(&token1)
+            .unwrap()
+            .set_accumulated_deposit_capacity_amount(1_000_000_000)
+            .unwrap();
+
         fund.add_supported_token(
             token2,
             Pubkey::default(),
             9,
-            1_000_000_000,
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
         )
         .unwrap();
+        fund.get_supported_token_mut(&token2)
+            .unwrap()
+            .set_accumulated_deposit_capacity_amount(1_000_000_000)
+            .unwrap();
+
         fund.add_supported_token(
             token1,
             Pubkey::default(),
             9,
-            1_000_000_000,
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
         )
         .unwrap_err();
         assert_eq!(fund.supported_tokens.len(), 2);
-        assert_eq!(fund.supported_tokens[0].capacity_amount, 1_000_000_000);
+        assert_eq!(
+            fund.supported_tokens[0].accumulated_deposit_capacity_amount,
+            1_000_000_000
+        );
 
         fund.supported_tokens[0].accumulated_deposit_amount = 1_000_000_000;
         fund.get_supported_token_mut(&token1)
             .unwrap()
-            .set_capacity_amount(0)
+            .set_accumulated_deposit_capacity_amount(0)
             .unwrap_err();
     }
 
     #[test]
     fn test_deposit_sol() {
         let mut fund = create_initialized_fund_account();
-        fund.set_sol_capacity_amount(100_000).unwrap();
+        fund.set_sol_accumulated_deposit_capacity_amount(100_000).unwrap();
 
         assert_eq!(fund.sol_operation_reserved_amount, 0);
         assert_eq!(fund.sol_accumulated_deposit_amount, 0);
@@ -560,12 +582,14 @@ mod tests {
             Pubkey::new_unique(),
             Pubkey::default(),
             9,
-            1_000,
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
         )
         .unwrap();
+        fund.supported_tokens[0]
+            .set_accumulated_deposit_capacity_amount(1_000)
+            .unwrap();
 
         assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 0);

@@ -340,14 +340,15 @@ impl SelfExecutable for UnstakeLSTCommand {
             if self.items.len() > 1 {
                 return Ok(Some(
                     UnstakeLSTCommand::new_init(self.items[1..].to_vec())
-                        .with_required_accounts([]),
+                        .without_required_accounts(),
                 ));
             }
         }
 
         // TODO v0.3/operation: next step ... stake sol
         Ok(Some(
-            OperationCommand::EnqueueWithdrawalBatch(Default::default()).with_required_accounts([]),
+            OperationCommand::EnqueueWithdrawalBatch(Default::default())
+                .without_required_accounts(),
         ))
     }
 }

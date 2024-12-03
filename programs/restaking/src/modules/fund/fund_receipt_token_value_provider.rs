@@ -23,15 +23,19 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         let mut assets = Vec::new();
 
-        // sol_operation_reserved_amount
-        assets.push(Asset::SOL(fund_account.sol_operation_reserved_amount));
+        // sol_operation_reserved_amount + sol_operation_receivable_amount
+        assets.push(Asset::SOL(
+            fund_account.sol_operation_reserved_amount
+                + fund_account.sol_operation_receivable_amount,
+        ));
 
-        // lst_operation_reserved_amount + lst_operating_amount (pending unstaking)
+        // lst_operation_reserved_amount + operation_receivable_amount
         for supported_token in &fund_account.supported_tokens {
             assets.push(Asset::TOKEN(
                 supported_token.mint,
                 Some(supported_token.pricing_source.clone()),
-                supported_token.operation_reserved_amount + supported_token.operating_amount,
+                supported_token.operation_reserved_amount
+                    + supported_token.operation_receivable_amount,
             ));
         }
 
@@ -44,13 +48,13 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
             ));
         }
 
-        // vrt_operation_reserved + vrt_operating_amount (pending unrestaking)
+        // vrt_operation_reserved + vrt_operation_receivable_amount
         for restaking_vault in &fund_account.restaking_vaults {
             assets.push(Asset::TOKEN(
                 restaking_vault.receipt_token_mint,
                 Some(restaking_vault.receipt_token_pricing_source.clone()),
                 restaking_vault.receipt_token_operation_reserved_amount
-                    + restaking_vault.receipt_token_operating_amount,
+                    + restaking_vault.receipt_token_operation_receivable_amount,
             ));
         }
 

@@ -1,12 +1,12 @@
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use crate::constants::{ADMIN_PUBKEY, JITO_VAULT_PROGRAM_FEE_WALLET};
 use crate::errors;
+use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
-use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ClaimUnrestakedVSTCommand {
@@ -100,10 +100,13 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             if claimable_tickets.len() == 0 {
                                 if self.items.len() > 1 {
                                     return Ok(Some(
-                                        ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec()).with_required_accounts([]),
+                                        ClaimUnrestakedVSTCommand::new_init(
+                                            self.items[1..].to_vec(),
+                                        )
+                                        .without_required_accounts(),
                                     ));
                                 }
-                                return Ok(None)
+                                return Ok(None);
                             };
 
                             let mut required_accounts =
@@ -214,8 +217,11 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                     ])))
                                 }
                                 None => {
-                                    let normalized_token = &ctx.fund_account.normalized_token.as_ref().unwrap();
-                                    if &restaking_vault.supported_token_mint == &normalized_token.mint {
+                                    let normalized_token =
+                                        &ctx.fund_account.normalized_token.as_ref().unwrap();
+                                    if &restaking_vault.supported_token_mint
+                                        == &normalized_token.mint
+                                    {
                                         let normalized_token_pool_address =
                                             NormalizedTokenPoolAccount::find_account_address_by_token_mint(
                                                 &normalized_token.mint,
@@ -227,22 +233,26 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                                 &normalized_token.mint,
                                                 &normalized_token.program,
                                             );
-                                        command.state = ClaimUnrestakedVSTCommandState::SetupDenormalize(
-                                            unrestaked_vst_amount,
-                                        );
+                                        command.state =
+                                            ClaimUnrestakedVSTCommandState::SetupDenormalize(
+                                                unrestaked_vst_amount,
+                                            );
                                         return Ok(Some(command.with_required_accounts([
                                             (normalized_token_pool_address, false),
                                             (normalized_token.mint, false),
                                             (normalized_token.program, false),
                                             (normalized_token_account, false),
                                         ])));
-                                } else {
+                                    } else {
                                         if self.items.len() > 1 {
                                             return Ok(Some(
-                                                ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec()).with_required_accounts([]),
+                                                ClaimUnrestakedVSTCommand::new_init(
+                                                    self.items[1..].to_vec(),
+                                                )
+                                                .without_required_accounts(),
                                             ));
                                         }
-                                        return Ok(None)
+                                        return Ok(None);
                                     }
                                 }
                             }
@@ -250,15 +260,14 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     }
                 }
-                ClaimUnrestakedVSTCommandState::SetupDenormalize(denormalize_amount) => {
-
-                }
+                ClaimUnrestakedVSTCommandState::SetupDenormalize(denormalize_amount) => {}
                 _ => (),
             }
         }
         if self.items.len() > 1 {
             return Ok(Some(
-                ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec()).with_required_accounts([]),
+                ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec())
+                    .without_required_accounts(),
             ));
         }
         Ok(None)

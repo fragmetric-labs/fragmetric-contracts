@@ -3,22 +3,20 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 
-use super::FundAccount;
-
 // TODO v0.3/operation: visibility
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
-    pub capacity_amount: u64,
+    pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
     pub operation_reserved_amount: u64,
     pub one_token_as_sol: u64,
     pub pricing_source: TokenPricingSource,
 
-    pub operating_amount: u64,
-    /// the amount being unstaked
+    /// the token amount being unstaked
+    pub operation_receivable_amount: u64,
 
     /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
     pub rebalancing_amount: u64,
@@ -35,7 +33,6 @@ impl SupportedToken {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
-        capacity_amount: u64,
         pricing_source: TokenPricingSource,
     ) -> Result<Self> {
         match pricing_source {
@@ -50,12 +47,12 @@ impl SupportedToken {
             mint,
             program,
             decimals,
-            capacity_amount,
+            accumulated_deposit_capacity_amount: 0,
             accumulated_deposit_amount: 0,
             operation_reserved_amount: 0,
             one_token_as_sol: 0,
             pricing_source,
-            operating_amount: 0,
+            operation_receivable_amount: 0,
             rebalancing_amount: 0,
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
@@ -75,34 +72,53 @@ impl SupportedToken {
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
-        self.operating_amount
+        self.operation_receivable_amount
     }
 
     // TODO v0.3/operation: visibility
     pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
-        self.operating_amount = amount;
+        self.operation_receivable_amount = amount;
     }
 
-    pub(super) fn set_capacity_amount(&mut self, capacity_amount: u64) -> anchor_lang::Result<()> {
+    pub(super) fn set_accumulated_deposit_capacity_amount(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
-            capacity_amount,
+            token_amount,
             self.accumulated_deposit_amount,
             ErrorCode::FundInvalidUpdateError
         );
 
-        self.capacity_amount = capacity_amount;
+        self.accumulated_deposit_capacity_amount = token_amount;
 
         Ok(())
     }
 
-    pub(super) fn deposit_token(&mut self, amount: u64) -> anchor_lang::Result<()> {
+    pub(super) fn set_sol_allocation_strategy(&mut self, weight: u64, sol_capacity_amount: u64) -> Result<()> {
+        self.sol_allocation_weight = weight;
+        self.sol_allocation_capacity_amount = sol_capacity_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
+        require_gte!(
+            token_amount,
+            self.operation_reserved_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.rebalancing_amount = token_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn deposit_token(&mut self, amount: u64) -> Result<()> {
         let new_accumulated_deposit_amount = self
             .accumulated_deposit_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         require_gte!(
-            self.capacity_amount,
+            self.accumulated_deposit_capacity_amount,
             new_accumulated_deposit_amount,
             ErrorCode::FundExceededTokenCapacityAmountError
         );

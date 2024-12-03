@@ -451,7 +451,7 @@ impl SelfExecutable for RestakeVSTCommand {
         }
         if self.items.len() > 1 {
             return Ok(Some(
-                RestakeVSTCommand::new_init(self.items[1..].to_vec()).with_required_accounts([]),
+                RestakeVSTCommand::new_init(self.items[1..].to_vec()).without_required_accounts(),
             ));
         }
 
