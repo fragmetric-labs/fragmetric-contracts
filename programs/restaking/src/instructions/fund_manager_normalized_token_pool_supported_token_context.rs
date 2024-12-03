@@ -11,7 +11,7 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
-    #[account(address = NSOL_MINT_ADDRESS)]
+    #[account(address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

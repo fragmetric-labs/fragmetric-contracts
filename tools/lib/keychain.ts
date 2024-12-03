@@ -192,7 +192,7 @@ export class Keychain<KEYS extends string> {
         }
 
         logger.notice(`applying keypairs to ${program} program workspace:`);
-        await Keychain.applyKeypairsToWorkspace(program, cluster, keypairMap, newLocalKeypairKEYS.size > 0, buildCommand, askYesNo);
+        await Keychain.applyKeypairsToWorkspace(program, cluster, keypairMap, newLocalKeypairKEYS.size > 0, buildCommand, false);
 
         logger.notice(`loaded ${program} program keypairs' pubkey:`)
         for (const [name, keypair] of keypairMap.local.entries()) {
@@ -230,7 +230,7 @@ export class Keychain<KEYS extends string> {
 
                 let updated = 0;
                 for (const keypairName of keypairKEYS) {
-                    const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/"([^"]+)"\/\\*\\*\/`, 'mg'));
+                    const matches = fileSource.match(new RegExp(`\/\\*local:${keypairName}\\*\/\\s*"([^"]+)"\\s*\/\\*\\*\/`, 'mg'));
 
                     if (matches) {
                         const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
