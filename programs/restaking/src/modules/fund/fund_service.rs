@@ -346,7 +346,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
-    ) -> Result<(u64)> {
+    ) -> Result<u64> {
         if !(forced
             || self
                 .fund_account
@@ -361,14 +361,20 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
         let mut operation_reserved_amount = self.fund_account.sol_operation_reserved_amount;
-        let mut withdrawal_receipt_token_amount = 0;
+        let mut operation_receivable_amount = self.fund_account.sol_operation_receivable_amount;
         let mut withdrawal_user_amount = 0;
         let mut withdrawal_fee_amount = 0;
-        let mut available_treasury_balance = treasury_account.lamports();
-
-        let mut count = 0;
+        let mut withdrawal_receipt_token_amount = 0;
+        let available_treasury_balance = treasury_account.lamports();
+        let mut batch_count = 0;
 
         for batch in &self.fund_account.withdrawal.queued_batches {
+            let next_withdrawal_receipt_token_amount =
+                withdrawal_receipt_token_amount + batch.receipt_token_amount;
+            if next_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
+                break;
+            }
+
             let sol_amount = pricing_service.get_token_amount_as_sol(
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
@@ -378,29 +384,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .withdrawal
                 .get_sol_fee_amount(sol_amount)?;
             let sol_user_amount = sol_amount - sol_fee_amount;
-
             let next_withdrawal_user_amount = withdrawal_user_amount + sol_user_amount;
             let next_withdrawal_fee_amount = withdrawal_fee_amount + sol_fee_amount;
-
-            if operation_reserved_amount + self.fund_account.sol_operation_receivable_amount
-                <= next_withdrawal_user_amount + next_withdrawal_fee_amount
+            if operation_reserved_amount + operation_receivable_amount
+                < next_withdrawal_user_amount + next_withdrawal_fee_amount
             {
                 break;
             }
 
-            if operation_reserved_amount >= next_withdrawal_user_amount
-                || next_withdrawal_user_amount - operation_reserved_amount
-                    >= available_treasury_balance
+            if operation_reserved_amount >= withdrawal_user_amount
+                || withdrawal_user_amount - operation_reserved_amount >= available_treasury_balance
             {
-                let new_withdrawal_receipt_token_amount =
-                    withdrawal_receipt_token_amount + batch.receipt_token_amount;
-                if new_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
-                    break;
-                }
-                withdrawal_receipt_token_amount = new_withdrawal_receipt_token_amount;
+                withdrawal_receipt_token_amount = next_withdrawal_receipt_token_amount;
                 withdrawal_user_amount = next_withdrawal_user_amount;
                 withdrawal_fee_amount = next_withdrawal_fee_amount;
-                count += 1;
+                batch_count += 1;
                 continue;
             }
         }
@@ -408,7 +406,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let processible_batches = self
             .fund_account
             .withdrawal
-            .dequeue_batches(count, self.current_timestamp);
+            .dequeue_batches(batch_count, self.current_timestamp);
 
         #[cfg(debug_assertions)]
         require_gte!(
@@ -479,6 +477,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         if operation_reserved_amount < withdrawal_user_amount {
+            // borrow sol from treasury
             anchor_lang::system_program::transfer(
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
@@ -491,16 +490,30 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 withdrawal_user_amount - operation_reserved_amount,
             )?;
             withdrawal_fee_amount += withdrawal_user_amount - operation_reserved_amount;
-
-            self.fund_account.sol_operation_reserved_amount = 0;
-            self.fund_account.sol_operation_receivable_amount -= withdrawal_fee_amount;
-        } else {
-            self.fund_account.sol_operation_reserved_amount -= withdrawal_user_amount;
-            operation_reserved_amount -= withdrawal_user_amount;
-
-            // 1. use operation_receivable_expense, pay fee
-            // 2. if needed, use operation_reserved_amount, pay fee (need CPI)
+            operation_reserved_amount = withdrawal_user_amount;
         }
+        operation_reserved_amount -= withdrawal_user_amount;
+
+        if operation_receivable_amount < withdrawal_fee_amount {
+            // pay fee as sol
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_reserve_account.clone(),
+                        to: treasury_account.clone(),
+                    },
+                    &[&self.fund_account.get_reserve_account_seeds()],
+                ),
+                withdrawal_fee_amount - operation_receivable_amount,
+            )?;
+            operation_reserved_amount -= withdrawal_fee_amount - operation_receivable_amount;
+            withdrawal_fee_amount = operation_receivable_amount;
+        }
+        operation_receivable_amount -= withdrawal_fee_amount;
+
+        self.fund_account.sol_operation_reserved_amount = operation_reserved_amount;
+        self.fund_account.sol_operation_receivable_amount = operation_receivable_amount;
 
         Ok(withdrawal_receipt_token_amount)
     }
