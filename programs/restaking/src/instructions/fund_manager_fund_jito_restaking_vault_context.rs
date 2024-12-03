@@ -39,7 +39,7 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     #[account(address = anchor_spl::token::ID)]
     pub vault_receipt_token_program: Interface<'info, TokenInterface>,
 
-    #[account(address = NSOL_MINT_ADDRESS)]
+    #[account(address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
     pub vault_supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(address = anchor_spl::token::ID)]

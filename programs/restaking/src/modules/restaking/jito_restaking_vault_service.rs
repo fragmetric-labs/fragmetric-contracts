@@ -1,6 +1,6 @@
 use crate::constants::{
     ADMIN_PUBKEY, FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS, FRAGSOL_JITO_VAULT_CONFIG_ADDRESS,
-    FRAGSOL_MINT_ADDRESS, JITO_VAULT_PROGRAM_FEE_WALLET, JITO_VAULT_PROGRAM_ID, NSOL_MINT_ADDRESS,
+    FRAGSOL_MINT_ADDRESS, JITO_VAULT_PROGRAM_FEE_WALLET, JITO_VAULT_PROGRAM_ID, FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS,
 };
 use crate::modules::restaking::jito::{
     JitoRestakingVault, JitoRestakingVaultContext, JitoVaultOperatorDelegation,
@@ -617,7 +617,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub fn find_withdrawal_ticket_token_account(withdrawal_ticket_account: &Pubkey) -> Pubkey {
         let withdrawal_ticket_token_account = associated_token::get_associated_token_address(
             &withdrawal_ticket_account,
-            &NSOL_MINT_ADDRESS,
+            &FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS,
         );
         withdrawal_ticket_token_account
     }

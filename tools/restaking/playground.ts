@@ -81,8 +81,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
-    // TODO: This ALT is missing a lot of accounts (function base PDAs, program IDs)
-    // TODO: Use PDA as ALT address if possible... -> define constant seed and address at onchain codebase
     public async getOrCreateKnownAddressLookupTable() {
         if (this._knownAddressLookupTableAddress) {
             return this._knownAddressLookupTableAddress;
@@ -93,14 +91,33 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [createIx, lookupTable] = web3.AddressLookupTableProgram.createLookupTable({
             authority,
             payer,
-            recentSlot: this.isLocalnet ? 0 : await this.connection.getSlot(),
+            recentSlot: 0, // for fragSOL: 0
         });
         await this.run({
             instructions: [createIx],
             signerNames: ['ADMIN']
         });
 
-        const addresses = Object.values(this.knownAddress).filter(a => typeof a != 'function').flat() as web3.PublicKey[];
+        this._knownAddressLookupTableAddress = lookupTable;
+        logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
+
+        await this.updateKnownAddressLookupTable();
+
+        await this.setAddressLookupTableAddresses([this._knownAddressLookupTableAddress]);
+    }
+
+    public async updateKnownAddressLookupTable() {
+        const authority = this.keychain.getKeypair('ADMIN').publicKey;
+        const payer = this.wallet.publicKey;
+        const lookupTable = await this.connection.getAddressLookupTable(this._knownAddressLookupTableAddress).then(res => res.value);
+        const existingAddresses = new Set(lookupTable.state.addresses);
+        logger.info("current lookup table addresses", lookupTable.state.addresses);
+
+        // prepare update
+        const addresses = (Object.values(this.knownAddress).filter(address => typeof address != 'function').flat() as web3.PublicKey[])
+            .filter(address => !existingAddresses.has(address));
+
+        // do update
         const listOfAddressList = addresses.reduce((listOfAddressList, address) =>  {
             if (listOfAddressList[0].length == 27) { // 27 (addresses) + 5 (admin/authority, payer, alt_program, alt, system_program)
                 listOfAddressList.unshift([address]);
@@ -109,11 +126,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
             return listOfAddressList;
         }, [[]] as web3.PublicKey[][]);
+        logger.info("newly adding lookup table addresses", addresses);
+
         for (let addresses of listOfAddressList) {
             await this.run({
                 instructions: [
                     web3.AddressLookupTableProgram.extendLookupTable({
-                        lookupTable,
+                        lookupTable: this._knownAddressLookupTableAddress,
                         authority,
                         payer,
                         addresses,
@@ -123,8 +142,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             });
         }
 
-        this._knownAddressLookupTableAddress = lookupTable;
-        logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
+        logger.notice('updated a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
     }
 
     private _knownAddressLookupTableAddress?: web3.PublicKey;
@@ -143,7 +161,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragSOLTokenMint, this.programId);
 
         // nSOL
-        const nSOLTokenMint = this.getConstantAsPublicKey("nsolMintAddress");
+        const nSOLTokenMint = this.getConstantAsPublicKey("fragsolNormalizedTokenMintAddress");
         const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
 
         // fragSOL jito VRT
@@ -161,6 +179,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFund, true, this.supportedTokenMetadata[symbol].program);
+        const fragSOLSupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
+            [`nSOLSupportedTokenLockAccount_${symbol}`]: fragSOLSupportedTokenAccount(symbol as any),
+            ...obj,
+        }), {} as { string: web3.PublicKey });
+
         const fragSOLFundNSOLAccount = spl.getAssociatedTokenAddressSync(
             nSOLTokenMint,
             fragSOLFund,
@@ -188,6 +211,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
         const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, nSOLTokenPool, true, this.supportedTokenMetadata[symbol].program);
+        const nSOLSupportedTokenLockAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
+            [`nSOLSupportedTokenLockAccount_${symbol}`]: nSOLSupportedTokenLockAccount(symbol as any),
+            ...obj,
+        }), {} as { string: web3.PublicKey });
 
         // staking
         const fundStakeAccounts = [...Array(5).keys()].map((i) =>
@@ -263,6 +290,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLFundNSOLAccount,
             nSOLTokenPool,
             nSOLSupportedTokenLockAccount,
+            ...nSOLSupportedTokenLockAccounts,
             fragSOLTokenMint,
             fragSOLFundReceiptTokenLockAccount,
             fragSOLFund,
@@ -274,6 +302,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLReward,
             fragSOLUserReward,
             fragSOLSupportedTokenAccount,
+            ...fragSOLSupportedTokenAccounts,
             userSupportedTokenAccount,
             fundStakeAccounts,
             jitoVaultProgram,
@@ -716,7 +745,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.TOKEN_PROGRAM_ID
                 ),
             ],
-            signerNames: ["NSOL_MINT"],
+            signerNames: ["FRAGSOL_NORMALIZED_TOKEN_MINT"],
         });
 
         if (this.isLocalnet) {
@@ -726,7 +755,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         if (createMetadata) {
             const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
-            const keypair = this.keychain.getKeypair('NSOL_MINT');
+            const keypair = this.keychain.getKeypair('FRAGSOL_NORMALIZED_TOKEN_MINT');
             const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
             const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
 
@@ -1474,9 +1503,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [user],
             events: ["userDepositedSupportedTokenToFund", "userUpdatedRewardPool"],
-            lookupTables: [
-                await this.getOrCreateKnownAddressLookupTable(),
-            ],
         });
 
         logger.notice(`deposited: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)} (${this.lamportsToX(event.userDepositedSupportedTokenToFund.fundAccount.oneReceiptTokenAsSol, event.userDepositedSupportedTokenToFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), userSupportedTokenAddress.toString());
