@@ -392,8 +392,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 break;
             }
 
-            if operation_reserved_amount >= withdrawal_user_amount
-                || withdrawal_user_amount - operation_reserved_amount >= available_treasury_balance
+            if operation_reserved_amount >= next_withdrawal_user_amount
+                || next_withdrawal_user_amount - operation_reserved_amount
+                    >= available_treasury_balance
             {
                 withdrawal_receipt_token_amount = next_withdrawal_receipt_token_amount;
                 withdrawal_user_amount = next_withdrawal_user_amount;
