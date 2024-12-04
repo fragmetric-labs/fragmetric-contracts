@@ -79,12 +79,11 @@ impl WithdrawalState {
     }
 
     /// 1 fee rate = 1bps = 0.01%
-    const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
-    const WITHDRAWAL_FEE_RATE_LIMIT: u64 = 500;
+    const WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 
     #[inline(always)]
     pub fn get_sol_fee_rate_as_percent(&self) -> f32 {
-        self.sol_fee_rate_bps as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
+        self.sol_fee_rate_bps as f32 / 100.0
     }
 
     #[inline(always)]
@@ -92,15 +91,15 @@ impl WithdrawalState {
         crate::utils::get_proportional_amount(
             sol_amount,
             self.sol_fee_rate_bps as u64,
-            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
+            10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn set_sol_fee_rate_bps(&mut self, sol_fee_rate_bps: u16) -> Result<()> {
         require_gte!(
-            Self::WITHDRAWAL_FEE_RATE_LIMIT,
-            sol_fee_rate_bps as u64,
+            Self::WITHDRAWAL_FEE_RATE_BPS_LIMIT,
+            sol_fee_rate_bps,
             ErrorCode::FundInvalidSolWithdrawalFeeRateError
         );
 

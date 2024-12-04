@@ -169,6 +169,22 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }
 
+    /// gives max fee/expense ratio during a cycle of circulation
+    /// returns (numerator, denominator)
+    #[inline(never)]
+    pub(in crate::modules) fn get_max_cycle_fee(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<(u64, u64)> {
+        let pool_account = Account::<State>::try_from(pool_account_info)?;
+
+        // it only costs withdrawal fee
+        Ok((
+            // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/state/fee.rs
+            pool_account.withdraw_stake_account_fee.bp_cents as u64,
+            1_000_000,
+        ))
+    }
+
     /// returns unstaking_sol_amount
     #[inline(never)]
     pub(in crate::modules) fn order_unstake(

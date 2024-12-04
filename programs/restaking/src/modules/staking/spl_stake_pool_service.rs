@@ -49,25 +49,20 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     }
 
     pub(super) fn deserialize_pool_account(
-        pool_account_info: &'a AccountInfo<'info>,
+        pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<StakePool> {
-        let pool_account_info_narrowed =
-            unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(pool_account_info) };
-        let pool_account =
-            StakePool::deserialize(&mut &**pool_account_info_narrowed.try_borrow_data()?)
-                .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
+        let pool_account = StakePool::deserialize(&mut &**pool_account_info.try_borrow_data()?)
+            .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
         require_eq!(pool_account.is_valid(), true);
         Ok(pool_account)
     }
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program]
     pub(super) fn deserialize_stake_account(
-        stake_account_info: &'a AccountInfo<'info>,
+        stake_account_info: &'info AccountInfo<'info>,
     ) -> Result<StakeStateV2> {
-        let stake_account_info_narrowed =
-            unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(stake_account_info) };
         let stake_account =
-            StakeStateV2::deserialize(&mut &**stake_account_info_narrowed.try_borrow_data()?)
+            StakeStateV2::deserialize(&mut &**stake_account_info.try_borrow_data()?)
                 .map_err(|_| error!(ErrorCode::AccountDidNotDeserialize))?;
         Ok(stake_account)
     }
@@ -87,7 +82,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account]
     pub fn find_accounts_to_deposit_sol(
-        pool_account_info: &'a AccountInfo<'info>,
+        pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
@@ -110,20 +105,18 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     /// gives (to_pool_token_account_amount, minted_pool_token_amount)
     pub fn deposit_sol(
         &self,
-        withdraw_authority: &AccountInfo<'info>,
-        reserve_stake_account: &AccountInfo<'info>,
-        manager_fee_account: &AccountInfo<'info>,
+        withdraw_authority: &'info AccountInfo<'info>,
+        reserve_stake_account: &'info AccountInfo<'info>,
+        manager_fee_account: &'info AccountInfo<'info>,
 
-        from_sol_account: &AccountInfo<'info>,
-        to_pool_token_account: &AccountInfo<'info>,
+        from_sol_account: &'info AccountInfo<'info>,
+        to_pool_token_account: &'info AccountInfo<'info>,
         from_sol_account_signer_seeds: &[&[u8]],
 
         sol_amount: u64,
     ) -> Result<(u64, u64)> {
-        let to_pool_token_account_narrowed =
-            unsafe { std::mem::transmute::<_, &'a AccountInfo<'a>>(to_pool_token_account) };
         let mut to_pool_token_account_parsed =
-            InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account_narrowed)?;
+            InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account_parsed.amount;
 
         // TODO: consider using spl_stake_pool::instruction::deposit_sol_with_slippage
@@ -167,7 +160,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     }
 
     pub fn find_accounts_to_withdraw_sol_or_stake(
-        pool_account_info: &'a AccountInfo<'info>,
+        pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
@@ -200,11 +193,33 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
         return (fund_stake_account, true, fund_stake_account_bump);
     }
 
+    /// gives max fee/expense ratio during a cycle of circulation
+    /// returns (numerator, denominator)
+    pub(in crate::modules) fn get_max_cycle_fee(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<(u64, u64)> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+
+        // it only costs withdrawal fee
+        let f1 = pool_account.sol_withdrawal_fee;
+        let f2 = pool_account.stake_withdrawal_fee;
+
+        // f1.numerator/f1.denominator > f2.numerator/f2.denominator
+        Ok(
+            if f2.denominator == 0 || f1.numerator * f2.denominator > f2.numerator * f1.denominator
+            {
+                (f1.numerator, f1.denominator)
+            } else {
+                (f2.numerator, f2.denominator)
+            },
+        )
+    }
+
     pub fn get_withdrawal_available_from_reserve_or_validator(
-        pool_program_info: &'a AccountInfo<'info>,
-        pool_account_info: &'a AccountInfo<'info>,
-        reserve_stake_account_info: &'a AccountInfo<'info>,
-        validator_list_account_info: &'a AccountInfo<'info>,
+        pool_program_info: &'info AccountInfo<'info>,
+        pool_account_info: &'info AccountInfo<'info>,
+        reserve_stake_account_info: &'info AccountInfo<'info>,
+        validator_list_account_info: &'info AccountInfo<'info>,
         pool_tokens: u64,
     ) -> Result<AvailableWithdrawals> {
         // return Vec<(where to withdraw account, how much to withdraw pool tokens)>

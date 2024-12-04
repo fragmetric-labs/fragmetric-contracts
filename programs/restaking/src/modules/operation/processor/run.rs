@@ -97,7 +97,7 @@ fn stake_sol<'info>(
                 reserve_stake_account,
                 manager_fee_account,
                 fund_reserve_account,
-                &fund_supported_token_account_to_stake.to_account_info(),
+                &fund_supported_token_account_to_stake.as_account_info(),
                 &fund_account.get_reserve_account_seeds(),
                 staking_lamports,
             )?;

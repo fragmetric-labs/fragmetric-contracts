@@ -519,6 +519,35 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(withdrawal_receipt_token_amount)
     }
 
+    /// returns (sol_amount_transferred)
+    pub(super) fn harvest_from_treasury_account(
+        &mut self,
+        system_program: &Program<'info, System>,
+        treasury_account: &AccountInfo<'info>,
+        to_account: &'info AccountInfo<'info>,
+    ) -> Result<u64> {
+        require_keys_eq!(treasury_account.key(), self.fund_account.get_treasury_account_address()?);
+
+        let treasury_account_lamports = treasury_account.lamports();
+        if treasury_account_lamports == 0 {
+            return Ok(0)
+        }
+
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: treasury_account.clone(),
+                    to: to_account.to_account_info(),
+                },
+                &[&self.fund_account.get_treasury_account_seeds()],
+            ),
+            treasury_account_lamports,
+        )?;
+
+        Ok(treasury_account_lamports)
+    }
+
     /// estimated $SOL amount to process queued withdrawals.
     fn get_sol_withdrawal_obligated_reserve_amount(
         &self,
