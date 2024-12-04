@@ -70,6 +70,15 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         logger.info(`loaded program ${this.programName}:`.padEnd(LOG_PAD_LARGE), programAddress);
     }
 
+    private addressLookupTables: web3.AddressLookupTableAccount[] = [];
+    protected async setAddressLookupTableAddresses(addresses: web3.PublicKey[]) {
+        this.addressLookupTables = await Promise.all(
+            addresses.map(address => this.connection.getAddressLookupTable(address).then(res => res.value)),
+        );
+
+        logger.notice('set address lookup tables for future transactions:'.padEnd(LOG_PAD_LARGE), addresses);
+    }
+
     public async run<EVENTS extends ExtractEventNames<IDL>>(args: {
         instructions: (Promise<web3.TransactionInstruction> | web3.TransactionInstruction)[],
         signers?: web3.Signer[],
@@ -78,12 +87,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         skipPreflight?: boolean,
         computeUnitLimit?: number,
         prioritizationFeeMicroLamports?: number,
-        lookupTables?: web3.PublicKey[],
     }) {
         let txSig: string | null = null;
         try {
             // prepare instructions
-            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit, prioritizationFeeMicroLamports, lookupTables = []} = args;
+            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit, prioritizationFeeMicroLamports} = args;
 
             // get recent block hash
             const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
@@ -104,11 +112,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                         ] : []),
                         ...await Promise.all(instructions),
                     ]
-                }).compileToV0Message(
-                    await Promise.all(
-                        lookupTables.map(address => this.connection.getAddressLookupTable(address).then(res => res.value)),
-                    ),
-                )
+                }).compileToV0Message(this.addressLookupTables)
             );
 
             // sign with wallet to pay fee

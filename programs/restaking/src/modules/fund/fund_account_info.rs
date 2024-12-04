@@ -12,6 +12,7 @@ pub struct FundAccountInfo {
     receipt_token_supply_amount: u64,
     receipt_token_value: TokenValue,
     one_receipt_token_as_sol: u64,
+    // TODO v0.3/events: re-design event structures
     // supported_tokens: Vec<SupportedToken>,
     sol_capacity_amount: u64,
     sol_accumulated_deposit_amount: u64,

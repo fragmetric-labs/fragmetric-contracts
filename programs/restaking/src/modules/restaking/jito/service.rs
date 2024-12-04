@@ -319,7 +319,7 @@ impl JitoRestakingVault {
     pub fn find_withdrawal_ticket_token_account(withdrawal_ticket_account: &Pubkey) -> Pubkey {
         let withdrawal_ticket_token_account = associated_token::get_associated_token_address(
             &withdrawal_ticket_account,
-            &NSOL_MINT_ADDRESS,
+            &FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS,
         );
         withdrawal_ticket_token_account
     }

@@ -17,11 +17,6 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
             restaking.tryAirdrop(user4.publicKey, 100),
         ]);
 
-        let fundManager = restaking.keychain.getKeypair('FUND_MANAGER');
-        await Promise.all([
-            restaking.tryAirdrop(fundManager.publicKey, 100),
-        ]);
-
         await restaking.sleep(1); // ...block hash not found?
 
         await Promise.all([
