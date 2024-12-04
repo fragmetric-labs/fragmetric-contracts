@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 
 use crate::constants::FUND_REVENUE_ADDRESS;
 use crate::errors;
-use crate::modules::fund::FundService;
+use crate::modules::fund::{
+    FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
+};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
@@ -27,7 +29,6 @@ pub enum ProcessWithdrawalBatchCommandState {
     New,
     /// max receipt_token_amount to process withdrawal
     Process(u64),
-    HarvestRevenue,
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
@@ -57,6 +58,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     (command, required_accounts)
                 };
 
+                // to harvest fund revenue
+                required_accounts.insert(0, (FUND_REVENUE_ADDRESS, false));
+
                 // to calculate LST cycle fee
                 for supported_token in ctx.fund_account.supported_tokens.iter() {
                     match &supported_token.pricing_source {
@@ -83,7 +87,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
-                let [receipt_token_program, receipt_token_lock_account, fund_reserve_account, treasury_account, remaining_accounts @ ..] =
+                let [fund_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -180,39 +184,79 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 // do process withdrawal
-                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .process_withdrawal_batch(
+                let (receipt_token_amount_processed, pricing_service) = {
+                    let mut fund_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                    let receipt_token_amount_processed = fund_service.process_withdrawal_batch(
                         ctx.operator,
                         ctx.system_program,
                         receipt_token_program,
                         receipt_token_lock_account,
                         fund_reserve_account,
-                        treasury_account,
+                        fund_treasury_account,
                         uninitialized_batch_withdrawal_tickets,
                         pricing_sources,
                         self.forced,
                         receipt_token_amount_to_process,
                     )?;
 
-                let mut command = self.clone();
-                command.state = ProcessWithdrawalBatchCommandState::HarvestRevenue;
-                return Ok(Some(command.with_required_accounts(vec![
-                    (treasury_account.key(), true),
-                    (FUND_REVENUE_ADDRESS, false),
-                ])));
-            }
-            ProcessWithdrawalBatchCommandState::HarvestRevenue => {
-                let [treasury_account, fund_revenue_account, _remaining_accounts @ ..] = accounts
-                else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
-                };
-
-                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .harvest_from_treasury_account(
+                    fund_service.harvest_from_treasury_account(
                         ctx.system_program,
-                        treasury_account,
+                        fund_treasury_account,
                         fund_revenue_account,
                     )?;
+
+                    let pricing_service =
+                        fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
+                    (receipt_token_amount_processed, pricing_service)
+                };
+
+                // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
+                // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
+                let receipt_token_amount_processed_as_sol = pricing_service
+                    .get_token_amount_as_sol(
+                        &ctx.receipt_token_mint.key(),
+                        receipt_token_amount_processed,
+                    )?;
+                let mut participants = ctx
+                    .fund_account
+                    .supported_tokens
+                    .iter()
+                    .map(|supported_token| {
+                        Ok(WeightedAllocationParticipant::new(
+                            supported_token.sol_allocation_weight,
+                            pricing_service.get_token_amount_as_sol(
+                                &supported_token.mint,
+                                supported_token.operation_reserved_amount,
+                            )?,
+                            pricing_service.get_token_amount_as_sol(
+                                &supported_token.mint,
+                                supported_token.sol_allocation_capacity_amount,
+                            )?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                let mut supported_token_increasing_capacity =
+                    receipt_token_amount_processed_as_sol.div_ceil(2);
+                supported_token_increasing_capacity -= WeightedAllocationStrategy::put(
+                    &mut *participants,
+                    receipt_token_amount_processed_as_sol,
+                );
+                for (i, participant) in participants.iter().enumerate() {
+                    let supported_token = &mut ctx.fund_account.supported_tokens[i];
+                    supported_token.set_accumulated_deposit_capacity_amount(
+                        supported_token.accumulated_deposit_capacity_amount
+                            + pricing_service.get_sol_amount_as_token(
+                                &supported_token.mint,
+                                participant.get_last_put_amount()?,
+                            )?,
+                    )?;
+                }
+
+                let sol_increasing_capacity =
+                    receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
+                ctx.fund_account.sol_accumulated_deposit_capacity_amount += sol_increasing_capacity;
             }
         }
 

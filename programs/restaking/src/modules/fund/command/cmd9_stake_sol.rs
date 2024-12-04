@@ -82,10 +82,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         &supported_token.mint,
                                         supported_token.operation_reserved_amount,
                                     )?,
-                                    pricing_service.get_token_amount_as_sol(
-                                        &supported_token.mint,
-                                        supported_token.accumulated_deposit_capacity_amount,
-                                    )?,
+                                    supported_token.sol_allocation_capacity_amount,
                                 ),
                             )
                         })

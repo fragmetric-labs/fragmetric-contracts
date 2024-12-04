@@ -341,7 +341,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
         fund_reserve_account: &AccountInfo<'info>,
-        treasury_account: &AccountInfo<'info>,
+        fund_treasury_account: &AccountInfo<'info>,
         uninitialized_batch_withdrawal_tickets: &[&'info AccountInfo<'info>],
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
@@ -365,7 +365,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let mut withdrawal_user_amount = 0;
         let mut withdrawal_fee_amount = 0;
         let mut withdrawal_receipt_token_amount = 0;
-        let available_treasury_balance = treasury_account.lamports();
+        let available_treasury_balance = fund_treasury_account.lamports();
         let mut batch_count = 0;
 
         for batch in &self.fund_account.withdrawal.queued_batches {
@@ -483,7 +483,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
-                        from: treasury_account.clone(),
+                        from: fund_treasury_account.clone(),
                         to: fund_reserve_account.clone(),
                     },
                     &[&self.fund_account.get_treasury_account_seeds()],
@@ -502,7 +502,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
                         from: fund_reserve_account.clone(),
-                        to: treasury_account.clone(),
+                        to: fund_treasury_account.clone(),
                     },
                     &[&self.fund_account.get_reserve_account_seeds()],
                 ),
@@ -523,12 +523,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub(super) fn harvest_from_treasury_account(
         &mut self,
         system_program: &Program<'info, System>,
-        treasury_account: &AccountInfo<'info>,
+        fund_treasury_account: &AccountInfo<'info>,
         to_account: &'info AccountInfo<'info>,
     ) -> Result<u64> {
-        require_keys_eq!(treasury_account.key(), self.fund_account.get_treasury_account_address()?);
+        require_keys_eq!(fund_treasury_account.key(), self.fund_account.get_treasury_account_address()?);
 
-        let treasury_account_lamports = treasury_account.lamports();
+        let treasury_account_lamports = fund_treasury_account.lamports();
         if treasury_account_lamports == 0 {
             return Ok(0)
         }
@@ -537,7 +537,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             CpiContext::new_with_signer(
                 system_program.to_account_info(),
                 anchor_lang::system_program::Transfer {
-                    from: treasury_account.clone(),
+                    from: fund_treasury_account.clone(),
                     to: to_account.to_account_info(),
                 },
                 &[&self.fund_account.get_treasury_account_seeds()],
