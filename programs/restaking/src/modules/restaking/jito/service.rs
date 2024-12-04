@@ -208,6 +208,12 @@ impl JitoRestakingVault {
                 &fund_account.key(),
                 &token_program,
             );
+        let vault_supported_token_account =
+            associated_token::get_associated_token_address_with_program_id(
+                &jito_vault_account.key(),
+                &vault.supported_mint,
+                &token_program,
+            );
 
         Ok(vec![
             (*jito_vault_program.key, false),
@@ -219,6 +225,7 @@ impl JitoRestakingVault {
             (vault_vst_mint, false),
             (fund_supported_token_account, false),
             (fund_receipt_token_account, false),
+            (vault_supported_token_account, false),
             (vault_fee_wallet_token_account, false),
             (token_program, false),
             (system_program, false),
@@ -288,9 +295,8 @@ impl JitoRestakingVault {
     pub fn find_vault_base_account(index: u8) -> Pubkey {
         let base = Pubkey::find_program_address(
             &[
-                Self::VAULT_BASE_ACCOUNT_SEED,
+                Self::VAULT_BASE_ACCOUNT1_SEED,
                 (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),
-                &[index],
             ],
             &JITO_VAULT_PROGRAM_ID,
         )

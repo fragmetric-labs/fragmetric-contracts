@@ -1,12 +1,14 @@
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use crate::errors;
 use crate::modules::fund::fund_account_restaking_vault::RestakingVault;
-use crate::modules::fund::{FundService, SupportedToken};
+use crate::modules::fund::{
+    FundService, SupportedToken, WeightedAllocationParticipant, WeightedAllocationStrategy,
+};
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::PDASeeds;
+use crate::utils::{AccountInfoExt, PDASeeds};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token::Token;
@@ -119,10 +121,10 @@ impl SelfExecutable for RestakeVSTCommand {
                             );
                         command.state = RestakeVSTCommandState::SetupNormalize;
                         return Ok(Some(command.with_required_accounts([
-                            (normalized_token_pool_address, false),
-                            (normalized_token.mint, false),
+                            (normalized_token.mint, true),
+                            (normalized_token_pool_address, true),
                             (normalized_token.program, false),
-                            (normalized_token_account, false),
+                            (normalized_token_account, true),
                         ])));
                     } else {
                         command.state = RestakeVSTCommandState::SetupRestake;
@@ -174,7 +176,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     };
                 }
                 RestakeVSTCommandState::SetupNormalize => {
-                    let [normalized_token_pool_address, normalized_token_mint, normalized_token_program, normalized_token_account, remaining_accounts @ ..] =
+                    let [normalized_token_mint, normalized_token_pool_address, normalized_token_program, normalized_token_account, remaining_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -193,36 +195,55 @@ impl SelfExecutable for RestakeVSTCommand {
                         FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
                             .new_pricing_service(pricing_source)?;
 
-                    let mut total_reserved_amount_as_sol: u64 = 0;
+                    let mut participants = vec![];
                     let supported_tokens = ctx
                         .fund_account
                         .supported_tokens
                         .iter()
                         .filter_map(|t| {
-                            if normalized_token_pool_account.has_supported_token(&t.mint)
-                                && t.mint != normalized_token_mint.key()
-                            {
-                                let reserved_amount_as_sol = pricing_service
-                                    .get_token_amount_as_sol(&t.mint, t.operation_reserved_amount)
-                                    .unwrap();
-                                total_reserved_amount_as_sol += reserved_amount_as_sol;
-                                Some((t, reserved_amount_as_sol))
-                            } else {
+                            if t.operation_reserved_amount == 0 {
                                 None
+                            } else {
+                                if normalized_token_pool_account.has_supported_token(&t.mint)
+                                    && t.mint != normalized_token_mint.key()
+                                {
+                                    let reserved_amount_as_sol = pricing_service
+                                        .get_token_amount_as_sol(
+                                            &t.mint,
+                                            t.operation_reserved_amount,
+                                        )
+                                        .unwrap();
+                                    participants.push(WeightedAllocationParticipant::new(
+                                        reserved_amount_as_sol,
+                                        0,
+                                        u64::MAX,
+                                    ));
+                                    Some(t)
+                                } else {
+                                    None
+                                }
                             }
                         })
                         .collect::<Vec<_>>();
 
-                    let mut restake_supported_tokens_state = vec![];
-                    for (supported_token, reserved_token_amount_as_sol) in &supported_tokens {
-                        let need_to_restake_token_amount_as_sol = (item.sol_amount as f64)
-                            * (*reserved_token_amount_as_sol as f64)
-                            / (total_reserved_amount_as_sol as f64);
+                    if supported_tokens.len() == 0 {
+                        if self.items.len() > 1 {
+                            return Ok(Some(
+                                RestakeVSTCommand::new_init(self.items[1..].to_vec())
+                                    .without_required_accounts(),
+                            ));
+                        }
+                        return Ok(None)
+                    }
 
+                    WeightedAllocationStrategy::put(&mut participants, item.sol_amount);
+
+                    let mut restake_supported_tokens_state = vec![];
+                    for (i, supported_token) in supported_tokens.iter().enumerate() {
                         let need_to_restake_token_amount = pricing_service
                             .get_sol_amount_as_token(
                                 &supported_token.mint,
-                                need_to_restake_token_amount_as_sol as u64,
+                                participants[i].get_last_put_amount()?,
                             )?;
 
                         restake_supported_tokens_state.push(NormalizeSupportedTokenAsset {
@@ -232,9 +253,9 @@ impl SelfExecutable for RestakeVSTCommand {
                                 supported_token.operation_reserved_amount,
                                 need_to_restake_token_amount,
                             ),
-                        })
+                        });
                     }
-                    let (restake_supported_token_state, _) = supported_tokens[0];
+                    let restake_supported_token_state = supported_tokens[0];
                     let pool_supported_token_account =
                         anchor_spl::associated_token::get_associated_token_address(
                             &normalized_token_pool_address.key(),
@@ -248,10 +269,22 @@ impl SelfExecutable for RestakeVSTCommand {
                     command.state =
                         RestakeVSTCommandState::Normalize(restake_supported_tokens_state);
                     let required_accounts = vec![
-                        (normalized_token_mint.key(), true),
-                        (normalized_token_pool_address.key(), false),
-                        (normalized_token_account.key(), true),
-                        (normalized_token_program.key(), false),
+                        (
+                            normalized_token_mint.key(),
+                            normalized_token_mint.is_writable,
+                        ),
+                        (
+                            normalized_token_pool_address.key(),
+                            normalized_token_pool_address.is_writable,
+                        ),
+                        (
+                            normalized_token_program.key(),
+                            normalized_token_program.is_writable,
+                        ),
+                        (
+                            normalized_token_account.key(),
+                            normalized_token_account.is_writable,
+                        ),
                         (pool_supported_token_account, true),
                         (restake_supported_token_state.mint, false),
                         (reserved_normalize_token_account, true),
@@ -261,7 +294,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     return Ok(Some(command.with_required_accounts(required_accounts)));
                 }
                 RestakeVSTCommandState::Normalize(restake_supported_tokens_state) => {
-                    let [normalized_token_mint, normalized_token_pool_address, normalized_token_account, normalized_token_program, pool_supported_token_account, supported_token_mint, supported_token_account, supported_token_program, remaining_accounts @ ..] =
+                    let [normalized_token_mint, normalized_token_pool_address, normalized_token_program, normalized_token_account, pool_supported_token_account, supported_token_mint, supported_token_account, supported_token_program, remaining_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -282,25 +315,24 @@ impl SelfExecutable for RestakeVSTCommand {
                         FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
                             .new_pricing_service(pricing_source)?;
 
-                    let mut command = self.clone();
-                    let normalized_token_account_parsed =
-                        InterfaceAccount::<TokenAccount>::try_from(normalized_token_account)?;
+                    let mut normalized_token_account_parsed =
+                        normalized_token_account.parse_interface_account_boxed::<TokenAccount>()?;
                     let supported_token_account_parsed =
-                        InterfaceAccount::<TokenAccount>::try_from(supported_token_account)?;
-                    let pool_supported_token_account_parsed =
-                        InterfaceAccount::<TokenAccount>::try_from(pool_supported_token_account)?;
+                        supported_token_account.parse_interface_account_boxed::<TokenAccount>()?;
+                    let pool_supported_token_account_parsed = pool_supported_token_account
+                        .parse_interface_account_boxed::<TokenAccount>(
+                    )?;
                     let mut normalized_token_mint_parsed =
-                        InterfaceAccount::<Mint>::try_from(normalized_token_mint)?;
+                        normalized_token_mint.parse_interface_account_boxed::<Mint>()?;
                     let supported_token_mint_parsed =
-                        InterfaceAccount::<Mint>::try_from(supported_token_mint)?;
+                        supported_token_mint.parse_interface_account_boxed::<Mint>()?;
+                    let mut normalized_token_pool_account = normalized_token_pool_address
+                        .parse_account_boxed::<NormalizedTokenPoolAccount>(
+                    )?;
                     let supported_token_program_parsed =
                         Interface::<TokenInterface>::try_from(*supported_token_program)?;
                     let normalized_token_program_parsed =
                         Program::<Token>::try_from(*normalized_token_program)?;
-                    let mut normalized_token_pool_account =
-                        Account::<NormalizedTokenPoolAccount>::try_from(
-                            *normalized_token_pool_address,
-                        )?;
 
                     let mut normalized_token_pool_service = NormalizedTokenPoolService::new(
                         &mut normalized_token_pool_account,
@@ -320,38 +352,53 @@ impl SelfExecutable for RestakeVSTCommand {
                         &mut pricing_service,
                     )?;
 
+                    let mut command = self.clone();
                     match unused_restake_supported_tokens.first() {
-                        Some(restake_supported_token) => {
+                        Some(next_reserved_restake_token) => {
                             command.state = RestakeVSTCommandState::Normalize(
                                 unused_restake_supported_tokens.clone(),
                             );
-                            let next_reserved_restake_token =
-                                unused_restake_supported_tokens.first().unwrap();
+
                             let next_pool_supported_token_account =
                                 anchor_spl::associated_token::get_associated_token_address(
                                     &normalized_token_pool_address.key(),
                                     &next_reserved_restake_token.token_mint,
                                 );
+
                             let next_reserved_normalize_token_account =
                                 ctx.fund_account.find_supported_token_account_address(
                                     &next_reserved_restake_token.token_mint,
                                 )?;
 
-                            return Ok(Some(command.with_required_accounts([
-                                (normalized_token_mint.key(), true),
-                                (normalized_token_pool_address.key(), false),
-                                (normalized_token_account.key(), true),
-                                (normalized_token_program.key(), false),
-                                (next_pool_supported_token_account.key(), true),
+                            let required_accounts = vec![
+                                (
+                                    normalized_token_mint.key(),
+                                    normalized_token_mint.is_writable,
+                                ),
+                                (
+                                    normalized_token_pool_address.key(),
+                                    normalized_token_pool_address.is_writable,
+                                ),
+                                (
+                                    normalized_token_program.key(),
+                                    normalized_token_program.is_writable,
+                                ),
+                                (
+                                    normalized_token_account.key(),
+                                    normalized_token_account.is_writable,
+                                ),
+                                (next_pool_supported_token_account, true),
                                 (next_reserved_restake_token.token_mint, false),
                                 (next_reserved_normalize_token_account, true),
                                 (next_reserved_restake_token.token_program, false),
-                            ])));
+                            ];
+                            return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
                         None => {
                             command.state = RestakeVSTCommandState::ReadVaultState;
                             match restaking_vault.receipt_token_pricing_source {
                                 TokenPricingSource::JitoRestakingVault { address } => {
+                                    normalized_token_account_parsed.reload()?;
                                     command.operation_reserved_restake_token =
                                         Some(OperationReservedRestakeToken {
                                             token_mint: normalized_token_account_parsed.mint,
@@ -400,7 +447,7 @@ impl SelfExecutable for RestakeVSTCommand {
 
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address: _ } => {
-                            let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
+                            let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -418,7 +465,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 token_program.to_account_info(),
                                 token_program.to_account_info(),
                                 vault_vst_mint.to_account_info(),
-                                fund_supported_token_account.to_account_info(),
+                                vault_supported_token_account.to_account_info(),
                             )?
                             .update_vault_if_needed(
                                 ctx.operator,
@@ -438,7 +485,6 @@ impl SelfExecutable for RestakeVSTCommand {
                                 &ctx.fund_account.as_ref(),
                                 &[&ctx.fund_account.get_seeds().as_ref()],
                             )?;
-
                             restaking_vault.receipt_token_operation_reserved_amount +=
                                 minted_vrt_amount;
                             command.operation_reserved_restake_token = None;
@@ -449,6 +495,7 @@ impl SelfExecutable for RestakeVSTCommand {
                 _ => (),
             }
         }
+
         if self.items.len() > 1 {
             return Ok(Some(
                 RestakeVSTCommand::new_init(self.items[1..].to_vec()).without_required_accounts(),

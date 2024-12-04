@@ -1,4 +1,5 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use std::cmp;
+use super::{NormalizeSupportedTokenAsset, OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use crate::constants::{ADMIN_PUBKEY, JITO_VAULT_PROGRAM_FEE_WALLET};
 use crate::errors;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
@@ -7,6 +8,7 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
+use crate::modules::fund::FundService;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ClaimUnrestakedVSTCommand {
@@ -89,11 +91,18 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
 
-                            let withdrawal_tickets = &remaining_accounts[0..5];
-                            let remaining_accounts = &remaining_accounts[5..];
+                            let withdrawal_tickets = &remaining_accounts[0..5] else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+                            let remaining_accounts = &remaining_accounts[5..] else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+
                             let (claimable_tickets, _) =
                                 JitoRestakingVaultService::get_claimable_withdrawal_tickets(
                                     vault_config,
+                                    &restaking_vault.receipt_token_mint,
+                                    &restaking_vault.receipt_token_program,
                                     withdrawal_tickets.to_vec(),
                                 )?;
 
@@ -103,7 +112,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                         ClaimUnrestakedVSTCommand::new_init(
                                             self.items[1..].to_vec(),
                                         )
-                                        .without_required_accounts(),
+                                        .with_required_accounts([]),
                                     ));
                                 }
                                 return Ok(None);
@@ -147,7 +156,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     let mut command = self.clone();
                     match restaking_vault.receipt_token_pricing_source {
                         TokenPricingSource::JitoRestakingVault { address: _ } => {
-                            let [vault_program, vault_account, vault_config, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, token_program, system_program, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
+                            let [vault_program, vault_account, vault_config, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account,vault_supported_token_account,  vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, token_program, system_program, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -170,9 +179,9 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 vault_config.to_account_info(),
                                 vault_vrt_mint.to_account_info(),
                                 token_program.to_account_info(),
-                                token_program.to_account_info(),
                                 vault_vst_mint.to_account_info(),
-                                fund_supported_token_account.to_account_info(),
+                                token_program.to_account_info(),
+                                vault_supported_token_account.to_account_info(),
                             )?
                             .update_vault_if_needed(
                                 ctx.operator,
@@ -240,19 +249,8 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                         return Ok(Some(command.with_required_accounts([
                                             (normalized_token_pool_address, false),
                                             (normalized_token.mint, false),
-                                            (normalized_token.program, false),
                                             (normalized_token_account, false),
                                         ])));
-                                    } else {
-                                        if self.items.len() > 1 {
-                                            return Ok(Some(
-                                                ClaimUnrestakedVSTCommand::new_init(
-                                                    self.items[1..].to_vec(),
-                                                )
-                                                .without_required_accounts(),
-                                            ));
-                                        }
-                                        return Ok(None);
                                     }
                                 }
                             }
@@ -260,14 +258,55 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     }
                 }
-                ClaimUnrestakedVSTCommandState::SetupDenormalize(denormalize_amount) => {}
+                ClaimUnrestakedVSTCommandState::SetupDenormalize(total_denormalize_amount) => {
+                    let [normalized_token_pool_address, normalized_token_mint, normalized_token_account, remaining_accounts @ ..] = accounts  else {
+                        err!(ErrorCode::AccountNotEnoughKeys)?
+                    };
+
+                    let mut command = self.clone();
+                    let normalized_token_pool_account =
+                        Account::<NormalizedTokenPoolAccount>::try_from(
+                            normalized_token_pool_address,
+                        )?;
+                    let mut pricing_source = remaining_accounts.to_vec();
+                    pricing_source.push(normalized_token_pool_address);
+
+                    let pricing_service =
+                        FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
+                            .new_pricing_service(pricing_source)?;
+                    // let supported_tokens = ctx
+                    //     .fund_account
+                    //     .supported_tokens
+                    //     .iter()
+                    //     .filter_map(|t| {
+                    //         if normalized_token_pool_account.has_supported_token(&t.mint)
+                    //             && t.mint != normalized_token_mint.key()
+                    //         {
+                    //             let reserved_amount_as_sol = pricing_service
+                    //                 .get_token_amount_as_sol(&t.mint, t.operation_reserved_amount)
+                    //                 .unwrap();
+                    //             Some((t, reserved_amount_as_sol))
+                    //         } else {
+                    //             None
+                    //         }
+                    //     })
+                    //     .collect::<Vec<_>>();
+
+
+                    // for (supported_token, reserved_token_amount_as_sol) in &supported_tokens {
+                    //
+                    // }
+
+                }
+
+
                 _ => (),
             }
         }
         if self.items.len() > 1 {
             return Ok(Some(
                 ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec())
-                    .without_required_accounts(),
+                    .with_required_accounts([]),
             ));
         }
         Ok(None)

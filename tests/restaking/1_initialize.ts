@@ -7,8 +7,9 @@ import {restakingPlayground} from "../restaking";
 describe("initialize", async () => {
     const restaking = await restakingPlayground;
 
-    step("try airdrop SOL to fund manager", async function () {
+    step("try airdrop SOL to authorized wallets", async function () {
         await Promise.all([
+            restaking.tryAirdrop(restaking.keychain.getPublicKey('ADMIN'), 100),
             restaking.tryAirdrop(restaking.keychain.getPublicKey('FUND_MANAGER'), 100),
         ]);
 
