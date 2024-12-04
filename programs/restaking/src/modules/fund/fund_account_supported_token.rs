@@ -3,9 +3,8 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 
-// TODO v0.3/operation: visibility
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct SupportedToken {
+pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
@@ -60,27 +59,10 @@ impl SupportedToken {
         })
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
-        self.operation_reserved_amount
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
-        self.operation_reserved_amount = amount;
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
-        self.operation_receivable_amount
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
-        self.operation_receivable_amount = amount;
-    }
-
-    pub(super) fn set_accumulated_deposit_capacity_amount(&mut self, token_amount: u64) -> Result<()> {
+    pub(super) fn set_accumulated_deposit_capacity_amount(
+        &mut self,
+        token_amount: u64,
+    ) -> Result<()> {
         require_gte!(
             token_amount,
             self.accumulated_deposit_amount,
@@ -92,7 +74,11 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn set_sol_allocation_strategy(&mut self, weight: u64, sol_capacity_amount: u64) -> Result<()> {
+    pub(super) fn set_sol_allocation_strategy(
+        &mut self,
+        weight: u64,
+        sol_capacity_amount: u64,
+    ) -> Result<()> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
 

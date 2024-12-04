@@ -435,23 +435,6 @@ pub mod restaking {
         )
     }
 
-    // TODO v0.3/operation: deprecate old run
-    pub fn operator_deprecating_run<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-        command: u8,
-    ) -> Result<()> {
-        let clock = Clock::get()?;
-        modules::operation::process_run(
-            &ctx.accounts.operator,
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-            ctx.remaining_accounts,
-            clock.unix_timestamp,
-            clock.slot,
-            command,
-        )
-    }
-
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////

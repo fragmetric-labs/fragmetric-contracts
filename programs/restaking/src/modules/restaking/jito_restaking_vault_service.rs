@@ -17,7 +17,6 @@ use jito_vault_core::vault::{BurnSummary, Vault};
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
-use marinade_cpi::State;
 
 pub struct JitoRestakingVaultStatus {
     pub vault_receipt_token_claimable_amount: u64,

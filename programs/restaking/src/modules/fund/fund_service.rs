@@ -359,7 +359,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
 
-        // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
         let mut operation_reserved_amount = self.fund_account.sol_operation_reserved_amount;
         let mut operation_receivable_amount = self.fund_account.sol_operation_receivable_amount;
         let mut withdrawal_user_amount = 0;

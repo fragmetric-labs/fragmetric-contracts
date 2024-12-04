@@ -258,7 +258,7 @@ pub(super) struct WithdrawalBatch {
     pub num_requests: u64,
     pub receipt_token_amount: u64,
     _padding: [u8; 24],
-    enqueued_at: Option<i64>, // TODO: why?
+    enqueued_at: Option<i64>, // TODO: ??????
     _reserved: [u8; 32],
 }
 

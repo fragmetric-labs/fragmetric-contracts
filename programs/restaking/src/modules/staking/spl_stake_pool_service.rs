@@ -24,19 +24,19 @@ impl From<AvailableWithdrawals> for Option<Vec<(Pubkey, u64)>> {
     }
 }
 
-pub struct SPLStakePoolService<'info: 'a, 'a> {
-    pub spl_stake_pool_program: &'a AccountInfo<'info>,
-    pub pool_account: &'a AccountInfo<'info>,
-    pub pool_token_mint: &'a AccountInfo<'info>,
-    pub pool_token_program: &'a AccountInfo<'info>,
+pub struct SPLStakePoolService<'info> {
+    pub spl_stake_pool_program: &'info AccountInfo<'info>,
+    pub pool_account: &'info AccountInfo<'info>,
+    pub pool_token_mint: &'info AccountInfo<'info>,
+    pub pool_token_program: &'info AccountInfo<'info>,
 }
 
-impl<'info, 'a> SPLStakePoolService<'info, 'a> {
+impl<'info> SPLStakePoolService<'info> {
     pub fn new(
-        spl_stake_pool_program: &'a AccountInfo<'info>,
-        pool_account: &'a AccountInfo<'info>,
-        pool_token_mint: &'a AccountInfo<'info>,
-        pool_token_program: &'a AccountInfo<'info>,
+        spl_stake_pool_program: &'info AccountInfo<'info>,
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &'info AccountInfo<'info>,
+        pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         require_eq!(spl_stake_pool::ID, spl_stake_pool_program.key());
 

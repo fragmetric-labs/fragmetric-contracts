@@ -32,8 +32,7 @@ pub struct FundAccount {
     pub(super) supported_tokens: Vec<SupportedToken>,
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) sol_operation_reserved_amount: u64,
+    pub(super) sol_operation_reserved_amount: u64,
 
     pub(super) withdrawal: WithdrawalState,
 
@@ -164,8 +163,7 @@ impl FundAccount {
         [Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
+    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
         let mut seeds = Vec::with_capacity(3);
         seeds.extend(self.get_reserve_account_seed_phrase());
         seeds.push(std::slice::from_ref(&self.reserve_account_bump));
@@ -281,8 +279,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_supported_token_mut(
+    pub(super) fn get_supported_token_mut(
         &mut self,
         token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {

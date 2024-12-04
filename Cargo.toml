@@ -1,7 +1,10 @@
 [workspace]
 members = [
+    "programs/*",
     "programs/vendor/*",
-    "programs/restaking",
+]
+exclude = [
+    "programs/vendor"
 ]
 resolver = "2"
 
