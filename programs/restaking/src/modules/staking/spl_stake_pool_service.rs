@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 
 use crate::errors;
+use crate::utils::SystemProgramExt;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
@@ -29,14 +30,16 @@ pub struct SPLStakePoolService<'info: 'a, 'a> {
     pub pool_account: &'a AccountInfo<'info>,
     pub pool_token_mint: &'a AccountInfo<'info>,
     pub pool_token_program: &'a AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
-impl<'info, 'a> SPLStakePoolService<'info, 'a> {
+impl<'info, 'a: 'info> SPLStakePoolService<'info, 'a> {
     pub fn new(
         spl_stake_pool_program: &'a AccountInfo<'info>,
         pool_account: &'a AccountInfo<'info>,
         pool_token_mint: &'a AccountInfo<'info>,
         pool_token_program: &'a AccountInfo<'info>,
+        system_program: &'a AccountInfo<'info>,
     ) -> Result<Self> {
         require_eq!(spl_stake_pool::ID, spl_stake_pool_program.key());
 
@@ -45,6 +48,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             pool_account,
             pool_token_mint,
             pool_token_program,
+            system_program: Program::try_from(system_program)?,
         })
     }
 
@@ -82,6 +86,7 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
             (pool_account_info.key(), true),
             (pool_account.pool_mint, true),
             (pool_account.token_program_id, false),
+            (System::id(), false),
         ]
     }
 
@@ -545,28 +550,20 @@ impl<'info, 'a> SPLStakePoolService<'info, 'a> {
     }
 
     pub fn create_stake_account_if_needed(
+        &self,
         payer: &AccountInfo<'info>,
         stake_account: &AccountInfo<'info>,
         payer_signer_seeds: &[&[u8]],
         stake_account_signer_seeds: &[&[u8]],
     ) -> Result<()> {
-        if stake_account.lamports() == 0 {
-            // if given stake_account has lamports, it means it's already initialized by spl_stake_pool, so it's already an active stake account
-            let create_account_ix = solana_program::system_instruction::create_account(
-                payer.key,
-                stake_account.key,
-                0,
-                StakeStateV2::size_of() as u64,
-                &solana_program::stake::program::ID,
-            );
-            invoke_signed(
-                &create_account_ix,
-                &[payer.clone(), stake_account.clone()],
-                &[payer_signer_seeds, stake_account_signer_seeds],
-            )?;
-        }
-
-        Ok(())
+        self.system_program.create_account(
+            stake_account,
+            stake_account_signer_seeds,
+            payer,
+            payer_signer_seeds,
+            StakeStateV2::size_of(),
+            &solana_program::stake::program::ID,
+        )
     }
 
     /// gives (to_sol_account_amount, returned_sol_amount)

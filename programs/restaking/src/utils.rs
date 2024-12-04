@@ -271,6 +271,18 @@ where
     }
 }
 
+impl<'info, T> AccountExt<'info> for Program<'info, T> {
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
+
+impl<'info, T> AccountExt<'info> for Interface<'info, T> {
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
+
 pub trait SystemProgramExt<'info> {
     fn create_account(
         &self,
@@ -279,6 +291,7 @@ pub trait SystemProgramExt<'info> {
         payer: &(impl ToAccountInfo<'info> + Key),
         payer_seeds: &[&[u8]],
         space: usize,
+        owner: &Pubkey,
     ) -> Result<()>;
 }
 
@@ -290,6 +303,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         payer: &(impl ToAccountInfo<'info> + Key),
         payer_seeds: &[&[u8]],
         space: usize,
+        owner: &Pubkey,
     ) -> Result<()> {
         let rent = Rent::get()?;
         let current_lamports = account_to_create.lamports();
@@ -305,7 +319,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 ),
                 rent.minimum_balance(space),
                 space as u64,
-                &crate::ID,
+                owner,
             )?;
         } else {
             require_keys_neq!(
@@ -349,7 +363,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                     },
                     &[account_to_create_seeds],
                 ),
-                &crate::ID,
+                owner,
             )?;
         }
 

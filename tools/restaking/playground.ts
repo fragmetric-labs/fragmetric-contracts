@@ -220,9 +220,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fundStakeAccounts = [...Array(5).keys()].map((i) =>
             web3.PublicKey.findProgramAddressSync(
                 [
-                    fragSOLTokenMint.toBuffer(),
+                    fragSOLFund.toBuffer(),
                     this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
-                    Buffer.from(i.toString()),
+                    Buffer.from([i]),
                 ],
                 this.programId,
             )[0]
@@ -1909,6 +1909,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 pubkey: this.isDevnet ? this.knownAddress.fragSOLSupportedTokenAccount("bSOL") : this.knownAddress.fragSOLSupportedTokenAccount("jitoSOL"),
                 isSigner: false,
                 isWritable: true,
+            },
+            {
+                // system_program
+                pubkey: anchor.web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
             },
         ];
         const cmd0Tx = await this.run({

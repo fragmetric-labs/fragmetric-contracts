@@ -93,7 +93,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                 ClaimUnstakedSOLCommandState::Claim => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, fund_stake_accounts @ ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, fund_stake_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -111,6 +111,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 pool_account,
                                 pool_token_mint,
                                 pool_token_program,
+                                system_program,
                             )?
                             .claim_sol(stake_account)?;
                         }

@@ -126,7 +126,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 UnstakeLSTCommandState::GetAvailableUnstakeAccount => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, _pool_token_mint, _pool_token_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, _fund_reserve_account, _fund_supported_token_account, _fund_account, ..] =
+                    let [pool_program, pool_account, _pool_token_mint, _pool_token_program, _system_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, _fund_reserve_account, _fund_supported_token_account, fund_account, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -190,7 +190,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 }
                 UnstakeLSTCommandState::Unstake => {
                     // TODO put accounts definition into each token_pricing_source
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -205,6 +205,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 pool_account,
                                 pool_token_mint,
                                 pool_token_program,
+                                system_program,
                             )?
                             .withdraw_sol(
                                 withdraw_authority,
@@ -261,7 +262,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 UnstakeLSTCommandState::RequestUnstake => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, stake_accounts @ ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, stake_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -283,7 +284,14 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 let validator_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts, &spl_withdraw_stake_item.validator_stake_account)?;
                                 let fund_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts, &spl_withdraw_stake_item.fund_stake_account)?;
                                 // should create stake account and pass it the cpi call
-                                staking::SPLStakePoolService::create_stake_account_if_needed(
+                                staking::SPLStakePoolService::new(
+                                    pool_program,
+                                    pool_account,
+                                    pool_token_mint,
+                                    pool_token_program,
+                                    system_program,
+                                )?
+                                .create_stake_account_if_needed(
                                     fund_reserve_account,
                                     fund_stake_account,
                                     &ctx.fund_account.get_reserve_account_seeds(),
@@ -299,6 +307,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                     pool_account,
                                     pool_token_mint,
                                     pool_token_program,
+                                    system_program,
                                 )?
                                 .withdraw_stake(
                                     withdraw_authority,

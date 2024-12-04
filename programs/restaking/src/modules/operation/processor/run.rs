@@ -82,6 +82,7 @@ fn stake_sol<'info>(
             pool_token_program.key,
         )?
         .parse_interface_account_boxed::<TokenAccount>()?;
+    let system_program = remaining_accounts.pop_system_program()?;
 
     let staking_lamports = fund_account.sol_operation_reserved_amount;
     if staking_lamports > 0 {
@@ -90,7 +91,8 @@ fn stake_sol<'info>(
                 pool_program,
                 pool_account,
                 pool_mint,
-                &*pool_token_program,
+                pool_token_program.as_account_info(),
+                system_program.as_account_info(),
             )?
             .deposit_sol(
                 withdraw_authority,

@@ -33,7 +33,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, undefined, undefined, 800_000);
     });
 
     step("withdraw SOL from jito stake pool", async function () {
@@ -60,6 +60,7 @@ describe("operator_spl_stake_pool", async () => {
                                 tokenAmount: jitoSolSupportedTokenBalance0,
                             },
                         ],
+                        splWithdrawStakeItems: [],
                         state: {
                             init: {},
                         },
