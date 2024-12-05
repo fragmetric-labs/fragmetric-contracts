@@ -71,6 +71,18 @@ address = "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"
 [[test.validator.clone]]
 address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"
 
+# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.clone]]
+address = "9QCSiqVuYy7QTvCu3g3jxpovt4JxkaPkGjqhu7hb4d1D"
+
+# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.clone]]
+address = "E32hnC2LdJdPaeqRiHhUDx3wjkNTi45ZMhqYEr1R7W9t"
+
+# clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.clone]]
+address = "EusU4msAfQWBq2ME6Aip9AyokFJWuPm3VfdAnjEZyjwx"
+
 # clone mainnet jitoSOL stake pool fee account to localnet
 [[test.validator.clone]]
 address = "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"

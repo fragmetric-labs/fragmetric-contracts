@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
 use crate::utils::PDASeeds;
@@ -99,7 +100,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
-                            staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
+                            staking::SPLStakePoolService::find_accounts_to_get_available_unstake_account(
                                 pool_account_info,
                             )?
                         }
@@ -111,22 +112,15 @@ impl SelfExecutable for UnstakeLSTCommand {
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
 
-                    required_accounts.extend([
-                        (ctx.fund_account.get_reserve_account_address()?, true),
-                        (
-                            ctx.fund_account
-                                .find_supported_token_account_address(&item.mint)?,
-                            true,
-                        ),
-                        (ctx.fund_account.key(), true),
-                    ]);
+                    required_accounts.extend([(ctx.fund_account.key(), true)]);
 
                     return Ok(Some(command.with_required_accounts(required_accounts)));
                 }
                 UnstakeLSTCommandState::GetAvailableUnstakeAccount => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, _pool_token_mint, _pool_token_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, _fund_reserve_account, _fund_supported_token_account, _fund_account, ..] =
+                    // stake_program is not used directly, but it needs when running transaction
+                    let [pool_program, pool_account, _pool_token_mint, _pool_token_program, reserve_stake_account, validator_list_account, _stake_program, fund_account, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -135,10 +129,45 @@ impl SelfExecutable for UnstakeLSTCommand {
                     let available_withdrawals_from_reserve_or_validator = staking::SPLStakePoolService::get_withdrawal_available_from_reserve_or_validator(pool_program, pool_account, reserve_stake_account, validator_list_account, item.token_amount)?;
 
                     let mut required_accounts = Vec::new();
+                    required_accounts.extend([
+                        (pool_program.key(), pool_program.is_writable),
+                        (pool_account.key(), pool_account.is_writable),
+                        (_pool_token_mint.key(), _pool_token_mint.is_writable),
+                        (_pool_token_program.key(), _pool_token_program.is_writable),
+                        (
+                            reserve_stake_account.key(),
+                            reserve_stake_account.is_writable,
+                        ),
+                        (
+                            validator_list_account.key(),
+                            validator_list_account.is_writable,
+                        ),
+                        (_stake_program.key(), _stake_program.is_writable),
+                        (fund_account.key(), fund_account.is_writable),
+                    ]);
+                    required_accounts.extend([
+                        (ctx.fund_account.get_reserve_account_address()?, true),
+                        (
+                            ctx.fund_account
+                                .find_supported_token_account_address(&item.mint)?,
+                            true,
+                        ),
+                    ]);
+                    let required_withdraw_sol_or_stake_accounts = match token.pricing_source {
+                        TokenPricingSource::SPLStakePool { address } => {
+                            staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
+                                pool_account,
+                            )?
+                        }
+                        TokenPricingSource::MarinadeStakePool { address } => {
+                            todo!()
+                        }
+                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                    };
                     required_accounts.extend(
-                        accounts
+                        required_withdraw_sol_or_stake_accounts
                             .iter()
-                            .map(|account| (*account.key, account.is_writable)),
+                            .map(|account| account),
                     );
 
                     if let AvailableWithdrawals::Validators(
@@ -153,7 +182,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         command.state = UnstakeLSTCommandState::RequestUnstake;
 
                         let fund_stake_accounts: Vec<(Pubkey, bool, u8)> = available_withdrawals_from_reserve_or_validator.iter().enumerate().map(|(account_index, _)| {
-                            staking::SPLStakePoolService::find_fund_stake_accounts_for_withdraw_stake(&[item.mint.key().as_ref(), pool_account.key.as_ref(), &[account_index as u8]])
+                            staking::SPLStakePoolService::find_fund_stake_accounts_for_withdraw_stake(&[fund_account.key.as_ref(), pool_account.key.as_ref(), &[account_index as u8]])
                         }).collect();
 
                         command.spl_withdraw_stake_items =
@@ -165,7 +194,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                         validator_stake_account,
                                         fund_stake_account: fund_stake_accounts[index].0,
                                         fund_stake_account_signer_seeds: vec![
-                                            item.mint.key().as_ref().to_vec(),
+                                            fund_account.key.as_ref().to_vec(),
                                             pool_account.key.as_ref().to_vec(),
                                             vec![index as u8],
                                             vec![fund_stake_accounts[index].2],
@@ -190,7 +219,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 }
                 UnstakeLSTCommandState::Unstake => {
                     // TODO put accounts definition into each token_pricing_source
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, reserve_stake_account, _validator_list_account, stake_program, fund_account, fund_reserve_account, fund_supported_token_account, withdraw_authority, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -261,18 +290,15 @@ impl SelfExecutable for UnstakeLSTCommand {
                 UnstakeLSTCommandState::RequestUnstake => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, stake_accounts @ ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, _reserve_stake_account, validator_list_account, stake_program, fund_account, fund_reserve_account, fund_supported_token_account, withdraw_authority, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_accounts_with_remainings @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = Vec::new();
-                    required_accounts.extend(
-                        accounts
-                            .iter()
-                            .map(|account| (*account.key, account.is_writable)),
-                    );
+                    let required_accounts = accounts
+                        .iter()
+                        .map(|account| (*account.key, account.is_writable));
 
                     match token.pricing_source {
                         TokenPricingSource::SPLStakePool { address } => {
@@ -280,8 +306,8 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                             let spl_withdraw_stake_item = command.spl_withdraw_stake_items.pop();
                             if let Some(spl_withdraw_stake_item) = spl_withdraw_stake_item {
-                                let validator_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts, &spl_withdraw_stake_item.validator_stake_account)?;
-                                let fund_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts, &spl_withdraw_stake_item.fund_stake_account)?;
+                                let validator_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts_with_remainings, &spl_withdraw_stake_item.validator_stake_account)?;
+                                let fund_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts_with_remainings, &spl_withdraw_stake_item.fund_stake_account)?;
                                 // should create stake account and pass it the cpi call
                                 staking::SPLStakePoolService::create_stake_account_if_needed(
                                     fund_reserve_account,
@@ -311,9 +337,40 @@ impl SelfExecutable for UnstakeLSTCommand {
                                     fund_stake_account,
                                     fund_account,
                                     &ctx.fund_account.get_seeds(),
+                                    fund_reserve_account,
                                     spl_withdraw_stake_item.token_amount,
                                 )?;
                                 msg!("returned_sol_amount {}", returned_sol_amount);
+
+                                // deactivate fund_stake_account
+                                staking::SPLStakePoolService::deactivate_stake_account(
+                                    sysvar_clock_program,
+                                    fund_stake_account,
+                                    fund_reserve_account,
+                                    &ctx.fund_account.get_reserve_account_seeds(),
+                                )?;
+
+                                let supported_token = ctx
+                                    .fund_account
+                                    .get_supported_token_mut(pool_token_mint.key)?;
+                                supported_token.operation_reserved_amount -=
+                                    spl_withdraw_stake_item.token_amount;
+
+                                // returned_sol_amount + pool_token_fee as sol
+                                let receivable_sol_amount =
+                                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                        .new_pricing_service(
+                                            [&stake_accounts_with_remainings[..], &[pool_account]] // TODO stake_accounts includes remaining_accounts, should be redefined..
+                                                .concat()
+                                                .into_iter(),
+                                        )?
+                                        .get_token_amount_as_sol(
+                                            pool_token_mint.key,
+                                            spl_withdraw_stake_item.token_amount,
+                                        )?;
+
+                                ctx.fund_account.sol_operation_receivable_amount +=
+                                    receivable_sol_amount;
 
                                 if command.spl_withdraw_stake_items.len() > 0 {
                                     command.state = UnstakeLSTCommandState::RequestUnstake;

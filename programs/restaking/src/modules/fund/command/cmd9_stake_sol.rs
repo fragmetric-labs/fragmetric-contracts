@@ -127,20 +127,22 @@ impl SelfExecutable for StakeSOLCommand {
                     let token = ctx.fund_account.get_supported_token(&item.mint)?;
 
                     match &self.state {
-                        StakeSOLCommandState::Init if item.sol_amount > 0 => {
-                            let mut command = self.clone();
-                            command.state = StakeSOLCommandState::ReadPoolState;
+                        StakeSOLCommandState::Init => {
+                            if item.sol_amount > 0 {
+                                let mut command = self.clone();
+                                command.state = StakeSOLCommandState::ReadPoolState;
 
-                            match token.pricing_source {
-                                TokenPricingSource::SPLStakePool { address }
-                                | TokenPricingSource::MarinadeStakePool { address } => {
-                                    return Ok(Some(
-                                        command.with_required_accounts([(address, false)]),
-                                    ));
+                                match token.pricing_source {
+                                    TokenPricingSource::SPLStakePool { address }
+                                    | TokenPricingSource::MarinadeStakePool { address } => {
+                                        return Ok(Some(
+                                            command.with_required_accounts([(address, false)]),
+                                        ));
+                                    }
+                                    _ => err!(
+                                        errors::ErrorCode::OperationCommandExecutionFailedException
+                                    )?,
                                 }
-                                _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
-                                )?,
                             }
                         }
                         StakeSOLCommandState::ReadPoolState => {
@@ -223,7 +225,9 @@ impl SelfExecutable for StakeSOLCommand {
                                     let expected_minted_supported_token_amount =
                                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                             .new_pricing_service(
-                                                remaining_accounts.into_iter().cloned(),
+                                                [&remaining_accounts[..], &[pool_account]]
+                                                    .concat()
+                                                    .into_iter(),
                                             )?
                                             .get_sol_amount_as_token(
                                                 pool_token_mint.key,
@@ -272,7 +276,9 @@ impl SelfExecutable for StakeSOLCommand {
                                     let expected_minted_supported_token_amount =
                                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                             .new_pricing_service(
-                                                remaining_accounts.into_iter().cloned(),
+                                                [&remaining_accounts[..], &[pool_account]]
+                                                    .concat()
+                                                    .into_iter(),
                                             )?
                                             .get_sol_amount_as_token(
                                                 pool_token_mint.key,
