@@ -10,7 +10,9 @@ use crate::modules::reward;
 use crate::utils::*;
 use crate::{events, utils};
 
-use super::command::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::command::{
+    OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -50,6 +52,35 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         self.update_asset_values(&mut pricing_service)?;
 
         Ok(pricing_service)
+    }
+
+    pub(in crate::modules) fn get_pricing_sources(&self) -> Result<Vec<Pubkey>> {
+        self
+            .fund_account
+            .normalized_token
+            .iter()
+            .map(|normalized_token| &normalized_token.pricing_source)
+            .chain(self.fund_account.restaking_vaults.iter().map(
+                |restaking_vault| &restaking_vault.receipt_token_pricing_source,
+            ))
+            .chain(
+                self.fund_account
+                    .supported_tokens
+                    .iter()
+                    .map(|supported_token| &supported_token.pricing_source),
+            )
+            .map(|pricing_source| {
+                Ok(match pricing_source {
+                    TokenPricingSource::SPLStakePool { address }
+                    | TokenPricingSource::MarinadeStakePool { address }
+                    | TokenPricingSource::JitoRestakingVault { address }
+                    | TokenPricingSource::FragmetricNormalizedTokenPool {
+                        address,
+                    } => *address,
+                    _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()
     }
 
     pub(super) fn update_asset_values(
@@ -192,11 +223,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
         let mut execution_count = 0;
+        let mut executed_commands = Vec::new();
+
+        let pricing_sources = self.get_pricing_sources()?;
         let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
             .iter()
             .map(|info| (*info.key, info))
             .collect();
-        let mut executed_commands = Vec::new();
 
         'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
         {
@@ -238,7 +271,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             // append all unused accounts
-            // TODO v0.3/operation: write pricing sources in command?
             for unused_account_key in &unused_account_keys {
                 // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
                 let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
@@ -252,12 +284,20 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 system_program,
             };
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
-                Ok(next_command) => {
+                Ok(mut next_command) => {
                     // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
                     // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
                     executed_commands.push(command.clone());
-                    operation_state.set_command(next_command, self.current_timestamp);
                     execution_count += 1;
+
+                    // append pricing sources to required_accounts
+                    match next_command {
+                        Some(ref mut next_command) => {
+                            next_command.append_readonly_accounts(pricing_sources.iter().cloned());
+                        }
+                        _ => {}
+                    }
+                    operation_state.set_command(next_command, self.current_timestamp);
                 }
                 Err(error) => {
                     // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);

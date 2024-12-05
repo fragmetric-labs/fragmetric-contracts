@@ -106,7 +106,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let (supported_token_pricing_sources, remaining_accounts) =
                     remaining_accounts.split_at(ctx.fund_account.supported_tokens.len());
 
-                let (restaing_vault_pricing_sources, pricing_sources) =
+                let (restaking_vault_pricing_sources, pricing_sources) =
                     remaining_accounts.split_at(ctx.fund_account.restaking_vaults.len());
 
                 // calculate LST max cycle fee
@@ -144,7 +144,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     let (numerator, denominator) =
                         match &restaking_vault.receipt_token_pricing_source {
                             TokenPricingSource::JitoRestakingVault { address } => {
-                                let account = restaing_vault_pricing_sources[i];
+                                let account = restaking_vault_pricing_sources[i];
                                 require_keys_eq!(account.key(), *address);
                                 JitoRestakingVaultService::get_max_cycle_fee(account)?
                             }

@@ -96,6 +96,16 @@ pub struct OperationCommandAccountMeta {
     pub(super) is_writable: bool,
 }
 
+impl OperationCommandEntry {
+    pub(super) fn append_readonly_accounts(&mut self, accounts: impl IntoIterator<Item = Pubkey>) {
+        self.required_accounts
+            .extend(accounts.into_iter().map(|account| OperationCommandAccountMeta {
+                pubkey: account,
+                is_writable: false,
+            }));
+    }
+}
+
 impl<'a> From<&'a OperationCommandEntry>
     for (&'a OperationCommand, &'a [OperationCommandAccountMeta])
 {
