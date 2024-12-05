@@ -36,7 +36,7 @@ impl FundAccountInfo {
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
-            sol_withdrawal_reserved_amount: fund_account.withdrawal.sol_withdrawal_reserved_amount,
+            sol_withdrawal_reserved_amount: fund_account.withdrawal.sol_user_reserved_amount,
             sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_fee_rate_as_percent(),
             withdrawal_enabled: fund_account.withdrawal.enabled,
             withdrawal_last_completed_batch_id: fund_account.withdrawal.last_processed_batch_id,

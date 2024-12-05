@@ -448,17 +448,17 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // SlahsherNormalizedTokenWithdrawalTicketInitialContext
+    // SlasherNormalizedTokenWithdrawalAccountInitialContext
     ////////////////////////////////////////////
 
     // TODO: untested
-    pub fn slasher_initialize_normalized_token_withdrawal_ticket<'info>(
+    pub fn slasher_initialize_normalized_token_withdrawal_account<'info>(
         ctx: Context<
             '_,
             '_,
             'info,
             'info,
-            SlasherNormalizedTokenWithdrawalTicketInitialContext<'info>,
+            SlasherNormalizedTokenWithdrawalAccountInitialContext<'info>,
         >,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolService::new(
@@ -466,7 +466,7 @@ pub mod restaking {
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-        .process_initialize_withdrawal_ticket(
+        .process_initialize_withdrawal_account(
             &mut ctx
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
@@ -478,19 +478,19 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // SlahsherNormalizedTokenWithdrawalTicketContext
+    // SlasherNormalizedTokenWithdrawContext
     ////////////////////////////////////////////
 
     // TODO: untested
-    pub fn slasher_claim_normalized_token_withdrawal_ticket(
-        ctx: Context<SlasherNormalizedTokenWithdrawalTicketContext>,
+    pub fn slasher_withdraw_normalized_token(
+        ctx: Context<SlasherNormalizedTokenWithdrawContext>,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolService::new(
             &mut ctx.accounts.normalized_token_pool_account,
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-            .process_claim_withdrawal_ticket(
+            .process_withdraw(
                 &mut ctx
                     .accounts
                     .slasher_normalized_token_withdrawal_ticket_account,
@@ -616,7 +616,7 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw(
-            &mut ctx.accounts.fund_batch_withdrawal_ticket_account,
+            &mut ctx.accounts.fund_withdrawal_batch_account,
             &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,

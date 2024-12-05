@@ -45,7 +45,7 @@ describe("withdraw", async () => {
 
         const fragSOLFund2 = await restaking.getFragSOLFundAccount();
         expect(fragSOLFund2.withdrawal.pendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
-        expect(fragSOLFund2.withdrawal.solWithdrawalReservedAmount.toNumber()).eq(0, 'not yet processed');
+        expect(fragSOLFund2.withdrawal.solUserReservedAmount.toNumber()).eq(0, 'not yet processed');
         expect(fragSOLFund2.withdrawal.pendingBatch.receiptTokenAmount.toString()).eq(amountFragSOLWithdrawalTotal.toString());
         expect(fragSOLFund0.withdrawal.pendingBatch.batchId.toNumber()).eq(fragSOLFund2.withdrawal.pendingBatch.batchId.toNumber());
 
@@ -94,7 +94,7 @@ describe("withdraw", async () => {
         const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
         expect(res2.fragSOLFund.withdrawal.lastProcessedBatchId.toNumber()).eq(2);
-        expect(res2.fragSOLFund.withdrawal.solWithdrawalReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.mul(new BN(2)).toString(), 'in this test, fragSOL unit price is still 1SOL');
+        expect(res2.fragSOLFund.withdrawal.solUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.mul(new BN(2)).toString(), 'in this test, fragSOL unit price is still 1SOL');
         expect(res2.fragSOLLockAccount.amount.toString()).eq('0');
     });
 
@@ -113,9 +113,9 @@ describe("withdraw", async () => {
             .eq(amountFragSOLWithdrawalEach.toString(), 'in this test, fragSOL unit price is still 1SOL - 1');
         expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString())
             .eq(amountFragSOLWithdrawalEach.sub(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '3');
-        expect(res1.fragSOLFund.withdrawal.solWithdrawalReservedAmount.toString())
+        expect(res1.fragSOLFund.withdrawal.solUserReservedAmount.toString())
             .eq(amountFragSOLWithdrawalEach.toString(), 'in this test, fragSOL unit price is still 1SOL - 2');
-        expect(res1.fragSOLFund.withdrawal.solWithdrawalReservedAmount.toString())
+        expect(res1.fragSOLFund.withdrawal.solUserReservedAmount.toString())
             .eq(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '4');
     });
 

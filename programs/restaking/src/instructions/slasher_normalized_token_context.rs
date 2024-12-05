@@ -4,12 +4,12 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::modules::normalization::{
-    NormalizedTokenPoolAccount, NormalizedTokenWithdrawalTicketAccount,
+    NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount,
 };
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
-pub struct SlasherNormalizedTokenWithdrawalTicketInitialContext<'info> {
+pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -31,12 +31,12 @@ pub struct SlasherNormalizedTokenWithdrawalTicketInitialContext<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + NormalizedTokenWithdrawalTicketAccount::INIT_SPACE,
-        seeds = [NormalizedTokenWithdrawalTicketAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
+        space = 8 + NormalizedTokenWithdrawalAccount::INIT_SPACE,
+        seeds = [NormalizedTokenWithdrawalAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
         bump,
     )]
     pub slasher_normalized_token_withdrawal_ticket_account:
-        Box<Account<'info, NormalizedTokenWithdrawalTicketAccount>>,
+        Box<Account<'info, NormalizedTokenWithdrawalAccount>>,
 
     #[account(
         mut,
@@ -51,7 +51,7 @@ pub struct SlasherNormalizedTokenWithdrawalTicketInitialContext<'info> {
 
 
 #[derive(Accounts)]
-pub struct SlasherNormalizedTokenWithdrawalTicketContext<'info> {
+pub struct SlasherNormalizedTokenWithdrawContext<'info> {
     #[account(mut)]
     pub slasher: Signer<'info>,
 
@@ -70,12 +70,12 @@ pub struct SlasherNormalizedTokenWithdrawalTicketContext<'info> {
 
     #[account(
         mut,
-        seeds = [NormalizedTokenWithdrawalTicketAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
+        seeds = [NormalizedTokenWithdrawalAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
         bump = slasher_normalized_token_withdrawal_ticket_account.get_bump(),
         has_one = normalized_token_mint,
     )]
     pub slasher_normalized_token_withdrawal_ticket_account:
-        Box<Account<'info, NormalizedTokenWithdrawalTicketAccount>>,
+        Box<Account<'info, NormalizedTokenWithdrawalAccount>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 

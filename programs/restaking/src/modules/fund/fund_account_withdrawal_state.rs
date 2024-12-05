@@ -24,7 +24,8 @@ pub(super) struct WithdrawalState {
     #[max_len(MAX_QUEUED_WITHDRAWAL_BATCHES)]
     pub queued_batches: Vec<WithdrawalBatch>,
 
-    pub sol_withdrawal_reserved_amount: u64,
+    /// reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund. for informational purposes only.
+    pub sol_user_reserved_amount: u64,
 
     /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
     pub sol_normal_reserve_rate_bps: u16,
@@ -88,12 +89,8 @@ impl WithdrawalState {
 
     #[inline(always)]
     pub fn get_sol_fee_amount(&self, sol_amount: u64) -> Result<u64> {
-        crate::utils::get_proportional_amount(
-            sol_amount,
-            self.sol_fee_rate_bps as u64,
-            10_000,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        crate::utils::get_proportional_amount(sol_amount, self.sol_fee_rate_bps as u64, 10_000)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn set_sol_fee_rate_bps(&mut self, sol_fee_rate_bps: u16) -> Result<()> {
@@ -121,6 +118,7 @@ impl WithdrawalState {
         Ok(())
     }
 
+    #[inline(always)]
     pub fn set_sol_normal_reserve_max_amount(&mut self, sol_amount: u64) {
         self.sol_normal_reserve_max_amount = sol_amount;
     }
@@ -137,7 +135,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn issue_new_withdrawal_request(
+    pub fn create_pending_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,
         current_timestamp: i64,
@@ -157,10 +155,7 @@ impl WithdrawalState {
     }
 
     /// Returns receipt_token_amount
-    pub fn remove_withdrawal_request_from_pending_batch(
-        &mut self,
-        request: WithdrawalRequest,
-    ) -> Result<u64> {
+    pub fn remove_pending_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<u64> {
         self.assert_request_issued(&request)?;
         self.assert_request_not_enqueued(&request)?;
 
@@ -178,16 +173,14 @@ impl WithdrawalState {
     }
 
     pub fn is_batch_enqueuing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
-        !self
-            .last_batch_enqueued_at
+        !self.last_batch_enqueued_at
             .is_some_and(|last_batch_enqueued_at| {
                 current_timestamp - last_batch_enqueued_at < self.batch_threshold_interval_seconds
             })
     }
 
     pub fn is_batch_processing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
-        !self
-            .last_batch_processed_at
+        !self.last_batch_processed_at
             .is_some_and(|last_batch_processed_at| {
                 current_timestamp - last_batch_processed_at < self.batch_threshold_interval_seconds
             })
@@ -213,42 +206,44 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) {
+    /// returns [enqueued]
+    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) -> bool {
         if self.queued_batches.len() == MAX_QUEUED_WITHDRAWAL_BATCHES {
-            return;
+            return false;
         }
 
         let batch_id = self.next_batch_id;
         self.next_batch_id += 1;
         let new_pending_batch = WithdrawalBatch::new(batch_id);
-        let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
+        let mut pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
 
-        self.num_requests_in_progress += old_pending_batch.num_requests;
+        self.num_requests_in_progress += pending_batch.num_requests;
         self.last_batch_enqueued_at = Some(current_timestamp);
-        old_pending_batch.enqueued_at = Some(current_timestamp);
-        self.queued_batches.push(old_pending_batch);
+        pending_batch.enqueued_at = Some(current_timestamp);
+        self.queued_batches.push(pending_batch);
+        true
     }
 
     pub fn dequeue_batches(
         &mut self,
         mut count: usize,
         current_timestamp: i64,
-    ) -> Vec<WithdrawalBatch> {
+    ) -> Result<Vec<WithdrawalBatch>> {
         if count == 0 {
-            return vec![];
+            return Ok(vec![]);
         }
+        require_gte!(self.queued_batches.len(), count);
 
-        count = count.min(self.queued_batches.len());
         self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
         self.last_batch_processed_at = Some(current_timestamp);
         let remaining_batches = self.queued_batches.split_off(count);
-        let processible_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
+        let processing_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
 
-        processible_batches
+        processing_batches
             .iter()
             .for_each(|batch| self.num_requests_in_progress -= batch.num_requests);
 
-        processible_batches
+        Ok(processing_batches)
     }
 }
 
@@ -258,7 +253,7 @@ pub(super) struct WithdrawalBatch {
     pub num_requests: u64,
     pub receipt_token_amount: u64,
     _padding: [u8; 24],
-    enqueued_at: Option<i64>, // TODO: ??????
+    enqueued_at: Option<i64>,
     _reserved: [u8; 32],
 }
 

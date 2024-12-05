@@ -126,7 +126,7 @@ impl UserFundAccount {
     /// Returns (batch_id, request_id)
     pub(super) fn create_withdrawal_request(
         &mut self,
-        withdrawal_status: &mut WithdrawalState,
+        withdrawal_state: &mut WithdrawalState,
         receipt_token_amount: u64,
         current_timestamp: i64,
     ) -> Result<(u64, u64)> {
@@ -136,8 +136,8 @@ impl UserFundAccount {
             ErrorCode::FundExceededMaxWithdrawalRequestError
         );
 
-        let request = withdrawal_status
-            .issue_new_withdrawal_request(receipt_token_amount, current_timestamp)?;
+        let request = withdrawal_state
+            .create_pending_withdrawal_request(receipt_token_amount, current_timestamp)?;
         let batch_id = request.batch_id;
         let request_id = request.request_id;
 
@@ -153,25 +153,25 @@ impl UserFundAccount {
         request_id: u64,
     ) -> Result<u64> {
         let request = self.pop_withdrawal_request(request_id)?;
-        withdrawal_state.remove_withdrawal_request_from_pending_batch(request)
+        withdrawal_state.remove_pending_withdrawal_request(request)
     }
 
-    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
-    pub(super) fn claim_withdrawal_request(
+    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_amount)
+    pub(super) fn settle_withdrawal_request(
         &mut self,
         withdrawal_state: &mut WithdrawalState,
-        fund_batch_withdrawal_ticket_account: &mut FundBatchWithdrawalTicketAccount,
+        withdrawal_batch_account: &mut FundWithdrawalBatchAccount,
         request_id: u64,
     ) -> Result<(u64, u64, u64)> {
         let request = self.pop_withdrawal_request(request_id)?;
-        let (sol_user_amount, sol_fee_amount, receipt_token_withdraw_amount) =
-            fund_batch_withdrawal_ticket_account.claim_withdrawal_request(request)?;
-        withdrawal_state.sol_withdrawal_reserved_amount -= sol_user_amount;
+        let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
+            withdrawal_batch_account.settle_withdrawal_request(request)?;
+        withdrawal_state.sol_user_reserved_amount -= sol_user_amount;
 
         Ok((
             sol_user_amount,
             sol_fee_amount,
-            receipt_token_withdraw_amount,
+            receipt_token_amount,
         ))
     }
 }

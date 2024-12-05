@@ -12,7 +12,7 @@ use crate::modules::fund::{
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
 
-use super::FundBatchWithdrawalTicketAccount;
+use super::FundWithdrawalBatchAccount;
 
 pub struct UserFundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -399,17 +399,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
-        fund_batch_withdrawal_ticket_account: &mut Account<'info, FundBatchWithdrawalTicketAccount>,
+        fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
-        // calculate $SOL amounts and mark withdrawal request as claimed
-        // withdrawal fee is already paid.
+        // calculate $SOL amounts and mark withdrawal request as claimed. withdrawal fee is already paid.
         let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-            self.user_fund_account.claim_withdrawal_request(
+            self.user_fund_account.settle_withdrawal_request(
                 &mut self.fund_account.withdrawal,
-                fund_batch_withdrawal_ticket_account,
+                fund_withdrawal_batch_account,
                 request_id,
             )?;
 
@@ -418,8 +417,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         self.user.add_lamports(sol_user_amount)?;
 
         // close ticket and collect rent if stale
-        if fund_batch_withdrawal_ticket_account.is_stale() {
-            fund_batch_withdrawal_ticket_account.close(fund_treasury_account.to_account_info())?;
+        if fund_withdrawal_batch_account.is_settled() {
+            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
         }
 
         // log withdraw event

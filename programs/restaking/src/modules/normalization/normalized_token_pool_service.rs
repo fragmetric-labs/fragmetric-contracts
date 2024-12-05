@@ -186,22 +186,22 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_initialize_withdrawal_ticket(
+    pub fn process_initialize_withdrawal_account(
         &mut self,
-        withdrawal_ticket: &mut Account<'info, NormalizedTokenWithdrawalTicketAccount>,
-        withdrawal_ticket_bump: u8,
+        withdrawal_account: &mut Account<'info, NormalizedTokenWithdrawalAccount>,
+        withdrawal_account_bump: u8,
         from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_normalized_token_account_signer: &Signer<'info>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
-        withdrawal_ticket.initialize(
-            withdrawal_ticket_bump,
+        withdrawal_account.initialize(
+            withdrawal_account_bump,
             from_normalized_token_account_signer.key(),
             self.normalized_token_mint.key(),
             self.normalized_token_pool_account.key(),
         );
         require!(
-            withdrawal_ticket.is_latest_version(),
+            withdrawal_account.is_latest_version(),
             ErrorCode::InvalidDataVersionError
         );
 
@@ -241,9 +241,8 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     supported_token_claimable_amount_as_sol,
                 )?;
 
-                // move locked amount to withdrawal reserved amount
                 supported_token
-                    .unlock_token_to_withdrawal_reserved(supported_token_claimable_amount)?;
+                    .allocate_locked_token_to_withdrawal_reserved(supported_token_claimable_amount)?;
 
                 Ok(if supported_token_claimable_amount > 0 {
                     Some(ClaimableToken::new(
@@ -260,7 +259,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             .filter_map(|x| x)
             .collect::<Vec<_>>();
 
-        // examine the value of the ticket; there can be cutting for the amount of [claimable_tokens.len()] lamports at maximum during evaluation.
+        // during evaluation, up to [claimable_tokens.len()] lamports can be deducted.
         require_gte!(
             normalized_token_amount_as_sol,
             claimable_tokens_value_as_sol
@@ -270,14 +269,14 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             normalized_token_amount_as_sol - claimable_tokens_value_as_sol
         );
 
-        // finalize the ticket state.
-        withdrawal_ticket.set_claimable_tokens(
+        // finalize the withdrawal account state.
+        withdrawal_account.set_claimable_tokens(
             normalized_token_amount,
             claimable_tokens,
             self.current_timestamp,
         )?;
 
-        withdrawal_ticket.exit(&crate::ID)?;
+        withdrawal_account.exit(&crate::ID)?;
 
         // burn given normalized token amount
         anchor_spl::token_interface::burn(
@@ -301,9 +300,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_claim_withdrawal_ticket(
+    pub fn process_withdraw(
         &mut self,
-        withdrawal_ticket: &mut Account<'info, NormalizedTokenWithdrawalTicketAccount>,
+        withdrawal_account: &mut Account<'info, NormalizedTokenWithdrawalAccount>,
         pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         to_rent_lamports_account: &UncheckedAccount<'info>,
@@ -313,23 +312,23 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         withdrawal_authority_signer: &Signer<'info>,
     ) -> Result<()> {
-        withdrawal_ticket.update_if_needed();
+        withdrawal_account.update_if_needed();
         require!(
-            withdrawal_ticket.is_latest_version(),
+            withdrawal_account.is_latest_version(),
             ErrorCode::InvalidDataVersionError
         );
         require_keys_eq!(
-            withdrawal_ticket.normalized_token_pool,
+            withdrawal_account.normalized_token_pool,
             self.normalized_token_pool_account.key()
         );
         require_keys_eq!(
-            withdrawal_ticket.withdrawal_authority,
+            withdrawal_account.withdrawal_authority,
             withdrawal_authority_signer.key()
         );
 
         // transfer claimable supported token
         let claimable_token =
-            withdrawal_ticket.get_claimable_token_mut(&supported_token_mint.key())?;
+            withdrawal_account.get_claimable_token_mut(&supported_token_mint.key())?;
 
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
@@ -352,11 +351,11 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             .get_supported_token_mut(&supported_token_mint.key())?;
         supported_token.settle_withdrawal_reserved_token(claimable_token.claimable_amount)?;
         claimable_token.settle()?;
-        withdrawal_ticket.exit(&crate::ID)?;
+        withdrawal_account.exit(&crate::ID)?;
 
-        // close the ticket account after all tokens are settled.
-        if withdrawal_ticket.is_settled() {
-            withdrawal_ticket.close(to_rent_lamports_account.to_account_info())?;
+        // close the withdrawal account after all tokens are settled.
+        if withdrawal_account.is_settled() {
+            withdrawal_account.close(to_rent_lamports_account.to_account_info())?;
         }
 
         Ok(())

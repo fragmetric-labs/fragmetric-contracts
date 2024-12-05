@@ -434,29 +434,6 @@ impl FundAccount {
 
         Ok(())
     }
-
-    pub(super) fn set_batch_withdrawal_ticket(
-        &mut self,
-        ticket: &mut Account<FundBatchWithdrawalTicketAccount>,
-        batch: WithdrawalBatch,
-        sol_amount: u64,
-        current_timestamp: i64,
-    ) -> Result<()> {
-        let sol_fee_amount = self.withdrawal.get_sol_fee_amount(sol_amount)?;
-        let sol_user_amount = sol_amount - sol_fee_amount;
-
-        self.sol_operation_reserved_amount -= sol_amount;
-        self.withdrawal.sol_withdrawal_reserved_amount += sol_user_amount;
-        ticket.set_withdrawal_amount(
-            batch.num_requests,
-            batch.receipt_token_amount,
-            sol_user_amount,
-            sol_fee_amount,
-            current_timestamp,
-        );
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
