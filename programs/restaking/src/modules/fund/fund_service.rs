@@ -270,11 +270,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 }
             }
 
-            // append all unused accounts
+            // append all unused accounts & pricing sources
             for unused_account_key in &unused_account_keys {
                 // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
                 let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
                 required_account_infos.push(*remaining_account);
+            }
+            for pricing_source in &pricing_sources {
+                // TODO: optimize and throw error
+                required_account_infos.push(remaining_accounts_map.get(pricing_source).unwrap());
             }
 
             let mut ctx = OperationCommandContext {
@@ -284,19 +288,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 system_program,
             };
             match command.execute(&mut ctx, required_account_infos.as_slice()) {
-                Ok(mut next_command) => {
+                Ok(next_command) => {
                     // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
                     // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
                     executed_commands.push(command.clone());
                     execution_count += 1;
 
-                    // append pricing sources to required_accounts
-                    match next_command {
-                        Some(ref mut next_command) => {
-                            next_command.append_readonly_accounts(pricing_sources.iter().cloned());
-                        }
-                        _ => {}
-                    }
                     operation_state.set_command(next_command, self.current_timestamp);
                 }
                 Err(error) => {
@@ -373,7 +370,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(accounts)
     }
 
-    /// returns (receipt_token_amount_processing)
+    /// returns (receipt_token_amount_processed)
     pub(super) fn process_withdrawal_batch(
         &mut self,
         operator: &Signer<'info>,

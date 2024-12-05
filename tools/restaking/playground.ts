@@ -1753,7 +1753,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
+    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit: number = 400000, prioritizationFeeMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
             const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit);

@@ -58,7 +58,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 // to harvest fund revenue (prepended)
-                required_accounts.insert(0, (FUND_REVENUE_ADDRESS, false));
+                required_accounts.insert(0, (FUND_REVENUE_ADDRESS, true));
 
                 // to calculate LST cycle fee (appended)
                 for supported_token in ctx.fund_account.supported_tokens.iter() {
@@ -228,10 +228,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 &supported_token.mint,
                                 supported_token.operation_reserved_amount,
                             )?,
-                            pricing_service.get_token_amount_as_sol(
-                                &supported_token.mint,
-                                supported_token.sol_allocation_capacity_amount,
-                            )?,
+                            supported_token.sol_allocation_capacity_amount,
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?;
