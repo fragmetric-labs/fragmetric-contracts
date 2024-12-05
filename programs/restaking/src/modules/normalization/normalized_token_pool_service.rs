@@ -2,8 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use std::cmp;
 
 use crate::errors::ErrorCode;
+use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::utils::{AccountExt, PDASeeds};
 
@@ -48,6 +50,51 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             normalized_token_program,
             current_timestamp: clock.unix_timestamp,
         })
+    }
+
+    pub(in crate::modules) fn get_denormalize_tokens_asset(
+        &self,
+        pricing_service: &PricingService,
+        denormalize_amount_as_sol: u64,
+    ) -> Result<Vec<(Pubkey, Pubkey, u64)>>{
+        let mut participants = vec![];
+        let supported_tokens = self
+            .normalized_token_pool_account
+            .supported_tokens
+            .iter()
+            .filter_map(|t| {
+                if t.locked_amount == 0 {
+                    None
+                } else {
+                    let reserved_amount_as_sol = pricing_service
+                        .get_token_amount_as_sol(&t.mint, t.locked_amount)
+                        .unwrap();
+                    participants.push(WeightedAllocationParticipant::new(
+                        reserved_amount_as_sol,
+                        0,
+                        u64::MAX,
+                    ));
+                    Some(t)
+                }
+            })
+            .collect::<Vec<_>>();
+
+        WeightedAllocationStrategy::put(&mut participants, denormalize_amount_as_sol);
+
+        let mut supported_tokens_state = vec![];
+        for (i, supported_token) in supported_tokens.iter().enumerate() {
+            let need_to_denormalize_amount = pricing_service.get_sol_amount_as_token(
+                &supported_token.mint,
+                participants[i].get_last_put_amount()?,
+            )?;
+
+            supported_tokens_state.push((
+                supported_token.mint,
+                supported_token.program,
+                cmp::min(supported_token.locked_amount, need_to_denormalize_amount),
+            ));
+        };
+        Ok(supported_tokens_state)
     }
 
     pub(in crate::modules) fn normalize_supported_token(
@@ -126,7 +173,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
 
-        from_normalized_token_account_signer: AccountInfo<'info>,
+        from_normalized_token_account_signer: &AccountInfo<'info>,
         from_normalized_token_account_signer_seeds: &[&[&[u8]]],
 
         normalized_token_amount: u64,

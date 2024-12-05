@@ -273,7 +273,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // write back operation state
         self.fund_account.operation = operation_state;
-
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(self.fund_account),
