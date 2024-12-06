@@ -6,8 +6,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
-use crate::utils::{get_proportional_amount, PDASeeds};
+use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod};
+use crate::utils::{get_proportional_amount, OptionPod, PDASeeds};
 
 use super::*;
 
@@ -20,16 +20,15 @@ use super::*;
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
-const MAX_RESTAKING_VAULTS: usize = 2;
+const MAX_RESTAKING_VAULTS: usize = 4;
 
-#[account]
-#[derive(InitSpace)]
+#[account(zero_copy)]
+#[repr(C)]
 pub struct FundAccount {
     data_version: u16,
     bump: u8,
     pub receipt_token_mint: Pubkey,
-    #[max_len(MAX_SUPPORTED_TOKENS)]
-    pub(super) supported_tokens: Vec<SupportedToken>,
+    pub(super) supported_tokens: [SupportedToken; MAX_SUPPORTED_TOKENS],
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
     // TODO v0.3/operation: visibility
@@ -46,14 +45,13 @@ pub struct FundAccount {
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
     pub(super) receipt_token_supply_amount: u64,
-    pub(super) receipt_token_value: TokenValue,
+    pub(super) receipt_token_value: TokenValuePod,
     pub(super) receipt_token_value_updated_at: i64,
     pub(super) one_receipt_token_as_sol: u64,
 
-    pub(super) normalized_token: Option<NormalizedToken>,
+    pub(super) normalized_token: OptionPod<NormalizedToken>,
 
-    #[max_len(MAX_RESTAKING_VAULTS)]
-    pub(super) restaking_vaults: Vec<RestakingVault>,
+    pub(super) restaking_vaults: [RestakingVault; MAX_RESTAKING_VAULTS],
 
     pub(super) operation: OperationState,
 
@@ -108,12 +106,12 @@ impl FundAccount {
             self.receipt_token_value = TokenValue {
                 numerator: Vec::new(),
                 denominator: 0,
-            };
+            }.into();
             self.receipt_token_value_updated_at = 0;
             self.one_receipt_token_as_sol = 0;
 
-            self.normalized_token = None;
-            self.restaking_vaults = Vec::new();
+            self.normalized_token = None.into();
+            self.restaking_vaults = [RestakingVault::default(); MAX_RESTAKING_VAULTS];
             self.operation.migrate(self.data_version);
 
             self.reserve_account_bump =

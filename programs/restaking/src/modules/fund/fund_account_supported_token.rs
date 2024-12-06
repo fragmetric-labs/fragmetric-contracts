@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 // TODO v0.3/operation: visibility
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[zero_copy]
 pub struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
@@ -13,7 +13,7 @@ pub struct SupportedToken {
     pub accumulated_deposit_amount: u64,
     pub operation_reserved_amount: u64,
     pub one_token_as_sol: u64,
-    pub pricing_source: TokenPricingSource,
+    pub pricing_source: TokenPricingSourcePod,
 
     /// the token amount being unstaked
     pub operation_receivable_amount: u64,
@@ -51,7 +51,7 @@ impl SupportedToken {
             accumulated_deposit_amount: 0,
             operation_reserved_amount: 0,
             one_token_as_sol: 0,
-            pricing_source,
+            pricing_source: pricing_source.into(),
             operation_receivable_amount: 0,
             rebalancing_amount: 0,
             sol_allocation_weight: 0,

@@ -3,11 +3,13 @@ use anchor_lang::prelude::*;
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::fund::SupportedToken;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
+use crate::utils::OptionPod;
 
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Default)]
+#[zero_copy]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
     pub program: Pubkey,
@@ -18,7 +20,7 @@ pub(super) struct RestakingVault {
     pub receipt_token_decimals: u8,
     /// transient price
     pub one_receipt_token_as_sol: u64,
-    pub receipt_token_pricing_source: TokenPricingSource,
+    pub receipt_token_pricing_source: TokenPricingSourcePod,
     pub receipt_token_operation_reserved_amount: u64,
     /// the amount of vrt being unrestaked
     pub receipt_token_operation_receivable_amount: u64,
@@ -27,8 +29,7 @@ pub(super) struct RestakingVault {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    #[max_len(MAX_RESTAKING_VAULT_OPERATORS)]
-    pub operators: Vec<RestakingVaultOperator>,
+    pub operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
 
     _reserved: [u8; 128],
 }
@@ -63,14 +64,14 @@ impl RestakingVault {
             receipt_token_program,
             receipt_token_decimals,
             one_receipt_token_as_sol: 0,
-            receipt_token_pricing_source,
+            receipt_token_pricing_source: receipt_token_pricing_source.into(),
             receipt_token_operation_reserved_amount,
             receipt_token_operation_receivable_amount: 0,
 
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
 
-            operators: Vec::new(),
+            operators: [RestakingVaultOperator::default(); MAX_RESTAKING_VAULT_OPERATORS],
 
             _reserved: [0; 128],
         })
@@ -121,7 +122,8 @@ impl RestakingVault {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Default)]
+#[zero_copy]
 pub(super) struct RestakingVaultOperator {
     pub operator: Pubkey,
 

@@ -31,7 +31,7 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
                 .iter()
                 .filter(|supported_token| supported_token.locked_amount > 0)
                 .map(|supported_token| {
-                    Asset::TOKEN(
+                    Asset::Token(
                         supported_token.mint,
                         Some(supported_token.pricing_source.clone()),
                         supported_token.locked_amount,

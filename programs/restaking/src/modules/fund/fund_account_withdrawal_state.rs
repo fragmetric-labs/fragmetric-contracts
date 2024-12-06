@@ -1,34 +1,33 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::utils::OptionPod;
 
 const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, Default)]
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Copy, Clone, Default, bytemuck::Zeroable, bytemuck::Pod)]
+#[repr(C)]
 pub(super) struct WithdrawalState {
-    pub next_batch_id: u64,
-    pub next_request_id: u64,
-
-    /// pending_batch.num_requests + queued_batches[].num_requests
-    pub num_requests_in_progress: u64,
-    pub last_processed_batch_id: u64,
-    pub last_batch_enqueued_at: Option<i64>,
-    pub last_batch_processed_at: Option<i64>,
-
-    pub sol_fee_rate_bps: u16,
+    /// configurations
     pub enabled: bool,
-    _padding: [u8; 8],
     pub batch_threshold_interval_seconds: i64,
-
-    pub pending_batch: WithdrawalBatch,
-    #[max_len(MAX_QUEUED_WITHDRAWAL_BATCHES)]
-    pub queued_batches: Vec<WithdrawalBatch>,
-
-    pub sol_withdrawal_reserved_amount: u64,
+    pub sol_fee_rate_bps: u16,
 
     /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
     pub sol_normal_reserve_rate_bps: u16,
     pub sol_normal_reserve_max_amount: u64,
+    pub sol_withdrawal_reserved_amount: u64,
+
+    /// pending_batch.num_requests + SUM(queued_batches[].num_requests)
+    num_requests_in_progress: u64,
+    next_batch_id: u64,
+    next_request_id: u64,
+    last_processed_batch_id: u64,
+    last_batch_enqueued_at: OptionPod<i64>,
+    last_batch_processed_at: OptionPod<i64>,
+
+    pending_batch: WithdrawalBatch,
+    queued_batches: [WithdrawalBatch; MAX_QUEUED_WITHDRAWAL_BATCHES],
 
     _reserved: [[u8; 8]; 16],
 }
@@ -40,15 +39,14 @@ impl WithdrawalState {
             self.next_request_id = 1;
             self.num_requests_in_progress = 0;
             self.last_processed_batch_id = 0;
-            self.last_batch_enqueued_at = None;
-            self.last_batch_processed_at = None;
+            self.last_batch_enqueued_at = None.into();
+            self.last_batch_processed_at = None.into();
             self.enabled = true;
             self.sol_fee_rate_bps = 0;
             // self.batch_threshold_creation_interval_seconds = 0;
-            self._padding = Default::default();
             self.batch_threshold_interval_seconds = 0;
             self.pending_batch = WithdrawalBatch::new(1);
-            self.queued_batches = vec![];
+            self.queued_batches = [WithdrawalBatch::default(); MAX_QUEUED_WITHDRAWAL_BATCHES];
             // self.num_completed_withdrawal_requests = 0;
             // self.sol_remaining = 0;
             // self.total_receipt_token_processed = 0;
@@ -65,7 +63,6 @@ impl WithdrawalState {
             self._reserved = Default::default();
         } else if fund_account_data_version == 3 {
             // batch_processing_threshold_amount: u64 -> _padding: [u8; 8]
-            self._padding = Default::default();
             self.pending_batch.migrate(fund_account_data_version);
             self.queued_batches
                 .iter_mut()
@@ -181,6 +178,7 @@ impl WithdrawalState {
     pub fn is_batch_enqueuing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
         !self
             .last_batch_enqueued_at
+            .into()
             .is_some_and(|last_batch_enqueued_at| {
                 current_timestamp - last_batch_enqueued_at < self.batch_threshold_interval_seconds
             })
@@ -189,6 +187,7 @@ impl WithdrawalState {
     pub fn is_batch_processing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
         !self
             .last_batch_processed_at
+            .into()
             .is_some_and(|last_batch_processed_at| {
                 current_timestamp - last_batch_processed_at < self.batch_threshold_interval_seconds
             })
@@ -225,8 +224,8 @@ impl WithdrawalState {
         let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
 
         self.num_requests_in_progress += old_pending_batch.num_requests;
-        self.last_batch_enqueued_at = Some(current_timestamp);
-        old_pending_batch.enqueued_at = Some(current_timestamp);
+        self.last_batch_enqueued_at = Some(current_timestamp).into();
+        old_pending_batch.enqueued_at = Some(current_timestamp).into();
         self.queued_batches.push(old_pending_batch);
     }
 
@@ -253,13 +252,13 @@ impl WithdrawalState {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+#[derive(Default)]
+#[zero_copy]
 pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,
-    _padding: [u8; 24],
-    enqueued_at: Option<i64>, // TODO: why?
+    enqueued_at: OptionPod<i64>,
     _reserved: [u8; 32],
 }
 
@@ -272,7 +271,6 @@ impl WithdrawalBatch {
             // sol_reserved: u64 -> _reserved
             // procssed_at: Option<i64> -> _reserved + _padding
             self._reserved = Default::default();
-            self._padding = Default::default();
         }
     }
 
@@ -281,8 +279,7 @@ impl WithdrawalBatch {
             batch_id,
             num_requests: 0,
             receipt_token_amount: 0,
-            _padding: Default::default(),
-            enqueued_at: None,
+            enqueued_at: None.into(),
             _reserved: Default::default(),
         }
     }

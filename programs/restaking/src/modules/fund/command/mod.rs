@@ -57,27 +57,117 @@ pub enum OperationCommand {
     DelegateVST(DelegateVSTCommand),
 }
 
+const OPERATION_COMMAND_BUFFER_SIZE: usize = 320;
+
+#[derive(Debug)]
+#[zero_copy]
+pub struct OperationCommandPod {
+    discriminant: u8,
+    buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
+}
+
+impl From<OperationCommand> for OperationCommandPod {
+    fn from(src: OperationCommand) -> Self {
+        let mut pod = Self {
+            discriminant: 0,
+            buffer: [0; OPERATION_COMMAND_BUFFER_SIZE],
+        };
+        src.serialize(&mut pod.buffer[..]).unwrap();
+        pod.discriminant = match src {
+            OperationCommand::Initialize(_) => 1,
+            OperationCommand::ClaimUnstakedSOL(_) => 2,
+            OperationCommand::EnqueueWithdrawalBatch(_) => 3,
+            OperationCommand::ProcessWithdrawalBatch(_) => 4,
+            OperationCommand::ClaimUnrestakedVST(_) => 5,
+            OperationCommand::DenormalizeNT(_) => 6,
+            OperationCommand::UndelegateVST(_) => 7,
+            OperationCommand::UnrestakeVRT(_) => 8,
+            OperationCommand::UnstakeLST(_) => 9,
+            OperationCommand::StakeSOL(_) => 10,
+            OperationCommand::NormalizeLST(_) => 11,
+            OperationCommand::RestakeVST(_) => 12,
+            OperationCommand::DelegateVST(_) => 13,
+        };
+
+        pod
+    }
+}
+
+impl From<OperationCommandPod> for OperationCommand {
+    fn from(pod: OperationCommandPod) -> Self {
+        match pod.discriminant {
+            1 => InitializeCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            2 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            3 => EnqueueWithdrawalBatchCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            4 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            5 => ClaimUnrestakedVSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            6 => DenormalizeNTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            7 => UndelegateVSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            8 => UnrestakeVRTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            9 => UnstakeLSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            10 => StakeSOLCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            11 => NormalizeLSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            12 => RestakeVSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            13 => DelegateVSTCommand::try_from_slice(&pod.buffer[..])
+                .unwrap()
+                .into(),
+            _ => panic!("invalid discriminant for OperationCommand"),
+        }
+    }
+}
+
+impl OperationCommand {
+    #[inline]
+    fn as_inner_command(&self) -> &dyn SelfExecutable {
+        match self {
+            OperationCommand::Initialize(command)
+            | OperationCommand::ClaimUnstakedSOL(command)
+            | OperationCommand::EnqueueWithdrawalBatch(command)
+            | OperationCommand::ProcessWithdrawalBatch(command)
+            | OperationCommand::ClaimUnrestakedVST(command)
+            | OperationCommand::DenormalizeNT(command)
+            | OperationCommand::UndelegateVST(command)
+            | OperationCommand::UnrestakeVRT(command)
+            | OperationCommand::UnstakeLST(command)
+            | OperationCommand::StakeSOL(command)
+            | OperationCommand::NormalizeLST(command)
+            | OperationCommand::RestakeVST(command)
+            | OperationCommand::DelegateVST(command) => command,
+        }
+    }
+}
+
 impl SelfExecutable for OperationCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
-        match self {
-            OperationCommand::Initialize(command) => command.execute(ctx, accounts),
-            OperationCommand::ClaimUnstakedSOL(command) => command.execute(ctx, accounts),
-            OperationCommand::EnqueueWithdrawalBatch(command) => command.execute(ctx, accounts),
-            OperationCommand::ProcessWithdrawalBatch(command) => command.execute(ctx, accounts),
-            OperationCommand::ClaimUnrestakedVST(command) => command.execute(ctx, accounts),
-            OperationCommand::DenormalizeNT(command) => command.execute(ctx, accounts),
-            OperationCommand::UndelegateVST(command) => command.execute(ctx, accounts),
-            OperationCommand::UnrestakeVRT(command) => command.execute(ctx, accounts),
-            OperationCommand::UnstakeLST(command) => command.execute(ctx, accounts),
-            OperationCommand::StakeSOL(command) => command.execute(ctx, accounts),
-            OperationCommand::NormalizeLST(command) => command.execute(ctx, accounts),
-            OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
-            OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
-        }
+        self.as_inner_command().execute(ctx, accounts)
     }
 }
 
@@ -90,10 +180,47 @@ pub struct OperationCommandEntry {
     required_accounts: Vec<OperationCommandAccountMeta>,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandAccountMeta {
     pub(super) pubkey: Pubkey,
     pub(super) is_writable: bool,
+}
+
+#[derive(Debug)]
+#[zero_copy]
+pub struct OperationCommandEntryPod {
+    command: OperationCommandPod,
+    required_accounts: [(Pubkey, bool); OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
+}
+
+impl From<OperationCommandEntry> for OperationCommandEntryPod {
+    fn from(src: OperationCommandEntry) -> Self {
+        Self {
+            command: src.command.into(),
+            required_accounts: src
+                .required_accounts
+                .iter()
+                .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+                .map(|account| (account.pubkey, account.is_writable))
+                .into(),
+        }
+    }
+}
+
+impl From<OperationCommandEntryPod> for OperationCommandEntry {
+    fn from(pod: OperationCommandEntryPod) -> Self {
+        Self {
+            command: pod.command.into(),
+            required_accounts: pod
+                .required_accounts
+                .into_iter()
+                .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
+                    pubkey,
+                    is_writable,
+                })
+                .collect::<Vec<_>>(),
+        }
+    }
 }
 
 impl<'a> From<&'a OperationCommandEntry>

@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
-
+use crate::utils::OptionPod;
 #[cfg(test)]
 pub use self::mock::*;
 
-use super::TokenPricingSource;
+use super::{TokenPricingSource, TokenPricingSourcePod};
 
 /// A type that can calculate the token amount as sol with its data.
 pub trait TokenValueProvider {
@@ -27,7 +27,7 @@ impl TokenValue {
     /// so the value of the token can be resolved by one self without other token information.
     pub fn is_atomic(&self) -> bool {
         self.numerator.iter().all(|asset| match asset {
-            Asset::TOKEN(..) => false,
+            Asset::Token(..) => false,
             Asset::SOL(..) => true,
         })
     }
@@ -48,22 +48,69 @@ impl std::fmt::Display for TokenValue {
     }
 }
 
+#[zero_copy]
+pub struct TokenValuePod {
+    pub numerator: [AssetPod; 20],
+    pub denominator: u64,
+}
+
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum Asset {
     // amount
     SOL(u64),
     // mint, known pricing source, amount
-    TOKEN(Pubkey, Option<TokenPricingSource>, u64),
+    Token(Pubkey, Option<TokenPricingSource>, u64),
 }
 
 impl std::fmt::Display for Asset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SOL(amount) => write!(f, "{} SOL", amount),
-            Self::TOKEN(mint, Some(source), amount) => {
+            Self::Token(mint, Some(source), amount) => {
                 write!(f, "{} TOKEN({}, source={:?})", amount, mint, source)
             }
-            Self::TOKEN(mint, None, amount) => write!(f, "{} TOKEN({})", amount, mint),
+            Self::Token(mint, None, amount) => write!(f, "{} TOKEN({})", amount, mint),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[zero_copy]
+pub struct AssetPod {
+    discriminant: u8,
+    sol_amount: u64,
+    token_mint: Pubkey,
+    token_pricing_source: OptionPod<TokenPricingSourcePod>,
+    token_amount: u64,
+}
+
+impl From<Asset> for AssetPod {
+    fn from(src: Asset) -> Self {
+        match src {
+            Asset::SOL(sol_amount) => Self {
+                discriminant: 1,
+                sol_amount,
+                token_mint: Pubkey::default(),
+                token_pricing_source: OptionPod::none(),
+                token_amount: 0,
+            },
+            Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
+                discriminant: 2,
+                sol_amount: 0,
+                token_mint,
+                token_pricing_source: token_pricing_source.into(),
+                token_amount,
+            },
+        }
+    }
+}
+
+impl From<AssetPod> for Asset {
+    fn from(pod: AssetPod) -> Self {
+        match pod.discriminant {
+            1 => Self::SOL(pod.sol_amount),
+            2 => Self::Token(pod.token_mint, pod.token_pricing_source.into(), pod.token_amount),
+            _ => panic!("invalid discriminant for TokenPricingSource"),
         }
     }
 }
@@ -118,7 +165,7 @@ mod mock {
                     .iter()
                     .map(|&asset| match asset {
                         MockAsset::SOL(amount) => Asset::SOL(amount),
-                        MockAsset::Token(mint, amount) => Asset::TOKEN(mint, None, amount),
+                        MockAsset::Token(mint, amount) => Asset::Token(mint, None, amount),
                     })
                     .collect(),
                 denominator: *self.denominator,

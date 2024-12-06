@@ -1,17 +1,18 @@
 use std::mem::discriminant;
 
 use anchor_lang::prelude::*;
-
+use crate::modules::pricing::{Asset, TokenPricingSourcePod};
+use crate::utils::OptionPod;
 use super::command::*;
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+#[zero_copy]
 pub(super) struct OperationState {
     updated_at: i64,
     expired_at: i64,
     pub next_sequence: u16,
-    next_command: Option<OperationCommandEntry>,
+    next_command: OptionPod<OperationCommandEntryPod>,
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
     no_transition: bool,
@@ -24,7 +25,7 @@ impl OperationState {
             self.updated_at = 0;
             self.expired_at = 0;
             self.next_sequence = 0;
-            self.next_command = None;
+            self.next_command = None.into();
             self.no_transition = false;
             self._reserved = Default::default();
         }
@@ -38,7 +39,7 @@ impl OperationState {
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
 
-        if has_reset_command || self.next_command.is_none() || current_timestamp > self.expired_at {
+        if has_reset_command || self.next_command.into().is_none() || current_timestamp > self.expired_at {
             self.no_transition = false;
             self.next_sequence = 0;
             self.set_command(

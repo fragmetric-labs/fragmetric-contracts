@@ -24,7 +24,7 @@ impl TokenValueProvider for JitoRestakingVaultValueProvider {
         require_keys_eq!(vault_account.vrt_mint, *token_mint);
 
         Ok(TokenValue {
-            numerator: vec![Asset::TOKEN(
+            numerator: vec![Asset::Token(
                 vault_account.supported_mint,
                 None,
                 vault_account.tokens_deposited(),

@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
 use anchor_lang::{CheckOwner, ZeroCopy};
+use bytemuck::{Pod, Zeroable};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -145,6 +146,41 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         }
 
         Ok(())
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Zeroable, Debug, Default, Default)]
+pub struct OptionPod<T: Pod + Zeroable> {
+    discriminant: u8, // 0 = None, 1 = Some
+    value: T,
+}
+
+// CHECKED: we just need to ensure generic T is always Pod and no padding exists.
+unsafe impl<T: Pod + Zeroable> Pod for OptionPod<T> {}
+
+impl<T: Pod + Zeroable> From<Option<T>> for OptionPod<T> {
+    fn from(option: Option<T>) -> Self {
+        match option {
+            Some(value) => OptionPod {
+                discriminant: 1,
+                value,
+            },
+            None => OptionPod {
+                discriminant: 0,
+                value: T::zeroed(),
+            },
+        }
+    }
+}
+
+impl<T: Pod + Zeroable> From<OptionPod<T>> for Option<T> {
+    fn from(pod: OptionPod<T>) -> Self {
+        if pod.discriminant == 1 {
+            Some(pod.value)
+        } else {
+            None
+        }
     }
 }
 
