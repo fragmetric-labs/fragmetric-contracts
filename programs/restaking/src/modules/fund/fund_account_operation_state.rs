@@ -1,9 +1,8 @@
 use std::mem::discriminant;
 
-use anchor_lang::prelude::*;
-use crate::modules::pricing::{Asset, TokenPricingSourcePod};
-use crate::utils::OptionPod;
 use super::command::*;
+use crate::utils::{BoolPod, OptionPod};
+use anchor_lang::prelude::*;
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
@@ -15,7 +14,7 @@ pub(super) struct OperationState {
     next_command: OptionPod<OperationCommandEntryPod>,
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
-    no_transition: bool,
+    no_transition: BoolPod,
     _reserved: [[u8; 8]; 32],
 }
 
@@ -26,7 +25,7 @@ impl OperationState {
             self.expired_at = 0;
             self.next_sequence = 0;
             self.next_command = None.into();
-            self.no_transition = false;
+            self.no_transition = false.into();
             self._reserved = Default::default();
         }
     }
@@ -39,14 +38,17 @@ impl OperationState {
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
 
-        if has_reset_command || self.next_command.into().is_none() || current_timestamp > self.expired_at {
-            self.no_transition = false;
+        if has_reset_command
+            || self.next_command.to_option().is_none()
+            || current_timestamp > self.expired_at
+        {
+            self.no_transition = false.into();
             self.next_sequence = 0;
             self.set_command(
                 reset_command.or_else(|| Some(InitializeCommand {}.with_required_accounts([]))),
                 current_timestamp,
             );
-            self.no_transition = has_reset_command;
+            self.no_transition = has_reset_command.into();
         }
 
         Ok(())
@@ -59,21 +61,23 @@ impl OperationState {
         current_timestamp: i64,
     ) {
         // deal with no_transition state, to adjust next command.
-        if self.no_transition {
-            if let (Some(prev_entry), Some(next_entry)) = (&self.next_command, &command) {
+        if self.no_transition.into() {
+            let next_command: Option<OperationCommandEntry> =
+                self.next_command.to_option().map(|pod| pod.into());
+            if let (Some(prev_entry), Some(next_entry)) = (next_command, &command) {
                 if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
                     msg!(
                         "COMMAND#{} reset due to no_transition state",
                         self.next_sequence
                     );
-                    self.no_transition = false;
+                    self.no_transition = false.into();
                     command = None;
                 }
                 // otherwise, retaining on the same command type, still maintains no_transition state.
             } else {
                 // if there is no previous command (unexpected flow) or next command, clear no_transition state.
-                self.no_transition = false;
+                self.no_transition = false.into();
             }
         }
 
@@ -83,11 +87,14 @@ impl OperationState {
             Some(_) => self.next_sequence + 1,
             None => 0,
         };
-        self.next_command = command;
+        self.next_command = command.map(|cmd| cmd.into()).into();
     }
 
     #[inline(always)]
-    pub fn get_command(&self) -> Option<(&OperationCommand, &[OperationCommandAccountMeta])> {
-        self.next_command.as_ref().map(Into::into)
+    pub fn get_command(&self) -> Option<(OperationCommand, Vec<OperationCommandAccountMeta>)> {
+        self.next_command
+            .to_option()
+            .map(OperationCommandEntry::from)
+            .map(|entry| (entry.command, entry.required_accounts))
     }
 }

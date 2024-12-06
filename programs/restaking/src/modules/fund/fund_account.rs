@@ -1,13 +1,17 @@
+use std::mem::zeroed;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token::accessor::mint;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
+use bytemuck::Zeroable;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod};
-use crate::utils::{get_proportional_amount, OptionPod, PDASeeds};
+use crate::modules::pricing::{
+    Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
+};
+use crate::utils::{get_proportional_amount, ArrayPod, OptionPod, PDASeeds};
 
 use super::*;
 
@@ -27,21 +31,12 @@ const MAX_RESTAKING_VAULTS: usize = 4;
 pub struct FundAccount {
     data_version: u16,
     bump: u8,
+    reserve_account_bump: u8,
+    treasury_account_bump: u8,
+    _padding: [u8; 1],
+
+    /// receipt token info
     pub receipt_token_mint: Pubkey,
-    pub(super) supported_tokens: [SupportedToken; MAX_SUPPORTED_TOKENS],
-    pub(super) sol_accumulated_deposit_capacity_amount: u64,
-    pub(super) sol_accumulated_deposit_amount: u64,
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) sol_operation_reserved_amount: u64,
-
-    pub(super) withdrawal: WithdrawalState,
-
-    /// A receivable that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
-    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
-    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
-    pub(super) sol_operation_receivable_amount: u64,
-
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
     pub(super) receipt_token_supply_amount: u64,
@@ -49,14 +44,36 @@ pub struct FundAccount {
     pub(super) receipt_token_value_updated_at: i64,
     pub(super) one_receipt_token_as_sol: u64,
 
+    /// configurations for deposit
+    pub(super) sol_accumulated_deposit_capacity_amount: u64,
+    pub(super) sol_accumulated_deposit_amount: u64,
+
+    pub(super) withdrawal: WithdrawalState,
+
+    /// asset: A receivable that the fund may charge the users requesting withdrawals.
+    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
+    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
+    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
+    pub(super) sol_operation_receivable_amount: u64,
+
+    // TODO v0.3/operation: visibility
+    /// asset
+    pub(in crate::modules) sol_operation_reserved_amount: u64,
+
+    /// asset & configurations for LSTs
+    num_supported_tokens: u8,
+    pub(super) supported_tokens: ArrayPod<SupportedToken, MAX_SUPPORTED_TOKENS>,
+
+    /// asset & configuration for NT
     pub(super) normalized_token: OptionPod<NormalizedToken>,
 
-    pub(super) restaking_vaults: [RestakingVault; MAX_RESTAKING_VAULTS],
+    /// asset & configurations for Restaking Vaults
+    pub(super) restaking_vaults: ArrayPod<RestakingVault, MAX_RESTAKING_VAULTS>,
 
+    /// fund operation state
     pub(super) operation: OperationState,
 
-    reserve_account_bump: u8,
-    treasury_account_bump: u8,
+
     _reserved: [u8; 256],
 }
 
@@ -106,12 +123,13 @@ impl FundAccount {
             self.receipt_token_value = TokenValue {
                 numerator: Vec::new(),
                 denominator: 0,
-            }.into();
+            }
+            .into();
             self.receipt_token_value_updated_at = 0;
             self.one_receipt_token_as_sol = 0;
 
             self.normalized_token = None.into();
-            self.restaking_vaults = [RestakingVault::default(); MAX_RESTAKING_VAULTS];
+            self.restaking_vaults = ArrayPod::<RestakingVault, MAX_RESTAKING_VAULTS>::zeroed();
             self.operation.migrate(self.data_version);
 
             self.reserve_account_bump =
@@ -307,7 +325,10 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
     }
 
-    pub(super) fn set_sol_accumulated_deposit_capacity_amount(&mut self, sol_amount: u64) -> Result<()> {
+    pub(super) fn set_sol_accumulated_deposit_capacity_amount(
+        &mut self,
+        sol_amount: u64,
+    ) -> Result<()> {
         require_gte!(
             sol_amount,
             self.sol_accumulated_deposit_amount,
@@ -354,7 +375,7 @@ impl FundAccount {
         pool: Pubkey,
         operation_reserved_amount: u64,
     ) -> Result<()> {
-        if self.normalized_token.is_some() {
+        if self.normalized_token.to_option().is_some() {
             err!(ErrorCode::FundNormalizedTokenAlreadySetError)?
         }
 
@@ -364,7 +385,7 @@ impl FundAccount {
             decimals,
             pool,
             operation_reserved_amount,
-        ));
+        )).into();
 
         Ok(())
     }
@@ -468,11 +489,11 @@ mod tests {
 
     #[test]
     fn size_fund_account() {
-        println!("\nfund account init size: {}", FundAccount::INIT_SPACE);
+        println!("\nfund account init size: {}", std::mem::size_of::<FundAccount>());
     }
 
     fn create_initialized_fund_account() -> FundAccount {
-        let buffer = [0u8; 8 + FundAccount::INIT_SPACE];
+        let buffer = [0u8; 8 + std::mem::size_of::<FundAccount>()];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
         fund.migrate(0, Pubkey::new_unique(), 9, 0);
         fund
@@ -484,11 +505,12 @@ mod tests {
 
         assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
-        assert!(fund.withdrawal.enabled);
+        assert!(fund.withdrawal.enabled.to_bool());
         assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
-        fund.set_sol_accumulated_deposit_capacity_amount(0).unwrap_err();
+        fund.set_sol_accumulated_deposit_capacity_amount(0)
+            .unwrap_err();
 
         let interval_seconds = 60;
         fund.withdrawal
@@ -560,7 +582,8 @@ mod tests {
     #[test]
     fn test_deposit_sol() {
         let mut fund = create_initialized_fund_account();
-        fund.set_sol_accumulated_deposit_capacity_amount(100_000).unwrap();
+        fund.set_sol_accumulated_deposit_capacity_amount(100_000)
+            .unwrap();
 
         assert_eq!(fund.sol_operation_reserved_amount, 0);
         assert_eq!(fund.sol_accumulated_deposit_amount, 0);

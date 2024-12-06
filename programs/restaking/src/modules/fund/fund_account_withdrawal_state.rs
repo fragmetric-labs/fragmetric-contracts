@@ -1,15 +1,15 @@
+use std::mem::zeroed;
 use anchor_lang::prelude::*;
-
+use bytemuck::Zeroable;
 use crate::errors::ErrorCode;
-use crate::utils::OptionPod;
+use crate::utils::{ArrayPod, BoolPod, OptionPod};
 
 const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Copy, Clone, Default, bytemuck::Zeroable, bytemuck::Pod)]
-#[repr(C)]
+#[zero_copy]
 pub(super) struct WithdrawalState {
     /// configurations
-    pub enabled: bool,
+    pub enabled: BoolPod,
     pub batch_threshold_interval_seconds: i64,
     pub sol_fee_rate_bps: u16,
 
@@ -22,12 +22,12 @@ pub(super) struct WithdrawalState {
     num_requests_in_progress: u64,
     next_batch_id: u64,
     next_request_id: u64,
-    last_processed_batch_id: u64,
+    pub last_processed_batch_id: u64,
     last_batch_enqueued_at: OptionPod<i64>,
     last_batch_processed_at: OptionPod<i64>,
 
     pending_batch: WithdrawalBatch,
-    queued_batches: [WithdrawalBatch; MAX_QUEUED_WITHDRAWAL_BATCHES],
+    queued_batches: ArrayPod<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>,
 
     _reserved: [[u8; 8]; 16],
 }
@@ -41,12 +41,12 @@ impl WithdrawalState {
             self.last_processed_batch_id = 0;
             self.last_batch_enqueued_at = None.into();
             self.last_batch_processed_at = None.into();
-            self.enabled = true;
+            self.enabled = true.into();
             self.sol_fee_rate_bps = 0;
             // self.batch_threshold_creation_interval_seconds = 0;
             self.batch_threshold_interval_seconds = 0;
             self.pending_batch = WithdrawalBatch::new(1);
-            self.queued_batches = [WithdrawalBatch::default(); MAX_QUEUED_WITHDRAWAL_BATCHES];
+            self.queued_batches = ArrayPod::<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>::zeroed();
             // self.num_completed_withdrawal_requests = 0;
             // self.sol_remaining = 0;
             // self.total_receipt_token_processed = 0;
@@ -108,7 +108,7 @@ impl WithdrawalState {
 
     #[inline(always)]
     pub fn set_withdrawal_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
+        self.enabled = enabled.into();
     }
 
     pub fn set_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
@@ -168,7 +168,7 @@ impl WithdrawalState {
     }
 
     pub fn assert_withdrawal_enabled(&self) -> Result<()> {
-        if !self.enabled {
+        if !self.enabled.to_bool() {
             err!(ErrorCode::FundWithdrawalDisabledError)?
         }
 
@@ -178,7 +178,7 @@ impl WithdrawalState {
     pub fn is_batch_enqueuing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
         !self
             .last_batch_enqueued_at
-            .into()
+            .to_option()
             .is_some_and(|last_batch_enqueued_at| {
                 current_timestamp - last_batch_enqueued_at < self.batch_threshold_interval_seconds
             })
@@ -187,7 +187,7 @@ impl WithdrawalState {
     pub fn is_batch_processing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
         !self
             .last_batch_processed_at
-            .into()
+            .to_option()
             .is_some_and(|last_batch_processed_at| {
                 current_timestamp - last_batch_processed_at < self.batch_threshold_interval_seconds
             })
@@ -240,19 +240,18 @@ impl WithdrawalState {
 
         count = count.min(self.queued_batches.len());
         self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
-        self.last_batch_processed_at = Some(current_timestamp);
+        self.last_batch_processed_at = Some(current_timestamp).into();
         let remaining_batches = self.queued_batches.split_off(count);
-        let processible_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
+        let processing_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
 
-        processible_batches
+        processing_batches
             .iter()
             .for_each(|batch| self.num_requests_in_progress -= batch.num_requests);
 
-        processible_batches
+        processing_batches.into_iter().cloned().collect()
     }
 }
 
-#[derive(Default)]
 #[zero_copy]
 pub(super) struct WithdrawalBatch {
     pub batch_id: u64,

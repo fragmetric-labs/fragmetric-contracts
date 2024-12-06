@@ -31,7 +31,7 @@ impl FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_decimals: fund_account.receipt_token_decimals,
             receipt_token_supply_amount: fund_account.receipt_token_supply_amount,
-            receipt_token_value: fund_account.receipt_token_value.clone(),
+            receipt_token_value: fund_account.receipt_token_value.into(),
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             // supported_tokens: fund_account.supported_tokens.clone(),
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
@@ -39,7 +39,7 @@ impl FundAccountInfo {
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
             sol_withdrawal_reserved_amount: fund_account.withdrawal.sol_withdrawal_reserved_amount,
             sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_fee_rate_as_percent(),
-            withdrawal_enabled: fund_account.withdrawal.enabled,
+            withdrawal_enabled: fund_account.withdrawal.enabled.into(),
             withdrawal_last_completed_batch_id: fund_account.withdrawal.last_processed_batch_id,
             next_operation_sequence: fund_account.operation.next_sequence,
         }

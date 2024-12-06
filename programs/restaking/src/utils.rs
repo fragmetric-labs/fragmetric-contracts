@@ -1,3 +1,4 @@
+use std::ops::{Index, IndexMut};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
 use anchor_lang::{CheckOwner, ZeroCopy};
@@ -149,15 +150,142 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
     }
 }
 
+#[zero_copy]
+#[derive(Default, Debug)]
+pub struct BoolPod {
+    value: u8, // 0 = False, Other = True
+}
+
+impl BoolPod {
+    pub(crate) fn to_bool(self) -> bool {
+        bool::from(self)
+    }
+}
+
+impl From<BoolPod> for bool {
+    fn from(pod: BoolPod) -> Self {
+        pod.value != 0
+    }
+}
+
+impl From<bool> for BoolPod {
+    fn from(value: bool) -> Self {
+        BoolPod {
+            value: if value { 1 } else { 0 },
+        }
+    }
+}
+
+#[derive(Copy, Clone, Zeroable, Debug)]
 #[repr(C)]
-#[derive(Copy, Clone, Zeroable, Debug, Default, Default)]
+pub struct ArrayPod<T: Pod + Zeroable, const N: usize> {
+    pub items: [T; N],
+    pub length: u8,
+}
+
+impl<T: Pod + Zeroable, const N: usize> ArrayPod<T, N> {
+    pub fn from_vec(vec: Vec<T>) -> Self {
+        let mut items = [T::zeroed(); N];
+        let length = vec.len();
+        assert!(length <= N, "out of capacity");
+
+        for (i, item) in vec.into_iter().enumerate() {
+            items[i] = item;
+        }
+        ArrayPod {
+            items,
+            length: length as u8,
+        }
+    }
+
+    pub fn to_vec(&self) -> Vec<T> {
+        self.items[..self.length as usize].to_vec()
+    }
+
+    pub fn len(&self) -> usize {
+        self.length as usize
+    }
+
+    pub fn push(&mut self, item: T) {
+        assert!((self.length as usize) < N, "out of capacity");
+        self.items[self.length as usize] = item;
+        self.length += 1;
+    }
+
+    pub fn split_off(&mut self, at: usize) -> Self {
+        assert!(at <= self.length as usize, "index out of bounds");
+        let mut new_array = ArrayPod {
+            items: [T::zeroed(); N],
+            length: (self.length as usize - at) as u8,
+        };
+        for i in 0..new_array.length as usize {
+            new_array.items[i] = self.items[at + i];
+        }
+        self.length = at as u8;
+        new_array
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items[..self.length as usize].iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.items[..self.length as usize].iter_mut()
+    }
+}
+
+impl<'a, T: Pod, const N: usize> IntoIterator for &'a ArrayPod<T, N> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items[..self.length as usize].iter()
+    }
+}
+
+impl<'a, T: Pod, const N: usize> IntoIterator for &'a mut ArrayPod<T, N> {
+    type Item = &'a mut T;
+    type IntoIter = std::slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items[..self.length as usize].iter_mut()
+    }
+}
+
+impl<T: Pod, const N: usize> Index<usize> for ArrayPod<T, N> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.length as usize, "index out of bounds");
+        &self.items[index]
+    }
+}
+
+impl<T: Pod, const N: usize> IndexMut<usize> for ArrayPod<T, N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert!(index < self.length as usize, "index out of bounds");
+        &mut self.items[index]
+    }
+}
+
+// CHECKED: generic T shall always meet Pod and no padding exists.
+unsafe impl<T: Pod + Zeroable, const N: usize> Pod for ArrayPod<T, N> {}
+
+#[derive(Copy, Clone, Zeroable, Debug, Default)]
+#[repr(C)]
 pub struct OptionPod<T: Pod + Zeroable> {
     discriminant: u8, // 0 = None, 1 = Some
     value: T,
 }
 
-// CHECKED: we just need to ensure generic T is always Pod and no padding exists.
+// CHECKED: generic T shall always meet Pod and no padding exists.
 unsafe impl<T: Pod + Zeroable> Pod for OptionPod<T> {}
+
+impl<T: Pod + Zeroable> OptionPod<T> {
+    pub(crate) fn to_option(self) -> Option<T> {
+        Option::from(self)
+    }
+}
 
 impl<T: Pod + Zeroable> From<Option<T>> for OptionPod<T> {
     fn from(option: Option<T>) -> Self {

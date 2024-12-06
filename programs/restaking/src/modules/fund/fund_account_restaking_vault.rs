@@ -1,14 +1,15 @@
+use std::mem::zeroed;
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
-use crate::utils::OptionPod;
+use crate::utils::{ArrayPod, OptionPod};
 
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
-#[derive(Default)]
 #[zero_copy]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
@@ -29,7 +30,7 @@ pub(super) struct RestakingVault {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    pub operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
+    pub operators: ArrayPod<RestakingVaultOperator, MAX_RESTAKING_VAULT_OPERATORS>,
 
     _reserved: [u8; 128],
 }
@@ -71,7 +72,7 @@ impl RestakingVault {
             sol_allocation_weight: 0,
             sol_allocation_capacity_amount: 0,
 
-            operators: [RestakingVaultOperator::default(); MAX_RESTAKING_VAULT_OPERATORS],
+            operators: ArrayPod::<RestakingVaultOperator, MAX_RESTAKING_VAULT_OPERATORS>::zeroed(),
 
             _reserved: [0; 128],
         })
@@ -122,7 +123,6 @@ impl RestakingVault {
     }
 }
 
-#[derive(Default)]
 #[zero_copy]
 pub(super) struct RestakingVaultOperator {
     pub operator: Pubkey,

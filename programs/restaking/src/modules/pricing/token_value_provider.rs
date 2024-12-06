@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
-use crate::utils::OptionPod;
-#[cfg(test)]
-pub use self::mock::*;
+use bytemuck::Zeroable;
+
+use crate::utils::{BoolPod, OptionPod};
 
 use super::{TokenPricingSource, TokenPricingSourcePod};
+
+#[cfg(test)]
+pub use self::mock::*;
 
 /// A type that can calculate the token amount as sol with its data.
 pub trait TokenValueProvider {
@@ -14,10 +17,12 @@ pub trait TokenValueProvider {
     ) -> Result<TokenValue>;
 }
 
+const TOKEN_VALUE_NUMERATOR_MAX_SIZE: usize = 20;
+
 /// a value representing total asset value of a pricing source.
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenValue {
-    #[max_len(20)]
+    #[max_len(TOKEN_VALUE_NUMERATOR_MAX_SIZE)]
     pub numerator: Vec<Asset>,
     pub denominator: u64,
 }
@@ -50,8 +55,32 @@ impl std::fmt::Display for TokenValue {
 
 #[zero_copy]
 pub struct TokenValuePod {
-    pub numerator: [AssetPod; 20],
+    pub num_numerator: u8,
+    pub numerator_truncated: BoolPod,
+    pub numerator: [AssetPod; TOKEN_VALUE_NUMERATOR_MAX_SIZE],
     pub denominator: u64,
+}
+
+impl From<TokenValue> for TokenValuePod {
+    fn from(src: TokenValue) -> Self {
+        Self {
+            num_numerator: src.numerator.len() as u8,
+            numerator_truncated: (src.numerator.len() > TOKEN_VALUE_NUMERATOR_MAX_SIZE).into(),
+            numerator: {
+                let mut array = [AssetPod::zeroed(); TOKEN_VALUE_NUMERATOR_MAX_SIZE];
+                for (i, item) in src
+                    .numerator
+                    .into_iter()
+                    .take(TOKEN_VALUE_NUMERATOR_MAX_SIZE)
+                    .enumerate()
+                {
+                    array[i] = item.into();
+                }
+                array
+            },
+            denominator: src.denominator,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -91,7 +120,7 @@ impl From<Asset> for AssetPod {
                 discriminant: 1,
                 sol_amount,
                 token_mint: Pubkey::default(),
-                token_pricing_source: OptionPod::none(),
+                token_pricing_source: None.into(),
                 token_amount: 0,
             },
             Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
@@ -109,7 +138,11 @@ impl From<AssetPod> for Asset {
     fn from(pod: AssetPod) -> Self {
         match pod.discriminant {
             1 => Self::SOL(pod.sol_amount),
-            2 => Self::Token(pod.token_mint, pod.token_pricing_source.into(), pod.token_amount),
+            2 => Self::Token(
+                pod.token_mint,
+                pod.token_pricing_source.into(),
+                pod.token_amount,
+            ),
             _ => panic!("invalid discriminant for TokenPricingSource"),
         }
     }
