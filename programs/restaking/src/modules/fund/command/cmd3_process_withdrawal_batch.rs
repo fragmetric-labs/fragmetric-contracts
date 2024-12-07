@@ -49,12 +49,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
 
-                if remaining_accounts.len() < ctx.fund_account.withdrawal.queued_batches.len() {
+                let queued_batches_len = ctx.fund_account.load()?.withdrawal.queued_batches.len();
+                if remaining_accounts.len() < queued_batches_len {
                     err!(ErrorCode::AccountNotEnoughKeys)?;
                 }
 
                 let (uninitialized_batch_withdrawal_tickets, pricing_sources) =
-                    remaining_accounts.split_at(ctx.fund_account.withdrawal.queued_batches.len());
+                    remaining_accounts.split_at(queued_batches_len);
+
                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                     .process_withdrawal_batch(
                         ctx.operator,

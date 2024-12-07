@@ -1,3 +1,4 @@
+use std::cell::RefMut;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
@@ -26,7 +27,7 @@ pub struct FundAccountInfo {
 
 impl FundAccountInfo {
     // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn from(fund_account: &Account<FundAccount>) -> Self {
+    pub(in crate::modules) fn from(fund_account: &RefMut<FundAccount>) -> Self {
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_decimals: fund_account.receipt_token_decimals,

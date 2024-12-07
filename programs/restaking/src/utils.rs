@@ -183,6 +183,12 @@ pub struct ArrayPod<T: Pod + Zeroable, const N: usize> {
     pub length: u8,
 }
 
+impl<T: Pod + Zeroable, const N: usize> Default for ArrayPod<T, N> {
+    fn default() -> Self {
+        Self::zeroed()
+    }
+}
+
 impl<T: Pod + Zeroable, const N: usize> ArrayPod<T, N> {
     pub fn from_vec(vec: Vec<T>) -> Self {
         let mut items = [T::zeroed(); N];
@@ -231,6 +237,18 @@ impl<T: Pod + Zeroable, const N: usize> ArrayPod<T, N> {
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.items[..self.length as usize].iter_mut()
+    }
+}
+
+impl<T: Pod + Zeroable, const N: usize> From<Vec<T>> for ArrayPod<T, N> {
+    fn from(vec: Vec<T>) -> Self {
+        Self::from_vec(vec)
+    }
+}
+
+impl<T: Pod + Zeroable, const N: usize> From<ArrayPod<T, N>> for Vec<T> {
+    fn from(pod: ArrayPod<T, N>) -> Self {
+        pod.to_vec()
     }
 }
 
@@ -415,6 +433,15 @@ pub trait AccountExt<'info> {
     /// }
     /// ```
     fn as_account_info(&self) -> &'info AccountInfo<'info>;
+}
+
+impl<'info, T> AccountExt<'info> for AccountLoader<'info, T>
+where
+    T: ZeroCopy + Owner + Clone,
+{
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
 }
 
 impl<'info, T> AccountExt<'info> for Account<'info, T>

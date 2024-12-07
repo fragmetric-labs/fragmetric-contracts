@@ -6,6 +6,7 @@ use anchor_lang::prelude::*;
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
+#[derive(Default)]
 #[zero_copy]
 pub(super) struct OperationState {
     updated_at: i64,

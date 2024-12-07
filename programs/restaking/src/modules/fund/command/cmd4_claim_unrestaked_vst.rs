@@ -64,14 +64,14 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let mut func_account = ctx.fund_account.clone();
-            let restaking_vault = func_account.get_restaking_vault_mut(&item.vault_address)?;
-
             match &self.state {
                 ClaimUnrestakedVSTCommandState::Init => {
                     let mut command = self.clone();
                     command.state = ClaimUnrestakedVSTCommandState::ReadVaultState;
-                    match restaking_vault.receipt_token_pricing_source {
+
+                    let fund_account = ctx.fund_account.load()?;
+                    let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
+                    match restaking_vault.receipt_token_pricing_source.into() {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let mut required_accounts =
                                 JitoRestakingVaultService::find_accounts_for_vault(address)?;
@@ -83,7 +83,10 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     };
                 }
                 ClaimUnrestakedVSTCommandState::ReadVaultState => {
-                    match restaking_vault.receipt_token_pricing_source {
+
+                    let fund_account = ctx.fund_account.load()?;
+                    let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
+                    match restaking_vault.receipt_token_pricing_source.into() {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let [vault_program, vault_account, vault_config, remaining_accounts @ ..] =
                                 accounts
@@ -154,7 +157,10 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                 }
                 ClaimUnrestakedVSTCommandState::Claim(claimable_unrestaked_tickets) => {
                     let mut command = self.clone();
-                    match restaking_vault.receipt_token_pricing_source {
+
+                    let fund_account = ctx.fund_account.load()?;
+                    let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
+                    match restaking_vault.receipt_token_pricing_source.into() {
                         TokenPricingSource::JitoRestakingVault { address: _ } => {
                             let [vault_program, vault_account, vault_config, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account,vault_supported_token_account,  vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, token_program, system_program, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
                                 accounts
@@ -189,8 +195,8 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 vault_update_state_tracker_prepare_for_delaying,
                                 Clock::get()?.slot,
                                 system_program.as_ref(),
-                                &ctx.fund_account.as_ref(),
-                                &[&ctx.fund_account.get_seeds().as_ref()],
+                                &ctx.fund_account.to_account_info(),
+                                &[fund_account.get_seeds().as_ref()],
                             )?
                             .withdraw(
                                 vault_withdrawal_ticket,
@@ -198,7 +204,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 fund_supported_token_account,
                                 vault_fee_receipt_token_account,
                                 vault_program_fee_wallet_vrt_account,
-                                &ctx.fund_account.as_ref(),
+                                &ctx.fund_account.to_account_info(),
                                 system_program,
                             )?;
 
@@ -227,7 +233,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 }
                                 None => {
                                     let normalized_token =
-                                        &ctx.fund_account.normalized_token.as_ref().unwrap();
+                                        &fund_account.normalized_token.to_option().unwrap();
                                     if &restaking_vault.supported_token_mint
                                         == &normalized_token.mint
                                     {

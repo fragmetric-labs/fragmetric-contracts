@@ -17,7 +17,8 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let fund_account = Account::<FundAccount>::try_from(pricing_source_accounts[0])?;
+        let fund_account_loader = AccountLoader::<FundAccount>::try_from(pricing_source_accounts[0])?;
+        let fund_account = fund_account_loader.load()?;
 
         require_keys_eq!(fund_account.receipt_token_mint, *token_mint);
 
@@ -33,17 +34,17 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         for supported_token in &fund_account.supported_tokens {
             assets.push(Asset::Token(
                 supported_token.mint,
-                Some(supported_token.pricing_source.clone()),
+                Some(supported_token.pricing_source.into()),
                 supported_token.operation_reserved_amount
                     + supported_token.operation_receivable_amount,
             ));
         }
 
         // nt_operation_reserved_amount
-        if let Some(normalized_token) = &fund_account.normalized_token {
+        if let Some(normalized_token) = &fund_account.normalized_token.to_option() {
             assets.push(Asset::Token(
                 normalized_token.mint,
-                Some(normalized_token.pricing_source.clone()),
+                Some(normalized_token.pricing_source.into()),
                 normalized_token.operation_reserved_amount,
             ));
         }
@@ -52,7 +53,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         for restaking_vault in &fund_account.restaking_vaults {
             assets.push(Asset::Token(
                 restaking_vault.receipt_token_mint,
-                Some(restaking_vault.receipt_token_pricing_source.clone()),
+                Some(restaking_vault.receipt_token_pricing_source.into()),
                 restaking_vault.receipt_token_operation_reserved_amount
                     + restaking_vault.receipt_token_operation_receivable_amount,
             ));

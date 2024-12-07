@@ -65,14 +65,15 @@ impl SelfExecutable for UnrestakeVRTCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let mut func_account = ctx.fund_account.clone();
-            let restaking_vault = func_account.get_restaking_vault_mut(&item.vault_address)?;
 
             match &self.state {
                 UnrestakeVRTCommandState::Init if item.sol_amount > 0 => {
                     let mut command = self.clone();
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
-                    match restaking_vault.receipt_token_pricing_source {
+
+                    let fund_accout_ref = ctx.fund_account.load()?;
+                    let restaking_vault = fund_accout_ref.get_restaking_vault(&item.vault_address)?;
+                    match restaking_vault.receipt_token_pricing_source.into() {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let required_accounts =
                                 &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
@@ -86,7 +87,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     };
                 }
                 UnrestakeVRTCommandState::ReadVaultState => {
-                    match restaking_vault.receipt_token_pricing_source {
+                    let fund_accout_ref = ctx.fund_account.load()?;
+                    let restaking_vault = fund_accout_ref.get_restaking_vault(&item.vault_address)?;
+
+                    match restaking_vault.receipt_token_pricing_source.into() {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
@@ -196,9 +200,9 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         base_account,
                         associated_token_program,
                         system_program,
-                        &ctx.fund_account.as_ref(),
+                        &ctx.fund_account.to_account_info(),
                         &[
-                            ctx.fund_account.get_seeds().as_ref(),
+                            ctx.fund_account.load()?.get_seeds().as_ref(),
                             &[
                                 JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED,
                                 (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),

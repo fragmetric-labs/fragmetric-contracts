@@ -12,6 +12,7 @@ mod cmd7_unrestake_vrt;
 mod cmd8_unstake_lst;
 mod cmd9_stake_sol;
 
+use std::cell::RefMut;
 pub use cmd0_initialize::*;
 pub use cmd10_normalize_lst::*;
 pub use cmd11_restake_vst::*;
@@ -31,13 +32,13 @@ use anchor_spl::token_interface::Mint;
 use bytemuck::Zeroable;
 
 use crate::modules::fund;
-use crate::utils::BoolPod;
+use crate::utils::{ArrayPod, BoolPod};
 
 // propagate common accounts and values to all commands
 pub struct OperationCommandContext<'info: 'a, 'a> {
     pub(super) operator: &'a Signer<'info>,
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    pub(super) fund_account: &'a mut Account<'info, fund::FundAccount>,
+    pub(super) fund_account: &'a mut AccountLoader<'info, fund::FundAccount>,
     pub(super) system_program: &'a Program<'info, System>,
 }
 
@@ -210,22 +211,20 @@ pub struct OperationCommandEntry {
 #[zero_copy]
 pub struct OperationCommandEntryPod {
     command: OperationCommandPod,
-    num_required_accounts: u8,
-    required_accounts: [OperationCommandAccountMetaPod; OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
+    required_accounts: ArrayPod<OperationCommandAccountMetaPod, OPERATION_COMMAND_MAX_ACCOUNT_SIZE>,
+}
+
+impl Default for OperationCommandEntryPod {
+    fn default() -> Self {
+        Self::zeroed()
+    }
 }
 
 impl From<OperationCommandEntry> for OperationCommandEntryPod {
     fn from(src: OperationCommandEntry) -> Self {
         Self {
             command: src.command.into(),
-            num_required_accounts: src.required_accounts.len() as u8,
-            required_accounts: {
-                let mut array = [OperationCommandAccountMetaPod::zeroed(); OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
-                for (i, item) in src.required_accounts.into_iter().take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE).enumerate() {
-                    array[i] = item.into();
-                }
-                array
-            },
+            required_accounts: src.required_accounts.into_iter().map(Into::into).collect::<Vec<_>>().into(),
         }
     }
 }
@@ -235,11 +234,7 @@ impl From<OperationCommandEntryPod> for OperationCommandEntry {
         Self {
             command: pod.command.into(),
             required_accounts: pod
-                .required_accounts
-                .into_iter()
-                .take(pod.num_required_accounts as usize)
-                .map(|account_meta| account_meta.into())
-                .collect::<Vec<_>>(),
+                .required_accounts.into_iter().cloned().map(Into::into).collect::<Vec<_>>().into(),
         }
     }
 }

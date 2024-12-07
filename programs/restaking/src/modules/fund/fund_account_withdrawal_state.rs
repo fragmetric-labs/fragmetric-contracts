@@ -27,7 +27,7 @@ pub(super) struct WithdrawalState {
     last_batch_processed_at: OptionPod<i64>,
 
     pending_batch: WithdrawalBatch,
-    queued_batches: ArrayPod<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>,
+    pub queued_batches: ArrayPod<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>,
 
     _reserved: [[u8; 8]; 16],
 }

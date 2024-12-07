@@ -38,7 +38,7 @@ pub struct AdminFundAccountInitialContext<'info> {
             8 + FundAccount::INIT_SPACE,
         ),
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub fund_account: AccountLoader<'info, FundAccount>,
 
     #[account(
         associated_token::mint = receipt_token_mint,
@@ -70,5 +70,5 @@ pub struct AdminFundAccountUpdateContext<'info> {
         bump = fund_account.get_bump(),
         has_one = receipt_token_mint,
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub fund_account: AccountLoader<'info, FundAccount>,
 }

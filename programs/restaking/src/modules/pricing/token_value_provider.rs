@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
-use crate::utils::{BoolPod, OptionPod};
+use crate::utils::{ArrayPod, BoolPod, OptionPod};
 
 use super::{TokenPricingSource, TokenPricingSourcePod};
 
@@ -55,30 +55,24 @@ impl std::fmt::Display for TokenValue {
 
 #[zero_copy]
 pub struct TokenValuePod {
-    pub num_numerator: u8,
-    pub numerator_truncated: BoolPod,
-    pub numerator: [AssetPod; TOKEN_VALUE_NUMERATOR_MAX_SIZE],
+    pub numerator: ArrayPod<AssetPod, TOKEN_VALUE_NUMERATOR_MAX_SIZE>,
     pub denominator: u64,
 }
 
 impl From<TokenValue> for TokenValuePod {
     fn from(src: TokenValue) -> Self {
         Self {
-            num_numerator: src.numerator.len() as u8,
-            numerator_truncated: (src.numerator.len() > TOKEN_VALUE_NUMERATOR_MAX_SIZE).into(),
-            numerator: {
-                let mut array = [AssetPod::zeroed(); TOKEN_VALUE_NUMERATOR_MAX_SIZE];
-                for (i, item) in src
-                    .numerator
-                    .into_iter()
-                    .take(TOKEN_VALUE_NUMERATOR_MAX_SIZE)
-                    .enumerate()
-                {
-                    array[i] = item.into();
-                }
-                array
-            },
+            numerator: src.numerator.into_iter().map(Into::into).collect::<Vec<_>>().into(),
             denominator: src.denominator,
+        }
+    }
+}
+
+impl From<TokenValuePod> for TokenValue {
+    fn from(pod: TokenValuePod) -> Self {
+        Self {
+            numerator: pod.numerator.into_iter().cloned().map(Into::into).collect::<Vec<_>>(),
+            denominator: pod.denominator,
         }
     }
 }
@@ -127,7 +121,7 @@ impl From<Asset> for AssetPod {
                 discriminant: 2,
                 sol_amount: 0,
                 token_mint,
-                token_pricing_source: token_pricing_source.into(),
+                token_pricing_source: token_pricing_source.map(Into::into).into(),
                 token_amount,
             },
         }
@@ -140,7 +134,7 @@ impl From<AssetPod> for Asset {
             1 => Self::SOL(pod.sol_amount),
             2 => Self::Token(
                 pod.token_mint,
-                pod.token_pricing_source.into(),
+                pod.token_pricing_source.to_option().map(Into::into),
                 pod.token_amount,
             ),
             _ => panic!("invalid discriminant for TokenPricingSource"),

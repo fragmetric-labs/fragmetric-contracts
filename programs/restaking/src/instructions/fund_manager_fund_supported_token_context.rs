@@ -21,7 +21,7 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
         has_one = receipt_token_mint,
         constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub fund_account: AccountLoader<'info, FundAccount>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
