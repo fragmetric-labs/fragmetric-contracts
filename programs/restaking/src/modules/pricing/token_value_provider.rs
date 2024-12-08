@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::Zeroable;
+use bytemuck::{Zeroable, Pod};
 
 use crate::utils::{ArrayPod, BoolPod, OptionPod};
 
@@ -53,10 +53,12 @@ impl std::fmt::Display for TokenValue {
     }
 }
 
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub struct TokenValuePod {
     pub numerator: ArrayPod<AssetPod, TOKEN_VALUE_NUMERATOR_MAX_SIZE>,
     pub denominator: u64,
+    _padding: [u8; 8],
 }
 
 impl From<TokenValue> for TokenValuePod {
@@ -64,6 +66,7 @@ impl From<TokenValue> for TokenValuePod {
         Self {
             numerator: src.numerator.into_iter().map(Into::into).collect::<Vec<_>>().into(),
             denominator: src.denominator,
+            _padding: [0; 8],
         }
     }
 }
@@ -97,14 +100,15 @@ impl std::fmt::Display for Asset {
     }
 }
 
-#[derive(Debug)]
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub struct AssetPod {
     discriminant: u8,
+    _padding: [u8; 15],
     sol_amount: u64,
+    token_amount: u64,
     token_mint: Pubkey,
     token_pricing_source: OptionPod<TokenPricingSourcePod>,
-    token_amount: u64,
 }
 
 impl From<Asset> for AssetPod {
@@ -112,6 +116,7 @@ impl From<Asset> for AssetPod {
         match src {
             Asset::SOL(sol_amount) => Self {
                 discriminant: 1,
+                _padding: [0; 15],
                 sol_amount,
                 token_mint: Pubkey::default(),
                 token_pricing_source: None.into(),
@@ -119,6 +124,7 @@ impl From<Asset> for AssetPod {
             },
             Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
                 discriminant: 2,
+                _padding: [0; 15],
                 sol_amount: 0,
                 token_mint,
                 token_pricing_source: token_pricing_source.map(Into::into).into(),

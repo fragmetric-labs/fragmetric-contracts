@@ -150,10 +150,11 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
     }
 }
 
-#[zero_copy]
-#[derive(Default, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C, align(8))]
 pub struct BoolPod {
     value: u8, // 0 = False, Other = True
+    _padding: [u8; 7],
 }
 
 impl BoolPod {
@@ -172,16 +173,21 @@ impl From<bool> for BoolPod {
     fn from(value: bool) -> Self {
         BoolPod {
             value: if value { 1 } else { 0 },
+            _padding: [0; 7],
         }
     }
 }
 
-#[derive(Copy, Clone, Zeroable, Debug)]
-#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Debug)]
+#[repr(C, align(16))]
 pub struct ArrayPod<T: Pod + Zeroable, const N: usize> {
-    pub items: [T; N],
-    pub length: u8,
+    length: u64,
+    _padding: [u8; 8],
+    items: [T; N],
 }
+
+/// SAFETY: Given that T is guaranteed to be a 16 byte-aligned Pod type, the provided ArrayPod definition is safe and stable for automatic Pod derivation.
+unsafe impl<T: Pod + Zeroable, const N: usize> Pod for ArrayPod<T, N> {}
 
 impl<T: Pod + Zeroable, const N: usize> Default for ArrayPod<T, N> {
     fn default() -> Self {
@@ -199,8 +205,9 @@ impl<T: Pod + Zeroable, const N: usize> ArrayPod<T, N> {
             items[i] = item;
         }
         ArrayPod {
+            length: length as u64,
+            _padding: [0; 8],
             items,
-            length: length as u8,
         }
     }
 
@@ -221,13 +228,14 @@ impl<T: Pod + Zeroable, const N: usize> ArrayPod<T, N> {
     pub fn split_off(&mut self, at: usize) -> Self {
         assert!(at <= self.length as usize, "index out of bounds");
         let mut new_array = ArrayPod {
+            length: (self.length as usize - at) as u64,
+            _padding: [0; 8],
             items: [T::zeroed(); N],
-            length: (self.length as usize - at) as u8,
         };
         for i in 0..new_array.length as usize {
             new_array.items[i] = self.items[at + i];
         }
-        self.length = at as u8;
+        self.length = at as u64;
         new_array
     }
 
@@ -286,17 +294,15 @@ impl<T: Pod, const N: usize> IndexMut<usize> for ArrayPod<T, N> {
     }
 }
 
-// CHECKED: generic T shall always meet Pod and no padding exists.
-unsafe impl<T: Pod + Zeroable, const N: usize> Pod for ArrayPod<T, N> {}
-
-#[derive(Copy, Clone, Zeroable, Debug, Default)]
-#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Debug, Default)]
+#[repr(C, align(16))]
 pub struct OptionPod<T: Pod + Zeroable> {
     discriminant: u8, // 0 = None, 1 = Some
+    _padding: [u8; 15],
     value: T,
 }
 
-// CHECKED: generic T shall always meet Pod and no padding exists.
+/// SAFETY: Given that T is guaranteed to be a 16 byte-aligned Pod type, the provided ArrayPod definition is safe and stable for automatic Pod derivation.
 unsafe impl<T: Pod + Zeroable> Pod for OptionPod<T> {}
 
 impl<T: Pod + Zeroable> OptionPod<T> {
@@ -310,12 +316,10 @@ impl<T: Pod + Zeroable> From<Option<T>> for OptionPod<T> {
         match option {
             Some(value) => OptionPod {
                 discriminant: 1,
+                _padding: [0; 15],
                 value,
             },
-            None => OptionPod {
-                discriminant: 0,
-                value: T::zeroed(),
-            },
+            None => OptionPod::zeroed(),
         }
     }
 }

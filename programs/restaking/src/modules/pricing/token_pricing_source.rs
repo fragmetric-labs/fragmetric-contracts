@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::{Zeroable, Pod};
 
 #[cfg(test)]
 use crate::modules::pricing::MockAsset;
@@ -47,10 +48,11 @@ impl std::fmt::Display for TokenPricingSource {
     }
 }
 
-#[derive(Debug)]
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C, align(16))]
 pub struct TokenPricingSourcePod {
     discriminant: u8,
+    _padding: [u8; 15],
     address: Pubkey,
 }
 
@@ -59,27 +61,33 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
         match src {
             TokenPricingSource::SPLStakePool { address } => Self {
                 discriminant: 1,
+                _padding: [0; 15],
                 address,
             },
             TokenPricingSource::MarinadeStakePool { address } => Self {
                 discriminant: 2,
+                _padding: [0; 15],
                 address,
             },
             TokenPricingSource::JitoRestakingVault { address } => Self {
                 discriminant: 3,
+                _padding: [0; 15],
                 address,
             },
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => Self {
                 discriminant: 4,
+                _padding: [0; 15],
                 address,
             },
             TokenPricingSource::FragmetricRestakingFund { address } => Self {
                 discriminant: 5,
+                _padding: [0; 15],
                 address,
             },
             #[cfg(test)]
             TokenPricingSource::Mock { .. } => Self {
                 discriminant: 0,
+                _padding: [0; 15],
                 address: Pubkey::default(),
             },
         }

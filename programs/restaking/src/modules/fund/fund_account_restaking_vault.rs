@@ -1,6 +1,6 @@
 use std::mem::zeroed;
 use anchor_lang::prelude::*;
-use bytemuck::Zeroable;
+use bytemuck::{Pod, Zeroable};
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
@@ -10,7 +10,8 @@ use crate::utils::{ArrayPod, OptionPod};
 
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
     pub program: Pubkey,
@@ -19,6 +20,8 @@ pub(super) struct RestakingVault {
     pub receipt_token_mint: Pubkey,
     pub receipt_token_program: Pubkey,
     pub receipt_token_decimals: u8,
+    _padding: [u8; 7],
+
     /// transient price
     pub one_receipt_token_as_sol: u64,
     pub receipt_token_pricing_source: TokenPricingSourcePod,
@@ -64,6 +67,8 @@ impl RestakingVault {
             receipt_token_mint,
             receipt_token_program,
             receipt_token_decimals,
+            _padding: [0; 7],
+
             one_receipt_token_as_sol: 0,
             receipt_token_pricing_source: receipt_token_pricing_source.into(),
             receipt_token_operation_reserved_amount,
@@ -123,7 +128,8 @@ impl RestakingVault {
     }
 }
 
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub(super) struct RestakingVaultOperator {
     pub operator: Pubkey,
 

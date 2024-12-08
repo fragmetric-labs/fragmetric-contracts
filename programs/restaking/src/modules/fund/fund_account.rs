@@ -1,10 +1,9 @@
-use std::mem::zeroed;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token::accessor::mint;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
-use bytemuck::Zeroable;
+use bytemuck::{Pod, Zeroable};
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
@@ -27,22 +26,23 @@ const MAX_SUPPORTED_TOKENS: usize = 16;
 const MAX_RESTAKING_VAULTS: usize = 4;
 
 #[account(zero_copy)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct FundAccount {
     data_version: u16,
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 1],
+    _padding: [u8; 11],
 
     /// receipt token info
     pub receipt_token_mint: Pubkey,
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
+    _padding2: [u8; 7],
     pub(super) receipt_token_supply_amount: u64,
-    pub(super) receipt_token_value: TokenValuePod,
-    pub(super) receipt_token_value_updated_at: i64,
     pub(super) one_receipt_token_as_sol: u64,
+    pub(super) receipt_token_value_updated_at: i64,
+    pub(super) receipt_token_value: TokenValuePod,
 
     /// configurations for deposit
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
@@ -61,7 +61,6 @@ pub struct FundAccount {
     pub(in crate::modules) sol_operation_reserved_amount: u64,
 
     /// asset & configurations for LSTs
-    num_supported_tokens: u8,
     pub(super) supported_tokens: ArrayPod<SupportedToken, MAX_SUPPORTED_TOKENS>,
 
     /// asset & configuration for NT
@@ -72,7 +71,6 @@ pub struct FundAccount {
 
     /// fund operation state
     pub(super) operation: OperationState,
-
 
     _reserved: [u8; 256],
 }

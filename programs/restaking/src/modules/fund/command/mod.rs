@@ -29,7 +29,7 @@ pub use cmd9_stake_sol::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use bytemuck::Zeroable;
+use bytemuck::{Zeroable, Pod};
 
 use crate::modules::fund;
 use crate::utils::{ArrayPod, BoolPod};
@@ -60,10 +60,11 @@ pub enum OperationCommand {
     DelegateVST(DelegateVSTCommand),
 }
 
-const OPERATION_COMMAND_BUFFER_SIZE: usize = 320;
+// TODO: check this size
+const OPERATION_COMMAND_BUFFER_SIZE: usize = 319;
 
-#[derive(Debug)]
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub struct OperationCommandPod {
     discriminant: u8,
     buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
@@ -173,8 +174,8 @@ pub struct OperationCommandAccountMeta {
     pub(super) is_writable: bool,
 }
 
-#[zero_copy]
-#[derive(Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C, align(8))]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
     is_writable: BoolPod,
@@ -207,11 +208,11 @@ pub struct OperationCommandEntry {
     pub(super) required_accounts: Vec<OperationCommandAccountMeta>,
 }
 
-#[derive(Debug)]
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub struct OperationCommandEntryPod {
-    command: OperationCommandPod,
     required_accounts: ArrayPod<OperationCommandAccountMetaPod, OPERATION_COMMAND_MAX_ACCOUNT_SIZE>,
+    command: OperationCommandPod,
 }
 
 impl Default for OperationCommandEntryPod {

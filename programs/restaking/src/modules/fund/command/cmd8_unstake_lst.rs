@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
-use crate::utils::PDASeeds;
+use crate::utils::{AccountExt, PDASeeds};
 use crate::{errors, modules::staking::AvailableWithdrawals};
 
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
@@ -191,7 +191,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 }
                 UnstakeLSTCommandState::Unstake => {
                     // TODO put accounts definition into each token_pricing_source
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -216,7 +216,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 stake_program,
                                 fund_supported_token_account,
                                 fund_reserve_account,
-                                fund_account,
+                                ctx.fund_account.as_account_info(),
                                 &fund_account.get_seeds(),
                                 item.token_amount,
                             )?
@@ -259,7 +259,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 UnstakeLSTCommandState::RequestUnstake => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, stake_accounts @ ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, stake_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -307,7 +307,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                     stake_program,
                                     fund_supported_token_account,
                                     fund_stake_account,
-                                    fund_account,
+                                    ctx.fund_account.as_account_info(),
                                     &fund_account.get_seeds(),
                                     spl_withdraw_stake_item.token_amount,
                                 )?;

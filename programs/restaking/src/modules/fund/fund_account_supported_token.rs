@@ -1,14 +1,18 @@
 use anchor_lang::prelude::*;
+use bytemuck::{Zeroable, Pod};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 // TODO v0.3/operation: visibility
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C, align(16))]
 pub struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
+    _padding: [u8; 15],
+
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
     pub operation_reserved_amount: u64,
@@ -47,6 +51,7 @@ impl SupportedToken {
             mint,
             program,
             decimals,
+            _padding: [0; 15],
             accumulated_deposit_capacity_amount: 0,
             accumulated_deposit_amount: 0,
             operation_reserved_amount: 0,

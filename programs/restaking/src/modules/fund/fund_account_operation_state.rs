@@ -1,22 +1,25 @@
 use std::mem::discriminant;
+use anchor_lang::prelude::*;
+use bytemuck::{Pod, Zeroable};
+
+use crate::utils::{BoolPod, OptionPod};
 
 use super::command::*;
-use crate::utils::{BoolPod, OptionPod};
-use anchor_lang::prelude::*;
 
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
-#[derive(Default)]
-#[zero_copy]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C, align(16))]
 pub(super) struct OperationState {
     updated_at: i64,
     expired_at: i64,
-    pub next_sequence: u16,
-    next_command: OptionPod<OperationCommandEntryPod>,
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
     no_transition: BoolPod,
-    _reserved: [[u8; 8]; 32],
+    _padding: [u8; 6],
+    pub next_sequence: u16,
+    next_command: OptionPod<OperationCommandEntryPod>,
+    _reserved: [[u8; 16]; 16],
 }
 
 impl OperationState {
