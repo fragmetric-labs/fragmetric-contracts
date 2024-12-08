@@ -12,7 +12,6 @@ mod cmd7_unrestake_vrt;
 mod cmd8_unstake_lst;
 mod cmd9_stake_sol;
 
-use std::cell::RefMut;
 pub use cmd0_initialize::*;
 pub use cmd10_normalize_lst::*;
 pub use cmd11_restake_vst::*;
@@ -29,10 +28,9 @@ pub use cmd9_stake_sol::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
 
 use crate::modules::fund;
-use crate::utils::{ArrayPod, BoolPod};
 
 // propagate common accounts and values to all commands
 pub struct OperationCommandContext<'info: 'a, 'a> {
@@ -64,7 +62,7 @@ pub enum OperationCommand {
 const OPERATION_COMMAND_BUFFER_SIZE: usize = 319;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C, align(8))]
 pub struct OperationCommandPod {
     discriminant: u8,
     buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
@@ -73,33 +71,35 @@ pub struct OperationCommandPod {
 impl From<OperationCommand> for OperationCommandPod {
     fn from(src: OperationCommand) -> Self {
         let mut pod = Self {
-            discriminant: 0,
+            discriminant: match src {
+                OperationCommand::Initialize(_) => 1,
+                OperationCommand::ClaimUnstakedSOL(_) => 2,
+                OperationCommand::EnqueueWithdrawalBatch(_) => 3,
+                OperationCommand::ProcessWithdrawalBatch(_) => 4,
+                OperationCommand::ClaimUnrestakedVST(_) => 5,
+                OperationCommand::DenormalizeNT(_) => 6,
+                OperationCommand::UndelegateVST(_) => 7,
+                OperationCommand::UnrestakeVRT(_) => 8,
+                OperationCommand::UnstakeLST(_) => 9,
+                OperationCommand::StakeSOL(_) => 10,
+                OperationCommand::NormalizeLST(_) => 11,
+                OperationCommand::RestakeVST(_) => 12,
+                OperationCommand::DelegateVST(_) => 13,
+            },
             buffer: [0; OPERATION_COMMAND_BUFFER_SIZE],
         };
         src.serialize(&mut &mut pod.buffer[..]).unwrap();
-        pod.discriminant = match src {
-            OperationCommand::Initialize(_) => 1,
-            OperationCommand::ClaimUnstakedSOL(_) => 2,
-            OperationCommand::EnqueueWithdrawalBatch(_) => 3,
-            OperationCommand::ProcessWithdrawalBatch(_) => 4,
-            OperationCommand::ClaimUnrestakedVST(_) => 5,
-            OperationCommand::DenormalizeNT(_) => 6,
-            OperationCommand::UndelegateVST(_) => 7,
-            OperationCommand::UnrestakeVRT(_) => 8,
-            OperationCommand::UnstakeLST(_) => 9,
-            OperationCommand::StakeSOL(_) => 10,
-            OperationCommand::NormalizeLST(_) => 11,
-            OperationCommand::RestakeVST(_) => 12,
-            OperationCommand::DelegateVST(_) => 13,
-        };
 
         pod
     }
 }
 
-impl From<OperationCommandPod> for OperationCommand {
+impl From<OperationCommandPod> for Option<OperationCommand> {
     fn from(pod: OperationCommandPod) -> Self {
-        match pod.discriminant {
+        if pod.discriminant == 0 {
+            return None;
+        }
+        Some(match pod.discriminant {
             1 => InitializeCommand::try_from_slice(&pod.buffer[..])
                 .unwrap()
                 .into(),
@@ -140,7 +140,7 @@ impl From<OperationCommandPod> for OperationCommand {
                 .unwrap()
                 .into(),
             _ => panic!("invalid discriminant for OperationCommand"),
-        }
+        })
     }
 }
 
@@ -178,14 +178,16 @@ pub struct OperationCommandAccountMeta {
 #[repr(C, align(8))]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
-    is_writable: BoolPod,
+    is_writable: u8,
+    _padding: [u8; 7],
 }
 
 impl From<OperationCommandAccountMeta> for OperationCommandAccountMetaPod {
     fn from(src: OperationCommandAccountMeta) -> Self {
         Self {
             pubkey: src.pubkey,
-            is_writable: src.is_writable.into(),
+            is_writable: if src.is_writable { 1 } else { 0 },
+            _padding: [0; 7],
         }
     }
 }
@@ -194,7 +196,7 @@ impl From<OperationCommandAccountMetaPod> for OperationCommandAccountMeta {
     fn from(pod: OperationCommandAccountMetaPod) -> Self {
         Self {
             pubkey: pod.pubkey,
-            is_writable: pod.is_writable.into(),
+            is_writable: pod.is_writable == 1,
         }
     }
 }
@@ -209,9 +211,11 @@ pub struct OperationCommandEntry {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C, align(8))]
 pub struct OperationCommandEntryPod {
-    required_accounts: ArrayPod<OperationCommandAccountMetaPod, OPERATION_COMMAND_MAX_ACCOUNT_SIZE>,
+    num_required_accounts: u8,
+    _padding: [u8; 7],
+    required_accounts: [OperationCommandAccountMetaPod; OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
     command: OperationCommandPod,
 }
 
@@ -223,20 +227,34 @@ impl Default for OperationCommandEntryPod {
 
 impl From<OperationCommandEntry> for OperationCommandEntryPod {
     fn from(src: OperationCommandEntry) -> Self {
-        Self {
-            command: src.command.into(),
-            required_accounts: src.required_accounts.into_iter().map(Into::into).collect::<Vec<_>>().into(),
+        let mut pod: OperationCommandEntryPod = OperationCommandEntryPod::zeroed();
+        pod.num_required_accounts = src.required_accounts.len() as u8;
+        for (i, account_meta) in src.required_accounts.into_iter().take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE).enumerate() {
+            pod.required_accounts[i] = account_meta.into();
         }
+        pod.command = src.command.into();
+        pod
     }
 }
 
-impl From<OperationCommandEntryPod> for OperationCommandEntry {
+impl OperationCommandEntryPod {
+    pub fn is_none(&self) -> bool {
+        self.command.discriminant == 0
+    }
+}
+
+impl From<OperationCommandEntryPod> for Option<OperationCommandEntry> {
     fn from(pod: OperationCommandEntryPod) -> Self {
-        Self {
-            command: pod.command.into(),
+        let optional_command: Option<OperationCommand> = pod.command.into();
+        optional_command.map(|command| OperationCommandEntry {
+            command,
             required_accounts: pod
-                .required_accounts.into_iter().cloned().map(Into::into).collect::<Vec<_>>().into(),
-        }
+                .required_accounts
+                .into_iter()
+                .take(pod.num_required_accounts as usize)
+                .map(Into::into)
+                .collect::<Vec<_>>(),
+        })
     }
 }
 

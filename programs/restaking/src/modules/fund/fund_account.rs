@@ -10,20 +10,17 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{
     Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
 };
-use crate::utils::{get_proportional_amount, ArrayPod, OptionPod, PDASeeds, ZeroCopyHeader};
+use crate::utils::{get_proportional_amount, PDASeeds, ZeroCopyHeader};
 
 use super::*;
 
 #[constant]
 /// ## Version History
-/// * v1: Initial Version
-/// * v2: Change reserve fund structure
-/// * v3: Remove `sol_fee_income_reserved_amount` field
-/// * v4: Add `receipt_token_program`, .., `one_receipt_token_as_sol`, `normalized_token`, `restaking_vaults`, `operation` fields
+/// * v4: migrate to new layout including new fields using bytemuck.
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
-const MAX_RESTAKING_VAULTS: usize = 4;
+const MAX_RESTAKING_VAULTS: usize = 8;
 
 #[account(zero_copy)]
 #[repr(C, align(16))]
@@ -61,18 +58,20 @@ pub struct FundAccount {
     pub(in crate::modules) sol_operation_reserved_amount: u64,
 
     /// asset & configurations for LSTs
-    pub(super) supported_tokens: ArrayPod<SupportedToken, MAX_SUPPORTED_TOKENS>,
+    _padding3: [u8; 15],
+    num_supported_tokens: u8,
+    supported_tokens: [SupportedToken; MAX_SUPPORTED_TOKENS],
 
     /// asset & configuration for NT
-    pub(super) normalized_token: OptionPod<NormalizedToken>,
+    normalized_token: NormalizedToken,
 
     /// asset & configurations for Restaking Vaults
-    pub(super) restaking_vaults: ArrayPod<RestakingVault, MAX_RESTAKING_VAULTS>,
+    _padding4: [u8; 15],
+    num_restaking_vaults: u8,
+    restaking_vaults: [RestakingVault; MAX_RESTAKING_VAULTS],
 
     /// fund operation state
     pub(super) operation: OperationState,
-
-    _reserved: [u8; 256],
 }
 
 impl PDASeeds<2> for FundAccount {
@@ -103,49 +102,15 @@ impl FundAccount {
     ) {
         if self.data_version == 0 {
             self.bump = bump;
-            self.receipt_token_mint = receipt_token_mint;
-            self.withdrawal.migrate(self.data_version);
-            self.data_version = 1;
-        }
-
-        if self.data_version == 1 {
-            self.withdrawal.migrate(self.data_version);
-            self.data_version = 2;
-        }
-
-        if self.data_version == 2 {
-            self.withdrawal.migrate(self.data_version);
-            self.data_version = 3;
-        }
-
-        if self.data_version == 3 {
-            self.sol_operation_receivable_amount = 0;
-
-            self.receipt_token_program = token_2022::ID;
-            self.receipt_token_decimals = receipt_token_decimals;
-            self.receipt_token_supply_amount = receipt_token_supply;
-            self.receipt_token_value = TokenValue {
-                numerator: Vec::new(),
-                denominator: 0,
-            }
-            .into();
-            self.receipt_token_value_updated_at = 0;
-            self.one_receipt_token_as_sol = 0;
-
-            self.normalized_token = None.into();
-            self.restaking_vaults = ArrayPod::<RestakingVault, MAX_RESTAKING_VAULTS>::zeroed();
-            self.operation.migrate(self.data_version);
-
             self.reserve_account_bump =
                 Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
             self.treasury_account_bump =
                 Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
                     .1;
-
-            for supported_token in &mut self.supported_tokens {
-                supported_token.operation_receivable_amount = 0;
-            }
-
+            self.receipt_token_mint = receipt_token_mint;
+            self.receipt_token_program = token_2022::ID;
+            self.receipt_token_decimals = receipt_token_decimals;
+            self.receipt_token_supply_amount = receipt_token_supply;
             self.data_version = 4;
         }
     }
@@ -294,9 +259,16 @@ impl FundAccount {
         )
     }
 
+    pub fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
+        self.supported_tokens[..self.num_supported_tokens as usize].iter()
+    }
+
+    pub fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
+        self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
+    }
+
     pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedToken> {
-        self.supported_tokens
-            .iter()
+        self.get_supported_tokens_iter()
             .find(|supported_token| supported_token.mint == *token)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
@@ -306,27 +278,9 @@ impl FundAccount {
         &mut self,
         token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {
-        self.supported_tokens
-            .iter_mut()
+        self.get_supported_tokens_iter_mut()
             .find(|supported_token| supported_token.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
-    }
-
-    pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {
-        self.restaking_vaults
-            .iter()
-            .find(|restaking_vault| restaking_vault.vault == *vault)
-            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
-    }
-
-    pub(super) fn get_restaking_vault_mut(
-        &mut self,
-        vault: &Pubkey,
-    ) -> Result<&mut RestakingVault> {
-        self.restaking_vaults
-            .iter_mut()
-            .find(|restaking_vault| restaking_vault.vault == *vault)
-            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
     }
 
     pub(super) fn set_sol_accumulated_deposit_capacity_amount(
@@ -351,24 +305,42 @@ impl FundAccount {
         decimals: u8,
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        if self.supported_tokens.iter().any(|info| info.mint == mint) {
+        if self.get_supported_tokens_iter().any(|info| info.mint == mint) {
             err!(ErrorCode::FundAlreadySupportedTokenError)?
         }
 
         require_gt!(
             MAX_SUPPORTED_TOKENS,
-            self.supported_tokens.len(),
+            self.num_supported_tokens as usize,
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        self.supported_tokens.push(SupportedToken::new(
+        let supported_token = &mut self.supported_tokens[self.num_supported_tokens as usize];
+        supported_token.initialize(
             mint,
             program,
             decimals,
             pricing_source,
-        )?);
+        )?;
+        self.num_supported_tokens += 1;
 
         Ok(())
+    }
+
+    pub(super) fn get_normalized_token(&self) -> Option<&NormalizedToken> {
+        if self.normalized_token.enabled == 1 {
+            Some(&self.normalized_token)
+        } else {
+            None
+        }
+    }
+
+    pub(super) fn get_normalized_token_mut(&mut self) -> Option<&mut NormalizedToken> {
+        if self.normalized_token.enabled == 1 {
+            Some(&mut self.normalized_token)
+        } else {
+            None
+        }
     }
 
     pub(super) fn set_normalized_token(
@@ -379,19 +351,41 @@ impl FundAccount {
         pool: Pubkey,
         operation_reserved_amount: u64,
     ) -> Result<()> {
-        if self.normalized_token.to_option().is_some() {
+        if self.normalized_token.enabled != 0 {
             err!(ErrorCode::FundNormalizedTokenAlreadySetError)?
         }
 
-        self.normalized_token = Some(NormalizedToken::new(
+        let normalized_token = &mut self.normalized_token;
+        normalized_token.initialize(
             mint,
             program,
             decimals,
             pool,
             operation_reserved_amount,
-        )).into();
+        )
+    }
 
-        Ok(())
+    pub fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
+        self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
+    }
+
+    pub fn get_restaking_vaults_iter_mut(&mut self) -> impl Iterator<Item = &mut RestakingVault> {
+        self.restaking_vaults[..self.num_restaking_vaults as usize].iter_mut()
+    }
+
+    pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {
+        self.get_restaking_vaults_iter()
+            .find(|restaking_vault| restaking_vault.vault == *vault)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
+    }
+
+    pub(super) fn get_restaking_vault_mut(
+        &mut self,
+        vault: &Pubkey,
+    ) -> Result<&mut RestakingVault> {
+        self.get_restaking_vaults_iter_mut()
+            .find(|restaking_vault| restaking_vault.vault == *vault)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
     }
 
     pub(super) fn add_restaking_vault(
@@ -404,17 +398,18 @@ impl FundAccount {
         receipt_token_decimals: u8,
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
-        if self.restaking_vaults.iter().any(|v| v.vault == vault) {
+        if self.get_restaking_vaults_iter().any(|v| v.vault == vault) {
             err!(ErrorCode::FundRestakingVaultAlreadyRegisteredError)?
         }
 
         require_gt!(
             MAX_RESTAKING_VAULTS,
-            self.restaking_vaults.len(),
+            self.num_restaking_vaults as usize,
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
 
-        self.restaking_vaults.push(RestakingVault::new(
+        let restaking_vault = &mut self.restaking_vaults[self.num_restaking_vaults as usize];
+        restaking_vault.initialize(
             vault,
             program,
             supported_token_mint,
@@ -422,9 +417,7 @@ impl FundAccount {
             receipt_token_program,
             receipt_token_decimals,
             receipt_token_operation_reserved_amount,
-        )?);
-
-        Ok(())
+        )
     }
 
     pub(super) fn reload_receipt_token_supply(
@@ -509,7 +502,7 @@ mod tests {
 
         assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
         assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
-        assert!(fund.withdrawal.enabled.to_bool());
+        assert_eq!(fund.withdrawal.enabled, 0);
         assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;

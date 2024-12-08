@@ -29,16 +29,18 @@ pub struct SupportedToken {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    _reserved: [u8; 96],
+    _reserved: [u8; 64],
 }
 
 impl SupportedToken {
-    pub fn new(
+    pub fn initialize(
+        &mut self,
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
-    ) -> Result<Self> {
+        // TODO: operation_reserved_amount: u64,
+    ) -> Result<()> {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. } => {}
@@ -47,22 +49,12 @@ impl SupportedToken {
             }
         }
 
-        Ok(Self {
-            mint,
-            program,
-            decimals,
-            _padding: [0; 15],
-            accumulated_deposit_capacity_amount: 0,
-            accumulated_deposit_amount: 0,
-            operation_reserved_amount: 0,
-            one_token_as_sol: 0,
-            pricing_source: pricing_source.into(),
-            operation_receivable_amount: 0,
-            rebalancing_amount: 0,
-            sol_allocation_weight: 0,
-            sol_allocation_capacity_amount: 0,
-            _reserved: [0; 96],
-        })
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
+        self.pricing_source = pricing_source.into();
+
+        Ok(())
     }
 
     // TODO v0.3/operation: visibility

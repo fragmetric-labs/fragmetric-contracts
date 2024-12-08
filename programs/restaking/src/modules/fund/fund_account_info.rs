@@ -40,7 +40,7 @@ impl FundAccountInfo {
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
             sol_withdrawal_reserved_amount: fund_account.withdrawal.sol_withdrawal_reserved_amount,
             sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_fee_rate_as_percent(),
-            withdrawal_enabled: fund_account.withdrawal.enabled.into(),
+            withdrawal_enabled: fund_account.withdrawal.enabled == 1,
             withdrawal_last_completed_batch_id: fund_account.withdrawal.last_processed_batch_id,
             next_operation_sequence: fund_account.operation.next_sequence,
         }

@@ -74,7 +74,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     let fund_accout_ref = ctx.fund_account.load()?;
                     let restaking_vault = fund_accout_ref.get_restaking_vault(&item.vault_address)?;
                     match restaking_vault.receipt_token_pricing_source.into() {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let required_accounts =
                                 &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
                             required_accounts
@@ -91,7 +91,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     let restaking_vault = fund_accout_ref.get_restaking_vault(&item.vault_address)?;
 
                     match restaking_vault.receipt_token_pricing_source.into() {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
                             else {

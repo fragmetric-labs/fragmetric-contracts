@@ -31,29 +31,29 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         ));
 
         // lst_operation_reserved_amount + operation_receivable_amount
-        for supported_token in &fund_account.supported_tokens {
+        for supported_token in fund_account.get_supported_tokens_iter() {
             assets.push(Asset::Token(
                 supported_token.mint,
-                Some(supported_token.pricing_source.into()),
+                supported_token.pricing_source.into(),
                 supported_token.operation_reserved_amount
                     + supported_token.operation_receivable_amount,
             ));
         }
 
         // nt_operation_reserved_amount
-        if let Some(normalized_token) = &fund_account.normalized_token.to_option() {
+        if let Some(normalized_token) = fund_account.get_normalized_token() {
             assets.push(Asset::Token(
                 normalized_token.mint,
-                Some(normalized_token.pricing_source.into()),
+                normalized_token.pricing_source.into(),
                 normalized_token.operation_reserved_amount,
             ));
         }
 
         // vrt_operation_reserved + vrt_operation_receivable_amount
-        for restaking_vault in &fund_account.restaking_vaults {
+        for restaking_vault in fund_account.get_restaking_vaults_iter() {
             assets.push(Asset::Token(
                 restaking_vault.receipt_token_mint,
-                Some(restaking_vault.receipt_token_pricing_source.into()),
+                restaking_vault.receipt_token_pricing_source.into(),
                 restaking_vault.receipt_token_operation_reserved_amount
                     + restaking_vault.receipt_token_operation_receivable_amount,
             ));

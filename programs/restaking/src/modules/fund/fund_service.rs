@@ -72,8 +72,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // the values being written below are informative, only for event emission.
         fund_account
-            .supported_tokens
-            .iter_mut()
+            .get_supported_tokens_iter_mut()
             .try_for_each(|supported_token| {
                 supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
                     &supported_token.mint,
@@ -85,16 +84,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Ok::<(), Error>(())
             })?;
 
-        if let Some(fund_account_normalized_token) =
-            &mut fund_account.normalized_token.to_option()
-        {
-            fund_account_normalized_token.one_token_as_sol = pricing_service
-                .get_token_amount_as_sol(
-                    &fund_account_normalized_token.mint,
-                    10u64
-                        .checked_pow(fund_account_normalized_token.decimals as u32)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-                )?;
+        if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
+            normalized_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
+                &normalized_token.mint,
+                10u64
+                    .checked_pow(normalized_token.decimals as u32)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            )?;
         }
 
         let receipt_token_mint_key = &self.receipt_token_mint.key();
@@ -313,7 +309,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
-        let mut accounts = Vec::with_capacity(4 + fund_account.withdrawal.queued_batches.len());
+        let mut accounts = Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -323,22 +319,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             (fund_account.get_reserve_account_address()?, true),
             (fund_account.get_treasury_account_address()?, true),
         ]);
-        accounts.extend(
-            fund_account
-                .withdrawal
-                .queued_batches
-                .iter()
-                .map(|batch| {
-                    (
-                        FundBatchWithdrawalTicketAccount::find_account_address(
-                            &self.receipt_token_mint.key(),
-                            batch.batch_id,
-                        )
-                        .0,
-                        true,
-                    )
-                }),
-        );
+        accounts.extend(fund_account.withdrawal.get_queued_batches_iter().map(|batch| {
+            (
+                FundBatchWithdrawalTicketAccount::find_account_address(
+                    &self.receipt_token_mint.key(),
+                    batch.batch_id,
+                )
+                .0,
+                true,
+            )
+        }));
         Ok(accounts)
     }
 
@@ -380,7 +370,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let available_treasury_balance = treasury_account.lamports();
         let mut batch_count = 0;
 
-        for batch in &fund_account.withdrawal.queued_batches {
+        for batch in fund_account.withdrawal.get_queued_batches_iter() {
             let next_withdrawal_receipt_token_amount =
                 withdrawal_receipt_token_amount + batch.receipt_token_amount;
             if next_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
@@ -535,8 +525,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .fund_account
             .load()?
             .withdrawal
-            .queued_batches
-            .iter()
+            .get_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
             .sum();
         pricing_service

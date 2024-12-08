@@ -1,12 +1,11 @@
-use std::mem::zeroed;
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
+use std::mem::zeroed;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
-use crate::utils::{ArrayPod, OptionPod};
 
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
@@ -33,13 +32,16 @@ pub(super) struct RestakingVault {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    pub operators: ArrayPod<RestakingVaultOperator, MAX_RESTAKING_VAULT_OPERATORS>,
+    _padding2: [u8; 15],
+    num_operators: u8,
+    operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
 
     _reserved: [u8; 128],
 }
 
 impl RestakingVault {
-    pub(super) fn new(
+    pub(super) fn initialize(
+        &mut self,
         vault: Pubkey,
         program: Pubkey,
 
@@ -50,7 +52,7 @@ impl RestakingVault {
         receipt_token_decimals: u8,
 
         receipt_token_operation_reserved_amount: u64,
-    ) -> Result<Self> {
+    ) -> Result<()> {
         let receipt_token_pricing_source = match program {
             JITO_VAULT_PROGRAM_ID => Ok(TokenPricingSource::JitoRestakingVault { address: vault }),
             _ => {
@@ -58,29 +60,25 @@ impl RestakingVault {
             }
         }?;
 
-        Ok(Self {
-            vault,
-            program,
+        self.vault = vault;
+        self.program = program;
+        self.supported_token_mint = supported_token_mint;
 
-            supported_token_mint,
+        self.receipt_token_mint = receipt_token_mint;
+        self.receipt_token_program = receipt_token_program;
+        self.receipt_token_decimals = receipt_token_decimals;
 
-            receipt_token_mint,
-            receipt_token_program,
-            receipt_token_decimals,
-            _padding: [0; 7],
+        self.one_receipt_token_as_sol = 0;
+        self.receipt_token_pricing_source = receipt_token_pricing_source.into();
+        self.receipt_token_operation_reserved_amount = receipt_token_operation_reserved_amount;
+        self.receipt_token_operation_receivable_amount = 0;
 
-            one_receipt_token_as_sol: 0,
-            receipt_token_pricing_source: receipt_token_pricing_source.into(),
-            receipt_token_operation_reserved_amount,
-            receipt_token_operation_receivable_amount: 0,
+        self.sol_allocation_weight = 0;
+        self.sol_allocation_capacity_amount = 0;
 
-            sol_allocation_weight: 0,
-            sol_allocation_capacity_amount: 0,
+        self.num_operators = 0;
 
-            operators: ArrayPod::<RestakingVaultOperator, MAX_RESTAKING_VAULT_OPERATORS>::zeroed(),
-
-            _reserved: [0; 128],
-        })
+        Ok(())
     }
 
     pub(super) fn set_sol_allocation_strategy(
@@ -94,18 +92,20 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub(super) fn add_operator(&mut self, operator: &Pubkey) -> Result<()> {
-        if self.operators.iter().any(|op| op.operator == *operator) {
+    pub(super) fn add_operator(&mut self, operator_key: &Pubkey) -> Result<()> {
+        if self.operators.iter().take(self.num_operators as usize).any(|op| op.operator == *operator_key) {
             err!(ErrorCode::FundRestakingVaultOperatorAlreadyRegisteredError)?
         }
 
         require_gt!(
             MAX_RESTAKING_VAULT_OPERATORS,
-            self.operators.len(),
+            self.num_operators as usize,
             ErrorCode::FundExceededMaxRestakingVaultOperatorsError
         );
 
-        self.operators.push(RestakingVaultOperator::new(*operator));
+        let operator = &mut self.operators[self.num_operators as usize];
+        operator.initialize(*operator_key);
+        self.num_operators += 1;
 
         Ok(())
     }
@@ -113,6 +113,7 @@ impl RestakingVault {
     pub(super) fn get_operator(&self, operator: &Pubkey) -> Result<&RestakingVaultOperator> {
         self.operators
             .iter()
+            .take(self.num_operators as usize)
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
@@ -123,6 +124,7 @@ impl RestakingVault {
     ) -> Result<&mut RestakingVaultOperator> {
         self.operators
             .iter_mut()
+            .take(self.num_operators as usize)
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
@@ -147,15 +149,12 @@ pub(super) struct RestakingVaultOperator {
 }
 
 impl RestakingVaultOperator {
-    pub(super) fn new(operator: Pubkey) -> Self {
-        Self {
-            operator,
-            supported_token_allocation_capacity_amount: 0,
-            supported_token_redelegation_amount: 0,
-            supported_token_allocation_weight: 0,
-            supported_token_delegated_amount: 0,
-            _reserved: [0; 32],
-        }
+    pub(super) fn initialize(&mut self, operator: Pubkey) {
+        self.operator = operator;
+        self.supported_token_allocation_capacity_amount = 0;
+        self.supported_token_redelegation_amount = 0;
+        self.supported_token_allocation_weight = 0;
+        self.supported_token_delegated_amount = 0;
     }
 
     pub(super) fn set_supported_token_allocation_strategy(

@@ -1,9 +1,9 @@
-use std::mem::zeroed;
 use anchor_lang::prelude::*;
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
+use std::mem::zeroed;
 
 use crate::errors::ErrorCode;
-use crate::utils::{ArrayPod, BoolPod, OptionPod};
+use crate::modules::fund::SupportedToken;
 
 const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
@@ -11,11 +11,12 @@ const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 #[repr(C, align(16))]
 pub(super) struct WithdrawalState {
     /// configurations
-    pub enabled: BoolPod,
-    pub batch_threshold_interval_seconds: i64,
-    _padding: [u8; 12],
+    pub enabled: u8,
+    _padding: [u8; 5],
     pub sol_fee_rate_bps: u16,
+    pub batch_threshold_interval_seconds: i64,
 
+    _padding2: [u8; 14],
     /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
     pub sol_normal_reserve_rate_bps: u16,
     pub sol_normal_reserve_max_amount: u64,
@@ -26,58 +27,19 @@ pub(super) struct WithdrawalState {
     next_batch_id: u64,
     next_request_id: u64,
     pub last_processed_batch_id: u64,
-    last_batch_enqueued_at: OptionPod<i128>,
-    last_batch_processed_at: OptionPod<i128>,
+    last_batch_enqueued_at: i64,
+    last_batch_processed_at: i64,
 
     pending_batch: WithdrawalBatch,
-    pub queued_batches: ArrayPod<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>,
 
-    _reserved: [[u8; 16]; 8],
+    _padding3: [u8; 15],
+    num_queued_batches: u8,
+    queued_batches: [WithdrawalBatch; MAX_QUEUED_WITHDRAWAL_BATCHES],
+
+    _reserved: [u8; 128],
 }
 
 impl WithdrawalState {
-    pub fn migrate(&mut self, fund_account_data_version: u16) {
-        if fund_account_data_version == 0 {
-            self.next_batch_id = 2;
-            self.next_request_id = 1;
-            self.num_requests_in_progress = 0;
-            self.last_processed_batch_id = 0;
-            self.last_batch_enqueued_at = None.into();
-            self.last_batch_processed_at = None.into();
-            self.enabled = true.into();
-            self.sol_fee_rate_bps = 0;
-            // self.batch_threshold_creation_interval_seconds = 0;
-            self.batch_threshold_interval_seconds = 0;
-            self.pending_batch = WithdrawalBatch::new(1);
-            self.queued_batches = ArrayPod::<WithdrawalBatch, MAX_QUEUED_WITHDRAWAL_BATCHES>::zeroed();
-            // self.num_completed_withdrawal_requests = 0;
-            // self.sol_remaining = 0;
-            // self.total_receipt_token_processed = 0;
-            // self.total_sol_reserved = 0;
-            self._reserved = Default::default();
-        } else if fund_account_data_version == 1 {
-            // num_completed_withdrawal_requests -> sol_withdrawal_reserved_amount
-            // sol_remaining -> sol_fee_income_reserved_amount
-            // total_receipt_token_processed: u128 -> receipt_token_processed_amount: u64 & _reserved
-            // total_sol_reserved: u128 -> _reserved
-            self._reserved = Default::default();
-        } else if fund_account_data_version == 2 {
-            // sol_fee_income_reserved_amount: u64 -> _padding: [u8; 8]
-            self._reserved = Default::default();
-        } else if fund_account_data_version == 3 {
-            // batch_processing_threshold_amount: u64 -> _padding: [u8; 8]
-            self.pending_batch.migrate(fund_account_data_version);
-            self.queued_batches
-                .iter_mut()
-                .for_each(|batch| batch.migrate(fund_account_data_version));
-            // _padding: [u8; 8] -> _reserved
-            // receipt_token_processed_amount: u64 -> _reserved
-            self.sol_normal_reserve_rate_bps = 0;
-            self.sol_normal_reserve_max_amount = 0;
-            self._reserved = Default::default();
-        }
-    }
-
     /// 1 fee rate = 1bps = 0.01%
     const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
     const WITHDRAWAL_FEE_RATE_LIMIT: u64 = 500;
@@ -111,7 +73,7 @@ impl WithdrawalState {
 
     #[inline(always)]
     pub fn set_withdrawal_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled.into();
+        self.enabled = if enabled { 1 } else { 0 };
     }
 
     pub fn set_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
@@ -171,7 +133,7 @@ impl WithdrawalState {
     }
 
     pub fn assert_withdrawal_enabled(&self) -> Result<()> {
-        if !self.enabled.to_bool() {
+        if self.enabled == 0 {
             err!(ErrorCode::FundWithdrawalDisabledError)?
         }
 
@@ -179,21 +141,11 @@ impl WithdrawalState {
     }
 
     pub fn is_batch_enqueuing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
-        !self
-            .last_batch_enqueued_at
-            .to_option()
-            .is_some_and(|last_batch_enqueued_at| {
-                current_timestamp - (last_batch_enqueued_at as i64) < self.batch_threshold_interval_seconds
-            })
+        current_timestamp - self.last_batch_enqueued_at > self.batch_threshold_interval_seconds
     }
 
     pub fn is_batch_processing_threshold_satisfied(&self, current_timestamp: i64) -> bool {
-        !self
-            .last_batch_processed_at
-            .to_option()
-            .is_some_and(|last_batch_processed_at| {
-                current_timestamp - (last_batch_processed_at as i64) < self.batch_threshold_interval_seconds
-            })
+        current_timestamp - self.last_batch_processed_at > self.batch_threshold_interval_seconds
     }
 
     fn assert_request_issued(&self, request: &WithdrawalRequest) -> Result<()> {
@@ -217,19 +169,22 @@ impl WithdrawalState {
     }
 
     pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) {
-        if self.queued_batches.len() == MAX_QUEUED_WITHDRAWAL_BATCHES {
+        if self.num_queued_batches >= MAX_QUEUED_WITHDRAWAL_BATCHES as u8 {
             return;
         }
 
         let batch_id = self.next_batch_id;
         self.next_batch_id += 1;
-        let new_pending_batch = WithdrawalBatch::new(batch_id);
-        let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, new_pending_batch);
+        self.num_queued_batches += 1;
+        let new_pending_batch = &mut self.queued_batches[self.num_queued_batches as usize];
+        new_pending_batch.initialize(batch_id);
+
+        let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, *new_pending_batch);
 
         self.num_requests_in_progress += old_pending_batch.num_requests;
-        self.last_batch_enqueued_at = Some(current_timestamp as i128).into();
-        old_pending_batch.enqueued_at = Some(current_timestamp as i128).into();
-        self.queued_batches.push(old_pending_batch);
+        self.last_batch_enqueued_at = current_timestamp;
+        old_pending_batch.enqueued_at = current_timestamp;
+        self.queued_batches[self.num_queued_batches as usize] = old_pending_batch;
     }
 
     pub fn dequeue_batches(
@@ -241,17 +196,28 @@ impl WithdrawalState {
             return vec![];
         }
 
-        count = count.min(self.queued_batches.len());
+        count = count.min(self.num_queued_batches as usize);
         self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
-        self.last_batch_processed_at = Some(current_timestamp as i128).into();
-        let remaining_batches = self.queued_batches.split_off(count);
-        let processing_batches = std::mem::replace(&mut self.queued_batches, remaining_batches);
+        self.last_batch_processed_at = current_timestamp;
+        let processing_batches = self.queued_batches[..count].to_vec();
 
+        for i in 0..self.num_queued_batches as usize {
+            if i < (self.num_queued_batches as usize) - count {
+                self.queued_batches[i] = self.queued_batches[i + count];
+            } else {
+                self.queued_batches[i] = WithdrawalBatch::zeroed()
+            }
+        }
+        self.num_queued_batches -= count as u8;
+
+        for processing_batch in &processing_batches {
+            self.num_requests_in_progress -= processing_batch.num_requests
+        }
         processing_batches
-            .iter()
-            .for_each(|batch| self.num_requests_in_progress -= batch.num_requests);
+    }
 
-        processing_batches.into_iter().cloned().collect()
+    pub fn get_queued_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
+        self.queued_batches[..self.num_queued_batches as usize].iter()
     }
 }
 
@@ -261,32 +227,16 @@ pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,
-    _padding: [u8; 8],
-    enqueued_at: OptionPod<i128>,
+    enqueued_at: i64,
     _reserved: [u8; 32],
 }
 
 impl WithdrawalBatch {
-    fn migrate(&mut self, fund_account_data_version: u16) {
-        if fund_account_data_version == 3 {
-            // receipt_token_amount_to_process -> receipt_token_amount
-            // receipt_token_being_processed: u64 -> _reserved
-            // receipt_token_processed: u64 -> _reserved
-            // sol_reserved: u64 -> _reserved
-            // procssed_at: Option<i64> -> _reserved + _padding
-            self._reserved = Default::default();
-        }
-    }
-
-    fn new(batch_id: u64) -> Self {
-        Self {
-            batch_id,
-            num_requests: 0,
-            receipt_token_amount: 0,
-            _padding: [0; 8],
-            enqueued_at: None.into(),
-            _reserved: Default::default(),
-        }
+    fn initialize(&mut self, batch_id: u64) {
+        self.batch_id = batch_id;
+        self.num_requests = 0;
+        self.receipt_token_amount = 0;
+        self.enqueued_at = 0;
     }
 
     fn add_request(&mut self, request: &WithdrawalRequest) -> Result<()> {

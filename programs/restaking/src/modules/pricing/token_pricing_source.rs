@@ -86,7 +86,7 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
             },
             #[cfg(test)]
             TokenPricingSource::Mock { .. } => Self {
-                discriminant: 0,
+                discriminant: 255,
                 _padding: [0; 15],
                 address: Pubkey::default(),
             },
@@ -94,29 +94,30 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
     }
 }
 
-impl From<TokenPricingSourcePod> for TokenPricingSource {
+impl From<TokenPricingSourcePod> for Option<TokenPricingSource> {
     fn from(pod: TokenPricingSourcePod) -> Self {
         match pod.discriminant {
-            1 => Self::SPLStakePool {
+            0 => None,
+            1 => Some(TokenPricingSource::SPLStakePool {
                 address: pod.address,
-            },
-            2 => Self::MarinadeStakePool {
+            }),
+            2 => Some(TokenPricingSource::MarinadeStakePool {
                 address: pod.address,
-            },
-            3 => Self::JitoRestakingVault {
+            }),
+            3 => Some(TokenPricingSource::JitoRestakingVault {
                 address: pod.address,
-            },
-            4 => Self::FragmetricNormalizedTokenPool {
+            }),
+            4 => Some(TokenPricingSource::FragmetricNormalizedTokenPool {
                 address: pod.address,
-            },
-            5 => Self::FragmetricRestakingFund {
+            }),
+            5 => Some(TokenPricingSource::FragmetricRestakingFund {
                 address: pod.address,
-            },
+            }),
             #[cfg(test)]
-            0 => Self::Mock {
-                denominator: 0,
+            255 => Some(TokenPricingSource::Mock {
+                denominator: 255,
                 numerator: vec![],
-            },
+            }),
             _ => panic!("invalid discriminant for TokenPricingSource"),
         }
     }
