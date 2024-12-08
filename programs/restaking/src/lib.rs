@@ -40,12 +40,17 @@ pub mod restaking {
 
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
+        desired_account_size: Option<u32>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_fund_account_if_needed()
+        .process_update_fund_account_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            desired_account_size,
+        )
     }
 
     ////////////////////////////////////////////

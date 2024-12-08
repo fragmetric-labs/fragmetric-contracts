@@ -10,7 +10,7 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{
     Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
 };
-use crate::utils::{get_proportional_amount, ArrayPod, OptionPod, PDASeeds};
+use crate::utils::{get_proportional_amount, ArrayPod, OptionPod, PDASeeds, ZeroCopyHeader};
 
 use super::*;
 
@@ -84,6 +84,12 @@ impl PDASeeds<2> for FundAccount {
 
     fn get_bump_ref(&self) -> &u8 {
         &self.bump
+    }
+}
+
+impl ZeroCopyHeader for FundAccount {
+    fn get_bump_offset() -> usize {
+        2
     }
 }
 

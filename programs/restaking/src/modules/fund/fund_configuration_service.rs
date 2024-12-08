@@ -7,7 +7,7 @@ use anchor_spl::token_interface::*;
 use crate::events;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
-
+use crate::utils::AccountLoaderExt;
 use super::*;
 
 pub struct FundConfigurationService<'info: 'a, 'a> {
@@ -36,28 +36,53 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         receipt_token_program: &Program<'info, Token2022>,
         receipt_token_mint_current_authority: &Signer<'info>,
-        bump: u8,
+        fund_account_bump: u8,
     ) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.initialize(bump, self.receipt_token_mint);
+        if self.fund_account.as_ref().data_len() < 8 + std::mem::size_of::<FundAccount>() {
+            self.fund_account
+                .initialize_zero_copy_header(fund_account_bump)?;
+        } else {
+            self.fund_account
+                .load_init()?
+                .initialize(fund_account_bump, self.receipt_token_mint);
 
-        // set token mint authority
-        token_2022::set_authority(
-            CpiContext::new(
-                receipt_token_program.to_account_info(),
-                token_2022::SetAuthority {
-                    current_authority: receipt_token_mint_current_authority.to_account_info(),
-                    account_or_mint: self.receipt_token_mint.to_account_info(),
-                },
-            ),
-            spl_token_2022::instruction::AuthorityType::MintTokens,
-            Some(self.fund_account.key()),
-        )
+            // set token mint authority
+            if self.receipt_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
+                token_2022::set_authority(
+                    CpiContext::new(
+                        receipt_token_program.to_account_info(),
+                        token_2022::SetAuthority {
+                            current_authority: receipt_token_mint_current_authority.to_account_info(),
+                            account_or_mint: self.receipt_token_mint.to_account_info(),
+                        },
+                    ),
+                    spl_token_2022::instruction::AuthorityType::MintTokens,
+                    Some(self.fund_account.key()),
+                )?;
+            }
+        }
+
+        Ok(())
     }
 
-    pub fn process_update_fund_account_if_needed(&mut self) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.update_if_needed(self.receipt_token_mint);
+    pub fn process_update_fund_account_if_needed(
+        &self,
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        self.fund_account.expand_account_size_if_needed(
+            payer,
+            system_program,
+            desired_account_size,
+        )?;
+
+        if self.fund_account.as_ref().data_len() >= 8 + std::mem::size_of::<FundAccount>() {
+            self.fund_account
+                .load_mut()?
+                .update_if_needed(self.receipt_token_mint);
+        }
+
         Ok(())
     }
 

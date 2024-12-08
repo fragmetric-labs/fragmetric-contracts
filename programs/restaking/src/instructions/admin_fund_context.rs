@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::modules::fund::FundAccount;
-use crate::utils::PDASeeds;
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // will be used only once
 #[derive(Accounts)]
@@ -35,7 +35,7 @@ pub struct AdminFundAccountInitialContext<'info> {
         bump,
         space = std::cmp::min(
             solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
-            8 + FundAccount::INIT_SPACE,
+            8 + std::mem::size_of::<FundAccount>(),
         ),
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
@@ -63,12 +63,8 @@ pub struct AdminFundAccountUpdateContext<'info> {
 
     #[account(
         mut,
-        realloc = 8 + FundAccount::INIT_SPACE,
-        realloc::payer = payer,
-        realloc::zero = false,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
-        has_one = receipt_token_mint,
+        bump = fund_account.get_bump()?,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 }
