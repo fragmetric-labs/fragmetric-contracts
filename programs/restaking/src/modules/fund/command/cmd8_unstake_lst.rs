@@ -80,7 +80,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                     let mut command = self.clone();
                     command.state = UnstakeLSTCommandState::ReadPoolState;
 
-                    match token.pricing_source.into() {
+                    match (&token.pricing_source).into() {
                         Some(TokenPricingSource::SPLStakePool { address })
                         | Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
@@ -96,7 +96,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match token.pricing_source.into() {
+                    let mut required_accounts = match (&token.pricing_source).into() {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
@@ -197,7 +197,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let (to_sol_account_amount, returned_sol_amount) = match token.pricing_source.into() {
+                    let (to_sol_account_amount, returned_sol_amount) = match (&token.pricing_source).into() {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account.key);
 
@@ -272,7 +272,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                             .map(|account| (*account.key, account.is_writable)),
                     );
 
-                    match token.pricing_source.into() {
+                    match (&token.pricing_source).into() {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account.key);
 

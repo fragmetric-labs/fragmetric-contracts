@@ -6,7 +6,7 @@ use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 // TODO v0.3/operation: visibility
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,

@@ -8,7 +8,7 @@ use crate::modules::fund::SupportedToken;
 const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub(super) struct WithdrawalState {
     /// configurations
     pub enabled: u8,
@@ -222,7 +222,7 @@ impl WithdrawalState {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,

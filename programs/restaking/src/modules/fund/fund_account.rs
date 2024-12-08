@@ -16,14 +16,14 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v4: migrate to new layout including new fields using bytemuck.
+/// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 const MAX_SUPPORTED_TOKENS: usize = 16;
 const MAX_RESTAKING_VAULTS: usize = 8;
 
 #[account(zero_copy)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub struct FundAccount {
     data_version: u16,
     bump: u8,
@@ -482,11 +482,34 @@ impl FundAccount {
 mod tests {
     use super::*;
     use crate::modules::pricing::TokenPricingSource;
-    use anchor_lang::{AccountDeserialize, Space};
+    use anchor_lang::{solana_program, AccountDeserialize, Space};
 
     #[test]
     fn size_fund_account() {
-        println!("\nfund account init size: {}", std::mem::size_of::<FundAccount>());
+        let size = 8 + std::mem::size_of::<FundAccount>();
+        println!("\nfund account size={}, version={}", size, FUND_ACCOUNT_CURRENT_VERSION);
+        assert_eq!(size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE * (FUND_ACCOUNT_CURRENT_VERSION as usize), true);
+
+        assert_eq!(std::mem::size_of::<FundAccount>() % 8, 0);
+        assert_eq!(std::mem::align_of::<FundAccount>(), 8);
+
+        assert_eq!(std::mem::size_of::<WithdrawalState>() % 8, 0);
+        assert_eq!(std::mem::align_of::<WithdrawalState>(), 8);
+
+        assert_eq!(std::mem::size_of::<WithdrawalBatch>() % 8, 0);
+        assert_eq!(std::mem::align_of::<WithdrawalBatch>(), 8);
+
+        assert_eq!(std::mem::size_of::<SupportedToken>() % 8, 0);
+        assert_eq!(std::mem::align_of::<SupportedToken>(), 8);
+
+        assert_eq!(std::mem::size_of::<NormalizedToken>() % 8, 0);
+        assert_eq!(std::mem::align_of::<NormalizedToken>(), 8);
+
+        assert_eq!(std::mem::size_of::<RestakingVault>() % 8, 0);
+        assert_eq!(std::mem::align_of::<RestakingVault>(), 8);
+
+        assert_eq!(std::mem::size_of::<OperationState>() % 8, 0);
+        assert_eq!(std::mem::align_of::<OperationState>(), 8);
     }
 
     fn create_initialized_fund_account() -> FundAccount {

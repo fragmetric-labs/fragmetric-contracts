@@ -71,13 +71,13 @@ impl From<TokenValue> for TokenValuePod {
     }
 }
 
-impl From<TokenValuePod> for TokenValue {
-    fn from(pod: TokenValuePod) -> Self {
+impl From<&TokenValuePod> for TokenValue {
+    fn from(pod: &TokenValuePod) -> Self {
         Self {
             numerator: pod
                 .numerator
-                .into_iter()
-                .filter_map(|asset| asset.into())
+                .iter()
+                .filter_map(Into::into)
                 .collect::<Vec<_>>(),
             denominator: pod.denominator,
         }
@@ -105,10 +105,10 @@ impl std::fmt::Display for Asset {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub struct AssetPod {
     discriminant: u8,
-    _padding: [u8; 15],
+    _padding: [u8; 7],
     sol_amount: u64,
     token_amount: u64,
     token_mint: Pubkey,
@@ -120,7 +120,7 @@ impl From<Asset> for AssetPod {
         match src {
             Asset::SOL(sol_amount) => Self {
                 discriminant: 1,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 sol_amount,
                 token_amount: 0,
                 token_mint: Pubkey::default(),
@@ -128,7 +128,7 @@ impl From<Asset> for AssetPod {
             },
             Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
                 discriminant: 2,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 sol_amount: 0,
                 token_amount,
                 token_mint,
@@ -138,14 +138,14 @@ impl From<Asset> for AssetPod {
     }
 }
 
-impl From<AssetPod> for Option<Asset> {
-    fn from(pod: AssetPod) -> Self {
+impl From<&AssetPod> for Option<Asset> {
+    fn from(pod: &AssetPod) -> Self {
         match pod.discriminant {
             0 => None,
             1 => Some(Asset::SOL(pod.sol_amount)),
             2 => Some(Asset::Token(
                 pod.token_mint,
-                pod.token_pricing_source.into(),
+                (&pod.token_pricing_source).into(),
                 pod.token_amount,
             )),
             _ => panic!("invalid discriminant for TokenPricingSource"),

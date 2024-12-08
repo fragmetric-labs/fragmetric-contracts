@@ -119,7 +119,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .update_asset_values(&mut pricing_service)?;
 
         // log deposit event
-        let fund_account = self.fund_account.load_mut()?;
         emit!(events::UserDepositedSOLToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
@@ -129,7 +128,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(&fund_account),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?),
         });
 
         Ok(())
@@ -202,7 +201,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .update_asset_values(&mut pricing_service)?;
 
         // log deposit event
-        let fund_account = self.fund_account.load_mut()?;
         emit!(events::UserDepositedSupportedTokenToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
@@ -214,7 +212,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(&fund_account),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?),
         });
 
         Ok(())
@@ -419,30 +417,35 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
+        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = {
+            let mut fund_account = self.fund_account.load_mut()?;
 
-        // calculate $SOL amounts and mark withdrawal request as claimed
-        // withdrawal fee is already paid.
-        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-            self.user_fund_account.claim_withdrawal_request(
-                &mut fund_account.withdrawal,
-                fund_batch_withdrawal_ticket_account,
-                request_id,
-            )?;
+            // calculate $SOL amounts and mark withdrawal request as claimed
+            // withdrawal fee is already paid.
+            let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
+                self.user_fund_account.claim_withdrawal_request(
+                    &mut fund_account.withdrawal,
+                    fund_batch_withdrawal_ticket_account,
+                    request_id,
+                )?;
 
-        // transfer sol_user_amount to user wallet
-        fund_reserve_account.sub_lamports(sol_user_amount)?;
-        self.user.add_lamports(sol_user_amount)?;
+            // transfer sol_user_amount to user wallet
+            fund_reserve_account.sub_lamports(sol_user_amount)?;
+            self.user.add_lamports(sol_user_amount)?;
 
-        // close ticket and collect rent if stale
-        if fund_batch_withdrawal_ticket_account.is_stale() {
-            fund_batch_withdrawal_ticket_account.close(fund_treasury_account.to_account_info())?;
-        }
+            // close ticket and collect rent if stale
+            if fund_batch_withdrawal_ticket_account.is_stale() {
+                fund_batch_withdrawal_ticket_account.close(fund_treasury_account.to_account_info())?;
+            }
+
+            (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
+        };
 
         // log withdraw event
+        let fund_account = self.fund_account.load()?;
         emit!(events::UserWithdrewSOLFromFund {
             receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: FundAccountInfo::from(&fund_account),
+            fund_account: FundAccountInfo::from(fund_account),
             request_id,
             user_fund_account: Clone::clone(self.user_fund_account),
             user: self.user.key(),

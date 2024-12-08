@@ -66,9 +66,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     private _getInitializeSteps() {
         return [
             () => this.runAdminInitializeFragSOLTokenMint(), // 0
-            () => this.runAdminInitializeFundAccounts(), // 1
-            () => this.runAdminUpdateFundAccounts(),
-            () => this.runAdminInitializeOrUpdateRewardAccounts(), // 2
+            () => this.runAdminInitializeOrUpdateFundAccount(), // 1
+            () => this.runAdminInitializeOrUpdateRewardAccount(), // 2
             () => this.runAdminInitializeFragSOLExtraAccountMetaList(), // 3
             () => this.runAdminInitializeNSOLTokenMint(), // 4
             () => this.runAdminInitializeNormalizedTokenPoolAccounts(), // 5
@@ -823,7 +822,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`updated token metadata:\n> ${JSON.stringify(tokenMetadata, null, 2)}`);
     }
 
-    public async runAdminInitializeOrUpdateRewardAccounts(batchSize = 35) {
+    public async runAdminInitializeOrUpdateRewardAccount(batchSize = 35) {
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragSOLReward)
             .then((a) => a.data.readInt16LE(8))
@@ -832,7 +831,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const targetVersion = parseInt(this.getConstant("rewardAccountCurrentVersion"));
         const instructions = [
             ...(currentVersion == 0 ? [this.program.methods.adminInitializeRewardAccount().accounts({payer: this.wallet.publicKey}).instruction()] : []),
-            ...new Array(targetVersion - currentVersion).fill(null).map((_, index, arr) => this.program.methods.adminUpdateRewardAccountsIfNeeded(null).accounts({payer: this.wallet.publicKey}).instruction()),
+            ...new Array(targetVersion - currentVersion).fill(null).map((_, index, arr) => this.program.methods.adminUpdateRewardAccountIfNeeded(null).accounts({payer: this.wallet.publicKey}).instruction()),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {
@@ -854,40 +853,45 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLRewardAccount};
     }
 
-    public async runAdminInitializeFundAccounts() {
-        await this.run({
-            instructions: [
-                spl.createAssociatedTokenAccountIdempotentInstruction(
-                    this.wallet.publicKey,
-                    this.knownAddress.fragSOLFundReceiptTokenLockAccount,
-                    this.knownAddress.fragSOLFund,
-                    this.knownAddress.fragSOLTokenMint,
-                    spl.TOKEN_2022_PROGRAM_ID,
-                ),
-                this.program.methods.adminInitializeFundAccount()
-                    .accounts({payer: this.wallet.publicKey})
-                    .instruction(),
-            ],
-            signerNames: ["ADMIN"],
-        });
+    public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
+        const currentVersion = await this.connection
+            .getAccountInfo(this.knownAddress.fragSOLFund)
+            .then((a) => a.data.readInt16LE(8))
+            .catch((err) => 0);
+
+        const targetVersion = parseInt(this.getConstant("fundAccountCurrentVersion"));
+        const instructions = [
+            spl.createAssociatedTokenAccountIdempotentInstruction(
+                this.wallet.publicKey,
+                this.knownAddress.fragSOLFundReceiptTokenLockAccount,
+                this.knownAddress.fragSOLFund,
+                this.knownAddress.fragSOLTokenMint,
+                spl.TOKEN_2022_PROGRAM_ID,
+            ),
+            ...(currentVersion == 0 ? [this.program.methods.adminInitializeFundAccount().accounts({payer: this.wallet.publicKey}).instruction()] : []),
+            ...new Array(targetVersion - currentVersion).fill(null).map((_, index, arr) => this.program.methods.adminUpdateFundAccountIfNeeded(null).accounts({payer: this.wallet.publicKey}).instruction()),
+        ];
+        if (instructions.length > 0) {
+            for (let i = 0; i < instructions.length / batchSize; i++) {
+                const batchedInstructions = [];
+                for (let j = i * batchSize; j < instructions.length && batchedInstructions.length < batchSize; j++) {
+                    batchedInstructions.push(instructions[j]);
+                }
+                logger.debug(`running batched instructions`.padEnd(LOG_PAD_LARGE), `${i * batchSize + batchedInstructions.length}/${instructions.length}`);
+                await this.run({
+                    instructions: batchedInstructions,
+                    signerNames: ["ADMIN"],
+                });
+            }
+        }
+
         const [fragSOLMint, fragSOLFundAccount] = await Promise.all([
             spl.getMint(this.connection, this.knownAddress.fragSOLTokenMint, "confirmed", spl.TOKEN_2022_PROGRAM_ID),
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed"),
         ]);
-        logger.notice("fragSOL fund account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+        logger.notice(`updated fund account version from=${currentVersion}, to=${fragSOLFundAccount.dataVersion}, target=${targetVersion}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
 
         return {fragSOLMint, fragSOLFundAccount};
-    }
-
-    public async runAdminUpdateFundAccounts() {
-        await this.run({
-            instructions: [this.program.methods.adminUpdateFundAccountIfNeeded().accounts({payer: this.wallet.publicKey}).instruction()],
-            signerNames: ["ADMIN"],
-        });
-        const fragSOLFundAccount = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, "confirmed");
-        logger.notice("fragSOL fund account updated".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
-
-        return {fragSOLFundAccount};
     }
 
     public async runAdminInitializeNormalizedTokenPoolAccounts() {

@@ -10,7 +10,7 @@ use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
     pub program: Pubkey,
@@ -32,7 +32,7 @@ pub(super) struct RestakingVault {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    _padding2: [u8; 15],
+    _padding2: [u8; 7],
     num_operators: u8,
     operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
 
@@ -131,7 +131,7 @@ impl RestakingVault {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub(super) struct RestakingVaultOperator {
     pub operator: Pubkey,
 

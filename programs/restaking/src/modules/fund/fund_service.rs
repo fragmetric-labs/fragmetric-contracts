@@ -60,17 +60,19 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<()> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
-        let mut fund_account = self.fund_account.load_mut()?;
 
         // update fund asset values
+        let receipt_token_mint_key = self.fund_account.load()?.receipt_token_mint.key();
         pricing_service.resolve_token_pricing_source(
-            &fund_account.receipt_token_mint.key(),
+            &receipt_token_mint_key,
             &TokenPricingSource::FragmetricRestakingFund {
                 address: self.fund_account.key(),
             },
         )?;
 
         // the values being written below are informative, only for event emission.
+        let mut fund_account = self.fund_account.load_mut()?;
+
         fund_account
             .get_supported_tokens_iter_mut()
             .try_for_each(|supported_token| {
@@ -190,99 +192,103 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
-        let mut operation_state = {
-            let mut fund_account = self.fund_account.load_mut()?;
-            std::mem::take(&mut fund_account.operation)
-        };
-        operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
+        let executed_commands = {
+            let mut operation_state = {
+                let mut fund_account = self.fund_account.load_mut()?;
+                std::mem::take(&mut fund_account.operation)
+            };
+            operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
-        let mut execution_count = 0;
-        let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
-            .iter()
-            .map(|info| (*info.key, info))
-            .collect();
-        let mut executed_commands = Vec::new();
+            let mut execution_count = 0;
+            let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
+                .iter()
+                .map(|info| (*info.key, info))
+                .collect();
+            let mut executed_commands = Vec::new();
 
-        'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
-        {
-            // rearrange given accounts in required order
-            let mut required_account_infos = Vec::new();
-            let mut unused_account_keys = remaining_accounts_map
-                .keys()
-                .cloned()
-                .collect::<BTreeSet<_>>();
+            'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
+            {
+                // rearrange given accounts in required order
+                let mut required_account_infos = Vec::new();
+                let mut unused_account_keys = remaining_accounts_map
+                    .keys()
+                    .cloned()
+                    .collect::<BTreeSet<_>>();
 
-            for account_meta in required_accounts {
-                // append required accounts in exact order
-                match remaining_accounts_map.get(&account_meta.pubkey) {
-                    Some(account) => {
-                        required_account_infos.push(*account);
-                        unused_account_keys.remove(&account_meta.pubkey);
-                    }
-                    None => {
-                        if execution_count > 0 {
-                            // maintain the current command and gracefully stop executing commands
-                            msg!(
+                for account_meta in required_accounts {
+                    // append required accounts in exact order
+                    match remaining_accounts_map.get(&account_meta.pubkey) {
+                        Some(account) => {
+                            required_account_infos.push(*account);
+                            unused_account_keys.remove(&account_meta.pubkey);
+                        }
+                        None => {
+                            if execution_count > 0 {
+                                // maintain the current command and gracefully stop executing commands
+                                msg!(
                                 "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
                                 operation_state.next_sequence,
                                 command,
                                 execution_count
                             );
-                            break 'command_loop;
-                        }
+                                break 'command_loop;
+                            }
 
-                        // error if it is the first command in this tx
-                        msg!(
+                            // error if it is the first command in this tx
+                            msg!(
                             "COMMAND#{}: {:?} has not enough accounts at the first execution",
                             operation_state.next_sequence,
                             command
                         );
-                        return err!(ErrorCode::OperationCommandAccountComputationException);
+                            return err!(ErrorCode::OperationCommandAccountComputationException);
+                        }
                     }
                 }
-            }
 
-            // append all unused accounts
-            // TODO v0.3/operation: write pricing sources in command?
-            for unused_account_key in &unused_account_keys {
-                // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
-                let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
-                required_account_infos.push(*remaining_account);
-            }
-
-            let mut ctx = OperationCommandContext {
-                operator,
-                receipt_token_mint: self.receipt_token_mint,
-                fund_account: self.fund_account,
-                system_program,
-            };
-            match command.execute(&mut ctx, required_account_infos.as_slice()) {
-                Ok(next_command) => {
-                    // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
-                    executed_commands.push(command.clone());
-                    operation_state.set_command(next_command, self.current_timestamp);
-                    execution_count += 1;
+                // append all unused accounts
+                // TODO v0.3/operation: write pricing sources in command?
+                for unused_account_key in &unused_account_keys {
+                    // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
+                    let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
+                    required_account_infos.push(*remaining_account);
                 }
-                Err(error) => {
-                    // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!(
+
+                let mut ctx = OperationCommandContext {
+                    operator,
+                    receipt_token_mint: self.receipt_token_mint,
+                    fund_account: self.fund_account,
+                    system_program,
+                };
+                match command.execute(&mut ctx, required_account_infos.as_slice()) {
+                    Ok(next_command) => {
+                        // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
+                        // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
+                        executed_commands.push(command.clone());
+                        operation_state.set_command(next_command, self.current_timestamp);
+                        execution_count += 1;
+                    }
+                    Err(error) => {
+                        // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
+                        msg!(
                         "COMMAND#{}: {:?} failed",
                         operation_state.next_sequence,
                         command
                     );
-                    return Err(error);
-                }
-            };
-        }
+                        return Err(error);
+                    }
+                };
+            }
 
-        // write back operation state
-        let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.operation = operation_state;
+            // write back operation state
+            let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.operation = operation_state;
+
+            executed_commands
+        };
 
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(&fund_account),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?),
             executed_commands,
         });
 

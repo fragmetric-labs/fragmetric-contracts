@@ -1,4 +1,4 @@
-use std::cell::RefMut;
+use std::cell::{Ref};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
@@ -13,8 +13,7 @@ pub struct FundAccountInfo {
     receipt_token_supply_amount: u64,
     receipt_token_value: TokenValue,
     one_receipt_token_as_sol: u64,
-    // TODO v0.3/events: re-design event structures
-    // supported_tokens: Vec<SupportedToken>,
+    supported_tokens: Vec<SupportedToken>,
     sol_capacity_amount: u64,
     sol_accumulated_deposit_amount: u64,
     sol_operation_reserved_amount: u64,
@@ -27,14 +26,14 @@ pub struct FundAccountInfo {
 
 impl FundAccountInfo {
     // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn from(fund_account: &RefMut<FundAccount>) -> Self {
+    pub(in crate::modules) fn from(fund_account: Ref<FundAccount>) -> Self {
         FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_decimals: fund_account.receipt_token_decimals,
             receipt_token_supply_amount: fund_account.receipt_token_supply_amount,
-            receipt_token_value: fund_account.receipt_token_value.into(),
+            receipt_token_value: (&fund_account.receipt_token_value).into(),
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
-            // supported_tokens: fund_account.supported_tokens.clone(),
+            supported_tokens: fund_account.get_supported_tokens_iter().copied().collect(),
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,

@@ -8,7 +8,7 @@ use super::command::*;
 const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub(super) struct OperationState {
     updated_at: i64,
     expired_at: i64,
@@ -64,7 +64,7 @@ impl OperationState {
     ) {
         // deal with no_transition state, to adjust next command.
         if self.no_transition == 1 {
-            let next_command: Option<OperationCommandEntry> = self.next_command.into();
+            let next_command: Option<OperationCommandEntry> = (&self.next_command).into();
             if let (Some(prev_entry), Some(next_entry)) = (next_command, &command) {
                 if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
@@ -93,7 +93,7 @@ impl OperationState {
 
     #[inline(always)]
     pub fn get_command(&self) -> Option<(OperationCommand, Vec<OperationCommandAccountMeta>)> {
-        let opt: Option<OperationCommandEntry> = self.next_command.into();
+        let opt: Option<OperationCommandEntry> = (&self.next_command).into();
         opt.map(|entry| (entry.command, entry.required_accounts))
     }
 }

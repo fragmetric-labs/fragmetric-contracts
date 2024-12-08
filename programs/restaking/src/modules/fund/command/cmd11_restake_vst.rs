@@ -189,7 +189,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         });
                     command.state = RestakeVSTCommandState::ReadVaultState;
 
-                    match restaking_vault.receipt_token_pricing_source.into() {
+                    match (&restaking_vault.receipt_token_pricing_source).into() {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             return Ok(Some(command.with_required_accounts(
                                 JitoRestakingVaultService::find_accounts_for_vault(address)?,
@@ -424,7 +424,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         None => {
                             command.state = RestakeVSTCommandState::ReadVaultState;
-                            match restaking_vault.receipt_token_pricing_source.into() {
+                            match (&restaking_vault.receipt_token_pricing_source).into() {
                                 Some(TokenPricingSource::JitoRestakingVault { address }) => {
                                     normalized_token_account_parsed.reload()?;
                                     command.operation_reserved_restake_token =
@@ -455,7 +455,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     let restaking_vault =
                         fund_account.get_restaking_vault(&item.vault_address)?;
 
-                    match restaking_vault.receipt_token_pricing_source.into() {
+                    match (&restaking_vault.receipt_token_pricing_source).into() {
                         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
                             let [vault_program, vault_account, vault_config, _remaining_accounts @ ..] =
                                 accounts
@@ -480,7 +480,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     let fund_account = ctx.fund_account.load()?;
                     let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
 
-                    match restaking_vault.receipt_token_pricing_source.into() {
+                    match (&restaking_vault.receipt_token_pricing_source).into() {
                         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
                             let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
                                 accounts

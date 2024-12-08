@@ -129,7 +129,7 @@ pub mod restaking {
     // AdminRewardAccountUpdateContext
     ////////////////////////////////////////////
 
-    pub fn admin_update_reward_accounts_if_needed(
+    pub fn admin_update_reward_account_if_needed(
         ctx: Context<AdminRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
@@ -679,7 +679,7 @@ pub mod restaking {
     // UserRewardAccountUpdateContext
     ////////////////////////////////////////////
 
-    pub fn user_update_reward_accounts_if_needed(
+    pub fn user_update_reward_account_if_needed(
         ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {

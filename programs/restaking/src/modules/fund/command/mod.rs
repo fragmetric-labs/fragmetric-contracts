@@ -62,7 +62,7 @@ pub enum OperationCommand {
 const OPERATION_COMMAND_BUFFER_SIZE: usize = 319;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(8))]
+#[repr(C)]
 pub struct OperationCommandPod {
     discriminant: u8,
     buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
@@ -94,8 +94,8 @@ impl From<OperationCommand> for OperationCommandPod {
     }
 }
 
-impl From<OperationCommandPod> for Option<OperationCommand> {
-    fn from(pod: OperationCommandPod) -> Self {
+impl From<&OperationCommandPod> for Option<OperationCommand> {
+    fn from(pod: &OperationCommandPod) -> Self {
         if pod.discriminant == 0 {
             return None;
         }
@@ -175,7 +175,7 @@ pub struct OperationCommandAccountMeta {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
-#[repr(C, align(8))]
+#[repr(C)]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
     is_writable: u8,
@@ -192,8 +192,8 @@ impl From<OperationCommandAccountMeta> for OperationCommandAccountMetaPod {
     }
 }
 
-impl From<OperationCommandAccountMetaPod> for OperationCommandAccountMeta {
-    fn from(pod: OperationCommandAccountMetaPod) -> Self {
+impl From<&OperationCommandAccountMetaPod> for OperationCommandAccountMeta {
+    fn from(pod: &OperationCommandAccountMetaPod) -> Self {
         Self {
             pubkey: pod.pubkey,
             is_writable: pod.is_writable == 1,
@@ -211,7 +211,7 @@ pub struct OperationCommandEntry {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(8))]
+#[repr(C)]
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,
     _padding: [u8; 7],
@@ -243,14 +243,14 @@ impl OperationCommandEntryPod {
     }
 }
 
-impl From<OperationCommandEntryPod> for Option<OperationCommandEntry> {
-    fn from(pod: OperationCommandEntryPod) -> Self {
-        let optional_command: Option<OperationCommand> = pod.command.into();
+impl From<&OperationCommandEntryPod> for Option<OperationCommandEntry> {
+    fn from(pod: &OperationCommandEntryPod) -> Self {
+        let optional_command: Option<OperationCommand> = (&pod.command).into();
         optional_command.map(|command| OperationCommandEntry {
             command,
             required_accounts: pod
                 .required_accounts
-                .into_iter()
+                .iter()
                 .take(pod.num_required_accounts as usize)
                 .map(Into::into)
                 .collect::<Vec<_>>(),

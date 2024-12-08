@@ -49,10 +49,10 @@ impl std::fmt::Display for TokenPricingSource {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
-#[repr(C, align(16))]
+#[repr(C)]
 pub struct TokenPricingSourcePod {
     discriminant: u8,
-    _padding: [u8; 15],
+    _padding: [u8; 7],
     address: Pubkey,
 }
 
@@ -61,41 +61,41 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
         match src {
             TokenPricingSource::SPLStakePool { address } => Self {
                 discriminant: 1,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address,
             },
             TokenPricingSource::MarinadeStakePool { address } => Self {
                 discriminant: 2,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address,
             },
             TokenPricingSource::JitoRestakingVault { address } => Self {
                 discriminant: 3,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address,
             },
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => Self {
                 discriminant: 4,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address,
             },
             TokenPricingSource::FragmetricRestakingFund { address } => Self {
                 discriminant: 5,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address,
             },
             #[cfg(test)]
             TokenPricingSource::Mock { .. } => Self {
                 discriminant: 255,
-                _padding: [0; 15],
+                _padding: [0; 7],
                 address: Pubkey::default(),
             },
         }
     }
 }
 
-impl From<TokenPricingSourcePod> for Option<TokenPricingSource> {
-    fn from(pod: TokenPricingSourcePod) -> Self {
+impl From<&TokenPricingSourcePod> for Option<TokenPricingSource> {
+    fn from(pod: &TokenPricingSourcePod) -> Self {
         match pod.discriminant {
             0 => None,
             1 => Some(TokenPricingSource::SPLStakePool {

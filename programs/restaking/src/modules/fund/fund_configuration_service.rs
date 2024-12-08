@@ -1,4 +1,3 @@
-use std::cell::RefMut;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
@@ -45,23 +44,22 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             self.fund_account
                 .load_init()?
                 .initialize(fund_account_bump, self.receipt_token_mint);
-
-            // set token mint authority
-            if self.receipt_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
-                token_2022::set_authority(
-                    CpiContext::new(
-                        receipt_token_program.to_account_info(),
-                        token_2022::SetAuthority {
-                            current_authority: receipt_token_mint_current_authority.to_account_info(),
-                            account_or_mint: self.receipt_token_mint.to_account_info(),
-                        },
-                    ),
-                    spl_token_2022::instruction::AuthorityType::MintTokens,
-                    Some(self.fund_account.key()),
-                )?;
-            }
         }
 
+        // set token mint authority
+        if self.receipt_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
+            token_2022::set_authority(
+                CpiContext::new(
+                    receipt_token_program.to_account_info(),
+                    token_2022::SetAuthority {
+                        current_authority: receipt_token_mint_current_authority.to_account_info(),
+                        account_or_mint: self.receipt_token_mint.to_account_info(),
+                    },
+                ),
+                spl_token_2022::instruction::AuthorityType::MintTokens,
+                Some(self.fund_account.key()),
+            )?;
+        }
         Ok(())
     }
 
@@ -115,7 +113,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        self.emit_fund_manager_updated_fund_event()
+        self.emit_fund_manager_updated_fund_event()?;
+
+        Ok(())
     }
 
     pub fn process_set_normalized_token(
@@ -340,10 +340,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     }
 
     fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
-        let fund_account = self.fund_account.load_mut()?;
+        let fund_account = self.fund_account.load()?;
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(&fund_account),
+            fund_account: FundAccountInfo::from(fund_account),
         });
 
         Ok(())

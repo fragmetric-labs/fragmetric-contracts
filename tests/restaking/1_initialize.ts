@@ -32,17 +32,14 @@ describe("initialize", async () => {
     });
 
     step("initialize fund accounts", async () => {
-        const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
+        const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeOrUpdateFundAccount();
 
         expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
-
-        await restaking.runAdminUpdateFundAccounts();
-
         expect(fragSOLFundAccount.dataVersion).gt(1);
     })
 
     step("initialize reward accounts", async () => {
-        const {fragSOLRewardAccount} = await restaking.runAdminInitializeOrUpdateRewardAccounts();
+        const {fragSOLRewardAccount} = await restaking.runAdminInitializeOrUpdateRewardAccount();
 
         expect(fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
     })
