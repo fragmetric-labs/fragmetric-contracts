@@ -150,7 +150,8 @@ pub mod restaking {
 
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
-        sol_accumulated_deposit_amount: u64,
+        sol_accumulated_deposit_capacity_amount: u64,
+        sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawal_fee_rate_bps: u16,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
@@ -162,6 +163,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_strategy(
+            sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount,
             sol_withdrawal_fee_rate_bps,
             sol_withdrawal_normal_reserve_rate_bps,
@@ -175,6 +177,7 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         token_mint: Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
+        token_accumulated_deposit_amount: Option<u64>,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -186,6 +189,7 @@ pub mod restaking {
         .process_update_supported_token_strategy(
             &token_mint,
             token_accumulated_deposit_capacity_amount,
+            token_accumulated_deposit_amount,
             token_rebalancing_amount,
             sol_allocation_weight,
             sol_allocation_capacity_amount,

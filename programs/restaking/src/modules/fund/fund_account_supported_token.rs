@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
@@ -77,7 +77,22 @@ impl SupportedToken {
         self.operation_receivable_amount = amount;
     }
 
-    pub(super) fn set_accumulated_deposit_capacity_amount(&mut self, token_amount: u64) -> Result<()> {
+    pub(super) fn set_accumulated_deposit_amount(&mut self, token_amount: u64) -> Result<()> {
+        require_gte!(
+            self.accumulated_deposit_capacity_amount,
+            token_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.accumulated_deposit_amount = token_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn set_accumulated_deposit_capacity_amount(
+        &mut self,
+        token_amount: u64,
+    ) -> Result<()> {
         require_gte!(
             token_amount,
             self.accumulated_deposit_amount,
@@ -89,7 +104,11 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn set_sol_allocation_strategy(&mut self, weight: u64, sol_capacity_amount: u64) -> Result<()> {
+    pub(super) fn set_sol_allocation_strategy(
+        &mut self,
+        weight: u64,
+        sol_capacity_amount: u64,
+    ) -> Result<()> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
 

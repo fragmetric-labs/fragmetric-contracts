@@ -1,6 +1,5 @@
-use std::cell::{Ref};
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use std::cell::Ref;
 
 use crate::modules::pricing::TokenValue;
 
@@ -31,7 +30,7 @@ impl FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_decimals: fund_account.receipt_token_decimals,
             receipt_token_supply_amount: fund_account.receipt_token_supply_amount,
-            receipt_token_value: (&fund_account.receipt_token_value).into(),
+            receipt_token_value: fund_account.receipt_token_value.deserialize(),
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             supported_tokens: fund_account.get_supported_tokens_iter().copied().collect(),
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,

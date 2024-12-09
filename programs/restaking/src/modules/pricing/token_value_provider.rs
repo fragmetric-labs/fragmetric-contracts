@@ -52,11 +52,17 @@ impl std::fmt::Display for TokenValue {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C, align(8))]
+#[repr(C)]
 pub struct TokenValuePod {
-    pub numerator: [AssetPod; TOKEN_VALUE_NUMERATOR_MAX_SIZE],
+    numerator: [AssetPod; TOKEN_VALUE_NUMERATOR_MAX_SIZE],
     num_numerator: u64,
-    pub denominator: u64,
+    denominator: u64,
+}
+
+impl TokenValuePod {
+    pub fn deserialize(&self) -> TokenValue {
+        self.into()
+    }
 }
 
 impl From<TokenValue> for TokenValuePod {
@@ -77,7 +83,7 @@ impl From<&TokenValuePod> for TokenValue {
             numerator: pod
                 .numerator
                 .iter()
-                .filter_map(Into::into)
+                .filter_map(|pod|Asset::try_from(pod).ok())
                 .collect::<Vec<_>>(),
             denominator: pod.denominator,
         }
@@ -108,7 +114,8 @@ impl std::fmt::Display for Asset {
 #[repr(C)]
 pub struct AssetPod {
     discriminant: u8,
-    _padding: [u8; 7],
+    has_token_pricing_source: u8,
+    _padding: [u8; 6],
     sol_amount: u64,
     token_amount: u64,
     token_mint: Pubkey,
@@ -120,7 +127,8 @@ impl From<Asset> for AssetPod {
         match src {
             Asset::SOL(sol_amount) => Self {
                 discriminant: 1,
-                _padding: [0; 7],
+                has_token_pricing_source: 0,
+                _padding: [0; 6],
                 sol_amount,
                 token_amount: 0,
                 token_mint: Pubkey::default(),
@@ -128,7 +136,8 @@ impl From<Asset> for AssetPod {
             },
             Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
                 discriminant: 2,
-                _padding: [0; 7],
+                has_token_pricing_source: if token_pricing_source.is_some() { 1 } else { 0 },
+                _padding: [0; 6],
                 sol_amount: 0,
                 token_amount,
                 token_mint,
@@ -138,18 +147,23 @@ impl From<Asset> for AssetPod {
     }
 }
 
-impl From<&AssetPod> for Option<Asset> {
-    fn from(pod: &AssetPod) -> Self {
-        match pod.discriminant {
-            0 => None,
-            1 => Some(Asset::SOL(pod.sol_amount)),
-            2 => Some(Asset::Token(
+impl TryFrom<&AssetPod> for Asset {
+    type Error = anchor_lang::error::Error;
+
+    fn try_from(pod: &AssetPod) -> Result<Asset> {
+        Ok(match pod.discriminant {
+            1 => Asset::SOL(pod.sol_amount),
+            2 => Asset::Token(
                 pod.token_mint,
-                (&pod.token_pricing_source).into(),
+                if pod.has_token_pricing_source == 1 {
+                    Some(pod.token_pricing_source.try_deserialize()?)
+                }  else {
+                    None
+                },
                 pod.token_amount,
-            )),
-            _ => panic!("invalid discriminant for TokenPricingSource"),
-        }
+            ),
+            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+        })
     }
 }
 

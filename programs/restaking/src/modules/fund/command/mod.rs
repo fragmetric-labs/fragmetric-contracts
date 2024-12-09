@@ -94,52 +94,25 @@ impl From<OperationCommand> for OperationCommandPod {
     }
 }
 
-impl From<&OperationCommandPod> for Option<OperationCommand> {
-    fn from(pod: &OperationCommandPod) -> Self {
-        if pod.discriminant == 0 {
-            return None;
-        }
-        Some(match pod.discriminant {
-            1 => InitializeCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            2 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            3 => EnqueueWithdrawalBatchCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            4 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            5 => ClaimUnrestakedVSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            6 => DenormalizeNTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            7 => UndelegateVSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            8 => UnrestakeVRTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            9 => UnstakeLSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            10 => StakeSOLCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            11 => NormalizeLSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            12 => RestakeVSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            13 => DelegateVSTCommand::try_from_slice(&pod.buffer[..])
-                .unwrap()
-                .into(),
-            _ => panic!("invalid discriminant for OperationCommand"),
+impl TryFrom<&OperationCommandPod> for OperationCommand {
+    type Error = anchor_lang::error::Error;
+
+    fn try_from(pod: &OperationCommandPod) -> Result<OperationCommand> {
+        Ok(match pod.discriminant {
+            1 => InitializeCommand::try_from_slice(&pod.buffer[..])?.into(),
+            2 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
+            3 => EnqueueWithdrawalBatchCommand::try_from_slice(&pod.buffer[..])?.into(),
+            4 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
+            5 => ClaimUnrestakedVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            6 => DenormalizeNTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            7 => UndelegateVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            8 => UnrestakeVRTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            9 => UnstakeLSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            10 => StakeSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
+            11 => NormalizeLSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            12 => RestakeVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            13 => DelegateVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
+            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
         })
     }
 }
@@ -229,7 +202,12 @@ impl From<OperationCommandEntry> for OperationCommandEntryPod {
     fn from(src: OperationCommandEntry) -> Self {
         let mut pod: OperationCommandEntryPod = OperationCommandEntryPod::zeroed();
         pod.num_required_accounts = src.required_accounts.len() as u8;
-        for (i, account_meta) in src.required_accounts.into_iter().take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE).enumerate() {
+        for (i, account_meta) in src
+            .required_accounts
+            .into_iter()
+            .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+            .enumerate()
+        {
             pod.required_accounts[i] = account_meta.into();
         }
         pod.command = src.command.into();
@@ -243,11 +221,12 @@ impl OperationCommandEntryPod {
     }
 }
 
-impl From<&OperationCommandEntryPod> for Option<OperationCommandEntry> {
-    fn from(pod: &OperationCommandEntryPod) -> Self {
-        let optional_command: Option<OperationCommand> = (&pod.command).into();
-        optional_command.map(|command| OperationCommandEntry {
-            command,
+impl TryFrom<&OperationCommandEntryPod> for OperationCommandEntry {
+    type Error = anchor_lang::error::Error;
+
+    fn try_from(pod: &OperationCommandEntryPod) -> Result<OperationCommandEntry> {
+        Ok(OperationCommandEntry {
+            command: (&pod.command).try_into()?,
             required_accounts: pod
                 .required_accounts
                 .iter()

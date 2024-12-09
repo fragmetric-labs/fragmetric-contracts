@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
 
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 use crate::modules::reward::RewardType::Token;
@@ -11,7 +11,7 @@ pub(super) struct NormalizedToken {
     pub program: Pubkey,
     pub decimals: u8,
     pub enabled: u8,
-    _padding: [u8; 14],
+    _padding: [u8; 6],
     pub pricing_source: TokenPricingSourcePod,
     pub one_token_as_sol: u64,
     pub operation_reserved_amount: u64,
@@ -33,7 +33,8 @@ impl NormalizedToken {
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
-        self.pricing_source = TokenPricingSource::FragmetricNormalizedTokenPool { address: pool }.into();
+        self.pricing_source =
+            TokenPricingSource::FragmetricNormalizedTokenPool { address: pool }.into();
         self.operation_reserved_amount = operation_reserved_amount;
 
         Ok(())

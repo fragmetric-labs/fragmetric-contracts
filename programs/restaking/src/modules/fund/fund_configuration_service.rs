@@ -3,11 +3,11 @@ use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
 
+use super::*;
 use crate::events;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::utils::AccountLoaderExt;
-use super::*;
 
 pub struct FundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -238,7 +238,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_fund_strategy(
         &mut self,
-        sol_accumulated_deposit_amount: u64,
+        sol_accumulated_deposit_capacity_amount: u64,
+        sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawal_fee_rate_bps: u16,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
@@ -248,7 +249,11 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         let mut fund_account = self.fund_account.load_mut()?;
 
         fund_account
-            .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
+            .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
+        if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
+            fund_account
+                .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
+        }
         fund_account
             .withdrawal
             .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
@@ -265,6 +270,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             .withdrawal
             .set_withdrawal_enabled(withdrawal_enabled);
 
+        drop(fund_account);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
@@ -272,6 +279,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         token_mint: &Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
+        token_accumulated_deposit_amount: Option<u64>,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -279,13 +287,19 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         let mut fund_account = self.fund_account.load_mut()?;
         let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
+        supported_token
+            .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
+        if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
+            supported_token.set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
+        }
+
         if let Some(token_amount) = token_rebalancing_amount {
             supported_token.set_rebalancing_strategy(token_amount)?;
         }
         supported_token
-            .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
-        supported_token
             .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -300,6 +314,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         let vault = fund_account.get_restaking_vault_mut(vault)?;
         vault.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 
+        drop(fund_account);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
@@ -312,6 +328,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         fund_account
             .get_restaking_vault_mut(vault)?
             .add_operator(operator)?;
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -336,11 +354,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             operator.set_supported_token_redelegation_amount(token_amount)?;
         }
 
+        drop(fund_account);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
     fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
         let fund_account = self.fund_account.load()?;
+
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(fund_account),

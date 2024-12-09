@@ -283,6 +283,18 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
+    pub(super) fn set_sol_accumulated_deposit_amount(&mut self, sol_amount: u64) -> Result<()> {
+        require_gte!(
+            self.sol_accumulated_deposit_capacity_amount,
+            sol_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.sol_accumulated_deposit_amount = sol_amount;
+
+        Ok(())
+    }
+
     pub(super) fn set_sol_accumulated_deposit_capacity_amount(
         &mut self,
         sol_amount: u64,
@@ -305,7 +317,10 @@ impl FundAccount {
         decimals: u8,
         pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        if self.get_supported_tokens_iter().any(|info| info.mint == mint) {
+        if self
+            .get_supported_tokens_iter()
+            .any(|info| info.mint == mint)
+        {
             err!(ErrorCode::FundAlreadySupportedTokenError)?
         }
 
@@ -316,12 +331,7 @@ impl FundAccount {
         );
 
         let supported_token = &mut self.supported_tokens[self.num_supported_tokens as usize];
-        supported_token.initialize(
-            mint,
-            program,
-            decimals,
-            pricing_source,
-        )?;
+        supported_token.initialize(mint, program, decimals, pricing_source)?;
         self.num_supported_tokens += 1;
 
         Ok(())
@@ -356,20 +366,16 @@ impl FundAccount {
         }
 
         let normalized_token = &mut self.normalized_token;
-        normalized_token.initialize(
-            mint,
-            program,
-            decimals,
-            pool,
-            operation_reserved_amount,
-        )
+        normalized_token.initialize(mint, program, decimals, pool, operation_reserved_amount)
     }
 
-    pub fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
+    pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
         self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
     }
 
-    pub fn get_restaking_vaults_iter_mut(&mut self) -> impl Iterator<Item = &mut RestakingVault> {
+    pub(super) fn get_restaking_vaults_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut RestakingVault> {
         self.restaking_vaults[..self.num_restaking_vaults as usize].iter_mut()
     }
 
@@ -417,7 +423,10 @@ impl FundAccount {
             receipt_token_program,
             receipt_token_decimals,
             receipt_token_operation_reserved_amount,
-        )
+        )?;
+        self.num_restaking_vaults += 1;
+
+        Ok(())
     }
 
     pub(super) fn reload_receipt_token_supply(
@@ -482,13 +491,20 @@ impl FundAccount {
 mod tests {
     use super::*;
     use crate::modules::pricing::TokenPricingSource;
-    use anchor_lang::{solana_program, AccountDeserialize, Space};
+    use anchor_lang::{solana_program, AccountDeserialize};
 
     #[test]
     fn size_fund_account() {
         let size = 8 + std::mem::size_of::<FundAccount>();
-        println!("\nfund account size={}, version={}", size, FUND_ACCOUNT_CURRENT_VERSION);
-        assert_eq!(size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE * (FUND_ACCOUNT_CURRENT_VERSION as usize), true);
+        println!(
+            "\nfund account size={}, version={}",
+            size, FUND_ACCOUNT_CURRENT_VERSION
+        );
+        assert_eq!(
+            size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
+                * (FUND_ACCOUNT_CURRENT_VERSION as usize),
+            true
+        );
 
         assert_eq!(std::mem::size_of::<FundAccount>() % 8, 0);
         assert_eq!(std::mem::align_of::<FundAccount>(), 8);
@@ -586,7 +602,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(fund.supported_tokens.len(), 2);
+        assert_eq!(fund.num_supported_tokens, 2);
         assert_eq!(
             fund.supported_tokens[0].accumulated_deposit_capacity_amount,
             1_000_000_000

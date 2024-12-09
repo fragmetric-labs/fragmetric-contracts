@@ -128,9 +128,9 @@ impl SelfExecutable for StakeSOLCommand {
 
                             let fund_account = ctx.fund_account.load()?;
                             let token = fund_account.get_supported_token(&item.mint)?;
-                            match (&token.pricing_source).into() {
-                                Some(TokenPricingSource::SPLStakePool { address })
-                                | Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                            match token.pricing_source.try_deserialize()? {
+                                TokenPricingSource::SPLStakePool { address }
+                                | TokenPricingSource::MarinadeStakePool { address } => {
                                     return Ok(Some(
                                         command.with_required_accounts([(address, false)]),
                                     ));
@@ -159,8 +159,8 @@ impl SelfExecutable for StakeSOLCommand {
                                 ),
                             ];
 
-                            required_accounts.extend(match (&token.pricing_source).into() {
-                                Some(TokenPricingSource::SPLStakePool { address }) => {
+                            required_accounts.extend(match token.pricing_source.try_deserialize()? {
+                                TokenPricingSource::SPLStakePool { address } => {
                                     #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
@@ -168,7 +168,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_account,
                                     )?
                                 }
-                                Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                                TokenPricingSource::MarinadeStakePool { address } => {
                                     #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
@@ -195,8 +195,8 @@ impl SelfExecutable for StakeSOLCommand {
                                 to_pool_token_account_amount,
                                 minted_supported_token_amount,
                                 expected_minted_supported_token_amount,
-                            ) = match (&token_pricing_source).into() {
-                                Some(TokenPricingSource::SPLStakePool { address }) => {
+                            ) = match token_pricing_source.try_deserialize()? {
+                                TokenPricingSource::SPLStakePool { address } => {
                                     let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
                                         accounts
                                     else {
@@ -243,7 +243,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         expected_minted_supported_token_amount,
                                     )
                                 }
-                                Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                                TokenPricingSource::MarinadeStakePool { address } => {
                                     let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
                                         accounts
                                     else {

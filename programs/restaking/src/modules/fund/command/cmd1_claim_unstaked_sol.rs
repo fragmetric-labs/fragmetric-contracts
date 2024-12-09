@@ -58,8 +58,8 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                     let mut command = self.clone();
                     command.state = ClaimUnstakedSOLCommandState::ReadPoolState;
 
-                    match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                    match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address } => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
@@ -73,8 +73,8 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
                             staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(

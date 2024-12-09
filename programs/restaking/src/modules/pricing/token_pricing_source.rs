@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Zeroable, Pod};
+use bytemuck::{Pod, Zeroable};
 
 #[cfg(test)]
 use crate::modules::pricing::MockAsset;
@@ -56,6 +56,12 @@ pub struct TokenPricingSourcePod {
     address: Pubkey,
 }
 
+impl TokenPricingSourcePod {
+    pub fn try_deserialize(&self) -> Result<TokenPricingSource> {
+        self.try_into()
+    }
+}
+
 impl From<TokenPricingSource> for TokenPricingSourcePod {
     fn from(src: TokenPricingSource) -> Self {
         match src {
@@ -94,31 +100,32 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
     }
 }
 
-impl From<&TokenPricingSourcePod> for Option<TokenPricingSource> {
-    fn from(pod: &TokenPricingSourcePod) -> Self {
-        match pod.discriminant {
-            0 => None,
-            1 => Some(TokenPricingSource::SPLStakePool {
+impl TryFrom<&TokenPricingSourcePod> for TokenPricingSource {
+    type Error = anchor_lang::error::Error;
+
+    fn try_from(pod: &TokenPricingSourcePod) -> Result<TokenPricingSource> {
+        Ok(match pod.discriminant {
+            1 => TokenPricingSource::SPLStakePool {
                 address: pod.address,
-            }),
-            2 => Some(TokenPricingSource::MarinadeStakePool {
+            },
+            2 => TokenPricingSource::MarinadeStakePool {
                 address: pod.address,
-            }),
-            3 => Some(TokenPricingSource::JitoRestakingVault {
+            },
+            3 => TokenPricingSource::JitoRestakingVault {
                 address: pod.address,
-            }),
-            4 => Some(TokenPricingSource::FragmetricNormalizedTokenPool {
+            },
+            4 => TokenPricingSource::FragmetricNormalizedTokenPool {
                 address: pod.address,
-            }),
-            5 => Some(TokenPricingSource::FragmetricRestakingFund {
+            },
+            5 => TokenPricingSource::FragmetricRestakingFund {
                 address: pod.address,
-            }),
+            },
             #[cfg(test)]
-            255 => Some(TokenPricingSource::Mock {
+            255 => TokenPricingSource::Mock {
                 denominator: 255,
                 numerator: vec![],
-            }),
-            _ => panic!("invalid discriminant for TokenPricingSource"),
-        }
+            },
+            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+        })
     }
 }

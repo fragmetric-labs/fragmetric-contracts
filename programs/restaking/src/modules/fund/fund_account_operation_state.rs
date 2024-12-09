@@ -1,7 +1,6 @@
-use std::mem::discriminant;
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-use crate::entry;
+use std::mem::discriminant;
 
 use super::command::*;
 
@@ -13,14 +12,13 @@ pub(super) struct OperationState {
     updated_at: i64,
     expired_at: i64,
 
-    _padding: [u8; 13],
+    _padding: [u8; 5],
     /// when the no_transition flag turned on, current command should not be transitioned to other command.
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
     no_transition: u8,
     pub next_sequence: u16,
 
     next_command: OperationCommandEntryPod,
-    _padding2: [u8; 8],
 
     _reserved: [u8; 128],
 }
@@ -40,10 +38,7 @@ impl OperationState {
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
 
-        if has_reset_command
-            || self.next_command.is_none()
-            || current_timestamp > self.expired_at
-        {
+        if has_reset_command || self.next_command.is_none() || current_timestamp > self.expired_at {
             self.no_transition = 0;
             self.next_sequence = 0;
             self.set_command(
@@ -64,8 +59,8 @@ impl OperationState {
     ) {
         // deal with no_transition state, to adjust next command.
         if self.no_transition == 1 {
-            let next_command: Option<OperationCommandEntry> = (&self.next_command).into();
-            if let (Some(prev_entry), Some(next_entry)) = (next_command, &command) {
+            let prev_command: Result<OperationCommandEntry> = (&self.next_command).try_into();
+            if let (Ok(prev_entry), Some(next_entry)) = (&prev_command, &command) {
                 if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
                     msg!(
@@ -92,8 +87,8 @@ impl OperationState {
     }
 
     #[inline(always)]
-    pub fn get_command(&self) -> Option<(OperationCommand, Vec<OperationCommandAccountMeta>)> {
-        let opt: Option<OperationCommandEntry> = (&self.next_command).into();
-        opt.map(|entry| (entry.command, entry.required_accounts))
+    pub fn get_command(&self) -> Result<(OperationCommand, Vec<OperationCommandAccountMeta>)> {
+        let command: Result<OperationCommandEntry> = (&self.next_command).try_into();
+        command.map(|entry| (entry.command, entry.required_accounts))
     }
 }

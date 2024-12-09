@@ -80,9 +80,9 @@ impl SelfExecutable for UnstakeLSTCommand {
                     let mut command = self.clone();
                     command.state = UnstakeLSTCommandState::ReadPoolState;
 
-                    match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address })
-                        | Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                    match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address }
+                        | TokenPricingSource::MarinadeStakePool { address } => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
@@ -96,15 +96,15 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
                             staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
                                 pool_account_info,
                             )?
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        TokenPricingSource::MarinadeStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
                             todo!() // TODO: support marinade..
@@ -197,8 +197,8 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let (to_sol_account_amount, returned_sol_amount) = match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                    let (to_sol_account_amount, returned_sol_amount) = match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
                             staking::SPLStakePoolService::new(
@@ -221,7 +221,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 item.token_amount,
                             )?
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        TokenPricingSource::MarinadeStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
                             todo!() // TODO: support marinade..
@@ -272,8 +272,8 @@ impl SelfExecutable for UnstakeLSTCommand {
                             .map(|account| (*account.key, account.is_writable)),
                     );
 
-                    match (&token.pricing_source).into() {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                    match token.pricing_source.try_deserialize()? {
+                        TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
                             let spl_withdraw_stake_item = command.spl_withdraw_stake_items.pop();
@@ -323,7 +323,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 // nothing to do
                             }
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        TokenPricingSource::MarinadeStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
                             todo!() // TODO: support marinade..

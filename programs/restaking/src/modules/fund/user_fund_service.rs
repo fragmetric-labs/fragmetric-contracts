@@ -89,14 +89,18 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .transpose()?
             .unzip();
 
-        // calculate receipt token minting amount
-        let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
-        let receipt_token_mint_amount =
-            pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
+        // mint receipt token to user
+        let receipt_token_mint_amount = {
+            let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+                .new_pricing_service(pricing_sources)?;
+            let receipt_token_mint_amount =
+                pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
 
-        // mint receipt token to user & update user reward accrual status
-        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+            // mint receipt token to user & update user reward accrual status
+            self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+
+            receipt_token_mint_amount
+        };
 
         // transfer user $SOL to fund
         {
@@ -115,14 +119,14 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             )?;
         }
 
+        // to update asset value again
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .update_asset_values(&mut pricing_service)?;
+            .new_pricing_service(pricing_sources)?;
 
-        // log deposit event
         emit!(events::UserDepositedSOLToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: Clone::clone(self.user_fund_account.as_ref().clone()),
             deposited_sol_amount: sol_amount,
             receipt_token_mint: self.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
@@ -192,8 +196,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 ),
                 supported_token_amount,
                 supported_token_mint.decimals,
-            )
-            .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+            )?;
         }
 
         // update fund asset value
@@ -237,8 +240,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 &[fund_account.get_seeds().as_ref()],
             ),
             receipt_token_mint_amount,
-        )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        )?;
 
         fund_account
             .reload_receipt_token_supply(self.receipt_token_mint)?;
@@ -288,8 +290,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 },
             ),
             receipt_token_amount,
-        )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        )?;
 
         // then, mint receipt token to fund's lock account
         token_2022::mint_to(
@@ -303,8 +304,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 &[fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
-        )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        )?;
 
         receipt_token_lock_account.reload()?;
 
@@ -362,8 +362,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 &[fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
-        )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        )?;
 
         // then, mint receipt token to user's receipt token account
         token_2022::mint_to(
@@ -377,8 +376,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 &[fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount,
-        )
-        .map_err(|_| error!(ErrorCode::FundTokenTransferFailedException))?;
+        )?;
 
         receipt_token_lock_account.reload()?;
 

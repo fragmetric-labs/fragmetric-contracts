@@ -11,12 +11,11 @@ const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 #[repr(C)]
 pub(super) struct WithdrawalState {
     /// configurations
-    pub enabled: u8,
-    _padding: [u8; 5],
-    pub sol_fee_rate_bps: u16,
     pub batch_threshold_interval_seconds: i64,
+    pub sol_fee_rate_bps: u16,
+    pub enabled: u8,
+    _padding: [u8; 11],
 
-    _padding2: [u8; 14],
     /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
     pub sol_normal_reserve_rate_bps: u16,
     pub sol_normal_reserve_max_amount: u64,

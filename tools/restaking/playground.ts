@@ -970,6 +970,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.fragSOLFund,
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLJitoVaultProgramFeeWalletTokenAccount,
+                    this.knownAddress.jitoVaultProgramFeeWallet,
+                    this.knownAddress.fragSOLJitoVRTMint,
+                ),
                 this.program.methods.fundManagerInitializeFundJitoRestakingVault()
                     .accounts({payer: this.wallet.publicKey})
                     .remainingAccounts(this.pricingSourceAccounts)
@@ -979,28 +985,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ['fundManagerUpdatedFund'],
         });
 
-        const fragSOLFundJitoFeeVRTAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVaultFeeWalletTokenAccount, 'confirmed');
+        const [
+            fragSOLFundJitoFeeVRTAccount,
+            fragSOLJitoVaultNSOLAccount,
+            fragSOLFundJitoVRTAccount,
+            fragSOLJitoVaultProgramFeeWalletTokenAccount,
+            fragSOLFundAccount,
+        ] = await Promise.all([
+            spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVaultFeeWalletTokenAccount, 'confirmed'),
+            spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVaultNSOLAccount, 'confirmed'),
+            spl.getAccount(this.connection, this.knownAddress.fragSOLFundJitoVRTAccount, 'confirmed'),
+            spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVaultProgramFeeWalletTokenAccount, 'confirmed'),
+            this.getFragSOLFundAccount(),
+        ]);
         logger.notice("jito VRT fee account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLJitoVaultFeeWalletTokenAccount.toString());
-
-        const fragSOLJitoVaultNSOLAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLJitoVaultNSOLAccount, 'confirmed');
         logger.notice("jito nSOL account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLJitoVaultNSOLAccount.toString());
-
-        const fragSOLFundJitoVRTAccount = await spl.getAccount(this.connection, this.knownAddress.fragSOLFundJitoVRTAccount, 'confirmed');
         logger.notice("jito VRT account created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundJitoVRTAccount.toString());
+        logger.notice("jito VRT account (of program fee wallet) created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLJitoVaultProgramFeeWalletTokenAccount.toString());
 
-        await spl.getOrCreateAssociatedTokenAccount(
-            this.connection,
-            this.wallet,
-            this.knownAddress.fragSOLJitoVRTMint,
-            this.knownAddress.jitoVaultProgramFeeWallet,
-            true,
-            "confirmed",
-            {
-                skipPreflight: false,
-                commitment: "confirmed",
-            },
-        )
-        return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount};
+        return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
     public async runAdminInitializeFragSOLExtraAccountMetaList() {
@@ -1159,6 +1162,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 this.program.methods.fundManagerUpdateFundStrategy(
                     config.solAccumulatedDepositCapacity,
+                    null,
                     config.solWithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.solWithdrawalNormalReserveRateBPS,
                     config.solWithdrawalNormalReserveMaxAmount,
@@ -1170,6 +1174,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         this.program.methods.fundManagerUpdateSupportedTokenStrategy(
                             v.tokenMint,
                             v.tokenAccumulatedDepositCapacity,
+                            null,
                             v.tokenRebalancingAmount,
                             v.solAllocationWeight,
                             v.solAllocationCapacityAmount,
@@ -1384,7 +1389,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ]),
             ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
                 this.program.methods
-                    .userUpdateRewardAccountsIfNeeded(null)
+                    .userUpdateRewardAccountIfNeeded(null)
                     .accounts({user: user.publicKey})
                     .instruction()
             ),

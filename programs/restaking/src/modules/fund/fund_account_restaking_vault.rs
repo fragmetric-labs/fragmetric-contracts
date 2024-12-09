@@ -93,7 +93,12 @@ impl RestakingVault {
     }
 
     pub(super) fn add_operator(&mut self, operator_key: &Pubkey) -> Result<()> {
-        if self.operators.iter().take(self.num_operators as usize).any(|op| op.operator == *operator_key) {
+        if self
+            .operators
+            .iter()
+            .take(self.num_operators as usize)
+            .any(|op| op.operator == *operator_key)
+        {
             err!(ErrorCode::FundRestakingVaultOperatorAlreadyRegisteredError)?
         }
 

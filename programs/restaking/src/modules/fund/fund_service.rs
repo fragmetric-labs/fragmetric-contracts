@@ -1,10 +1,9 @@
-use std::cell::RefMut;
-use std::cmp::min;
-use std::collections::{BTreeMap, BTreeSet};
-
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
+use std::cell::RefMut;
+use std::cmp::min;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
@@ -206,7 +205,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .collect();
             let mut executed_commands = Vec::new();
 
-            'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
+            'command_loop: while let Ok((command, required_accounts)) =
+                operation_state.get_command()
             {
                 // rearrange given accounts in required order
                 let mut required_account_infos = Vec::new();
@@ -236,10 +236,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
                             // error if it is the first command in this tx
                             msg!(
-                            "COMMAND#{}: {:?} has not enough accounts at the first execution",
-                            operation_state.next_sequence,
-                            command
-                        );
+                                "COMMAND#{}: {:?} has not enough accounts at the first execution",
+                                operation_state.next_sequence,
+                                command
+                            );
                             return err!(ErrorCode::OperationCommandAccountComputationException);
                         }
                     }
@@ -270,10 +270,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     Err(error) => {
                         // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
                         msg!(
-                        "COMMAND#{}: {:?} failed",
-                        operation_state.next_sequence,
-                        command
-                    );
+                            "COMMAND#{}: {:?} failed",
+                            operation_state.next_sequence,
+                            command
+                        );
                         return Err(error);
                     }
                 };
@@ -315,7 +315,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
-        let mut accounts = Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
+        let mut accounts =
+            Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -325,16 +326,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             (fund_account.get_reserve_account_address()?, true),
             (fund_account.get_treasury_account_address()?, true),
         ]);
-        accounts.extend(fund_account.withdrawal.get_queued_batches_iter().map(|batch| {
-            (
-                FundBatchWithdrawalTicketAccount::find_account_address(
-                    &self.receipt_token_mint.key(),
-                    batch.batch_id,
-                )
-                .0,
-                true,
-            )
-        }));
+        accounts.extend(
+            fund_account
+                .withdrawal
+                .get_queued_batches_iter()
+                .map(|batch| {
+                    (
+                        FundBatchWithdrawalTicketAccount::find_account_address(
+                            &self.receipt_token_mint.key(),
+                            batch.batch_id,
+                        )
+                        .0,
+                        true,
+                    )
+                }),
+        );
         Ok(accounts)
     }
 
