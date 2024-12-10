@@ -1,5 +1,10 @@
 [toolchain]
 
+[workspace]
+members = [
+    "programs/restaking",
+]
+
 [features]
 resolution = true
 skip-lint = false

@@ -1,35 +1,42 @@
 use anchor_lang::prelude::*;
+use bytemuck::{Pod, Zeroable};
 
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 use crate::modules::reward::RewardType::Token;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
 pub(super) struct NormalizedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
+    pub enabled: u8,
+    _padding: [u8; 6],
+    pub pricing_source: TokenPricingSourcePod,
     pub one_token_as_sol: u64,
-    pub pricing_source: TokenPricingSource,
     pub operation_reserved_amount: u64,
     _reserved: [u8; 64],
 }
 
 impl NormalizedToken {
-    pub fn new(
+    pub fn initialize(
+        &mut self,
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
         pool: Pubkey,
         operation_reserved_amount: u64,
-    ) -> Self {
-        Self {
-            mint,
-            program,
-            decimals,
-            one_token_as_sol: 0,
-            pricing_source: TokenPricingSource::FragmetricNormalizedTokenPool { address: pool },
-            operation_reserved_amount,
-            _reserved: [0; 64],
-        }
+    ) -> Result<()> {
+        require_eq!(self.enabled, 0);
+
+        self.enabled = 1;
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
+        self.pricing_source =
+            TokenPricingSource::FragmetricNormalizedTokenPool { address: pool }.into();
+        self.operation_reserved_amount = operation_reserved_amount;
+
+        Ok(())
     }
 }

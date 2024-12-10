@@ -41,17 +41,20 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             self.normalized_token_mint,
         );
 
-        anchor_spl::token::set_authority(
-            CpiContext::new(
-                self.normalized_token_program.to_account_info(),
-                anchor_spl::token::SetAuthority {
-                    current_authority: normalized_token_mint_current_authority.to_account_info(),
-                    account_or_mint: self.normalized_token_mint.to_account_info(),
-                },
-            ),
-            spl_token::instruction::AuthorityType::MintTokens,
-            Some(self.normalized_token_pool_account.key()),
-        )?;
+        // set token mint authority
+        if self.normalized_token_mint.mint_authority.unwrap_or_default() != self.normalized_token_pool_account.key() {
+            anchor_spl::token::set_authority(
+                CpiContext::new(
+                    self.normalized_token_program.to_account_info(),
+                    anchor_spl::token::SetAuthority {
+                        current_authority: normalized_token_mint_current_authority.to_account_info(),
+                        account_or_mint: self.normalized_token_mint.to_account_info(),
+                    },
+                ),
+                spl_token::instruction::AuthorityType::MintTokens,
+                Some(self.normalized_token_pool_account.key()),
+            )?;
+        }
 
         Ok(())
     }

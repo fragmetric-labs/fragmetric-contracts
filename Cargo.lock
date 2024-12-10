@@ -2489,9 +2489,7 @@ dependencies = [
 
 [[package]]
 name = "marinade-cpi"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fcdda1bb55ae7f617068d8d4c8b13b849f9e08f1dd27a7b793f1af800c2bd10"
+version = "0.4.0"
 dependencies = [
  "anchor-gen",
  "anchor-lang",
@@ -3445,15 +3443,14 @@ dependencies = [
 name = "restaking"
 version = "0.3.1"
 dependencies = [
+ "anchor-gen",
  "anchor-lang",
  "anchor-spl",
- "base64 0.13.1",
  "bytemuck",
  "jito-bytemuck",
  "jito-vault-core",
  "jito-vault-sdk",
  "marinade-cpi",
- "shank",
  "solana-program-test",
  "solana-sdk",
  "spl-stake-pool",

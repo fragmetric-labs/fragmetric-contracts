@@ -58,7 +58,7 @@ impl Reward {
 
     pub(super) fn get_name(&self) -> anchor_lang::Result<&str> {
         Ok(std::str::from_utf8(&self.name)
-            .map_err(|_| ErrorCode::DecodeInvalidUtf8FormatException)?
+            .map_err(|_| ErrorCode::DecodeInvalidUTF8FormatException)?
             .trim_matches('\0'))
     }
 

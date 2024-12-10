@@ -97,11 +97,11 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
+        bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub fund_account: AccountLoader<'info, FundAccount>,
 
     #[account(
         mut,
@@ -163,19 +163,19 @@ pub struct UserFundWithdrawContext<'info> {
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
-        bump = fund_account.get_bump(),
+        bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
     )]
-    pub fund_account: Box<Account<'info, FundAccount>>,
+    pub fund_account: AccountLoader<'info, FundAccount>,
 
     #[account(
         mut,
-        seeds = [FundBatchWithdrawalTicketAccount::SEED, receipt_token_mint.key().as_ref(), &fund_batch_withdrawal_ticket_account.batch_id.to_le_bytes()],
-        bump = fund_batch_withdrawal_ticket_account.get_bump(),
+        seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
+        bump = fund_withdrawal_batch_account.get_bump(),
         has_one = receipt_token_mint,
     )]
-    pub fund_batch_withdrawal_ticket_account: Box<Account<'info, FundBatchWithdrawalTicketAccount>>,
+    pub fund_withdrawal_batch_account: Box<Account<'info, FundWithdrawalBatchAccount>>,
 
     #[account(
         mut,

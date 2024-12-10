@@ -53,14 +53,15 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let token = ctx.fund_account.get_supported_token(&item.mint)?;
+            let mut fund_account = ctx.fund_account.load_mut()?;
+            let token = fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
                 ClaimUnstakedSOLCommandState::Init => {
                     let mut command = self.clone();
                     command.state = ClaimUnstakedSOLCommandState::ReadPoolState;
 
-                    match token.pricing_source {
+                    match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
@@ -75,7 +76,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match token.pricing_source {
+                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
@@ -84,7 +85,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
                     required_accounts
-                        .extend([(ctx.fund_account.get_reserve_account_address()?, true)]);
+                        .extend([(fund_account.get_reserve_account_address()?, true)]);
                     required_accounts.extend(
                         item.fund_stake_accounts
                             .iter()
@@ -120,13 +121,13 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 stake_program,
                                 fund_stake_account,
                                 fund_reserve_account,
-                                &ctx.fund_account.get_reserve_account_seeds(),
+                                &fund_account.get_reserve_account_seeds(),
                             )?;
 
                             msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
 
-                            ctx.fund_account.sol_operation_receivable_amount -= received_sol_amount;
-                            ctx.fund_account.sol_operation_reserved_amount += received_sol_amount;
+                            fund_account.sol_operation_receivable_amount -= received_sol_amount;
+                            fund_account.sol_operation_reserved_amount += received_sol_amount;
                         }
                     }
                 }
