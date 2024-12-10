@@ -13,7 +13,6 @@ impl TokenValueProvider for SPLStakePoolValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
-        #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
 
         let pool_account =

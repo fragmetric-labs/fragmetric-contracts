@@ -15,7 +15,7 @@ pub enum ErrorCode {
     CalculationArithmeticException,
 
     #[msg("decode invalid utf-8 format exception")]
-    DecodeInvalidUtf8FormatException,
+    DecodeInvalidUTF8FormatException,
 
     #[msg("fund: cannot apply invalid update")]
     FundInvalidUpdateError,
@@ -185,10 +185,10 @@ pub enum ErrorCode {
     #[msg("normalization: not enough supported token in the pool")]
     NormalizedTokenPoolNotEnoughSupportedTokenException,
 
-    #[msg("normalization: already settled withdrawal ticket")]
-    NormalizedTokenPoolAlreadySettledWithdrawalTicketError,
+    #[msg("normalization: already settled withdrawal account")]
+    NormalizedTokenPoolAlreadySettledWithdrawalAccountError,
 
-    #[msg("normalization: the token is unclaimable for the given withdrawal ticket")]
+    #[msg("normalization: the token is unclaimable for the given withdrawal account")]
     NormalizedTokenPoolUnclaimableTokenError,
 
     #[msg("operation: failed to compute required accounts for the next command")]

@@ -70,10 +70,9 @@ impl SelfExecutable for StakeSOLCommand {
                 };
 
                 if sol_staking_reserved_amount > 0 {
-                    let mut participants = ctx
-                        .fund_account
-                        .supported_tokens
-                        .iter()
+                    let fund_account = ctx.fund_account.load()?;
+                    let mut participants = fund_account
+                        .get_supported_tokens_iter()
                         .map(|supported_token| {
                             Ok::<WeightedAllocationParticipant, Error>(
                                 WeightedAllocationParticipant::new(
@@ -82,10 +81,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         &supported_token.mint,
                                         supported_token.operation_reserved_amount,
                                     )?,
-                                    pricing_service.get_token_amount_as_sol(
-                                        &supported_token.mint,
-                                        supported_token.accumulated_deposit_capacity_amount,
-                                    )?,
+                                    supported_token.sol_allocation_capacity_amount,
                                 ),
                             )
                         })
@@ -99,10 +95,8 @@ impl SelfExecutable for StakeSOLCommand {
                     let _sol_staking_execution_amount =
                         sol_staking_reserved_amount_positive - sol_staking_remaining_amount;
 
-                    let items = ctx
-                        .fund_account
-                        .supported_tokens
-                        .iter()
+                    let items = fund_account
+                        .get_supported_tokens_iter()
                         .enumerate()
                         .map(|(i, supported_token)| {
                             Ok(StakeSOLCommandItem {
@@ -124,15 +118,15 @@ impl SelfExecutable for StakeSOLCommand {
             _ => {
                 // there are remaining tokens to handle
                 if let Some(item) = self.items.first() {
-                    let token = ctx.fund_account.get_supported_token(&item.mint)?;
-
                     match &self.state {
                         StakeSOLCommandState::Init => {
                             if item.sol_amount > 0 {
                                 let mut command = self.clone();
                                 command.state = StakeSOLCommandState::ReadPoolState;
 
-                                match token.pricing_source {
+                                let fund_account = ctx.fund_account.load()?;
+                                let token = fund_account.get_supported_token(&item.mint)?;
+                                match token.pricing_source.try_deserialize()? {
                                     TokenPricingSource::SPLStakePool { address }
                                     | TokenPricingSource::MarinadeStakePool { address } => {
                                         return Ok(Some(
@@ -153,18 +147,19 @@ impl SelfExecutable for StakeSOLCommand {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
 
+                            let fund_account = ctx.fund_account.load()?;
+                            let token = fund_account.get_supported_token(&item.mint)?;
                             let mut required_accounts = vec![
-                                (ctx.fund_account.get_reserve_account_address()?, true),
+                                (fund_account.get_reserve_account_address()?, true),
                                 (
-                                    ctx.fund_account
+                                    fund_account
                                         .find_supported_token_account_address(&item.mint)?,
                                     true,
                                 ),
                             ];
 
-                            required_accounts.extend(match token.pricing_source {
+                            required_accounts.extend(match token.pricing_source.try_deserialize()? {
                                 TokenPricingSource::SPLStakePool { address } => {
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     staking::SPLStakePoolService::find_accounts_to_deposit_sol(
@@ -172,7 +167,6 @@ impl SelfExecutable for StakeSOLCommand {
                                     )?
                                 }
                                 TokenPricingSource::MarinadeStakePool { address } => {
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     staking::MarinadeStakePoolService::find_accounts_to_deposit_sol(
@@ -187,22 +181,40 @@ impl SelfExecutable for StakeSOLCommand {
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
                         StakeSOLCommandState::Stake => {
+                            let token_pricing_source = {
+                                let fund_account = ctx.fund_account.load()?;
+                                fund_account
+                                    .get_supported_token(&item.mint)?
+                                    .pricing_source
+                                    .clone()
+                            };
+
                             let (
                                 pool_token_mint,
                                 to_pool_token_account_amount,
                                 minted_supported_token_amount,
                                 expected_minted_supported_token_amount,
-                            ) = match token.pricing_source {
+                            ) = match token_pricing_source.try_deserialize()? {
                                 TokenPricingSource::SPLStakePool { address } => {
-                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, system_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
+                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
                                         accounts
                                     else {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
                                     };
 
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
+                                    let expected_minted_supported_token_amount =
+                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                            .new_pricing_service(
+                                                remaining_accounts.into_iter().cloned(),
+                                            )?
+                                            .get_sol_amount_as_token(
+                                                pool_token_mint.key,
+                                                item.sol_amount,
+                                            )?;
+
+                                    let fund_account = ctx.fund_account.load()?;
                                     let (
                                         to_pool_token_account_amount,
                                         minted_supported_token_amount,
@@ -211,7 +223,6 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_account,
                                         pool_token_mint,
                                         pool_token_program,
-                                        system_program,
                                     )?
                                     .deposit_sol(
                                         withdraw_authority,
@@ -219,21 +230,9 @@ impl SelfExecutable for StakeSOLCommand {
                                         manager_fee_account,
                                         fund_reserve_account,
                                         fund_supported_token_account,
-                                        &ctx.fund_account.get_reserve_account_seeds(),
+                                        &fund_account.get_reserve_account_seeds(),
                                         item.sol_amount,
                                     )?;
-
-                                    let expected_minted_supported_token_amount =
-                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                            .new_pricing_service(
-                                                [&remaining_accounts[..], &[pool_account]]
-                                                    .concat()
-                                                    .into_iter(),
-                                            )?
-                                            .get_sol_amount_as_token(
-                                                pool_token_mint.key,
-                                                item.sol_amount,
-                                            )?;
 
                                     (
                                         pool_token_mint,
@@ -243,15 +242,25 @@ impl SelfExecutable for StakeSOLCommand {
                                     )
                                 }
                                 TokenPricingSource::MarinadeStakePool { address } => {
-                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
+                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
                                         accounts
                                     else {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
                                     };
 
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
+                                    let expected_minted_supported_token_amount =
+                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                            .new_pricing_service(
+                                                remaining_accounts.into_iter().cloned(),
+                                            )?
+                                            .get_sol_amount_as_token(
+                                                pool_token_mint.key,
+                                                item.sol_amount,
+                                            )?;
+
+                                    let fund_account = ctx.fund_account.load()?;
                                     let (
                                         to_pool_token_account_amount,
                                         minted_supported_token_amount,
@@ -260,9 +269,9 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_account,
                                         pool_token_mint,
                                         pool_token_program,
-                                        system_program,
                                     )?
                                     .deposit_sol(
+                                        ctx.system_program,
                                         liq_pool_sol_leg,
                                         liq_pool_token_leg,
                                         liq_pool_token_leg_authority,
@@ -270,21 +279,9 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_token_mint_authority,
                                         fund_reserve_account,
                                         fund_supported_token_account,
-                                        &ctx.fund_account.get_reserve_account_seeds(),
+                                        &fund_account.get_reserve_account_seeds(),
                                         item.sol_amount,
                                     )?;
-
-                                    let expected_minted_supported_token_amount =
-                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                            .new_pricing_service(
-                                                [&remaining_accounts[..], &[pool_account]]
-                                                    .concat()
-                                                    .into_iter(),
-                                            )?
-                                            .get_sol_amount_as_token(
-                                                pool_token_mint.key,
-                                                item.sol_amount,
-                                            )?;
 
                                     (
                                         pool_token_mint,
@@ -303,11 +300,11 @@ impl SelfExecutable for StakeSOLCommand {
                                 expected_minted_supported_token_amount
                             );
 
-                            ctx.fund_account.sol_operation_reserved_amount -= item.sol_amount;
+                            let mut fund_account = ctx.fund_account.load_mut()?;
+                            fund_account.sol_operation_reserved_amount -= item.sol_amount;
 
-                            let supported_token = ctx
-                                .fund_account
-                                .get_supported_token_mut(pool_token_mint.key)?;
+                            let supported_token =
+                                fund_account.get_supported_token_mut(pool_token_mint.key)?;
                             supported_token.operation_reserved_amount +=
                                 minted_supported_token_amount;
 

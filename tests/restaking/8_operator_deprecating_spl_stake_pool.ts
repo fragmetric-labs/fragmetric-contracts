@@ -11,7 +11,7 @@ const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 describe("operator_spl_stake_pool", async () => {
     const restaking = await restakingPlayground;
 
-    const depositSolAmount = new BN(72000 * web3.LAMPORTS_PER_SOL);
+    const depositSolAmount = new BN(100_000 * web3.LAMPORTS_PER_SOL);
     // const depositSolAmount = new BN(500 * web3.LAMPORTS_PER_SOL);
 
     step("stake SOL to jito stake pool", async function () {
@@ -33,7 +33,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, undefined, 800_000);
+        }, undefined, 3);
     });
 
     step("withdraw SOL from jito stake pool", async function () {
@@ -60,7 +60,6 @@ describe("operator_spl_stake_pool", async () => {
                                 tokenAmount: jitoSolSupportedTokenBalance0,
                             },
                         ],
-                        splWithdrawStakeItems: [],
                         state: {
                             init: {},
                         },
@@ -68,7 +67,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, undefined, 800_000);
+        }, undefined, 3, 800_000);
         
         const [
             fragSOLFundReserveAccountBalance1,
@@ -109,6 +108,6 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, undefined, 800_000);
+        }, undefined, 3, 800_000);
     });
 });

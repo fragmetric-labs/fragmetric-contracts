@@ -3,15 +3,15 @@ use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
 
+use super::*;
 use crate::events;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
-
-use super::*;
+use crate::utils::AccountLoaderExt;
 
 pub struct FundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    fund_account: &'a mut Account<'info, FundAccount>,
+    fund_account: &'a mut AccountLoader<'info, FundAccount>,
 }
 
 impl Drop for FundConfigurationService<'_, '_> {
@@ -23,7 +23,7 @@ impl Drop for FundConfigurationService<'_, '_> {
 impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        fund_account: &'a mut Account<'info, FundAccount>,
+        fund_account: &'a mut AccountLoader<'info, FundAccount>,
     ) -> Result<Self> {
         Ok(Self {
             receipt_token_mint,
@@ -35,26 +35,52 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         receipt_token_program: &Program<'info, Token2022>,
         receipt_token_mint_current_authority: &Signer<'info>,
-        bump: u8,
+        fund_account_bump: u8,
     ) -> Result<()> {
-        self.fund_account.initialize(bump, self.receipt_token_mint);
+        if self.fund_account.as_ref().data_len() < 8 + std::mem::size_of::<FundAccount>() {
+            self.fund_account
+                .initialize_zero_copy_header(fund_account_bump)?;
+        } else {
+            self.fund_account
+                .load_init()?
+                .initialize(fund_account_bump, self.receipt_token_mint);
+        }
 
         // set token mint authority
-        token_2022::set_authority(
-            CpiContext::new(
-                receipt_token_program.to_account_info(),
-                token_2022::SetAuthority {
-                    current_authority: receipt_token_mint_current_authority.to_account_info(),
-                    account_or_mint: self.receipt_token_mint.to_account_info(),
-                },
-            ),
-            spl_token_2022::instruction::AuthorityType::MintTokens,
-            Some(self.fund_account.key()),
-        )
+        if self.receipt_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
+            token_2022::set_authority(
+                CpiContext::new(
+                    receipt_token_program.to_account_info(),
+                    token_2022::SetAuthority {
+                        current_authority: receipt_token_mint_current_authority.to_account_info(),
+                        account_or_mint: self.receipt_token_mint.to_account_info(),
+                    },
+                ),
+                spl_token_2022::instruction::AuthorityType::MintTokens,
+                Some(self.fund_account.key()),
+            )?;
+        }
+        Ok(())
     }
 
-    pub fn process_update_fund_account_if_needed(&mut self) -> Result<()> {
-        self.fund_account.update_if_needed(self.receipt_token_mint);
+    pub fn process_update_fund_account_if_needed(
+        &self,
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        self.fund_account.expand_account_size_if_needed(
+            payer,
+            system_program,
+            desired_account_size,
+        )?;
+
+        if self.fund_account.as_ref().data_len() >= 8 + std::mem::size_of::<FundAccount>() {
+            self.fund_account
+                .load_mut()?
+                .update_if_needed(self.receipt_token_mint);
+        }
+
         Ok(())
     }
 
@@ -76,7 +102,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key()
         );
 
-        self.fund_account.add_supported_token(
+        self.fund_account.load_mut()?.add_supported_token(
             supported_token_mint.key(),
             supported_token_program.key(),
             supported_token_mint.decimals,
@@ -87,7 +113,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        self.emit_fund_manager_updated_fund_event()
+        self.emit_fund_manager_updated_fund_event()?;
+
+        Ok(())
     }
 
     pub fn process_set_normalized_token(
@@ -116,7 +144,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         )?;
 
         // set normalized token and validate pricing source
-        self.fund_account.set_normalized_token(
+        self.fund_account.load_mut()?.set_normalized_token(
             normalized_token_mint.key(),
             normalized_token_program.key(),
             normalized_token_mint.decimals,
@@ -174,7 +202,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
         require_keys_eq!(*vault.to_account_info().owner, vault_program.key());
 
-        self.fund_account.add_restaking_vault(
+        self.fund_account.load_mut()?.add_restaking_vault(
             vault.key(),
             vault_program.key(),
             vault_supported_token_mint.key(),
@@ -197,7 +225,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault_program: &UncheckedAccount,
         vault_operator: &UncheckedAccount,
     ) -> Result<()> {
-        let restaking_vault = self.fund_account.get_restaking_vault_mut(vault.key)?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        let restaking_vault = fund_account.get_restaking_vault_mut(vault.key)?;
 
         require_keys_eq!(restaking_vault.program, vault_program.key());
 
@@ -209,30 +238,30 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_fund_strategy(
         &mut self,
-        sol_accumulated_deposit_amount: u64,
+        sol_accumulated_deposit_capacity_amount: u64,
+        sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawal_fee_rate_bps: u16,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
         withdrawal_batch_threshold_interval_seconds: i64,
         withdrawal_enabled: bool,
     ) -> Result<()> {
-        self.fund_account
-            .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
-        self.fund_account
-            .withdrawal
-            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
-        self.fund_account
-            .withdrawal
-            .set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
-        self.fund_account
-            .withdrawal
-            .set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
-        self.fund_account
-            .withdrawal
-            .set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
-        self.fund_account
-            .withdrawal
-            .set_withdrawal_enabled(withdrawal_enabled);
+        let mut fund_account = self.fund_account.load_mut()?;
+
+        fund_account
+            .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
+        if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
+            fund_account
+                .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
+        }
+
+        fund_account.withdrawal.set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
+        fund_account.withdrawal.set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
+        fund_account.withdrawal.set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
+        fund_account.withdrawal.set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+        fund_account.withdrawal.set_withdrawal_enabled(withdrawal_enabled);
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -241,19 +270,27 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         token_mint: &Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
+        token_accumulated_deposit_amount: Option<u64>,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
-        let supported_token = self.fund_account.get_supported_token_mut(token_mint)?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        let supported_token = fund_account.get_supported_token_mut(token_mint)?;
+
+        supported_token
+            .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
+        if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
+            supported_token.set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
+        }
 
         if let Some(token_amount) = token_rebalancing_amount {
             supported_token.set_rebalancing_strategy(token_amount)?;
         }
         supported_token
-            .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?;
-        supported_token
             .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -264,8 +301,11 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
-        let vault = self.fund_account.get_restaking_vault_mut(vault)?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        let vault = fund_account.get_restaking_vault_mut(vault)?;
         vault.set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -275,9 +315,12 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault: &Pubkey,
         operator: &Pubkey,
     ) -> Result<()> {
-        self.fund_account
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account
             .get_restaking_vault_mut(vault)?
             .add_operator(operator)?;
+
+        drop(fund_account);
 
         self.emit_fund_manager_updated_fund_event()
     }
@@ -290,8 +333,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         token_allocation_capacity_amount: u64,
         token_redelegation_amount: Option<u64>,
     ) -> Result<()> {
-        let operator = self
-            .fund_account
+        let mut fund_account = self.fund_account.load_mut()?;
+        let operator = fund_account
             .get_restaking_vault_mut(vault)?
             .get_operator_mut(operator)?;
         operator.set_supported_token_allocation_strategy(
@@ -302,13 +345,17 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             operator.set_supported_token_redelegation_amount(token_amount)?;
         }
 
+        drop(fund_account);
+
         self.emit_fund_manager_updated_fund_event()
     }
 
     fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
+        let fund_account = self.fund_account.load()?;
+
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account),
+            fund_account: FundAccountInfo::from(fund_account),
         });
 
         Ok(())

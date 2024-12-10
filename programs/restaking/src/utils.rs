@@ -253,6 +253,15 @@ pub trait AccountExt<'info> {
     fn as_account_info(&self) -> &'info AccountInfo<'info>;
 }
 
+impl<'info, T> AccountExt<'info> for AccountLoader<'info, T>
+where
+    T: ZeroCopy + Owner + Clone,
+{
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
+
 impl<'info, T> AccountExt<'info> for Account<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::{Pod, Zeroable};
 
 #[cfg(test)]
 use crate::modules::pricing::MockAsset;
@@ -44,5 +45,87 @@ impl std::fmt::Display for TokenPricingSource {
             #[cfg(test)]
             Self::Mock { .. } => write!(f, "Mock(...)"),
         }
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C)]
+pub struct TokenPricingSourcePod {
+    discriminant: u8,
+    _padding: [u8; 7],
+    address: Pubkey,
+}
+
+impl TokenPricingSourcePod {
+    pub fn try_deserialize(&self) -> Result<TokenPricingSource> {
+        self.try_into()
+    }
+}
+
+impl From<TokenPricingSource> for TokenPricingSourcePod {
+    fn from(src: TokenPricingSource) -> Self {
+        match src {
+            TokenPricingSource::SPLStakePool { address } => Self {
+                discriminant: 1,
+                _padding: [0; 7],
+                address,
+            },
+            TokenPricingSource::MarinadeStakePool { address } => Self {
+                discriminant: 2,
+                _padding: [0; 7],
+                address,
+            },
+            TokenPricingSource::JitoRestakingVault { address } => Self {
+                discriminant: 3,
+                _padding: [0; 7],
+                address,
+            },
+            TokenPricingSource::FragmetricNormalizedTokenPool { address } => Self {
+                discriminant: 4,
+                _padding: [0; 7],
+                address,
+            },
+            TokenPricingSource::FragmetricRestakingFund { address } => Self {
+                discriminant: 5,
+                _padding: [0; 7],
+                address,
+            },
+            #[cfg(test)]
+            TokenPricingSource::Mock { .. } => Self {
+                discriminant: 255,
+                _padding: [0; 7],
+                address: Pubkey::default(),
+            },
+        }
+    }
+}
+
+impl TryFrom<&TokenPricingSourcePod> for TokenPricingSource {
+    type Error = anchor_lang::error::Error;
+
+    fn try_from(pod: &TokenPricingSourcePod) -> Result<TokenPricingSource> {
+        Ok(match pod.discriminant {
+            1 => TokenPricingSource::SPLStakePool {
+                address: pod.address,
+            },
+            2 => TokenPricingSource::MarinadeStakePool {
+                address: pod.address,
+            },
+            3 => TokenPricingSource::JitoRestakingVault {
+                address: pod.address,
+            },
+            4 => TokenPricingSource::FragmetricNormalizedTokenPool {
+                address: pod.address,
+            },
+            5 => TokenPricingSource::FragmetricRestakingFund {
+                address: pod.address,
+            },
+            #[cfg(test)]
+            255 => TokenPricingSource::Mock {
+                denominator: 255,
+                numerator: vec![],
+            },
+            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+        })
     }
 }

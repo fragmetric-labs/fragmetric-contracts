@@ -40,12 +40,17 @@ pub mod restaking {
 
     pub fn admin_update_fund_account_if_needed(
         ctx: Context<AdminFundAccountUpdateContext>,
+        desired_account_size: Option<u32>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_fund_account_if_needed()
+        .process_update_fund_account_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            desired_account_size,
+        )
     }
 
     ////////////////////////////////////////////
@@ -124,7 +129,7 @@ pub mod restaking {
     // AdminRewardAccountUpdateContext
     ////////////////////////////////////////////
 
-    pub fn admin_update_reward_accounts_if_needed(
+    pub fn admin_update_reward_account_if_needed(
         ctx: Context<AdminRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
@@ -145,7 +150,8 @@ pub mod restaking {
 
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
-        sol_accumulated_deposit_amount: u64,
+        sol_accumulated_deposit_capacity_amount: u64,
+        sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawal_fee_rate_bps: u16,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
@@ -157,6 +163,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_strategy(
+            sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount,
             sol_withdrawal_fee_rate_bps,
             sol_withdrawal_normal_reserve_rate_bps,
@@ -170,6 +177,7 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         token_mint: Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
+        token_accumulated_deposit_amount: Option<u64>,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -181,6 +189,7 @@ pub mod restaking {
         .process_update_supported_token_strategy(
             &token_mint,
             token_accumulated_deposit_capacity_amount,
+            token_accumulated_deposit_amount,
             token_rebalancing_amount,
             sol_allocation_weight,
             sol_allocation_capacity_amount,
@@ -435,23 +444,6 @@ pub mod restaking {
         )
     }
 
-    // TODO v0.3/operation: deprecate old run
-    pub fn operator_deprecating_run<'info>(
-        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-        command: u8,
-    ) -> Result<()> {
-        let clock = Clock::get()?;
-        modules::operation::process_run(
-            &ctx.accounts.operator,
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-            ctx.remaining_accounts,
-            clock.unix_timestamp,
-            clock.slot,
-            command,
-        )
-    }
-
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////
@@ -465,17 +457,17 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // SlahsherNormalizedTokenWithdrawalTicketInitialContext
+    // SlasherNormalizedTokenWithdrawalAccountInitialContext
     ////////////////////////////////////////////
 
     // TODO: untested
-    pub fn slasher_initialize_normalized_token_withdrawal_ticket<'info>(
+    pub fn slasher_initialize_normalized_token_withdrawal_account<'info>(
         ctx: Context<
             '_,
             '_,
             'info,
             'info,
-            SlasherNormalizedTokenWithdrawalTicketInitialContext<'info>,
+            SlasherNormalizedTokenWithdrawalAccountInitialContext<'info>,
         >,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolService::new(
@@ -483,7 +475,7 @@ pub mod restaking {
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-        .process_initialize_withdrawal_ticket(
+        .process_initialize_withdrawal_account(
             &mut ctx
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
@@ -495,19 +487,19 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // SlahsherNormalizedTokenWithdrawalTicketContext
+    // SlasherNormalizedTokenWithdrawContext
     ////////////////////////////////////////////
 
     // TODO: untested
-    pub fn slasher_claim_normalized_token_withdrawal_ticket(
-        ctx: Context<SlasherNormalizedTokenWithdrawalTicketContext>,
+    pub fn slasher_withdraw_normalized_token(
+        ctx: Context<SlasherNormalizedTokenWithdrawContext>,
     ) -> Result<()> {
         modules::normalization::NormalizedTokenPoolService::new(
             &mut ctx.accounts.normalized_token_pool_account,
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-            .process_claim_withdrawal_ticket(
+            .process_withdraw(
                 &mut ctx
                     .accounts
                     .slasher_normalized_token_withdrawal_ticket_account,
@@ -633,7 +625,7 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw(
-            &mut ctx.accounts.fund_batch_withdrawal_ticket_account,
+            &mut ctx.accounts.fund_withdrawal_batch_account,
             &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,
@@ -691,7 +683,7 @@ pub mod restaking {
     // UserRewardAccountUpdateContext
     ////////////////////////////////////////////
 
-    pub fn user_update_reward_accounts_if_needed(
+    pub fn user_update_reward_account_if_needed(
         ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
