@@ -200,7 +200,6 @@ impl NormalizedTokenPoolAccount {
         &mut self,
         normalized_token_mint: &mut InterfaceAccount<Mint>,
     ) -> Result<()> {
-        #[cfg(debug_assertions)]
         require_keys_eq!(self.normalized_token_mint, normalized_token_mint.key());
 
         normalized_token_mint.reload()?;

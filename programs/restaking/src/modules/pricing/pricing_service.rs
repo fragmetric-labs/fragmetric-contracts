@@ -114,7 +114,7 @@ impl<'info> PricingService<'info> {
 
         // expand supported tokens recursively
         token_value.numerator.iter().try_for_each(|asset| {
-            if let Asset::TOKEN(token_mint, Some(token_pricing_source), _) = asset {
+            if let Asset::Token(token_mint, Some(token_pricing_source), _) = asset {
                 self.resolve_token_pricing_source_rec(
                     token_mint,
                     token_pricing_source,
@@ -166,7 +166,7 @@ impl<'info> PricingService<'info> {
                         .checked_add(*sol_amount)
                         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
                 }
-                Asset::TOKEN(nested_token_mint, _, nested_token_amount) => {
+                Asset::Token(nested_token_mint, _, nested_token_amount) => {
                     let nested_sol_amount =
                         self.get_token_amount_as_sol(nested_token_mint, *nested_token_amount)?;
                     total_sol_amount = total_sol_amount
@@ -228,7 +228,7 @@ impl<'info> PricingService<'info> {
                 Asset::SOL(sol_amount) => {
                     total_sol_amount += sol_amount;
                 }
-                Asset::TOKEN(token_mint, _, token_amount) => {
+                Asset::Token(token_mint, _, token_amount) => {
                     let is_token_atomic = self
                         .token_value_map
                         .get(token_mint)
@@ -257,7 +257,7 @@ impl<'info> PricingService<'info> {
                                         error!(ErrorCode::CalculationArithmeticException)
                                     })?;
                                 }
-                                Asset::TOKEN(nested_token_mint, _, nested_token_amount) => {
+                                Asset::Token(nested_token_mint, _, nested_token_amount) => {
                                     total_tokens.insert(
                                         *nested_token_mint,
                                         total_tokens.get(nested_token_mint).unwrap_or(&0u64)
@@ -287,7 +287,7 @@ impl<'info> PricingService<'info> {
                 .into_iter()
                 .filter(|(_, token_amount)| *token_amount > 0)
                 .map(|(token_mint, token_amount)| {
-                    Asset::TOKEN(
+                    Asset::Token(
                         token_mint,
                         self.token_pricing_source_map.get(&token_mint).cloned(),
                         token_amount,
@@ -500,7 +500,7 @@ mod tests {
                 Asset::SOL(sol_amount) => {
                     assert_eq!(*sol_amount, 30); // 20 + 10
                 }
-                Asset::TOKEN(token_mint, pricing_source, token_amount) => {
+                Asset::Token(token_mint, pricing_source, token_amount) => {
                     assert_ne!(*pricing_source, None);
                     assert_eq!(*token_amount, 5);
                     total_tokens_as_sol += pricing_service

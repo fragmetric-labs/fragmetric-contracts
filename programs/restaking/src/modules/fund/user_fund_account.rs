@@ -103,10 +103,8 @@ impl UserFundAccount {
         &mut self,
         user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
     ) -> Result<()> {
-        #[cfg(debug_assertions)]
         require_keys_eq!(self.user, user_receipt_token_account.owner);
 
-        #[cfg(debug_assertions)]
         require_keys_eq!(self.receipt_token_mint, user_receipt_token_account.mint);
 
         user_receipt_token_account.reload()?;

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
-use crate::utils::PDASeeds;
+use crate::utils::{AccountExt, PDASeeds};
 use crate::{errors, modules::staking::AvailableWithdrawals};
 
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
@@ -72,14 +72,15 @@ impl SelfExecutable for UnstakeLSTCommand {
     ) -> Result<Option<OperationCommandEntry>> {
         // there are remaining tokens to handle
         if let Some(item) = self.items.first() {
-            let token = ctx.fund_account.get_supported_token(&item.mint)?;
+            let mut fund_account = ctx.fund_account.load_mut()?;
+            let token = fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
                 UnstakeLSTCommandState::Init if item.token_amount > 0 => {
                     let mut command = self.clone();
                     command.state = UnstakeLSTCommandState::ReadPoolState;
 
-                    match token.pricing_source {
+                    match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address }
                         | TokenPricingSource::MarinadeStakePool { address } => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
@@ -95,7 +96,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match token.pricing_source {
+                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
@@ -112,9 +113,9 @@ impl SelfExecutable for UnstakeLSTCommand {
                     };
 
                     required_accounts.extend([
-                        (ctx.fund_account.get_reserve_account_address()?, true),
+                        (fund_account.get_reserve_account_address()?, true),
                         (
-                            ctx.fund_account
+                            fund_account
                                 .find_supported_token_account_address(&item.mint)?,
                             true,
                         ),
@@ -190,13 +191,13 @@ impl SelfExecutable for UnstakeLSTCommand {
                 }
                 UnstakeLSTCommandState::Unstake => {
                     // TODO put accounts definition into each token_pricing_source
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, _validator_list_account, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let (to_sol_account_amount, returned_sol_amount) = match token.pricing_source {
+                    let (to_sol_account_amount, returned_sol_amount) = match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
@@ -215,8 +216,8 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 stake_program,
                                 fund_supported_token_account,
                                 fund_reserve_account,
-                                fund_account,
-                                &ctx.fund_account.get_seeds(),
+                                ctx.fund_account.as_account_info(),
+                                &fund_account.get_seeds(),
                                 item.token_amount,
                             )?
                         }
@@ -228,16 +229,13 @@ impl SelfExecutable for UnstakeLSTCommand {
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
 
-                    ctx.fund_account.sol_operation_reserved_amount = ctx
-                        .fund_account
-                        .sol_operation_reserved_amount
+                    fund_account.sol_operation_reserved_amount = fund_account.sol_operation_reserved_amount
                         .checked_add(returned_sol_amount)
                         .ok_or_else(|| {
                             error!(errors::ErrorCode::FundUnexpectedReserveAccountBalanceException)
                         })?;
 
-                    let fund_supported_token_info = ctx
-                        .fund_account
+                    let fund_supported_token_info = fund_account
                         .get_supported_token_mut(pool_token_mint.key)?;
                     fund_supported_token_info.set_operation_reserved_amount(
                         fund_supported_token_info
@@ -254,14 +252,14 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                     require_gte!(returned_sol_amount, item.token_amount);
                     require_eq!(
-                        ctx.fund_account.sol_operation_reserved_amount,
+                        fund_account.sol_operation_reserved_amount,
                         to_sol_account_amount
                     );
                 }
                 UnstakeLSTCommandState::RequestUnstake => {
                     let mut command = self.clone();
 
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, fund_account, stake_accounts @ ..] =
+                    let [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, _reserve_stake_account, validator_list_account, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_program, fund_reserve_account, fund_supported_token_account, stake_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -274,7 +272,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                             .map(|account| (*account.key, account.is_writable)),
                     );
 
-                    match token.pricing_source {
+                    match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account.key);
 
@@ -286,7 +284,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 staking::SPLStakePoolService::create_stake_account_if_needed(
                                     fund_reserve_account,
                                     fund_stake_account,
-                                    &ctx.fund_account.get_reserve_account_seeds(),
+                                    &fund_account.get_reserve_account_seeds(),
                                     &spl_withdraw_stake_item
                                         .fund_stake_account_signer_seeds
                                         .iter()
@@ -309,8 +307,8 @@ impl SelfExecutable for UnstakeLSTCommand {
                                     stake_program,
                                     fund_supported_token_account,
                                     fund_stake_account,
-                                    fund_account,
-                                    &ctx.fund_account.get_seeds(),
+                                    ctx.fund_account.as_account_info(),
+                                    &fund_account.get_seeds(),
                                     spl_withdraw_stake_item.token_amount,
                                 )?;
                                 msg!("returned_sol_amount {}", returned_sol_amount);
