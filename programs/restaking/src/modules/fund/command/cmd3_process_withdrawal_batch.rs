@@ -39,30 +39,26 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
     ) -> Result<Option<OperationCommandEntry>> {
         match self.state {
             ProcessWithdrawalBatchCommandState::New => {
-                let (command, mut required_accounts) = {
+                let (receipt_token_amount_to_process, mut required_accounts) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
                     let receipt_token_amount_to_process =
-                        fund_service.get_receipt_token_withdrawal_obligated_amount();
+                        fund_service.get_receipt_token_withdrawal_obligated_amount()?;
 
                     let mut required_accounts =
                         fund_service.find_accounts_to_process_withdrawal_batch()?;
 
-                    let mut command = self.clone();
-                    command.state = ProcessWithdrawalBatchCommandState::Process(
-                        receipt_token_amount_to_process,
-                    );
-
-                    (command, required_accounts)
+                    (receipt_token_amount_to_process, required_accounts)
                 };
 
                 // to harvest fund revenue (prepended)
                 required_accounts.insert(0, (FUND_REVENUE_ADDRESS, true));
 
                 // to calculate LST cycle fee (appended)
-                for supported_token in ctx.fund_account.supported_tokens.iter() {
-                    match &supported_token.pricing_source {
+                let fund_account = ctx.fund_account.load()?;
+                for supported_token in fund_account.get_supported_tokens_iter() {
+                    match &supported_token.pricing_source.try_deserialize()? {
                         TokenPricingSource::MarinadeStakePool { address } => {
                             required_accounts.push((*address, false));
                         }
@@ -74,8 +70,11 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 // to calculate VRT cycle fee (appended)
-                for restaking_vault in ctx.fund_account.restaking_vaults.iter() {
-                    match &restaking_vault.receipt_token_pricing_source {
+                for restaking_vault in fund_account.get_restaking_vaults_iter() {
+                    match &restaking_vault
+                        .receipt_token_pricing_source
+                        .try_deserialize()?
+                    {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             required_accounts.push((*address, false));
                         }
@@ -83,6 +82,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
                 }
 
+                let mut command = self.clone();
+                command.state =
+                    ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process);
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
@@ -92,40 +94,72 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
 
+                let fund_account = ctx.fund_account.load()?;
+                let num_queued_batches = fund_account
+                    .withdrawal
+                    .get_queued_batches_iter()
+                    .count();
+                let num_supported_token_pricing_sources = fund_account
+                    .get_supported_tokens_iter()
+                    .map(|supported_token| {
+                        match &supported_token.pricing_source.try_deserialize()? {
+                            TokenPricingSource::MarinadeStakePool { .. }
+                            | TokenPricingSource::SPLStakePool { .. } => Ok(1),
+                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .iter()
+                    .sum();
+                let num_restaking_vault_pricing_sources = fund_account
+                    .get_restaking_vaults_iter()
+                    .map(|restaking_vault| {
+                        match &restaking_vault
+                            .receipt_token_pricing_source
+                            .try_deserialize()?
+                        {
+                            TokenPricingSource::JitoRestakingVault { .. } => Ok(1),
+                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .iter()
+                    .sum();
                 if remaining_accounts.len()
-                    < ctx.fund_account.withdrawal.queued_batches.len()
-                        + ctx.fund_account.supported_tokens.len()
-                        + ctx.fund_account.restaking_vaults.len()
+                    < num_queued_batches
+                        + num_supported_token_pricing_sources
+                        + num_restaking_vault_pricing_sources
                 {
                     err!(ErrorCode::AccountNotEnoughKeys)?;
                 }
 
                 let (uninitialized_withdrawal_batch_accounts, remaining_accounts) =
-                    remaining_accounts.split_at(ctx.fund_account.withdrawal.queued_batches.len());
+                    remaining_accounts.split_at(num_queued_batches);
 
                 let (supported_token_pricing_sources, remaining_accounts) =
-                    remaining_accounts.split_at(ctx.fund_account.supported_tokens.len());
+                    remaining_accounts.split_at(num_supported_token_pricing_sources);
 
                 let (restaking_vault_pricing_sources, pricing_sources) =
-                    remaining_accounts.split_at(ctx.fund_account.restaking_vaults.len());
+                    remaining_accounts.split_at(num_restaking_vault_pricing_sources);
 
                 // calculate LST max cycle fee
                 let mut lst_max_cycle_fee_numerator = 0u64;
                 let mut lst_max_cycle_fee_denominator = 0u64;
-                for (i, supported_token) in ctx.fund_account.supported_tokens.iter().enumerate() {
-                    let (numerator, denominator) = match &supported_token.pricing_source {
-                        TokenPricingSource::MarinadeStakePool { address } => {
-                            let account = supported_token_pricing_sources[i];
-                            require_keys_eq!(account.key(), *address);
-                            MarinadeStakePoolService::get_max_cycle_fee(account)?
-                        }
-                        TokenPricingSource::SPLStakePool { address } => {
-                            let account = supported_token_pricing_sources[i];
-                            require_keys_eq!(account.key(), *address);
-                            SPLStakePoolService::get_max_cycle_fee(account)?
-                        }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
-                    };
+                for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
+                    let (numerator, denominator) =
+                        match &supported_token.pricing_source.try_deserialize()? {
+                            TokenPricingSource::MarinadeStakePool { address } => {
+                                let account = supported_token_pricing_sources[i];
+                                require_keys_eq!(account.key(), *address);
+                                MarinadeStakePoolService::get_max_cycle_fee(account)?
+                            }
+                            TokenPricingSource::SPLStakePool { address } => {
+                                let account = supported_token_pricing_sources[i];
+                                require_keys_eq!(account.key(), *address);
+                                SPLStakePoolService::get_max_cycle_fee(account)?
+                            }
+                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        };
 
                     // numerator/denominator > lst_max_cycle_fee_numerator/lst_max_cycle_fee_denominator
                     if denominator != 0
@@ -140,16 +174,18 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // calculate VRT max cycle fee
                 let mut vrt_max_cycle_fee_numerator = 0u64;
                 let mut vrt_max_cycle_fee_denominator = 0u64;
-                for (i, restaking_vault) in ctx.fund_account.restaking_vaults.iter().enumerate() {
-                    let (numerator, denominator) =
-                        match &restaking_vault.receipt_token_pricing_source {
-                            TokenPricingSource::JitoRestakingVault { address } => {
-                                let account = restaking_vault_pricing_sources[i];
-                                require_keys_eq!(account.key(), *address);
-                                JitoRestakingVaultService::get_max_cycle_fee(account)?
-                            }
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
-                        };
+                for (i, restaking_vault) in fund_account.get_restaking_vaults_iter().enumerate() {
+                    let (numerator, denominator) = match &restaking_vault
+                        .receipt_token_pricing_source
+                        .try_deserialize()?
+                    {
+                        TokenPricingSource::JitoRestakingVault { address } => {
+                            let account = restaking_vault_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            JitoRestakingVaultService::get_max_cycle_fee(account)?
+                        }
+                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                    };
                     // numerator/denominator > vrt_max_cycle_fee_numerator/vrt_max_cycle_fee_denominator
                     if denominator != 0
                         || numerator * vrt_max_cycle_fee_denominator
@@ -169,7 +205,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             - (vrt_max_cycle_fee_numerator as f32
                                 / vrt_max_cycle_fee_denominator.max(1) as f32));
                 let withdrawal_fee_rate =
-                    ctx.fund_account.withdrawal.sol_fee_rate_bps as f32 / 10_000.0;
+                    fund_account.withdrawal.sol_fee_rate_bps as f32 / 10_000.0;
+                drop(fund_account);
 
                 // adjust withdrawal fee rate
                 if lrt_max_cycle_fee_rate > withdrawal_fee_rate {
@@ -178,6 +215,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         err!(errors::ErrorCode::OperationCommandExecutionFailedException)?;
                     }
                     ctx.fund_account
+                        .load_mut()?
                         .withdrawal
                         .set_sol_fee_rate_bps(lrt_max_cycle_fee_rate_bps as u16)?;
                 }
@@ -217,10 +255,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         &ctx.receipt_token_mint.key(),
                         receipt_token_amount_processed,
                     )?;
-                let mut participants = ctx
-                    .fund_account
-                    .supported_tokens
-                    .iter()
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let mut participants = fund_account
+                    .get_supported_tokens_iter()
                     .map(|supported_token| {
                         Ok(WeightedAllocationParticipant::new(
                             supported_token.sol_allocation_weight,
@@ -239,8 +277,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     &mut *participants,
                     receipt_token_amount_processed_as_sol,
                 );
+
                 for (i, participant) in participants.iter().enumerate() {
-                    let supported_token = &mut ctx.fund_account.supported_tokens[i];
+                    let supported_token = fund_account.get_supported_token_mut_by_index(i)?;
                     supported_token.set_accumulated_deposit_capacity_amount(
                         supported_token
                             .accumulated_deposit_capacity_amount
@@ -253,8 +292,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                 let sol_increasing_capacity =
                     receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
-                ctx.fund_account.sol_accumulated_deposit_capacity_amount = ctx
-                    .fund_account
+                fund_account.sol_accumulated_deposit_capacity_amount = fund_account
                     .sol_accumulated_deposit_capacity_amount
                     .saturating_add(sol_increasing_capacity);
             }

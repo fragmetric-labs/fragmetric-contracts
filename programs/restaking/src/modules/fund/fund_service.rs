@@ -1,8 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
-
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
+use std::cell::RefMut;
+use std::cmp::min;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
@@ -17,7 +18,7 @@ use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    fund_account: &'a mut Account<'info, FundAccount>,
+    fund_account: &'a mut AccountLoader<'info, FundAccount>,
     current_timestamp: i64,
 }
 
@@ -30,7 +31,7 @@ impl Drop for FundService<'_, '_> {
 impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        fund_account: &'a mut Account<'info, FundAccount>,
+        fund_account: &'a mut AccountLoader<'info, FundAccount>,
     ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
@@ -55,28 +56,28 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     pub(in crate::modules) fn get_pricing_sources(&self) -> Result<Vec<Pubkey>> {
-        self
-            .fund_account
-            .normalized_token
+        let fund_account = self.fund_account.load()?;
+
+        fund_account
+            .get_normalized_token()
             .iter()
             .map(|normalized_token| &normalized_token.pricing_source)
-            .chain(self.fund_account.restaking_vaults.iter().map(
-                |restaking_vault| &restaking_vault.receipt_token_pricing_source,
-            ))
             .chain(
-                self.fund_account
-                    .supported_tokens
-                    .iter()
+                fund_account
+                    .get_restaking_vaults_iter()
+                    .map(|restaking_vault| &restaking_vault.receipt_token_pricing_source),
+            )
+            .chain(
+                fund_account
+                    .get_supported_tokens_iter()
                     .map(|supported_token| &supported_token.pricing_source),
             )
             .map(|pricing_source| {
-                Ok(match pricing_source {
+                Ok(match pricing_source.try_deserialize()? {
                     TokenPricingSource::SPLStakePool { address }
                     | TokenPricingSource::MarinadeStakePool { address }
                     | TokenPricingSource::JitoRestakingVault { address }
-                    | TokenPricingSource::FragmetricNormalizedTokenPool {
-                        address,
-                    } => *address,
+                    | TokenPricingSource::FragmetricNormalizedTokenPool { address } => address,
                     _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                 })
             })
@@ -91,17 +92,19 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         self.fund_account.exit(&crate::ID)?;
 
         // update fund asset values
+        let receipt_token_mint_key = self.fund_account.load()?.receipt_token_mint.key();
         pricing_service.resolve_token_pricing_source(
-            &self.fund_account.receipt_token_mint.key(),
+            &receipt_token_mint_key,
             &TokenPricingSource::FragmetricRestakingFund {
                 address: self.fund_account.key(),
             },
         )?;
 
         // the values being written below are informative, only for event emission.
-        self.fund_account
-            .supported_tokens
-            .iter_mut()
+        let mut fund_account = self.fund_account.load_mut()?;
+
+        fund_account
+            .get_supported_tokens_iter_mut()
             .try_for_each(|supported_token| {
                 supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
                     &supported_token.mint,
@@ -113,28 +116,28 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Ok::<(), Error>(())
             })?;
 
-        if let Some(fund_account_normalized_token) = &mut self.fund_account.normalized_token {
-            fund_account_normalized_token.one_token_as_sol = pricing_service
-                .get_token_amount_as_sol(
-                    &fund_account_normalized_token.mint,
-                    10u64
-                        .checked_pow(fund_account_normalized_token.decimals as u32)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-                )?;
+        if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
+            normalized_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
+                &normalized_token.mint,
+                10u64
+                    .checked_pow(normalized_token.decimals as u32)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            )?;
         }
 
         let receipt_token_mint_key = &self.receipt_token_mint.key();
-        self.fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
+        fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
             receipt_token_mint_key,
             10u64
                 .checked_pow(self.receipt_token_mint.decimals as u32)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )?;
 
-        self.fund_account.receipt_token_value =
-            pricing_service.get_token_total_value_as_atomic(receipt_token_mint_key)?;
+        fund_account.receipt_token_value = pricing_service
+            .get_token_total_value_as_atomic(receipt_token_mint_key)?
+            .into();
 
-        self.fund_account.receipt_token_value_updated_at = self.current_timestamp;
+        fund_account.receipt_token_value_updated_at = self.current_timestamp;
 
         Ok(())
     }
@@ -219,154 +222,158 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
-        let mut operation_state = std::mem::take(&mut self.fund_account.operation);
-        operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
+        let executed_commands = {
+            let mut operation_state = {
+                let mut fund_account = self.fund_account.load_mut()?;
+                std::mem::take(&mut fund_account.operation)
+            };
+            operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
-        let mut execution_count = 0;
-        let mut executed_commands = Vec::new();
+            let mut execution_count = 0;
+            let mut executed_commands = Vec::new();
 
-        let pricing_sources = self.get_pricing_sources()?;
-        let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
-            .iter()
-            .map(|info| (*info.key, info))
-            .collect();
+            let pricing_sources = self.get_pricing_sources()?;
+            let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
+                .iter()
+                .map(|info| (*info.key, info))
+                .collect();
 
-        'command_loop: while let Some((command, required_accounts)) = operation_state.get_command()
-        {
-            // rearrange given accounts in required order
-            let mut required_account_infos = Vec::new();
-            let mut unused_account_keys = remaining_accounts_map
-                .keys()
-                .cloned()
-                .collect::<BTreeSet<_>>();
+            'command_loop: while let Ok((command, required_accounts)) =
+                operation_state.get_command()
+            {
+                // rearrange given accounts in required order
+                let mut required_account_infos = Vec::new();
+                let mut unused_account_keys = remaining_accounts_map
+                    .keys()
+                    .cloned()
+                    .collect::<BTreeSet<_>>();
 
-            for account_meta in required_accounts {
-                // append required accounts in exact order
-                match remaining_accounts_map.get(&account_meta.pubkey) {
-                    Some(account) => {
-                        required_account_infos.push(*account);
-                        unused_account_keys.remove(&account_meta.pubkey);
-                    }
-                    None => {
-                        if execution_count > 0 {
-                            // maintain the current command and gracefully stop executing commands
-                            msg!(
+                for account_meta in required_accounts {
+                    // append required accounts in exact order
+                    match remaining_accounts_map.get(&account_meta.pubkey) {
+                        Some(account) => {
+                            required_account_infos.push(*account);
+                            unused_account_keys.remove(&account_meta.pubkey);
+                        }
+                        None => {
+                            if execution_count > 0 {
+                                // maintain the current command and gracefully stop executing commands
+                                msg!(
                                 "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
                                 operation_state.next_sequence,
                                 command,
                                 execution_count
                             );
-                            break 'command_loop;
-                        }
+                                break 'command_loop;
+                            }
 
-                        // error if it is the first command in this tx
+                            // error if it is the first command in this tx
+                            msg!(
+                                "COMMAND#{}: {:?} has not enough accounts at the first execution",
+                                operation_state.next_sequence,
+                                command
+                            );
+                            return err!(ErrorCode::OperationCommandAccountComputationException);
+                        }
+                    }
+                }
+
+                // append all unused accounts & pricing sources
+                for unused_account_key in &unused_account_keys {
+                    // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
+                    let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
+                    required_account_infos.push(*remaining_account);
+                }
+                for pricing_source in &pricing_sources {
+                    // TODO: optimize and throw error
+                    required_account_infos
+                        .push(remaining_accounts_map.get(pricing_source).unwrap());
+                }
+
+                let mut ctx = OperationCommandContext {
+                    operator,
+                    receipt_token_mint: self.receipt_token_mint,
+                    fund_account: self.fund_account,
+                    system_program,
+                };
+                match command.execute(&mut ctx, required_account_infos.as_slice()) {
+                    Ok(next_command) => {
+                        // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
+                        // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
+                        executed_commands.push(command.clone());
+                        execution_count += 1;
+
+                        operation_state.set_command(next_command, self.current_timestamp);
+                    }
+                    Err(error) => {
+                        // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
                         msg!(
-                            "COMMAND#{}: {:?} has not enough accounts at the first execution",
+                            "COMMAND#{}: {:?} failed",
                             operation_state.next_sequence,
                             command
                         );
-                        return err!(ErrorCode::OperationCommandAccountComputationException);
+                        return Err(error);
                     }
-                }
+                };
             }
 
-            // append all unused accounts & pricing sources
-            for unused_account_key in &unused_account_keys {
-                // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
-                let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
-                required_account_infos.push(*remaining_account);
-            }
-            for pricing_source in &pricing_sources {
-                // TODO: optimize and throw error
-                required_account_infos.push(remaining_accounts_map.get(pricing_source).unwrap());
-            }
+            // write back operation state
+            let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.operation = operation_state;
 
-            let mut ctx = OperationCommandContext {
-                operator,
-                receipt_token_mint: self.receipt_token_mint,
-                fund_account: self.fund_account,
-                system_program,
-            };
-            match command.execute(&mut ctx, required_account_infos.as_slice()) {
-                Ok(next_command) => {
-                    // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
-                    executed_commands.push(command.clone());
-                    execution_count += 1;
-
-                    operation_state.set_command(next_command, self.current_timestamp);
-                }
-                Err(error) => {
-                    // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!(
-                        "COMMAND#{}: {:?} failed",
-                        operation_state.next_sequence,
-                        command
-                    );
-                    return Err(error);
-                }
-            };
-        }
-
-        // write back operation state
-        self.fund_account.operation = operation_state;
+            executed_commands
+        };
 
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?),
             executed_commands,
         });
 
         Ok(())
     }
 
-    /// returns (enqueued)
-    pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> bool {
+    pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<bool> {
+        let mut fund_account = self.fund_account.load_mut()?;
+
         if !(forced
-            || self
-                .fund_account
+            || fund_account
                 .withdrawal
                 .is_batch_enqueuing_threshold_satisfied(self.current_timestamp))
         {
             // Threshold unmet, skip enqueue
-            return false;
+            return Ok(false);
         }
 
-        self.fund_account
+        Ok(fund_account
             .withdrawal
-            .enqueue_pending_batch(self.current_timestamp)
+            .enqueue_pending_batch(self.current_timestamp))
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts =
-            Vec::with_capacity(4 + self.fund_account.withdrawal.queued_batches.len());
+        let fund_account = self.fund_account.load()?;
+
+        let mut accounts = Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
         accounts.extend([
-            (self.fund_account.receipt_token_program, false),
+            (fund_account.receipt_token_program, false),
             (
-                self.fund_account
-                    .find_receipt_token_lock_account_address()?,
+                fund_account.find_receipt_token_lock_account_address()?,
                 true,
             ),
-            (self.fund_account.get_reserve_account_address()?, true),
-            (self.fund_account.get_treasury_account_address()?, true),
+            (fund_account.get_reserve_account_address()?, true),
+            (fund_account.get_treasury_account_address()?, true),
         ]);
-        accounts.extend(
-            self.fund_account
-                .withdrawal
-                .queued_batches
-                .iter()
-                .map(|batch| {
-                    (
-                        FundWithdrawalBatchAccount::find_account_address(
-                            &self.receipt_token_mint.key(),
-                            batch.batch_id,
-                        )
-                        .0,
-                        true,
-                    )
-                }),
-        );
+        accounts.extend(fund_account.withdrawal.get_queued_batches_iter().map(|batch| {
+            (
+                FundWithdrawalBatchAccount::find_account_address(
+                    &self.receipt_token_mint.key(),
+                    batch.batch_id,
+                )
+                .0,
+                true,
+            )
+        }));
         Ok(accounts)
     }
 
@@ -387,6 +394,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         if !(forced
             || self
                 .fund_account
+                .load()?
                 .withdrawal
                 .is_batch_processing_threshold_satisfied(self.current_timestamp))
         {
@@ -394,15 +402,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             return Ok(0);
         }
 
-        let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
-
         let mut sol_user_amount_processing = 0;
         let mut sol_fee_amount_processing = 0;
         let mut receipt_token_amount_processing = 0;
         let mut processing_batch_count = 0;
 
+        let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
+        let mut fund_account = self.fund_account.load_mut()?;
+
         // examine withdrawal batches to process with current fund status
-        for batch in &self.fund_account.withdrawal.queued_batches {
+        for batch in fund_account.withdrawal.get_queued_batches_iter() {
             let next_receipt_token_amount_processing =
                 receipt_token_amount_processing + batch.receipt_token_amount;
             if next_receipt_token_amount_processing > receipt_token_amount_to_process {
@@ -413,10 +422,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
             )?;
-            let sol_fee_amount = self
-                .fund_account
-                .withdrawal
-                .get_sol_fee_amount(sol_amount)?;
+            let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
             let sol_user_amount = sol_amount - sol_fee_amount;
 
             let next_sol_user_amount_processing = sol_user_amount_processing + sol_user_amount;
@@ -441,11 +447,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             // - sol_operation_receivable_amount will offset sol_fee_amount_processing + [optional debt from sol_treasury_reserved_amount].
             // - any remaining portion of sol_fee_amount_processing not covered by the receivables will be offset by the leftover sol_operation_reserved_amount, transferring the surplus to the treasury fund as revenue.
 
-            if self.fund_account.sol_operation_reserved_amount
-                + self.fund_account.sol_operation_receivable_amount
+            if fund_account.sol_operation_reserved_amount
+                + fund_account.sol_operation_receivable_amount
                 < next_sol_user_amount_processing + next_sol_fee_amount_processing
-                || self.fund_account.sol_operation_reserved_amount
-                    + fund_treasury_account.lamports()
+                || fund_account.sol_operation_reserved_amount + fund_treasury_account.lamports()
                     < next_sol_user_amount_processing
             {
                 break;
@@ -458,9 +463,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         // borrow sol cash from treasury if needed (condition 1-2)
-        if sol_user_amount_processing > self.fund_account.sol_operation_reserved_amount {
+        if sol_user_amount_processing > fund_account.sol_operation_reserved_amount {
             let sol_debt_amount_from_treasury =
-                sol_user_amount_processing - self.fund_account.sol_operation_reserved_amount;
+                sol_user_amount_processing - fund_account.sol_operation_reserved_amount;
             anchor_lang::system_program::transfer(
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
@@ -468,7 +473,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         from: fund_treasury_account.clone(),
                         to: fund_reserve_account.clone(),
                     },
-                    &[&self.fund_account.get_treasury_account_seeds()],
+                    &[&fund_account.get_treasury_account_seeds()],
                 ),
                 sol_debt_amount_from_treasury,
             )?;
@@ -477,7 +482,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             sol_fee_amount_processing += sol_debt_amount_from_treasury;
 
             // reserve transferred cash
-            self.fund_account.sol_operation_reserved_amount += sol_debt_amount_from_treasury;
+            fund_account.sol_operation_reserved_amount += sol_debt_amount_from_treasury;
         }
 
         // burn receipt tokens
@@ -489,17 +494,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     from: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[self.fund_account.get_seeds().as_ref()],
+                &[fund_account.get_seeds().as_ref()],
             ),
             receipt_token_amount_processing,
         )?;
-        self.fund_account
-            .reload_receipt_token_supply(self.receipt_token_mint)?;
+        fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
         let receipt_token_amount_processed = receipt_token_amount_processing;
 
         // reserve each sol_user_amount to batch accounts: sol_operation_reserved_amount -= sol_user_amount_processing;
-        let processing_batches = self
-            .fund_account
+        let processing_batches = fund_account
             .withdrawal
             .dequeue_batches(processing_batch_count, self.current_timestamp)?;
 
@@ -545,14 +548,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
             )?;
-            let sol_fee_amount = self
-                .fund_account
-                .withdrawal
-                .get_sol_fee_amount(sol_amount)?;
+            let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
             let sol_user_amount = sol_amount - sol_fee_amount;
 
-            self.fund_account.sol_operation_reserved_amount -= sol_amount;
-            self.fund_account.withdrawal.sol_user_reserved_amount += sol_user_amount;
+            fund_account.sol_operation_reserved_amount -= sol_amount;
+            fund_account.withdrawal.sol_user_reserved_amount += sol_user_amount;
             batch_account.set_claimable_amount(
                 batch.num_requests,
                 batch.receipt_token_amount,
@@ -571,11 +571,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         require_gte!(processing_batch_count as u64, sol_user_amount_processing);
 
         // pay the treasury debt with receivables first (no further action).
-        let receivable_amount_to_pay = self
-            .fund_account
+        let receivable_amount_to_pay = fund_account
             .sol_operation_receivable_amount
             .min(sol_fee_amount_processing);
-        self.fund_account.sol_operation_receivable_amount -= receivable_amount_to_pay;
+        fund_account.sol_operation_receivable_amount -= receivable_amount_to_pay;
         sol_fee_amount_processing -= receivable_amount_to_pay;
 
         // pay remaining debt with cash
@@ -587,13 +586,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         from: fund_reserve_account.clone(),
                         to: fund_treasury_account.clone(),
                     },
-                    &[&self.fund_account.get_reserve_account_seeds()],
+                    &[&fund_account.get_reserve_account_seeds()],
                 ),
                 sol_fee_amount_processing,
             )?;
             sol_fee_amount_processing = 0;
         }
-        self.fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
+        fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
 
         require_eq!(
             sol_user_amount_processing
@@ -611,9 +610,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         fund_treasury_account: &AccountInfo<'info>,
         to_account: &'info AccountInfo<'info>,
     ) -> Result<u64> {
+        let fund_account = self.fund_account.load()?;
         require_keys_eq!(
             fund_treasury_account.key(),
-            self.fund_account.get_treasury_account_address()?
+            fund_account.get_treasury_account_address()?
         );
 
         let treasury_account_lamports = fund_treasury_account.lamports();
@@ -628,7 +628,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     from: fund_treasury_account.clone(),
                     to: to_account.to_account_info(),
                 },
-                &[&self.fund_account.get_treasury_account_seeds()],
+                &[&fund_account.get_treasury_account_seeds()],
             ),
             treasury_account_lamports,
         )?;
@@ -637,13 +637,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     /// receipt token amount in queued withdrawals.
-    pub(super) fn get_receipt_token_withdrawal_obligated_amount(&self) -> u64 {
-        self.fund_account
+    pub(super) fn get_receipt_token_withdrawal_obligated_amount(&self) -> Result<u64> {
+        Ok(self
+            .fund_account
+            .load()?
             .withdrawal
-            .queued_batches
-            .iter()
+            .get_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
-            .sum()
+            .sum())
     }
 
     /// estimated $SOL amount to process queued withdrawals.
@@ -653,7 +654,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<u64> {
         pricing_service.get_token_amount_as_sol(
             &self.receipt_token_mint.key(),
-            self.get_receipt_token_withdrawal_obligated_amount(),
+            self.get_receipt_token_withdrawal_obligated_amount()?,
         )
     }
 
@@ -664,13 +665,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<u64> {
         let (total_token_value_as_sol, _total_token_amount) =
             pricing_service.get_token_total_value_as_sol(&self.receipt_token_mint.key())?;
+        let fund_account = self.fund_account.load()?;
+
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            self.fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
+            fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(self.fund_account.withdrawal.sol_normal_reserve_max_amount))
+        .max(fund_account.withdrawal.sol_normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.
@@ -678,15 +681,28 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     fn get_sol_withdrawal_reserve_amount(&self, pricing_service: &PricingService) -> Result<u64> {
         let sol_withdrawal_obligated_reserve_amount =
             self.get_sol_withdrawal_obligated_reserve_amount(pricing_service)?;
+        let fund_account = self.fund_account.load()?;
 
         Ok(sol_withdrawal_obligated_reserve_amount
             + self
                 .get_sol_withdrawal_normal_reserve_amount(pricing_service)?
                 .min(
-                    self.fund_account
+                    fund_account
                         .sol_operation_reserved_amount
                         .saturating_sub(sol_withdrawal_obligated_reserve_amount),
                 ))
+    }
+
+    /// which is going to be executed in this stage. there can be remains after the execution.
+    /// MIN(sol_withdrawal_obligated_reserve_amount, sol_operation_reserved_amount)
+    pub(super) fn get_sol_withdrawal_execution_amount(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let fund_account = self.fund_account.load()?;
+        Ok(fund_account
+            .sol_operation_reserved_amount
+            .min(self.get_sol_withdrawal_obligated_reserve_amount(pricing_service)?))
     }
 
     /// surplus/shortage will be handled in staking stage.
@@ -695,7 +711,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         &self,
         pricing_service: &PricingService,
     ) -> Result<i128> {
-        Ok(self.fund_account.sol_operation_reserved_amount as i128
+        let fund_account = self.fund_account.load()?;
+        Ok(fund_account.sol_operation_reserved_amount as i128
             - self.get_sol_withdrawal_reserve_amount(pricing_service)? as i128)
     }
 }

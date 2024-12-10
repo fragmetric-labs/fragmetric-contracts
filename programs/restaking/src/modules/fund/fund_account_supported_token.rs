@@ -1,18 +1,22 @@
 use anchor_lang::prelude::*;
+use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
 pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
+    _padding: [u8; 15],
+
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
     pub operation_reserved_amount: u64,
     pub one_token_as_sol: u64,
-    pub pricing_source: TokenPricingSource,
+    pub pricing_source: TokenPricingSourcePod,
 
     /// the token amount being unstaked
     pub operation_receivable_amount: u64,
@@ -24,16 +28,18 @@ pub(super) struct SupportedToken {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    _reserved: [u8; 96],
+    _reserved: [u8; 64],
 }
 
 impl SupportedToken {
-    pub fn new(
+    pub fn initialize(
+        &mut self,
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
-    ) -> Result<Self> {
+        // TODO: operation_reserved_amount: u64,
+    ) -> Result<()> {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. } => {}
@@ -42,21 +48,44 @@ impl SupportedToken {
             }
         }
 
-        Ok(Self {
-            mint,
-            program,
-            decimals,
-            accumulated_deposit_capacity_amount: 0,
-            accumulated_deposit_amount: 0,
-            operation_reserved_amount: 0,
-            one_token_as_sol: 0,
-            pricing_source,
-            operation_receivable_amount: 0,
-            rebalancing_amount: 0,
-            sol_allocation_weight: 0,
-            sol_allocation_capacity_amount: 0,
-            _reserved: [0; 96],
-        })
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
+        self.pricing_source = pricing_source.into();
+
+        Ok(())
+    }
+
+    // TODO v0.3/operation: visibility
+    pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
+        self.operation_reserved_amount
+    }
+
+    // TODO v0.3/operation: visibility
+    pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
+        self.operation_reserved_amount = amount;
+    }
+
+    // TODO v0.3/operation: visibility
+    pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
+        self.operation_receivable_amount
+    }
+
+    // TODO v0.3/operation: visibility
+    pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
+        self.operation_receivable_amount = amount;
+    }
+
+    pub(super) fn set_accumulated_deposit_amount(&mut self, token_amount: u64) -> Result<()> {
+        require_gte!(
+            self.accumulated_deposit_capacity_amount,
+            token_amount,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.accumulated_deposit_amount = token_amount;
+
+        Ok(())
     }
 
     pub(super) fn set_accumulated_deposit_capacity_amount(

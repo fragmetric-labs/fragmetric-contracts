@@ -32,17 +32,14 @@ describe("initialize", async () => {
     });
 
     step("initialize fund accounts", async () => {
-        const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeFundAccounts();
+        const {fragSOLMint, fragSOLFundAccount} = await restaking.runAdminInitializeOrUpdateFundAccount();
 
         expect(fragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
-
-        await restaking.runAdminUpdateFundAccounts();
-
         expect(fragSOLFundAccount.dataVersion).gt(1);
     })
 
     step("initialize reward accounts", async () => {
-        const {fragSOLRewardAccount} = await restaking.runAdminInitializeOrUpdateRewardAccounts();
+        const {fragSOLRewardAccount} = await restaking.runAdminInitializeOrUpdateRewardAccount();
 
         expect(fragSOLRewardAccount.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
     })
@@ -117,7 +114,7 @@ describe("initialize", async () => {
     step("initialize fund supported tokens", async function () {
         const res0 = await restaking.runFundManagerInitializeFundSupportedTokens();
 
-        expect(res0.fragSOLFund.supportedTokens.length).eq(Object.values(restaking.supportedTokenMetadata).length);
+        expect(res0.fragSOLFund.numSupportedTokens).eq(Object.values(restaking.supportedTokenMetadata).length);
         let i = 0;
         for (const [symbol, v] of Object.entries(restaking.supportedTokenMetadata)) {
             const supported = res0.fragSOLFund.supportedTokens[i++];
@@ -125,22 +122,24 @@ describe("initialize", async () => {
             expect(supported.program.toString()).eq(v.program.toString());
             expect(supported.oneTokenAsSol.toNumber()).greaterThan(web3.LAMPORTS_PER_SOL).lessThan(2 * web3.LAMPORTS_PER_SOL);
             expect(supported.operationReservedAmount.toNumber()).eq(0);
-            // console.log(restaking.knownAddress.fragSOLSupportedTokenAccount(symbol as any));
         }
     });
 
     step("initialize fund normalized token", async () => {
         const {fragSOLFundAccount} = await restaking.runFundManagerInitializeFundNormalizedToken();
-        expect(fragSOLFundAccount.normalizedToken?.mint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
-    })
-
-    step("initialize fund jito restaking vault", async () => {
-        const {fragSOLFundJitoVRTAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
-        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
-        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+        expect(fragSOLFundAccount.normalizedToken.enabled).eq(1);
+        expect(fragSOLFundAccount.normalizedToken.mint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
     });
 
-    step("initialize fund, supported tokens, restaking vaults strategy", async function () {
+    step("initialize fund jito restaking vault", async () => {
+        const {fragSOLFundJitoVRTAccount, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
+        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
+        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+        expect(fragSOLFundAccount.numRestakingVaults).eq(1);
+        expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoVaultAccount.toString());
+    });
+
+    step("initialize fund, supported tokens, restaking vaults strategy", async () => {
         await restaking.runFundManagerUpdateFundConfigurations();
     });
 });

@@ -50,14 +50,15 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let token = ctx.fund_account.get_supported_token(&item.mint)?;
+            let fund_account = ctx.fund_account.load()?;
+            let token = fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
                 ClaimUnstakedSOLCommandState::Init => {
                     let mut command = self.clone();
                     command.state = ClaimUnstakedSOLCommandState::ReadPoolState;
 
-                    match token.pricing_source {
+                    match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
@@ -72,7 +73,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let mut required_accounts = match token.pricing_source {
+                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 

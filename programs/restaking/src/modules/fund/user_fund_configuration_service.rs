@@ -21,9 +21,6 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
         user: &'a Signer<'info>,
         user_fund_account: &'a mut Account<'info, UserFundAccount>,
     ) -> Result<Self> {
-        #[cfg(debug_assertions)]
-        require_keys_eq!(user.key(), user_fund_account.user);
-
         Ok(Self {
             receipt_token_mint,
             user,

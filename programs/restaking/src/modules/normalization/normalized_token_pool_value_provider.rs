@@ -14,7 +14,6 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
     ) -> Result<TokenValue> {
-        #[cfg(debug_assertions)]
         require_eq!(pricing_source_accounts.len(), 1);
 
         let normalized_token_pool_account =
@@ -31,7 +30,7 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
                 .iter()
                 .filter(|supported_token| supported_token.locked_amount > 0)
                 .map(|supported_token| {
-                    Asset::TOKEN(
+                    Asset::Token(
                         supported_token.mint,
                         Some(supported_token.pricing_source.clone()),
                         supported_token.locked_amount,

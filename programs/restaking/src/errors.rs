@@ -15,7 +15,7 @@ pub enum ErrorCode {
     CalculationArithmeticException,
 
     #[msg("decode invalid utf-8 format exception")]
-    DecodeInvalidUtf8FormatException,
+    DecodeInvalidUTF8FormatException,
 
     #[msg("fund: cannot apply invalid update")]
     FundInvalidUpdateError,
