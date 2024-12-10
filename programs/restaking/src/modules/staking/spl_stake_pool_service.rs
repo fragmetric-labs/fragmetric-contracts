@@ -159,11 +159,24 @@ impl<'info> SPLStakePoolService<'info> {
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }
 
-    pub fn find_accounts_to_withdraw_sol_or_stake(
+    pub fn find_accounts_to_get_available_unstake_account(
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
         let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        accounts.extend([
+            (pool_account.reserve_stake, true),
+            (pool_account.validator_list, true),
+            (solana_program::stake::program::ID, false),
+        ]);
+        Ok(accounts)
+    }
+
+    pub fn find_accounts_to_withdraw_sol_or_stake(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+        let mut accounts = Vec::new();
         accounts.extend([
             // for self.withdraw_sol
             (
@@ -174,12 +187,9 @@ impl<'info> SPLStakePoolService<'info> {
                 .0,
                 false,
             ),
-            (pool_account.reserve_stake, true),
-            (pool_account.validator_list, true),
             (pool_account.manager_fee_account, true),
             (solana_program::sysvar::clock::ID, false),
             (solana_program::sysvar::stake_history::ID, false),
-            (solana_program::stake::program::ID, false),
         ]);
         Ok(accounts)
     }
@@ -548,6 +558,7 @@ impl<'info> SPLStakePoolService<'info> {
         }
     }
 
+    // TODO: remove
     pub fn find_stake_account_info_by_address(
         stake_account_infos: &[&'info AccountInfo<'info>],
         stake_account_address: &Pubkey,
@@ -582,6 +593,16 @@ impl<'info> SPLStakePoolService<'info> {
         }
 
         Ok(())
+    }
+
+    pub fn find_accounts_to_claim_sol() -> Vec<(Pubkey, bool)> {
+        let mut accounts = Vec::new();
+        accounts.extend([
+            (solana_program::sysvar::clock::ID, false),
+            (solana_program::sysvar::stake_history::ID, false),
+            (solana_program::stake::program::ID, false),
+        ]);
+        return accounts;
     }
 
     /// gives (to_sol_account_amount, returned_sol_amount)
@@ -655,6 +676,7 @@ impl<'info> SPLStakePoolService<'info> {
         to_stake_account: &AccountInfo<'info>,
         from_pool_token_account_signer: &AccountInfo<'info>,
         from_pool_token_account_signer_seeds: &[&[u8]],
+        to_stake_account_withdraw_authority: &AccountInfo<'info>,
 
         pool_token_amount: u64,
     ) -> Result<u64> {
@@ -665,8 +687,8 @@ impl<'info> SPLStakePoolService<'info> {
             withdraw_authority.key,
             validator_stake_account.key,
             to_stake_account.key,
-            to_stake_account.key, // User account to set as a new withdraw authority
-            from_pool_token_account_signer.key, // signer
+            to_stake_account_withdraw_authority.key, // User account to set as a new withdraw authority
+            from_pool_token_account_signer.key,      // signer
             from_pool_token_account.key,
             manager_fee_account.key,
             self.pool_token_mint.key,
@@ -682,7 +704,7 @@ impl<'info> SPLStakePoolService<'info> {
                 withdraw_authority.clone(),
                 validator_stake_account.clone(),
                 to_stake_account.clone(),
-                to_stake_account.clone(),
+                to_stake_account_withdraw_authority.clone(),
                 from_pool_token_account_signer.clone(),
                 from_pool_token_account.clone(),
                 manager_fee_account.clone(),
@@ -698,15 +720,70 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(returned_sol_amount)
     }
 
-    pub fn claim_sol(&self, stake_account_info: &'info AccountInfo<'info>) -> Result<()> {
-        let stake_account = Self::deserialize_stake_account(stake_account_info)?;
-        let meta = stake_account.meta();
-        msg!("meta {:?}", meta);
+    pub fn deactivate_stake_account(
+        sysvar_clock_program: &AccountInfo<'info>,
 
-        // TODO
-        // 1. check stake_account's lamports is withdrawable
-        // 2. if it is, withdraw sol
-        // 3. if not, skip
+        stake_account_info: &AccountInfo<'info>,
+        stake_account_withdraw_authority: &AccountInfo<'info>,
+        stake_account_withdraw_authority_signer_seeds: &[&[u8]],
+    ) -> Result<()> {
+        let deactivate_ix = solana_program::stake::instruction::deactivate_stake(
+            stake_account_info.key,
+            stake_account_withdraw_authority.key,
+        );
+
+        invoke_signed(
+            &deactivate_ix,
+            &[
+                stake_account_info.clone(),
+                stake_account_withdraw_authority.clone(),
+                sysvar_clock_program.clone(),
+            ],
+            &[stake_account_withdraw_authority_signer_seeds],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn claim_sol(
+        sysvar_clock_program: &AccountInfo<'info>,
+        sysvar_stake_history_program: &AccountInfo<'info>,
+        stake_program: &AccountInfo<'info>,
+
+        stake_account_info: &'info AccountInfo<'info>,
+        fund_reserve_account_info: &AccountInfo<'info>,
+        withdraw_authority_signer_seeds: &[&[u8]],
+    ) -> Result<()> {
+        let stake_account = Self::deserialize_stake_account(stake_account_info);
+        if let Ok(_stake_account) = stake_account {
+            let withdrawn_lamports = stake_account_info.lamports();
+
+            let withdraw_ix = solana_program::stake::instruction::withdraw(
+                stake_account_info.key,
+                fund_reserve_account_info.key,
+                fund_reserve_account_info.key,
+                withdrawn_lamports,
+                None,
+            );
+
+            invoke_signed(
+                &withdraw_ix,
+                &[
+                    stake_account_info.clone(),
+                    fund_reserve_account_info.clone(),
+                    sysvar_clock_program.clone(),
+                    sysvar_stake_history_program.clone(),
+                    stake_program.clone(),
+                ],
+                &[withdraw_authority_signer_seeds],
+            )?;
+        } else {
+            msg!(
+                "stake_account key {}, error {:?}",
+                stake_account_info.key,
+                stake_account.unwrap_err()
+            );
+        }
 
         Ok(())
     }

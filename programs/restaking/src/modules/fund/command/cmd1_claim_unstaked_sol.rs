@@ -2,7 +2,10 @@ use anchor_lang::prelude::*;
 
 use crate::{
     errors,
-    modules::{pricing::TokenPricingSource, staking},
+    modules::{
+        pricing::TokenPricingSource,
+        staking::{self, SPLStakePoolService},
+    },
 };
 
 use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
@@ -50,7 +53,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let fund_account = ctx.fund_account.load()?;
+            let mut fund_account = ctx.fund_account.load_mut()?;
             let token = fund_account.get_supported_token(&item.mint)?;
 
             match &self.state {
@@ -77,12 +80,12 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         TokenPricingSource::SPLStakePool { address } => {
                             require_keys_eq!(address, *pool_account_info.key);
 
-                            staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
-                                pool_account_info,
-                            )?
+                            staking::SPLStakePoolService::find_accounts_to_claim_sol()
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
+                    required_accounts
+                        .extend([(fund_account.get_reserve_account_address()?, true)]);
                     required_accounts.extend(
                         item.fund_stake_accounts
                             .iter()
@@ -92,28 +95,39 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                     return Ok(Some(command.with_required_accounts(required_accounts)));
                 }
                 ClaimUnstakedSOLCommandState::Claim => {
-                    let mut command = self.clone();
-
-                    let [pool_program, pool_account, pool_token_mint, pool_token_program, _withdraw_authority, reserve_stake_account, validator_list_account, _manager_fee_account, _sysvar_clock_program, _sysvar_stake_history_program, _stake_program, fund_stake_accounts @ ..] =
+                    let [sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_stake_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    for stake_account in fund_stake_accounts {
+                    for (index, fund_stake_account) in fund_stake_accounts
+                        .iter()
+                        .take(item.fund_stake_accounts.len())
+                        .enumerate()
+                    {
                         msg!(
-                            "fund_stake_account key {}, lamports {}",
-                            stake_account.key,
-                            stake_account.lamports()
+                            "fund_stake_account {} key {}, lamports {}",
+                            index,
+                            fund_stake_account.key,
+                            fund_stake_account.lamports()
                         );
-                        if stake_account.lamports() > 0 {
-                            staking::SPLStakePoolService::new(
-                                pool_program,
-                                pool_account,
-                                pool_token_mint,
-                                pool_token_program,
-                            )?
-                            .claim_sol(stake_account)?;
+                        if fund_stake_account.lamports() > 0 {
+                            let received_sol_amount = fund_stake_account.lamports();
+                            msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+                            staking::SPLStakePoolService::claim_sol(
+                                sysvar_clock_program,
+                                sysvar_stake_history_program,
+                                stake_program,
+                                fund_stake_account,
+                                fund_reserve_account,
+                                &fund_account.get_reserve_account_seeds(),
+                            )?;
+
+                            msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+
+                            fund_account.sol_operation_receivable_amount -= received_sol_amount;
+                            fund_account.sol_operation_reserved_amount += received_sol_amount;
                         }
                     }
                 }

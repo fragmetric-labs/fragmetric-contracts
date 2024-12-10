@@ -219,9 +219,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fundStakeAccounts = [...Array(5).keys()].map((i) =>
             web3.PublicKey.findProgramAddressSync(
                 [
-                    fragSOLTokenMint.toBuffer(),
+                    fragSOLFund.toBuffer(),
                     this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
-                    Buffer.from(i.toString()),
+                    Buffer.from([i]),
                 ],
                 this.programId,
             )[0]
@@ -1771,6 +1771,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
                 return {event, error}
             }
+            // if (txCount == maxTxCount) { // TODO comment for operator_run event memory exceed
+            //     return {event, error};
+            // }
         }
     }
 
