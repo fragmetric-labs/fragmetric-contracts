@@ -65,6 +65,23 @@ impl<'info> JitoRestakingVaultService<'info> {
         })
     }
 
+    /// gives max fee/expense ratio during a cycle of circulation
+    /// returns (numerator, denominator)
+    pub(in crate::modules) fn get_max_cycle_fee(
+        vault_account_info: &'info AccountInfo<'info>,
+    ) -> Result<(u64, u64)> {
+        let vault_data_ref = vault_account_info.data.borrow();
+        let vault_data = vault_data_ref.as_ref();
+        let vault = Vault::try_from_slice_unchecked(vault_data)?;
+
+        Ok((
+            vault.deposit_fee_bps() as u64 // vault's deposit fee
+            + vault.withdrawal_fee_bps() as u64 // vault's withdrawal fee
+            + vault.program_fee_bps() as u64, // vault program's withdrawal fee
+            10_000,
+        ))
+    }
+
     pub fn get_status(
         vault: AccountInfo,
         vault_operators_delegation: &[AccountInfo],

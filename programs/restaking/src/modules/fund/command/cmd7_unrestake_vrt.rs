@@ -65,14 +65,18 @@ impl SelfExecutable for UnrestakeVRTCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         if let Some(item) = self.items.first() {
-            let mut func_account = ctx.fund_account.clone();
-            let restaking_vault = func_account.get_restaking_vault_mut(&item.vault_address)?;
-
             match &self.state {
                 UnrestakeVRTCommandState::Init if item.sol_amount > 0 => {
                     let mut command = self.clone();
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
-                    match restaking_vault.receipt_token_pricing_source {
+
+                    let fund_accout_ref = ctx.fund_account.load()?;
+                    let restaking_vault =
+                        fund_accout_ref.get_restaking_vault(&item.vault_address)?;
+                    match restaking_vault
+                        .receipt_token_pricing_source
+                        .try_deserialize()?
+                    {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let required_accounts =
                                 &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
@@ -86,7 +90,14 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     };
                 }
                 UnrestakeVRTCommandState::ReadVaultState => {
-                    match restaking_vault.receipt_token_pricing_source {
+                    let fund_accout_ref = ctx.fund_account.load()?;
+                    let restaking_vault =
+                        fund_accout_ref.get_restaking_vault(&item.vault_address)?;
+
+                    match restaking_vault
+                        .receipt_token_pricing_source
+                        .try_deserialize()?
+                    {
                         TokenPricingSource::JitoRestakingVault { address } => {
                             let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
@@ -120,9 +131,12 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                     );
                                     let (_, base_account_bump) =
                                         JitoRestakingVaultService::find_vault_base_account(i as u8);
-                                    
-                                    signer_seed.push(JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED.to_vec());
-                                    signer_seed.push(ctx.receipt_token_mint.key().as_ref().to_vec());
+
+                                    signer_seed.push(
+                                        JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED.to_vec(),
+                                    );
+                                    signer_seed
+                                        .push(ctx.receipt_token_mint.key().as_ref().to_vec());
                                     signer_seed.push(vec![i as u8]);
                                     signer_seed.push(vec![base_account_bump]);
                                     break;
@@ -153,15 +167,14 @@ impl SelfExecutable for UnrestakeVRTCommand {
                             ]);
 
                             let mut command = self.clone();
-                            command.state =
-                                UnrestakeVRTCommandState::Unstake(signer_seed);
+                            command.state = UnrestakeVRTCommandState::Unstake(signer_seed);
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
                 }
                 UnrestakeVRTCommandState::Unstake(raw_signer_seed) => {
-                    let [vault_program,  vault_config, vault_account,vault_receipt_token_mint, vault_receipt_token_program, vault_supported_token_mint, vault_supported_token_program, vault_supported_token_account, base_account, withdrawal_ticket_account, withdrawal_ticket_token_account, fund_receipt_token_account, associated_token_program, system_program, remaining_accounts @ ..] =
+                    let [vault_program, vault_config, vault_account, vault_receipt_token_mint, vault_receipt_token_program, vault_supported_token_mint, vault_supported_token_program, vault_supported_token_account, base_account, withdrawal_ticket_account, withdrawal_ticket_token_account, fund_receipt_token_account, associated_token_program, system_program, remaining_accounts @ ..] =
                         accounts
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -177,7 +190,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         item.sol_amount,
                     )?;
                     let signer_seed = raw_signer_seed.to_vec();
-                    let signer_seed: Vec<&[u8]> = raw_signer_seed.iter().map(|inner_vec| inner_vec.as_slice()).collect();
+                    let signer_seed: Vec<&[u8]> = raw_signer_seed
+                        .iter()
+                        .map(|inner_vec| inner_vec.as_slice())
+                        .collect();
 
                     JitoRestakingVaultService::new(
                         vault_program.to_account_info(),
@@ -197,10 +213,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         base_account,
                         associated_token_program,
                         system_program,
-                        &ctx.fund_account.as_ref(),
+                        &ctx.fund_account.to_account_info(),
                         &[
-                            ctx.fund_account.get_seeds().as_ref(),
-                            signer_seed.as_slice()
+                            ctx.fund_account.load()?.get_seeds().as_ref(),
+                            signer_seed.as_slice(),
                         ],
                         need_to_withdraw_token_amount,
                     )?;

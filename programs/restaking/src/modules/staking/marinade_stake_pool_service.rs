@@ -13,7 +13,6 @@ pub struct MarinadeStakePoolService<'info> {
     pool_account: Account<'info, State>,
     pool_token_mint: InterfaceAccount<'info, Mint>,
     pool_token_program: Program<'info, Token>,
-    system_program: Program<'info, System>,
 }
 
 impl<'info> MarinadeStakePoolService<'info> {
@@ -54,7 +53,6 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
-        system_program: &'info AccountInfo<'info>,
     ) -> Result<Box<Self>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
         require_keys_eq!(pool_token_mint.key(), pool_account.msol_mint);
@@ -64,7 +62,6 @@ impl<'info> MarinadeStakePoolService<'info> {
             marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
             pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
             pool_token_program: Program::try_from(pool_token_program)?,
-            system_program: Program::try_from(system_program)?,
         }))
     }
 
@@ -124,6 +121,8 @@ impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
     pub(in crate::modules) fn deposit_sol(
         &mut self,
+        system_program: &Program<'info, System>,
+
         liq_pool_sol_leg: &AccountInfo<'info>,
         liq_pool_token_leg: &AccountInfo<'info>,
         liq_pool_token_leg_authority: &AccountInfo<'info>,
@@ -153,7 +152,7 @@ impl<'info> MarinadeStakePoolService<'info> {
                     transfer_from: from_sol_account.clone(),
                     mint_to: to_pool_token_account.to_account_info(),
                     msol_mint_authority: pool_token_mint_authority.clone(),
-                    system_program: self.system_program.to_account_info(),
+                    system_program: system_program.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
                 &[from_sol_account_seeds],
@@ -169,10 +168,28 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }
 
+    /// gives max fee/expense ratio during a cycle of circulation
+    /// returns (numerator, denominator)
+    #[inline(never)]
+    pub(in crate::modules) fn get_max_cycle_fee(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<(u64, u64)> {
+        let pool_account = Account::<State>::try_from(pool_account_info)?;
+
+        // it only costs withdrawal fee
+        Ok((
+            // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/state/fee.rs
+            pool_account.withdraw_stake_account_fee.bp_cents as u64,
+            1_000_000,
+        ))
+    }
+
     /// returns unstaking_sol_amount
     #[inline(never)]
     pub(in crate::modules) fn order_unstake(
         &mut self,
+        system_program: &Program<'info, System>,
+
         new_ticket_account: &'info AccountInfo<'info>,
         new_ticket_account_seeds: &[&[u8]],
         clock: &AccountInfo<'info>,
@@ -185,7 +202,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         token_amount: u64,
     ) -> Result<u64> {
-        self.create_ticket_account(operator, new_ticket_account, new_ticket_account_seeds)?;
+        self.create_ticket_account(system_program, operator, new_ticket_account, new_ticket_account_seeds)?;
 
         marinade_cpi::cpi::order_unstake(
             CpiContext::new_with_signer(
@@ -211,17 +228,20 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     fn create_ticket_account(
         &self,
+        system_program: &Program<'info, System>,
+
         operator: &Signer<'info>,
         new_ticket_account: &AccountInfo<'info>,
         new_ticket_account_seeds: &[&[u8]],
     ) -> Result<()> {
         let space = 8 + std::mem::size_of::<TicketAccountData>();
-        self.system_program.create_account(
+        system_program.create_account(
             new_ticket_account,
             new_ticket_account_seeds,
             operator,
             &[],
             space,
+            &crate::ID,
         )
     }
 
@@ -229,6 +249,8 @@ impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
     pub(in crate::modules) fn claim(
         &mut self,
+        system_program: &Program<'info, System>,
+
         pool_reserve_account: &'info AccountInfo<'info>,
         clock: &AccountInfo<'info>,
         ticket_account: &'info AccountInfo<'info>,
@@ -249,13 +271,13 @@ impl<'info> MarinadeStakePoolService<'info> {
                 ticket_account: ticket_account.to_account_info(),
                 transfer_sol_to: to_sol_account.clone(),
                 clock: clock.clone(),
-                system_program: self.system_program.to_account_info(),
+                system_program: system_program.to_account_info(),
             },
         ))?;
 
         anchor_lang::system_program::transfer(
             CpiContext::new_with_signer(
-                self.system_program.to_account_info(),
+                system_program.to_account_info(),
                 anchor_lang::system_program::Transfer {
                     from: to_sol_account.to_account_info(),
                     to: rent_refund_account.to_account_info(),

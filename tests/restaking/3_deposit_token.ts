@@ -17,11 +17,6 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
             restaking.tryAirdrop(user4.publicKey, 100),
         ]);
 
-        let fundManager = restaking.keychain.getKeypair('FUND_MANAGER');
-        await Promise.all([
-            restaking.tryAirdrop(fundManager.publicKey, 100),
-        ]);
-
         await restaking.sleep(1); // ...block hash not found?
 
         await Promise.all([
@@ -150,17 +145,17 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
         expect(new BN(fragSOLTokenMint.supply.toString()).toString()).eq(fragSOLFund.receiptTokenSupplyAmount.toString(), 'correct receipt token supply');
         expect(new BN(fragSOLTokenMint.decimals.toString()).toString()).eq(fragSOLFund.receiptTokenDecimals.toString(), 'correct receipt token decimals');
         for (const asset of fragSOLFund.receiptTokenValue.numerator) {
-            if (asset.sol) {
-                expect(asset.sol[0].toString()).eq(fragSOLFundReserveAccountBalance.toString(), 'correct fund reserved sol (wallet account)');
-                expect(asset.sol[0].toString()).eq(fragSOLFund.solOperationReservedAmount.toString(), 'correct fund reserved sol (data account)');
-            } else {
-                const supportedTokenAccount = await restaking.getFragSOLSupportedTokenAccountByMintAddress(asset.token[0]);
-                const supportedTokenData = fragSOLFund.supportedTokens.find(s => s.mint.toString() == asset.token[0].toString());
+            if (asset.discriminant == 1) { // SOL
+                expect(asset.solAmount.toString()).eq(fragSOLFundReserveAccountBalance.toString(), 'correct fund reserved sol (wallet account)');
+                expect(asset.solAmount.toString()).eq(fragSOLFund.solOperationReservedAmount.toString(), 'correct fund reserved sol (data account)');
+            } else if (asset.discriminant == 2) { // Token
+                const supportedTokenAccount = await restaking.getFragSOLSupportedTokenAccountByMintAddress(asset.tokenMint);
+                const supportedTokenData = fragSOLFund.supportedTokens.find(s => s.mint.toString() == asset.tokenMint.toString());
                 const supportedTokenDataBalance = supportedTokenData.operationReservedAmount.add(supportedTokenData.operationReceivableAmount);
-                logger.debug(`${asset.token[0]} balance:`, asset.token[2].toString(), supportedTokenDataBalance.toString());
+                logger.debug(`${asset.tokenMint} balance:`, asset.tokenAmount.toString(), supportedTokenDataBalance.toString());
 
-                // TODO: expect(asset.token[2].toString()).eq(new BN(supportedTokenAccount.amount.toString()).toString(), `correct fund reserved supported token (token account, ${asset.token[0]})`);
-                expect(asset.token[2].toString()).eq(supportedTokenDataBalance.toString(), `correct fund reserved supported token (data account, ${asset.token[0]})`);
+                expect(asset.tokenAmount.toString()).eq(new BN(supportedTokenAccount.amount.toString()).toString(), `correct fund reserved supported token (token account, ${asset.tokenMint})`);
+                expect(asset.tokenAmount.toString()).eq(supportedTokenDataBalance.toString(), `correct fund reserved supported token (data account, ${asset.tokenMint})`);
             }
         }
     })

@@ -3,7 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalTicketAccount};
+use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalAccount};
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
@@ -200,7 +200,6 @@ impl NormalizedTokenPoolAccount {
         &mut self,
         normalized_token_mint: &mut InterfaceAccount<Mint>,
     ) -> Result<()> {
-        #[cfg(debug_assertions)]
         require_keys_eq!(self.normalized_token_mint, normalized_token_mint.key());
 
         normalized_token_mint.reload()?;
@@ -259,7 +258,7 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn unlock_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
+    pub(super) fn allocate_locked_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)
