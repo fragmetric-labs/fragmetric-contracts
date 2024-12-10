@@ -4,10 +4,9 @@ use bytemuck::{Pod, Zeroable};
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
-// TODO v0.3/operation: visibility
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub struct SupportedToken {
+pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,

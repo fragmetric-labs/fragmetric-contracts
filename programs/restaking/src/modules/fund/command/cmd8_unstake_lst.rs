@@ -237,12 +237,8 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                     let fund_supported_token_info = fund_account
                         .get_supported_token_mut(pool_token_mint.key)?;
-                    fund_supported_token_info.set_operation_reserved_amount(
-                        fund_supported_token_info
-                            .get_operation_reserved_amount()
-                            .checked_sub(item.token_amount)
-                            .unwrap(),
-                    );
+                    fund_supported_token_info.operation_reserved_amount =
+                        fund_supported_token_info.operation_reserved_amount - item.token_amount;
 
                     msg!(
                         "unstaked {} tokens to get {} sol",

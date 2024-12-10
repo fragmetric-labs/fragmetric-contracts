@@ -6,12 +6,13 @@ use super::*;
 
 #[account]
 #[derive(InitSpace)]
-pub struct FundBatchWithdrawalTicketAccount {
+pub struct FundWithdrawalBatchAccount {
     data_version: u16,
     bump: u8,
     pub receipt_token_mint: Pubkey,
     pub batch_id: u64,
     num_requests: u64,
+    num_claimed_requests: u64,
     receipt_token_amount: u64,
     claimed_receipt_token_amount: u64,
     pub(super) sol_user_amount: u64,
@@ -23,8 +24,8 @@ pub struct FundBatchWithdrawalTicketAccount {
     _reserved: [u8; 32],
 }
 
-impl FundBatchWithdrawalTicketAccount {
-    pub const SEED: &'static [u8] = b"batch_withdrawal_ticket";
+impl FundWithdrawalBatchAccount {
+    pub const SEED: &'static [u8] = b"withdrawal_batch";
 
     pub fn get_bump(&self) -> u8 {
         self.bump
@@ -88,7 +89,7 @@ impl FundBatchWithdrawalTicketAccount {
         self.migrate(self.bump, receipt_token_mint, batch_id)
     }
 
-    pub(super) fn set_withdrawal_amount(
+    pub(super) fn set_claimable_amount(
         &mut self,
         num_requests: u64,
         receipt_token_amount: u64,
@@ -97,6 +98,7 @@ impl FundBatchWithdrawalTicketAccount {
         processed_at: i64,
     ) {
         self.num_requests = num_requests;
+        self.num_claimed_requests = 0;
         self.receipt_token_amount = receipt_token_amount;
         self.claimed_receipt_token_amount = 0;
         self.sol_user_amount = sol_user_amount;
@@ -105,12 +107,12 @@ impl FundBatchWithdrawalTicketAccount {
         self.processed_at = processed_at;
     }
 
-    pub(super) fn is_stale(&self) -> bool {
+    pub(super) fn is_settled(&self) -> bool {
         self.claimed_receipt_token_amount == self.receipt_token_amount
     }
 
-    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_withdraw_amount)
-    pub(super) fn claim_withdrawal_request(
+    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_amount)
+    pub(super) fn settle_withdrawal_request(
         &mut self,
         request: WithdrawalRequest,
     ) -> Result<(u64, u64, u64)> {
@@ -135,6 +137,7 @@ impl FundBatchWithdrawalTicketAccount {
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
+        self.num_claimed_requests += 1;
         self.claimed_receipt_token_amount += request.receipt_token_amount;
         self.claimed_sol_user_amount += sol_user_amount;
 

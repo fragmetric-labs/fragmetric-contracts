@@ -3,7 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalTicketAccount};
+use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalAccount};
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
@@ -258,7 +258,7 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn unlock_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
+    pub(super) fn allocate_locked_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)

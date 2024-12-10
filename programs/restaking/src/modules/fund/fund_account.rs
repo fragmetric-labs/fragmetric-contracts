@@ -45,7 +45,7 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
 
-    withdrawal: WithdrawalState,
+    pub withdrawal: WithdrawalState,
 
     /// asset: A receivable that the fund may charge the users requesting withdrawals.
     /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
@@ -55,7 +55,7 @@ pub struct FundAccount {
 
     // TODO v0.3/operation: visibility
     /// asset
-    pub(in crate::modules) sol_operation_reserved_amount: u64,
+    pub(super) sol_operation_reserved_amount: u64,
 
     /// asset & configurations for LSTs
     _padding3: [u8; 15],
@@ -149,8 +149,7 @@ impl FundAccount {
         [Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
+    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
         let mut seeds = Vec::with_capacity(3);
         seeds.extend(self.get_reserve_account_seed_phrase());
         seeds.push(std::slice::from_ref(&self.reserve_account_bump));
@@ -275,13 +274,22 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_supported_token_mut(
+    pub(super) fn get_supported_token_mut(
         &mut self,
         token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {
         self.get_supported_tokens_iter_mut()
             .find(|supported_token| supported_token.mint == *token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
+    }
+
+    pub(super) fn get_supported_token_mut_by_index(
+        &mut self,
+        index: usize,
+    ) -> Result<&mut SupportedToken> {
+        self.get_supported_tokens_iter_mut()
+            .skip(index)
+            .next()
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
@@ -337,19 +345,6 @@ impl FundAccount {
         self.num_supported_tokens += 1;
 
         Ok(())
-    }
-
-    #[inline]
-    pub(super) fn get_withdrawal_state(&self) -> &WithdrawalState {
-        &self.withdrawal
-    }
-
-    #[inline]
-    pub(super) fn get_withdrawal_state_mut(&mut self, ignore_disabled: bool) -> Result<&mut WithdrawalState> {
-        if !ignore_disabled {
-            self.withdrawal.assert_withdrawal_enabled()?;
-        }
-        Ok(&mut self.withdrawal)
     }
 
     #[inline]
@@ -477,29 +472,6 @@ impl FundAccount {
             .sol_operation_reserved_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
-    }
-
-    pub(super) fn set_batch_withdrawal_ticket(
-        &mut self,
-        ticket: &mut Account<FundBatchWithdrawalTicketAccount>,
-        batch: WithdrawalBatch,
-        sol_amount: u64,
-        current_timestamp: i64,
-    ) -> Result<()> {
-        let sol_fee_amount = self.withdrawal.get_sol_fee_amount(sol_amount)?;
-        let sol_user_amount = sol_amount - sol_fee_amount;
-
-        self.sol_operation_reserved_amount -= sol_amount;
-        self.withdrawal.sol_withdrawal_reserved_amount += sol_user_amount;
-        ticket.set_withdrawal_amount(
-            batch.num_requests,
-            batch.receipt_token_amount,
-            sol_user_amount,
-            sol_fee_amount,
-            current_timestamp,
-        );
 
         Ok(())
     }

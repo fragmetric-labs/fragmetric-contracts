@@ -202,11 +202,14 @@ impl<'info> PricingService<'info> {
             total_token_value_as_sol,
             total_token_amount,
         )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException));
+        if sol_amount.is_err() {
+            msg!("PRICING ERROR: {:?}, {:?}", token_mint, token_amount);
+        }
         // if *token_mint == FRAGSOL_MINT_ADDRESS {
         //     msg!("PRICING: {} SOL <= {} {:?} ({} SOL / {} TOKEN)", sol_amount, token_amount, token_mint, total_token_value_as_sol, total_token_amount);
         // }
-        Ok(sol_amount)
+        Ok(sol_amount?)
     }
 
     /// returns token value being consist of atomic tokens, either SOL or LSTs

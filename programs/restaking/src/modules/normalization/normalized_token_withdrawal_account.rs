@@ -9,11 +9,11 @@ use super::MAX_SUPPORTED_TOKENS;
 #[constant]
 /// ## Version History
 /// * v1: Initial Version
-pub const NORMALIZED_TOKEN_WITHDRAWAL_TICKET_ACCOUNT_CURRENT_VERSION: u16 = 1;
+pub const NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION: u16 = 1;
 
 #[account]
 #[derive(InitSpace)]
-pub struct NormalizedTokenWithdrawalTicketAccount {
+pub struct NormalizedTokenWithdrawalAccount {
     data_version: u16,
     bump: u8,
     pub(super) withdrawal_authority: Pubkey,
@@ -26,7 +26,7 @@ pub struct NormalizedTokenWithdrawalTicketAccount {
     _reserved: [u8; 32],
 }
 
-impl PDASeeds<3> for NormalizedTokenWithdrawalTicketAccount {
+impl PDASeeds<3> for NormalizedTokenWithdrawalAccount {
     const SEED: &'static [u8] = b"nt_withdrawal";
 
     fn get_seed_phrase(&self) -> [&[u8]; 3] {
@@ -42,7 +42,7 @@ impl PDASeeds<3> for NormalizedTokenWithdrawalTicketAccount {
     }
 }
 
-impl NormalizedTokenWithdrawalTicketAccount {
+impl NormalizedTokenWithdrawalAccount {
     fn migrate(
         &mut self,
         bump: u8,
@@ -91,7 +91,7 @@ impl NormalizedTokenWithdrawalTicketAccount {
 
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
-        self.data_version == NORMALIZED_TOKEN_WITHDRAWAL_TICKET_ACCOUNT_CURRENT_VERSION
+        self.data_version == NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION
     }
 
     pub(super) fn set_claimable_tokens(
@@ -103,7 +103,7 @@ impl NormalizedTokenWithdrawalTicketAccount {
         require_eq!(
             self.normalized_token_amount,
             0,
-            ErrorCode::NormalizedTokenPoolAlreadySettledWithdrawalTicketError
+            ErrorCode::NormalizedTokenPoolAlreadySettledWithdrawalAccountError
         );
         require_eq!(
             claimable_tokens

@@ -13,7 +13,7 @@ use crate::modules::fund::{
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
 
-use super::FundBatchWithdrawalTicketAccount;
+use super::FundWithdrawalBatchAccount;
 
 pub struct UserFundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -258,11 +258,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // validate configuration
         let mut fund_account = self.fund_account.load_mut()?;
-        let withdrawal = fund_account.get_withdrawal_state_mut(false)?;
+        fund_account.withdrawal.assert_withdrawal_enabled()?;
 
         // create a user withdrawal request
         let (batch_id, request_id) = self.user_fund_account.create_withdrawal_request(
-            withdrawal,
+            &mut fund_account.withdrawal,
             receipt_token_amount,
             self.current_timestamp,
         )?;
@@ -334,12 +334,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         let mut fund_account = self.fund_account.load_mut()?;
-        let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
 
         // clear pending amount from both user fund account and global fund account
         let receipt_token_amount = self
             .user_fund_account
-            .cancel_withdrawal_request(withdrawal, request_id)?;
+            .cancel_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
         drop(fund_account);
 
         // unlock requested user receipt token amount
@@ -404,21 +403,20 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
-        fund_batch_withdrawal_ticket_account: &mut Account<'info, FundBatchWithdrawalTicketAccount>,
+        fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
         let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = {
             let mut fund_account = self.fund_account.load_mut()?;
-            let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
 
             // calculate $SOL amounts and mark withdrawal request as claimed
             // withdrawal fee is already paid.
             let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-                self.user_fund_account.claim_withdrawal_request(
-                    withdrawal,
-                    fund_batch_withdrawal_ticket_account,
+                self.user_fund_account.settle_withdrawal_request(
+                    &mut fund_account.withdrawal,
+                    fund_withdrawal_batch_account,
                     request_id,
                 )?;
 
@@ -427,9 +425,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             self.user.add_lamports(sol_user_amount)?;
 
             // close ticket and collect rent if stale
-            if fund_batch_withdrawal_ticket_account.is_stale() {
-                fund_batch_withdrawal_ticket_account
-                    .close(fund_treasury_account.to_account_info())?;
+            if fund_withdrawal_batch_account.is_settled() {
+                fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
             }
 
             (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)

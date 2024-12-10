@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-use std::mem::zeroed;
 
 use crate::errors::ErrorCode;
-use crate::modules::fund::SupportedToken;
 
 const MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
@@ -19,7 +17,9 @@ pub(super) struct WithdrawalState {
     /// configuration: basis of normal reserve to cover typical withdrawal volumes rapidly, aiming to minimize redundant circulations and unstaking/unrestaking fees.
     pub sol_normal_reserve_rate_bps: u16,
     pub sol_normal_reserve_max_amount: u64,
-    pub sol_withdrawal_reserved_amount: u64,
+
+    /// reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund. for informational purposes only.
+    pub sol_user_reserved_amount: u64,
 
     /// pending_batch.num_requests + SUM(queued_batches[].num_requests)
     num_requests_in_progress: u64,
@@ -32,7 +32,7 @@ pub(super) struct WithdrawalState {
     pending_batch: WithdrawalBatch,
 
     _padding3: [u8; 15],
-    num_queued_batches: u8,
+    pub num_queued_batches: u8,
     queued_batches: [WithdrawalBatch; MAX_QUEUED_WITHDRAWAL_BATCHES],
 
     _reserved: [u8; 128],
@@ -40,28 +40,23 @@ pub(super) struct WithdrawalState {
 
 impl WithdrawalState {
     /// 1 fee rate = 1bps = 0.01%
-    const WITHDRAWAL_FEE_RATE_DIVISOR: u64 = 10_000;
-    const WITHDRAWAL_FEE_RATE_LIMIT: u64 = 500;
+    const WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 
     #[inline(always)]
     pub fn get_sol_fee_rate_as_percent(&self) -> f32 {
-        self.sol_fee_rate_bps as f32 / (Self::WITHDRAWAL_FEE_RATE_DIVISOR / 100) as f32
+        self.sol_fee_rate_bps as f32 / 100.0
     }
 
     #[inline(always)]
     pub fn get_sol_fee_amount(&self, sol_amount: u64) -> Result<u64> {
-        crate::utils::get_proportional_amount(
-            sol_amount,
-            self.sol_fee_rate_bps as u64,
-            Self::WITHDRAWAL_FEE_RATE_DIVISOR,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        crate::utils::get_proportional_amount(sol_amount, self.sol_fee_rate_bps as u64, 10_000)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
     pub fn set_sol_fee_rate_bps(&mut self, sol_fee_rate_bps: u16) -> Result<()> {
         require_gte!(
-            Self::WITHDRAWAL_FEE_RATE_LIMIT,
-            sol_fee_rate_bps as u64,
+            Self::WITHDRAWAL_FEE_RATE_BPS_LIMIT,
+            sol_fee_rate_bps,
             ErrorCode::FundInvalidSolWithdrawalFeeRateError
         );
 
@@ -83,6 +78,7 @@ impl WithdrawalState {
         Ok(())
     }
 
+    #[inline(always)]
     pub fn set_sol_normal_reserve_max_amount(&mut self, sol_amount: u64) {
         self.sol_normal_reserve_max_amount = sol_amount;
     }
@@ -99,7 +95,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn issue_new_withdrawal_request(
+    pub fn create_pending_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,
         current_timestamp: i64,
@@ -119,10 +115,7 @@ impl WithdrawalState {
     }
 
     /// Returns receipt_token_amount
-    pub fn remove_withdrawal_request_from_pending_batch(
-        &mut self,
-        request: WithdrawalRequest,
-    ) -> Result<u64> {
+    pub fn remove_pending_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<u64> {
         self.assert_request_issued(&request)?;
         self.assert_request_not_enqueued(&request)?;
 
@@ -167,9 +160,10 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) {
+    /// returns [enqueued]
+    pub fn enqueue_pending_batch(&mut self, current_timestamp: i64) -> bool {
         if self.num_queued_batches >= MAX_QUEUED_WITHDRAWAL_BATCHES as u8 {
-            return;
+            return false;
         }
 
         let batch_id = self.next_batch_id;
@@ -178,28 +172,33 @@ impl WithdrawalState {
         let new_pending_batch = &mut self.queued_batches[self.num_queued_batches as usize];
         new_pending_batch.initialize(batch_id);
 
-        let mut old_pending_batch = std::mem::replace(&mut self.pending_batch, *new_pending_batch);
+        let mut pending_batch = std::mem::replace(&mut self.pending_batch, *new_pending_batch);
 
-        self.num_requests_in_progress += old_pending_batch.num_requests;
+        self.num_requests_in_progress += pending_batch.num_requests;
         self.last_batch_enqueued_at = current_timestamp;
-        old_pending_batch.enqueued_at = current_timestamp;
-        self.queued_batches[self.num_queued_batches as usize] = old_pending_batch;
+        pending_batch.enqueued_at = current_timestamp;
+        self.queued_batches[self.num_queued_batches as usize] = pending_batch;
+
+        true
     }
 
     pub fn dequeue_batches(
         &mut self,
         mut count: usize,
         current_timestamp: i64,
-    ) -> Vec<WithdrawalBatch> {
+    ) -> Result<Vec<WithdrawalBatch>> {
         if count == 0 {
-            return vec![];
+            return Ok(vec![]);
         }
+        require_gte!(self.num_queued_batches as usize, count);
 
-        count = count.min(self.num_queued_batches as usize);
         self.last_processed_batch_id = self.queued_batches[count - 1].batch_id;
         self.last_batch_processed_at = current_timestamp;
         let processing_batches = self.queued_batches[..count].to_vec();
 
+        processing_batches
+            .iter()
+            .for_each(|batch| self.num_requests_in_progress -= batch.num_requests);
         for i in 0..self.num_queued_batches as usize {
             if i < (self.num_queued_batches as usize) - count {
                 self.queued_batches[i] = self.queued_batches[i + count];
@@ -212,7 +211,7 @@ impl WithdrawalState {
         for processing_batch in &processing_batches {
             self.num_requests_in_progress -= processing_batch.num_requests
         }
-        processing_batches
+        Ok(processing_batches)
     }
 
     pub fn get_queued_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {

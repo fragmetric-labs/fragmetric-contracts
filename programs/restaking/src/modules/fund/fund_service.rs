@@ -11,7 +11,9 @@ use crate::modules::reward;
 use crate::utils::*;
 use crate::{events, utils};
 
-use super::command::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::command::{
+    OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -51,6 +53,35 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         self.update_asset_values(&mut pricing_service)?;
 
         Ok(pricing_service)
+    }
+
+    pub(in crate::modules) fn get_pricing_sources(&self) -> Result<Vec<Pubkey>> {
+        let fund_account = self.fund_account.load()?;
+
+        fund_account
+            .get_normalized_token()
+            .iter()
+            .map(|normalized_token| &normalized_token.pricing_source)
+            .chain(
+                fund_account
+                    .get_restaking_vaults_iter()
+                    .map(|restaking_vault| &restaking_vault.receipt_token_pricing_source),
+            )
+            .chain(
+                fund_account
+                    .get_supported_tokens_iter()
+                    .map(|supported_token| &supported_token.pricing_source),
+            )
+            .map(|pricing_source| {
+                Ok(match pricing_source.try_deserialize()? {
+                    TokenPricingSource::SPLStakePool { address }
+                    | TokenPricingSource::MarinadeStakePool { address }
+                    | TokenPricingSource::JitoRestakingVault { address }
+                    | TokenPricingSource::FragmetricNormalizedTokenPool { address } => address,
+                    _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()
     }
 
     pub(super) fn update_asset_values(
@@ -199,11 +230,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
 
             let mut execution_count = 0;
+            let mut executed_commands = Vec::new();
+
+            let pricing_sources = self.get_pricing_sources()?;
             let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
                 .iter()
                 .map(|info| (*info.key, info))
                 .collect();
-            let mut executed_commands = Vec::new();
 
             'command_loop: while let Ok((command, required_accounts)) =
                 operation_state.get_command()
@@ -245,12 +278,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     }
                 }
 
-                // append all unused accounts
-                // TODO v0.3/operation: write pricing sources in command?
+                // append all unused accounts & pricing sources
                 for unused_account_key in &unused_account_keys {
                     // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
                     let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
                     required_account_infos.push(*remaining_account);
+                }
+                for pricing_source in &pricing_sources {
+                    // TODO: optimize and throw error
+                    required_account_infos
+                        .push(remaining_accounts_map.get(pricing_source).unwrap());
                 }
 
                 let mut ctx = OperationCommandContext {
@@ -264,8 +301,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
                         // msg!("COMMAND#{}: {:?} passed", operation_state.sequence, command);
                         executed_commands.push(command.clone());
-                        operation_state.set_command(next_command, self.current_timestamp);
                         execution_count += 1;
+
+                        operation_state.set_command(next_command, self.current_timestamp);
                     }
                     Err(error) => {
                         // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
@@ -295,25 +333,28 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(())
     }
 
-    pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<()> {
+    pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<bool> {
         let mut fund_account = self.fund_account.load_mut()?;
-        let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
 
-        if !(forced || withdrawal.is_batch_enqueuing_threshold_satisfied(self.current_timestamp)) {
+        if !(forced
+            || fund_account
+                .withdrawal
+                .is_batch_enqueuing_threshold_satisfied(self.current_timestamp))
+        {
             // Threshold unmet, skip enqueue
-            return Ok(());
+            return Ok(false);
         }
 
-        withdrawal.enqueue_pending_batch(self.current_timestamp);
-
-        Ok(())
+        Ok(fund_account
+            .withdrawal
+            .enqueue_pending_batch(self.current_timestamp))
     }
 
+    /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
-        let withdrawal = fund_account.get_withdrawal_state();
 
-        let mut accounts = Vec::with_capacity(4 + withdrawal.get_queued_batches_iter().count());
+        let mut accounts = Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -323,9 +364,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             (fund_account.get_reserve_account_address()?, true),
             (fund_account.get_treasury_account_address()?, true),
         ]);
-        accounts.extend(withdrawal.get_queued_batches_iter().map(|batch| {
+        accounts.extend(fund_account.withdrawal.get_queued_batches_iter().map(|batch| {
             (
-                FundBatchWithdrawalTicketAccount::find_account_address(
+                FundWithdrawalBatchAccount::find_account_address(
                     &self.receipt_token_mint.key(),
                     batch.batch_id,
                 )
@@ -344,42 +385,36 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         receipt_token_program: &AccountInfo<'info>,
         receipt_token_lock_account: &AccountInfo<'info>,
         fund_reserve_account: &AccountInfo<'info>,
-        treasury_account: &AccountInfo<'info>,
-        uninitialized_batch_withdrawal_tickets: &[&'info AccountInfo<'info>],
+        fund_treasury_account: &AccountInfo<'info>,
+        uninitialized_withdrawal_batch_accounts: &[&'info AccountInfo<'info>],
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
     ) -> Result<u64> {
+        if !(forced
+            || self
+                .fund_account
+                .load()?
+                .withdrawal
+                .is_batch_processing_threshold_satisfied(self.current_timestamp))
         {
-            if !(forced
-                || self
-                    .fund_account
-                    .load()?
-                    .get_withdrawal_state()
-                    .is_batch_processing_threshold_satisfied(self.current_timestamp))
-            {
-                // Threshold unmet, skip process
-                return Ok(0);
-            }
-        };
+            // threshold unmet, skip process
+            return Ok(0);
+        }
+
+        let mut sol_user_amount_processing = 0;
+        let mut sol_fee_amount_processing = 0;
+        let mut receipt_token_amount_processing = 0;
+        let mut processing_batch_count = 0;
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
         let mut fund_account = self.fund_account.load_mut()?;
 
-        // TODO v0.3/operation: later use get_sol_withdrawal_obligated_reserve_amount
-        let mut operation_reserved_amount = fund_account.sol_operation_reserved_amount;
-        let mut operation_receivable_amount = fund_account.sol_operation_receivable_amount;
-        let mut withdrawal_user_amount = 0;
-        let mut withdrawal_fee_amount = 0;
-        let mut withdrawal_receipt_token_amount = 0;
-        let available_treasury_balance = treasury_account.lamports();
-        let mut batch_count = 0;
-
-        let mut withdrawal = fund_account.get_withdrawal_state_mut(true)?;
-        for batch in withdrawal.get_queued_batches_iter() {
-            let next_withdrawal_receipt_token_amount =
-                withdrawal_receipt_token_amount + batch.receipt_token_amount;
-            if next_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
+        // examine withdrawal batches to process with current fund status
+        for batch in fund_account.withdrawal.get_queued_batches_iter() {
+            let next_receipt_token_amount_processing =
+                receipt_token_amount_processing + batch.receipt_token_amount;
+            if next_receipt_token_amount_processing > receipt_token_amount_to_process {
                 break;
             }
 
@@ -387,81 +422,70 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
             )?;
-            let sol_fee_amount = withdrawal.get_sol_fee_amount(sol_amount)?;
+            let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
             let sol_user_amount = sol_amount - sol_fee_amount;
-            let next_withdrawal_user_amount = withdrawal_user_amount + sol_user_amount;
-            let next_withdrawal_fee_amount = withdrawal_fee_amount + sol_fee_amount;
-            if operation_reserved_amount + operation_receivable_amount
-                < next_withdrawal_user_amount + next_withdrawal_fee_amount
+
+            let next_sol_user_amount_processing = sol_user_amount_processing + sol_user_amount;
+            let next_sol_fee_amount_processing = sol_fee_amount_processing + sol_fee_amount;
+
+            // [sol_user_amount_processing] should primarily be covered by cash.
+            // condition 1: sol_operation_reserved_amount (cash) >= sol_user_amount_processing (cash/debt)
+            // if condition 1 is met, the user's sol withdrawal will be fully processed using cash.
+
+            // if condition 1 fails, the withdrawal can still proceed if:
+            // condition 1-2: sol_operation_reserved_amount (cash) + sol_treasury_reserved_amount (cash/debt) >= sol_user_amount_processing (cash/debt)
+            // in this case, the user's sol withdrawal will rely on the treasury's ability to provide additional liquidity, even by taking on debt.
+
+            // additionally, the [sol_fee_amount_processing], which belongs to the treasury, can be covered using sol_operation_receivable_amount (bonds).
+            // the treasury is willing to accept receivables from the fund to offset its debt obligations.
+            // this leads to condition 2:
+            // sol_operation_reserved_amount (cash) + sol_operation_receivable_amount (bond) >= sol_user_amount_processing (cash/debt) + sol_fee_amount_processing (debt)
+
+            // to summarize:
+            // - sol_operation_reserved_amount + sol_operation_receivable_amount + [optional debt from sol_treasury_reserved_amount] will offset sol_user_amount_processing + sol_fee_amount_processing.
+            // - sol_operation_reserved_amount + [optional debt from sol_treasury_reserved_amount] will offset sol_user_amount_processing.
+            // - sol_operation_receivable_amount will offset sol_fee_amount_processing + [optional debt from sol_treasury_reserved_amount].
+            // - any remaining portion of sol_fee_amount_processing not covered by the receivables will be offset by the leftover sol_operation_reserved_amount, transferring the surplus to the treasury fund as revenue.
+
+            if fund_account.sol_operation_reserved_amount
+                + fund_account.sol_operation_receivable_amount
+                < next_sol_user_amount_processing + next_sol_fee_amount_processing
+                || fund_account.sol_operation_reserved_amount + fund_treasury_account.lamports()
+                    < next_sol_user_amount_processing
             {
                 break;
             }
 
-            if operation_reserved_amount >= next_withdrawal_user_amount
-                || next_withdrawal_user_amount - operation_reserved_amount
-                    >= available_treasury_balance
-            {
-                withdrawal_receipt_token_amount = next_withdrawal_receipt_token_amount;
-                withdrawal_user_amount = next_withdrawal_user_amount;
-                withdrawal_fee_amount = next_withdrawal_fee_amount;
-                batch_count += 1;
-                continue;
-            }
+            receipt_token_amount_processing = next_receipt_token_amount_processing;
+            sol_user_amount_processing = next_sol_user_amount_processing;
+            sol_fee_amount_processing = next_sol_fee_amount_processing;
+            processing_batch_count += 1;
         }
 
-        let processible_batches = withdrawal.dequeue_batches(batch_count, self.current_timestamp);
-
-        require_gte!(
-            uninitialized_batch_withdrawal_tickets.len(),
-            processible_batches.len(),
-        );
-
-        for (ticket, batch) in uninitialized_batch_withdrawal_tickets
-            .iter()
-            .cloned()
-            .zip(processible_batches)
-        {
-            let (ticket_address, bump) = FundBatchWithdrawalTicketAccount::find_account_address(
-                &self.receipt_token_mint.key(),
-                batch.batch_id,
-            );
-
-            require_keys_eq!(ticket.key(), ticket_address);
-
-            // create account
-            let mut ticket = {
-                system_program.create_account(
-                    ticket,
-                    FundBatchWithdrawalTicketAccount::get_seeds(
-                        &self.receipt_token_mint.key(),
-                        batch.batch_id,
-                    )
-                    .iter()
-                    .map(Vec::as_slice)
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-                    operator,
-                    &[],
-                    8 + FundBatchWithdrawalTicketAccount::INIT_SPACE,
-                )?;
-                Account::<FundBatchWithdrawalTicketAccount>::try_from_unchecked(ticket)?
-            };
-            ticket.initialize(bump, self.receipt_token_mint.key(), batch.batch_id);
-
-            let sol_amount = pricing_service.get_token_amount_as_sol(
-                &self.receipt_token_mint.key(),
-                batch.receipt_token_amount,
-            )?;
-            fund_account.set_batch_withdrawal_ticket(
-                &mut ticket,
-                batch,
-                sol_amount,
-                self.current_timestamp,
+        // borrow sol cash from treasury if needed (condition 1-2)
+        if sol_user_amount_processing > fund_account.sol_operation_reserved_amount {
+            let sol_debt_amount_from_treasury =
+                sol_user_amount_processing - fund_account.sol_operation_reserved_amount;
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_treasury_account.clone(),
+                        to: fund_reserve_account.clone(),
+                    },
+                    &[&fund_account.get_treasury_account_seeds()],
+                ),
+                sol_debt_amount_from_treasury,
             )?;
 
-            ticket.exit(&crate::ID)?;
+            // increase debt, can use this variable as the entire sol_fee_amount_processing should be given to the treasury account in the first place
+            sol_fee_amount_processing += sol_debt_amount_from_treasury;
+
+            // reserve transferred cash
+            fund_account.sol_operation_reserved_amount += sol_debt_amount_from_treasury;
         }
 
+        // burn receipt tokens
         anchor_spl::token_2022::burn(
             CpiContext::new_with_signer(
                 receipt_token_program.to_account_info(),
@@ -472,67 +496,166 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 },
                 &[fund_account.get_seeds().as_ref()],
             ),
-            withdrawal_receipt_token_amount,
+            receipt_token_amount_processing,
         )?;
-
         fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
+        let receipt_token_amount_processed = receipt_token_amount_processing;
 
-        if operation_reserved_amount < withdrawal_user_amount {
-            // borrow sol from treasury
-            anchor_lang::system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: treasury_account.clone(),
-                        to: fund_reserve_account.clone(),
-                    },
-                    &[&fund_account.get_treasury_account_seeds()],
-                ),
-                withdrawal_user_amount - operation_reserved_amount,
+        // reserve each sol_user_amount to batch accounts: sol_operation_reserved_amount -= sol_user_amount_processing;
+        let processing_batches = fund_account
+            .withdrawal
+            .dequeue_batches(processing_batch_count, self.current_timestamp)?;
+
+        require_gte!(
+            uninitialized_withdrawal_batch_accounts.len(),
+            processing_batches.len(),
+        );
+
+        for (uninitialized_batch_account, batch) in uninitialized_withdrawal_batch_accounts
+            .iter()
+            .cloned()
+            .zip(processing_batches)
+        {
+            // create a batch account
+            let (batch_account_address, bump) = FundWithdrawalBatchAccount::find_account_address(
+                &self.receipt_token_mint.key(),
+                batch.batch_id,
+            );
+            require_keys_eq!(uninitialized_batch_account.key(), batch_account_address);
+            let mut batch_account = {
+                system_program.create_account(
+                    uninitialized_batch_account,
+                    FundWithdrawalBatchAccount::get_seeds(
+                        &self.receipt_token_mint.key(),
+                        batch.batch_id,
+                    )
+                    .iter()
+                    .map(Vec::as_slice)
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+                    operator,
+                    &[],
+                    8 + FundWithdrawalBatchAccount::INIT_SPACE,
+                )?;
+                Account::<FundWithdrawalBatchAccount>::try_from_unchecked(
+                    uninitialized_batch_account,
+                )?
+            };
+            batch_account.initialize(bump, self.receipt_token_mint.key(), batch.batch_id);
+
+            // reserve user_sol_amount of the batch account
+            let sol_amount = pricing_service.get_token_amount_as_sol(
+                &self.receipt_token_mint.key(),
+                batch.receipt_token_amount,
             )?;
-            withdrawal_fee_amount += withdrawal_user_amount - operation_reserved_amount;
-            operation_reserved_amount = withdrawal_user_amount;
-        }
-        operation_reserved_amount -= withdrawal_user_amount;
+            let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
+            let sol_user_amount = sol_amount - sol_fee_amount;
 
-        if operation_receivable_amount < withdrawal_fee_amount {
-            // pay fee as sol
+            fund_account.sol_operation_reserved_amount -= sol_amount;
+            fund_account.withdrawal.sol_user_reserved_amount += sol_user_amount;
+            batch_account.set_claimable_amount(
+                batch.num_requests,
+                batch.receipt_token_amount,
+                sol_user_amount,
+                sol_fee_amount,
+                self.current_timestamp,
+            );
+            batch_account.exit(&crate::ID)?;
+
+            sol_user_amount_processing -= sol_user_amount;
+            receipt_token_amount_processing -= batch.receipt_token_amount;
+        }
+
+        // during evaluation, up to [processing_batch_count] lamports can be deducted.
+        // any remaining sol_user_amount_processing simply remains to the fund (no further action).
+        require_gte!(processing_batch_count as u64, sol_user_amount_processing);
+
+        // pay the treasury debt with receivables first (no further action).
+        let receivable_amount_to_pay = fund_account
+            .sol_operation_receivable_amount
+            .min(sol_fee_amount_processing);
+        fund_account.sol_operation_receivable_amount -= receivable_amount_to_pay;
+        sol_fee_amount_processing -= receivable_amount_to_pay;
+
+        // pay remaining debt with cash
+        if sol_fee_amount_processing > 0 {
             anchor_lang::system_program::transfer(
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
                     anchor_lang::system_program::Transfer {
                         from: fund_reserve_account.clone(),
-                        to: treasury_account.clone(),
+                        to: fund_treasury_account.clone(),
                     },
                     &[&fund_account.get_reserve_account_seeds()],
                 ),
-                withdrawal_fee_amount - operation_receivable_amount,
+                sol_fee_amount_processing,
             )?;
-            operation_reserved_amount -= withdrawal_fee_amount - operation_receivable_amount;
-            withdrawal_fee_amount = operation_receivable_amount;
+            sol_fee_amount_processing = 0;
         }
-        operation_receivable_amount -= withdrawal_fee_amount;
+        fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
 
-        fund_account.sol_operation_reserved_amount = operation_reserved_amount;
-        fund_account.sol_operation_receivable_amount = operation_receivable_amount;
+        require_eq!(
+            sol_user_amount_processing
+                + sol_fee_amount_processing
+                + receipt_token_amount_processing,
+            0
+        );
+        Ok(receipt_token_amount_processed)
+    }
 
-        Ok(withdrawal_receipt_token_amount)
+    /// returns (sol_amount_transferred)
+    pub(super) fn harvest_from_treasury_account(
+        &mut self,
+        system_program: &Program<'info, System>,
+        fund_treasury_account: &AccountInfo<'info>,
+        to_account: &'info AccountInfo<'info>,
+    ) -> Result<u64> {
+        let fund_account = self.fund_account.load()?;
+        require_keys_eq!(
+            fund_treasury_account.key(),
+            fund_account.get_treasury_account_address()?
+        );
+
+        let treasury_account_lamports = fund_treasury_account.lamports();
+        if treasury_account_lamports == 0 {
+            return Ok(0);
+        }
+
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: fund_treasury_account.clone(),
+                    to: to_account.to_account_info(),
+                },
+                &[&fund_account.get_treasury_account_seeds()],
+            ),
+            treasury_account_lamports,
+        )?;
+
+        Ok(treasury_account_lamports)
+    }
+
+    /// receipt token amount in queued withdrawals.
+    pub(super) fn get_receipt_token_withdrawal_obligated_amount(&self) -> Result<u64> {
+        Ok(self
+            .fund_account
+            .load()?
+            .withdrawal
+            .get_queued_batches_iter()
+            .map(|b| b.receipt_token_amount)
+            .sum())
     }
 
     /// estimated $SOL amount to process queued withdrawals.
-    fn get_sol_withdrawal_obligated_reserve_amount(
+    pub(super) fn get_sol_withdrawal_obligated_reserve_amount(
         &self,
         pricing_service: &PricingService,
     ) -> Result<u64> {
-        let receipt_token_amount = self
-            .fund_account
-            .load()?
-            .get_withdrawal_state()
-            .get_queued_batches_iter()
-            .map(|b| b.receipt_token_amount)
-            .sum();
-        pricing_service
-            .get_token_amount_as_sol(&self.receipt_token_mint.key(), receipt_token_amount)
+        pricing_service.get_token_amount_as_sol(
+            &self.receipt_token_mint.key(),
+            self.get_receipt_token_withdrawal_obligated_amount()?,
+        )
     }
 
     /// based on normal reserve configuration, the normal reserve amount relative to total value of the fund.
@@ -543,15 +666,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let (total_token_value_as_sol, _total_token_amount) =
             pricing_service.get_token_total_value_as_sol(&self.receipt_token_mint.key())?;
         let fund_account = self.fund_account.load()?;
-        let withdrawal = fund_account.get_withdrawal_state();
 
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            withdrawal.sol_normal_reserve_rate_bps as u64,
+            fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(withdrawal.sol_normal_reserve_max_amount))
+        .max(fund_account.withdrawal.sol_normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.
