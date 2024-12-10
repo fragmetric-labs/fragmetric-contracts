@@ -181,8 +181,8 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub fn find_accounts_for_restaking_vault(
         fund_account: &AccountInfo,
         jito_vault_program: &AccountInfo,
-        jito_vault_account: &AccountInfo,
         jito_vault_config: &AccountInfo,
+        jito_vault_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let vault_data_ref = jito_vault_account.data.borrow();
         let vault_data = vault_data_ref.as_ref();
@@ -198,12 +198,6 @@ impl<'info> JitoRestakingVaultService<'info> {
                 &vault_vst_mint,
                 &token_program,
             );
-        let clock = Clock::get()?;
-        let vault_update_state_tracker =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
-
-        let vault_update_state_tracker_prepare_for_delaying =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, true)?;
 
         let vault_fee_wallet_token_account =
             associated_token::get_associated_token_address_with_program_id(
@@ -226,10 +220,8 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         Ok(vec![
             (*jito_vault_program.key, false),
-            (*jito_vault_account.key, true),
             (*jito_vault_config.key, true),
-            (vault_update_state_tracker.key(), false),
-            (vault_update_state_tracker_prepare_for_delaying.key(), false),
+            (*jito_vault_account.key, true),
             (vault_vrt_mint, true),
             (vault_vst_mint, true),
             (fund_supported_token_account, true),
@@ -245,7 +237,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         jito_vault_config: &AccountInfo,
         current_slot: u64,
         delayed: bool,
-    ) -> Result<Pubkey> {
+    ) -> Result<(Pubkey, u64)> {
         let data = jito_vault_config
             .try_borrow_data()
             .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
@@ -268,42 +260,42 @@ impl<'info> JitoRestakingVaultService<'info> {
             &JITO_VAULT_PROGRAM_ID,
         );
 
-        Ok(vault_update_state_tracker)
+        Ok((vault_update_state_tracker, ncn_epoch))
     }
 
     pub fn find_current_vault_update_state_tracker(
+        vault_config: &'info AccountInfo,
         vault_update_state_tracker: &'info AccountInfo<'info>,
+        expected_ncn_epoch: u64,
         next_vault_update_state_tracker: &'info AccountInfo<'info>,
-    ) -> Result<&'info AccountInfo<'info>> {
-        let data = vault_update_state_tracker
-            .try_borrow_data()
-            .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
-        let tracker = VaultUpdateStateTracker::try_from_slice_unchecked(&data)
-            .map_err(|e| Error::from(e).with_account_name("jito_vault_update_state_tracker"))?;
-        if Clock::get()?.epoch == tracker.ncn_epoch() {
-            Ok(vault_update_state_tracker)
+        delayed_ncn_epoch: u64,
+    ) -> Result<(&'info AccountInfo<'info>, u64, u64)> {
+        let vault_config_data = &**vault_config.try_borrow_data()?;
+        let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
+        let epoch_length = vault_config.epoch_length();
+        let current_slot = Clock::get()?.slot;
+        let current_epoch = current_slot
+            .checked_div(epoch_length)
+            .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
+
+        let current_vault_update_state_tracker = if current_epoch == expected_ncn_epoch {
+            vault_update_state_tracker
         } else {
-            Ok(next_vault_update_state_tracker)
-        }
+            next_vault_update_state_tracker
+        };
+        Ok((current_vault_update_state_tracker, current_epoch, epoch_length))
     }
 
     pub fn update_vault_if_needed(
         self: &Self,
         operator: &Signer<'info>,
         vault_update_state_tracker: &'info AccountInfo<'info>,
-        next_vault_update_state_tracker: &'info AccountInfo<'info>,
-        current_slot: u64,
+        current_epoch: u64,
+        epoch_length: u64,
         system_program: &AccountInfo<'info>,
         signer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
     ) -> Result<&Self> {
-        let epoch_length =
-            Config::try_from_slice_unchecked(&self.vault_config.try_borrow_data()?)?.epoch_length();
-
-        let current_epoch = current_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
-
         let updated_slot = Vault::try_from_slice_unchecked(&self.vault.try_borrow_data()?)?
             .last_full_state_update_slot();
         let updated_epoch = updated_slot
@@ -311,13 +303,10 @@ impl<'info> JitoRestakingVaultService<'info> {
             .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))?;
 
         if current_epoch > updated_epoch {
-            let current_vault_update_state_tracker = Self::find_current_vault_update_state_tracker(
-                vault_update_state_tracker,
-                next_vault_update_state_tracker,
-            )?;
             let rent = Rent::get()?;
-            let current_lamports = current_vault_update_state_tracker.get_lamports();
+            let current_lamports = vault_update_state_tracker.get_lamports();
             let space = 8 + std::mem::size_of::<VaultUpdateStateTracker>();
+
             let required_lamports = rent
                 .minimum_balance(space)
                 .max(1)
@@ -328,7 +317,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                     system_program.clone(),
                     anchor_lang::system_program::Transfer {
                         from: operator.to_account_info(),
-                        to: current_vault_update_state_tracker.clone(),
+                        to: vault_update_state_tracker.clone(),
                     },
                 ),
                 required_lamports,
@@ -336,19 +325,18 @@ impl<'info> JitoRestakingVaultService<'info> {
 
             Self::initialize_vault_update_state_tracker(
                 self,
-                signer,
-                signer_seeds,
-                current_vault_update_state_tracker,
+                operator,
+                &[],
+                vault_update_state_tracker,
                 system_program,
             )?;
-
             // TODO : need to crank_update_state_tracker for each operator
 
             Self::close_vault_update_state_tracker(
                 self,
-                signer,
-                signer_seeds,
-                current_vault_update_state_tracker,
+                operator,
+                &[],
+                vault_update_state_tracker,
                 current_epoch,
             )?;
         }
@@ -369,7 +357,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 self.vault.key,
                 vault_update_state_tracker.key,
                 signer.key,
-                TryFrom::try_from(0u8).unwrap(), // WithdrawalAllocationMethod
+                jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy
             );
 
         invoke_signed(
@@ -522,8 +510,8 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     pub fn find_initialize_vault_accounts(
         vault_program: &AccountInfo,
-        vault_account: &AccountInfo,
         vault_config: &AccountInfo,
+        vault_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let vault_data_ref = vault_account.try_borrow_data()?;
         let vault = Vault::try_from_slice_unchecked(&vault_data_ref)?;
@@ -735,8 +723,8 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub fn find_accounts_for_unrestaking_vault(
         fund_account: &AccountInfo,
         jito_vault_program: &AccountInfo,
-        jito_vault_account: &AccountInfo,
         jito_vault_config: &AccountInfo,
+        jito_vault_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let vault_data_ref = jito_vault_account.data.borrow();
         let vault_data = vault_data_ref.as_ref();
@@ -777,26 +765,18 @@ impl<'info> JitoRestakingVaultService<'info> {
                 &token_program,
             );
 
-        let clock = Clock::get()?;
-        let vault_update_state_tracker =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
-
-        let vault_update_state_tracker_prepare_for_delaying =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, true)?;
-
         Ok(vec![
             (*jito_vault_program.key, false),
-            (*jito_vault_account.key, false),
             (*jito_vault_config.key, false),
-            (vault_vrt_mint, false),
-            (vault_vst_mint, false),
-            (fund_supported_token_account, false),
-            (fund_receipt_token_account, false),
-            (vault_supported_token_account, false),
-            (vault_fee_receipt_token_account, false),
-            (vault_program_fee_wallet_vrt_account, false),
-            (vault_update_state_tracker, false),
-            (vault_update_state_tracker_prepare_for_delaying, false),
+            (*jito_vault_account.key, true),
+            (vault_vrt_mint, true),
+            (vault_vst_mint, true),
+            (fund_supported_token_account, true),
+            (fund_receipt_token_account, true),
+            (vault_supported_token_account, true),
+            (vault_fee_receipt_token_account, true),
+            (vault_program_fee_wallet_vrt_account, true),
+
             (token_program, false),
             (system_program, false),
         ])
@@ -816,11 +796,11 @@ impl<'info> JitoRestakingVaultService<'info> {
             InterfaceAccount::<TokenAccount>::try_from(fund_vault_supported_token_account)?;
         let fund_vault_supported_token_account_amount_before =
             fund_vault_supported_token_account_parsed.amount;
-        let ticket_data_ref = vault_withdrawal_ticket.data.borrow();
-        let ticket_data = ticket_data_ref.as_ref();
-        let vault_staker_withdrawal_ticket =
-            VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
-        let claimed_vrt_amount = vault_staker_withdrawal_ticket.vrt_amount();
+        // let vault_withdrawal_ticket_copied = vault_withdrawal_ticket.clone();
+        // let vault_staker_withdrawal_ticket_data = vault_withdrawal_ticket_copied.try_borrow_data()?;
+        // let vault_staker_withdrawal_ticket =
+        //     VaultStakerWithdrawalTicket::try_from_slice_unchecked(&vault_staker_withdrawal_ticket_data)?;
+        // let claimed_vrt_amount = vault_staker_withdrawal_ticket.vrt_amount();
 
         let enqueue_withdraw_ix = jito_vault_sdk::sdk::burn_withdrawal_ticket(
             self.vault_program.key,
@@ -861,7 +841,6 @@ impl<'info> JitoRestakingVaultService<'info> {
             fund_vault_supported_token_account_parsed.amount;
         let unrestaked_vst_amount = fund_vault_supported_token_account_amount
             - fund_vault_supported_token_account_amount_before;
-
         Ok(unrestaked_vst_amount)
     }
 }
