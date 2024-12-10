@@ -1,9 +1,9 @@
-use std::cell::RefMut;
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
+use std::cell::RefMut;
 
 use crate::errors::ErrorCode;
 use crate::events;
@@ -89,44 +89,35 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .transpose()?
             .unzip();
 
-        // mint receipt token to user
-        let receipt_token_mint_amount = {
-            let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
-                .new_pricing_service(pricing_sources)?;
-            let receipt_token_mint_amount =
-                pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
-
-            // mint receipt token to user & update user reward accrual status
-            self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
-
-            receipt_token_mint_amount
-        };
+        // mint receipt token to user & update user reward accrual status
+        let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources)?;
+        let receipt_token_mint_amount =
+            pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
+        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user $SOL to fund
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            fund_account.deposit_sol(sol_amount)?;
+        self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
 
-            system_program::transfer(
-                CpiContext::new(
-                    system_program.to_account_info(),
-                    system_program::Transfer {
-                        from: self.user.to_account_info(),
-                        to: fund_reserve_account.to_account_info(),
-                    },
-                ),
-                sol_amount,
-            )?;
-        }
+        system_program::transfer(
+            CpiContext::new(
+                system_program.to_account_info(),
+                system_program::Transfer {
+                    from: self.user.to_account_info(),
+                    to: fund_reserve_account.to_account_info(),
+                },
+            ),
+            sol_amount,
+        )?;
 
-        // to update asset value again
+        // update asset value again
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .update_asset_values(&mut pricing_service)?;
 
         emit!(events::UserDepositedSOLToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account.as_ref().clone()),
+            user_fund_account: Clone::clone(self.user_fund_account),
             deposited_sol_amount: sol_amount,
             receipt_token_mint: self.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
@@ -226,8 +217,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_mint_amount: u64,
         contribution_accrual_rate: Option<u8>,
     ) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
-
         // mint receipt token
         token_2022::mint_to(
             CpiContext::new_with_signer(
@@ -237,13 +226,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: self.user_receipt_token_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[fund_account.get_seeds().as_ref()],
+                &[self.fund_account.load()?.get_seeds().as_ref()],
             ),
             receipt_token_mint_amount,
         )?;
 
-        fund_account
-            .reload_receipt_token_supply(self.receipt_token_mint)?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
 
         self.user_fund_account
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
@@ -269,14 +258,15 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // validate configuration
         let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.withdrawal.assert_withdrawal_enabled()?;
+        let withdrawal = fund_account.get_withdrawal_state_mut(false)?;
 
         // create a user withdrawal request
         let (batch_id, request_id) = self.user_fund_account.create_withdrawal_request(
-            &mut fund_account.withdrawal,
+            withdrawal,
             receipt_token_amount,
             self.current_timestamp,
         )?;
+        drop(fund_account);
 
         // lock requested user receipt token amount
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -301,14 +291,15 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[fund_account.get_seeds().as_ref()],
+                &[self.fund_account.load()?.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )?;
 
         receipt_token_lock_account.reload()?;
 
-        fund_account
+        self.fund_account
+            .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         self.user_fund_account
@@ -343,11 +334,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         request_id: u64,
     ) -> Result<()> {
         let mut fund_account = self.fund_account.load_mut()?;
+        let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
 
         // clear pending amount from both user fund account and global fund account
         let receipt_token_amount = self
             .user_fund_account
-            .cancel_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
+            .cancel_withdrawal_request(withdrawal, request_id)?;
+        drop(fund_account);
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -359,7 +352,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     from: receipt_token_lock_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[fund_account.get_seeds().as_ref()],
+                &[self.fund_account.load()?.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )?;
@@ -373,14 +366,15 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                     to: self.user_receipt_token_account.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
-                &[fund_account.get_seeds().as_ref()],
+                &[self.fund_account.load()?.get_seeds().as_ref()],
             ),
             receipt_token_amount,
         )?;
 
         receipt_token_lock_account.reload()?;
 
-        fund_account
+        self.fund_account
+            .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         self.user_fund_account
@@ -417,12 +411,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
     ) -> Result<()> {
         let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = {
             let mut fund_account = self.fund_account.load_mut()?;
+            let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
 
             // calculate $SOL amounts and mark withdrawal request as claimed
             // withdrawal fee is already paid.
             let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
                 self.user_fund_account.claim_withdrawal_request(
-                    &mut fund_account.withdrawal,
+                    withdrawal,
                     fund_batch_withdrawal_ticket_account,
                     request_id,
                 )?;
@@ -433,7 +428,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
             // close ticket and collect rent if stale
             if fund_batch_withdrawal_ticket_account.is_stale() {
-                fund_batch_withdrawal_ticket_account.close(fund_treasury_account.to_account_info())?;
+                fund_batch_withdrawal_ticket_account
+                    .close(fund_treasury_account.to_account_info())?;
             }
 
             (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)

@@ -161,7 +161,6 @@ impl SelfExecutable for StakeSOLCommand {
 
                             required_accounts.extend(match token.pricing_source.try_deserialize()? {
                                 TokenPricingSource::SPLStakePool { address } => {
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     staking::SPLStakePoolService::find_accounts_to_deposit_sol(
@@ -169,7 +168,6 @@ impl SelfExecutable for StakeSOLCommand {
                                     )?
                                 }
                                 TokenPricingSource::MarinadeStakePool { address } => {
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     staking::MarinadeStakePoolService::find_accounts_to_deposit_sol(
@@ -203,7 +201,6 @@ impl SelfExecutable for StakeSOLCommand {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
                                     };
 
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     let expected_minted_supported_token_amount =
@@ -250,7 +247,6 @@ impl SelfExecutable for StakeSOLCommand {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
                                     };
 
-                                    #[cfg(debug_assertions)]
                                     require_keys_eq!(address, pool_account.key());
 
                                     let expected_minted_supported_token_amount =

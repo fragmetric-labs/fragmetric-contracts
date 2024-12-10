@@ -297,26 +297,23 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
     pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<()> {
         let mut fund_account = self.fund_account.load_mut()?;
-        if !(forced
-            || fund_account
-                .withdrawal
-                .is_batch_enqueuing_threshold_satisfied(self.current_timestamp))
-        {
+        let withdrawal = fund_account.get_withdrawal_state_mut(true)?;
+
+        if !(forced || withdrawal.is_batch_enqueuing_threshold_satisfied(self.current_timestamp)) {
             // Threshold unmet, skip enqueue
             return Ok(());
         }
 
-        fund_account
-            .withdrawal
-            .enqueue_pending_batch(self.current_timestamp);
+        withdrawal.enqueue_pending_batch(self.current_timestamp);
 
         Ok(())
     }
 
     pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
-        let mut accounts =
-            Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
+        let withdrawal = fund_account.get_withdrawal_state();
+
+        let mut accounts = Vec::with_capacity(4 + withdrawal.get_queued_batches_iter().count());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -326,21 +323,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             (fund_account.get_reserve_account_address()?, true),
             (fund_account.get_treasury_account_address()?, true),
         ]);
-        accounts.extend(
-            fund_account
-                .withdrawal
-                .get_queued_batches_iter()
-                .map(|batch| {
-                    (
-                        FundBatchWithdrawalTicketAccount::find_account_address(
-                            &self.receipt_token_mint.key(),
-                            batch.batch_id,
-                        )
-                        .0,
-                        true,
-                    )
-                }),
-        );
+        accounts.extend(withdrawal.get_queued_batches_iter().map(|batch| {
+            (
+                FundBatchWithdrawalTicketAccount::find_account_address(
+                    &self.receipt_token_mint.key(),
+                    batch.batch_id,
+                )
+                .0,
+                true,
+            )
+        }));
         Ok(accounts)
     }
 
@@ -359,10 +351,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         receipt_token_amount_to_process: u64,
     ) -> Result<u64> {
         {
-            let fund_account = self.fund_account.load()?;
             if !(forced
-                || fund_account
-                    .withdrawal
+                || self
+                    .fund_account
+                    .load()?
+                    .get_withdrawal_state()
                     .is_batch_processing_threshold_satisfied(self.current_timestamp))
             {
                 // Threshold unmet, skip process
@@ -382,7 +375,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let available_treasury_balance = treasury_account.lamports();
         let mut batch_count = 0;
 
-        for batch in fund_account.withdrawal.get_queued_batches_iter() {
+        let mut withdrawal = fund_account.get_withdrawal_state_mut(true)?;
+        for batch in withdrawal.get_queued_batches_iter() {
             let next_withdrawal_receipt_token_amount =
                 withdrawal_receipt_token_amount + batch.receipt_token_amount;
             if next_withdrawal_receipt_token_amount > receipt_token_amount_to_process {
@@ -393,7 +387,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
             )?;
-            let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
+            let sol_fee_amount = withdrawal.get_sol_fee_amount(sol_amount)?;
             let sol_user_amount = sol_amount - sol_fee_amount;
             let next_withdrawal_user_amount = withdrawal_user_amount + sol_user_amount;
             let next_withdrawal_fee_amount = withdrawal_fee_amount + sol_fee_amount;
@@ -415,11 +409,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
         }
 
-        let processible_batches = fund_account
-            .withdrawal
-            .dequeue_batches(batch_count, self.current_timestamp);
+        let processible_batches = withdrawal.dequeue_batches(batch_count, self.current_timestamp);
 
-        #[cfg(debug_assertions)]
         require_gte!(
             uninitialized_batch_withdrawal_tickets.len(),
             processible_batches.len(),
@@ -536,7 +527,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let receipt_token_amount = self
             .fund_account
             .load()?
-            .withdrawal
+            .get_withdrawal_state()
             .get_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
             .sum();
@@ -552,14 +543,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let (total_token_value_as_sol, _total_token_amount) =
             pricing_service.get_token_total_value_as_sol(&self.receipt_token_mint.key())?;
         let fund_account = self.fund_account.load()?;
+        let withdrawal = fund_account.get_withdrawal_state();
 
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
+            withdrawal.sol_normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(fund_account.withdrawal.sol_normal_reserve_max_amount))
+        .max(withdrawal.sol_normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.

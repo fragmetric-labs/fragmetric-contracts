@@ -45,7 +45,7 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
 
-    pub(super) withdrawal: WithdrawalState,
+    withdrawal: WithdrawalState,
 
     /// asset: A receivable that the fund may charge the users requesting withdrawals.
     /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
@@ -259,10 +259,12 @@ impl FundAccount {
         )
     }
 
+    #[inline]
     pub fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
         self.supported_tokens[..self.num_supported_tokens as usize].iter()
     }
 
+    #[inline]
     pub fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
         self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
     }
@@ -337,6 +339,20 @@ impl FundAccount {
         Ok(())
     }
 
+    #[inline]
+    pub(super) fn get_withdrawal_state(&self) -> &WithdrawalState {
+        &self.withdrawal
+    }
+
+    #[inline]
+    pub(super) fn get_withdrawal_state_mut(&mut self, ignore_disabled: bool) -> Result<&mut WithdrawalState> {
+        if !ignore_disabled {
+            self.withdrawal.assert_withdrawal_enabled()?;
+        }
+        Ok(&mut self.withdrawal)
+    }
+
+    #[inline]
     pub(super) fn get_normalized_token(&self) -> Option<&NormalizedToken> {
         if self.normalized_token.enabled == 1 {
             Some(&self.normalized_token)
@@ -345,6 +361,7 @@ impl FundAccount {
         }
     }
 
+    #[inline]
     pub(super) fn get_normalized_token_mut(&mut self) -> Option<&mut NormalizedToken> {
         if self.normalized_token.enabled == 1 {
             Some(&mut self.normalized_token)
@@ -369,10 +386,12 @@ impl FundAccount {
         normalized_token.initialize(mint, program, decimals, pool, operation_reserved_amount)
     }
 
+    #[inline]
     pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
         self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
     }
 
+    #[inline]
     pub(super) fn get_restaking_vaults_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RestakingVault> {
@@ -433,7 +452,6 @@ impl FundAccount {
         &mut self,
         receipt_token_mint: &mut InterfaceAccount<Mint>,
     ) -> Result<()> {
-        #[cfg(debug_assertions)]
         require_keys_eq!(self.receipt_token_mint, receipt_token_mint.key());
 
         receipt_token_mint.reload()?;

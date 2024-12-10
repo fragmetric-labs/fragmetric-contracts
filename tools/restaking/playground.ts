@@ -466,7 +466,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async tryAirdropSupportedTokens(account: web3.PublicKey, amount = 100) {
-        await this.tryAirdrop(account, amount);
+        await this.tryAirdrop(this.wallet.publicKey, amount * Object.keys(this.supportedTokenMetadata).length);
 
         const txData = await Promise.all(
             Object.values(this.supportedTokenMetadata).map(async (token) => {
@@ -659,7 +659,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 name: metadata.name,
                 symbol: metadata.symbol,
                 description: metadata.additionalMetadata[0][1],
-                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.comSOL/fragSOL.png",
+                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png",
                 // attributes: [],
             },
             null,
@@ -793,7 +793,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 name: tokenMetadata.name,
                 symbol: tokenMetadata.symbol,
                 description: tokenMetadata.additionalMetadata[0][1],
-                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.comSOL/fragSOL.png",
+                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png",
                 // attributes: [],
             },
             null,

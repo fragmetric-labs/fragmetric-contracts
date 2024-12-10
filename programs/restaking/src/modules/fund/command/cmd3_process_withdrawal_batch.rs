@@ -49,7 +49,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
 
-                let num_queued_batches = ctx.fund_account.load()?.withdrawal.get_queued_batches_iter().count();
+                let num_queued_batches = ctx.fund_account.load()?.get_withdrawal_state().get_queued_batches_iter().count();
                 if remaining_accounts.len() < num_queued_batches {
                     err!(ErrorCode::AccountNotEnoughKeys)?;
                 }
