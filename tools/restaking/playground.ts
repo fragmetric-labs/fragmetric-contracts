@@ -1922,6 +1922,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 isSigner: false,
                 isWritable: true,
             },
+            {
+                // system_program
+                pubkey: anchor.web3.SystemProgram.programId,
+                isSigner: false,
+                isWritable: false,
+            },
         ];
         const cmd0Tx = await this.run({
             instructions: [

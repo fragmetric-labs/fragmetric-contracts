@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 
 use crate::errors;
+use crate::utils::SystemProgramExt;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
@@ -575,24 +576,17 @@ impl<'info> SPLStakePoolService<'info> {
         stake_account: &AccountInfo<'info>,
         payer_signer_seeds: &[&[u8]],
         stake_account_signer_seeds: &[&[u8]],
+        system_program: &Program<'info, System>,
     ) -> Result<()> {
-        if stake_account.lamports() == 0 {
-            // if given stake_account has lamports, it means it's already initialized by spl_stake_pool, so it's already an active stake account
-            let create_account_ix = solana_program::system_instruction::create_account(
-                payer.key,
-                stake_account.key,
-                0,
-                StakeStateV2::size_of() as u64,
-                &solana_program::stake::program::ID,
-            );
-            invoke_signed(
-                &create_account_ix,
-                &[payer.clone(), stake_account.clone()],
-                &[payer_signer_seeds, stake_account_signer_seeds],
-            )?;
-        }
-
-        Ok(())
+        // if given stake_account has lamports, it means it's already initialized by spl_stake_pool, so it's already an active stake account
+        system_program.create_account(
+            stake_account,
+            stake_account_signer_seeds,
+            payer,
+            payer_signer_seeds,
+            StakeStateV2::size_of(),
+            &solana_program::stake::program::ID,
+        )
     }
 
     pub fn find_accounts_to_claim_sol() -> Vec<(Pubkey, bool)> {

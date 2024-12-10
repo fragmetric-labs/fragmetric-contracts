@@ -314,6 +314,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                         .iter()
                                         .map(|seed| seed.as_slice())
                                         .collect::<Vec<&[u8]>>()[..],
+                                    ctx.system_program,
                                 )?;
 
                                 let returned_sol_amount = staking::SPLStakePoolService::new(

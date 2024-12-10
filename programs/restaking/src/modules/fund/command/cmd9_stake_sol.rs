@@ -242,7 +242,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )
                                 }
                                 TokenPricingSource::MarinadeStakePool { address } => {
-                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
+                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
                                         accounts
                                     else {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -269,9 +269,9 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_account,
                                         pool_token_mint,
                                         pool_token_program,
-                                        system_program,
                                     )?
                                     .deposit_sol(
+                                        ctx.system_program,
                                         liq_pool_sol_leg,
                                         liq_pool_token_leg,
                                         liq_pool_token_leg_authority,

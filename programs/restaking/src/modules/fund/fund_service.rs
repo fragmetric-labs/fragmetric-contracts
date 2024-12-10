@@ -536,6 +536,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     operator,
                     &[],
                     8 + FundWithdrawalBatchAccount::INIT_SPACE,
+                    &crate::ID,
                 )?;
                 Account::<FundWithdrawalBatchAccount>::try_from_unchecked(
                     uninitialized_batch_account,
