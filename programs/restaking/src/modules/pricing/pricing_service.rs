@@ -9,7 +9,7 @@ use crate::modules::restaking::JitoRestakingVaultValueProvider;
 use crate::modules::staking::{MarinadeStakePoolValueProvider, SPLStakePoolValueProvider};
 use crate::utils;
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "idl-build")))]
 use super::MockPricingSourceValueProvider;
 use super::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
 
@@ -104,7 +104,7 @@ impl<'info> PricingService<'info> {
                     .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
                 FundReceiptTokenValueProvider.resolve_underlying_assets(token_mint, &[account1])?
             }
-            #[cfg(test)]
+            #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,
                 denominator,
@@ -235,9 +235,7 @@ impl<'info> PricingService<'info> {
                     let is_token_atomic = self
                         .token_value_map
                         .get(token_mint)
-                        .ok_or_else(|| {
-                            error!(ErrorCode::TokenPricingSourceAccountNotFoundError)
-                        })?
+                        .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?
                         .is_atomic();
 
                     if is_token_atomic {
@@ -305,7 +303,7 @@ impl<'info> PricingService<'info> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "idl-build")))]
 mod tests {
     use crate::modules::pricing::MockAsset;
 

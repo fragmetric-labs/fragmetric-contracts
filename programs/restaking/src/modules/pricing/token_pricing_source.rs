@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "idl-build")))]
 use crate::modules::pricing::MockAsset;
 
 #[derive(Clone, Debug, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq)]
@@ -22,7 +22,7 @@ pub enum TokenPricingSource {
     FragmetricRestakingFund {
         address: Pubkey,
     },
-    #[cfg(test)]
+    #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
         numerator: Vec<MockAsset>,
@@ -42,7 +42,7 @@ impl std::fmt::Display for TokenPricingSource {
             Self::FragmetricRestakingFund { address } => {
                 write!(f, "FragmetricRestakingFund({})", address)
             }
-            #[cfg(test)]
+            #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
         }
     }
@@ -90,7 +90,7 @@ impl From<TokenPricingSource> for TokenPricingSourcePod {
                 _padding: [0; 7],
                 address,
             },
-            #[cfg(test)]
+            #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock { .. } => Self {
                 discriminant: 255,
                 _padding: [0; 7],
@@ -120,7 +120,7 @@ impl TryFrom<&TokenPricingSourcePod> for TokenPricingSource {
             5 => TokenPricingSource::FragmetricRestakingFund {
                 address: pod.address,
             },
-            #[cfg(test)]
+            #[cfg(all(test, not(feature = "idl-build")))]
             255 => TokenPricingSource::Mock {
                 denominator: 255,
                 numerator: vec![],
