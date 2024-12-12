@@ -1847,7 +1847,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             prioritizationFeeMicroLamports,
         });
 
-        console.log(tx.event.operatorRanFund);
         for (const command of tx.event.operatorRanFund.executedCommands) {
             const commandName = Object.keys(command)[0];
             const commandArgs = command[commandName][0];

@@ -324,7 +324,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         // write back operation state
-        self.fund_account.load_mut()?.operation = *operation_state;
+        std::mem::swap(&mut self.fund_account.load_mut()?.operation, operation_state.as_mut());
 
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),

@@ -78,6 +78,7 @@ impl OperationCommand {
     }
 
     fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
+        pod.clear();
         pod.discriminant = self.discriminant();
         self.serialize(&mut pod.buffer.as_mut_slice())?;
         Ok(())
@@ -94,6 +95,11 @@ pub struct OperationCommandPod {
 }
 
 impl OperationCommandPod {
+    fn clear(&mut self) {
+        self.discriminant = 0;
+        self.buffer.fill(0);
+    }
+
     fn try_deserialize(&self) -> Result<Option<OperationCommand>> {
         Ok({
             if self.discriminant == 0 {
@@ -178,8 +184,8 @@ impl OperationCommandEntryPod {
         self.command.discriminant == 0
     }
 
-    pub fn set_none(&mut self) {
-        self.command.discriminant = 0;
+    pub fn clear(&mut self) {
+        self.command.clear();
     }
 
     pub fn try_deserialize(&self) -> Result<Option<OperationCommandEntry>> {

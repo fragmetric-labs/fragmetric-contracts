@@ -85,7 +85,7 @@ impl OperationState {
         };
         match &next_command {
             Some(next_command) => next_command.serialize_as_pod(&mut self.next_command)?,
-            None => self.next_command.set_none(),
+            None => self.next_command.clear(),
         };
         Ok(())
     }
