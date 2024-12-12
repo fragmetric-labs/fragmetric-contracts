@@ -89,8 +89,9 @@ pub struct TokenPricingSourcePod {
 }
 
 impl TokenPricingSourcePod {
-    pub fn set_none(&mut self) {
+    pub fn clear(&mut self) {
         self.discriminant = 0;
+        self.address = Pubkey::default();
     }
 
     pub fn try_deserialize(&self) -> Result<Option<TokenPricingSource>> {

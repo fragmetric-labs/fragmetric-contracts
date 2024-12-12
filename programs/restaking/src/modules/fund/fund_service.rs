@@ -343,20 +343,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<bool> {
-        let mut fund_account = self.fund_account.load_mut()?;
-
-        if !(forced
-            || fund_account
-                .withdrawal
-                .is_batch_enqueuing_threshold_satisfied(self.current_timestamp))
-        {
-            // Threshold unmet, skip enqueue
-            return Ok(false);
-        }
-
-        Ok(fund_account
+        Ok(self
+            .fund_account
+            .load_mut()?
             .withdrawal
-            .enqueue_pending_batch(self.current_timestamp))
+            .enqueue_pending_batch(self.current_timestamp, forced))
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
@@ -406,17 +397,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         forced: bool,
         receipt_token_amount_to_process: u64,
     ) -> Result<u64> {
-        if !(forced
-            || self
-                .fund_account
-                .load()?
-                .withdrawal
-                .is_batch_processing_threshold_satisfied(self.current_timestamp))
-        {
-            // threshold unmet, skip process
-            return Ok(0);
-        }
-
         let mut sol_user_amount_processing = 0;
         let mut sol_fee_amount_processing = 0;
         let mut receipt_token_amount_processing = 0;
@@ -427,7 +407,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             let fund_account = self.fund_account.load()?;
 
             // examine withdrawal batches to process with current fund status
-            for batch in fund_account.withdrawal.get_queued_batches_iter() {
+            for batch in fund_account
+                .withdrawal
+                .get_queued_batches_iter_to_process(self.current_timestamp, forced)
+            {
                 let next_receipt_token_amount_processing =
                     receipt_token_amount_processing + batch.receipt_token_amount;
                 if next_receipt_token_amount_processing > receipt_token_amount_to_process {
@@ -503,7 +486,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
         }
 
-        {
+        if receipt_token_amount_processing > 0 {
             // burn receipt tokens
             let fund_account = self.fund_account.load()?;
             anchor_spl::token_2022::burn(
@@ -522,7 +505,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let receipt_token_amount_processed = receipt_token_amount_processing;
 
-        {
+        if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
 

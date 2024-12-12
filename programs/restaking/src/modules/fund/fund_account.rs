@@ -340,8 +340,9 @@ impl FundAccount {
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        let supported_token = &mut self.supported_tokens[self.num_supported_tokens as usize];
+        let mut supported_token = SupportedToken::zeroed();
         supported_token.initialize(mint, program, decimals, pricing_source)?;
+        self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
         Ok(())
@@ -428,7 +429,7 @@ impl FundAccount {
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
 
-        let restaking_vault = &mut self.restaking_vaults[self.num_restaking_vaults as usize];
+        let mut restaking_vault = RestakingVault::zeroed();
         restaking_vault.initialize(
             vault,
             program,
@@ -438,6 +439,7 @@ impl FundAccount {
             receipt_token_decimals,
             receipt_token_operation_reserved_amount,
         )?;
+        self.restaking_vaults[self.num_restaking_vaults as usize] = restaking_vault;
         self.num_restaking_vaults += 1;
 
         Ok(())
@@ -532,11 +534,6 @@ mod tests {
     #[test]
     fn test_initialize_update_fund_account() {
         let mut fund = create_initialized_fund_account();
-
-        assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
-        assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
-        assert_eq!(fund.withdrawal.enabled, 0);
-        assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
 
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
         fund.set_sol_accumulated_deposit_capacity_amount(0)

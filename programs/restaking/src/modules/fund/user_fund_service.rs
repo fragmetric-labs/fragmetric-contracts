@@ -258,7 +258,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         let (batch_id, request_id) = {
             // validate configuration
             let mut fund_account = self.fund_account.load_mut()?;
-            fund_account.withdrawal.assert_withdrawal_enabled()?;
 
             // create a user withdrawal request
             self.user_fund_account.create_withdrawal_request(

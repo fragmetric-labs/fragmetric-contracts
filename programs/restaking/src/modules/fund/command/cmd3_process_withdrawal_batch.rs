@@ -245,53 +245,55 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     (receipt_token_amount_processed, pricing_service)
                 };
 
-                // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
-                // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
-                let receipt_token_amount_processed_as_sol = pricing_service
-                    .get_token_amount_as_sol(
-                        &ctx.receipt_token_mint.key(),
-                        receipt_token_amount_processed,
-                    )?;
+                if receipt_token_amount_processed > 0 {
+                    // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
+                    // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
+                    let receipt_token_amount_processed_as_sol = pricing_service
+                        .get_token_amount_as_sol(
+                            &ctx.receipt_token_mint.key(),
+                            receipt_token_amount_processed,
+                        )?;
 
-                let mut fund_account = ctx.fund_account.load_mut()?;
-                let mut participants = fund_account
-                    .get_supported_tokens_iter()
-                    .map(|supported_token| {
-                        Ok(WeightedAllocationParticipant::new(
-                            supported_token.sol_allocation_weight,
-                            pricing_service.get_token_amount_as_sol(
-                                &supported_token.mint,
-                                supported_token.operation_reserved_amount,
-                            )?,
-                            supported_token.sol_allocation_capacity_amount,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    let mut participants = fund_account
+                        .get_supported_tokens_iter()
+                        .map(|supported_token| {
+                            Ok(WeightedAllocationParticipant::new(
+                                supported_token.sol_allocation_weight,
+                                pricing_service.get_token_amount_as_sol(
+                                    &supported_token.mint,
+                                    supported_token.operation_reserved_amount,
+                                )?,
+                                supported_token.sol_allocation_capacity_amount,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?;
 
-                let mut supported_token_increasing_capacity =
-                    receipt_token_amount_processed_as_sol.div_ceil(2);
-                supported_token_increasing_capacity -= WeightedAllocationStrategy::put(
-                    &mut *participants,
-                    receipt_token_amount_processed_as_sol,
-                );
+                    let mut supported_token_increasing_capacity =
+                        receipt_token_amount_processed_as_sol.div_ceil(2);
+                    supported_token_increasing_capacity -= WeightedAllocationStrategy::put(
+                        &mut *participants,
+                        receipt_token_amount_processed_as_sol,
+                    );
 
-                for (i, participant) in participants.iter().enumerate() {
-                    let supported_token = fund_account.get_supported_token_mut_by_index(i)?;
-                    supported_token.set_accumulated_deposit_capacity_amount(
-                        supported_token
-                            .accumulated_deposit_capacity_amount
-                            .saturating_add(pricing_service.get_sol_amount_as_token(
-                                &supported_token.mint,
-                                participant.get_last_put_amount()?,
-                            )?),
-                    )?;
+                    for (i, participant) in participants.iter().enumerate() {
+                        let supported_token = fund_account.get_supported_token_mut_by_index(i)?;
+                        supported_token.set_accumulated_deposit_capacity_amount(
+                            supported_token
+                                .accumulated_deposit_capacity_amount
+                                .saturating_add(pricing_service.get_sol_amount_as_token(
+                                    &supported_token.mint,
+                                    participant.get_last_put_amount()?,
+                                )?),
+                        )?;
+                    }
+
+                    let sol_increasing_capacity =
+                        receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
+                    fund_account.sol_accumulated_deposit_capacity_amount = fund_account
+                        .sol_accumulated_deposit_capacity_amount
+                        .saturating_add(sol_increasing_capacity);
                 }
-
-                let sol_increasing_capacity =
-                    receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
-                fund_account.sol_accumulated_deposit_capacity_amount = fund_account
-                    .sol_accumulated_deposit_capacity_amount
-                    .saturating_add(sol_increasing_capacity);
             }
         }
 

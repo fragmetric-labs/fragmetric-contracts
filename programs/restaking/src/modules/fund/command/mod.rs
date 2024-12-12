@@ -129,7 +129,7 @@ impl OperationCommandAccountMeta {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
@@ -186,6 +186,9 @@ impl OperationCommandEntryPod {
 
     pub fn clear(&mut self) {
         self.command.clear();
+        self.num_required_accounts = 0;
+        self.required_accounts
+            .fill(OperationCommandAccountMetaPod::zeroed());
     }
 
     pub fn try_deserialize(&self) -> Result<Option<OperationCommandEntry>> {

@@ -23,12 +23,6 @@ pub(super) struct OperationState {
     _reserved: [u8; 128],
 }
 
-impl Default for OperationState {
-    fn default() -> Self {
-        Self::zeroed()
-    }
-}
-
 impl OperationState {
     /// Initialize current operation command to `reset_command` or default.
     pub fn initialize_command_if_needed(

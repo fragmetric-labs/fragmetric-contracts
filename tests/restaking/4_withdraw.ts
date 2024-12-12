@@ -24,7 +24,6 @@ describe("withdraw", async () => {
     step("user5 deposits and withdraws", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
 
-        expect(fragSOLFund0.withdrawal.numRequestsInProgress.toNumber()).eq(0);
         expect(fragSOLFund0.withdrawal.pendingBatch.numRequests.toNumber()).eq(0);
         expect(fragSOLFund0.withdrawal.pendingBatch.receiptTokenAmount.toNumber()).eq(0);
 
@@ -47,7 +46,7 @@ describe("withdraw", async () => {
         expect(fragSOLFund2.withdrawal.pendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
         expect(fragSOLFund2.withdrawal.solUserReservedAmount.toNumber()).eq(0, 'not yet processed');
         expect(fragSOLFund2.withdrawal.pendingBatch.receiptTokenAmount.toString()).eq(amountFragSOLWithdrawalTotal.toString());
-        expect(fragSOLFund0.withdrawal.pendingBatch.batchId.toNumber()).eq(fragSOLFund2.withdrawal.pendingBatch.batchId.toNumber());
+        expect(fragSOLFund0.withdrawal.pendingBatch.batchId.toNumber()).eq(fragSOLFund2.withdrawal.lastProcessedBatchId.toNumber(), 'pending batch processed');
 
         const fragSOLLock = await restaking.getFragSOLFundReceiptTokenLockAccount();
         expect(fragSOLFund2.withdrawal.pendingBatch.receiptTokenAmount.toString()).eq(fragSOLLock.amount.toString());
@@ -60,10 +59,10 @@ describe("withdraw", async () => {
 
         await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(10))).rejectedWith("FundWithdrawalRequestNotFoundError");
 
-        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(1));
+        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(10001));
         expect(res1.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 1);
 
-        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(3));
+        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(10003));
         expect(res2.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 2);
         expect(res2.fragSOLFund.withdrawal.pendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize - 2);
 
@@ -73,7 +72,7 @@ describe("withdraw", async () => {
         const account2 = await restaking.getUserFragSOLAccount(user5.publicKey);
         expect(account2.amount.toString()).eq(res2.fragSOLUserFund.receiptTokenAmount.toString());
 
-        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(2))).rejectedWith("FundWithdrawalRequestNotFoundError");
+        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(10002))).rejectedWith("FundWithdrawalRequestNotFoundError");
     });
 
     step("user5 (operator) processes queued withdrawals", async () => {
@@ -81,8 +80,6 @@ describe("withdraw", async () => {
 
         expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
         expect(res1.fragSOLFund.withdrawal.pendingBatch.numRequests.toNumber()).eq(0);
-        expect(res1.fragSOLFund.withdrawal.lastProcessedBatchId.toNumber()).eq(1);
-        expect(res1.fragSOLFund.withdrawal.pendingBatch.batchId.toNumber()).eq(2);
 
         await restaking.sleep(1);
         await expect(restaking.runOperatorProcessFundWithdrawalJob()).rejectedWith('OperatorJobUnmetThresholdError');
@@ -93,7 +90,7 @@ describe("withdraw", async () => {
         await restaking.sleep(1);
         const res2 = await restaking.runOperatorProcessFundWithdrawalJob(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
-        expect(res2.fragSOLFund.withdrawal.lastProcessedBatchId.toNumber()).eq(2);
+        expect(res2.fragSOLFund.withdrawal.lastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.withdrawal.pendingBatch.batchId.toNumber());
         expect(res2.fragSOLFund.withdrawal.solUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.mul(new BN(2)).toString(), 'in this test, fragSOL unit price is still 1SOL');
         expect(res2.fragSOLLockAccount.amount.toString()).eq('0');
     });

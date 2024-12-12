@@ -117,7 +117,7 @@ impl Asset {
                 pod.sol_amount = *sol_amount;
                 pod.token_amount = 0;
                 pod.token_mint = Pubkey::default();
-                pod.token_pricing_source.set_none();
+                pod.token_pricing_source.clear();
             }
             Asset::Token(token_mint, token_pricing_source, token_amount) => {
                 pod.discriminant = 2;
@@ -129,7 +129,7 @@ impl Asset {
                         source.serialize_as_pod(&mut pod.token_pricing_source);
                     }
                     None => {
-                        pod.token_pricing_source.set_none();
+                        pod.token_pricing_source.clear();
                     }
                 }
             }
