@@ -58,8 +58,33 @@ pub enum OperationCommand {
     DelegateVST(DelegateVSTCommand),
 }
 
-// TODO: check this size
-const OPERATION_COMMAND_BUFFER_SIZE: usize = 319;
+impl OperationCommand {
+    fn discriminant(&self) -> u8 {
+        match self {
+            OperationCommand::Initialize(_) => 1,
+            OperationCommand::ClaimUnstakedSOL(_) => 2,
+            OperationCommand::EnqueueWithdrawalBatch(_) => 3,
+            OperationCommand::ProcessWithdrawalBatch(_) => 4,
+            OperationCommand::ClaimUnrestakedVST(_) => 5,
+            OperationCommand::DenormalizeNT(_) => 6,
+            OperationCommand::UndelegateVST(_) => 7,
+            OperationCommand::UnrestakeVRT(_) => 8,
+            OperationCommand::UnstakeLST(_) => 9,
+            OperationCommand::StakeSOL(_) => 10,
+            OperationCommand::NormalizeLST(_) => 11,
+            OperationCommand::RestakeVST(_) => 12,
+            OperationCommand::DelegateVST(_) => 13,
+        }
+    }
+
+    fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
+        pod.discriminant = self.discriminant();
+        self.serialize(&mut pod.buffer.as_mut_slice())?;
+        Ok(())
+    }
+}
+
+const OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
@@ -68,51 +93,107 @@ pub struct OperationCommandPod {
     buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
 }
 
-impl From<OperationCommand> for OperationCommandPod {
-    fn from(src: OperationCommand) -> Self {
-        let mut pod = Self {
-            discriminant: match src {
-                OperationCommand::Initialize(_) => 1,
-                OperationCommand::ClaimUnstakedSOL(_) => 2,
-                OperationCommand::EnqueueWithdrawalBatch(_) => 3,
-                OperationCommand::ProcessWithdrawalBatch(_) => 4,
-                OperationCommand::ClaimUnrestakedVST(_) => 5,
-                OperationCommand::DenormalizeNT(_) => 6,
-                OperationCommand::UndelegateVST(_) => 7,
-                OperationCommand::UnrestakeVRT(_) => 8,
-                OperationCommand::UnstakeLST(_) => 9,
-                OperationCommand::StakeSOL(_) => 10,
-                OperationCommand::NormalizeLST(_) => 11,
-                OperationCommand::RestakeVST(_) => 12,
-                OperationCommand::DelegateVST(_) => 13,
-            },
-            buffer: [0; OPERATION_COMMAND_BUFFER_SIZE],
-        };
-        src.serialize(&mut &mut pod.buffer[..]).unwrap();
-
-        pod
+impl OperationCommandPod {
+    fn try_deserialize(&self) -> Result<Option<OperationCommand>> {
+        Ok({
+            if self.discriminant == 0 {
+                None
+            } else {
+                let command = OperationCommand::deserialize(&mut self.buffer.as_slice())?;
+                if self.discriminant == command.discriminant() {
+                    Some(command)
+                } else {
+                    Err(Error::from(ProgramError::InvalidAccountData))?
+                }
+            }
+        })
     }
 }
 
-impl TryFrom<&OperationCommandPod> for OperationCommand {
-    type Error = anchor_lang::error::Error;
+#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct OperationCommandAccountMeta {
+    pub(super) pubkey: Pubkey,
+    pub(super) is_writable: bool,
+}
 
-    fn try_from(pod: &OperationCommandPod) -> Result<OperationCommand> {
-        Ok(match pod.discriminant {
-            1 => InitializeCommand::try_from_slice(&pod.buffer[..])?.into(),
-            2 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
-            3 => EnqueueWithdrawalBatchCommand::try_from_slice(&pod.buffer[..])?.into(),
-            4 => ClaimUnstakedSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
-            5 => ClaimUnrestakedVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            6 => DenormalizeNTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            7 => UndelegateVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            8 => UnrestakeVRTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            9 => UnstakeLSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            10 => StakeSOLCommand::try_from_slice(&pod.buffer[..])?.into(),
-            11 => NormalizeLSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            12 => RestakeVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            13 => DelegateVSTCommand::try_from_slice(&pod.buffer[..])?.into(),
-            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+impl OperationCommandAccountMeta {
+    pub fn serialize_as_pod(&self, pod: &mut OperationCommandAccountMetaPod) {
+        pod.pubkey = self.pubkey;
+        pod.is_writable = if self.is_writable { 1 } else { 0 };
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[repr(C)]
+pub struct OperationCommandAccountMetaPod {
+    pubkey: Pubkey,
+    is_writable: u8,
+    _padding: [u8; 7],
+}
+
+impl OperationCommandAccountMetaPod {
+    pub fn deserialize(&self) -> OperationCommandAccountMeta {
+        OperationCommandAccountMeta {
+            pubkey: self.pubkey,
+            is_writable: self.is_writable == 1,
+        }
+    }
+}
+
+const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct OperationCommandEntry {
+    pub(super) command: OperationCommand,
+    #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
+    pub(super) required_accounts: Vec<OperationCommandAccountMeta>,
+}
+
+impl OperationCommandEntry {
+    pub fn serialize_as_pod(&self, pod: &mut OperationCommandEntryPod) -> Result<()> {
+        pod.num_required_accounts = self.required_accounts.len() as u8;
+        for (i, account_meta) in self
+            .required_accounts
+            .iter()
+            .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+            .enumerate()
+        {
+            account_meta.serialize_as_pod(&mut pod.required_accounts[i]);
+        }
+        self.command.serialize_as_pod(&mut pod.command)
+    }
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub struct OperationCommandEntryPod {
+    num_required_accounts: u8,
+    _padding: [u8; 7],
+    required_accounts: [OperationCommandAccountMetaPod; OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
+    command: OperationCommandPod,
+}
+
+impl OperationCommandEntryPod {
+    pub fn is_none(&self) -> bool {
+        self.command.discriminant == 0
+    }
+
+    pub fn set_none(&mut self) {
+        self.command.discriminant = 0;
+    }
+
+    pub fn try_deserialize(&self) -> Result<Option<OperationCommandEntry>> {
+        Ok({
+            let command = self.command.try_deserialize()?;
+            command.map(|command| OperationCommandEntry {
+                command,
+                required_accounts: self
+                    .required_accounts
+                    .iter()
+                    .take(self.num_required_accounts as usize)
+                    .map(|account_meta_pod| account_meta_pod.deserialize())
+                    .collect::<Vec<_>>(),
+            })
         })
     }
 }
@@ -138,102 +219,6 @@ impl SelfExecutable for OperationCommand {
             OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
             OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
         }
-    }
-}
-
-#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct OperationCommandAccountMeta {
-    pub(super) pubkey: Pubkey,
-    pub(super) is_writable: bool,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
-#[repr(C)]
-pub struct OperationCommandAccountMetaPod {
-    pubkey: Pubkey,
-    is_writable: u8,
-    _padding: [u8; 7],
-}
-
-impl From<OperationCommandAccountMeta> for OperationCommandAccountMetaPod {
-    fn from(src: OperationCommandAccountMeta) -> Self {
-        Self {
-            pubkey: src.pubkey,
-            is_writable: if src.is_writable { 1 } else { 0 },
-            _padding: [0; 7],
-        }
-    }
-}
-
-impl From<&OperationCommandAccountMetaPod> for OperationCommandAccountMeta {
-    fn from(pod: &OperationCommandAccountMetaPod) -> Self {
-        Self {
-            pubkey: pod.pubkey,
-            is_writable: pod.is_writable == 1,
-        }
-    }
-}
-
-const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct OperationCommandEntry {
-    pub(super) command: OperationCommand,
-    #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
-    pub(super) required_accounts: Vec<OperationCommandAccountMeta>,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C)]
-pub struct OperationCommandEntryPod {
-    num_required_accounts: u8,
-    _padding: [u8; 7],
-    required_accounts: [OperationCommandAccountMetaPod; OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
-    command: OperationCommandPod,
-}
-
-impl Default for OperationCommandEntryPod {
-    fn default() -> Self {
-        Self::zeroed()
-    }
-}
-
-impl From<OperationCommandEntry> for OperationCommandEntryPod {
-    fn from(src: OperationCommandEntry) -> Self {
-        let mut pod: OperationCommandEntryPod = OperationCommandEntryPod::zeroed();
-        pod.num_required_accounts = src.required_accounts.len() as u8;
-        for (i, account_meta) in src
-            .required_accounts
-            .into_iter()
-            .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
-            .enumerate()
-        {
-            pod.required_accounts[i] = account_meta.into();
-        }
-        pod.command = src.command.into();
-        pod
-    }
-}
-
-impl OperationCommandEntryPod {
-    pub fn is_none(&self) -> bool {
-        self.command.discriminant == 0
-    }
-}
-
-impl TryFrom<&OperationCommandEntryPod> for OperationCommandEntry {
-    type Error = anchor_lang::error::Error;
-
-    fn try_from(pod: &OperationCommandEntryPod) -> Result<OperationCommandEntry> {
-        Ok(OperationCommandEntry {
-            command: (&pod.command).try_into()?,
-            required_accounts: pod
-                .required_accounts
-                .iter()
-                .take(pod.num_required_accounts as usize)
-                .map(Into::into)
-                .collect::<Vec<_>>(),
-        })
     }
 }
 
@@ -266,5 +251,23 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
             command: self.into(),
             required_accounts: Vec::with_capacity(0),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn size_command_buffer() {
+        println!(
+            "\ncommand buffer_size={}, init_size={}",
+            OPERATION_COMMAND_BUFFER_SIZE,
+            OperationCommand::INIT_SPACE,
+        );
+        assert_eq!(
+            OPERATION_COMMAND_BUFFER_SIZE > OperationCommand::INIT_SPACE,
+            true
+        );
     }
 }

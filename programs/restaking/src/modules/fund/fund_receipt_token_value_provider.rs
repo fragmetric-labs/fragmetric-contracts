@@ -34,7 +34,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         for supported_token in fund_account.get_supported_tokens_iter() {
             assets.push(Asset::Token(
                 supported_token.mint,
-                Some(supported_token.pricing_source.try_deserialize()?),
+                supported_token.pricing_source.try_deserialize()?,
                 supported_token.operation_reserved_amount
                     + supported_token.operation_receivable_amount,
             ));
@@ -44,7 +44,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         if let Some(normalized_token) = fund_account.get_normalized_token() {
             assets.push(Asset::Token(
                 normalized_token.mint,
-                Some(normalized_token.pricing_source.try_deserialize()?),
+                normalized_token.pricing_source.try_deserialize()?,
                 normalized_token.operation_reserved_amount,
             ));
         }
@@ -53,11 +53,9 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
         for restaking_vault in fund_account.get_restaking_vaults_iter() {
             assets.push(Asset::Token(
                 restaking_vault.receipt_token_mint,
-                Some(
-                    restaking_vault
-                        .receipt_token_pricing_source
-                        .try_deserialize()?,
-                ),
+                restaking_vault
+                    .receipt_token_pricing_source
+                    .try_deserialize()?,
                 restaking_vault.receipt_token_operation_reserved_amount
                     + restaking_vault.receipt_token_operation_receivable_amount,
             ));

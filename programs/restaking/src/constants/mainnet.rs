@@ -34,7 +34,8 @@ pub const FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo");
 
 #[constant]
-pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey = pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
+pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey =
+    pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 
 #[constant]
 pub const FRAGSOL_JITO_VAULT_CONFIG_ADDRESS: Pubkey =

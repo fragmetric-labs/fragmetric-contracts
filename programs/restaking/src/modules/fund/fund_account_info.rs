@@ -24,12 +24,12 @@ pub struct FundAccountInfo {
 }
 
 impl FundAccountInfo {
-    pub(super) fn from(fund_account: Ref<FundAccount>) -> Self {
-        FundAccountInfo {
+    pub(super) fn from(fund_account: Ref<FundAccount>) -> Result<Self> {
+        Ok(FundAccountInfo {
             receipt_token_mint: fund_account.receipt_token_mint,
             receipt_token_decimals: fund_account.receipt_token_decimals,
             receipt_token_supply_amount: fund_account.receipt_token_supply_amount,
-            receipt_token_value: fund_account.receipt_token_value.deserialize(),
+            receipt_token_value: fund_account.receipt_token_value.try_deserialize()?,
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
             supported_tokens: fund_account.get_supported_tokens_iter().copied().collect(),
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
@@ -40,6 +40,6 @@ impl FundAccountInfo {
             withdrawal_enabled: fund_account.withdrawal.enabled == 1,
             withdrawal_last_completed_batch_id: fund_account.withdrawal.last_processed_batch_id,
             next_operation_sequence: fund_account.operation.next_sequence,
-        }
+        })
     }
 }

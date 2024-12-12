@@ -51,7 +51,7 @@ impl SupportedToken {
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
-        self.pricing_source = pricing_source.into();
+        pricing_source.serialize_as_pod(&mut self.pricing_source);
 
         Ok(())
     }

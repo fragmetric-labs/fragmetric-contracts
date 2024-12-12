@@ -123,7 +123,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
         });
 
         Ok(())
@@ -206,7 +206,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?),
+            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
         });
 
         Ok(())
@@ -436,7 +436,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         let fund_account = self.fund_account.load()?;
         emit!(events::UserWithdrewSOLFromFund {
             receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: FundAccountInfo::from(fund_account),
+            fund_account: FundAccountInfo::from(fund_account)?,
             request_id,
             user_fund_account: Clone::clone(self.user_fund_account),
             user: self.user.key(),

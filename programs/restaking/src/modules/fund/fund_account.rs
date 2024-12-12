@@ -490,6 +490,10 @@ mod tests {
             "\nfund account size={}, version={}",
             size, FUND_ACCOUNT_CURRENT_VERSION
         );
+        println!(
+            "fund operation_state size={}",
+            std::mem::size_of::<OperationState>()
+        );
         assert_eq!(
             size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
                 * (FUND_ACCOUNT_CURRENT_VERSION as usize),

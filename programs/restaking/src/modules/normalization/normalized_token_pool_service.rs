@@ -57,7 +57,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         &self,
         pricing_service: &PricingService,
         denormalize_amount_as_sol: u64,
-    ) -> Result<Vec<(Pubkey, Pubkey, u64)>>{
+    ) -> Result<Vec<(Pubkey, Pubkey, u64)>> {
         let mut participants = vec![];
         let supported_tokens = self
             .normalized_token_pool_account
@@ -94,7 +94,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 supported_token.program,
                 cmp::min(supported_token.locked_amount, need_to_denormalize_amount),
             ));
-        };
+        }
         Ok(supported_tokens_state)
     }
 
@@ -289,8 +289,9 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                     supported_token_claimable_amount_as_sol,
                 )?;
 
-                supported_token
-                    .allocate_locked_token_to_withdrawal_reserved(supported_token_claimable_amount)?;
+                supported_token.allocate_locked_token_to_withdrawal_reserved(
+                    supported_token_claimable_amount,
+                )?;
 
                 Ok(if supported_token_claimable_amount > 0 {
                     Some(ClaimableToken::new(

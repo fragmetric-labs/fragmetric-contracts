@@ -59,10 +59,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let fund_account = ctx.fund_account.load()?;
                 for supported_token in fund_account.get_supported_tokens_iter() {
                     match &supported_token.pricing_source.try_deserialize()? {
-                        TokenPricingSource::MarinadeStakePool { address } => {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        TokenPricingSource::SPLStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
@@ -75,7 +75,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             required_accounts.push((*address, false));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
@@ -95,16 +95,13 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 let fund_account = ctx.fund_account.load()?;
-                let num_queued_batches = fund_account
-                    .withdrawal
-                    .get_queued_batches_iter()
-                    .count();
+                let num_queued_batches = fund_account.withdrawal.get_queued_batches_iter().count();
                 let num_supported_token_pricing_sources = fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
                         match &supported_token.pricing_source.try_deserialize()? {
-                            TokenPricingSource::MarinadeStakePool { .. }
-                            | TokenPricingSource::SPLStakePool { .. } => Ok(1),
+                            Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SPLStakePool { .. }) => Ok(1),
                             _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                         }
                     })
@@ -118,7 +115,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .receipt_token_pricing_source
                             .try_deserialize()?
                         {
-                            TokenPricingSource::JitoRestakingVault { .. } => Ok(1),
+                            Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(1),
                             _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                         }
                     })
@@ -148,12 +145,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
                     let (numerator, denominator) =
                         match &supported_token.pricing_source.try_deserialize()? {
-                            TokenPricingSource::MarinadeStakePool { address } => {
+                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
                                 let account = supported_token_pricing_sources[i];
                                 require_keys_eq!(account.key(), *address);
                                 MarinadeStakePoolService::get_max_cycle_fee(account)?
                             }
-                            TokenPricingSource::SPLStakePool { address } => {
+                            Some(TokenPricingSource::SPLStakePool { address }) => {
                                 let account = supported_token_pricing_sources[i];
                                 require_keys_eq!(account.key(), *address);
                                 SPLStakePoolService::get_max_cycle_fee(account)?
@@ -179,7 +176,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?

@@ -137,7 +137,8 @@ impl WeightedAllocationStrategy {
 
         // set delta amount
         participants.iter_mut().for_each(|participant| {
-            participant.last_delta_amount = (participant.allocated_amount as i128) - participant.last_delta_amount;
+            participant.last_delta_amount =
+                (participant.allocated_amount as i128) - participant.last_delta_amount;
         });
 
         remaining_amount
@@ -197,7 +198,8 @@ impl WeightedAllocationStrategy {
 
         // set delta amount
         participants.iter_mut().for_each(|participant| {
-            participant.last_delta_amount = (participant.allocated_amount as i128) - participant.last_delta_amount;
+            participant.last_delta_amount =
+                (participant.allocated_amount as i128) - participant.last_delta_amount;
         });
 
         required_amount
