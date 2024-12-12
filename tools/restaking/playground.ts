@@ -98,7 +98,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 instructions: [createIx],
                 signerNames: ['ADMIN']
             });
-            logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
+            logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
         }
         this._knownAddressLookupTableAddress = lookupTable;
 
@@ -109,12 +109,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async updateKnownAddressLookupTable() {
         const authority = this.keychain.getKeypair('ADMIN').publicKey;
         const payer = this.wallet.publicKey;
-        const lookupTable = await this.connection.getAddressLookupTable(this._knownAddressLookupTableAddress).then(res => res.value);
+        const lookupTable = await this.connection
+            .getAddressLookupTable(this._knownAddressLookupTableAddress, { commitment: 'confirmed' })
+            .then(res => res.value);
         const existingAddresses = new Set(lookupTable.state.addresses.map(a => a.toString()));
         logger.info("current lookup table addresses", lookupTable.state.addresses);
 
         // prepare update
-        const addresses = (Object.values(this.knownAddress).filter(address => typeof address != 'function').flat() as web3.PublicKey[])
+        const addresses = (Object.values(this.knownAddress)
+            .filter(address => typeof address != 'function').flat() as web3.PublicKey[])
             .filter(address => !existingAddresses.has(address.toString()));
 
         // do update
