@@ -84,3 +84,7 @@ $ CI=true anchor test -p restaking | sed "s|$(pwd)||g" | sed -e "s|slot=[0-9]*|s
 # can compare it manually for now...
 $ git diff --no-index tests/restaking.snapshot.v0.3.1.txt tests/restaking.snapshot.txt
 ```
+
+## Mocking mainnet accounts
+- update `Anchor.tmol`
+- run `tsx ./tests/mock_mainnet_accounts.ts` or `anchor run sync-test-accounts`
