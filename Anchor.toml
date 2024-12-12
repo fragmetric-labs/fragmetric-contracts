@@ -24,10 +24,6 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 [test]
 startup_wait = 50000
 
-[[test.genesis]]
-address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-program = "./tests/mocks/mainnet/mpl-token-metadata.so"
-
 # [[test.genesis]]
 # address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
 # program = "./tools/restaking/modules/staking/spl_stake_pool.so"
@@ -39,66 +35,80 @@ bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
+# *metaplex
+# clone mainnet metaplex program to localnet
+[[test.validator.clone]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+
 # *bSOL, jitoSOL
 # clone mainnet SPL stake pool program to localnet
 [[test.validator.clone]]
 address = "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"
 
-# clone mainnet SPL stake pool executable data account to localnet
-[[test.validator.clone]]
-address = "EmiU8AQkB2sswTxVB6aCmsAJftoowZGGDXuytm6X65R3"
-
 # clone mainnet bSOL mint to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 0
 address = "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
+filename = "./tests/mocks/mainnet/bSOL_mint.json"
 
 # clone mainnet bSOL stake pool to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 1
 address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_account.json"
 
 # clone mainnet jitoSOL mint to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 2
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+filename = "./tests/mocks/mainnet/JitoSOL_mint.json"
 
 # clone mainnet jito stake pool to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 3
 address = "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_account.json"
 
 # clone mainnet jito stake pool's validator list account to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 4
 address = "3R3nGZpQs2aZo5FDQvd2MUQ6R7KhAPainds6uT6uE2mn"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_validator_list_account.json"
 
 # clone mainnet jitoSOL stake pool reserve stake account to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 5
 address = "BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_reserve_stake_account.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 6
 address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_validator_stake_account_1.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 7
 address = "9QCSiqVuYy7QTvCu3g3jxpovt4JxkaPkGjqhu7hb4d1D"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_validator_stake_account_2.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 8
 address = "E32hnC2LdJdPaeqRiHhUDx3wjkNTi45ZMhqYEr1R7W9t"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_validator_stake_account_3.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 9
 address = "EusU4msAfQWBq2ME6Aip9AyokFJWuPm3VfdAnjEZyjwx"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_validator_stake_account_4.json"
 
 # clone mainnet jitoSOL stake pool fee account to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 10
 address = "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"
+filename = "./tests/mocks/mainnet/JitoSOL_stake_pool_fee_account.json"
 
 # clone mainnet BNSOL mint to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 11
 address = "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85"
+filename = "./tests/mocks/mainnet/BNSOL_mint.json"
 
 # clone mainnet BNSOL stake pool to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 12
 address = "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r"
+filename = "./tests/mocks/mainnet/BNSOL_stake_pool_account.json"
 
 # *mSOL
 # ref: https://docs.marinade.finance/developers/contract-addresses#tokens
@@ -106,44 +116,39 @@ address = "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r"
 [[test.validator.clone]]
 address = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
 
-# clone mainnet Marinade stake pool executable data account to localnet
-[[test.validator.clone]]
-address = "4PQH9YmfuKrVyZaibkLYpJZPv2FPaybhq2GAuBcWMSBf"
-
 # clone mainnet mSOL mint to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 13
 address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+filename = "./tests/mocks/mainnet/mSOL_mint.json"
 
 # clone mainnet mSOL stake pool to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 14
 address = "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
+filename = "./tests/mocks/mainnet/mSOL_stake_pool_account.json"
 
 # clone mainnet mSOL liqudity pool to localnet
-[[test.validator.clone]]
+[[test.validator.account]] # 15
 address = "7GgPYjS5Dza89wV6FpZ23kUJRG5vbQ1GM25ezspYFSoE"
+filename = "./tests/mocks/mainnet/mSOL_liquidity_pool_account.json"
 
 # *jitoVRT
 # clone mainnet Jito restaking protocol to localnet
 [[test.validator.clone]]
 address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
 
-# program executable data account for Jito restaking protocol
-[[test.validator.clone]]
-address = "96nH6npzmaAWpmraLaN2F55h27TMEtJrsjo881dCc2Dt"
-
 # clone mainnet Jito restaking protocol Config to localnet
-[[test.validator.account]]
+[[test.validator.account]] # 16
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-filename = "./tests/mocks/mainnet/jito_vault_config.json"
+filename = "./tests/mocks/mainnet/Jito_vault_config.json"
 
-[[test.validator.account]]
+[[test.validator.account]] # 17
 address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
 filename = "./tests/mocks/mainnet/jito_vault.json"
 
-[[test.validator.account]]
+[[test.validator.account]] # 18
 address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
 filename = "./tests/mocks/mainnet/jito_vault_vrt.json"
 
-[[test.validator.account]]
+[[test.validator.account]] # 19
 address = "7N3VJBtCAm5vgUBG3kTAdhMMe4PzPFTT5wF3aGye6kDh"
 filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"
