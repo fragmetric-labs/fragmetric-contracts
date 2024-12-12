@@ -154,3 +154,6 @@ filename = "./tests/mocks/local/fragsol_jito_vault.json"
 address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
 filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
 
+[[test.validator.account]]
+address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
+filename = "./tests/mocks/local/fragsol_lookup_table.json"

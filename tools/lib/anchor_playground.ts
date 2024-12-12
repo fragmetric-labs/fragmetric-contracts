@@ -75,7 +75,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         this.addressLookupTables = await Promise.all(
             addresses.map(address => this.connection.getAddressLookupTable(address).then(res => res.value)),
         );
-
+        await this.sleep(2);
         logger.notice('set address lookup tables for future transactions:'.padEnd(LOG_PAD_LARGE), addresses);
     }
 

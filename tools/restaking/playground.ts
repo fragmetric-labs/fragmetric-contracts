@@ -92,16 +92,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             payer,
             recentSlot: 0, // for fragSOL: 0
         });
-        await this.run({
-            instructions: [createIx],
-            signerNames: ['ADMIN']
-        });
-
+        const existingLookupTable = await this.connection.getAccountInfo(lookupTable).catch(() => null);
+        if (!existingLookupTable) {
+            await this.run({
+                instructions: [createIx],
+                signerNames: ['ADMIN']
+            });
+            logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
+        }
         this._knownAddressLookupTableAddress = lookupTable;
-        logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
 
         await this.updateKnownAddressLookupTable();
-
         await this.setAddressLookupTableAddresses([this._knownAddressLookupTableAddress]);
     }
 
@@ -109,12 +110,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const authority = this.keychain.getKeypair('ADMIN').publicKey;
         const payer = this.wallet.publicKey;
         const lookupTable = await this.connection.getAddressLookupTable(this._knownAddressLookupTableAddress).then(res => res.value);
-        const existingAddresses = new Set(lookupTable.state.addresses);
+        const existingAddresses = new Set(lookupTable.state.addresses.map(a => a.toString()));
         logger.info("current lookup table addresses", lookupTable.state.addresses);
 
         // prepare update
         const addresses = (Object.values(this.knownAddress).filter(address => typeof address != 'function').flat() as web3.PublicKey[])
-            .filter(address => !existingAddresses.has(address));
+            .filter(address => !existingAddresses.has(address.toString()));
 
         // do update
         const listOfAddressList = addresses.reduce((listOfAddressList, address) =>  {
@@ -125,9 +126,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
             return listOfAddressList;
         }, [[]] as web3.PublicKey[][]);
-        logger.info("newly adding lookup table addresses", addresses);
+        logger.info("newly added lookup table addresses", addresses);
 
         for (let addresses of listOfAddressList) {
+            if (addresses.length == 0) continue;
             await this.run({
                 instructions: [
                     web3.AddressLookupTableProgram.extendLookupTable({
@@ -141,7 +143,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             });
         }
 
-        logger.notice('updated a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
+        if (addresses.length > 0) {
+            logger.notice('updated a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
+        }
     }
 
     private _knownAddressLookupTableAddress?: web3.PublicKey;
