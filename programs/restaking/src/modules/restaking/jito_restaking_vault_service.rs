@@ -283,7 +283,11 @@ impl<'info> JitoRestakingVaultService<'info> {
         } else {
             next_vault_update_state_tracker
         };
-        Ok((current_vault_update_state_tracker, current_epoch, epoch_length))
+        Ok((
+            current_vault_update_state_tracker,
+            current_epoch,
+            epoch_length,
+        ))
     }
 
     pub fn update_vault_if_needed(
@@ -357,7 +361,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 self.vault.key,
                 vault_update_state_tracker.key,
                 signer.key,
-                jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy
+                jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
             );
 
         invoke_signed(
@@ -776,7 +780,6 @@ impl<'info> JitoRestakingVaultService<'info> {
             (vault_supported_token_account, true),
             (vault_fee_receipt_token_account, true),
             (vault_program_fee_wallet_vrt_account, true),
-
             (token_program, false),
             (system_program, false),
         ])

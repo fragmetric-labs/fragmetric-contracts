@@ -77,7 +77,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let required_accounts =
                                 &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
                             required_accounts
@@ -98,7 +98,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
                             else {

@@ -255,11 +255,21 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
         }
 
-        fund_account.withdrawal.set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
-        fund_account.withdrawal.set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
-        fund_account.withdrawal.set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
-        fund_account.withdrawal.set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
-        fund_account.withdrawal.set_withdrawal_enabled(withdrawal_enabled);
+        fund_account
+            .withdrawal
+            .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
+        fund_account
+            .withdrawal
+            .set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
+        fund_account
+            .withdrawal
+            .set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
+        fund_account
+            .withdrawal
+            .set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+        fund_account
+            .withdrawal
+            .set_withdrawal_enabled(withdrawal_enabled);
 
         drop(fund_account);
 
@@ -355,7 +365,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(fund_account),
+            fund_account: FundAccountInfo::from(fund_account)?,
         });
 
         Ok(())

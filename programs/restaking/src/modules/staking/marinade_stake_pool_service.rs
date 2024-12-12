@@ -202,7 +202,12 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         token_amount: u64,
     ) -> Result<u64> {
-        self.create_ticket_account(system_program, operator, new_ticket_account, new_ticket_account_seeds)?;
+        self.create_ticket_account(
+            system_program,
+            operator,
+            new_ticket_account,
+            new_ticket_account_seeds,
+        )?;
 
         marinade_cpi::cpi::order_unstake(
             CpiContext::new_with_signer(

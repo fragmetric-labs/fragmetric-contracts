@@ -6,7 +6,7 @@ use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
-use crate::utils::{PDASeeds, AccountLoaderExt};
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct FundManagerFundNormalizedTokenInitialContext<'info> {

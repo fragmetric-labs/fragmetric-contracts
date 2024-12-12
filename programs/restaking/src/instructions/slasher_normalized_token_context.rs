@@ -3,9 +3,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
-use crate::modules::normalization::{
-    NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount,
-};
+use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount};
 use crate::utils::PDASeeds;
 
 #[derive(Accounts)]
@@ -48,7 +46,6 @@ pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 }
-
 
 #[derive(Accounts)]
 pub struct SlasherNormalizedTokenWithdrawContext<'info> {

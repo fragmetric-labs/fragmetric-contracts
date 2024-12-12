@@ -69,7 +69,7 @@ impl RestakingVault {
         self.receipt_token_decimals = receipt_token_decimals;
 
         self.one_receipt_token_as_sol = 0;
-        self.receipt_token_pricing_source = receipt_token_pricing_source.into();
+        receipt_token_pricing_source.serialize_as_pod(&mut self.receipt_token_pricing_source);
         self.receipt_token_operation_reserved_amount = receipt_token_operation_reserved_amount;
         self.receipt_token_operation_receivable_amount = 0;
 

@@ -48,6 +48,38 @@ impl std::fmt::Display for TokenPricingSource {
     }
 }
 
+impl TokenPricingSource {
+    pub fn serialize_as_pod(&self, pod: &mut TokenPricingSourcePod) {
+        match self {
+            TokenPricingSource::SPLStakePool { address } => {
+                pod.discriminant = 1;
+                pod.address = *address;
+            }
+            TokenPricingSource::MarinadeStakePool { address } => {
+                pod.discriminant = 2;
+                pod.address = *address;
+            }
+            TokenPricingSource::JitoRestakingVault { address } => {
+                pod.discriminant = 3;
+                pod.address = *address;
+            }
+            TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
+                pod.discriminant = 4;
+                pod.address = *address;
+            }
+            TokenPricingSource::FragmetricRestakingFund { address } => {
+                pod.discriminant = 5;
+                pod.address = *address;
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => {
+                pod.discriminant = 255;
+                pod.address = Pubkey::default();
+            }
+        }
+    }
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
@@ -57,75 +89,39 @@ pub struct TokenPricingSourcePod {
 }
 
 impl TokenPricingSourcePod {
-    pub fn try_deserialize(&self) -> Result<TokenPricingSource> {
-        self.try_into()
+    pub fn set_none(&mut self) {
+        self.discriminant = 0;
     }
-}
 
-impl From<TokenPricingSource> for TokenPricingSourcePod {
-    fn from(src: TokenPricingSource) -> Self {
-        match src {
-            TokenPricingSource::SPLStakePool { address } => Self {
-                discriminant: 1,
-                _padding: [0; 7],
-                address,
-            },
-            TokenPricingSource::MarinadeStakePool { address } => Self {
-                discriminant: 2,
-                _padding: [0; 7],
-                address,
-            },
-            TokenPricingSource::JitoRestakingVault { address } => Self {
-                discriminant: 3,
-                _padding: [0; 7],
-                address,
-            },
-            TokenPricingSource::FragmetricNormalizedTokenPool { address } => Self {
-                discriminant: 4,
-                _padding: [0; 7],
-                address,
-            },
-            TokenPricingSource::FragmetricRestakingFund { address } => Self {
-                discriminant: 5,
-                _padding: [0; 7],
-                address,
-            },
-            #[cfg(all(test, not(feature = "idl-build")))]
-            TokenPricingSource::Mock { .. } => Self {
-                discriminant: 255,
-                _padding: [0; 7],
-                address: Pubkey::default(),
-            },
-        }
-    }
-}
-
-impl TryFrom<&TokenPricingSourcePod> for TokenPricingSource {
-    type Error = anchor_lang::error::Error;
-
-    fn try_from(pod: &TokenPricingSourcePod) -> Result<TokenPricingSource> {
-        Ok(match pod.discriminant {
-            1 => TokenPricingSource::SPLStakePool {
-                address: pod.address,
-            },
-            2 => TokenPricingSource::MarinadeStakePool {
-                address: pod.address,
-            },
-            3 => TokenPricingSource::JitoRestakingVault {
-                address: pod.address,
-            },
-            4 => TokenPricingSource::FragmetricNormalizedTokenPool {
-                address: pod.address,
-            },
-            5 => TokenPricingSource::FragmetricRestakingFund {
-                address: pod.address,
-            },
-            #[cfg(all(test, not(feature = "idl-build")))]
-            255 => TokenPricingSource::Mock {
-                denominator: 255,
-                numerator: vec![],
-            },
-            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+    pub fn try_deserialize(&self) -> Result<Option<TokenPricingSource>> {
+        Ok({
+            if self.discriminant == 0 {
+                None
+            } else {
+                Some(match self.discriminant {
+                    1 => TokenPricingSource::SPLStakePool {
+                        address: self.address,
+                    },
+                    2 => TokenPricingSource::MarinadeStakePool {
+                        address: self.address,
+                    },
+                    3 => TokenPricingSource::JitoRestakingVault {
+                        address: self.address,
+                    },
+                    4 => TokenPricingSource::FragmetricNormalizedTokenPool {
+                        address: self.address,
+                    },
+                    5 => TokenPricingSource::FragmetricRestakingFund {
+                        address: self.address,
+                    },
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    255 => TokenPricingSource::Mock {
+                        numerator: vec![],
+                        denominator: 1,
+                    },
+                    _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+                })
+            }
         })
     }
 }

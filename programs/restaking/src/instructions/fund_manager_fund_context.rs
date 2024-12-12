@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
-use crate::utils::{PDASeeds, AccountLoaderExt};
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
 pub struct FundManagerFundContext<'info> {

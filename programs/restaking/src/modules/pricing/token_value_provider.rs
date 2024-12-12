@@ -25,17 +25,6 @@ pub struct TokenValue {
     pub denominator: u64,
 }
 
-impl TokenValue {
-    /// indicates whether the token is not a kind of basket such as normalized token,
-    /// so the value of the token can be resolved by one self without other token information.
-    pub fn is_atomic(&self) -> bool {
-        self.numerator.iter().all(|asset| match asset {
-            Asset::Token(..) => false,
-            Asset::SOL(..) => true,
-        })
-    }
-}
-
 impl std::fmt::Display for TokenValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let numerator = self
@@ -51,6 +40,30 @@ impl std::fmt::Display for TokenValue {
     }
 }
 
+impl TokenValue {
+    /// indicates whether the token is not a kind of basket such as normalized token,
+    /// so the value of the token can be resolved by one self without other token information.
+    pub fn is_atomic(&self) -> bool {
+        self.numerator.iter().all(|asset| match asset {
+            Asset::Token(..) => false,
+            Asset::SOL(..) => true,
+        })
+    }
+
+    pub fn serialize_as_pod(&self, pod: &mut TokenValuePod) {
+        pod.num_numerator = self.numerator.len() as u64;
+        for (i, asset) in self
+            .numerator
+            .iter()
+            .take(TOKEN_VALUE_NUMERATOR_MAX_SIZE)
+            .enumerate()
+        {
+            asset.serialize_as_pod(&mut pod.numerator[i]);
+        }
+        pod.denominator = self.denominator;
+    }
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
@@ -60,33 +73,19 @@ pub struct TokenValuePod {
 }
 
 impl TokenValuePod {
-    pub fn deserialize(&self) -> TokenValue {
-        self.into()
-    }
-}
-
-impl From<TokenValue> for TokenValuePod {
-    fn from(src: TokenValue) -> Self {
-        let mut pod = TokenValuePod::zeroed();
-        pod.num_numerator = src.numerator.len() as u64;
-        for (i, asset) in src.numerator.into_iter().take(TOKEN_VALUE_NUMERATOR_MAX_SIZE).enumerate() {
-            pod.numerator[i] = asset.into();
-        }
-        pod.denominator = src.denominator;
-        pod
-    }
-}
-
-impl From<&TokenValuePod> for TokenValue {
-    fn from(pod: &TokenValuePod) -> Self {
-        Self {
-            numerator: pod
+    pub fn try_deserialize(&self) -> Result<TokenValue> {
+        Ok(TokenValue {
+            numerator: self
                 .numerator
                 .iter()
-                .filter_map(|pod|Asset::try_from(pod).ok())
-                .collect::<Vec<_>>(),
-            denominator: pod.denominator,
-        }
+                .take(self.num_numerator as usize)
+                .map(|pod| pod.try_deserialize())
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .filter_map(|a| a)
+                .collect(),
+            denominator: self.denominator,
+        })
     }
 }
 
@@ -110,59 +109,59 @@ impl std::fmt::Display for Asset {
     }
 }
 
+impl Asset {
+    fn serialize_as_pod(&self, pod: &mut AssetPod) {
+        match self {
+            Asset::SOL(sol_amount) => {
+                pod.discriminant = 1;
+                pod.sol_amount = *sol_amount;
+                pod.token_amount = 0;
+                pod.token_mint = Pubkey::default();
+                pod.token_pricing_source.set_none();
+            }
+            Asset::Token(token_mint, token_pricing_source, token_amount) => {
+                pod.discriminant = 2;
+                pod.sol_amount = 0;
+                pod.token_amount = *token_amount;
+                pod.token_mint = *token_mint;
+                match token_pricing_source {
+                    Some(source) => {
+                        source.serialize_as_pod(&mut pod.token_pricing_source);
+                    }
+                    None => {
+                        pod.token_pricing_source.set_none();
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct AssetPod {
     discriminant: u8,
-    has_token_pricing_source: u8,
-    _padding: [u8; 6],
+    _padding: [u8; 7],
     sol_amount: u64,
     token_amount: u64,
     token_mint: Pubkey,
     token_pricing_source: TokenPricingSourcePod,
 }
 
-impl From<Asset> for AssetPod {
-    fn from(src: Asset) -> Self {
-        match src {
-            Asset::SOL(sol_amount) => Self {
-                discriminant: 1,
-                has_token_pricing_source: 0,
-                _padding: [0; 6],
-                sol_amount,
-                token_amount: 0,
-                token_mint: Pubkey::default(),
-                token_pricing_source: TokenPricingSourcePod::default(),
-            },
-            Asset::Token(token_mint, token_pricing_source, token_amount) => Self {
-                discriminant: 2,
-                has_token_pricing_source: if token_pricing_source.is_some() { 1 } else { 0 },
-                _padding: [0; 6],
-                sol_amount: 0,
-                token_amount,
-                token_mint,
-                token_pricing_source: token_pricing_source.map(Into::into).unwrap_or_default(),
-            },
-        }
-    }
-}
-
-impl TryFrom<&AssetPod> for Asset {
-    type Error = anchor_lang::error::Error;
-
-    fn try_from(pod: &AssetPod) -> Result<Asset> {
-        Ok(match pod.discriminant {
-            1 => Asset::SOL(pod.sol_amount),
-            2 => Asset::Token(
-                pod.token_mint,
-                if pod.has_token_pricing_source == 1 {
-                    Some(pod.token_pricing_source.try_deserialize()?)
-                }  else {
-                    None
-                },
-                pod.token_amount,
-            ),
-            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+impl AssetPod {
+    fn try_deserialize(&self) -> Result<Option<Asset>> {
+        Ok(if self.discriminant == 0 {
+            None
+        } else {
+            Some(match self.discriminant {
+                1 => Asset::SOL(self.sol_amount),
+                2 => Asset::Token(
+                    self.token_mint,
+                    self.token_pricing_source.try_deserialize()?,
+                    self.token_amount,
+                ),
+                _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+            })
         })
     }
 }

@@ -258,7 +258,10 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn allocate_locked_token_to_withdrawal_reserved(&mut self, token_amount: u64) -> Result<()> {
+    pub(super) fn allocate_locked_token_to_withdrawal_reserved(
+        &mut self,
+        token_amount: u64,
+    ) -> Result<()> {
         self.locked_amount = self
             .locked_amount
             .checked_sub(token_amount)

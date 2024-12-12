@@ -166,10 +166,6 @@ impl UserFundAccount {
             withdrawal_batch_account.settle_withdrawal_request(request)?;
         withdrawal_state.sol_user_reserved_amount -= sol_user_amount;
 
-        Ok((
-            sol_user_amount,
-            sol_fee_amount,
-            receipt_token_amount,
-        ))
+        Ok((sol_user_amount, sol_fee_amount, receipt_token_amount))
     }
 }

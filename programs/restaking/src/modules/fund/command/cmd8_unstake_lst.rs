@@ -86,8 +86,8 @@ impl SelfExecutable for UnstakeLSTCommand {
                         .pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::SPLStakePool { address }
-                        | TokenPricingSource::MarinadeStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address })
+                        | Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
@@ -108,12 +108,12 @@ impl SelfExecutable for UnstakeLSTCommand {
                         .pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::SPLStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
                             staking::SPLStakePoolService::find_accounts_to_get_available_unstake_account(pool_account_info)?
                         }
-                        TokenPricingSource::MarinadeStakePool { address } => {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
                             todo!() // TODO: support marinade..
@@ -159,23 +159,22 @@ impl SelfExecutable for UnstakeLSTCommand {
                             true,
                         ),
                     ]);
-                    let required_withdraw_sol_or_stake_accounts = match fund_account.get_supported_token(&item.mint)?
+                    let required_withdraw_sol_or_stake_accounts = match fund_account
+                        .get_supported_token(&item.mint)?
                         .pricing_source
                         .try_deserialize()?
                     {
-                        TokenPricingSource::SPLStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
                             staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
                                 pool_account,
                             )?
                         }
-                        TokenPricingSource::MarinadeStakePool { address } => {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             todo!()
                         }
                         _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
                     };
-                    required_accounts.extend(
-                        required_withdraw_sol_or_stake_accounts,
-                    );
+                    required_accounts.extend(required_withdraw_sol_or_stake_accounts);
 
                     if let AvailableWithdrawals::Validators(
                         available_withdrawals_from_reserve_or_validator,
@@ -234,8 +233,12 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                     let (to_sol_account_amount, returned_sol_amount) = {
                         let fund_account = ctx.fund_account.load()?;
-                        match fund_account.get_supported_token(&item.mint)?.pricing_source.try_deserialize()? {
-                            TokenPricingSource::SPLStakePool { address } => {
+                        match fund_account
+                            .get_supported_token(&item.mint)?
+                            .pricing_source
+                            .try_deserialize()?
+                        {
+                            Some(TokenPricingSource::SPLStakePool { address }) => {
                                 require_keys_eq!(address, *pool_account.key);
 
                                 staking::SPLStakePoolService::new(
@@ -244,21 +247,21 @@ impl SelfExecutable for UnstakeLSTCommand {
                                     pool_token_mint,
                                     pool_token_program,
                                 )?
-                                    .withdraw_sol(
-                                        withdraw_authority,
-                                        reserve_stake_account,
-                                        manager_fee_account,
-                                        sysvar_clock_program,
-                                        sysvar_stake_history_program,
-                                        stake_program,
-                                        fund_supported_token_account,
-                                        fund_reserve_account,
-                                        ctx.fund_account.as_account_info(),
-                                        &fund_account.get_seeds(),
-                                        item.token_amount,
-                                    )?
+                                .withdraw_sol(
+                                    withdraw_authority,
+                                    reserve_stake_account,
+                                    manager_fee_account,
+                                    sysvar_clock_program,
+                                    sysvar_stake_history_program,
+                                    stake_program,
+                                    fund_supported_token_account,
+                                    fund_reserve_account,
+                                    ctx.fund_account.as_account_info(),
+                                    &fund_account.get_seeds(),
+                                    item.token_amount,
+                                )?
                             }
-                            TokenPricingSource::MarinadeStakePool { address } => {
+                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
                                 require_keys_eq!(address, *pool_account.key);
 
                                 todo!() // TODO: support marinade..
@@ -268,10 +271,13 @@ impl SelfExecutable for UnstakeLSTCommand {
                     };
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
-                    fund_account.sol_operation_reserved_amount = fund_account.sol_operation_reserved_amount + returned_sol_amount;
+                    fund_account.sol_operation_reserved_amount =
+                        fund_account.sol_operation_reserved_amount + returned_sol_amount;
 
-                    let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                    supported_token.operation_reserved_amount = supported_token.operation_reserved_amount - item.token_amount;
+                    let supported_token =
+                        fund_account.get_supported_token_mut(pool_token_mint.key)?;
+                    supported_token.operation_reserved_amount =
+                        supported_token.operation_reserved_amount - item.token_amount;
 
                     msg!(
                         "unstaked {} tokens to get {} sol",
@@ -294,9 +300,14 @@ impl SelfExecutable for UnstakeLSTCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    let supported_token_pricing_source = ctx.fund_account.load()?.get_supported_token(&item.mint)?.pricing_source.try_deserialize()?;
+                    let supported_token_pricing_source = ctx
+                        .fund_account
+                        .load()?
+                        .get_supported_token(&item.mint)?
+                        .pricing_source
+                        .try_deserialize()?;
                     match supported_token_pricing_source {
-                        TokenPricingSource::SPLStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account.key);
 
                             let spl_withdraw_stake_item = command.spl_withdraw_stake_items.pop();
@@ -374,14 +385,18 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 if command.spl_withdraw_stake_items.len() > 0 {
                                     command.state = UnstakeLSTCommandState::RequestUnstake;
                                     return Ok(Some(
-                                        command.with_required_accounts(accounts.iter().map(|account| (*account.key, account.is_writable))),
+                                        command.with_required_accounts(
+                                            accounts
+                                                .iter()
+                                                .map(|account| (*account.key, account.is_writable)),
+                                        ),
                                     ));
                                 }
                             } else {
                                 // nothing to do
                             }
                         }
-                        TokenPricingSource::MarinadeStakePool { address } => {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             require_keys_eq!(address, *pool_account.key);
 
                             todo!() // TODO: support marinade..

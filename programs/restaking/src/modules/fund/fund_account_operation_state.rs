@@ -42,25 +42,25 @@ impl OperationState {
             self.no_transition = 0;
             self.next_sequence = 0;
             self.set_command(
-                reset_command.or_else(|| Some(InitializeCommand {}.with_required_accounts([]))),
+                reset_command.or_else(|| Some(InitializeCommand {}.without_required_accounts())),
                 current_timestamp,
-            );
+            )?;
             self.no_transition = if has_reset_command { 1 } else { 0 };
         }
-
         Ok(())
     }
 
     /// Sets next operation command and increment sequence number.
     pub fn set_command(
         &mut self,
-        mut command: Option<OperationCommandEntry>,
+        mut next_command: Option<OperationCommandEntry>,
         current_timestamp: i64,
-    ) {
+    ) -> Result<()> {
         // deal with no_transition state, to adjust next command.
         if self.no_transition == 1 {
-            let prev_command: Result<OperationCommandEntry> = (&self.next_command).try_into();
-            if let (Ok(prev_entry), Some(next_entry)) = (&prev_command, &command) {
+            let prev_command: Option<OperationCommandEntry> =
+                self.next_command.try_deserialize()?;
+            if let (Some(prev_entry), Some(next_entry)) = (&prev_command, &next_command) {
                 if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
                     msg!(
@@ -68,7 +68,7 @@ impl OperationState {
                         self.next_sequence
                     );
                     self.no_transition = 0;
-                    command = None;
+                    next_command = None;
                 }
                 // otherwise, retaining on the same command type, still maintains no_transition state.
             } else {
@@ -79,16 +79,23 @@ impl OperationState {
 
         self.updated_at = current_timestamp;
         self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
-        self.next_sequence = match command {
+        self.next_sequence = match next_command {
             Some(_) => self.next_sequence + 1,
             None => 0,
         };
-        self.next_command = command.map(|cmd| cmd.into()).unwrap_or_default();
+        match &next_command {
+            Some(next_command) => next_command.serialize_as_pod(&mut self.next_command)?,
+            None => self.next_command.set_none(),
+        };
+        Ok(())
     }
 
-    #[inline(always)]
-    pub fn get_command(&self) -> Result<(OperationCommand, Vec<OperationCommandAccountMeta>)> {
-        let command: Result<OperationCommandEntry> = (&self.next_command).try_into();
-        command.map(|entry| (entry.command, entry.required_accounts))
+    pub fn get_next_command(
+        &self,
+    ) -> Result<Option<(OperationCommand, Vec<OperationCommandAccountMeta>)>> {
+        Ok(self
+            .next_command
+            .try_deserialize()?
+            .map(|entry: OperationCommandEntry| (entry.command, entry.required_accounts)))
     }
 }
