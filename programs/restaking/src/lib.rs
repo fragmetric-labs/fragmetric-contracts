@@ -563,8 +563,8 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_sol(
-            &ctx.accounts.fund_reserve_account,
             &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
             &ctx.accounts.instructions_sysvar,
             ctx.remaining_accounts,
             amount,
@@ -622,6 +622,7 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw(
+            &ctx.accounts.system_program,
             &mut ctx.accounts.fund_withdrawal_batch_account,
             &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,

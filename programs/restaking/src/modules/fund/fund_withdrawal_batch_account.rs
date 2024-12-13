@@ -17,8 +17,7 @@ pub struct FundWithdrawalBatchAccount {
     claimed_receipt_token_amount: u64,
     pub(super) sol_user_amount: u64,
     claimed_sol_user_amount: u64,
-    /// SOL withdrawal fee is already paid to treasury account.
-    /// This field is just for event.
+    /// SOL withdrawal fee is already paid to the treasury account, this field is informative.
     pub(super) sol_fee_amount: u64,
     processed_at: i64,
     _reserved: [u8; 32],
@@ -119,7 +118,7 @@ impl FundWithdrawalBatchAccount {
         require_eq!(
             self.batch_id,
             request.batch_id,
-            ErrorCode::FundWrongWithdrawalBatchError,
+            ErrorCode::FundWithdrawalRequestIncorrectBatchError,
         );
 
         let sol_user_amount = crate::utils::get_proportional_amount(

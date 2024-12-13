@@ -209,6 +209,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, user, false, this.supportedTokenMetadata[symbol].program);
 
+        const fragSOLFundWithdrawalBatch = (batchId: BN) => web3.PublicKey.findProgramAddressSync([Buffer.from("withdrawal_batch"), fragSOLTokenMintBuf, batchId.toBuffer('le', 8)], this.programId)[0];
+
         // reward
         const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragSOLTokenMintBuf], this.programId);
         const fragSOLUserReward = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_reward"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
@@ -310,6 +312,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLSupportedTokenAccount,
             ...fragSOLSupportedTokenAccounts,
             userSupportedTokenAccount,
+            fragSOLFundWithdrawalBatch,
             fundStakeAccounts,
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
@@ -1629,7 +1632,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorProcessFundWithdrawalJob(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorRun({
             command: {
                 enqueueWithdrawalBatch: {
@@ -1655,7 +1658,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             requiredAccounts: [],
         }, operator);
 
-        logger.notice(`operator processed withdrawal job: #${event.operatorRanFund.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        logger.info(`operator processed withdrawal batches up to #${event.operatorRanFund.fundAccount.withdrawalLastCompletedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),
@@ -1674,6 +1677,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .userWithdraw(requestId)
                     .accounts({
                         user: user.publicKey,
+                        fundWithdrawalBatchAccount: await this.getUserFragSOLFundAccount(user.publicKey)
+                            .then(userFundAccount => {
+                                return this.knownAddress.fragSOLFundWithdrawalBatch(
+                                    userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId))?.batchId ?? (() => {
+                                        throw "withdrawal request not found from the user account"
+                                    })()
+                                );
+                            }),
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
@@ -1811,7 +1822,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         let fragSOLFund = await this.getFragSOLFundAccount();
         let nextOperationCommand = resetCommand ?? fragSOLFund.operation.nextCommand;
-        let nextOperationSequence = resetCommand ? -1 : fragSOLFund.operation.nextSequence;
+        let nextOperationSequence = resetCommand ? 0 : fragSOLFund.operation.nextSequence;
         if (nextOperationCommand) {
             for (const accountMeta of nextOperationCommand.requiredAccounts) {
                 if (requiredAccounts.has(accountMeta.pubkey)) {
@@ -1851,15 +1862,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const commandName = Object.keys(executedCommand)[0];
         const commandArgs = executedCommand[commandName][0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
-        nextOperationSequence = tx.event.operatorRanFund.fundAccount.nextOperationSequence;
-
-        if (nextOperationSequence == -1) {
-            // noop for reset command
-        } else if (nextOperationSequence == 0) {
-            logger.debug(`operator finished active operation cycle`);
-        } else {
-            logger.info(`operator has remaining command#${nextOperationSequence}`.padEnd(LOG_PAD_LARGE));
-        }
 
         return {
             event: tx.event,

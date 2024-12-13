@@ -68,7 +68,7 @@ describe("operator_spl_stake_pool", async () => {
             },
             requiredAccounts: [],
         });
-        
+
         const [
             fragSOLFundReserveAccountBalance1,
             jitoSolSupportedTokenBalance1_,
@@ -90,7 +90,7 @@ describe("operator_spl_stake_pool", async () => {
     });
 
     step("claim sol", async function () {
-        console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
+        // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
         await restaking.runOperatorRun({
             command: {
                 claimUnstakedSol: {

@@ -53,7 +53,6 @@ pub struct FundAccount {
     /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub(super) sol_operation_receivable_amount: u64,
 
-    // TODO v0.3/operation: visibility
     /// asset
     pub(super) sol_operation_reserved_amount: u64,
 
@@ -316,6 +315,7 @@ impl FundAccount {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
+        operation_reserved_amount: u64,
     ) -> Result<()> {
         if self
             .get_supported_tokens_iter()
@@ -331,7 +331,13 @@ impl FundAccount {
         );
 
         let mut supported_token = SupportedToken::zeroed();
-        supported_token.initialize(mint, program, decimals, pricing_source)?;
+        supported_token.initialize(
+            mint,
+            program,
+            decimals,
+            pricing_source,
+            operation_reserved_amount,
+        )?;
         self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
@@ -553,6 +559,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token1)
@@ -567,6 +574,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token2)
@@ -581,6 +589,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap_err();
         assert_eq!(fund.num_supported_tokens, 2);
@@ -623,6 +632,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.supported_tokens[0]

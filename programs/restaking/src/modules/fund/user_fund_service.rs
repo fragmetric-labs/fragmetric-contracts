@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
@@ -65,8 +64,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_deposit_sol(
         &mut self,
-        fund_reserve_account: &SystemAccount<'info>,
         system_program: &Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
         sol_amount: u64,
@@ -99,10 +98,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // transfer user $SOL to fund
         self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
 
-        system_program::transfer(
+        anchor_lang::system_program::transfer(
             CpiContext::new(
                 system_program.to_account_info(),
-                system_program::Transfer {
+                anchor_lang::system_program::Transfer {
                     from: self.user.to_account_info(),
                     to: fund_reserve_account.to_account_info(),
                 },
@@ -402,6 +401,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
+        system_program: &Program<'info, System>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
@@ -412,27 +412,33 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
             // calculate $SOL amounts and mark withdrawal request as claimed
             // withdrawal fee is already paid.
-            let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-                self.user_fund_account.settle_withdrawal_request(
-                    &mut fund_account.withdrawal,
-                    fund_withdrawal_batch_account,
-                    request_id,
-                )?;
+            self.user_fund_account.settle_withdrawal_request(
+                &mut fund_account.withdrawal,
+                fund_withdrawal_batch_account,
+                request_id,
+            )?
+        };
 
-            // transfer sol_user_amount to user wallet
-            fund_reserve_account.sub_lamports(sol_user_amount)?;
-            self.user.add_lamports(sol_user_amount)?;
+        {
+            // transfer sol_user_amount to user wallet from reserved account
+            let fund_account = self.fund_account.load()?;
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_reserve_account.to_account_info(),
+                        to: self.user.to_account_info(),
+                    },
+                    &[&fund_account.get_reserve_account_seeds()],
+                ),
+                sol_user_amount,
+            )?;
 
-            // close ticket and collect rent if stale
+            // close the ticket to collect rent after all requests are settled
             if fund_withdrawal_batch_account.is_settled() {
                 fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
             }
 
-            (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
-        };
-
-        {
-            let fund_account = self.fund_account.load()?;
             emit!(events::UserWithdrewSOLFromFund {
                 receipt_token_mint: fund_account.receipt_token_mint,
                 fund_account: FundAccountInfo::from(fund_account)?,

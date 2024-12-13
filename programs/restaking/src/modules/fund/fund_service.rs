@@ -56,7 +56,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(pricing_service)
     }
 
-    fn get_pricing_source_infos(&self, remaining_accounts: &'info [AccountInfo<'info>]) -> Result<Vec<&'info AccountInfo<'info>>> {
+    fn get_pricing_source_infos(
+        &self,
+        remaining_accounts: &'info [AccountInfo<'info>],
+    ) -> Result<Vec<&'info AccountInfo<'info>>> {
         let fund_account = self.fund_account.load()?;
 
         fund_account
@@ -73,21 +76,19 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .get_supported_tokens_iter()
                     .map(|supported_token| &supported_token.pricing_source),
             )
-            .map(|pricing_source| {
-                match pricing_source.try_deserialize()? {
-                    Some(TokenPricingSource::SPLStakePool { address })
-                    | Some(TokenPricingSource::MarinadeStakePool { address })
-                    | Some(TokenPricingSource::JitoRestakingVault { address })
-                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
-                        for remaining_account in remaining_accounts {
-                            if address == remaining_account.key() {
-                                return Ok(remaining_account);
-                            }
+            .map(|pricing_source| match pricing_source.try_deserialize()? {
+                Some(TokenPricingSource::SPLStakePool { address })
+                | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::JitoRestakingVault { address })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
+                    for remaining_account in remaining_accounts {
+                        if address == remaining_account.key() {
+                            return Ok(remaining_account);
                         }
-                        err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                     }
-                    _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError),
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
+                _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError),
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -246,7 +247,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let (command, required_accounts) = &operation_state
             .get_next_command()?
-            .ok_or_else(|| error!(ErrorCode::OperationCommandExecutionFailedException))?;
+            .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
         let mut required_account_infos = Vec::with_capacity(32);
         let mut remaining_accounts_used: [bool; 32] = [false; 32];
@@ -271,7 +272,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     operation_state.next_sequence,
                     command
                 );
-                return err!(ErrorCode::OperationCommandAccountComputationException);
+                return err!(ErrorCode::FundOperationCommandAccountComputationException);
             }
         }
 

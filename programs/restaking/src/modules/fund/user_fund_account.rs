@@ -169,3 +169,29 @@ impl UserFundAccount {
         Ok((sol_user_amount, sol_fee_amount, receipt_token_amount))
     }
 }
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub(super) struct WithdrawalRequest {
+    pub batch_id: u64,
+    pub request_id: u64,
+    pub receipt_token_amount: u64,
+    created_at: i64,
+    _reserved: [u8; 16],
+}
+
+impl WithdrawalRequest {
+    pub fn new(
+        batch_id: u64,
+        request_id: u64,
+        receipt_token_amount: u64,
+        current_timestamp: i64,
+    ) -> Self {
+        Self {
+            batch_id,
+            request_id,
+            receipt_token_amount,
+            created_at: current_timestamp,
+            _reserved: [0; 16],
+        }
+    }
+}
