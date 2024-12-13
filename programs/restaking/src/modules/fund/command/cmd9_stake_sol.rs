@@ -4,7 +4,7 @@ use crate::errors;
 use crate::modules::fund::command::OperationCommand::StakeSOL;
 use crate::modules::fund::{
     weighted_allocation_strategy, FundService, WeightedAllocationParticipant,
-    WeightedAllocationStrategy,
+    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
@@ -71,27 +71,28 @@ impl SelfExecutable for StakeSOLCommand {
 
                 if sol_staking_reserved_amount > 0 {
                     let fund_account = ctx.fund_account.load()?;
-                    let mut participants = fund_account
-                        .get_supported_tokens_iter()
-                        .map(|supported_token| {
-                            Ok::<WeightedAllocationParticipant, Error>(
-                                WeightedAllocationParticipant::new(
-                                    supported_token.sol_allocation_weight,
-                                    pricing_service.get_token_amount_as_sol(
-                                        &supported_token.mint,
-                                        supported_token.operation_reserved_amount,
-                                    )?,
-                                    supported_token.sol_allocation_capacity_amount,
-                                ),
-                            )
-                        })
-                        .collect::<Result<Vec<_>>>()?;
+                    let mut strategy =
+                        WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+                            fund_account
+                                .get_supported_tokens_iter()
+                                .map(|supported_token| {
+                                    Ok::<WeightedAllocationParticipant, Error>(
+                                        WeightedAllocationParticipant::new(
+                                            supported_token.sol_allocation_weight,
+                                            pricing_service.get_token_amount_as_sol(
+                                                &supported_token.mint,
+                                                supported_token.operation_reserved_amount,
+                                            )?,
+                                            supported_token.sol_allocation_capacity_amount,
+                                        ),
+                                    )
+                                })
+                                .collect::<Result<Vec<_>>>()?,
+                        );
                     let sol_staking_reserved_amount_positive =
                         u64::try_from(sol_staking_reserved_amount)?;
-                    let sol_staking_remaining_amount = WeightedAllocationStrategy::put(
-                        &mut *participants,
-                        sol_staking_reserved_amount_positive,
-                    );
+                    let sol_staking_remaining_amount =
+                        strategy.put(sol_staking_reserved_amount_positive)?;
                     let _sol_staking_execution_amount =
                         sol_staking_reserved_amount_positive - sol_staking_remaining_amount;
 
@@ -101,7 +102,7 @@ impl SelfExecutable for StakeSOLCommand {
                         .map(|(i, supported_token)| {
                             Ok(StakeSOLCommandItem {
                                 mint: supported_token.mint,
-                                sol_amount: participants.get(i).unwrap().get_last_put_amount()?,
+                                sol_amount: strategy.get_participant_last_put_amount_by_index(i)?,
                             })
                         })
                         .collect::<Result<Vec<_>>>()?;
@@ -134,7 +135,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         ));
                                     }
                                     _ => err!(
-                                        errors::ErrorCode::OperationCommandExecutionFailedException
+                                        errors::ErrorCode::FundOperationCommandExecutionFailedException
                                     )?,
                                 }
                             }
@@ -174,7 +175,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )?
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             });
 
@@ -291,7 +292,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             };
 
@@ -313,7 +314,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 to_pool_token_account_amount
                             );
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
 
                     // proceed to next token

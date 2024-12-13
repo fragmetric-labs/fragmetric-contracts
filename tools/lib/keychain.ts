@@ -236,7 +236,7 @@ export class Keychain<KEYS extends string> {
                         const publicKey = keypairMap.local.get(keypairName)?.publicKey || keypairMap.ledger.get(keypairName).publicKey;
                         const target = `/*local:${keypairName}*/ "${publicKey.toString()}" /**/`;
                         for (const match of matches) {
-                            if (match != target) {
+                            if (match != target && !match.includes(publicKey.toString())) {
                                 updated++;
                                 fileSource = fileSource.replace(match, target);
                                 logger.info(`replaced a line starting with`.padEnd(LOG_PAD_SMALL), `/*local:${keypairName}*/...`);

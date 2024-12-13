@@ -99,7 +99,7 @@ pub struct UserFundContext<'info> {
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
@@ -124,7 +124,7 @@ pub struct UserFundContext<'info> {
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
@@ -134,7 +134,7 @@ pub struct UserFundContext<'info> {
         bump = user_reward_account.get_bump()?,
         has_one = receipt_token_mint,
         has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 
@@ -147,6 +147,8 @@ pub struct UserFundContext<'info> {
 pub struct UserFundWithdrawContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 
     pub receipt_token_program: Program<'info, Token2022>,
 
@@ -165,14 +167,16 @@ pub struct UserFundWithdrawContext<'info> {
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
+    /// Users can derive proper account address with target batch id for each withdrawal requests.
+    /// And the batch id can be read from a user fund account which the withdrawal requests belong to.
+    /// seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
+    /// bump = fund_withdrawal_batch_account.get_bump(),
     #[account(
         mut,
-        seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
-        bump = fund_withdrawal_batch_account.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub fund_withdrawal_batch_account: Box<Account<'info, FundWithdrawalBatchAccount>>,
@@ -204,7 +208,7 @@ pub struct UserFundWithdrawContext<'info> {
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
@@ -213,7 +217,7 @@ pub struct UserFundWithdrawContext<'info> {
         bump = user_reward_account.get_bump()?,
         has_one = receipt_token_mint,
         has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

@@ -85,13 +85,14 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         signerNames?: KEYS[],
         events?: EVENTS[],
         skipPreflight?: boolean,
-        computeUnitLimit?: number,
-        prioritizationFeeMicroLamports?: number,
+        requestHeapFrameBytes?: number,
+        setComputeUnitLimitUnits?: number,
+        setComputeUnitPriceMicroLamports?: number,
     }) {
         let txSig: string | null = null;
         try {
             // prepare instructions
-            let {instructions, signers = [], signerNames = [], skipPreflight = false, computeUnitLimit, prioritizationFeeMicroLamports} = args;
+            let {instructions, signers = [], signerNames = [], skipPreflight = false, requestHeapFrameBytes, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports} = args;
 
             // get recent block hash
             const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
@@ -100,14 +101,19 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                     payerKey: this.keychain.wallet.publicKey,
                     recentBlockhash: blockhash,
                     instructions: [
-                        ...(typeof prioritizationFeeMicroLamports != 'undefined' ? [
-                            web3.ComputeBudgetProgram.setComputeUnitPrice({
-                                microLamports: prioritizationFeeMicroLamports,
+                        ...(typeof requestHeapFrameBytes != 'undefined' ? [
+                            web3.ComputeBudgetProgram.requestHeapFrame({
+                                bytes: requestHeapFrameBytes, // should be multiple of 1024
                             }),
                         ] : []),
-                        ...(typeof computeUnitLimit != 'undefined' ? [
+                        ...(typeof setComputeUnitPriceMicroLamports != 'undefined' ? [
+                            web3.ComputeBudgetProgram.setComputeUnitPrice({
+                                microLamports: setComputeUnitPriceMicroLamports,
+                            }),
+                        ] : []),
+                        ...(typeof setComputeUnitLimitUnits != 'undefined' ? [
                             web3.ComputeBudgetProgram.setComputeUnitLimit({
-                                units: computeUnitLimit,
+                                units: setComputeUnitLimitUnits,
                             })
                         ] : []),
                         ...await Promise.all(instructions),

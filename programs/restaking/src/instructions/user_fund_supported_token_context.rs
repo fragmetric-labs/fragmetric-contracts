@@ -50,7 +50,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
@@ -68,7 +68,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
@@ -78,7 +78,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         bump = user_reward_account.get_bump()?,
         has_one = receipt_token_mint,
         has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 

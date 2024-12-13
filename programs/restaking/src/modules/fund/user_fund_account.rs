@@ -113,59 +113,48 @@ impl UserFundAccount {
         Ok(())
     }
 
-    fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
-        let index = self
-            .withdrawal_requests
-            .binary_search_by_key(&request_id, |req| req.request_id)
-            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
-        Ok(self.withdrawal_requests.remove(index))
-    }
-
-    /// Returns (batch_id, request_id)
-    pub(super) fn create_withdrawal_request(
-        &mut self,
-        withdrawal_state: &mut WithdrawalState,
-        receipt_token_amount: u64,
-        current_timestamp: i64,
-    ) -> Result<(u64, u64)> {
+    pub(super) fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         require_gt!(
             Self::MAX_WITHDRAWAL_REQUESTS_SIZE,
             self.withdrawal_requests.len(),
             ErrorCode::FundExceededMaxWithdrawalRequestError
         );
 
-        let request = withdrawal_state
-            .create_pending_withdrawal_request(receipt_token_amount, current_timestamp)?;
-        let batch_id = request.batch_id;
-        let request_id = request.request_id;
-
         self.withdrawal_requests.push(request);
-
-        Ok((batch_id, request_id))
+        Ok(())
     }
 
-    /// Returns receipt_token_amount
-    pub(super) fn cancel_withdrawal_request(
-        &mut self,
-        withdrawal_state: &mut WithdrawalState,
-        request_id: u64,
-    ) -> Result<u64> {
-        let request = self.pop_withdrawal_request(request_id)?;
-        withdrawal_state.remove_pending_withdrawal_request(request)
+    pub(super) fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
+        let index = self
+            .withdrawal_requests
+            .binary_search_by_key(&request_id, |req| req.request_id)
+            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
+        Ok(self.withdrawal_requests.remove(index))
     }
+}
 
-    /// Returns (sol_user_amount, sol_fee_amount, receipt_token_amount)
-    pub(super) fn settle_withdrawal_request(
-        &mut self,
-        withdrawal_state: &mut WithdrawalState,
-        withdrawal_batch_account: &mut FundWithdrawalBatchAccount,
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub(super) struct WithdrawalRequest {
+    pub batch_id: u64,
+    pub request_id: u64,
+    pub receipt_token_amount: u64,
+    created_at: i64,
+    _reserved: [u8; 16],
+}
+
+impl WithdrawalRequest {
+    pub fn new(
+        batch_id: u64,
         request_id: u64,
-    ) -> Result<(u64, u64, u64)> {
-        let request = self.pop_withdrawal_request(request_id)?;
-        let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
-            withdrawal_batch_account.settle_withdrawal_request(request)?;
-        withdrawal_state.sol_user_reserved_amount -= sol_user_amount;
-
-        Ok((sol_user_amount, sol_fee_amount, receipt_token_amount))
+        receipt_token_amount: u64,
+        current_timestamp: i64,
+    ) -> Self {
+        Self {
+            batch_id,
+            request_id,
+            receipt_token_amount,
+            created_at: current_timestamp,
+            _reserved: [0; 16],
+        }
     }
 }

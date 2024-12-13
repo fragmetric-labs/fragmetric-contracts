@@ -177,8 +177,7 @@ impl<'info> SPLStakePoolService<'info> {
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Vec::new();
-        accounts.extend([
+        let mut accounts = vec![
             // for self.withdraw_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
@@ -191,7 +190,7 @@ impl<'info> SPLStakePoolService<'info> {
             (pool_account.manager_fee_account, true),
             (solana_program::sysvar::clock::ID, false),
             (solana_program::sysvar::stake_history::ID, false),
-        ]);
+        ];
         Ok(accounts)
     }
 
@@ -590,13 +589,11 @@ impl<'info> SPLStakePoolService<'info> {
     }
 
     pub fn find_accounts_to_claim_sol() -> Vec<(Pubkey, bool)> {
-        let mut accounts = Vec::new();
-        accounts.extend([
+        vec![
             (solana_program::sysvar::clock::ID, false),
             (solana_program::sysvar::stake_history::ID, false),
             (solana_program::stake::program::ID, false),
-        ]);
-        return accounts;
+        ]
     }
 
     /// gives (to_sol_account_amount, returned_sol_amount)

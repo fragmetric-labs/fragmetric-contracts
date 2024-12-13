@@ -90,7 +90,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         | Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 UnstakeLSTCommandState::ReadPoolState => {
@@ -118,7 +118,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                             todo!() // TODO: support marinade..
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
 
                     return Ok(Some(command.with_required_accounts(required_accounts)));
@@ -172,7 +172,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             todo!()
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                     required_accounts.extend(required_withdraw_sol_or_stake_accounts);
 
@@ -266,7 +266,9 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                                 todo!() // TODO: support marinade..
                             }
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
                         }
                     };
 
@@ -401,7 +403,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                             todo!() // TODO: support marinade..
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 _ => (),

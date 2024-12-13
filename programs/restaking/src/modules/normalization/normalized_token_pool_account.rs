@@ -13,7 +13,7 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-pub(super) const MAX_SUPPORTED_TOKENS: usize = 10;
+pub(super) const MAX_SUPPORTED_TOKENS_SIZE: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
@@ -22,13 +22,13 @@ pub struct NormalizedTokenPoolAccount {
     bump: u8,
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_program: Pubkey,
-    #[max_len(MAX_SUPPORTED_TOKENS)]
+    #[max_len(MAX_SUPPORTED_TOKENS_SIZE)]
     pub(super) supported_tokens: Vec<SupportedToken>,
 
     pub(super) normalized_token_decimals: u8,
     pub(super) normalized_token_supply_amount: u64,
     pub(super) normalized_token_value: TokenValue,
-    pub(super) normalized_token_value_updated_at: i64,
+    pub(super) normalized_token_value_updated_slot: u64,
     pub(super) one_normalized_token_as_sol: u64,
 
     _reserved: [u8; 128],
@@ -68,7 +68,7 @@ impl NormalizedTokenPoolAccount {
                 numerator: Vec::new(),
                 denominator: 0,
             };
-            self.normalized_token_value_updated_at = 0;
+            self.normalized_token_value_updated_slot = 0;
             self.one_normalized_token_as_sol = 0;
             self.supported_tokens
                 .iter_mut()
@@ -104,6 +104,7 @@ impl NormalizedTokenPoolAccount {
         }
     }
 
+    // TODO: remove? or optimize by removing contains
     pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
         let supported_token_mint_list: Vec<&Pubkey> = self
             .supported_tokens
@@ -161,7 +162,7 @@ impl NormalizedTokenPoolAccount {
         }
 
         require_gt!(
-            MAX_SUPPORTED_TOKENS,
+            MAX_SUPPORTED_TOKENS_SIZE,
             self.supported_tokens.len(),
             ErrorCode::NormalizedTokenPoolExceededMaxSupportedTokensError
         );

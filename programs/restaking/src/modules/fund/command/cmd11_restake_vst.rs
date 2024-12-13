@@ -3,6 +3,7 @@ use crate::errors;
 use crate::modules::fund::fund_account_restaking_vault::RestakingVault;
 use crate::modules::fund::{
     FundService, SupportedToken, WeightedAllocationParticipant, WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
@@ -196,7 +197,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 JitoRestakingVaultService::find_accounts_for_vault(address)?,
                             )));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 RestakeVSTCommandState::SetupNormalize => {
@@ -250,14 +251,17 @@ impl SelfExecutable for RestakeVSTCommand {
                         })
                         .collect::<Vec<_>>();
 
-                    WeightedAllocationStrategy::put(&mut participants, item.sol_amount);
+                    let mut strategy = WeightedAllocationStrategy::<
+                        FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+                    >::new(participants);
+                    let _ = strategy.put(item.sol_amount);
 
                     let mut restake_supported_tokens_state = vec![];
                     for (i, supported_token) in supported_tokens.iter().enumerate() {
                         let need_to_restake_token_amount = pricing_service
                             .get_sol_amount_as_token(
                                 &supported_token.mint,
-                                participants[i].get_last_put_amount()?,
+                                strategy.get_participant_last_put_amount_by_index(i)?,
                             )?;
 
                         restake_supported_tokens_state.push(NormalizeSupportedTokenAsset {
@@ -445,7 +449,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                     )));
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             };
                         }
@@ -504,7 +508,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             ]);
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 RestakeVSTCommandState::Restake(ncn_epoch) => {
@@ -574,7 +578,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             }
                             command.operation_reserved_restake_token = None;
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 _ => (),

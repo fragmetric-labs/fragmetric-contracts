@@ -33,7 +33,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3);
+        });
     });
 
     step("withdraw SOL from jito stake pool", async function () {
@@ -67,8 +67,8 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3, 800_000);
-        
+        });
+
         const [
             fragSOLFundReserveAccountBalance1,
             jitoSolSupportedTokenBalance1_,
@@ -90,7 +90,7 @@ describe("operator_spl_stake_pool", async () => {
     });
 
     step("claim sol", async function () {
-        console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
+        // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
         await restaking.runOperatorRun({
             command: {
                 claimUnstakedSol: {
@@ -108,6 +108,6 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3, 800_000);
+        });
     });
 });

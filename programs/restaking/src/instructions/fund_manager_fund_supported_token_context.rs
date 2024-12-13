@@ -19,7 +19,7 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidDataVersionError,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 

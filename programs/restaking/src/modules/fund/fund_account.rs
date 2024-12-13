@@ -19,8 +19,8 @@ use super::*;
 /// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
-const MAX_SUPPORTED_TOKENS: usize = 16;
-const MAX_RESTAKING_VAULTS: usize = 8;
+pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 4;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -29,7 +29,10 @@ pub struct FundAccount {
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 11],
+    _padding: [u8; 10],
+
+    /// irreversible configurations
+    pub(super) receipt_token_transfer_enabled: u8,
 
     /// receipt token info
     pub receipt_token_mint: Pubkey,
@@ -38,13 +41,14 @@ pub struct FundAccount {
     _padding2: [u8; 7],
     pub(super) receipt_token_supply_amount: u64,
     pub(super) one_receipt_token_as_sol: u64,
-    pub(super) receipt_token_value_updated_at: i64,
+    pub(super) receipt_token_value_updated_slot: u64,
     pub(super) receipt_token_value: TokenValuePod,
 
     /// configurations for deposit
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
 
+    /// configuration & withdrawal processing state
     pub withdrawal: WithdrawalState,
 
     /// asset: A receivable that the fund may charge the users requesting withdrawals.
@@ -53,14 +57,13 @@ pub struct FundAccount {
     /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub(super) sol_operation_receivable_amount: u64,
 
-    // TODO v0.3/operation: visibility
     /// asset
     pub(super) sol_operation_reserved_amount: u64,
 
     /// asset & configurations for LSTs
     _padding3: [u8; 15],
     num_supported_tokens: u8,
-    supported_tokens: [SupportedToken; MAX_SUPPORTED_TOKENS],
+    supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
 
     /// asset & configuration for NT
     normalized_token: NormalizedToken,
@@ -68,7 +71,7 @@ pub struct FundAccount {
     /// asset & configurations for Restaking Vaults
     _padding4: [u8; 15],
     num_restaking_vaults: u8,
-    restaking_vaults: [RestakingVault; MAX_RESTAKING_VAULTS],
+    restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
 
     /// fund operation state
     pub(super) operation: OperationState,
@@ -283,16 +286,6 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn get_supported_token_mut_by_index(
-        &mut self,
-        index: usize,
-    ) -> Result<&mut SupportedToken> {
-        self.get_supported_tokens_iter_mut()
-            .skip(index)
-            .next()
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
-    }
-
     pub(super) fn set_sol_accumulated_deposit_amount(&mut self, sol_amount: u64) -> Result<()> {
         require_gte!(
             self.sol_accumulated_deposit_capacity_amount,
@@ -326,6 +319,7 @@ impl FundAccount {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
+        operation_reserved_amount: u64,
     ) -> Result<()> {
         if self
             .get_supported_tokens_iter()
@@ -335,13 +329,20 @@ impl FundAccount {
         }
 
         require_gt!(
-            MAX_SUPPORTED_TOKENS,
+            FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
             self.num_supported_tokens as usize,
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        let supported_token = &mut self.supported_tokens[self.num_supported_tokens as usize];
-        supported_token.initialize(mint, program, decimals, pricing_source)?;
+        let mut supported_token = SupportedToken::zeroed();
+        supported_token.initialize(
+            mint,
+            program,
+            decimals,
+            pricing_source,
+            operation_reserved_amount,
+        )?;
+        self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
         Ok(())
@@ -423,12 +424,12 @@ impl FundAccount {
         }
 
         require_gt!(
-            MAX_RESTAKING_VAULTS,
+            FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
             self.num_restaking_vaults as usize,
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
 
-        let restaking_vault = &mut self.restaking_vaults[self.num_restaking_vaults as usize];
+        let mut restaking_vault = RestakingVault::zeroed();
         restaking_vault.initialize(
             vault,
             program,
@@ -438,6 +439,7 @@ impl FundAccount {
             receipt_token_decimals,
             receipt_token_operation_reserved_amount,
         )?;
+        self.restaking_vaults[self.num_restaking_vaults as usize] = restaking_vault;
         self.num_restaking_vaults += 1;
 
         Ok(())
@@ -533,11 +535,6 @@ mod tests {
     fn test_initialize_update_fund_account() {
         let mut fund = create_initialized_fund_account();
 
-        assert_eq!(fund.sol_accumulated_deposit_capacity_amount, 0);
-        assert_eq!(fund.withdrawal.get_sol_fee_rate_as_percent(), 0.);
-        assert_eq!(fund.withdrawal.enabled, 0);
-        assert_eq!(fund.withdrawal.batch_threshold_interval_seconds, 0);
-
         fund.sol_accumulated_deposit_amount = 1_000_000_000_000;
         fund.set_sol_accumulated_deposit_capacity_amount(0)
             .unwrap_err();
@@ -566,6 +563,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token1)
@@ -580,6 +578,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token2)
@@ -594,6 +593,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap_err();
         assert_eq!(fund.num_supported_tokens, 2);
@@ -636,6 +636,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.supported_tokens[0]

@@ -38,7 +38,7 @@ impl SupportedToken {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
-        // TODO: operation_reserved_amount: u64,
+        operation_reserved_amount: u64,
     ) -> Result<()> {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
@@ -51,6 +51,7 @@ impl SupportedToken {
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
+        self.operation_reserved_amount = operation_reserved_amount;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
         Ok(())

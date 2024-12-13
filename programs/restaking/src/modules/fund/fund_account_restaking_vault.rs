@@ -108,8 +108,9 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultOperatorsError
         );
 
-        let operator = &mut self.operators[self.num_operators as usize];
+        let mut operator = RestakingVaultOperator::zeroed();
         operator.initialize(*operator_key);
+        self.operators[self.num_operators as usize] = operator;
         self.num_operators += 1;
 
         Ok(())

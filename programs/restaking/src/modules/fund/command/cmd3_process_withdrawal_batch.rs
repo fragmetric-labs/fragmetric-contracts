@@ -4,6 +4,7 @@ use crate::constants::FUND_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::fund::{
     FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
@@ -47,7 +48,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         fund_service.get_receipt_token_withdrawal_obligated_amount()?;
 
                     let mut required_accounts =
-                        fund_service.find_accounts_to_process_withdrawal_batch()?;
+                        fund_service.find_accounts_to_process_withdrawal_batches()?;
 
                     (receipt_token_amount_to_process, required_accounts)
                 };
@@ -65,7 +66,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
 
@@ -78,13 +79,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
 
                 let mut command = self.clone();
                 command.state =
                     ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process);
+
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
@@ -102,7 +104,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         match &supported_token.pricing_source.try_deserialize()? {
                             Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SPLStakePool { .. }) => Ok(1),
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
                         }
                     })
                     .collect::<Result<Vec<_>>>()?
@@ -116,7 +120,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .try_deserialize()?
                         {
                             Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(1),
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
                         }
                     })
                     .collect::<Result<Vec<_>>>()?
@@ -143,20 +149,22 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let mut lst_max_cycle_fee_numerator = 0u64;
                 let mut lst_max_cycle_fee_denominator = 0u64;
                 for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
-                    let (numerator, denominator) =
-                        match &supported_token.pricing_source.try_deserialize()? {
-                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                                let account = supported_token_pricing_sources[i];
-                                require_keys_eq!(account.key(), *address);
-                                MarinadeStakePoolService::get_max_cycle_fee(account)?
-                            }
-                            Some(TokenPricingSource::SPLStakePool { address }) => {
-                                let account = supported_token_pricing_sources[i];
-                                require_keys_eq!(account.key(), *address);
-                                SPLStakePoolService::get_max_cycle_fee(account)?
-                            }
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
-                        };
+                    let (numerator, denominator) = match &supported_token
+                        .pricing_source
+                        .try_deserialize()?
+                    {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            MarinadeStakePoolService::get_max_cycle_fee(account)?
+                        }
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            SPLStakePoolService::get_max_cycle_fee(account)?
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    };
 
                     // numerator/denominator > lst_max_cycle_fee_numerator/lst_max_cycle_fee_denominator
                     if denominator != 0
@@ -181,7 +189,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                     // numerator/denominator > vrt_max_cycle_fee_numerator/vrt_max_cycle_fee_denominator
                     if denominator != 0
@@ -209,7 +217,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 if lrt_max_cycle_fee_rate > withdrawal_fee_rate {
                     let lrt_max_cycle_fee_rate_bps = (lrt_max_cycle_fee_rate * 10_000.0).ceil();
                     if lrt_max_cycle_fee_rate_bps > u16::MAX as f32 {
-                        err!(errors::ErrorCode::OperationCommandExecutionFailedException)?;
+                        err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?;
                     }
                     ctx.fund_account
                         .load_mut()?
@@ -221,7 +229,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let (receipt_token_amount_processed, pricing_service) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                    let receipt_token_amount_processed = fund_service.process_withdrawal_batch(
+                    let receipt_token_amount_processed = fund_service.process_withdrawal_batches(
                         ctx.operator,
                         ctx.system_program,
                         receipt_token_program,
@@ -242,56 +250,61 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                     let pricing_service =
                         fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
+
                     (receipt_token_amount_processed, pricing_service)
                 };
 
-                // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
-                // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
-                let receipt_token_amount_processed_as_sol = pricing_service
-                    .get_token_amount_as_sol(
-                        &ctx.receipt_token_mint.key(),
-                        receipt_token_amount_processed,
-                    )?;
+                if receipt_token_amount_processed > 0 {
+                    // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
+                    // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
+                    let receipt_token_amount_processed_as_sol = pricing_service
+                        .get_token_amount_as_sol(
+                            &ctx.receipt_token_mint.key(),
+                            receipt_token_amount_processed,
+                        )?;
 
-                let mut fund_account = ctx.fund_account.load_mut()?;
-                let mut participants = fund_account
-                    .get_supported_tokens_iter()
-                    .map(|supported_token| {
-                        Ok(WeightedAllocationParticipant::new(
-                            supported_token.sol_allocation_weight,
-                            pricing_service.get_token_amount_as_sol(
-                                &supported_token.mint,
-                                supported_token.operation_reserved_amount,
-                            )?,
-                            supported_token.sol_allocation_capacity_amount,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    let mut strategy =
+                        WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+                            fund_account
+                                .get_supported_tokens_iter()
+                                .map(|supported_token| {
+                                    Ok(WeightedAllocationParticipant::new(
+                                        supported_token.sol_allocation_weight,
+                                        pricing_service.get_token_amount_as_sol(
+                                            &supported_token.mint,
+                                            supported_token.operation_reserved_amount,
+                                        )?,
+                                        supported_token.sol_allocation_capacity_amount,
+                                    ))
+                                })
+                                .collect::<Result<Vec<_>>>()?,
+                        );
 
-                let mut supported_token_increasing_capacity =
-                    receipt_token_amount_processed_as_sol.div_ceil(2);
-                supported_token_increasing_capacity -= WeightedAllocationStrategy::put(
-                    &mut *participants,
-                    receipt_token_amount_processed_as_sol,
-                );
+                    let mut supported_token_increasing_capacity =
+                        receipt_token_amount_processed_as_sol.div_ceil(2);
+                    supported_token_increasing_capacity -=
+                        strategy.put(receipt_token_amount_processed_as_sol)?;
 
-                for (i, participant) in participants.iter().enumerate() {
-                    let supported_token = fund_account.get_supported_token_mut_by_index(i)?;
-                    supported_token.set_accumulated_deposit_capacity_amount(
-                        supported_token
-                            .accumulated_deposit_capacity_amount
-                            .saturating_add(pricing_service.get_sol_amount_as_token(
-                                &supported_token.mint,
-                                participant.get_last_put_amount()?,
-                            )?),
-                    )?;
+                    for (i, supported_token) in
+                        fund_account.get_supported_tokens_iter_mut().enumerate()
+                    {
+                        supported_token.set_accumulated_deposit_capacity_amount(
+                            supported_token
+                                .accumulated_deposit_capacity_amount
+                                .saturating_add(pricing_service.get_sol_amount_as_token(
+                                    &supported_token.mint,
+                                    strategy.get_participant_last_put_amount_by_index(i)?,
+                                )?),
+                        )?;
+                    }
+
+                    let sol_increasing_capacity =
+                        receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
+                    fund_account.sol_accumulated_deposit_capacity_amount = fund_account
+                        .sol_accumulated_deposit_capacity_amount
+                        .saturating_add(sol_increasing_capacity);
                 }
-
-                let sol_increasing_capacity =
-                    receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
-                fund_account.sol_accumulated_deposit_capacity_amount = fund_account
-                    .sol_accumulated_deposit_capacity_amount
-                    .saturating_add(sol_increasing_capacity);
             }
         }
 

@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
@@ -65,8 +64,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_deposit_sol(
         &mut self,
-        fund_reserve_account: &SystemAccount<'info>,
         system_program: &Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
         sol_amount: u64,
@@ -99,10 +98,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // transfer user $SOL to fund
         self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
 
-        system_program::transfer(
+        anchor_lang::system_program::transfer(
             CpiContext::new(
                 system_program.to_account_info(),
-                system_program::Transfer {
+                anchor_lang::system_program::Transfer {
                     from: self.user.to_account_info(),
                     to: fund_reserve_account.to_account_info(),
                 },
@@ -170,25 +169,23 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user supported token to fund
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            fund_account
-                .get_supported_token_mut(&supported_token_mint.key())?
-                .deposit_token(supported_token_amount)?;
-            token_interface::transfer_checked(
-                CpiContext::new(
-                    supported_token_program.to_account_info(),
-                    token_interface::TransferChecked {
-                        from: user_supported_token_account.to_account_info(),
-                        to: fund_supported_token_account.to_account_info(),
-                        mint: supported_token_mint.to_account_info(),
-                        authority: self.user.to_account_info(),
-                    },
-                ),
-                supported_token_amount,
-                supported_token_mint.decimals,
-            )?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_supported_token_mut(&supported_token_mint.key())?
+            .deposit_token(supported_token_amount)?;
+        token_interface::transfer_checked(
+            CpiContext::new(
+                supported_token_program.to_account_info(),
+                token_interface::TransferChecked {
+                    from: user_supported_token_account.to_account_info(),
+                    to: fund_supported_token_account.to_account_info(),
+                    mint: supported_token_mint.to_account_info(),
+                    authority: self.user.to_account_info(),
+                },
+            ),
+            supported_token_amount,
+            supported_token_mint.decimals,
+        )?;
 
         // update fund asset value
         FundService::new(self.receipt_token_mint, self.fund_account)?
@@ -231,8 +228,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_mint_amount,
         )?;
 
-        let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
+        self.fund_account
+            .load_mut()?
+            .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         self.user_fund_account
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
@@ -256,17 +254,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         require_gte!(self.user_receipt_token_account.amount, receipt_token_amount);
         require_gt!(receipt_token_amount, 0);
 
-        // validate configuration
-        let mut fund_account = self.fund_account.load_mut()?;
-        fund_account.withdrawal.assert_withdrawal_enabled()?;
-
         // create a user withdrawal request
-        let (batch_id, request_id) = self.user_fund_account.create_withdrawal_request(
-            &mut fund_account.withdrawal,
-            receipt_token_amount,
-            self.current_timestamp,
-        )?;
-        drop(fund_account);
+        let withdrawal_request = self
+            .fund_account
+            .load_mut()?
+            .withdrawal
+            .create_pending_request(receipt_token_amount, self.current_timestamp)?;
+        let batch_id = withdrawal_request.batch_id;
+        let request_id = withdrawal_request.request_id;
+        self.user_fund_account
+            .push_withdrawal_request(withdrawal_request)?;
 
         // lock requested user receipt token amount
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -296,7 +293,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_amount,
         )?;
 
-        receipt_token_lock_account.reload()?;
+        // receipt_token_lock_account.reload()?;
 
         self.fund_account
             .load_mut()?
@@ -333,13 +330,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         request_id: u64,
     ) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
-
         // clear pending amount from both user fund account and global fund account
-        let receipt_token_amount = self
-            .user_fund_account
-            .cancel_withdrawal_request(&mut fund_account.withdrawal, request_id)?;
-        drop(fund_account);
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let receipt_token_amount = withdrawal_request.receipt_token_amount;
+        self.fund_account
+            .load_mut()?
+            .withdrawal
+            .cancel_pending_request(withdrawal_request)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -370,7 +367,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_amount,
         )?;
 
-        receipt_token_lock_account.reload()?;
+        // receipt_token_lock_account.reload()?;
 
         self.fund_account
             .load_mut()?
@@ -403,47 +400,52 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
+        system_program: &Program<'info, System>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
-        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = {
-            let mut fund_account = self.fund_account.load_mut()?;
+        // calculate $SOL amounts and mark withdrawal request as claimed withdrawal fee is already paid.
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
+            fund_withdrawal_batch_account.settle_withdrawal_request(withdrawal_request)?;
+        self.fund_account
+            .load_mut()?
+            .withdrawal
+            .sol_user_reserved_amount -= sol_user_amount;
 
-            // calculate $SOL amounts and mark withdrawal request as claimed
-            // withdrawal fee is already paid.
-            let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) =
-                self.user_fund_account.settle_withdrawal_request(
-                    &mut fund_account.withdrawal,
-                    fund_withdrawal_batch_account,
-                    request_id,
-                )?;
+        {
+            // transfer sol_user_amount to user wallet from reserved account
+            let fund_account = self.fund_account.load()?;
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: fund_reserve_account.to_account_info(),
+                        to: self.user.to_account_info(),
+                    },
+                    &[&fund_account.get_reserve_account_seeds()],
+                ),
+                sol_user_amount,
+            )?;
 
-            // transfer sol_user_amount to user wallet
-            fund_reserve_account.sub_lamports(sol_user_amount)?;
-            self.user.add_lamports(sol_user_amount)?;
-
-            // close ticket and collect rent if stale
+            // close the ticket to collect rent after all requests are settled
             if fund_withdrawal_batch_account.is_settled() {
                 fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
             }
 
-            (sol_user_amount, sol_fee_amount, receipt_token_burn_amount)
-        };
-
-        // log withdraw event
-        let fund_account = self.fund_account.load()?;
-        emit!(events::UserWithdrewSOLFromFund {
-            receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: FundAccountInfo::from(fund_account)?,
-            request_id,
-            user_fund_account: Clone::clone(self.user_fund_account),
-            user: self.user.key(),
-            burnt_receipt_token_amount: receipt_token_burn_amount,
-            withdrawn_sol_amount: sol_user_amount,
-            deducted_sol_fee_amount: sol_fee_amount,
-        });
+            emit!(events::UserWithdrewSOLFromFund {
+                receipt_token_mint: fund_account.receipt_token_mint,
+                fund_account: FundAccountInfo::from(fund_account)?,
+                request_id,
+                user_fund_account: Clone::clone(self.user_fund_account),
+                user: self.user.key(),
+                burnt_receipt_token_amount: receipt_token_amount,
+                withdrawn_sol_amount: sol_user_amount,
+                deducted_sol_fee_amount: sol_fee_amount,
+            });
+        }
 
         Ok(())
     }
