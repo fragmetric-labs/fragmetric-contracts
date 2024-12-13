@@ -70,7 +70,7 @@ impl RewardPoolHolder {
 
     pub(super) fn get_name(&self) -> Result<&str> {
         Ok(std::str::from_utf8(&self.name)
-            .map_err(|_| crate::errors::ErrorCode::DecodeInvalidUTF8FormatException)?
+            .map_err(|_| crate::errors::ErrorCode::UTF8DecodingException)?
             .trim_matches('\0'))
     }
 

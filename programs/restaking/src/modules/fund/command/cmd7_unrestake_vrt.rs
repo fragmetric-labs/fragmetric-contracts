@@ -86,7 +86,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                 command.with_required_accounts(required_accounts.to_vec()),
                             ));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 UnrestakeVRTCommandState::ReadVaultState => {
@@ -170,7 +170,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                             command.state = UnrestakeVRTCommandState::Unstake(signer_seed);
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 UnrestakeVRTCommandState::Unstake(raw_signer_seed) => {

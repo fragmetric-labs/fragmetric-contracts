@@ -132,7 +132,7 @@ impl NormalizedTokenWithdrawalAccount {
         self.claimable_tokens
             .iter_mut()
             .find(|token| token.mint == *supported_token_mint && !token.claimed)
-            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolUnclaimableTokenError))
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNonClaimableTokenError))
     }
 }
 
@@ -157,7 +157,7 @@ impl ClaimableToken {
     pub fn settle(&mut self) -> Result<()> {
         require!(
             !self.claimed,
-            ErrorCode::NormalizedTokenPoolUnclaimableTokenError
+            ErrorCode::NormalizedTokenPoolNonClaimableTokenError
         );
         self.claimed = true;
         Ok(())

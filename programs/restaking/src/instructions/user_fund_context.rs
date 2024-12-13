@@ -148,6 +148,8 @@ pub struct UserFundWithdrawContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
+    pub system_program: Program<'info, System>,
+
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]

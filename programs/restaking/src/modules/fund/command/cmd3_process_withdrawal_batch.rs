@@ -66,7 +66,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
 
@@ -79,7 +79,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
 
@@ -104,7 +104,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         match &supported_token.pricing_source.try_deserialize()? {
                             Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SPLStakePool { .. }) => Ok(1),
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
                         }
                     })
                     .collect::<Result<Vec<_>>>()?
@@ -118,7 +120,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .try_deserialize()?
                         {
                             Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(1),
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
                         }
                     })
                     .collect::<Result<Vec<_>>>()?
@@ -145,20 +149,22 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let mut lst_max_cycle_fee_numerator = 0u64;
                 let mut lst_max_cycle_fee_denominator = 0u64;
                 for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
-                    let (numerator, denominator) =
-                        match &supported_token.pricing_source.try_deserialize()? {
-                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                                let account = supported_token_pricing_sources[i];
-                                require_keys_eq!(account.key(), *address);
-                                MarinadeStakePoolService::get_max_cycle_fee(account)?
-                            }
-                            Some(TokenPricingSource::SPLStakePool { address }) => {
-                                let account = supported_token_pricing_sources[i];
-                                require_keys_eq!(account.key(), *address);
-                                SPLStakePoolService::get_max_cycle_fee(account)?
-                            }
-                            _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
-                        };
+                    let (numerator, denominator) = match &supported_token
+                        .pricing_source
+                        .try_deserialize()?
+                    {
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            MarinadeStakePoolService::get_max_cycle_fee(account)?
+                        }
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            SPLStakePoolService::get_max_cycle_fee(account)?
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    };
 
                     // numerator/denominator > lst_max_cycle_fee_numerator/lst_max_cycle_fee_denominator
                     if denominator != 0
@@ -183,7 +189,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                     // numerator/denominator > vrt_max_cycle_fee_numerator/vrt_max_cycle_fee_denominator
                     if denominator != 0
@@ -211,7 +217,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 if lrt_max_cycle_fee_rate > withdrawal_fee_rate {
                     let lrt_max_cycle_fee_rate_bps = (lrt_max_cycle_fee_rate * 10_000.0).ceil();
                     if lrt_max_cycle_fee_rate_bps > u16::MAX as f32 {
-                        err!(errors::ErrorCode::OperationCommandExecutionFailedException)?;
+                        err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?;
                     }
                     ctx.fund_account
                         .load_mut()?

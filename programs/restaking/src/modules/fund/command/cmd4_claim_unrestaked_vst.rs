@@ -110,7 +110,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
 
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 ClaimUnrestakedVSTCommandState::ReadVaultState => {
@@ -210,7 +210,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             );
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 ClaimUnrestakedVSTCommandState::Claim(withdrawal_status) => {
@@ -340,7 +340,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 }
                             }
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 ClaimUnrestakedVSTCommandState::SetupDenormalize(

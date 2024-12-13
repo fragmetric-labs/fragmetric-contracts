@@ -197,7 +197,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 JitoRestakingVaultService::find_accounts_for_vault(address)?,
                             )));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                 }
                 RestakeVSTCommandState::SetupNormalize => {
@@ -449,7 +449,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                     )));
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             };
                         }
@@ -508,7 +508,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             ]);
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 RestakeVSTCommandState::Restake(ncn_epoch) => {
@@ -578,7 +578,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             }
                             command.operation_reserved_restake_token = None;
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 _ => (),

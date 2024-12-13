@@ -2,68 +2,26 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum ErrorCode {
+    #[msg("calculation arithmetic exception")]
+    CalculationArithmeticException,
+
+    #[msg("index out of bounds exception")]
+    IndexOutOfBoundsException,
+
+    #[msg("utf-8 decoding exception")]
+    UTF8DecodingException,
+
     #[msg("signature verification failed")]
     InvalidSignatureError,
+
+    #[msg("invalid account data version")]
+    InvalidAccountDataVersionError,
 
     #[msg("token is not transferable currently")]
     TokenNotTransferableError,
 
     #[msg("token is not transferring currently")]
     TokenNotTransferringException,
-
-    #[msg("calculation arithmetic exception")]
-    CalculationArithmeticException,
-
-    #[msg("decode invalid utf-8 format exception")]
-    DecodeInvalidUTF8FormatException,
-
-    #[msg("fund: cannot apply invalid update")]
-    FundInvalidUpdateError,
-
-    #[msg("fund: sol transfer failed")]
-    FundSOLTransferFailedException,
-
-    #[msg("fund: token transfer failed")]
-    FundTokenTransferFailedException,
-
-    #[msg("fund: already supported token")]
-    FundAlreadySupportedTokenError,
-
-    #[msg("fund: not supported token")]
-    FundNotSupportedTokenError,
-
-    #[msg("fund: exceeded sol capacity amount")]
-    FundExceededSOLCapacityAmountError,
-
-    #[msg("fund: exceeded token capacity amount")]
-    FundExceededTokenCapacityAmountError,
-
-    #[msg("fund: exceeded max withdrawal request per user")]
-    FundExceededMaxWithdrawalRequestError,
-
-    #[msg("fund: operation reserved sol is exhausted")]
-    FundOperationReservedSOLExhaustedException,
-
-    #[msg("fund: withdrawal request not found")]
-    FundWithdrawalRequestNotFoundError,
-
-    #[msg("fund: wrong batch")]
-    FundWrongWithdrawalBatchError,
-
-    #[msg("fund: withdrawal reserved sol is exhausted")]
-    FundWithdrawalReservedSOLExhaustedException,
-
-    #[msg("fund: withdrawal is currently disabled")]
-    FundWithdrawalDisabledError,
-
-    #[msg("fund: withdrawal request is already in progress")]
-    FundProcessingWithdrawalRequestError,
-
-    #[msg("pricing: token pricing source is not found")]
-    TokenPricingSourceAccountNotFoundError,
-
-    #[msg("operation: job unmet threshold")]
-    OperatorJobUnmetThresholdError,
 
     #[msg("reward: invalid token transfer args")]
     RewardInvalidTransferArgsException,
@@ -106,9 +64,6 @@ pub enum ErrorCode {
 
     #[msg("reward: invalid reward pool access")]
     RewardInvalidPoolAccessException,
-
-    #[msg("unmet account size reallocation")]
-    AccountUnmetDesiredReallocSizeError,
 
     #[msg("reward: incorrect accounting exception")]
     RewardInvalidAccountingException,
@@ -154,48 +109,47 @@ pub enum ErrorCode {
 
     #[msg("reward: cannot close the reward pool")]
     RewardPoolCloseConditionError,
+    #[msg("pricing: token pricing source is not found")]
+    TokenPricingSourceAccountNotFoundError,
 
-    #[msg("fund: signature has expired")]
+    #[msg("fund: cannot apply invalid update")]
+    FundInvalidUpdateError,
+
+    #[msg("fund: already supported token")]
+    FundAlreadySupportedTokenError,
+
+    #[msg("fund: not supported token")]
+    FundNotSupportedTokenError,
+
+    #[msg("fund: exceeded sol capacity amount")]
+    FundExceededSOLCapacityAmountError,
+
+    #[msg("fund: exceeded token capacity amount")]
+    FundExceededTokenCapacityAmountError,
+
+    #[msg("fund: exceeded max withdrawal request per user")]
+    FundExceededMaxWithdrawalRequestError,
+
+    #[msg("fund: withdrawal request not found")]
+    FundWithdrawalRequestNotFoundError,
+
+    #[msg("fund: withdrawal request not belongs to the given batch")]
+    FundWithdrawalRequestIncorrectBatchError,
+
+    #[msg("fund: withdrawal is currently disabled")]
+    FundWithdrawalDisabledError,
+
+    #[msg("fund: withdrawal request is already in progress")]
+    FundWithdrawalRequestAlreadyQueuedError,
+
+    #[msg("fund: deposit metadata signature has expired")]
     FundDepositMetadataSignatureExpiredError,
-
-    #[msg("invalid data account version")]
-    InvalidDataVersionError,
-
-    #[msg("fund: exceeded max batch withdrawals in progress")]
-    FundExceededMaxBatchWithdrawalInProgressError,
 
     #[msg("fund: exceeded max supported tokens")]
     FundExceededMaxSupportedTokensError,
 
     #[msg("fund: invalid sol withdrawal fee rate")]
     FundInvalidSolWithdrawalFeeRateError,
-
-    #[msg("fund: unexpected execution reserved account balance")]
-    FundUnexpectedReserveAccountBalanceException,
-
-    #[msg("normalization: not supported token")]
-    NormalizedTokenPoolNotSupportedTokenError,
-
-    #[msg("normalization: already supported token")]
-    NormalizedTokenPoolAlreadySupportedTokenError,
-
-    #[msg("normalization: exceeded max supported tokens")]
-    NormalizedTokenPoolExceededMaxSupportedTokensError,
-
-    #[msg("normalization: not enough supported token in the pool")]
-    NormalizedTokenPoolNotEnoughSupportedTokenException,
-
-    #[msg("normalization: already settled withdrawal account")]
-    NormalizedTokenPoolAlreadySettledWithdrawalAccountError,
-
-    #[msg("normalization: the token is unclaimable for the given withdrawal account")]
-    NormalizedTokenPoolUnclaimableTokenError,
-
-    #[msg("operation: failed to compute required accounts for the next command")]
-    OperationCommandAccountComputationException,
-
-    #[msg("operation: failed to execute the operation command")]
-    OperationCommandExecutionFailedException,
 
     #[msg("fund: normalized token already set")]
     FundNormalizedTokenAlreadySetError,
@@ -221,6 +175,30 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max restaking vault operators")]
     FundExceededMaxRestakingVaultOperatorsError,
 
+    #[msg("fund: failed to compute required accounts for the operation command")]
+    FundOperationCommandAccountComputationException,
+
+    #[msg("fund: failed to execute the operation command")]
+    FundOperationCommandExecutionFailedException,
+
+    #[msg("normalization: not supported token")]
+    NormalizedTokenPoolNotSupportedTokenError,
+
+    #[msg("normalization: already supported token")]
+    NormalizedTokenPoolAlreadySupportedTokenError,
+
+    #[msg("normalization: exceeded max supported tokens")]
+    NormalizedTokenPoolExceededMaxSupportedTokensError,
+
+    #[msg("normalization: not enough supported token in the pool")]
+    NormalizedTokenPoolNotEnoughSupportedTokenException,
+
+    #[msg("normalization: already settled withdrawal account")]
+    NormalizedTokenPoolAlreadySettledWithdrawalAccountError,
+
+    #[msg("normalization: the token is non-claimable for the given withdrawal account")]
+    NormalizedTokenPoolNonClaimableTokenError,
+
     #[msg("staking: failed to find uninitialized withdraw ticket")]
     StakingUninitializedWithdrawTicketNotFoundException,
 
@@ -238,7 +216,4 @@ pub enum ErrorCode {
 
     #[msg("restaking: withdrawal ticket is already initialized")]
     RestakingVaultWithdrawalTicketAlreadyInitializedError,
-
-    #[msg("index out of bounds exception")]
-    IndexOutOfBoundsException,
 }

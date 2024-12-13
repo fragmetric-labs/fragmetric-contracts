@@ -65,7 +65,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             return Ok(Some(command.with_required_accounts([(address, false)])));
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
                 ClaimUnstakedSOLCommandState::ReadPoolState => {
@@ -82,7 +82,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
                             staking::SPLStakePoolService::find_accounts_to_claim_sol()
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
                     required_accounts.extend([(fund_account.get_reserve_account_address()?, true)]);
                     required_accounts.extend(

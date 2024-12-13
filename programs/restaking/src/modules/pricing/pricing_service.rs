@@ -248,7 +248,9 @@ impl<'info> PricingService<'info> {
                     if *token_amount > 0 {
                         let is_token_atomic = self
                             .get_token_value(token_mint)
-                            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?
+                            .ok_or_else(|| {
+                                error!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                            })?
                             .is_atomic();
                         if is_token_atomic {
                             atomic_token_value.add(asset.clone());
@@ -258,37 +260,45 @@ impl<'info> PricingService<'info> {
                             for nested_asset in &nested_token_value.numerator {
                                 match nested_asset {
                                     Asset::SOL(nested_sol_amount) => {
-                                        let proportional_sol_amount = utils::get_proportional_amount(
-                                            *nested_sol_amount,
-                                            *token_amount,
-                                            nested_token_value.denominator,
-                                        )
+                                        let proportional_sol_amount =
+                                            utils::get_proportional_amount(
+                                                *nested_sol_amount,
+                                                *token_amount,
+                                                nested_token_value.denominator,
+                                            )
                                             .ok_or_else(|| {
                                                 error!(ErrorCode::CalculationArithmeticException)
                                             })?;
 
                                         if proportional_sol_amount > 0 {
-                                            atomic_token_value.add(Asset::SOL(proportional_sol_amount));
+                                            atomic_token_value
+                                                .add(Asset::SOL(proportional_sol_amount));
                                         }
                                     }
-                                    Asset::Token(nested_token_mint, nested_pricing_source, nested_token_amount) => {
-                                        let proportional_token_amount = utils::get_proportional_amount(
-                                            *nested_token_amount,
-                                            *token_amount,
-                                            nested_token_value.denominator,
-                                        )
+                                    Asset::Token(
+                                        nested_token_mint,
+                                        nested_pricing_source,
+                                        nested_token_amount,
+                                    ) => {
+                                        let proportional_token_amount =
+                                            utils::get_proportional_amount(
+                                                *nested_token_amount,
+                                                *token_amount,
+                                                nested_token_value.denominator,
+                                            )
                                             .ok_or_else(|| {
                                                 error!(ErrorCode::CalculationArithmeticException)
                                             })?;
 
                                         if proportional_token_amount > 0 {
-                                            atomic_token_value.add(
-                                                Asset::Token(
-                                                    *nested_token_mint,
-                                                    nested_pricing_source.clone().or_else(|| self.get_token_pricing_source(nested_token_mint).cloned()),
-                                                    proportional_token_amount,
-                                                )
-                                            );
+                                            atomic_token_value.add(Asset::Token(
+                                                *nested_token_mint,
+                                                nested_pricing_source.clone().or_else(|| {
+                                                    self.get_token_pricing_source(nested_token_mint)
+                                                        .cloned()
+                                                }),
+                                                proportional_token_amount,
+                                            ));
                                         }
                                     }
                                 }

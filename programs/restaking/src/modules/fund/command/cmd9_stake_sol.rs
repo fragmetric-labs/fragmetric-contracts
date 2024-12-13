@@ -135,7 +135,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         ));
                                     }
                                     _ => err!(
-                                        errors::ErrorCode::OperationCommandExecutionFailedException
+                                        errors::ErrorCode::FundOperationCommandExecutionFailedException
                                     )?,
                                 }
                             }
@@ -175,7 +175,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )?
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             });
 
@@ -292,7 +292,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )
                                 }
                                 _ => err!(
-                                    errors::ErrorCode::OperationCommandExecutionFailedException
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             };
 
@@ -314,7 +314,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 to_pool_token_account_amount
                             );
                         }
-                        _ => err!(errors::ErrorCode::OperationCommandExecutionFailedException)?,
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
 
                     // proceed to next token

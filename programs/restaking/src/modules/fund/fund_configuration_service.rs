@@ -107,6 +107,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
+            fund_supported_token_account.amount,
         )?;
 
         // validate pricing source

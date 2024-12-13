@@ -33,7 +33,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
     ) -> Result<Self> {
         require!(
             normalized_token_pool_account.is_latest_version(),
-            ErrorCode::InvalidDataVersionError
+            ErrorCode::InvalidAccountDataVersionError
         );
         require_keys_eq!(
             normalized_token_pool_account.normalized_token_mint,
@@ -252,7 +252,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         );
         require!(
             withdrawal_account.is_latest_version(),
-            ErrorCode::InvalidDataVersionError
+            ErrorCode::InvalidAccountDataVersionError
         );
 
         // calculate claimable amount for each supported tokens to withdraw them proportionally relative to the current composition ratio.
@@ -366,7 +366,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         withdrawal_account.update_if_needed();
         require!(
             withdrawal_account.is_latest_version(),
-            ErrorCode::InvalidDataVersionError
+            ErrorCode::InvalidAccountDataVersionError
         );
         require_keys_eq!(
             withdrawal_account.normalized_token_pool,
