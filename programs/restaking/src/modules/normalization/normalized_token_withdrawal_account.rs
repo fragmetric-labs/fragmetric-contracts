@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
-use super::MAX_SUPPORTED_TOKENS;
+use super::MAX_SUPPORTED_TOKENS_SIZE;
 
 #[constant]
 /// ## Version History
@@ -20,7 +20,7 @@ pub struct NormalizedTokenWithdrawalAccount {
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_pool: Pubkey,
     normalized_token_amount: u64,
-    #[max_len(MAX_SUPPORTED_TOKENS)]
+    #[max_len(MAX_SUPPORTED_TOKENS_SIZE)]
     claimable_tokens: Vec<ClaimableToken>,
     created_at: i64,
     _reserved: [u8; 32],

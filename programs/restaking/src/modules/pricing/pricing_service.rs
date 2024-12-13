@@ -9,10 +9,12 @@ use crate::utils;
 
 #[cfg(all(test, not(feature = "idl-build")))]
 use super::MockPricingSourceValueProvider;
-use super::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
+use super::{Asset, TokenPricingSource, TokenValue, TokenValuePod, TokenValueProvider};
+
+pub const PRICING_SERVICE_EXPECTED_TOKENS_SIZE: usize = 12;
 
 pub struct PricingService<'info> {
-    token_pricing_sources_accounts_info: Vec<&'info AccountInfo<'info>>,
+    token_pricing_sources_account_infos: Vec<&'info AccountInfo<'info>>,
     token_pricing_sources: Vec<(Pubkey, TokenPricingSource)>,
     token_values: Vec<(Pubkey, TokenValue)>,
 }
@@ -22,11 +24,11 @@ impl<'info> PricingService<'info> {
         token_pricing_source_accounts: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<Self> {
         Ok(Self {
-            token_pricing_sources_accounts_info: token_pricing_source_accounts
+            token_pricing_sources_account_infos: token_pricing_source_accounts
                 .into_iter()
                 .collect(),
-            token_pricing_sources: Vec::new(),
-            token_values: Vec::new(),
+            token_pricing_sources: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
+            token_values: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
         })
     }
 
@@ -35,11 +37,11 @@ impl<'info> PricingService<'info> {
         token_pricing_source_account: &'info AccountInfo<'info>,
     ) -> Self {
         if !self
-            .token_pricing_sources_accounts_info
+            .token_pricing_sources_account_infos
             .iter()
             .any(|account| token_pricing_source_account.key() == *account.key)
         {
-            self.token_pricing_sources_accounts_info
+            self.token_pricing_sources_account_infos
                 .push(token_pricing_source_account);
         }
         self
@@ -50,7 +52,7 @@ impl<'info> PricingService<'info> {
         mint: &Pubkey,
     ) -> Result<&'info AccountInfo<'info>> {
         Ok(self
-            .token_pricing_sources_accounts_info
+            .token_pricing_sources_account_infos
             .iter()
             .find(|account| account.key == mint)
             .copied()
@@ -83,7 +85,7 @@ impl<'info> PricingService<'info> {
         token_mint: &Pubkey,
         token_pricing_source: &TokenPricingSource,
     ) -> Result<()> {
-        let updated_tokens = &mut Vec::new();
+        let updated_tokens = &mut Vec::with_capacity(1);
         self.resolve_token_pricing_source_rec(token_mint, token_pricing_source, updated_tokens)
     }
 
@@ -137,7 +139,7 @@ impl<'info> PricingService<'info> {
         };
 
         // expand supported tokens recursively
-        token_value.numerator.iter().try_for_each(|asset| {
+        for asset in token_value.numerator.iter() {
             if let Asset::Token(token_mint, Some(token_pricing_source), _) = asset {
                 self.resolve_token_pricing_source_rec(
                     token_mint,
@@ -145,8 +147,7 @@ impl<'info> PricingService<'info> {
                     updated_tokens,
                 )?;
             }
-            Ok::<(), Error>(())
-        })?;
+        }
 
         // update resolved token value
         match self.get_token_value_mut(token_mint) {
@@ -231,68 +232,63 @@ impl<'info> PricingService<'info> {
             return Ok(token_value.clone());
         }
 
-        let mut total_tokens = Vec::<(Pubkey, u64)>::new();
-        let mut total_sol_amount = 0u64;
+        let mut atomic_token_value = TokenValue {
+            numerator: Vec::with_capacity(1),
+            denominator: token_value.denominator,
+        };
 
         for asset in &token_value.numerator {
             match asset {
                 Asset::SOL(sol_amount) => {
-                    total_sol_amount += sol_amount;
+                    if *sol_amount > 0 {
+                        atomic_token_value.add(asset.clone());
+                    }
                 }
                 Asset::Token(token_mint, _, token_amount) => {
-                    let is_token_atomic = self
-                        .get_token_value(token_mint)
-                        .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?
-                        .is_atomic();
+                    if *token_amount > 0 {
+                        let is_token_atomic = self
+                            .get_token_value(token_mint)
+                            .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?
+                            .is_atomic();
+                        if is_token_atomic {
+                            atomic_token_value.add(asset.clone());
+                        } else {
+                            let nested_token_value =
+                                self.get_token_total_value_as_atomic(token_mint)?;
+                            for nested_asset in &nested_token_value.numerator {
+                                match nested_asset {
+                                    Asset::SOL(nested_sol_amount) => {
+                                        let proportional_sol_amount = utils::get_proportional_amount(
+                                            *nested_sol_amount,
+                                            *token_amount,
+                                            nested_token_value.denominator,
+                                        )
+                                            .ok_or_else(|| {
+                                                error!(ErrorCode::CalculationArithmeticException)
+                                            })?;
 
-                    if is_token_atomic {
-                        match total_tokens
-                            .iter_mut()
-                            .find(|(old_token_mint, _)| old_token_mint == token_mint)
-                        {
-                            Some((_, old_token_amount)) => {
-                                *old_token_amount += *token_amount;
-                            }
-                            None => {
-                                total_tokens.push((*token_mint, *token_amount));
-                            }
-                        }
-                    } else {
-                        let nested_token_value =
-                            self.get_token_total_value_as_atomic(token_mint)?;
-                        for nested_asset in &nested_token_value.numerator {
-                            match nested_asset {
-                                Asset::SOL(nested_sol_amount) => {
-                                    let proportional_sol_amount = utils::get_proportional_amount(
-                                        *nested_sol_amount,
-                                        *token_amount,
-                                        nested_token_value.denominator,
-                                    )
-                                    .ok_or_else(|| {
-                                        error!(ErrorCode::CalculationArithmeticException)
-                                    })?;
-                                    total_sol_amount += proportional_sol_amount;
-                                }
-                                Asset::Token(nested_token_mint, _, nested_token_amount) => {
-                                    let proportional_token_amount = utils::get_proportional_amount(
-                                        *nested_token_amount,
-                                        *token_amount,
-                                        nested_token_value.denominator,
-                                    )
-                                    .ok_or_else(|| {
-                                        error!(ErrorCode::CalculationArithmeticException)
-                                    })?;
-                                    match total_tokens.iter_mut().find(|(old_token_mint, _)| {
-                                        old_token_mint == nested_token_mint
-                                    }) {
-                                        Some((_, old_token_amount)) => {
-                                            *old_token_amount += proportional_token_amount;
+                                        if proportional_sol_amount > 0 {
+                                            atomic_token_value.add(Asset::SOL(proportional_sol_amount));
                                         }
-                                        None => {
-                                            total_tokens.push((
-                                                *nested_token_mint,
-                                                proportional_token_amount,
-                                            ));
+                                    }
+                                    Asset::Token(nested_token_mint, nested_pricing_source, nested_token_amount) => {
+                                        let proportional_token_amount = utils::get_proportional_amount(
+                                            *nested_token_amount,
+                                            *token_amount,
+                                            nested_token_value.denominator,
+                                        )
+                                            .ok_or_else(|| {
+                                                error!(ErrorCode::CalculationArithmeticException)
+                                            })?;
+
+                                        if proportional_token_amount > 0 {
+                                            atomic_token_value.add(
+                                                Asset::Token(
+                                                    *nested_token_mint,
+                                                    nested_pricing_source.clone().or_else(|| self.get_token_pricing_source(nested_token_mint).cloned()),
+                                                    proportional_token_amount,
+                                                )
+                                            );
                                         }
                                     }
                                 }
@@ -303,27 +299,7 @@ impl<'info> PricingService<'info> {
             }
         }
 
-        let mut numerator = Vec::new();
-        if total_sol_amount > 0 {
-            numerator.push(Asset::SOL(total_sol_amount));
-        }
-        numerator.extend(
-            total_tokens
-                .into_iter()
-                .filter(|(_, token_amount)| *token_amount > 0)
-                .map(|(token_mint, token_amount)| {
-                    Asset::Token(
-                        token_mint,
-                        self.get_token_pricing_source(&token_mint).cloned(),
-                        token_amount,
-                    )
-                }),
-        );
-
-        Ok(TokenValue {
-            numerator,
-            denominator: token_value.denominator,
-        })
+        Ok(atomic_token_value)
     }
 }
 

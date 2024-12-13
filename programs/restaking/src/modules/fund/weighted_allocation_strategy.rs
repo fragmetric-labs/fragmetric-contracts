@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use std::ops::Index;
 
 use crate::errors;
 use crate::utils;
@@ -37,18 +38,45 @@ impl WeightedAllocationParticipant {
 }
 
 pub struct WeightedAllocationStrategy<const N: usize> {
-    pub participants: [WeightedAllocationParticipant; N],
+    participants: [WeightedAllocationParticipant; N],
+    num_participants: usize,
 }
 
 impl<const N: usize> WeightedAllocationStrategy<N> {
     pub fn new(participants: impl IntoIterator<Item = WeightedAllocationParticipant>) -> Self {
         let mut strategy = Self {
             participants: [WeightedAllocationParticipant::default(); N],
+            num_participants: 0,
         };
         for (i, participant) in participants.into_iter().enumerate() {
             strategy.participants[i] = participant;
+            strategy.num_participants += 1;
         }
         strategy
+    }
+
+    pub fn get_participants_iter(&self) -> impl Iterator<Item = &WeightedAllocationParticipant> {
+        self.participants[..self.num_participants].iter()
+    }
+
+    pub fn get_participants_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut WeightedAllocationParticipant> {
+        self.participants[..self.num_participants].iter_mut()
+    }
+
+    fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
+        self.participants[..self.num_participants]
+            .get(index)
+            .ok_or_else(|| error!(errors::ErrorCode::IndexOutOfBoundsException))
+    }
+
+    pub fn get_participant_last_put_amount_by_index(&self, index: usize) -> Result<u64> {
+        self.get_participant_by_index(index)?.get_last_put_amount()
+    }
+
+    pub fn get_participant_last_cut_amount_by_index(&self, index: usize) -> Result<u64> {
+        self.get_participant_by_index(index)?.get_last_cut_amount()
     }
 
     /// returns remaining_amount after the allocation made
@@ -56,10 +84,9 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         let mut remaining_amount = amount;
 
         // remember original amount
-        self.participants.iter_mut().for_each(|participant| {
-            participant.last_delta_amount = participant.allocated_amount as i128;
-        });
-
+        for p in self.participants.iter_mut() {
+            p.last_delta_amount = p.allocated_amount as i128;
+        }
 
         while remaining_amount > 0 {
             let mut target_participants_count = 0;
@@ -99,11 +126,16 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             }
 
             // first, allocate remaining resources proportionally relative to each shortages
-            let total_shortage_amount = shortage_amounts[..target_participants_count].iter().sum::<u64>();
+            let total_shortage_amount = shortage_amounts[..target_participants_count]
+                .iter()
+                .sum::<u64>();
             if total_shortage_amount > 0 {
                 let total_allocatable_amount = remaining_amount.min(total_shortage_amount);
                 let mut allocated_amount = 0;
-                for (i, shortage) in shortage_amounts[..target_participants_count].iter().enumerate() {
+                for (i, shortage) in shortage_amounts[..target_participants_count]
+                    .iter()
+                    .enumerate()
+                {
                     if *shortage == 0 {
                         continue;
                     }
@@ -130,7 +162,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
 
             // then, allocate remaining resources proportionally relative to each weights
             let total_weight = target_participants_index[..target_participants_count]
-                .into_iter()
+                .iter()
                 .map(|i| self.participants[*i].weight)
                 .sum();
             let mut allocated_amount = 0;
@@ -166,13 +198,11 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             remaining_amount -= allocated_amount;
         }
 
-
         // set delta amount
-        self.participants.iter_mut().for_each(|p| {
+        for p in self.participants.iter_mut() {
             p.last_delta_amount = (p.allocated_amount as i128) - p.last_delta_amount;
-        });
+        }
 
-        crate::utils::debug_msg_heap_size("strategy...9");
         Ok(remaining_amount)
     }
 
@@ -181,9 +211,9 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         let mut required_amount = amount;
 
         // remember original amount
-        self.participants.iter_mut().for_each(|p| {
+        for p in self.participants.iter_mut() {
             p.last_delta_amount = p.allocated_amount as i128;
-        });
+        }
 
         // cut from non-zero weighted participants first
         {
@@ -197,7 +227,8 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             }
 
             // cut by lowest weighted participant
-            target_participants_index_weight[..target_participants_count].sort_by(|(_, a), (_, b)| a.cmp(b));
+            target_participants_index_weight[..target_participants_count]
+                .sort_by(|(_, a), (_, b)| a.cmp(b));
 
             for (i, _) in &target_participants_index_weight[..target_participants_count] {
                 if required_amount == 0 {
@@ -243,9 +274,9 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         }
 
         // set delta amount
-        self.participants.iter_mut().for_each(|p| {
+        for p in self.participants.iter_mut() {
             p.last_delta_amount = (p.allocated_amount as i128) - p.last_delta_amount;
-        });
+        }
 
         Ok(required_amount)
     }
@@ -378,6 +409,25 @@ mod tests {
         assert_eq!(strategy.participants[2].last_delta_amount, -240);
         assert_eq!(strategy.participants[3].last_delta_amount, -20);
 
+        assert_eq!(
+            strategy
+                .get_participant_last_cut_amount_by_index(2)
+                .unwrap(),
+            240
+        );
+        assert_eq!(
+            strategy
+                .get_participant_last_cut_amount_by_index(3)
+                .unwrap(),
+            20
+        );
+        assert!(strategy
+            .get_participant_last_put_amount_by_index(2)
+            .is_err());
+        assert!(strategy
+            .get_participant_last_cut_amount_by_index(4)
+            .is_err());
+
         assert_eq!(strategy.put(2800).unwrap(), 0);
         assert_eq!(strategy.participants[0].allocated_amount, 1600);
         assert_eq!(strategy.participants[1].allocated_amount, 800);
@@ -387,6 +437,25 @@ mod tests {
         assert_eq!(strategy.participants[1].last_delta_amount, 800);
         assert_eq!(strategy.participants[2].last_delta_amount, 400);
         assert_eq!(strategy.participants[3].last_delta_amount, 0);
+
+        assert_eq!(
+            strategy
+                .get_participant_last_put_amount_by_index(2)
+                .unwrap(),
+            400
+        );
+        assert_eq!(
+            strategy
+                .get_participant_last_put_amount_by_index(3)
+                .unwrap(),
+            0
+        );
+        assert!(strategy
+            .get_participant_last_cut_amount_by_index(2)
+            .is_err());
+        assert!(strategy
+            .get_participant_last_put_amount_by_index(4)
+            .is_err());
 
         assert_eq!(strategy.put(1400).unwrap(), 0);
         assert_eq!(strategy.participants[0].allocated_amount, 2000);

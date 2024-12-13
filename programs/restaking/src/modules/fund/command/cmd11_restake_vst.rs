@@ -3,7 +3,7 @@ use crate::errors;
 use crate::modules::fund::fund_account_restaking_vault::RestakingVault;
 use crate::modules::fund::{
     FundService, SupportedToken, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
@@ -251,7 +251,9 @@ impl SelfExecutable for RestakeVSTCommand {
                         })
                         .collect::<Vec<_>>();
 
-                    let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(participants);
+                    let mut strategy = WeightedAllocationStrategy::<
+                        FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+                    >::new(participants);
                     let _ = strategy.put(item.sol_amount);
 
                     let mut restake_supported_tokens_state = vec![];
@@ -259,7 +261,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         let need_to_restake_token_amount = pricing_service
                             .get_sol_amount_as_token(
                                 &supported_token.mint,
-                                strategy.participants[i].get_last_put_amount()?,
+                                strategy.get_participant_last_put_amount_by_index(i)?,
                             )?;
 
                         restake_supported_tokens_state.push(NormalizeSupportedTokenAsset {

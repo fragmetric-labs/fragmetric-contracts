@@ -146,7 +146,7 @@ impl OperationCommandAccountMetaPod {
     }
 }
 
-const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 24;
+const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 27;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandEntry {

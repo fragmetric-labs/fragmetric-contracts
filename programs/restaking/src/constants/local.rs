@@ -39,7 +39,8 @@ pub const FRAGSOL_MINT_ADDRESS: Pubkey =
 
 #[constant]
 pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey = pubkey!(
-    /*local:FRAGSOL_NORMALIZED_TOKEN_MINT*/ "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX" /**/
+    /*local:FRAGSOL_NORMALIZED_TOKEN_MINT*/
+    "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX" /**/
 );
 
 #[constant]

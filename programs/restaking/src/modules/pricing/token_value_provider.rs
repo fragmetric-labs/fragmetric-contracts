@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-
-use super::{TokenPricingSource, TokenPricingSourcePod};
+use crate::{errors, utils};
+use super::{TokenPricingSource, TokenPricingSourcePod, PRICING_SERVICE_EXPECTED_TOKENS_SIZE};
 
 #[cfg(test)]
 pub use self::mock::*;
@@ -15,12 +15,12 @@ pub trait TokenValueProvider {
     ) -> Result<TokenValue>;
 }
 
-const TOKEN_VALUE_NUMERATOR_MAX_SIZE: usize = 20;
+const TOKEN_VALUE_MAX_NUMERATORS_SIZE: usize = PRICING_SERVICE_EXPECTED_TOKENS_SIZE + 1;
 
 /// a value representing total asset value of a pricing source.
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct TokenValue {
-    #[max_len(TOKEN_VALUE_NUMERATOR_MAX_SIZE)]
+    #[max_len(TOKEN_VALUE_MAX_NUMERATORS_SIZE)]
     pub numerator: Vec<Asset>,
     pub denominator: u64,
 }
@@ -50,24 +50,62 @@ impl TokenValue {
         })
     }
 
-    pub fn serialize_as_pod(&self, pod: &mut TokenValuePod) {
+    pub fn add(&mut self, asset: Asset) {
+        match &asset {
+            Asset::SOL(sol_amount) => {
+                for asset in &mut self.numerator {
+                    match asset {
+                        Asset::SOL(existing_sol_amount) => {
+                            *existing_sol_amount += *sol_amount;
+                            return
+                        }
+                        _ => (),
+                    }
+                }
+                self.numerator.push(asset);
+            }
+            Asset::Token(token_mint, token_pricing_source, token_amount) => {
+                for asset in &mut self.numerator {
+                    match asset {
+                        Asset::Token(existing_token_mint, existing_token_pricing_source, existing_token_amount) => {
+                            if existing_token_mint == token_mint {
+                                *existing_token_amount += *token_amount;
+                                if existing_token_pricing_source.is_none() && token_pricing_source.is_some() {
+                                    *existing_token_pricing_source = token_pricing_source.clone();
+                                }
+                                return
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+                self.numerator.push(asset);
+            }
+        }
+    }
+
+    pub fn serialize_as_pod(&self, pod: &mut TokenValuePod) -> Result<()> {
+        if self.numerator.len() > TOKEN_VALUE_MAX_NUMERATORS_SIZE {
+            err!(errors::ErrorCode::IndexOutOfBoundsException)?;
+        }
         pod.num_numerator = self.numerator.len() as u64;
         for (i, asset) in self
             .numerator
             .iter()
-            .take(TOKEN_VALUE_NUMERATOR_MAX_SIZE)
             .enumerate()
         {
             asset.serialize_as_pod(&mut pod.numerator[i]);
         }
         pod.denominator = self.denominator;
+
+        Ok(())
     }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
-    numerator: [AssetPod; TOKEN_VALUE_NUMERATOR_MAX_SIZE],
+    numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
     num_numerator: u64,
     denominator: u64,
 }

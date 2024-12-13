@@ -20,7 +20,7 @@ use super::*;
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 10;
-pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 8;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 4;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -280,16 +280,6 @@ impl FundAccount {
     ) -> Result<&mut SupportedToken> {
         self.get_supported_tokens_iter_mut()
             .find(|supported_token| supported_token.mint == *token_mint)
-            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
-    }
-
-    pub(super) fn get_supported_token_mut_by_index(
-        &mut self,
-        index: usize,
-    ) -> Result<&mut SupportedToken> {
-        self.get_supported_tokens_iter_mut()
-            .skip(index)
-            .next()
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 

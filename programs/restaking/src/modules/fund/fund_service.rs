@@ -56,7 +56,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(pricing_service)
     }
 
-    pub(in crate::modules) fn get_pricing_sources(&self) -> Result<Vec<Pubkey>> {
+    fn get_pricing_source_infos(&self, remaining_accounts: &'info [AccountInfo<'info>]) -> Result<Vec<&'info AccountInfo<'info>>> {
         let fund_account = self.fund_account.load()?;
 
         fund_account
@@ -74,15 +74,20 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .map(|supported_token| &supported_token.pricing_source),
             )
             .map(|pricing_source| {
-                Ok(match pricing_source.try_deserialize()? {
+                match pricing_source.try_deserialize()? {
                     Some(TokenPricingSource::SPLStakePool { address })
                     | Some(TokenPricingSource::MarinadeStakePool { address })
                     | Some(TokenPricingSource::JitoRestakingVault { address })
                     | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
-                        address
+                        for remaining_account in remaining_accounts {
+                            if address == remaining_account.key() {
+                                return Ok(remaining_account);
+                            }
+                        }
+                        err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                     }
-                    _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
-                })
+                    _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError),
+                }
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -109,18 +114,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             // the values being written below are informative, only for event emission.
             let mut fund_account = self.fund_account.load_mut()?;
 
-            fund_account
-                .get_supported_tokens_iter_mut()
-                .try_for_each(|supported_token| {
-                    supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
-                        &supported_token.mint,
-                        10u64
-                            .checked_pow(supported_token.decimals as u32)
-                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-                    )?;
-
-                    Ok::<(), Error>(())
-                })?;
+            for supported_token in fund_account.get_supported_tokens_iter_mut() {
+                supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
+                    &supported_token.mint,
+                    10u64
+                        .checked_pow(supported_token.decimals as u32)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                )?;
+            }
 
             if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
                 normalized_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
@@ -141,7 +142,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             pricing_service
                 .get_token_total_value_as_atomic(receipt_token_mint_key)?
-                .serialize_as_pod(&mut fund_account.receipt_token_value);
+                .serialize_as_pod(&mut fund_account.receipt_token_value)?;
 
             fund_account.receipt_token_value_updated_slot = self.current_slot;
         }
@@ -234,25 +235,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
+        let pricing_source_infos = self.get_pricing_source_infos(remaining_accounts)?;
+
         let mut operation_state = self.clone_operation_state()?;
         operation_state.initialize_command_if_needed(
             reset_command,
             self.current_slot,
             self.current_timestamp,
         )?;
-
-        let pricing_sources_info = self
-            .get_pricing_sources()?
-            .into_iter()
-            .map(|source| {
-                for remaining_account in remaining_accounts {
-                    if source == *remaining_account.key {
-                        return Ok(remaining_account);
-                    }
-                }
-                Err(error!(ErrorCode::TokenPricingSourceAccountNotFoundError))
-            })
-            .collect::<Result<Vec<_>>>()?;
 
         let (command, required_accounts) = &operation_state
             .get_next_command()?
@@ -295,7 +285,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 required_account_infos.push(&remaining_accounts[i]);
             }
         }
-        for pricing_source in &pricing_sources_info {
+        for pricing_source in &pricing_source_infos {
             if required_account_infos.len() == 32 {
                 break;
             }
@@ -356,7 +346,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
-    pub(super) fn find_accounts_to_process_withdrawal_batches(&self) -> Result<Vec<(Pubkey, bool)>> {
+    pub(super) fn find_accounts_to_process_withdrawal_batches(
+        &self,
+    ) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
 
         let mut accounts =
@@ -407,9 +399,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let mut receipt_token_amount_processing = 0;
         let mut processing_batch_count = 0;
 
-        crate::utils::debug_msg_heap_size("process_withdrawal_batches: start");
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
-        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after pricing");
         {
             let fund_account = self.fund_account.load()?;
 
@@ -467,7 +457,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 sol_fee_amount_processing = next_sol_fee_amount_processing;
                 processing_batch_count += 1;
             }
-            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after iterating batches");
 
             // borrow sol cash from treasury if needed (condition 1-2)
             if sol_user_amount_processing > fund_account.sol_operation_reserved_amount {
@@ -492,7 +481,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 self.fund_account.load_mut()?.sol_operation_reserved_amount +=
                     sol_debt_amount_from_treasury;
             }
-            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after debting");
         }
 
         if receipt_token_amount_processing > 0 {
@@ -511,7 +499,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 receipt_token_amount_processing,
             )?;
         }
-        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after burn");
 
         let receipt_token_amount_processed = receipt_token_amount_processing;
 
@@ -599,8 +586,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // pay remaining debt with cash
             fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
-
-            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after create a ticket");
         }
 
         if sol_fee_amount_processing > 0 {
@@ -618,8 +603,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             )?;
             sol_fee_amount_processing = 0;
         }
-
-        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after transfer fee");
 
         require_eq!(
             sol_user_amount_processing

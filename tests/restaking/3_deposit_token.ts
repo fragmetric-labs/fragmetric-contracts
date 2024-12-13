@@ -139,7 +139,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
             restaking.getFragSOLFundReserveAccountBalance(),
         ]);
 
-        // console.log({ fragSOLTokenMint, fragSOLFund, fragSOLFundReserveAccountBalance })
+        console.log({ fragSOLTokenMint, fragSOLFund, fragSOLFundReserveAccountBalance })
 
         expect(new BN(fragSOLTokenMint.supply.toString()).toString()).eq(fragSOLFund.receiptTokenValue.denominator.toString(), 'correct receipt token supply');
         expect(new BN(fragSOLTokenMint.supply.toString()).toString()).eq(fragSOLFund.receiptTokenSupplyAmount.toString(), 'correct receipt token supply');

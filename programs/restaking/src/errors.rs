@@ -238,4 +238,7 @@ pub enum ErrorCode {
 
     #[msg("restaking: withdrawal ticket is already initialized")]
     RestakingVaultWithdrawalTicketAlreadyInitializedError,
+
+    #[msg("index out of bounds exception")]
+    IndexOutOfBoundsException,
 }
