@@ -19,7 +19,7 @@ use super::*;
 /// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
-const MAX_SUPPORTED_TOKENS: usize = 16;
+const MAX_SUPPORTED_TOKENS: usize = 10;
 const MAX_RESTAKING_VAULTS: usize = 8;
 
 #[account(zero_copy)]
@@ -38,7 +38,7 @@ pub struct FundAccount {
     _padding2: [u8; 7],
     pub(super) receipt_token_supply_amount: u64,
     pub(super) one_receipt_token_as_sol: u64,
-    pub(super) receipt_token_value_updated_at: i64,
+    pub(super) receipt_token_value_updated_slot: u64,
     pub(super) receipt_token_value: TokenValuePod,
 
     /// configurations for deposit

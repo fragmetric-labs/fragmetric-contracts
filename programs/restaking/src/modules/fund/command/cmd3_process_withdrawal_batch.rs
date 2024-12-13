@@ -85,9 +85,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let mut command = self.clone();
                 command.state =
                     ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process);
+
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
+                crate::utils::debug_msg_heap_size(0);
+
                 let [fund_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
@@ -234,16 +237,22 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         receipt_token_amount_to_process,
                     )?;
 
+                    crate::utils::debug_msg_heap_size(3);
+
                     fund_service.harvest_from_treasury_account(
                         ctx.system_program,
                         fund_treasury_account,
                         fund_revenue_account,
                     )?;
 
+                    crate::utils::debug_msg_heap_size(31);
+
                     let pricing_service =
                         fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
                     (receipt_token_amount_processed, pricing_service)
                 };
+
+                crate::utils::debug_msg_heap_size(4);
 
                 if receipt_token_amount_processed > 0 {
                     // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
@@ -269,12 +278,16 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         })
                         .collect::<Result<Vec<_>>>()?;
 
+                    crate::utils::debug_msg_heap_size(5);
+
                     let mut supported_token_increasing_capacity =
                         receipt_token_amount_processed_as_sol.div_ceil(2);
                     supported_token_increasing_capacity -= WeightedAllocationStrategy::put(
-                        &mut *participants,
+                        &mut participants,
                         receipt_token_amount_processed_as_sol,
                     );
+
+                    crate::utils::debug_msg_heap_size(6);
 
                     for (i, participant) in participants.iter().enumerate() {
                         let supported_token = fund_account.get_supported_token_mut_by_index(i)?;
@@ -287,6 +300,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 )?),
                         )?;
                     }
+
+                    crate::utils::debug_msg_heap_size(7);
 
                     let sol_increasing_capacity =
                         receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;

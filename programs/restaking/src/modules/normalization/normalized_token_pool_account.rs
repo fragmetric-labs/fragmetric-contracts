@@ -28,7 +28,7 @@ pub struct NormalizedTokenPoolAccount {
     pub(super) normalized_token_decimals: u8,
     pub(super) normalized_token_supply_amount: u64,
     pub(super) normalized_token_value: TokenValue,
-    pub(super) normalized_token_value_updated_at: i64,
+    pub(super) normalized_token_value_updated_slot: u64,
     pub(super) one_normalized_token_as_sol: u64,
 
     _reserved: [u8; 128],
@@ -68,7 +68,7 @@ impl NormalizedTokenPoolAccount {
                 numerator: Vec::new(),
                 denominator: 0,
             };
-            self.normalized_token_value_updated_at = 0;
+            self.normalized_token_value_updated_slot = 0;
             self.one_normalized_token_as_sol = 0;
             self.supported_tokens
                 .iter_mut()

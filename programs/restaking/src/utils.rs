@@ -379,3 +379,15 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         Ok(())
     }
 }
+
+pub fn debug_msg_heap_size(marker: i8) {
+    let heap_total: u64 = 32 * 1024;
+    let heap_top: u64 = heap_total + 0x300000000;
+    let heap_usage: u64 = heap_top.saturating_sub(Box::new(0u8).as_ref() as *const u8 as u64);
+    msg!(
+        "HEAP#{} = {:?}bytes ({}%)",
+        marker,
+        heap_usage,
+        (heap_usage * 100) as f32 / heap_total as f32
+    );
+}

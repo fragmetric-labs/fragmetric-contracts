@@ -15,6 +15,7 @@ pub struct NormalizedTokenPoolService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
     normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,
+    current_slot: u64,
     current_timestamp: i64,
 }
 
@@ -48,6 +49,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             normalized_token_pool_account,
             normalized_token_mint,
             normalized_token_program,
+            current_slot: clock.slot,
             current_timestamp: clock.unix_timestamp,
         })
     }
@@ -452,7 +454,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             pricing_service.get_token_total_value_as_atomic(normalized_token_mint_key)?;
 
         self.normalized_token_pool_account
-            .normalized_token_value_updated_at = self.current_timestamp;
+            .normalized_token_value_updated_slot = self.current_slot;
 
         Ok(())
     }

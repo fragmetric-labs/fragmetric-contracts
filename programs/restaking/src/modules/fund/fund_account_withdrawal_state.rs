@@ -297,7 +297,9 @@ mod tests {
         assert_eq!(state.last_request_id, 10_002);
         assert_eq!(state.pending_batch.num_requests, 2);
 
-        state.remove_pending_withdrawal_request(req2.clone()).unwrap();
+        state
+            .remove_pending_withdrawal_request(req2.clone())
+            .unwrap();
         assert_eq!(state.last_request_id, 10_002);
         assert_eq!(state.pending_batch.num_requests, 1);
 

@@ -33,7 +33,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3);
+        });
     });
 
     step("withdraw SOL from jito stake pool", async function () {
@@ -67,7 +67,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3, 800_000);
+        });
         
         const [
             fragSOLFundReserveAccountBalance1,
@@ -108,6 +108,6 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        }, undefined, 3, 800_000);
+        });
     });
 });

@@ -3,7 +3,6 @@ use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use std::cell::RefMut;
 use std::cmp::min;
-use std::collections::{BTreeMap, BTreeSet};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
@@ -20,6 +19,7 @@ pub struct FundService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
     current_timestamp: i64,
+    current_slot: u64,
 }
 
 impl Drop for FundService<'_, '_> {
@@ -38,6 +38,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             receipt_token_mint,
             fund_account,
             current_timestamp: clock.unix_timestamp,
+            current_slot: clock.slot,
         })
     }
 
@@ -142,7 +143,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .get_token_total_value_as_atomic(receipt_token_mint_key)?
                 .serialize_as_pod(&mut fund_account.receipt_token_value);
 
-            fund_account.receipt_token_value_updated_at = self.current_timestamp;
+            fund_account.receipt_token_value_updated_slot = self.current_slot;
         }
 
         Ok(())
@@ -234,98 +235,102 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<()> {
         let mut operation_state = self.clone_operation_state()?;
-        operation_state.initialize_command_if_needed(self.current_timestamp, reset_command)?;
+        operation_state.initialize_command_if_needed(
+            reset_command,
+            self.current_slot,
+            self.current_timestamp,
+        )?;
 
-        let mut execution_count = 0;
-        let mut executed_commands = Vec::new();
-
-        let pricing_sources = self.get_pricing_sources()?;
-        let remaining_accounts_map: BTreeMap<Pubkey, &AccountInfo> = remaining_accounts
-            .iter()
-            .map(|info| (*info.key, info))
-            .collect();
-
-        'command_loop: while let Some((command, required_accounts)) =
-            operation_state.get_next_command()?
-        {
-            // rearrange given accounts in required order
-            let mut required_account_infos = Vec::new();
-            let mut unused_account_keys = remaining_accounts_map
-                .keys()
-                .cloned()
-                .collect::<BTreeSet<_>>();
-
-            for account_meta in required_accounts {
-                // append required accounts in exact order
-                match remaining_accounts_map.get(&account_meta.pubkey) {
-                    Some(account) => {
-                        required_account_infos.push(*account);
-                        unused_account_keys.remove(&account_meta.pubkey);
-                    }
-                    None => {
-                        if execution_count > 0 {
-                            // maintain the current command and gracefully stop executing commands
-                            msg!(
-                                "COMMAND#{}: {:?} has not enough accounts after {} execution(s)",
-                                operation_state.next_sequence,
-                                command,
-                                execution_count
-                            );
-                            break 'command_loop;
-                        }
-
-                        // error if it is the first command in this tx
-                        msg!(
-                            "COMMAND#{}: {:?} has not enough accounts at the first execution",
-                            operation_state.next_sequence,
-                            command
-                        );
-                        return err!(ErrorCode::OperationCommandAccountComputationException);
+        let pricing_sources_info = self
+            .get_pricing_sources()?
+            .into_iter()
+            .map(|source| {
+                for remaining_account in remaining_accounts {
+                    if source == *remaining_account.key {
+                        return Ok(remaining_account);
                     }
                 }
-            }
+                Err(error!(ErrorCode::TokenPricingSourceAccountNotFoundError))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-            // append all unused accounts & pricing sources
-            for unused_account_key in &unused_account_keys {
-                // SAFETY: `unused_account_key` is a subset of `remaining_accounts_map`.
-                let remaining_account = remaining_accounts_map.get(unused_account_key).unwrap();
-                required_account_infos.push(*remaining_account);
-            }
-            for pricing_source in &pricing_sources {
-                // TODO: optimize and throw error
-                required_account_infos.push(remaining_accounts_map.get(pricing_source).unwrap());
-            }
+        let (command, required_accounts) = &operation_state
+            .get_next_command()?
+            .ok_or_else(|| error!(ErrorCode::OperationCommandExecutionFailedException))?;
+        // rearrange given accounts in required order
+        let mut required_account_infos = Vec::with_capacity(32);
+        let mut remaining_accounts_used: [bool; 32] = [false; 32];
 
-            let mut ctx = OperationCommandContext {
-                operator,
-                receipt_token_mint: self.receipt_token_mint,
-                fund_account: self.fund_account,
-                system_program,
-            };
-            match command.execute(&mut ctx, required_account_infos.as_slice()) {
-                Ok(next_command) => {
-                    // msg!("COMMAND: {:?} with {:?} passed", command, required_accounts);
-                    msg!(
-                        "COMMAND#{}: {:?} passed",
-                        operation_state.next_sequence,
-                        command
-                    );
-                    executed_commands.push(command.clone());
-                    execution_count += 1;
-
-                    operation_state.set_command(next_command, self.current_timestamp)?;
+        for required_account in required_accounts {
+            // append required accounts in exact order
+            let mut found = false;
+            for (i, remaining_account) in remaining_accounts.iter().enumerate() {
+                if required_account.pubkey == *remaining_account.key {
+                    required_account_infos.push(remaining_account);
+                    // SAFETY: the length of remaining_accounts is less or equal to 27
+                    remaining_accounts_used[i] = true;
+                    found = true;
+                    break;
                 }
-                Err(error) => {
-                    // msg!("COMMAND: {:?} with {:?} failed", command, required_accounts);
-                    msg!(
-                        "COMMAND#{}: {:?} failed",
-                        operation_state.next_sequence,
-                        command
-                    );
-                    return Err(error);
-                }
-            };
+            }
+
+            if !found {
+                // error if it is the first command in this tx
+                msg!(
+                    "COMMAND#{}: {:?} has not given all the required accounts",
+                    operation_state.next_sequence,
+                    command
+                );
+                return err!(ErrorCode::OperationCommandAccountComputationException);
+            }
         }
+
+        // append all unused accounts & pricing sources
+        for (i, used) in remaining_accounts_used
+            .into_iter()
+            .take(remaining_accounts.len())
+            .enumerate()
+        {
+            if !used {
+                required_account_infos.push(&remaining_accounts[i]);
+            }
+        }
+        for pricing_source in &pricing_sources_info {
+            if required_account_infos.len() == 32 {
+                break;
+            }
+            required_account_infos.push(*pricing_source);
+        }
+
+        // execute the command
+        let mut ctx = OperationCommandContext {
+            operator,
+            receipt_token_mint: self.receipt_token_mint,
+            fund_account: self.fund_account,
+            system_program,
+        };
+        match command.execute(&mut ctx, required_account_infos.as_slice()) {
+            Ok(next_command) => {
+                msg!(
+                    "COMMAND#{}: {:?} passed",
+                    operation_state.next_sequence,
+                    command
+                );
+                operation_state.set_command(
+                    next_command,
+                    self.current_slot,
+                    self.current_timestamp,
+                )?;
+            }
+            Err(error) => {
+                msg!(
+                    "COMMAND#{}: {:?} failed",
+                    operation_state.next_sequence,
+                    command
+                );
+                return Err(error);
+            }
+        };
 
         // write back operation state
         std::mem::swap(
@@ -336,7 +341,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         emit!(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
-            executed_commands,
+            executed_command: command.clone(),
         });
 
         Ok(())

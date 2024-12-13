@@ -4,11 +4,12 @@ use std::mem::discriminant;
 
 use super::command::*;
 
-const OPERATION_COMMANDS_EXPIRATION_SECONDS: i64 = 600;
+const OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub(super) struct OperationState {
+    updated_slot: u64,
     updated_at: i64,
     expired_at: i64,
 
@@ -27,8 +28,9 @@ impl OperationState {
     /// Initialize current operation command to `reset_command` or default.
     pub fn initialize_command_if_needed(
         &mut self,
-        current_timestamp: i64,
         reset_command: Option<OperationCommandEntry>,
+        current_slot: u64,
+        current_timestamp: i64,
     ) -> Result<()> {
         let has_reset_command = reset_command.is_some();
 
@@ -37,6 +39,7 @@ impl OperationState {
             self.next_sequence = 0;
             self.set_command(
                 reset_command.or_else(|| Some(InitializeCommand {}.without_required_accounts())),
+                current_slot,
                 current_timestamp,
             )?;
             self.no_transition = if has_reset_command { 1 } else { 0 };
@@ -48,6 +51,7 @@ impl OperationState {
     pub fn set_command(
         &mut self,
         mut next_command: Option<OperationCommandEntry>,
+        current_slot: u64,
         current_timestamp: i64,
     ) -> Result<()> {
         // deal with no_transition state, to adjust next command.
@@ -71,8 +75,9 @@ impl OperationState {
             }
         }
 
+        self.updated_slot = current_slot;
         self.updated_at = current_timestamp;
-        self.expired_at = current_timestamp + OPERATION_COMMANDS_EXPIRATION_SECONDS;
+        self.expired_at = current_timestamp + OPERATION_COMMAND_EXPIRATION_SECONDS;
         self.next_sequence = match next_command {
             Some(_) => self.next_sequence + 1,
             None => 0,

@@ -1769,23 +1769,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, computeUnitLimit: number = 400000, prioritizationFeeMicroLamports?: number) {
+    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
         let txCount = 0;
-        while (txCount < maxTxCount) {
-            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, computeUnitLimit);
+        while (txCount < 100) {
+            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
             txCount++;
-            logger.debug(`operator ran tx#${txCount}`);
-            if (txCount == maxTxCount || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
+            if (txCount == 100 || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
                 return {event, error}
             }
         }
     }
 
-    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], computeUnitLimit?: number, prioritizationFeeMicroLamports?: number) {
+    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], setComputeUnitLimitUnits: number = 800_000, setComputeUnitPriceMicroLamports?: number) {
         // prepare accounts according to the current state of operation.
-        // - can contain 28/32 accounts including reserved four accounts.
+        // - can contain 27/32 accounts with reserved four accounts and payer.
         // - order doesn't matter, no need to put duplicate.
-        // - contain accounts as many as possible to execute multiple commands in a single tx.
         const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
         this.pricingSourceAccounts.forEach(accoutMeta => {
             requiredAccounts.set(accoutMeta.pubkey, accoutMeta);
@@ -1812,8 +1810,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         let fragSOLFund = await this.getFragSOLFundAccount();
-        let nextOperationSequence = fragSOLFund.operation.nextSequence;
         let nextOperationCommand = resetCommand ?? fragSOLFund.operation.nextCommand;
+        let nextOperationSequence = resetCommand ? -1 : fragSOLFund.operation.nextSequence;
         if (nextOperationCommand) {
             for (const accountMeta of nextOperationCommand.requiredAccounts) {
                 if (requiredAccounts.has(accountMeta.pubkey)) {
@@ -1843,17 +1841,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorRanFund"],
             skipPreflight: true,
-            computeUnitLimit,
-            prioritizationFeeMicroLamports,
+            // TODO: why is requestHeapFrameBytes not working?
+            // requestHeapFrameBytes, : 64 * 1024,
+            setComputeUnitLimitUnits,
+            setComputeUnitPriceMicroLamports,
         });
 
-        for (const command of tx.event.operatorRanFund.executedCommands) {
-            const commandName = Object.keys(command)[0];
-            const commandArgs = command[commandName][0];
-            logger.notice(`operator ran command#${nextOperationSequence++}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
-        }
+        let executedCommand = tx.event.operatorRanFund.executedCommand;
+        const commandName = Object.keys(executedCommand)[0];
+        const commandArgs = executedCommand[commandName][0];
+        logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
         nextOperationSequence = tx.event.operatorRanFund.fundAccount.nextOperationSequence;
-        if (nextOperationSequence == 0) {
+
+        if (nextOperationSequence == -1) {
+            // noop for reset command
+        } else if (nextOperationSequence == 0) {
             logger.debug(`operator finished active operation cycle`);
         } else {
             logger.info(`operator has remaining command#${nextOperationSequence}`.padEnd(LOG_PAD_LARGE));
@@ -1946,8 +1948,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorRanFund"],
             skipPreflight: true,
-            computeUnitLimit,
-            prioritizationFeeMicroLamports,
+            setComputeUnitLimitUnits: computeUnitLimit,
+            setComputeUnitPriceMicroLamports: prioritizationFeeMicroLamports,
         });
         if (cmd0Tx.error) {
             return {error: cmd0Tx.error};
@@ -2020,8 +2022,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 signers: [operator],
                 events: ["operatorRanFund"],
                 skipPreflight: true,
-                computeUnitLimit,
-                prioritizationFeeMicroLamports,
+                setComputeUnitLimitUnits: computeUnitLimit,
+                setComputeUnitPriceMicroLamports: prioritizationFeeMicroLamports,
             });
             if (cmd1Tx.error) {
                 return {error: cmd1Tx.error};
@@ -2132,8 +2134,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorRanFund"],
             skipPreflight: true,
-            computeUnitLimit,
-            prioritizationFeeMicroLamports,
+            setComputeUnitLimitUnits: computeUnitLimit,
+            setComputeUnitPriceMicroLamports: prioritizationFeeMicroLamports,
         });
         if (cmd2Tx.error) {
             return {error: cmd2Tx.error};
@@ -2243,8 +2245,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorRanFund"],
             skipPreflight: true,
-            computeUnitLimit,
-            prioritizationFeeMicroLamports,
+            setComputeUnitLimitUnits: computeUnitLimit,
+            setComputeUnitPriceMicroLamports: prioritizationFeeMicroLamports,
         });
         if (cmd3Tx.error) {
             return {error: cmd3Tx.error};
@@ -2367,8 +2369,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [operator],
             events: ["operatorRanFund"],
             skipPreflight: true,
-            computeUnitLimit,
-            prioritizationFeeMicroLamports,
+            setComputeUnitLimitUnits: computeUnitLimit,
+            setComputeUnitPriceMicroLamports: prioritizationFeeMicroLamports,
         });
         if (cmd4Tx.error) {
             return {error: cmd4Tx.error};
