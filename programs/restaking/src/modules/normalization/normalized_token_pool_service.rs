@@ -60,43 +60,43 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         pricing_service: &PricingService,
         denormalize_amount_as_sol: u64,
     ) -> Result<Vec<(Pubkey, Pubkey, u64)>> {
-        let mut participants = vec![];
-        let supported_tokens = self
-            .normalized_token_pool_account
-            .supported_tokens
-            .iter()
-            .filter_map(|t| {
-                if t.locked_amount == 0 {
-                    None
-                } else {
-                    let reserved_amount_as_sol = pricing_service
-                        .get_token_amount_as_sol(&t.mint, t.locked_amount)
-                        .unwrap();
-                    participants.push(WeightedAllocationParticipant::new(
-                        reserved_amount_as_sol,
-                        0,
-                        u64::MAX,
-                    ));
-                    Some(t)
-                }
-            })
-            .collect::<Vec<_>>();
-
-        WeightedAllocationStrategy::put(&mut participants, denormalize_amount_as_sol);
+        // let mut participants = vec![];
+        // let supported_tokens = self
+        //     .normalized_token_pool_account
+        //     .supported_tokens
+        //     .iter()
+        //     .filter_map(|t| {
+        //         if t.locked_amount == 0 {
+        //             None
+        //         } else {
+        //             let reserved_amount_as_sol = pricing_service
+        //                 .get_token_amount_as_sol(&t.mint, t.locked_amount)
+        //                 .unwrap();
+        //             participants.push(WeightedAllocationParticipant::new(
+        //                 reserved_amount_as_sol,
+        //                 0,
+        //                 u64::MAX,
+        //             ));
+        //             Some(t)
+        //         }
+        //     })
+        //     .collect::<Vec<_>>();
+        //
+        // WeightedAllocationStrategy::put(&mut participants, denormalize_amount_as_sol);
 
         let mut supported_tokens_state = vec![];
-        for (i, supported_token) in supported_tokens.iter().enumerate() {
-            let need_to_denormalize_amount = pricing_service.get_sol_amount_as_token(
-                &supported_token.mint,
-                participants[i].get_last_put_amount()?,
-            )?;
-
-            supported_tokens_state.push((
-                supported_token.mint,
-                supported_token.program,
-                cmp::min(supported_token.locked_amount, need_to_denormalize_amount),
-            ));
-        }
+        // for (i, supported_token) in supported_tokens.iter().enumerate() {
+        //     let need_to_denormalize_amount = pricing_service.get_sol_amount_as_token(
+        //         &supported_token.mint,
+        //         participants[i].get_last_put_amount()?,
+        //     )?;
+        //
+        //     supported_tokens_state.push((
+        //         supported_token.mint,
+        //         supported_token.program,
+        //         cmp::min(supported_token.locked_amount, need_to_denormalize_amount),
+        //     ));
+        // }
         Ok(supported_tokens_state)
     }
 

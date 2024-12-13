@@ -5,6 +5,7 @@ use crate::modules::fund::command::OperationCommand::StakeSOL;
 use crate::modules::fund::{
     weighted_allocation_strategy, FundService, WeightedAllocationParticipant,
     WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
@@ -71,7 +72,7 @@ impl SelfExecutable for StakeSOLCommand {
 
                 if sol_staking_reserved_amount > 0 {
                     let fund_account = ctx.fund_account.load()?;
-                    let mut participants = fund_account
+                    let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(fund_account
                         .get_supported_tokens_iter()
                         .map(|supported_token| {
                             Ok::<WeightedAllocationParticipant, Error>(
@@ -85,13 +86,12 @@ impl SelfExecutable for StakeSOLCommand {
                                 ),
                             )
                         })
-                        .collect::<Result<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?);
                     let sol_staking_reserved_amount_positive =
                         u64::try_from(sol_staking_reserved_amount)?;
-                    let sol_staking_remaining_amount = WeightedAllocationStrategy::put(
-                        &mut *participants,
+                    let sol_staking_remaining_amount = strategy.put(
                         sol_staking_reserved_amount_positive,
-                    );
+                    )?;
                     let _sol_staking_execution_amount =
                         sol_staking_reserved_amount_positive - sol_staking_remaining_amount;
 
@@ -101,7 +101,7 @@ impl SelfExecutable for StakeSOLCommand {
                         .map(|(i, supported_token)| {
                             Ok(StakeSOLCommandItem {
                                 mint: supported_token.mint,
-                                sol_amount: participants.get(i).unwrap().get_last_put_amount()?,
+                                sol_amount: strategy.participants[i].get_last_put_amount()?,
                             })
                         })
                         .collect::<Result<Vec<_>>>()?;

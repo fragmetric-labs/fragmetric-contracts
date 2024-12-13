@@ -356,7 +356,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
-    pub(super) fn find_accounts_to_process_withdrawal_batch(&self) -> Result<Vec<(Pubkey, bool)>> {
+    pub(super) fn find_accounts_to_process_withdrawal_batches(&self) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
 
         let mut accounts =
@@ -389,7 +389,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     /// returns (receipt_token_amount_processed)
-    pub(super) fn process_withdrawal_batch(
+    pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
         system_program: &Program<'info, System>,
@@ -407,7 +407,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let mut receipt_token_amount_processing = 0;
         let mut processing_batch_count = 0;
 
+        crate::utils::debug_msg_heap_size("process_withdrawal_batches: start");
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
+        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after pricing");
         {
             let fund_account = self.fund_account.load()?;
 
@@ -465,6 +467,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 sol_fee_amount_processing = next_sol_fee_amount_processing;
                 processing_batch_count += 1;
             }
+            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after iterating batches");
 
             // borrow sol cash from treasury if needed (condition 1-2)
             if sol_user_amount_processing > fund_account.sol_operation_reserved_amount {
@@ -489,6 +492,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 self.fund_account.load_mut()?.sol_operation_reserved_amount +=
                     sol_debt_amount_from_treasury;
             }
+            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after debting");
         }
 
         if receipt_token_amount_processing > 0 {
@@ -507,6 +511,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 receipt_token_amount_processing,
             )?;
         }
+        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after burn");
 
         let receipt_token_amount_processed = receipt_token_amount_processing;
 
@@ -594,6 +599,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // pay remaining debt with cash
             fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
+
+            crate::utils::debug_msg_heap_size("process_withdrawal_batches: after create a ticket");
         }
 
         if sol_fee_amount_processing > 0 {
@@ -611,6 +618,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             )?;
             sol_fee_amount_processing = 0;
         }
+
+        crate::utils::debug_msg_heap_size("process_withdrawal_batches: after transfer fee");
 
         require_eq!(
             sol_user_amount_processing

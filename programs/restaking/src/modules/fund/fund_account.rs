@@ -19,8 +19,8 @@ use super::*;
 /// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
-const MAX_SUPPORTED_TOKENS: usize = 10;
-const MAX_RESTAKING_VAULTS: usize = 8;
+pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 8;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -60,7 +60,7 @@ pub struct FundAccount {
     /// asset & configurations for LSTs
     _padding3: [u8; 15],
     num_supported_tokens: u8,
-    supported_tokens: [SupportedToken; MAX_SUPPORTED_TOKENS],
+    supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
 
     /// asset & configuration for NT
     normalized_token: NormalizedToken,
@@ -68,7 +68,7 @@ pub struct FundAccount {
     /// asset & configurations for Restaking Vaults
     _padding4: [u8; 15],
     num_restaking_vaults: u8,
-    restaking_vaults: [RestakingVault; MAX_RESTAKING_VAULTS],
+    restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
 
     /// fund operation state
     pub(super) operation: OperationState,
@@ -335,7 +335,7 @@ impl FundAccount {
         }
 
         require_gt!(
-            MAX_SUPPORTED_TOKENS,
+            FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
             self.num_supported_tokens as usize,
             ErrorCode::FundExceededMaxSupportedTokensError
         );
@@ -424,7 +424,7 @@ impl FundAccount {
         }
 
         require_gt!(
-            MAX_RESTAKING_VAULTS,
+            FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
             self.num_restaking_vaults as usize,
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
