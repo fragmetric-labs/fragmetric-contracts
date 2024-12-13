@@ -218,8 +218,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             ),
         });
 
-        // TODO v0.4/transfer: token transfer is temporarily disabled
-        err!(ErrorCode::TokenNotTransferableError)?;
+        if self.fund_account.load()?.receipt_token_transfer_enabled != 1 {
+            err!(ErrorCode::TokenNotTransferableError)?;
+        }
 
         Ok(())
     }
@@ -507,7 +508,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
 
-            // reserve each sol_user_amount to batch accounts: sol_operation_reserved_amount -= sol_user_amount_processing;
+            // reserve each sol_user_amount to batch accounts
             let processing_batches = fund_account
                 .withdrawal
                 .dequeue_batches(processing_batch_count, self.current_timestamp)?;
@@ -559,8 +560,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
                 let sol_user_amount = sol_amount - sol_fee_amount;
 
+                // offset sol_user_amount and sol_fee_amount by sol_operation_reserved_amount
                 fund_account.sol_operation_reserved_amount -= sol_amount;
                 fund_account.withdrawal.sol_user_reserved_amount += sol_user_amount;
+                sol_user_amount_processing -= sol_user_amount;
+                sol_fee_amount_processing -= sol_fee_amount;
+                receipt_token_amount_processing -= batch.receipt_token_amount;
+
                 batch_account.set_claimable_amount(
                     batch.num_requests,
                     batch.receipt_token_amount,
@@ -569,9 +575,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     self.current_timestamp,
                 );
                 batch_account.exit(&crate::ID)?;
-
-                sol_user_amount_processing -= sol_user_amount;
-                receipt_token_amount_processing -= batch.receipt_token_amount;
             }
 
             // during evaluation, up to [processing_batch_count] lamports can be deducted.

@@ -254,17 +254,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         require_gte!(self.user_receipt_token_account.amount, receipt_token_amount);
         require_gt!(receipt_token_amount, 0);
 
-        let (batch_id, request_id) = {
-            // validate configuration
-            let mut fund_account = self.fund_account.load_mut()?;
-
-            // create a user withdrawal request
-            self.user_fund_account.create_withdrawal_request(
-                &mut fund_account.withdrawal,
-                receipt_token_amount,
-                self.current_timestamp,
-            )?
-        };
+        // create a user withdrawal request
+        let withdrawal_request = self
+            .fund_account
+            .load_mut()?
+            .withdrawal
+            .create_pending_request(receipt_token_amount, self.current_timestamp)?;
+        let batch_id = withdrawal_request.batch_id;
+        let request_id = withdrawal_request.request_id;
+        self.user_fund_account
+            .push_withdrawal_request(withdrawal_request)?;
 
         // lock requested user receipt token amount
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -294,7 +293,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_amount,
         )?;
 
-        receipt_token_lock_account.reload()?;
+        // receipt_token_lock_account.reload()?;
 
         self.fund_account
             .load_mut()?
@@ -331,13 +330,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         request_id: u64,
     ) -> Result<()> {
-        let receipt_token_amount = {
-            let mut fund_account = self.fund_account.load_mut()?;
-
-            // clear pending amount from both user fund account and global fund account
-            self.user_fund_account
-                .cancel_withdrawal_request(&mut fund_account.withdrawal, request_id)?
-        };
+        // clear pending amount from both user fund account and global fund account
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let receipt_token_amount = withdrawal_request.receipt_token_amount;
+        self.fund_account
+            .load_mut()?
+            .withdrawal
+            .cancel_pending_request(withdrawal_request)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -368,7 +367,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             receipt_token_amount,
         )?;
 
-        receipt_token_lock_account.reload()?;
+        // receipt_token_lock_account.reload()?;
 
         self.fund_account
             .load_mut()?
@@ -407,17 +406,14 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<()> {
-        let (sol_user_amount, sol_fee_amount, receipt_token_burn_amount) = {
-            let mut fund_account = self.fund_account.load_mut()?;
-
-            // calculate $SOL amounts and mark withdrawal request as claimed
-            // withdrawal fee is already paid.
-            self.user_fund_account.settle_withdrawal_request(
-                &mut fund_account.withdrawal,
-                fund_withdrawal_batch_account,
-                request_id,
-            )?
-        };
+        // calculate $SOL amounts and mark withdrawal request as claimed withdrawal fee is already paid.
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
+            fund_withdrawal_batch_account.settle_withdrawal_request(withdrawal_request)?;
+        self.fund_account
+            .load_mut()?
+            .withdrawal
+            .sol_user_reserved_amount -= sol_user_amount;
 
         {
             // transfer sol_user_amount to user wallet from reserved account
@@ -445,7 +441,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 request_id,
                 user_fund_account: Clone::clone(self.user_fund_account),
                 user: self.user.key(),
-                burnt_receipt_token_amount: receipt_token_burn_amount,
+                burnt_receipt_token_amount: receipt_token_amount,
                 withdrawn_sol_amount: sol_user_amount,
                 deducted_sol_fee_amount: sol_fee_amount,
             });

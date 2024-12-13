@@ -94,7 +94,7 @@ impl WithdrawalState {
         Ok(())
     }
 
-    pub fn create_pending_withdrawal_request(
+    pub fn create_pending_request(
         &mut self,
         receipt_token_amount: u64,
         current_timestamp: i64,
@@ -123,8 +123,7 @@ impl WithdrawalState {
         Ok(request)
     }
 
-    /// Returns receipt_token_amount
-    pub fn remove_pending_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<u64> {
+    pub fn cancel_pending_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         // assert creation
         require_gte!(
             self.last_request_id,
@@ -139,9 +138,7 @@ impl WithdrawalState {
             ErrorCode::FundWithdrawalRequestAlreadyQueuedError
         );
 
-        self.pending_batch.remove_request(&request)?;
-
-        Ok(request.receipt_token_amount)
+        self.pending_batch.remove_request(&request)
     }
 
     /// returns [enqueued]
@@ -255,31 +252,29 @@ mod tests {
         assert_eq!(state.pending_batch.batch_id, 0);
         assert_eq!(state.last_request_id, 0);
 
-        assert!(state.create_pending_withdrawal_request(10, 0).is_err());
+        assert!(state.create_pending_request(10, 0).is_err());
 
         state.set_withdrawal_enabled(true);
         state.set_batch_threshold(1).unwrap();
 
-        let req1 = state.create_pending_withdrawal_request(10, 0).unwrap();
+        let req1 = state.create_pending_request(10, 0).unwrap();
         assert_eq!(req1.batch_id, state.pending_batch.batch_id);
         assert_eq!(state.pending_batch.batch_id, 10_001);
         assert_eq!(req1.request_id, 10_001);
         assert_eq!(state.last_request_id, 10_001);
         assert_eq!(state.pending_batch.num_requests, 1);
 
-        let req2 = state.create_pending_withdrawal_request(20, 0).unwrap();
+        let req2 = state.create_pending_request(20, 0).unwrap();
         assert_eq!(req2.batch_id, state.pending_batch.batch_id);
         assert_eq!(req2.request_id, 10_002);
         assert_eq!(state.last_request_id, 10_002);
         assert_eq!(state.pending_batch.num_requests, 2);
 
-        state
-            .remove_pending_withdrawal_request(req2.clone())
-            .unwrap();
+        state.cancel_pending_request(req2.clone()).unwrap();
         assert_eq!(state.last_request_id, 10_002);
         assert_eq!(state.pending_batch.num_requests, 1);
 
-        let req3 = state.create_pending_withdrawal_request(20, 0).unwrap();
+        let req3 = state.create_pending_request(20, 0).unwrap();
         assert_eq!(req3.batch_id, state.pending_batch.batch_id);
         assert_eq!(req3.request_id, 10_003);
         assert_eq!(state.last_request_id, 10_003);
@@ -288,7 +283,7 @@ mod tests {
         assert!(!state.enqueue_pending_batch(0, false));
         assert!(state.enqueue_pending_batch(1, false));
 
-        assert!(state.remove_pending_withdrawal_request(req3).is_err());
+        assert!(state.cancel_pending_request(req3).is_err());
         assert_eq!(state.pending_batch.batch_id, 10_002);
         assert_eq!(state.pending_batch.num_requests, 0);
         assert_eq!(state.pending_batch.receipt_token_amount, 0);
@@ -311,7 +306,7 @@ mod tests {
         assert!(!state.enqueue_pending_batch(1, false));
         assert!(!state.enqueue_pending_batch(1, true));
 
-        let req4 = state.create_pending_withdrawal_request(30, 2).unwrap();
+        let req4 = state.create_pending_request(30, 2).unwrap();
         assert_eq!(req4.batch_id, state.pending_batch.batch_id);
         assert_eq!(req4.request_id, 10_004);
         assert_eq!(state.last_request_id, 10_004);

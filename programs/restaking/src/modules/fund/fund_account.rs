@@ -29,7 +29,10 @@ pub struct FundAccount {
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 11],
+    _padding: [u8; 10],
+
+    /// irreversible configurations
+    pub(super) receipt_token_transfer_enabled: u8,
 
     /// receipt token info
     pub receipt_token_mint: Pubkey,
@@ -45,6 +48,7 @@ pub struct FundAccount {
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
 
+    /// configuration & withdrawal processing state
     pub withdrawal: WithdrawalState,
 
     /// asset: A receivable that the fund may charge the users requesting withdrawals.

@@ -1463,6 +1463,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
             this.getUserFragSOLAccount(user.publicKey),
         ]);
+
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
@@ -1577,6 +1578,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
+
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
@@ -1617,6 +1619,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
+
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
