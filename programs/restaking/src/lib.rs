@@ -150,26 +150,39 @@ pub mod restaking {
 
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
-        sol_accumulated_deposit_capacity_amount: u64,
-        sol_accumulated_deposit_amount: Option<u64>,
-        sol_withdrawal_fee_rate_bps: u16,
-        sol_withdrawal_normal_reserve_rate_bps: u16,
-        sol_withdrawal_normal_reserve_max_amount: u64,
-        withdrawal_batch_threshold_seconds: i64,
         withdrawal_enabled: bool,
+        withdrawal_fee_rate_bps: u16,
+        withdrawal_batch_threshold_seconds: i64,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_strategy(
+            withdrawal_enabled,
+            withdrawal_fee_rate_bps,
+            withdrawal_batch_threshold_seconds,
+        )
+    }
+
+    pub fn fund_manager_update_sol_strategy<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        sol_accumulated_deposit_capacity_amount: u64,
+        sol_accumulated_deposit_amount: Option<u64>,
+        sol_withdrawable: bool,
+        sol_withdrawal_normal_reserve_rate_bps: u16,
+        sol_withdrawal_normal_reserve_max_amount: u64,
+    ) -> Result<()> {
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_update_sol_strategy(
             sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount,
-            sol_withdrawal_fee_rate_bps,
+            sol_withdrawable,
             sol_withdrawal_normal_reserve_rate_bps,
             sol_withdrawal_normal_reserve_max_amount,
-            withdrawal_batch_threshold_seconds,
-            withdrawal_enabled,
         )
     }
 
@@ -178,6 +191,9 @@ pub mod restaking {
         token_mint: Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
         token_accumulated_deposit_amount: Option<u64>,
+        token_withdrawable: bool,
+        token_withdrawal_normal_reserve_rate_bps: u16,
+        token_withdrawal_normal_reserve_max_amount: u64,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -190,6 +206,9 @@ pub mod restaking {
             &token_mint,
             token_accumulated_deposit_capacity_amount,
             token_accumulated_deposit_amount,
+            token_withdrawable,
+            token_withdrawal_normal_reserve_rate_bps,
+            token_withdrawal_normal_reserve_max_amount,
             token_rebalancing_amount,
             sol_allocation_weight,
             sol_allocation_capacity_amount,
@@ -576,6 +595,7 @@ pub mod restaking {
     pub fn user_request_withdrawal(
         ctx: Context<UserFundContext>,
         receipt_token_amount: u64,
+        supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -589,6 +609,7 @@ pub mod restaking {
         )?
         .process_request_withdrawal(
             &mut ctx.accounts.receipt_token_lock_account,
+            supported_token_mint,
             receipt_token_amount,
         )
     }
@@ -624,8 +645,11 @@ pub mod restaking {
         .process_withdraw(
             &ctx.accounts.system_program,
             &mut ctx.accounts.fund_withdrawal_batch_account,
+            &ctx.accounts.user_supported_token_account,
             &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.fund_reserve_supported_token_account,
             &ctx.accounts.fund_treasury_account,
+            &ctx.accounts.fund_treasury_supported_token_account,
             request_id,
         )
     }

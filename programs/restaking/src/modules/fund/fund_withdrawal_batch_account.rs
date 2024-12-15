@@ -15,10 +15,15 @@ pub struct FundWithdrawalBatchAccount {
     num_claimed_requests: u64,
     receipt_token_amount: u64,
     claimed_receipt_token_amount: u64,
+
+    /// SOL to be withdrawn
     pub(super) sol_user_amount: u64,
     claimed_sol_user_amount: u64,
-    /// SOL withdrawal fee is already paid to the treasury account, this field is informative.
+    /// informative: SOL withdrawal fee is already paid to the treasury account.
     pub(super) sol_fee_amount: u64,
+
+    // TODO: supported tokens...
+
     processed_at: i64,
     _reserved: [u8; 32],
 }

@@ -148,8 +148,8 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max supported tokens")]
     FundExceededMaxSupportedTokensError,
 
-    #[msg("fund: invalid sol withdrawal fee rate")]
-    FundInvalidSolWithdrawalFeeRateError,
+    #[msg("fund: invalid withdrawal fee rate")]
+    FundInvalidWithdrawalFeeRateError,
 
     #[msg("fund: normalized token already set")]
     FundNormalizedTokenAlreadySetError,

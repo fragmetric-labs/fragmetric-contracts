@@ -218,7 +218,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             ),
         });
 
-        if self.fund_account.load()?.receipt_token_transfer_enabled != 1 {
+        if self.fund_account.load()?.transfer_enabled != 1 {
             err!(ErrorCode::TokenNotTransferableError)?;
         }
 
@@ -343,8 +343,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load_mut()?
-            .withdrawal
-            .enqueue_pending_batch(self.current_timestamp, forced))
+            .enqueue_withdrawal_pending_batch(self.current_timestamp, forced))
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
@@ -354,7 +353,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let fund_account = self.fund_account.load()?;
 
         let mut accounts =
-            Vec::with_capacity(4 + fund_account.withdrawal.get_queued_batches_iter().count());
+            Vec::with_capacity(4 + fund_account.get_withdrawal_queued_batches_iter().count());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -366,8 +365,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ]);
         accounts.extend(
             fund_account
-                .withdrawal
-                .get_queued_batches_iter()
+                .get_withdrawal_queued_batches_iter()
                 .map(|batch| {
                     (
                         FundWithdrawalBatchAccount::find_account_address(
@@ -407,8 +405,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // examine withdrawal batches to process with current fund status
             for batch in fund_account
-                .withdrawal
-                .get_queued_batches_iter_to_process(self.current_timestamp, forced)
+                .get_withdrawal_queued_batches_iter_to_process(self.current_timestamp, forced)
             {
                 let next_receipt_token_amount_processing =
                     receipt_token_amount_processing + batch.receipt_token_amount;
@@ -420,7 +417,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     &self.receipt_token_mint.key(),
                     batch.receipt_token_amount,
                 )?;
-                let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
+                let sol_fee_amount = fund_account.get_withdrawal_fee_amount(sol_amount)?;
                 let sol_user_amount = sol_amount - sol_fee_amount;
 
                 let next_sol_user_amount_processing = sol_user_amount_processing + sol_user_amount;
@@ -510,8 +507,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // reserve each sol_user_amount to batch accounts
             let processing_batches = fund_account
-                .withdrawal
-                .dequeue_batches(processing_batch_count, self.current_timestamp)?;
+                .dequeue_withdrawal_batches(processing_batch_count, self.current_timestamp)?;
 
             require_gte!(
                 uninitialized_withdrawal_batch_accounts.len(),
@@ -557,12 +553,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     &self.receipt_token_mint.key(),
                     batch.receipt_token_amount,
                 )?;
-                let sol_fee_amount = fund_account.withdrawal.get_sol_fee_amount(sol_amount)?;
+                let sol_fee_amount = fund_account.get_withdrawal_fee_amount(sol_amount)?;
                 let sol_user_amount = sol_amount - sol_fee_amount;
 
                 // offset sol_user_amount and sol_fee_amount by sol_operation_reserved_amount
                 fund_account.sol_operation_reserved_amount -= sol_amount;
-                fund_account.withdrawal.sol_user_reserved_amount += sol_user_amount;
+                fund_account.sol_withdrawal_user_reserved_amount += sol_user_amount;
                 sol_user_amount_processing -= sol_user_amount;
                 sol_fee_amount_processing -= sol_fee_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
@@ -655,8 +651,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load()?
-            .withdrawal
-            .get_queued_batches_iter()
+            .get_withdrawal_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
             .sum())
     }
@@ -683,11 +678,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            fund_account.withdrawal.sol_normal_reserve_rate_bps as u64,
+            fund_account.sol_normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(fund_account.withdrawal.sol_normal_reserve_max_amount))
+        .max(fund_account.sol_normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.

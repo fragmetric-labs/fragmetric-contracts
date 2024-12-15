@@ -162,6 +162,9 @@ pub struct UserFundWithdrawContext<'info> {
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
+    #[account(mut)]
+    pub user_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
+
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
@@ -188,12 +191,18 @@ pub struct UserFundWithdrawContext<'info> {
     )]
     pub fund_reserve_account: SystemAccount<'info>,
 
+    #[account(mut)]
+    pub fund_reserve_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
+
     #[account(
         mut,
         seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_treasury_account: SystemAccount<'info>,
+
+    #[account(mut)]
+    pub fund_treasury_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
     #[account(
         mut,

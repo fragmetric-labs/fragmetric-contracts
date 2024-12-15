@@ -248,6 +248,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
     pub fn process_request_withdrawal(
         &mut self,
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
+        supported_token_mint: Option<Pubkey>,
         receipt_token_amount: u64,
     ) -> Result<()> {
         // validate user receipt token account balance
@@ -255,11 +256,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         require_gt!(receipt_token_amount, 0);
 
         // create a user withdrawal request
-        let withdrawal_request = self
-            .fund_account
-            .load_mut()?
-            .withdrawal
-            .create_pending_request(receipt_token_amount, self.current_timestamp)?;
+        let withdrawal_request = self.fund_account.load_mut()?.create_withdrawal_request(
+            receipt_token_amount,
+            supported_token_mint,
+            self.current_timestamp,
+        )?;
         let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
         self.user_fund_account
@@ -335,8 +336,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
-            .withdrawal
-            .cancel_pending_request(withdrawal_request)?;
+            .cancel_withdrawal_request(withdrawal_request)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -402,8 +402,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         &mut self,
         system_program: &Program<'info, System>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
+        user_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         fund_reserve_account: &SystemAccount<'info>,
+        fund_reserve_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         fund_treasury_account: &SystemAccount<'info>,
+        fund_treasury_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         request_id: u64,
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed withdrawal fee is already paid.
@@ -412,8 +415,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             fund_withdrawal_batch_account.settle_withdrawal_request(withdrawal_request)?;
         self.fund_account
             .load_mut()?
-            .withdrawal
-            .sol_user_reserved_amount -= sol_user_amount;
+            .sol_withdrawal_user_reserved_amount -= sol_user_amount;
 
         {
             // transfer sol_user_amount to user wallet from reserved account

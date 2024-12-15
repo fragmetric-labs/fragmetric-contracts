@@ -104,7 +104,7 @@ impl NormalizedTokenPoolAccount {
         }
     }
 
-    // TODO: remove? or optimize by removing contains
+    // TODO: remove?
     pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
         let supported_token_mint_list: Vec<&Pubkey> = self
             .supported_tokens

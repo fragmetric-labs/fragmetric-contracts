@@ -97,7 +97,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 let fund_account = ctx.fund_account.load()?;
-                let num_queued_batches = fund_account.withdrawal.get_queued_batches_iter().count();
+                let num_queued_batches = fund_account.get_withdrawal_queued_batches_iter().count();
                 let num_supported_token_pricing_sources = fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
@@ -209,8 +209,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         * (1.0
                             - (vrt_max_cycle_fee_numerator as f32
                                 / vrt_max_cycle_fee_denominator.max(1) as f32));
-                let withdrawal_fee_rate =
-                    fund_account.withdrawal.sol_fee_rate_bps as f32 / 10_000.0;
+                let withdrawal_fee_rate = fund_account.withdrawal_fee_rate_bps as f32 / 10_000.0;
                 drop(fund_account);
 
                 // adjust withdrawal fee rate
@@ -221,8 +220,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
                     ctx.fund_account
                         .load_mut()?
-                        .withdrawal
-                        .set_sol_fee_rate_bps(lrt_max_cycle_fee_rate_bps as u16)?;
+                        .set_withdrawal_fee_rate_bps(lrt_max_cycle_fee_rate_bps as u16)?;
                 }
 
                 // do process withdrawal

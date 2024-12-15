@@ -10,15 +10,28 @@ pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
-    _padding: [u8; 15],
+    _padding: [u8; 7],
 
-    pub accumulated_deposit_capacity_amount: u64,
-    pub accumulated_deposit_amount: u64,
-    pub operation_reserved_amount: u64,
-    pub one_token_as_sol: u64,
     pub pricing_source: TokenPricingSourcePod,
 
-    /// the token amount being unstaked
+    /// informative
+    pub one_token_as_sol: u64,
+
+    /// configurations: token deposit & withdraw
+    pub accumulated_deposit_capacity_amount: u64,
+    pub accumulated_deposit_amount: u64,
+    _padding2: [u8; 5],
+    pub withdrawable: u8,
+    pub normal_reserve_rate_bps: u16,
+    pub normal_reserve_max_amount: u64,
+
+    /// informative: reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund.
+    pub withdrawal_user_reserved_amount: u64,
+
+    /// asset
+    pub operation_reserved_amount: u64,
+
+    /// asset: the token amount being unstaked
     pub operation_receivable_amount: u64,
 
     /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
@@ -57,26 +70,6 @@ impl SupportedToken {
         Ok(())
     }
 
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_operation_reserved_amount(&self) -> u64 {
-        self.operation_reserved_amount
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn set_operation_reserved_amount(&mut self, amount: u64) {
-        self.operation_reserved_amount = amount;
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn get_operating_amount(&self) -> u64 {
-        self.operation_receivable_amount
-    }
-
-    // TODO v0.3/operation: visibility
-    pub(in crate::modules) fn set_operating_amount(&mut self, amount: u64) {
-        self.operation_receivable_amount = amount;
-    }
-
     pub(super) fn set_accumulated_deposit_amount(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
@@ -102,6 +95,28 @@ impl SupportedToken {
         self.accumulated_deposit_capacity_amount = token_amount;
 
         Ok(())
+    }
+
+    #[inline(always)]
+    pub(super) fn set_normal_reserve_max_amount(&mut self, token_amount: u64) {
+        self.normal_reserve_max_amount = token_amount;
+    }
+
+    pub(super) fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+        require_gte!(
+            10_00, // 10%
+            reserve_rate_bps,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.normal_reserve_rate_bps = reserve_rate_bps;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub(super) fn set_withdrawable(&mut self, withdrawable: bool) {
+        self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
     pub(super) fn set_sol_allocation_strategy(

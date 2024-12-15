@@ -241,13 +241,28 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_fund_strategy(
         &mut self,
+        withdrawal_enabled: bool,
+        withdrawal_fee_rate_bps: u16,
+        withdrawal_batch_threshold_interval_seconds: i64,
+    ) -> Result<()> {
+        {
+            let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.set_withdrawal_enabled(withdrawal_enabled);
+            fund_account.set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
+            fund_account
+                .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+        }
+
+        self.emit_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_sol_strategy(
+        &mut self,
         sol_accumulated_deposit_capacity_amount: u64,
         sol_accumulated_deposit_amount: Option<u64>,
-        sol_withdrawal_fee_rate_bps: u16,
+        sol_withdrawable: bool,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
-        withdrawal_batch_threshold_interval_seconds: i64,
-        withdrawal_enabled: bool,
     ) -> Result<()> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
@@ -260,21 +275,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                     .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
             }
 
+            fund_account.set_sol_withdrawable(sol_withdrawable);
+            fund_account.set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
             fund_account
-                .withdrawal
-                .set_sol_fee_rate_bps(sol_withdrawal_fee_rate_bps)?;
-            fund_account
-                .withdrawal
-                .set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
-            fund_account
-                .withdrawal
                 .set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
-            fund_account
-                .withdrawal
-                .set_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
-            fund_account
-                .withdrawal
-                .set_withdrawal_enabled(withdrawal_enabled);
         }
 
         self.emit_fund_manager_updated_fund_event()
@@ -285,6 +289,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         token_mint: &Pubkey,
         token_accumulated_deposit_capacity_amount: u64,
         token_accumulated_deposit_amount: Option<u64>,
+        token_withdrawable: bool,
+        token_withdrawal_normal_reserve_rate_bps: u16,
+        token_withdrawal_normal_reserve_max_amount: u64,
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -299,6 +306,11 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
                 supported_token.set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
             }
+            supported_token.set_withdrawable(token_withdrawable);
+            supported_token
+                .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?;
+            supported_token
+                .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
             if let Some(token_amount) = token_rebalancing_amount {
                 supported_token.set_rebalancing_strategy(token_amount)?;

@@ -19,7 +19,7 @@ pub struct FundAccountInfo {
     sol_withdrawal_reserved_amount: u64,
     sol_withdrawal_fee_rate: f32,
     withdrawal_enabled: bool,
-    withdrawal_last_completed_batch_id: u64,
+    withdrawal_last_processed_batch_id: u64,
     next_operation_sequence: u16,
 }
 
@@ -35,10 +35,10 @@ impl FundAccountInfo {
             sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
-            sol_withdrawal_reserved_amount: fund_account.withdrawal.sol_user_reserved_amount,
-            sol_withdrawal_fee_rate: fund_account.withdrawal.get_sol_fee_rate_as_percent(),
-            withdrawal_enabled: fund_account.withdrawal.enabled == 1,
-            withdrawal_last_completed_batch_id: fund_account.withdrawal.last_processed_batch_id,
+            sol_withdrawal_reserved_amount: fund_account.sol_withdrawal_user_reserved_amount,
+            sol_withdrawal_fee_rate: fund_account.get_withdrawal_fee_rate_as_percent(),
+            withdrawal_enabled: fund_account.withdrawal_enabled == 1,
+            withdrawal_last_processed_batch_id: fund_account.withdrawal_last_processed_batch_id,
             next_operation_sequence: fund_account.operation.next_sequence,
         })
     }

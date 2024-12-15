@@ -19,6 +19,8 @@ use super::*;
 /// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
+pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
+pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 10;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 4;
 
@@ -31,10 +33,10 @@ pub struct FundAccount {
     treasury_account_bump: u8,
     _padding: [u8; 10],
 
-    /// irreversible configurations
-    pub(super) receipt_token_transfer_enabled: u8,
+    /// irreversible receipt token configuration
+    pub(super) transfer_enabled: u8,
 
-    /// receipt token info
+    /// informative
     pub receipt_token_mint: Pubkey,
     pub(super) receipt_token_program: Pubkey,
     pub(super) receipt_token_decimals: u8,
@@ -44,12 +46,32 @@ pub struct FundAccount {
     pub(super) receipt_token_value_updated_slot: u64,
     pub(super) receipt_token_value: TokenValuePod,
 
-    /// configurations for deposit
+    /// configurations: SOL deposit & withdrawal
     pub(super) sol_accumulated_deposit_capacity_amount: u64,
     pub(super) sol_accumulated_deposit_amount: u64,
+    _padding3: [u8; 5],
+    pub(super) sol_withdrawable: u8,
+    pub(super) sol_normal_reserve_rate_bps: u16,
+    pub(super) sol_normal_reserve_max_amount: u64,
 
-    /// configuration & withdrawal processing state
-    pub withdrawal: WithdrawalState,
+    /// configurations: withdrawal
+    pub(super) withdrawal_batch_threshold_interval_seconds: i64,
+    pub(super) withdrawal_fee_rate_bps: u16,
+    pub(super) withdrawal_enabled: u8,
+    _padding4: [u8; 5],
+
+    withdrawal_last_created_request_id: u64,
+    pub(super) withdrawal_last_processed_batch_id: u64,
+    withdrawal_last_batch_enqueued_at: i64,
+    withdrawal_last_batch_processed_at: i64,
+    withdrawal_pending_batch: WithdrawalBatch,
+    _padding5: [u8; 15],
+    withdrawal_num_queued_batches: u8,
+    withdrawal_queued_batches: [WithdrawalBatch; FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES],
+    _reserved: [u8; 64],
+
+    /// informative: reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund.
+    pub sol_withdrawal_user_reserved_amount: u64,
 
     /// asset: A receivable that the fund may charge the users requesting withdrawals.
     /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
@@ -60,16 +82,16 @@ pub struct FundAccount {
     /// asset
     pub(super) sol_operation_reserved_amount: u64,
 
-    /// asset & configurations for LSTs
-    _padding3: [u8; 15],
+    /// asset & configuration: underlying assets
+    _padding6: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
 
-    /// asset & configuration for NT
+    /// asset & configuration: optional basket of underlying assets
     normalized_token: NormalizedToken,
 
-    /// asset & configurations for Restaking Vaults
-    _padding4: [u8; 15],
+    /// asset & configurations: investments
+    _padding7: [u8; 15],
     num_restaking_vaults: u8,
     restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
 
@@ -114,6 +136,8 @@ impl FundAccount {
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
+            self.withdrawal_last_created_request_id = 10_000;
+            self.withdrawal_pending_batch.batch_id = 10_001;
             self.data_version = 4;
         }
     }
@@ -313,6 +337,185 @@ impl FundAccount {
         Ok(())
     }
 
+    #[inline(always)]
+    pub fn get_withdrawal_fee_rate_as_percent(&self) -> f32 {
+        self.withdrawal_fee_rate_bps as f32 / 100.0
+    }
+
+    #[inline(always)]
+    pub(super) fn get_withdrawal_fee_amount(&self, amount: u64) -> Result<u64> {
+        get_proportional_amount(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    }
+
+    pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<()> {
+        require_gte!(
+            FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT,
+            fee_rate_bps,
+            ErrorCode::FundInvalidWithdrawalFeeRateError
+        );
+
+        self.withdrawal_fee_rate_bps = fee_rate_bps;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) {
+        self.withdrawal_enabled = if enabled { 1 } else { 0 };
+    }
+
+    pub(super) fn set_withdrawal_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
+        require_gte!(interval_seconds, 0);
+
+        self.withdrawal_batch_threshold_interval_seconds = interval_seconds;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub(super) fn set_sol_normal_reserve_max_amount(&mut self, sol_amount: u64) {
+        self.sol_normal_reserve_max_amount = sol_amount;
+    }
+
+    pub(super) fn set_sol_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+        require_gte!(
+            10_00, // 10%
+            reserve_rate_bps,
+            ErrorCode::FundInvalidUpdateError
+        );
+
+        self.sol_normal_reserve_rate_bps = reserve_rate_bps;
+
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub(super) fn set_sol_withdrawable(&mut self, withdrawable: bool) {
+        self.sol_withdrawable = if withdrawable { 1 } else { 0 };
+    }
+
+    pub(super) fn create_withdrawal_request(
+        &mut self,
+        receipt_token_amount: u64,
+        supported_token_mint: Option<Pubkey>,
+        current_timestamp: i64,
+    ) -> Result<WithdrawalRequest> {
+        if self.withdrawal_enabled == 0 {
+            err!(ErrorCode::FundWithdrawalDisabledError)?
+        }
+
+        // TODO: check supported_token_mint
+
+        self.withdrawal_last_created_request_id += 1;
+        let request_id = self.withdrawal_last_created_request_id;
+
+        let request = WithdrawalRequest::new(
+            self.withdrawal_pending_batch.batch_id,
+            request_id,
+            receipt_token_amount,
+            supported_token_mint,
+            current_timestamp,
+        );
+        self.withdrawal_pending_batch.add_request(&request)?;
+
+        Ok(request)
+    }
+
+    pub(super) fn cancel_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
+        // assert creation
+        require_gte!(
+            self.withdrawal_last_created_request_id,
+            request.request_id,
+            ErrorCode::FundWithdrawalRequestNotFoundError
+        );
+
+        // assert not queued yet
+        require_eq!(
+            request.batch_id,
+            self.withdrawal_pending_batch.batch_id,
+            ErrorCode::FundWithdrawalRequestAlreadyQueuedError
+        );
+
+        self.withdrawal_pending_batch.remove_request(&request)
+    }
+
+    /// returns [enqueued]
+    pub(super) fn enqueue_withdrawal_pending_batch(
+        &mut self,
+        current_timestamp: i64,
+        forced: bool,
+    ) -> bool {
+        if !((forced
+            || current_timestamp - self.withdrawal_last_batch_enqueued_at
+                >= self.withdrawal_batch_threshold_interval_seconds)
+            && self.withdrawal_num_queued_batches
+                < FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES as u8
+            && self.withdrawal_pending_batch.num_requests > 0)
+        {
+            return false;
+        }
+
+        let next_batch_id = self.withdrawal_pending_batch.batch_id + 1;
+        let mut pending_batch = std::mem::replace(&mut self.withdrawal_pending_batch, {
+            let mut new_pending_batch = WithdrawalBatch::zeroed();
+            new_pending_batch.initialize(next_batch_id);
+            new_pending_batch
+        });
+        pending_batch.enqueued_at = current_timestamp;
+
+        self.withdrawal_last_batch_enqueued_at = current_timestamp;
+        self.withdrawal_queued_batches[self.withdrawal_num_queued_batches as usize] = pending_batch;
+        self.withdrawal_num_queued_batches += 1;
+
+        true
+    }
+
+    pub(super) fn dequeue_withdrawal_batches(
+        &mut self,
+        mut count: usize,
+        current_timestamp: i64,
+    ) -> Result<Vec<WithdrawalBatch>> {
+        if count == 0 {
+            return Ok(vec![]);
+        }
+        require_gte!(self.withdrawal_num_queued_batches as usize, count);
+
+        self.withdrawal_last_processed_batch_id =
+            self.withdrawal_queued_batches[count - 1].batch_id;
+        self.withdrawal_last_batch_processed_at = current_timestamp;
+        let processing_batches = self.withdrawal_queued_batches[..count].to_vec();
+
+        for i in 0..self.withdrawal_num_queued_batches as usize {
+            if i < (self.withdrawal_num_queued_batches as usize) - count {
+                self.withdrawal_queued_batches[i] = self.withdrawal_queued_batches[i + count];
+            } else {
+                self.withdrawal_queued_batches[i] = WithdrawalBatch::zeroed()
+            }
+        }
+        self.withdrawal_num_queued_batches -= count as u8;
+
+        Ok(processing_batches)
+    }
+
+    pub(super) fn get_withdrawal_queued_batches_iter(
+        &self,
+    ) -> impl Iterator<Item = &WithdrawalBatch> {
+        self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
+    }
+
+    pub(super) fn get_withdrawal_queued_batches_iter_to_process(
+        &self,
+        current_timestamp: i64,
+        forced: bool,
+    ) -> impl Iterator<Item = &WithdrawalBatch> {
+        let available = forced
+            || current_timestamp - self.withdrawal_last_batch_processed_at
+                >= self.withdrawal_batch_threshold_interval_seconds;
+        self.get_withdrawal_queued_batches_iter()
+            .filter(move |_| available)
+    }
+
     pub(super) fn add_supported_token(
         &mut self,
         mint: Pubkey,
@@ -479,6 +682,39 @@ impl FundAccount {
     }
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub(super) struct WithdrawalBatch {
+    pub batch_id: u64,
+    pub num_requests: u64,
+    pub receipt_token_amount: u64,
+    enqueued_at: i64,
+    _reserved: [u8; 32],
+}
+
+impl WithdrawalBatch {
+    fn initialize(&mut self, batch_id: u64) {
+        self.batch_id = batch_id;
+        self.num_requests = 0;
+        self.receipt_token_amount = 0;
+        self.enqueued_at = 0;
+    }
+
+    fn add_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
+        self.num_requests += 1;
+        self.receipt_token_amount += request.receipt_token_amount;
+
+        Ok(())
+    }
+
+    fn remove_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
+        self.num_requests -= 1;
+        self.receipt_token_amount -= request.receipt_token_amount;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -504,9 +740,6 @@ mod tests {
 
         assert_eq!(std::mem::size_of::<FundAccount>() % 8, 0);
         assert_eq!(std::mem::align_of::<FundAccount>(), 8);
-
-        assert_eq!(std::mem::size_of::<WithdrawalState>() % 8, 0);
-        assert_eq!(std::mem::align_of::<WithdrawalState>(), 8);
 
         assert_eq!(std::mem::size_of::<WithdrawalBatch>() % 8, 0);
         assert_eq!(std::mem::align_of::<WithdrawalBatch>(), 8);
@@ -540,11 +773,10 @@ mod tests {
             .unwrap_err();
 
         let interval_seconds = 60;
-        fund.withdrawal
-            .set_batch_threshold(interval_seconds)
+        fund.set_withdrawal_batch_threshold(interval_seconds)
             .unwrap();
         assert_eq!(
-            fund.withdrawal.batch_threshold_interval_seconds,
+            fund.withdrawal_batch_threshold_interval_seconds,
             interval_seconds
         );
     }
@@ -651,5 +883,137 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].accumulated_deposit_amount, 1_000);
 
         fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
+    }
+
+    #[test]
+    fn withdrawal_test() {
+        let mut fund = create_initialized_fund_account();
+        assert_eq!(fund.withdrawal_pending_batch.batch_id, 10001);
+        assert_eq!(fund.withdrawal_last_created_request_id, 10000);
+
+        assert!(fund.create_withdrawal_request(10, None, 0).is_err());
+
+        fund.set_withdrawal_enabled(true);
+        fund.set_withdrawal_batch_threshold(1).unwrap();
+
+        let req1 = fund.create_withdrawal_request(10, None, 0).unwrap();
+        assert_eq!(req1.batch_id, fund.withdrawal_pending_batch.batch_id);
+        assert_eq!(fund.withdrawal_pending_batch.batch_id, 10_001);
+        assert_eq!(req1.request_id, 10_001);
+        assert_eq!(fund.withdrawal_last_created_request_id, 10_001);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 1);
+
+        let req2 = fund.create_withdrawal_request(20, None, 0).unwrap();
+        assert_eq!(req2.batch_id, fund.withdrawal_pending_batch.batch_id);
+        assert_eq!(req2.request_id, 10_002);
+        assert_eq!(fund.withdrawal_last_created_request_id, 10_002);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 2);
+
+        fund.cancel_withdrawal_request(req2.clone()).unwrap();
+        assert_eq!(fund.withdrawal_last_created_request_id, 10_002);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 1);
+
+        let req3 = fund.create_withdrawal_request(20, None, 0).unwrap();
+        assert_eq!(req3.batch_id, fund.withdrawal_pending_batch.batch_id);
+        assert_eq!(req3.request_id, 10_003);
+        assert_eq!(fund.withdrawal_last_created_request_id, 10_003);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 2);
+
+        assert!(!fund.enqueue_withdrawal_pending_batch(0, false));
+        assert!(fund.enqueue_withdrawal_pending_batch(1, false));
+
+        assert!(fund.cancel_withdrawal_request(req3).is_err());
+        assert_eq!(fund.withdrawal_pending_batch.batch_id, 10_002);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 0);
+        assert_eq!(fund.withdrawal_pending_batch.receipt_token_amount, 0);
+        assert_eq!(fund.withdrawal_queued_batches[0].batch_id, 10_001);
+        assert_eq!(fund.withdrawal_queued_batches[0].num_requests, 2);
+        assert_eq!(fund.withdrawal_queued_batches[0].receipt_token_amount, 30);
+        assert_eq!(fund.withdrawal_queued_batches[0].enqueued_at, 1);
+        assert_eq!(fund.withdrawal_last_batch_enqueued_at, 1);
+        assert_eq!(fund.get_withdrawal_queued_batches_iter().count(), 1);
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(0, false)
+                .count(),
+            0
+        );
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(0, true)
+                .count(),
+            1
+        );
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(1, false)
+                .count(),
+            1
+        );
+
+        assert!(!fund.enqueue_withdrawal_pending_batch(1, false));
+        assert!(!fund.enqueue_withdrawal_pending_batch(1, true));
+
+        let req4 = fund.create_withdrawal_request(30, None, 2).unwrap();
+        assert_eq!(req4.batch_id, fund.withdrawal_pending_batch.batch_id);
+        assert_eq!(req4.request_id, 10_004);
+        assert_eq!(fund.withdrawal_last_created_request_id, 10_004);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 1);
+
+        assert!(fund.enqueue_withdrawal_pending_batch(2, false));
+        assert_eq!(fund.get_withdrawal_queued_batches_iter().count(), 2);
+        assert_eq!(fund.withdrawal_pending_batch.batch_id, 10_003);
+        assert_eq!(fund.withdrawal_pending_batch.num_requests, 0);
+        assert_eq!(fund.withdrawal_pending_batch.receipt_token_amount, 0);
+        assert_eq!(fund.withdrawal_queued_batches[0].batch_id, 10_001);
+        assert_eq!(fund.withdrawal_queued_batches[0].num_requests, 2);
+        assert_eq!(fund.withdrawal_queued_batches[0].receipt_token_amount, 30);
+        assert_eq!(fund.withdrawal_queued_batches[0].enqueued_at, 1);
+        assert_eq!(fund.withdrawal_queued_batches[1].batch_id, 10_002);
+        assert_eq!(fund.withdrawal_queued_batches[1].num_requests, 1);
+        assert_eq!(fund.withdrawal_queued_batches[1].receipt_token_amount, 30);
+        assert_eq!(fund.withdrawal_queued_batches[1].enqueued_at, 2);
+        assert_eq!(fund.withdrawal_last_batch_enqueued_at, 2);
+        assert_eq!(fund.get_withdrawal_queued_batches_iter().count(), 2);
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(0, false)
+                .count(),
+            0
+        );
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(0, true)
+                .count(),
+            2
+        );
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(2, false)
+                .count(),
+            2
+        );
+
+        assert!(fund.dequeue_withdrawal_batches(3, 3).is_err());
+        let dequeued_batches = fund.dequeue_withdrawal_batches(2, 3).unwrap();
+        assert_eq!(dequeued_batches.len(), 2);
+        assert_eq!(dequeued_batches[0].batch_id, 10_001);
+        assert_eq!(dequeued_batches[0].num_requests, 2);
+        assert_eq!(dequeued_batches[0].receipt_token_amount, 30);
+        assert_eq!(dequeued_batches[0].enqueued_at, 1);
+        assert_eq!(dequeued_batches[1].batch_id, 10_002);
+        assert_eq!(dequeued_batches[1].num_requests, 1);
+        assert_eq!(dequeued_batches[1].receipt_token_amount, 30);
+        assert_eq!(dequeued_batches[1].enqueued_at, 2);
+        assert_eq!(fund.withdrawal_last_batch_processed_at, 3);
+        assert_eq!(fund.withdrawal_last_processed_batch_id, 10_002);
+
+        assert_eq!(fund.get_withdrawal_queued_batches_iter().count(), 0);
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(4, false)
+                .count(),
+            0
+        );
+        assert_eq!(
+            fund.get_withdrawal_queued_batches_iter_to_process(4, true)
+                .count(),
+            0
+        );
+
+        // println!("{:?}", state);
     }
 }
