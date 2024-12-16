@@ -1,7 +1,6 @@
 pub(crate) mod command;
 mod deposit_metadata;
 mod fund_account;
-mod fund_account_info;
 mod fund_account_normalized_token;
 mod fund_account_operation_state;
 mod fund_account_restaking_vault;
@@ -18,7 +17,6 @@ mod weighted_allocation_strategy;
 
 pub use deposit_metadata::*;
 pub use fund_account::*;
-pub use fund_account_info::*;
 pub use fund_account_normalized_token::*;
 pub use fund_account_operation_state::*;
 pub use fund_account_restaking_vault::*;

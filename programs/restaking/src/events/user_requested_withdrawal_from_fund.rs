@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund::UserFundAccount;
-
 #[event]
 pub struct UserRequestedWithdrawalFromFund {
     pub receipt_token_mint: Pubkey,
@@ -10,7 +8,8 @@ pub struct UserRequestedWithdrawalFromFund {
 
     pub user: Pubkey,
     pub user_receipt_token_account: Pubkey,
-    pub user_fund_account: UserFundAccount,
+    pub user_fund_account: Pubkey,
 
+    pub requested_supported_token_mint: Option<Pubkey>,
     pub requested_receipt_token_amount: u64,
 }

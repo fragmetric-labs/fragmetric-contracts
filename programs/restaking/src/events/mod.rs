@@ -9,6 +9,7 @@ mod user_requested_withdrawal_from_fund;
 mod user_transferred_receipt_token;
 mod user_updated_reward_pool;
 mod user_withdrew_sol_from_fund;
+mod user_withdrew_supported_token_from_fund;
 
 pub use fund_manager_updated_fund::*;
 pub use fund_manager_updated_reward_pool::*;
@@ -21,3 +22,4 @@ pub use user_requested_withdrawal_from_fund::*;
 pub use user_transferred_receipt_token::*;
 pub use user_updated_reward_pool::*;
 pub use user_withdrew_sol_from_fund::*;
+pub use user_withdrew_supported_token_from_fund::*;

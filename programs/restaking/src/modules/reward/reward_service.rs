@@ -32,7 +32,7 @@ impl<'info, 'a> RewardService<'info, 'a> {
 
         emit!(events::OperatorUpdatedRewardPools {
             receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account_address: self.reward_account.key(),
+            reward_account: self.reward_account.key(),
         });
 
         Ok(())

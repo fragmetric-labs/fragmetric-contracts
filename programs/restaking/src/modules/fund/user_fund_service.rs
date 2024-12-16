@@ -6,9 +6,7 @@ use std::cell::RefMut;
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{
-    DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
-};
+use crate::modules::fund::{DepositMetadata, FundAccount, FundService, UserFundAccount};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
 
@@ -116,13 +114,13 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         emit!(events::UserDepositedSOLToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: self.user_fund_account.key(),
             deposited_sol_amount: sol_amount,
             receipt_token_mint: self.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
+            fund_account: self.fund_account.key(),
         });
 
         Ok(())
@@ -195,7 +193,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         emit!(events::UserDepositedSupportedTokenToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: self.user_fund_account.key(),
             supported_token_mint: supported_token_mint.key(),
             supported_token_user_account: user_supported_token_account.key(),
             deposited_supported_token_amount: supported_token_amount,
@@ -203,7 +201,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
+            fund_account: self.fund_account.key(),
         });
 
         Ok(())
@@ -316,11 +314,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         emit!(events::UserRequestedWithdrawalFromFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: self.user_fund_account.key(),
             batch_id,
             request_id,
             receipt_token_mint: self.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,
+            requested_supported_token_mint: None,
         });
 
         Ok(())
@@ -333,6 +332,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
     ) -> Result<()> {
         // clear pending amount from both user fund account and global fund account
         let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let batch_id = withdrawal_request.batch_id;
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
@@ -389,10 +389,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         emit!(events::UserCanceledWithdrawalRequestFromFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: self.user_fund_account.key(),
             request_id,
+            batch_id,
             receipt_token_mint: self.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,
+            requested_supported_token_mint: None,
         });
 
         Ok(())
@@ -411,6 +413,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
     ) -> Result<()> {
         // calculate $SOL amounts and mark withdrawal request as claimed withdrawal fee is already paid.
         let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let batch_id = withdrawal_request.batch_id;
         let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
             fund_withdrawal_batch_account.settle_withdrawal_request(withdrawal_request)?;
         self.fund_account
@@ -419,7 +422,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         {
             // transfer sol_user_amount to user wallet from reserved account
-            let fund_account = self.fund_account.load()?;
+            let fund_account = &*self.fund_account.load()?;
             anchor_lang::system_program::transfer(
                 CpiContext::new_with_signer(
                     system_program.to_account_info(),
@@ -439,9 +442,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
             emit!(events::UserWithdrewSOLFromFund {
                 receipt_token_mint: fund_account.receipt_token_mint,
-                fund_account: FundAccountInfo::from(fund_account)?,
+                fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
+                fund_account: self.fund_account.key(),
                 request_id,
-                user_fund_account: Clone::clone(self.user_fund_account),
+                batch_id,
+                user_fund_account: self.user_fund_account.key(),
+                user_receipt_token_account: self.user_receipt_token_account.key(),
                 user: self.user.key(),
                 burnt_receipt_token_amount: receipt_token_amount,
                 withdrawn_sol_amount: sol_user_amount,

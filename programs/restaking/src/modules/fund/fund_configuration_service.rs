@@ -383,11 +383,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     }
 
     fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
-        let fund_account = self.fund_account.load()?;
-
         emit!(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(fund_account)?,
+            fund_account: self.fund_account.key(),
         });
 
         Ok(())

@@ -82,23 +82,6 @@ impl UserFundAccount {
         self.initialize(self.bump, receipt_token_mint, user_receipt_token_account);
     }
 
-    // create a placeholder to emit event for non existing user account
-    pub(super) fn placeholder(
-        user: Pubkey,
-        receipt_token_mint: Pubkey,
-        receipt_token_amount: u64,
-    ) -> Self {
-        Self {
-            data_version: 0,
-            bump: 0,
-            receipt_token_mint,
-            user,
-            receipt_token_amount,
-            _reserved: [0; 32],
-            withdrawal_requests: Default::default(),
-        }
-    }
-
     pub(super) fn reload_receipt_token_amount(
         &mut self,
         user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
