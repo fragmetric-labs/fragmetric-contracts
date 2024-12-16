@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
 
-describe("withdraw", async () => {
+describe("withdraw SOL", async () => {
     const restaking = await restakingPlayground;
     const user5 = restaking.keychain.getKeypair('MOCK_USER5');
     const user6 = restaking.keychain.getKeypair('MOCK_USER6');
@@ -59,10 +59,10 @@ describe("withdraw", async () => {
 
         await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(10))).rejectedWith("FundWithdrawalRequestNotFoundError");
 
-        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(10001));
+        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(1));
         expect(res1.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 1);
 
-        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(10003));
+        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(3));
         expect(res2.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 2);
         expect(res2.fragSOLFund.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize - 2);
 
@@ -72,7 +72,7 @@ describe("withdraw", async () => {
         const account2 = await restaking.getUserFragSOLAccount(user5.publicKey);
         expect(account2.amount.toString()).eq(res2.fragSOLUserFund.receiptTokenAmount.toString());
 
-        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(10002))).rejectedWith("FundWithdrawalRequestNotFoundError");
+        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(2))).rejectedWith("FundWithdrawalRequestNotFoundError");
     });
 
     step("user5 (operator) processes queued withdrawals", async () => {
@@ -98,7 +98,7 @@ describe("withdraw", async () => {
 
     step("user5 can withdraw SOL", async () => {
         const balance0 = await restaking.connection.getBalance(user5.publicKey);
-        const res1 = await restaking.runUserWithdraw(user5, new BN(10002));
+        const res1 = await restaking.runUserWithdraw(user5, new BN(2));
         const balance1 = await restaking.connection.getBalance(user5.publicKey);
         expect(res1.event.userWithdrewSolFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
         expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
@@ -149,7 +149,7 @@ describe("withdraw", async () => {
             events: ['fundManagerUpdatedFund'],
         });
 
-        const res2 = await restaking.runUserWithdraw(user5, new BN(10004));
+        const res2 = await restaking.runUserWithdraw(user5, new BN(4));
         expect(res2.fragSOLFund.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
     });
 });

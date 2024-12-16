@@ -12,7 +12,7 @@ pub struct FundAccountInfo {
     receipt_token_supply_amount: u64,
     receipt_token_value: TokenValue,
     one_receipt_token_as_sol: u64,
-    supported_tokens: Vec<SupportedToken>,
+    // supported_tokens: Vec<SupportedToken>,
     sol_capacity_amount: u64,
     sol_accumulated_deposit_amount: u64,
     sol_operation_reserved_amount: u64,
@@ -31,14 +31,16 @@ impl FundAccountInfo {
             receipt_token_supply_amount: fund_account.receipt_token_supply_amount,
             receipt_token_value: fund_account.receipt_token_value.try_deserialize()?,
             one_receipt_token_as_sol: fund_account.one_receipt_token_as_sol,
-            supported_tokens: fund_account.get_supported_tokens_iter().copied().collect(),
-            sol_capacity_amount: fund_account.sol_accumulated_deposit_capacity_amount,
-            sol_accumulated_deposit_amount: fund_account.sol_accumulated_deposit_amount,
+            // supported_tokens: fund_account.get_supported_tokens_iter().copied().collect(),
+            sol_capacity_amount: fund_account.sol_flow.accumulated_deposit_capacity_amount,
+            sol_accumulated_deposit_amount: fund_account.sol_flow.accumulated_deposit_amount,
             sol_operation_reserved_amount: fund_account.sol_operation_reserved_amount,
-            sol_withdrawal_reserved_amount: fund_account.sol_withdrawal_user_reserved_amount,
+            sol_withdrawal_reserved_amount: fund_account.sol_flow.withdrawal_user_reserved_amount,
             sol_withdrawal_fee_rate: fund_account.get_withdrawal_fee_rate_as_percent(),
             withdrawal_enabled: fund_account.withdrawal_enabled == 1,
-            withdrawal_last_processed_batch_id: fund_account.withdrawal_last_processed_batch_id,
+            withdrawal_last_processed_batch_id: fund_account
+                .sol_flow
+                .withdrawal_last_processed_batch_id,
             next_operation_sequence: fund_account.operation.next_sequence,
         })
     }

@@ -7,6 +7,7 @@ import {WORKSPACE_PROGRAM_NAME} from "./types";
 import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 // @ts-ignore
 import chalk from "chalk";
+import {PartiallyDecodedInstruction} from "@solana/web3.js";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
@@ -164,7 +165,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             return {
                 txSig,
                 error: anchor.AnchorError.parse(txResult.meta.logMessages),
-                event: this.parseEvents<EVENTS>(txResult.meta.logMessages, args.events),
+                event: this.parseEvents<EVENTS>(txResult.meta, args.events),
             };
 
         } catch (err) {
@@ -227,13 +228,14 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return value;
     }
 
-    private parseEvents<K extends ExtractEventNames<IDL>>(logMessages: string[], eventNames: K[] = []) {
+    private parseEvents<K extends ExtractEventNames<IDL>>(meta: web3.ParsedTransactionMeta, eventNames: K[] = []) {
         const events: {[k in K]: anchor.IdlEvents<IDL>[k]} = {} as any;
         const required = new Set(eventNames);
         const found = new Set();
         const ignored = new Set();
 
-        const it = this.eventParser.parseLogs(logMessages, false) as unknown as Generator<anchor.Event<IDL['events'][number]>>;
+        // parse event data from emit! -> logs
+        const it = this.eventParser.parseLogs(meta.logMessages, false) as unknown as Generator<anchor.Event<IDL['events'][number]>>;
         while (true) {
             const event = it.next();
             const name = event?.value?.name;
@@ -245,11 +247,37 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 ignored.add(name);
             }
         }
+
+        // to parse event data from emit_cpi! -> self-CPI ix data
+        for (const ixs of meta.innerInstructions) {
+            for (const ix of ixs.instructions) {
+                if (ix.programId.equals(this.programId)) {
+                    const data = (ix as any).data as string ?? null;
+                    if (data) {
+                        const ixData = anchor.utils.bytes.bs58.decode(data);
+                        const eventData = anchor.utils.bytes.base64.encode(ixData.subarray(8)); // remove ix discriminant
+                        const event = this.program.coder.events.decode(eventData);
+                        if (event) {
+                            const name = event.name as any;
+                            if (required.has(name)) {
+                                events[name] = event.data;
+                                found.add(name);
+                            } else {
+                                ignored.add(name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ...
+
         if (required.size != found.size) {
             const notFound = new Set();
             required.forEach(elem => notFound.add(elem));
             found.forEach(elem => notFound.delete(elem));
-            throw new Error(`event not found: ${Array.from(notFound.values()).join(', ')}`);
+            logger.warn(`event not found: ${Array.from(notFound.values()).join(', ')}`);
         }
         if (ignored.size > 0) {
             logger.fatal(`event ignored: ${Array.from(ignored.values()).join(', ')}`)

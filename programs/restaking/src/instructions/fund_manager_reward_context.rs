@@ -6,6 +6,7 @@ use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerRewardContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
@@ -24,6 +25,7 @@ pub struct FundManagerRewardContext<'info> {
     pub reward_account: AccountLoader<'info, RewardAccount>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerRewardDistributionContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]

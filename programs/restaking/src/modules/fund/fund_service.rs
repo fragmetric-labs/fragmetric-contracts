@@ -156,10 +156,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
         source_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
         destination_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
-        extra_accounts: &'info [AccountInfo<'info>],
+        extra_accounts: impl IntoIterator<Item = &'info AccountInfo<'info>>,
         transfer_amount: u64,
-    ) -> Result<()> {
-        let mut extra_accounts = extra_accounts.iter();
+    ) -> Result<events::UserTransferredReceiptToken> {
+        let mut extra_accounts = extra_accounts.into_iter();
         // parse extra accounts
         let source_fund_account_option = extra_accounts
             .next()
@@ -198,7 +198,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             destination_fund_account.exit(&crate::ID)?;
         }
 
-        emit!(events::UserTransferredReceiptToken {
+        if self.fund_account.load()?.transfer_enabled != 1 {
+            err!(ErrorCode::TokenNotTransferableError)?;
+        }
+
+        Ok(events::UserTransferredReceiptToken {
             receipt_token_mint: self.receipt_token_mint.key(),
             transferred_receipt_token_amount: transfer_amount,
 
@@ -216,13 +220,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 self.receipt_token_mint.key(),
                 destination_receipt_token_account.amount,
             ),
-        });
-
-        if self.fund_account.load()?.transfer_enabled != 1 {
-            err!(ErrorCode::TokenNotTransferableError)?;
-        }
-
-        Ok(())
+        })
     }
 
     #[inline(never)]
@@ -236,7 +234,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         system_program: &Program<'info, System>,
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
-    ) -> Result<()> {
+    ) -> Result<events::OperatorRanFund> {
         let pricing_source_infos = self.get_pricing_source_infos(remaining_accounts)?;
 
         let mut operation_state = self.clone_operation_state()?;
@@ -330,20 +328,27 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             operation_state.as_mut(),
         );
 
-        emit!(events::OperatorRanFund {
+        Ok(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
             executed_command: command.clone(),
-        });
-
-        Ok(())
+        })
     }
 
     pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<bool> {
+        let withdrawal_batch_threshold_interval_seconds = self
+            .fund_account
+            .load()?
+            .withdrawal_batch_threshold_interval_seconds;
         Ok(self
             .fund_account
             .load_mut()?
-            .enqueue_withdrawal_pending_batch(self.current_timestamp, forced))
+            .sol_flow
+            .enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                self.current_timestamp,
+                forced,
+            ))
     }
 
     /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, withdrawal_batch_accounts @ ..]
@@ -352,8 +357,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<Vec<(Pubkey, bool)>> {
         let fund_account = self.fund_account.load()?;
 
-        let mut accounts =
-            Vec::with_capacity(4 + fund_account.get_withdrawal_queued_batches_iter().count());
+        let mut accounts = Vec::with_capacity(
+            4 + fund_account
+                .sol_flow
+                .get_withdrawal_queued_batches_iter()
+                .count(),
+        );
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -365,11 +374,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ]);
         accounts.extend(
             fund_account
+                .sol_flow
                 .get_withdrawal_queued_batches_iter()
                 .map(|batch| {
                     (
                         FundWithdrawalBatchAccount::find_account_address(
                             &self.receipt_token_mint.key(),
+                            None, // TODO:... supported tokens..
                             batch.batch_id,
                         )
                         .0,
@@ -405,7 +416,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // examine withdrawal batches to process with current fund status
             for batch in fund_account
-                .get_withdrawal_queued_batches_iter_to_process(self.current_timestamp, forced)
+                .sol_flow
+                .get_withdrawal_queued_batches_iter_to_process(
+                    fund_account.withdrawal_batch_threshold_interval_seconds,
+                    self.current_timestamp,
+                    forced,
+                )
             {
                 let next_receipt_token_amount_processing =
                     receipt_token_amount_processing + batch.receipt_token_amount;
@@ -507,6 +523,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // reserve each sol_user_amount to batch accounts
             let processing_batches = fund_account
+                .sol_flow
                 .dequeue_withdrawal_batches(processing_batch_count, self.current_timestamp)?;
 
             require_gte!(
@@ -523,6 +540,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 let (batch_account_address, bump) =
                     FundWithdrawalBatchAccount::find_account_address(
                         &self.receipt_token_mint.key(),
+                        None, // TODO: ...supported..
                         batch.batch_id,
                     );
                 require_keys_eq!(uninitialized_batch_account.key(), batch_account_address);
@@ -531,6 +549,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         uninitialized_batch_account,
                         FundWithdrawalBatchAccount::get_seeds(
                             &self.receipt_token_mint.key(),
+                            None, // TODO: ...supported..
                             batch.batch_id,
                         )
                         .iter()
@@ -546,7 +565,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         uninitialized_batch_account,
                     )?
                 };
-                batch_account.initialize(bump, self.receipt_token_mint.key(), batch.batch_id);
+                batch_account.initialize(
+                    bump,
+                    self.receipt_token_mint.key(),
+                    None, // TODO: ...supported..,
+                    batch.batch_id,
+                );
 
                 // reserve user_sol_amount of the batch account
                 let sol_amount = pricing_service.get_token_amount_as_sol(
@@ -558,7 +582,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
                 // offset sol_user_amount and sol_fee_amount by sol_operation_reserved_amount
                 fund_account.sol_operation_reserved_amount -= sol_amount;
-                fund_account.sol_withdrawal_user_reserved_amount += sol_user_amount;
+                fund_account.sol_flow.withdrawal_user_reserved_amount += sol_user_amount;
                 sol_user_amount_processing -= sol_user_amount;
                 sol_fee_amount_processing -= sol_fee_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
@@ -651,6 +675,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load()?
+            .sol_flow
             .get_withdrawal_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
             .sum())
@@ -678,11 +703,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            fund_account.sol_normal_reserve_rate_bps as u64,
+            fund_account.sol_flow.normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(fund_account.sol_normal_reserve_max_amount))
+        .max(fund_account.sol_flow.normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.

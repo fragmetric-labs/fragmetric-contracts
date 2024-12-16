@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminNormalizedTokenPoolInitialContext<'info> {
     #[account(mut)]
@@ -35,6 +36,7 @@ pub struct AdminNormalizedTokenPoolInitialContext<'info> {
     pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminNormalizedTokenPoolUpdateContext<'info> {
     #[account(mut)]

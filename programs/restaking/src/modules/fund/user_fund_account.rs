@@ -6,7 +6,7 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 10;
+pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 6;
 
 #[account]
 #[derive(InitSpace)]
@@ -19,7 +19,7 @@ pub struct UserFundAccount {
     pub(super) receipt_token_amount: u64,
     _reserved: [u8; 32],
 
-    #[max_len(MAX_WITHDRAWAL_REQUESTS_SIZE)]
+    #[max_len(USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE)]
     withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
@@ -40,8 +40,6 @@ impl PDASeeds<3> for UserFundAccount {
 }
 
 impl UserFundAccount {
-    const MAX_WITHDRAWAL_REQUESTS_SIZE: usize = MAX_WITHDRAWAL_REQUESTS_SIZE;
-
     fn migrate(
         &mut self,
         bump: u8,
@@ -115,7 +113,7 @@ impl UserFundAccount {
 
     pub(super) fn push_withdrawal_request(&mut self, request: WithdrawalRequest) -> Result<()> {
         require_gt!(
-            Self::MAX_WITHDRAWAL_REQUESTS_SIZE,
+            USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE,
             self.withdrawal_requests.len(),
             ErrorCode::FundExceededMaxWithdrawalRequestError
         );
@@ -138,9 +136,9 @@ pub(super) struct WithdrawalRequest {
     pub batch_id: u64,
     pub request_id: u64,
     pub receipt_token_amount: u64,
-    pub supported_token_mint: Option<Pubkey>,
     created_at: i64,
-    _reserved: [u8; 16],
+    pub supported_token_mint: Option<Pubkey>,
+    _reserved: [u8; 15],
 }
 
 impl WithdrawalRequest {
@@ -157,7 +155,7 @@ impl WithdrawalRequest {
             receipt_token_amount,
             supported_token_mint,
             created_at: current_timestamp,
-            _reserved: [0; 16],
+            _reserved: [0; 15],
         }
     }
 }

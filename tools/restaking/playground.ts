@@ -1687,34 +1687,31 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runUserWithdraw(user: web3.Keypair, requestId: BN) {
+        const request = await this.getUserFragSOLFundAccount(user.publicKey)
+            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId)));
+        if (!request) {
+            throw "request not found";
+        }
+        // TODO: branch based on request.supportedTokenMint
+        const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.batchId);
+
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
-                    .userWithdraw(requestId)
+                    .userWithdrawSol(requestId)
                     .accounts({
                         user: user.publicKey,
-                        fundWithdrawalBatchAccount: await this.getUserFragSOLFundAccount(user.publicKey)
-                            .then(userFundAccount => {
-                                return this.knownAddress.fragSOLFundWithdrawalBatch(
-                                    userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId))?.batchId ?? (() => {
-                                        throw "withdrawal request not found from the user account"
-                                    })()
-                                );
-                            }),
-                        // TODO: withdraw... supported token
-                        userSupportedTokenAccount: null,
-                        fundReserveSupportedTokenAccount: null,
-                        fundTreasurySupportedTokenAccount: null,
+                        fundWithdrawalBatchAccount,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],
-            events: ["userWithdrewSolFromFund"],
+            events: ["userWithdrewFromFund"],
         });
 
-        logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewSolFromFund.withdrawnSolAmount)} #${requestId.toString()}, (${this.lamportsToX(event.userWithdrewSolFromFund.fundAccount.oneReceiptTokenAsSol, event.userWithdrewSolFromFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewFromFund.withdrawnAmount)} #${requestId.toString()}, (${this.lamportsToX(event.userWithdrewFromFund.fundAccount.oneReceiptTokenAsSol, event.userWithdrewFromFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),

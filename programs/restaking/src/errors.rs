@@ -139,6 +139,9 @@ pub enum ErrorCode {
     #[msg("fund: withdrawal is currently disabled")]
     FundWithdrawalDisabledError,
 
+    #[msg("fund: withdrawal is not supported for the given asset")]
+    FundWithdrawalNotSupportedAsset,
+
     #[msg("fund: withdrawal request is already in progress")]
     FundWithdrawalRequestAlreadyQueuedError,
 

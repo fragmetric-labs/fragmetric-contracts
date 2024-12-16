@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
-
 use super::*;
+use crate::events;
+use anchor_lang::prelude::*;
 
 pub struct UserRewardService<'info: 'a, 'a> {
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
@@ -26,12 +26,6 @@ impl<'info, 'a> UserRewardService<'info, 'a> {
         self.user_reward_account
             .load_mut()?
             .update_user_reward_pools(&mut *self.reward_account.load_mut()?, self.current_slot)
-
-        // no events required practically...
-        // emit!(UserUpdatedRewardPool::new(
-        //     receipt_token_mint.key(),
-        //     vec![update],
-        // ));
     }
 
     pub fn process_claim_user_rewards(&self) -> Result<()> {

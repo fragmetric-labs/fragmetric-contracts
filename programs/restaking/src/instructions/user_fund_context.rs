@@ -8,6 +8,7 @@ use crate::errors::ErrorCode;
 use crate::modules::{fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundAccountInitialContext<'info> {
     #[account(mut)]
@@ -37,6 +38,7 @@ pub struct UserFundAccountInitialContext<'info> {
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundAccountUpdateContext<'info> {
     #[account(mut)]
@@ -66,6 +68,7 @@ pub struct UserFundAccountUpdateContext<'info> {
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundContext<'info> {
     #[account(mut)]
@@ -143,6 +146,7 @@ pub struct UserFundContext<'info> {
     pub instructions_sysvar: UncheckedAccount<'info>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundWithdrawContext<'info> {
     #[account(mut)]
@@ -162,9 +166,6 @@ pub struct UserFundWithdrawContext<'info> {
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(mut)]
-    pub user_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
-
     #[account(
         mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
@@ -176,7 +177,7 @@ pub struct UserFundWithdrawContext<'info> {
 
     /// Users can derive proper account address with target batch id for each withdrawal requests.
     /// And the batch id can be read from a user fund account which the withdrawal requests belong to.
-    /// seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
+    /// seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), Pubkey::default().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
     /// bump = fund_withdrawal_batch_account.get_bump(),
     #[account(
         mut,
@@ -191,18 +192,12 @@ pub struct UserFundWithdrawContext<'info> {
     )]
     pub fund_reserve_account: SystemAccount<'info>,
 
-    #[account(mut)]
-    pub fund_reserve_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
-
     #[account(
         mut,
         seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_treasury_account: SystemAccount<'info>,
-
-    #[account(mut)]
-    pub fund_treasury_supported_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
     #[account(
         mut,

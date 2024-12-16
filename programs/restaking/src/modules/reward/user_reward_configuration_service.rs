@@ -48,7 +48,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
         &self,
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
-    ) -> Result<()> {
+    ) -> Result<Option<events::UserUpdatedRewardPool>> {
         self.user_reward_account.expand_account_size_if_needed(
             self.user,
             system_program,
@@ -62,12 +62,12 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                 .load_mut()?
                 .update_if_needed(self.receipt_token_mint.key(), self.user.key());
 
-            emit!(events::UserUpdatedRewardPool {
+            return Ok(Some(events::UserUpdatedRewardPool {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 updated_user_reward_account_addresses: vec![self.user_reward_account.key()],
-            });
+            }));
         }
 
-        Ok(())
+        Ok(None)
     }
 }

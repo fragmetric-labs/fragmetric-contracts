@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount};
 use crate::utils::PDASeeds;
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
     #[account(mut)]
@@ -47,6 +48,7 @@ pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct SlasherNormalizedTokenWithdrawContext<'info> {
     #[account(mut)]

@@ -71,7 +71,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         sol_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
-    ) -> Result<()> {
+    ) -> Result<events::UserDepositedToFund> {
         // validate user wallet balance
         require_gte!(self.user.lamports(), sol_amount);
 
@@ -113,33 +113,33 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .update_asset_values(&mut pricing_service)?;
 
-        emit!(events::UserDepositedSOLToFund {
+        Ok(events::UserDepositedToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(self.user_fund_account),
-            deposited_sol_amount: sol_amount,
+            supported_token_mint: None,
+            supported_token_user_account: None,
+            deposited_amount: sol_amount,
             receipt_token_mint: self.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
             fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
-        });
-
-        Ok(())
+        })
     }
 
     pub fn process_deposit_supported_token(
         &mut self,
+        supported_token_program: &Interface<'info, TokenInterface>,
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-        supported_token_program: &Interface<'info, TokenInterface>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
         supported_token_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
-    ) -> Result<()> {
+    ) -> Result<events::UserDepositedToFund> {
         // validate user token account balance
         require_gte!(user_supported_token_account.amount, supported_token_amount);
 
@@ -192,28 +192,26 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .update_asset_values(&mut pricing_service)?;
 
         // log deposit event
-        emit!(events::UserDepositedSupportedTokenToFund {
+        Ok(events::UserDepositedToFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(self.user_fund_account),
-            supported_token_mint: supported_token_mint.key(),
-            supported_token_user_account: user_supported_token_account.key(),
-            deposited_supported_token_amount: supported_token_amount,
+            supported_token_mint: Some(supported_token_mint.key()),
+            supported_token_user_account: Some(user_supported_token_account.key()),
+            deposited_amount: supported_token_amount,
             receipt_token_mint: self.receipt_token_mint.key(),
             minted_receipt_token_amount: receipt_token_mint_amount,
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
             fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
-        });
-
-        Ok(())
+        })
     }
 
     fn mint_receipt_token_to_user(
         &mut self,
         receipt_token_mint_amount: u64,
         contribution_accrual_rate: Option<u8>,
-    ) -> Result<()> {
+    ) -> Result<events::UserUpdatedRewardPool> {
         // mint receipt token
         token_2022::mint_to(
             CpiContext::new_with_signer(
@@ -250,15 +248,15 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         supported_token_mint: Option<Pubkey>,
         receipt_token_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<events::UserRequestedWithdrawalFromFund> {
         // validate user receipt token account balance
         require_gte!(self.user_receipt_token_account.amount, receipt_token_amount);
         require_gt!(receipt_token_amount, 0);
 
         // create a user withdrawal request
         let withdrawal_request = self.fund_account.load_mut()?.create_withdrawal_request(
-            receipt_token_amount,
             supported_token_mint,
+            receipt_token_amount,
             self.current_timestamp,
         )?;
         let batch_id = withdrawal_request.batch_id;
@@ -313,7 +311,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             )?;
 
         // log withdrawal request event
-        emit!(events::UserRequestedWithdrawalFromFund {
+        Ok(events::UserRequestedWithdrawalFromFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(self.user_fund_account),
@@ -321,22 +319,20 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             request_id,
             receipt_token_mint: self.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,
-        });
-
-        Ok(())
+        })
     }
 
     pub fn process_cancel_withdrawal_request(
         &mut self,
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         request_id: u64,
-    ) -> Result<()> {
+    ) -> Result<events::UserCanceledWithdrawalRequestFromFund> {
         // clear pending amount from both user fund account and global fund account
         let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
-            .cancel_withdrawal_request(withdrawal_request)?;
+            .cancel_withdrawal_request(&withdrawal_request)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -386,69 +382,124 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             )?;
 
         // log withdrawal request canceled event
-        emit!(events::UserCanceledWithdrawalRequestFromFund {
+        Ok(events::UserCanceledWithdrawalRequestFromFund {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: Clone::clone(self.user_fund_account),
             request_id,
             receipt_token_mint: self.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,
-        });
-
-        Ok(())
+        })
     }
 
-    pub fn process_withdraw(
+    pub fn process_withdraw_sol(
         &mut self,
         system_program: &Program<'info, System>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
-        user_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         fund_reserve_account: &SystemAccount<'info>,
-        fund_reserve_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         fund_treasury_account: &SystemAccount<'info>,
-        fund_treasury_supported_token_account: &Option<Box<InterfaceAccount<'info, TokenAccount>>>,
         request_id: u64,
-    ) -> Result<()> {
-        // calculate $SOL amounts and mark withdrawal request as claimed withdrawal fee is already paid.
+    ) -> Result<events::UserWithdrewFromFund> {
+        // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
         let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        require_eq!(withdrawal_request.supported_token_mint.is_none(), true);
         let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
-            fund_withdrawal_batch_account.settle_withdrawal_request(withdrawal_request)?;
+            fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
+
         self.fund_account
             .load_mut()?
-            .sol_withdrawal_user_reserved_amount -= sol_user_amount;
+            .get_asset_flow_state_mut(None)?
+            .withdrawal_user_reserved_amount -= sol_user_amount;
 
-        {
-            // transfer sol_user_amount to user wallet from reserved account
-            let fund_account = self.fund_account.load()?;
-            anchor_lang::system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: fund_reserve_account.to_account_info(),
-                        to: self.user.to_account_info(),
-                    },
-                    &[&fund_account.get_reserve_account_seeds()],
-                ),
-                sol_user_amount,
-            )?;
+        // transfer asset_user_amount $SOL to user wallet from reserved account
+        let fund_account = self.fund_account.load()?;
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: fund_reserve_account.to_account_info(),
+                    to: self.user.to_account_info(),
+                },
+                &[&fund_account.get_reserve_account_seeds()],
+            ),
+            sol_user_amount,
+        )?;
 
-            // close the ticket to collect rent after all requests are settled
-            if fund_withdrawal_batch_account.is_settled() {
-                fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
-            }
-
-            emit!(events::UserWithdrewSOLFromFund {
-                receipt_token_mint: fund_account.receipt_token_mint,
-                fund_account: FundAccountInfo::from(fund_account)?,
-                request_id,
-                user_fund_account: Clone::clone(self.user_fund_account),
-                user: self.user.key(),
-                burnt_receipt_token_amount: receipt_token_amount,
-                withdrawn_sol_amount: sol_user_amount,
-                deducted_sol_fee_amount: sol_fee_amount,
-            });
+        // close the ticket to collect rent after all requests are settled
+        if fund_withdrawal_batch_account.is_settled() {
+            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
         }
 
-        Ok(())
+        Ok(events::UserWithdrewFromFund {
+            receipt_token_mint: fund_account.receipt_token_mint,
+            fund_account: FundAccountInfo::from(fund_account)?,
+            request_id,
+            user_fund_account: Clone::clone(self.user_fund_account),
+            user: self.user.key(),
+            burnt_receipt_token_amount: receipt_token_amount,
+            supported_token_mint: None,
+            withdrawn_amount: sol_user_amount,
+            deducted_fee_amount: sol_fee_amount,
+        })
+    }
+
+    pub fn process_withdraw_supported_token(
+        &mut self,
+        system_program: &Program<'info, System>,
+        supported_token_program: &Interface<'info, TokenInterface>,
+        supported_token_mint: &InterfaceAccount<'info, Mint>,
+        fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
+        fund_treasury_account: &SystemAccount<'info>,
+        request_id: u64,
+    ) -> Result<events::UserWithdrewFromFund> {
+        // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        require_eq!(withdrawal_request.supported_token_mint.is_some(), true);
+        require_eq!(
+            withdrawal_request.supported_token_mint.unwrap(),
+            supported_token_mint.key()
+        );
+        let (supported_token_user_amount, supported_token_fee_amount, receipt_token_amount) =
+            fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
+
+        self.fund_account
+            .load_mut()?
+            .get_asset_flow_state_mut(withdrawal_request.supported_token_mint)?
+            .withdrawal_user_reserved_amount -= supported_token_user_amount;
+
+        // transfer supported_token_user_amount $TOKEN to user wallet from reserved account
+        let fund_account = self.fund_account.load()?;
+        token_interface::transfer_checked(
+            CpiContext::new(
+                supported_token_program.to_account_info(),
+                token_interface::TransferChecked {
+                    from: fund_supported_token_account.to_account_info(),
+                    to: user_supported_token_account.to_account_info(),
+                    mint: supported_token_mint.to_account_info(),
+                    authority: self.fund_account.to_account_info(),
+                },
+            ),
+            supported_token_user_amount,
+            supported_token_mint.decimals,
+        )?;
+
+        // close the ticket to collect rent after all requests are settled
+        if fund_withdrawal_batch_account.is_settled() {
+            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
+        }
+
+        Ok(events::UserWithdrewFromFund {
+            receipt_token_mint: fund_account.receipt_token_mint,
+            fund_account: FundAccountInfo::from(fund_account)?,
+            request_id,
+            user_fund_account: Clone::clone(self.user_fund_account),
+            user: self.user.key(),
+            burnt_receipt_token_amount: receipt_token_amount,
+            supported_token_mint: Some(supported_token_mint.key()),
+            withdrawn_amount: supported_token_user_amount,
+            deducted_fee_amount: supported_token_fee_amount,
+        })
     }
 }
