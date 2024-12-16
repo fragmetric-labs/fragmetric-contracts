@@ -118,7 +118,7 @@ impl FundAccount {
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
-            self.sol_flow.token_mint = Pubkey::default();
+            self.sol_flow.initialize(None);
             self.data_version = 4;
         }
     }

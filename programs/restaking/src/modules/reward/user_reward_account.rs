@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::events;
 use crate::utils::{PDASeeds, ZeroCopyHeader};
 
 use super::*;
@@ -133,8 +134,6 @@ impl UserRewardAccount {
             .try_for_each(|(user_reward_pool, reward_pool)| {
                 user_reward_pool.update(reward_pool, vec![], current_slot)?;
                 Ok::<_, Error>(())
-            })?;
-
-        Ok(())
+            })
     }
 }

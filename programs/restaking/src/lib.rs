@@ -811,11 +811,13 @@ pub mod restaking {
     }
 
     pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
-        modules::reward::UserRewardService::new(
+        emit_cpi!(modules::reward::UserRewardService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.user,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-        .process_update_user_reward_pools()?;
+        .process_update_user_reward_pools()?);
 
         Ok(())
     }
@@ -827,6 +829,8 @@ pub mod restaking {
         reward_id: u8,
     ) -> Result<()> {
         modules::reward::UserRewardService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.user,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
@@ -844,10 +848,6 @@ pub mod restaking {
     ) -> Result<()> {
         ctx.accounts.assert_is_transferring()?;
 
-        let mut extra_accounts = ctx.remaining_accounts.into_iter();
-        let event_authority_info = extra_accounts.next().unwrap();
-        let program_info = extra_accounts.next().unwrap();
-
         let event = modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
@@ -856,10 +856,12 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.source_receipt_token_account,
             &mut ctx.accounts.destination_receipt_token_account,
-            extra_accounts,
+            &ctx.remaining_accounts[2..],
             amount,
         )?;
 
+        let event_authority_info = &ctx.remaining_accounts[0];
+        let program_info = &ctx.remaining_accounts[1];
         events::emit_cpi(event_authority_info, program_info, &event)?;
 
         Ok(())

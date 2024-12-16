@@ -61,7 +61,7 @@ impl SupportedToken {
         self.operation_reserved_amount = operation_reserved_amount;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
-        self.token_flow.token_mint = mint;
+        self.token_flow.initialize(Some(mint));
         Ok(())
     }
 

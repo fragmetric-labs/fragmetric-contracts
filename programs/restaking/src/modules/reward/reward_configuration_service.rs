@@ -78,7 +78,7 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
     ) -> Result<events::FundManagerUpdatedRewardPool> {
         Ok(events::FundManagerUpdatedRewardPool {
             receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account_address: self.reward_account.key(),
+            reward_account: self.reward_account.key(),
         })
     }
 

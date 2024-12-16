@@ -64,7 +64,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
             return Ok(Some(events::UserUpdatedRewardPool {
                 receipt_token_mint: self.receipt_token_mint.key(),
-                updated_user_reward_account_addresses: vec![self.user_reward_account.key()],
+                updated_user_reward_accounts: vec![self.user_reward_account.key()],
             }));
         }
 

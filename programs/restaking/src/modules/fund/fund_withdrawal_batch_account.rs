@@ -159,6 +159,20 @@ impl FundWithdrawalBatchAccount {
         &mut self,
         request: &WithdrawalRequest,
     ) -> Result<(u64, u64, u64)> {
+        if self.supported_token_mint.is_some() {
+            require_eq!(
+                request.supported_token_mint.unwrap(),
+                self.supported_token_mint.unwrap(),
+                ErrorCode::FundWithdrawalRequestIncorrectBatchError,
+            );
+        } else {
+            require_eq!(
+                request.supported_token_mint.is_none(),
+                true,
+                ErrorCode::FundWithdrawalRequestIncorrectBatchError,
+            );
+        }
+
         require_eq!(
             self.batch_id,
             request.batch_id,

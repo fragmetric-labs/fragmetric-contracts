@@ -24,12 +24,12 @@ describe("withdraw SOL", async () => {
     step("user5 deposits and withdraws", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
 
-        expect(fragSOLFund0.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
-        expect(fragSOLFund0.withdrawalPendingBatch.receiptTokenAmount.toNumber()).eq(0);
+        expect(fragSOLFund0.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
+        expect(fragSOLFund0.solFlow.withdrawalPendingBatch.receiptTokenAmount.toNumber()).eq(0);
 
         const res1 = await restaking.runUserDepositSOL(user5, amountSOLDeposited, null);
         const account1 = await restaking.getUserFragSOLAccount(user5.publicKey);
-        expect(res1.event.userDepositedSolToFund.mintedReceiptTokenAmount.toString()).eq(account1.amount.toString());
+        expect(res1.event.userDepositedToFund.mintedReceiptTokenAmount.toString()).eq(account1.amount.toString());
 
         const amountFragSOLWithdrawalTotal = amountFragSOLWithdrawalEach.mul(new BN(withdrawalRequestedSize));
         const res2s = await Promise.all(
@@ -43,19 +43,19 @@ describe("withdraw SOL", async () => {
         expect(account2.amount.toString(), 'after balance').eq(new BN(account1.amount.toString()).sub(amountFragSOLWithdrawalTotal).toString(), 'before balance minus total withdrawal amount');
 
         const fragSOLFund2 = await restaking.getFragSOLFundAccount();
-        expect(fragSOLFund2.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
-        expect(fragSOLFund2.solWithdrawalUserReservedAmount.toNumber()).eq(0, 'not yet processed');
-        expect(fragSOLFund2.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(amountFragSOLWithdrawalTotal.toString());
-        expect(fragSOLFund0.withdrawalPendingBatch.batchId.toNumber()).not.eq(fragSOLFund2.withdrawalLastProcessedBatchId.toNumber(), 'not yet processed2');
+        expect(fragSOLFund2.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
+        expect(fragSOLFund2.solFlow.withdrawalUserReservedAmount.toNumber()).eq(0, 'not yet processed');
+        expect(fragSOLFund2.solFlow.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(amountFragSOLWithdrawalTotal.toString());
+        expect(fragSOLFund0.solFlow.withdrawalPendingBatch.batchId.toNumber()).not.eq(fragSOLFund2.solFlow.withdrawalLastProcessedBatchId.toNumber(), 'not yet processed2');
 
         const fragSOLLock = await restaking.getFragSOLFundReceiptTokenLockAccount();
-        expect(fragSOLFund2.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(fragSOLLock.amount.toString());
-        expect(fragSOLFund2.withdrawalPendingBatch.receiptTokenAmount.sub(res1.fragSOLFund.withdrawalPendingBatch.receiptTokenAmount).toString()).eq(amountFragSOLWithdrawalTotal.toString());
+        expect(fragSOLFund2.solFlow.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(fragSOLLock.amount.toString());
+        expect(fragSOLFund2.solFlow.withdrawalPendingBatch.receiptTokenAmount.sub(res1.fragSOLFund.solFlow.withdrawalPendingBatch.receiptTokenAmount).toString()).eq(amountFragSOLWithdrawalTotal.toString());
     });
 
     step("user5 cancels withdrawal request", async () => {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
-        expect(fragSOLFund0.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
+        expect(fragSOLFund0.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
 
         await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(10))).rejectedWith("FundWithdrawalRequestNotFoundError");
 
@@ -64,9 +64,9 @@ describe("withdraw SOL", async () => {
 
         const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(3));
         expect(res2.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 2);
-        expect(res2.fragSOLFund.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize - 2);
+        expect(res2.fragSOLFund.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize - 2);
 
-        expect(res2.fragSOLFund.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(res2.fragSOLLockAccount.amount.toString());
+        expect(res2.fragSOLFund.solFlow.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(res2.fragSOLLockAccount.amount.toString());
         expect(res2.fragSOLUserFund.receiptTokenAmount.toString()).eq(amountSOLDeposited.sub(amountFragSOLWithdrawalEach.mul(new BN(2))).toString());
 
         const account2 = await restaking.getUserFragSOLAccount(user5.publicKey);
@@ -79,11 +79,11 @@ describe("withdraw SOL", async () => {
         const res1 = await restaking.runOperatorProcessWithdrawalBatches();
 
         expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
-        expect(res1.fragSOLFund.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
+        expect(res1.fragSOLFund.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
 
         await restaking.sleep(1);
         const res2 = await restaking.runOperatorProcessWithdrawalBatches();
-        expect(res2.fragSOLFund.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.withdrawalLastProcessedBatchId.toNumber());
+        expect(res2.fragSOLFund.solFlow.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.solFlow.withdrawalLastProcessedBatchId.toNumber());
 
         await restaking.sleep(1);
         await expect(restaking.runOperatorProcessWithdrawalBatches(user5, true)).rejectedWith('RequireEqViolated');
@@ -91,8 +91,8 @@ describe("withdraw SOL", async () => {
         await restaking.sleep(1);
         const res3 = await restaking.runOperatorProcessWithdrawalBatches(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
-        expect(res3.fragSOLFund.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');
-        expect(res3.fragSOLFund.solWithdrawalUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(2).muln(10000 - res3.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL');
+        expect(res3.fragSOLFund.solFlow.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.solFlow.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');
+        expect(res3.fragSOLFund.solFlow.withdrawalUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(2).muln(10000 - res3.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL');
         expect(res3.fragSOLLockAccount.amount.toString()).eq('0');
     });
 
@@ -100,21 +100,21 @@ describe("withdraw SOL", async () => {
         const balance0 = await restaking.connection.getBalance(user5.publicKey);
         const res1 = await restaking.runUserWithdraw(user5, new BN(2));
         const balance1 = await restaking.connection.getBalance(user5.publicKey);
-        expect(res1.event.userWithdrewSolFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
-        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
+        expect(res1.event.userWithdrewFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
+        expect(res1.event.userWithdrewFromFund.withdrawnAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
         // x * (1 - feeRate/10_000) = withdrawnSolAmount
         // x * feeRate/10_000 = deductedSolFeeAmount
         // withdrawnSolAmount/deductedSolFeeAmount = 10_000/feeRate - 1
-        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.div(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString())
+        expect(res1.event.userWithdrewFromFund.withdrawnAmount.div(res1.event.userWithdrewFromFund.deductedFeeAmount).toString())
             .eq((10_000 / res1.fragSOLFund.withdrawalFeeRateBps - 1).toString(), '2');
-        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString())
+        expect(res1.event.userWithdrewFromFund.withdrawnAmount.add(res1.event.userWithdrewFromFund.deductedFeeAmount).toString())
             .eq(amountFragSOLWithdrawalEach.toString(), 'in this test, fragSOL unit price is still 1SOL - 1');
-        expect(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.toString())
-            .eq(amountFragSOLWithdrawalEach.sub(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '3');
-        expect(res1.fragSOLFund.solWithdrawalUserReservedAmount.toString())
+        expect(res1.event.userWithdrewFromFund.withdrawnAmount.toString())
+            .eq(amountFragSOLWithdrawalEach.sub(res1.event.userWithdrewFromFund.deductedFeeAmount).toString(), '3');
+        expect(res1.fragSOLFund.solFlow.withdrawalUserReservedAmount.toString())
             .eq(amountFragSOLWithdrawalEach.muln(10000 - res1.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL - 2');
         expect(amountFragSOLWithdrawalEach.toString())
-            .eq(res1.event.userWithdrewSolFromFund.withdrawnSolAmount.add(res1.event.userWithdrewSolFromFund.deductedSolFeeAmount).toString(), '4');
+            .eq(res1.event.userWithdrewFromFund.withdrawnAmount.add(res1.event.userWithdrewFromFund.deductedFeeAmount).toString(), '4');
     });
 
     step("user5 cannot request withdrawal when withdrawal is disabled", async () => {
@@ -150,6 +150,6 @@ describe("withdraw SOL", async () => {
         });
 
         const res2 = await restaking.runUserWithdraw(user5, new BN(4));
-        expect(res2.fragSOLFund.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
+        expect(res2.fragSOLFund.solFlow.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
     });
 });

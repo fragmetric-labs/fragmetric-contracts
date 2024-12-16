@@ -6,9 +6,7 @@ use std::cell::RefMut;
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::fund::{
-    DepositMetadata, FundAccount, FundAccountInfo, FundService, UserFundAccount,
-};
+use crate::modules::fund::{DepositMetadata, FundAccount, FundService, UserFundAccount};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
 
@@ -93,7 +91,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount =
             pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
-        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+        let event1 = self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user $SOL to fund
         self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
@@ -114,17 +112,20 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .update_asset_values(&mut pricing_service)?;
 
         Ok(events::UserDepositedToFund {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            supported_token_mint: None,
+            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
-            supported_token_mint: None,
-            supported_token_user_account: None,
-            deposited_amount: sol_amount,
-            receipt_token_mint: self.receipt_token_mint.key(),
-            minted_receipt_token_amount: receipt_token_mint_amount,
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: None,
+
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
+            deposited_amount: sol_amount,
+            minted_receipt_token_amount: receipt_token_mint_amount,
         })
     }
 
@@ -166,7 +167,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         )?;
 
         // mint receipt token to user & update user reward accrual status
-        self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+        let event1 = self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user supported token to fund
         self.fund_account
@@ -193,17 +194,20 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // log deposit event
         Ok(events::UserDepositedToFund {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            supported_token_mint: Some(supported_token_mint.key()),
+            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
-            supported_token_mint: Some(supported_token_mint.key()),
-            supported_token_user_account: Some(user_supported_token_account.key()),
-            deposited_amount: supported_token_amount,
-            receipt_token_mint: self.receipt_token_mint.key(),
-            minted_receipt_token_amount: receipt_token_mint_amount,
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: Some(user_supported_token_account.key()),
+
             wallet_provider: wallet_provider.clone(),
             contribution_accrual_rate: *contribution_accrual_rate,
-            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
+            deposited_amount: supported_token_amount,
+            minted_receipt_token_amount: receipt_token_mint_amount,
         })
     }
 
@@ -302,7 +306,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
         // reduce user's reward accrual rate
-        RewardService::new(self.receipt_token_mint, self.reward_account)?
+        let event1 = RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 Some(self.user_reward_account),
                 None,
@@ -312,12 +316,17 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // log withdrawal request event
         Ok(events::UserRequestedWithdrawalFromFund {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            supported_token_mint,
+            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
+            user_fund_account: self.user_fund_account.key(),
+
             batch_id,
             request_id,
-            receipt_token_mint: self.receipt_token_mint.key(),
             requested_receipt_token_amount: receipt_token_amount,
         })
     }
@@ -373,7 +382,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        RewardService::new(self.receipt_token_mint, self.reward_account)?
+        let event1 = RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 None,
                 Some(self.user_reward_account),
@@ -383,11 +392,17 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         // log withdrawal request canceled event
         Ok(events::UserCanceledWithdrawalRequestFromFund {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            supported_token_mint: withdrawal_request.supported_token_mint,
+            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: Clone::clone(self.user_fund_account),
-            request_id,
-            receipt_token_mint: self.receipt_token_mint.key(),
+            user_fund_account: self.user_fund_account.key(),
+
+            batch_id: withdrawal_request.batch_id,
+            request_id: withdrawal_request.request_id,
             requested_receipt_token_amount: receipt_token_amount,
         })
     }
@@ -403,6 +418,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
         let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
         require_eq!(withdrawal_request.supported_token_mint.is_none(), true);
+
         let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
             fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
 
@@ -432,12 +448,19 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         Ok(events::UserWithdrewFromFund {
             receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: FundAccountInfo::from(fund_account)?,
-            request_id,
-            user_fund_account: Clone::clone(self.user_fund_account),
-            user: self.user.key(),
-            burnt_receipt_token_amount: receipt_token_amount,
+            fund_account: self.fund_account.key(),
             supported_token_mint: None,
+
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: None,
+
+            fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
+            batch_id: withdrawal_request.batch_id,
+            request_id: withdrawal_request.request_id,
+            burnt_receipt_token_amount: receipt_token_amount,
+            returned_receipt_token_amount: 0,
             withdrawn_amount: sol_user_amount,
             deducted_fee_amount: sol_fee_amount,
         })
@@ -492,12 +515,19 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         Ok(events::UserWithdrewFromFund {
             receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: FundAccountInfo::from(fund_account)?,
-            request_id,
-            user_fund_account: Clone::clone(self.user_fund_account),
-            user: self.user.key(),
-            burnt_receipt_token_amount: receipt_token_amount,
+            fund_account: self.fund_account.key(),
             supported_token_mint: Some(supported_token_mint.key()),
+
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: Some(user_supported_token_account.key()),
+
+            fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
+            batch_id: withdrawal_request.batch_id,
+            request_id: withdrawal_request.request_id,
+            burnt_receipt_token_amount: receipt_token_amount,
+            returned_receipt_token_amount: 0,
             withdrawn_amount: supported_token_user_amount,
             deducted_fee_amount: supported_token_fee_amount,
         })

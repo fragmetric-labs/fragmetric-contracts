@@ -209,7 +209,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, user, false, this.supportedTokenMetadata[symbol].program);
 
-        const fragSOLFundWithdrawalBatch = (batchId: BN) => web3.PublicKey.findProgramAddressSync([Buffer.from("withdrawal_batch"), fragSOLTokenMintBuf, batchId.toBuffer('le', 8)], this.programId)[0];
+        const fragSOLFundWithdrawalBatch = (supportedTokenMint: web3.PublicKey|null, batchId: BN) => web3.PublicKey.findProgramAddressSync([Buffer.from("withdrawal_batch"), fragSOLTokenMintBuf, (supportedTokenMint || web3.PublicKey.default).toBuffer(), batchId.toBuffer('le', 8)], this.programId)[0];
 
         // reward
         const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragSOLTokenMintBuf], this.programId);
@@ -944,7 +944,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.nSOLTokenMint,
                 ),
                 this.program.methods.fundManagerInitializeFundNormalizedToken()
-                    .accounts({payer: this.wallet.publicKey})
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
@@ -987,7 +986,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
                 this.program.methods.fundManagerInitializeFundJitoRestakingVault()
-                    .accounts({payer: this.wallet.publicKey})
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
@@ -1333,7 +1331,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ...this.rewardPoolsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddRewardPool(v.name, v.holderId, v.customAccrualRateEnabled)
-                        .accounts({
+                        .accountsPartial({
                             receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         })
                         .instruction();
@@ -1432,7 +1430,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ]
                 : [
                     this.program.methods.userUpdateFundAccountIfNeeded()
-                        .accounts({user: user.publicKey})
+                        .accountsPartial({user: user.publicKey})
                         .instruction(),
                 ]),
         ];
@@ -1458,17 +1456,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ...depositMetadataInstruction,
                 this.program.methods
                     .userDepositSol(amount, depositMetadata)
-                    .accounts({
+                    .accountsPartial({
                         user: user.publicKey,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],
-            events: ["userDepositedSolToFund", "userUpdatedRewardPool"],
+            events: ["userDepositedToFund"],
         });
 
-        logger.notice(`deposited: ${this.lamportsToSOL(amount)} (${this.lamportsToX(event.userDepositedSolToFund.fundAccount.oneReceiptTokenAsSol, event.userDepositedSolToFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),
@@ -1477,7 +1474,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
             this.getUserFragSOLAccount(user.publicKey),
         ]);
-
+        logger.notice(`deposited: ${this.lamportsToSOL(amount)} (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
@@ -1536,10 +1533,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [user],
-            events: ["userDepositedSupportedTokenToFund", "userUpdatedRewardPool"],
+            events: ["userDepositedToFund"],
         });
 
-        logger.notice(`deposited: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)} (${this.lamportsToX(event.userDepositedSupportedTokenToFund.fundAccount.oneReceiptTokenAsSol, event.userDepositedSupportedTokenToFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), userSupportedTokenAddress.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, userSupportedTokenAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),
@@ -1549,6 +1545,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getUserFragSOLAccount(user.publicKey),
             this.getUserSupportedTokenAccount(user.publicKey, tokenSymbol),
         ]);
+        logger.notice(`deposited: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)} (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), userSupportedTokenAddress.toString());
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
@@ -1570,13 +1567,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
                     .userRequestWithdrawal(amount, supported_token_mint)
-                    .accounts({
+                    .accountsPartial({
                         user: user.publicKey,
                     })
                     .instruction(),
             ],
             signers: [user],
-            events: ["userRequestedWithdrawalFromFund", "userUpdatedRewardPool"],
+            events: ["userRequestedWithdrawalFromFund"],
         });
 
         logger.notice(
@@ -1614,13 +1611,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
                     .userCancelWithdrawalRequest(requestId)
-                    .accounts({
+                    .accountsPartial({
                         user: user.publicKey,
                     })
                     .instruction(),
             ],
             signers: [user],
-            events: ["userCanceledWithdrawalRequestFromFund", "userUpdatedRewardPool"],
+            events: ["userCanceledWithdrawalRequestFromFund"],
         });
 
         logger.notice(`canceled withdrawal request: #${requestId.toString()}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
@@ -1675,13 +1672,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             requiredAccounts: [],
         }, operator);
 
-        logger.info(`operator processed withdrawal batches up to #${event.operatorRanFund.fundAccount.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
+        logger.info(`operator processed withdrawal batches up to #${fragSOLFund.solFlow.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
         return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
@@ -1692,15 +1689,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (!request) {
             throw "request not found";
         }
-        // TODO: branch based on request.supportedTokenMint
-        const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.batchId);
+        const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
 
+        // TODO: branch based on request.supportedTokenMint
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
                     .userWithdrawSol(requestId)
-                    .accounts({
+                    .accountsPartial({
                         user: user.publicKey,
                         fundWithdrawalBatchAccount,
                     })
@@ -1711,7 +1708,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["userWithdrewFromFund"],
         });
 
-        logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewFromFund.withdrawnAmount)} #${requestId.toString()}, (${this.lamportsToX(event.userWithdrewFromFund.fundAccount.oneReceiptTokenAsSol, event.userWithdrewFromFund.fundAccount.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
             this.getFragSOLFundReserveAccountBalance(),
@@ -1721,6 +1717,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
+        logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewFromFund.withdrawnAmount)} #${requestId.toString()}, (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
             event,
@@ -1752,7 +1749,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ),
             ],
             signers: [source],
-            events: ["userTransferredReceiptToken", "userUpdatedRewardPool"],
+            events: ["userTransferredReceiptToken"],
         });
 
         return {event, error};
@@ -1763,13 +1760,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 this.program.methods
                     .userUpdateRewardPools()
-                    .accounts({
+                    .accountsPartial({
                         user: user.publicKey,
                     })
                     .instruction(),
             ],
             signers: [user],
-            // events: ['userUpdatedRewardPool'], // won't emit it for such void update requests
+            events: ['userUpdatedRewardPool'],
         });
 
         logger.notice(`user manually updated user reward pool:`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
@@ -1803,7 +1800,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         while (txCount < 100) {
             const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
             txCount++;
-            if (txCount == 100 || event.operatorRanFund.fundAccount.nextOperationSequence == 0) {
+            if (txCount == 100 || event.operatorRanFund.nextOperationSequence == 0) {
                 return {event, error}
             }
         }
@@ -1844,13 +1841,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (nextOperationCommand) {
             for (const accountMeta of nextOperationCommand.requiredAccounts) {
                 if (requiredAccounts.has(accountMeta.pubkey)) {
-                    if (accountMeta.isWritable) {
+                    if (accountMeta.isWritable != 0) {
                         requiredAccounts.get(accountMeta.pubkey).isWritable = true;
                     }
                 } else {
                     requiredAccounts.set(accountMeta.pubkey, {
                         pubkey: accountMeta.pubkey,
-                        isWritable: accountMeta.isWritable,
+                        isWritable: (accountMeta.isWritable != 0),
                         isSigner: false,
                     });
                 }

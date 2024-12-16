@@ -156,30 +156,29 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
         source_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
         destination_receipt_token_account: &mut InterfaceAccount<TokenAccount>,
-        extra_accounts: impl IntoIterator<Item = &'info AccountInfo<'info>>,
+        extra_accounts: &'info [AccountInfo<'info>],
         transfer_amount: u64,
     ) -> Result<events::UserTransferredReceiptToken> {
-        let mut extra_accounts = extra_accounts.into_iter();
+        let [source_fund_account_option, source_reward_account_option, destination_fund_account_option, destination_reward_account_option, ..] =
+            extra_accounts
+        else {
+            return Err(ProgramError::NotEnoughAccountKeys)?;
+        };
+
         // parse extra accounts
-        let source_fund_account_option = extra_accounts
-            .next()
-            .ok_or(ProgramError::NotEnoughAccountKeys)?
-            .parse_optional_account_boxed::<UserFundAccount>()?;
-        let mut source_reward_account_option = extra_accounts
-            .next()
-            .ok_or(ProgramError::NotEnoughAccountKeys)?
-            .parse_optional_account_loader::<reward::UserRewardAccount>()?;
-        let destination_fund_account_option = extra_accounts
-            .next()
-            .ok_or(ProgramError::NotEnoughAccountKeys)?
-            .parse_optional_account_boxed::<UserFundAccount>()?;
-        let mut destination_reward_account_option = extra_accounts
-            .next()
-            .ok_or(ProgramError::NotEnoughAccountKeys)?
-            .parse_optional_account_loader::<reward::UserRewardAccount>()?;
+        let mut source_fund_account_option =
+            source_fund_account_option.parse_optional_account_boxed::<UserFundAccount>()?;
+        let mut source_reward_account_option = source_reward_account_option
+            .parse_optional_account_loader::<reward::UserRewardAccount>(
+        )?;
+        let mut destination_fund_account_option =
+            destination_fund_account_option.parse_optional_account_boxed::<UserFundAccount>()?;
+        let mut destination_reward_account_option = destination_reward_account_option
+            .parse_optional_account_loader::<reward::UserRewardAccount>(
+        )?;
 
         // transfer source's reward accrual rate to destination
-        reward::RewardService::new(self.receipt_token_mint, reward_account)?
+        let event1 = reward::RewardService::new(self.receipt_token_mint, reward_account)?
             .update_reward_pools_token_allocation(
                 source_reward_account_option.as_mut(),
                 destination_reward_account_option.as_mut(),
@@ -188,11 +187,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             )?;
 
         // sync user fund accounts
-        if let Some(mut source_fund_account) = source_fund_account_option {
+        if let Some(source_fund_account) = source_fund_account_option.as_deref_mut() {
             source_fund_account.reload_receipt_token_amount(source_receipt_token_account)?;
             source_fund_account.exit(&crate::ID)?;
         }
-        if let Some(mut destination_fund_account) = destination_fund_account_option {
+        if let Some(destination_fund_account) = destination_fund_account_option.as_deref_mut() {
             destination_fund_account
                 .reload_receipt_token_amount(destination_receipt_token_account)?;
             destination_fund_account.exit(&crate::ID)?;
@@ -204,22 +203,18 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(events::UserTransferredReceiptToken {
             receipt_token_mint: self.receipt_token_mint.key(),
-            transferred_receipt_token_amount: transfer_amount,
+            fund_account: self.fund_account.key(),
+            updated_user_reward_accounts: event1.updated_user_reward_accounts,
 
-            source_receipt_token_account: source_receipt_token_account.key(),
             source: source_receipt_token_account.owner,
-            source_fund_account: UserFundAccount::placeholder(
-                source_receipt_token_account.owner,
-                self.receipt_token_mint.key(),
-                source_receipt_token_account.amount,
-            ),
-            destination_receipt_token_account: destination_receipt_token_account.key(),
+            source_receipt_token_account: source_receipt_token_account.key(),
+            source_fund_account: source_fund_account_option.map(|account| account.key()),
+
             destination: destination_receipt_token_account.owner,
-            destination_fund_account: UserFundAccount::placeholder(
-                destination_receipt_token_account.owner,
-                self.receipt_token_mint.key(),
-                destination_receipt_token_account.amount,
-            ),
+            destination_receipt_token_account: destination_receipt_token_account.key(),
+            destination_fund_account: destination_fund_account_option.map(|account| account.key()),
+
+            transferred_receipt_token_amount: transfer_amount,
         })
     }
 
@@ -322,6 +317,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
         };
 
+        let next_operation_sequence = operation_state.next_sequence;
+
         // write back operation state
         std::mem::swap(
             &mut self.fund_account.load_mut()?.operation,
@@ -330,8 +327,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(events::OperatorRanFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(self.fund_account.load()?)?,
+            fund_account: self.fund_account.key(),
             executed_command: command.clone(),
+            next_operation_sequence,
         })
     }
 

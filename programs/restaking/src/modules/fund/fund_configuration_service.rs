@@ -1,4 +1,3 @@
-use anchor_lang::emit_cpi;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
@@ -395,11 +394,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     }
 
     fn create_fund_manager_updated_fund_event(&self) -> Result<events::FundManagerUpdatedFund> {
-        let fund_account = self.fund_account.load()?;
-
         Ok(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(fund_account)?,
+            fund_account: self.fund_account.key(),
         })
     }
 }

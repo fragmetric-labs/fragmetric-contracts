@@ -32,7 +32,7 @@ impl<'info, 'a> RewardService<'info, 'a> {
 
         Ok(events::OperatorUpdatedRewardPools {
             receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account_address: self.reward_account.key(),
+            reward_account: self.reward_account.key(),
         })
     }
 
@@ -43,12 +43,12 @@ impl<'info, 'a> RewardService<'info, 'a> {
         amount: u64,
         contribution_accrual_rate: Option<u8>,
     ) -> Result<events::UserUpdatedRewardPool> {
-        let mut updated_user_reward_account_addresses = vec![];
+        let mut updated_user_reward_accounts = vec![];
         if let Some(from) = from_user_reward_account.as_ref() {
-            updated_user_reward_account_addresses.push(from.key());
+            updated_user_reward_accounts.push(from.key());
         }
         if let Some(to) = to_user_reward_account.as_ref() {
-            updated_user_reward_account_addresses.push(to.key());
+            updated_user_reward_accounts.push(to.key());
         }
 
         let mut from_account_ref = from_user_reward_account
@@ -74,7 +74,7 @@ impl<'info, 'a> RewardService<'info, 'a> {
 
         Ok(events::UserUpdatedRewardPool {
             receipt_token_mint: self.receipt_token_mint.key(),
-            updated_user_reward_account_addresses,
+            updated_user_reward_accounts,
         })
     }
 }

@@ -67,6 +67,11 @@ pub(super) struct AssetFlowState {
 }
 
 impl AssetFlowState {
+    pub(super) fn initialize(&mut self, asset_token_mint: Option<Pubkey>) {
+        self.token_mint = asset_token_mint.unwrap_or_default();
+        self.withdrawal_pending_batch.initialize(1);
+    }
+
     pub(super) fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
@@ -236,7 +241,9 @@ mod tests {
     #[test]
     fn withdraw_basic_test() {
         let mut asset_flow = AssetFlowState::zeroed();
-        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 0);
+        asset_flow.initialize(None);
+        assert_eq!(asset_flow.token_mint, Pubkey::default());
+        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 1);
         assert_eq!(asset_flow.withdrawal_last_created_request_id, 0);
         assert!(asset_flow.create_withdrawal_request(10, 0).is_err());
 
@@ -245,7 +252,7 @@ mod tests {
 
         let req1 = asset_flow.create_withdrawal_request(10, 0).unwrap();
         assert_eq!(req1.batch_id, asset_flow.withdrawal_pending_batch.batch_id);
-        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 0);
+        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 1);
         assert_eq!(req1.request_id, 1);
         assert_eq!(asset_flow.withdrawal_last_created_request_id, 1);
         assert_eq!(asset_flow.withdrawal_pending_batch.num_requests, 1);
@@ -278,7 +285,7 @@ mod tests {
         ));
 
         assert!(asset_flow.cancel_withdrawal_request(&req3).is_err());
-        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 1);
+        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 2);
         assert_eq!(asset_flow.withdrawal_pending_batch.num_requests, 0);
         assert_eq!(asset_flow.withdrawal_pending_batch.receipt_token_amount, 0);
         assert_eq!(
@@ -287,7 +294,7 @@ mod tests {
                 .next()
                 .unwrap()
                 .batch_id,
-            0
+            1
         );
         assert_eq!(
             asset_flow
@@ -369,7 +376,7 @@ mod tests {
             false
         ));
         assert_eq!(asset_flow.get_withdrawal_queued_batches_iter().count(), 2);
-        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 2);
+        assert_eq!(asset_flow.withdrawal_pending_batch.batch_id, 3);
         assert_eq!(asset_flow.withdrawal_pending_batch.num_requests, 0);
         assert_eq!(asset_flow.withdrawal_pending_batch.receipt_token_amount, 0);
         assert_eq!(
@@ -378,7 +385,7 @@ mod tests {
                 .next()
                 .unwrap()
                 .batch_id,
-            0
+            1
         );
         assert_eq!(
             asset_flow
@@ -411,7 +418,7 @@ mod tests {
                 .next()
                 .unwrap()
                 .batch_id,
-            1
+            2
         );
         assert_eq!(
             asset_flow
@@ -476,16 +483,16 @@ mod tests {
         assert!(asset_flow.dequeue_withdrawal_batches(3, 3).is_err());
         let dequeued_batches = asset_flow.dequeue_withdrawal_batches(2, 3).unwrap();
         assert_eq!(dequeued_batches.len(), 2);
-        assert_eq!(dequeued_batches[0].batch_id, 0);
+        assert_eq!(dequeued_batches[0].batch_id, 1);
         assert_eq!(dequeued_batches[0].num_requests, 2);
         assert_eq!(dequeued_batches[0].receipt_token_amount, 30);
         assert_eq!(dequeued_batches[0].enqueued_at, 1);
-        assert_eq!(dequeued_batches[1].batch_id, 1);
+        assert_eq!(dequeued_batches[1].batch_id, 2);
         assert_eq!(dequeued_batches[1].num_requests, 1);
         assert_eq!(dequeued_batches[1].receipt_token_amount, 30);
         assert_eq!(dequeued_batches[1].enqueued_at, 2);
         assert_eq!(asset_flow.withdrawal_last_batch_processed_at, 3);
-        assert_eq!(asset_flow.withdrawal_last_processed_batch_id, 1);
+        assert_eq!(asset_flow.withdrawal_last_processed_batch_id, 2);
 
         assert_eq!(asset_flow.get_withdrawal_queued_batches_iter().count(), 0);
         assert_eq!(
