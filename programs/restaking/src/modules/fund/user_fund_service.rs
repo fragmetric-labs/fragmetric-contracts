@@ -95,7 +95,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user $SOL to fund
-        self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
+        self.fund_account.load_mut()?.deposit(None, sol_amount)?;
 
         anchor_lang::system_program::transfer(
             CpiContext::new(
@@ -174,8 +174,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // transfer user supported token to fund
         self.fund_account
             .load_mut()?
-            .get_supported_token_mut(&supported_token_mint.key())?
-            .deposit_token(supported_token_amount)?;
+            .deposit(Some(supported_token_mint.key()), supported_token_amount)?;
         token_interface::transfer_checked(
             CpiContext::new(
                 supported_token_program.to_account_info(),
@@ -426,7 +425,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         self.fund_account
             .load_mut()?
-            .get_asset_flow_state_mut(None)?
+            .get_asset_state_mut(None)?
             .withdrawal_user_reserved_amount -= sol_user_amount;
 
         // transfer asset_user_amount $SOL to user wallet from reserved account
@@ -491,7 +490,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
         self.fund_account
             .load_mut()?
-            .get_asset_flow_state_mut(withdrawal_request.supported_token_mint)?
+            .get_asset_state_mut(withdrawal_request.supported_token_mint)?
             .withdrawal_user_reserved_amount -= supported_token_user_amount;
 
         // transfer supported_token_user_amount $TOKEN to user wallet from reserved account

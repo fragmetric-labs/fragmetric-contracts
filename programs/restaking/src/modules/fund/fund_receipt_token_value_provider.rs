@@ -26,8 +26,8 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         // sol_operation_reserved_amount + sol_operation_receivable_amount
         assets.push(Asset::SOL(
-            fund_account.sol_operation_reserved_amount
-                + fund_account.sol_operation_receivable_amount,
+            fund_account.sol.operation_reserved_amount
+                + fund_account.sol.operation_receivable_amount,
         ));
 
         // lst_operation_reserved_amount + operation_receivable_amount
@@ -35,8 +35,8 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
             assets.push(Asset::Token(
                 supported_token.mint,
                 supported_token.pricing_source.try_deserialize()?,
-                supported_token.operation_reserved_amount
-                    + supported_token.operation_receivable_amount,
+                supported_token.token.operation_reserved_amount
+                    + supported_token.token.operation_receivable_amount,
             ));
         }
 

@@ -273,13 +273,13 @@ impl SelfExecutable for UnstakeLSTCommand {
                     };
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
-                    fund_account.sol_operation_reserved_amount =
-                        fund_account.sol_operation_reserved_amount + returned_sol_amount;
+                    fund_account.sol.operation_reserved_amount =
+                        fund_account.sol.operation_reserved_amount + returned_sol_amount;
 
                     let supported_token =
                         fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                    supported_token.operation_reserved_amount =
-                        supported_token.operation_reserved_amount - item.token_amount;
+                    supported_token.token.operation_reserved_amount =
+                        supported_token.token.operation_reserved_amount - item.token_amount;
 
                     msg!(
                         "unstaked {} tokens to get {} sol",
@@ -289,7 +289,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                     require_gte!(returned_sol_amount, item.token_amount);
                     require_eq!(
-                        fund_account.sol_operation_reserved_amount,
+                        fund_account.sol.operation_reserved_amount,
                         to_sol_account_amount
                     );
                 }
@@ -379,9 +379,9 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 let mut fund_account = ctx.fund_account.load_mut()?;
                                 let supported_token =
                                     fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                                supported_token.operation_reserved_amount -=
+                                supported_token.token.operation_reserved_amount -=
                                     spl_withdraw_stake_item.token_amount;
-                                fund_account.sol_operation_receivable_amount +=
+                                fund_account.sol.operation_receivable_amount +=
                                     receivable_sol_amount;
 
                                 if command.spl_withdraw_stake_items.len() > 0 {

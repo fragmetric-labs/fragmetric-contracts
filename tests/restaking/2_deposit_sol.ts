@@ -27,7 +27,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
             restaking.getFragSOLFundReserveAccountBalance(),
         ]);
         expect(fragSOLFund0.oneReceiptTokenAsSol.toNumber()).greaterThan(0, 'fragSOL price is not zero');
-        expect(fragSOLFund0.solOperationReservedAmount.toString()).eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
+        expect(fragSOLFund0.sol.operationReservedAmount.toString()).eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
         const [
             userFundAccount0,
             userRewardAccount0,
@@ -41,7 +41,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
         expect(res1.event.userDepositedToFund.supportedTokenMint).eq(null);
         expect(res1.fragSOLFundReserveAccountBalance.sub(fragSOLFundReserveAccountBalance0).toString()).eq(amount.toString(), 'SOL is transferred to fund reserve account');
-        expect(res1.fragSOLFund.solOperationReservedAmount.sub(fragSOLFund0.solOperationReservedAmount).toString()).eq(amount.toString(), 'fund records correct amount of deposited SOL');
+        expect(res1.fragSOLFund.sol.operationReservedAmount.sub(fragSOLFund0.sol.operationReservedAmount).toString()).eq(amount.toString(), 'fund records correct amount of deposited SOL');
 
         expect(res1.fragSOLUserFund.user.toString()).eq(user1.publicKey.toString(), 'user check');
         expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(res1.fragSOLUserTokenAccount.amount.toString(), 'user fund records correct amount of minted fragSOL');

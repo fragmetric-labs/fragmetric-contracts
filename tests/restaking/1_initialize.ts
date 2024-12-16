@@ -121,7 +121,7 @@ describe("initialize", async () => {
             expect(supported.mint.toString()).eq(v.mint.toString());
             expect(supported.program.toString()).eq(v.program.toString());
             expect(supported.oneTokenAsSol.toNumber()).greaterThan(web3.LAMPORTS_PER_SOL).lessThan(2 * web3.LAMPORTS_PER_SOL);
-            expect(supported.operationReservedAmount.toNumber()).eq(0);
+            expect(supported.token.operationReservedAmount.toNumber()).eq(0);
         }
     });
 

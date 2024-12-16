@@ -81,7 +81,7 @@ impl SelfExecutable for StakeSOLCommand {
                                             supported_token.sol_allocation_weight,
                                             pricing_service.get_token_amount_as_sol(
                                                 &supported_token.mint,
-                                                supported_token.operation_reserved_amount,
+                                                supported_token.token.operation_reserved_amount,
                                             )?,
                                             supported_token.sol_allocation_capacity_amount,
                                         ),
@@ -302,15 +302,15 @@ impl SelfExecutable for StakeSOLCommand {
                             );
 
                             let mut fund_account = ctx.fund_account.load_mut()?;
-                            fund_account.sol_operation_reserved_amount -= item.sol_amount;
+                            fund_account.sol.operation_reserved_amount -= item.sol_amount;
 
                             let supported_token =
                                 fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                            supported_token.operation_reserved_amount +=
+                            supported_token.token.operation_reserved_amount +=
                                 minted_supported_token_amount;
 
                             require_eq!(
-                                supported_token.operation_reserved_amount,
+                                supported_token.token.operation_reserved_amount,
                                 to_pool_token_account_amount
                             );
                         }

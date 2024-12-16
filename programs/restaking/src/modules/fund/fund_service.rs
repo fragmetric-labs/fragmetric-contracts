@@ -341,7 +341,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load_mut()?
-            .sol_flow
+            .sol
             .enqueue_withdrawal_pending_batch(
                 withdrawal_batch_threshold_interval_seconds,
                 self.current_timestamp,
@@ -357,7 +357,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let mut accounts = Vec::with_capacity(
             4 + fund_account
-                .sol_flow
+                .sol
                 .get_withdrawal_queued_batches_iter()
                 .count(),
         );
@@ -372,7 +372,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ]);
         accounts.extend(
             fund_account
-                .sol_flow
+                .sol
                 .get_withdrawal_queued_batches_iter()
                 .map(|batch| {
                     (
@@ -414,7 +414,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // examine withdrawal batches to process with current fund status
             for batch in fund_account
-                .sol_flow
+                .sol
                 .get_withdrawal_queued_batches_iter_to_process(
                     fund_account.withdrawal_batch_threshold_interval_seconds,
                     self.current_timestamp,
@@ -456,10 +456,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 // - sol_operation_receivable_amount will offset sol_fee_amount_processing + [optional debt from sol_treasury_reserved_amount].
                 // - any remaining portion of sol_fee_amount_processing not covered by the receivables will be offset by the leftover sol_operation_reserved_amount, transferring the surplus to the treasury fund as revenue.
 
-                if fund_account.sol_operation_reserved_amount
-                    + fund_account.sol_operation_receivable_amount
+                if fund_account.sol.operation_reserved_amount
+                    + fund_account.sol.operation_receivable_amount
                     < next_sol_user_amount_processing + next_sol_fee_amount_processing
-                    || fund_account.sol_operation_reserved_amount + fund_treasury_account.lamports()
+                    || fund_account.sol.operation_reserved_amount + fund_treasury_account.lamports()
                         < next_sol_user_amount_processing
                 {
                     break;
@@ -472,9 +472,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             // borrow sol cash from treasury if needed (condition 1-2)
-            if sol_user_amount_processing > fund_account.sol_operation_reserved_amount {
+            if sol_user_amount_processing > fund_account.sol.operation_reserved_amount {
                 let sol_debt_amount_from_treasury =
-                    sol_user_amount_processing - fund_account.sol_operation_reserved_amount;
+                    sol_user_amount_processing - fund_account.sol.operation_reserved_amount;
                 anchor_lang::system_program::transfer(
                     CpiContext::new_with_signer(
                         system_program.to_account_info(),
@@ -491,7 +491,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 sol_fee_amount_processing += sol_debt_amount_from_treasury;
 
                 // reserve transferred cash
-                self.fund_account.load_mut()?.sol_operation_reserved_amount +=
+                self.fund_account.load_mut()?.sol.operation_reserved_amount +=
                     sol_debt_amount_from_treasury;
             }
         }
@@ -521,7 +521,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // reserve each sol_user_amount to batch accounts
             let processing_batches = fund_account
-                .sol_flow
+                .sol
                 .dequeue_withdrawal_batches(processing_batch_count, self.current_timestamp)?;
 
             require_gte!(
@@ -579,8 +579,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 let sol_user_amount = sol_amount - sol_fee_amount;
 
                 // offset sol_user_amount and sol_fee_amount by sol_operation_reserved_amount
-                fund_account.sol_operation_reserved_amount -= sol_amount;
-                fund_account.sol_flow.withdrawal_user_reserved_amount += sol_user_amount;
+                fund_account.sol.operation_reserved_amount -= sol_amount;
+                fund_account.sol.withdrawal_user_reserved_amount += sol_user_amount;
                 sol_user_amount_processing -= sol_user_amount;
                 sol_fee_amount_processing -= sol_fee_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
@@ -601,13 +601,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // pay the treasury debt with receivables first (no further action).
             let receivable_amount_to_pay = fund_account
-                .sol_operation_receivable_amount
+                .sol
+                .operation_receivable_amount
                 .min(sol_fee_amount_processing);
-            fund_account.sol_operation_receivable_amount -= receivable_amount_to_pay;
+            fund_account.sol.operation_receivable_amount -= receivable_amount_to_pay;
             sol_fee_amount_processing -= receivable_amount_to_pay;
 
             // pay remaining debt with cash
-            fund_account.sol_operation_reserved_amount -= sol_fee_amount_processing;
+            fund_account.sol.operation_reserved_amount -= sol_fee_amount_processing;
         }
 
         if sol_fee_amount_processing > 0 {
@@ -673,7 +674,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load()?
-            .sol_flow
+            .sol
             .get_withdrawal_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
             .sum())
@@ -701,11 +702,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(get_proportional_amount(
             total_token_value_as_sol,
-            fund_account.sol_flow.normal_reserve_rate_bps as u64,
+            fund_account.sol.normal_reserve_rate_bps as u64,
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(fund_account.sol_flow.normal_reserve_max_amount))
+        .max(fund_account.sol.normal_reserve_max_amount))
     }
 
     /// total $SOL amount required for withdrawal in current state, including normal reserve if there is remaining sol_operation_reserved_amount after withdrawal obligation met.
@@ -720,7 +721,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .min(
                     self.fund_account
                         .load()?
-                        .sol_operation_reserved_amount
+                        .sol
+                        .operation_reserved_amount
                         .saturating_sub(sol_withdrawal_obligated_reserve_amount),
                 ))
     }
@@ -734,7 +736,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(self
             .fund_account
             .load()?
-            .sol_operation_reserved_amount
+            .sol
+            .operation_reserved_amount
             .min(self.get_sol_withdrawal_obligated_reserve_amount(pricing_service)?))
     }
 
@@ -745,7 +748,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_service: &PricingService,
     ) -> Result<i128> {
         Ok(
-            self.fund_account.load()?.sol_operation_reserved_amount as i128
+            self.fund_account.load()?.sol.operation_reserved_amount as i128
                 - self.get_sol_withdrawal_reserve_amount(pricing_service)? as i128,
         )
     }

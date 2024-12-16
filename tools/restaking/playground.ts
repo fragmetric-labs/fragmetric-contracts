@@ -177,6 +177,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [fragSOLFund] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund"), fragSOLTokenMintBuf], this.programId);
         const [fragSOLFundReserveAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_reserve"), fragSOLTokenMintBuf], this.programId);
         const [fragSOLFundTreasuryAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_treasury"), fragSOLTokenMintBuf], this.programId);
+        const fragSOLFundTreasurySupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
+            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFundTreasuryAccount, true, this.supportedTokenMetadata[symbol].program);
+        const fragSOLFundTreasurySupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
+            [`fragSOLFundTreasurySupportedTokenAccount_${symbol}`]: fragSOLFundTreasurySupportedTokenAccount(symbol as any),
+            ...obj,
+        }), {} as { string: web3.PublicKey });
+
         const fragSOLFundReceiptTokenLockAccount = spl.getAssociatedTokenAddressSync(
             fragSOLTokenMint,
             fragSOLFund,
@@ -304,6 +311,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLFund,
             fragSOLFundReserveAccount,
             fragSOLFundTreasuryAccount,
+            fragSOLFundTreasurySupportedTokenAccount,
+            ...fragSOLFundTreasurySupportedTokenAccounts,
             fragSOLExtraAccountMetasAccount,
             fragSOLUserFund,
             fragSOLUserTokenAccount,
@@ -1039,6 +1048,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         v.mint,
                         v.program,
                     ),
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        this.wallet.publicKey,
+                        this.knownAddress.fragSOLFundTreasurySupportedTokenAccount(symbol as any),
+                        this.knownAddress.fragSOLFundTreasuryAccount,
+                        v.mint,
+                        v.program,
+                    ),
                     this.program.methods
                         .fundManagerAddSupportedToken(v.pricingSource)
                         .accountsPartial({
@@ -1678,7 +1694,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
-        logger.info(`operator processed withdrawal batches up to #${fragSOLFund.solFlow.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+        logger.info(`operator processed withdrawal batches up to #${fragSOLFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
         return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }

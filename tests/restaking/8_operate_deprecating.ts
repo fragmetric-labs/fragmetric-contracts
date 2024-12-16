@@ -16,8 +16,8 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const nSOLMint0 = await restaking.getNSOLTokenMint();
         const fragSOLFundNSOLBalance0 = await restaking.getFragSOLFundNSOLAccountBalance();
         const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
-        logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.operationReservedAmount.toString()).join(', ')}, `
-            +`fundSolOperationReservedAmount=${fragSOLFund0.solOperationReservedAmount}, fundReservedAmount=${fragSOLFundReserveAccountBalance0}, `
+        logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.token.operationReservedAmount.toString()).join(', ')}, `
+            +`fundSolOperationReservedAmount=${fragSOLFund0.sol.operationReservedAmount}, fundReservedAmount=${fragSOLFundReserveAccountBalance0}, `
             +`nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLOperationReservedAmount=?, nSOLSupply=${nSOLMint0.supply.toString()}, `
             +`fragSOLFundNSOL=${fragSOLFundNSOLBalance0.toString()}, jitoVaultNSOL=${jitoVaultNSOLBalance0.toString()}`
         );

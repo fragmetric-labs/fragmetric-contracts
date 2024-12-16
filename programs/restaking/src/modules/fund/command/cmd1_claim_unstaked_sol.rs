@@ -125,8 +125,8 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
                             msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
 
-                            fund_account.sol_operation_receivable_amount -= received_sol_amount;
-                            fund_account.sol_operation_reserved_amount += received_sol_amount;
+                            fund_account.sol.operation_receivable_amount -= received_sol_amount;
+                            fund_account.sol.operation_reserved_amount += received_sol_amount;
                         }
                     }
                 }

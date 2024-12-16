@@ -154,7 +154,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         {
                             Some(supported_token) => (
                                 supported_token.mint,
-                                supported_token.operation_reserved_amount,
+                                supported_token.token.operation_reserved_amount,
                             ),
                             None => err!(errors::ErrorCode::FundNotSupportedTokenError)?,
                         };
@@ -226,7 +226,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     let supported_tokens = fund_account
                         .get_supported_tokens_iter()
                         .filter_map(|t| {
-                            if t.operation_reserved_amount == 0 {
+                            if t.token.operation_reserved_amount == 0 {
                                 None
                             } else {
                                 if normalized_token_pool_account.has_supported_token(&t.mint)
@@ -235,7 +235,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                     let reserved_amount_as_sol = pricing_service
                                         .get_token_amount_as_sol(
                                             &t.mint,
-                                            t.operation_reserved_amount,
+                                            t.token.operation_reserved_amount,
                                         )
                                         .unwrap();
                                     participants.push(WeightedAllocationParticipant::new(
@@ -268,7 +268,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             token_mint: supported_token.mint,
                             token_program: supported_token.program,
                             operation_reserved_amount: cmp::min(
-                                supported_token.operation_reserved_amount,
+                                supported_token.token.operation_reserved_amount,
                                 need_to_restake_token_amount,
                             ),
                         });

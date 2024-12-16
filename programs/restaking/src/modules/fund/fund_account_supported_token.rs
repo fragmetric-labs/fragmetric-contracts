@@ -4,7 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
-use super::AssetFlowState;
+use super::AssetState;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
@@ -20,13 +20,7 @@ pub(super) struct SupportedToken {
     pub one_token_as_sol: u64,
 
     /// token deposit & withdrawal
-    pub token_flow: AssetFlowState,
-
-    /// asset
-    pub operation_reserved_amount: u64,
-
-    /// asset: the token amount being unstaked
-    pub operation_receivable_amount: u64,
+    pub token: AssetState,
 
     /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
     pub rebalancing_amount: u64,
@@ -45,7 +39,6 @@ impl SupportedToken {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
-        operation_reserved_amount: u64,
     ) -> Result<()> {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
@@ -58,10 +51,9 @@ impl SupportedToken {
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
-        self.operation_reserved_amount = operation_reserved_amount;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
-        self.token_flow.initialize(Some(mint));
+        self.token.initialize(Some(mint));
         Ok(())
     }
 
@@ -79,33 +71,11 @@ impl SupportedToken {
     pub(super) fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
             token_amount,
-            self.operation_reserved_amount,
+            self.token.operation_reserved_amount,
             ErrorCode::FundInvalidUpdateError
         );
 
         self.rebalancing_amount = token_amount;
-
-        Ok(())
-    }
-
-    pub(super) fn deposit_token(&mut self, amount: u64) -> Result<()> {
-        let new_accumulated_deposit_amount = self
-            .token_flow
-            .accumulated_deposit_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        require_gte!(
-            self.token_flow.accumulated_deposit_capacity_amount,
-            new_accumulated_deposit_amount,
-            ErrorCode::FundExceededTokenCapacityAmountError
-        );
-
-        self.token_flow.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount = self
-            .operation_reserved_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(())
     }

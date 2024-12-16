@@ -121,11 +121,8 @@ pub enum ErrorCode {
     #[msg("fund: not supported token")]
     FundNotSupportedTokenError,
 
-    #[msg("fund: exceeded sol capacity amount")]
-    FundExceededSOLCapacityAmountError,
-
-    #[msg("fund: exceeded token capacity amount")]
-    FundExceededTokenCapacityAmountError,
+    #[msg("fund: exceeded deposit capacity amount")]
+    FundExceededDepositCapacityAmountError,
 
     #[msg("fund: exceeded max withdrawal request per user")]
     FundExceededMaxWithdrawalRequestError,

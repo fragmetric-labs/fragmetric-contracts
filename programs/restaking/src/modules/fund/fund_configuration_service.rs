@@ -108,7 +108,6 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
-            fund_supported_token_account.amount,
         )?;
 
         // validate pricing source
@@ -267,20 +266,20 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             let mut fund_account = self.fund_account.load_mut()?;
 
             fund_account
-                .sol_flow
+                .sol
                 .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
             if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
                 fund_account
-                    .sol_flow
+                    .sol
                     .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
             }
 
-            fund_account.sol_flow.set_withdrawable(sol_withdrawable);
+            fund_account.sol.set_withdrawable(sol_withdrawable);
             fund_account
-                .sol_flow
+                .sol
                 .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
             fund_account
-                .sol_flow
+                .sol
                 .set_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
         }
 
@@ -304,23 +303,21 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
             supported_token
-                .token_flow
+                .token
                 .set_accumulated_deposit_capacity_amount(
                     token_accumulated_deposit_capacity_amount,
                 )?;
             if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
                 supported_token
-                    .token_flow
+                    .token
                     .set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
             }
+            supported_token.token.set_withdrawable(token_withdrawable);
             supported_token
-                .token_flow
-                .set_withdrawable(token_withdrawable);
-            supported_token
-                .token_flow
+                .token
                 .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?;
             supported_token
-                .token_flow
+                .token
                 .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
             if let Some(token_amount) = token_rebalancing_amount {

@@ -1,15 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token::accessor::mint;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use bytemuck::{Pod, Zeroable};
 
-use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
-use crate::modules::fund::fund_account_asset_flow_state::{
-    AssetFlowState, WithdrawalBatch, FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES,
-};
 use crate::modules::pricing::{
     Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
 };
@@ -53,16 +48,7 @@ pub struct FundAccount {
     _padding4: [u8; 5],
 
     /// SOL deposit & withdrawal
-    pub(super) sol_flow: AssetFlowState,
-
-    /// asset: A receivable that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
-    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
-    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
-    pub(super) sol_operation_receivable_amount: u64,
-
-    /// asset
-    pub(super) sol_operation_reserved_amount: u64,
+    pub(super) sol: AssetState,
 
     /// underlying assets
     _padding6: [u8; 15],
@@ -118,7 +104,7 @@ impl FundAccount {
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
-            self.sol_flow.initialize(None);
+            self.sol.initialize(None);
             self.data_version = 4;
         }
     }
@@ -333,7 +319,6 @@ impl FundAccount {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
-        operation_reserved_amount: u64,
     ) -> Result<()> {
         if self
             .get_supported_tokens_iter()
@@ -349,13 +334,7 @@ impl FundAccount {
         );
 
         let mut supported_token = SupportedToken::zeroed();
-        supported_token.initialize(
-            mint,
-            program,
-            decimals,
-            pricing_source,
-            operation_reserved_amount,
-        )?;
+        supported_token.initialize(mint, program, decimals, pricing_source)?;
         self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
@@ -471,54 +450,37 @@ impl FundAccount {
         Ok(())
     }
 
-    pub(super) fn deposit_sol(&mut self, amount: u64) -> Result<()> {
-        let new_sol_accumulated_deposit_amount = self
-            .sol_flow
-            .accumulated_deposit_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        require_gte!(
-            self.sol_flow.accumulated_deposit_capacity_amount,
-            new_sol_accumulated_deposit_amount,
-            ErrorCode::FundExceededSOLCapacityAmountError
-        );
-
-        self.sol_flow.accumulated_deposit_amount = new_sol_accumulated_deposit_amount;
-        self.sol_operation_reserved_amount = self
-            .sol_operation_reserved_amount
-            .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        Ok(())
-    }
-
     #[inline]
-    pub(super) fn get_asset_flow_state(
+    pub(super) fn get_asset_state(
         &self,
         supported_token_mint: Option<Pubkey>,
-    ) -> Result<&AssetFlowState> {
+    ) -> Result<&AssetState> {
         Ok(match supported_token_mint {
-            Some(supported_token_mint) => {
-                &self.get_supported_token(&supported_token_mint)?.token_flow
-            }
-            None => &self.sol_flow,
+            Some(supported_token_mint) => &self.get_supported_token(&supported_token_mint)?.token,
+            None => &self.sol,
         })
     }
 
     #[inline]
-    pub(super) fn get_asset_flow_state_mut(
+    pub(super) fn get_asset_state_mut(
         &mut self,
         supported_token_mint: Option<Pubkey>,
-    ) -> Result<&mut AssetFlowState> {
+    ) -> Result<&mut AssetState> {
         Ok(match supported_token_mint {
             Some(supported_token_mint) => {
-                &mut self
-                    .get_supported_token_mut(&supported_token_mint)?
-                    .token_flow
+                &mut self.get_supported_token_mut(&supported_token_mint)?.token
             }
-            None => &mut self.sol_flow,
+            None => &mut self.sol,
         })
+    }
+
+    pub(super) fn deposit(
+        &mut self,
+        supported_token_mint: Option<Pubkey>,
+        amount: u64,
+    ) -> Result<()> {
+        self.get_asset_state_mut(supported_token_mint)?
+            .deposit(amount)
     }
 
     pub(super) fn create_withdrawal_request(
@@ -531,12 +493,12 @@ impl FundAccount {
             err!(ErrorCode::FundWithdrawalDisabledError)?
         }
 
-        self.get_asset_flow_state_mut(supported_token_mint)?
+        self.get_asset_state_mut(supported_token_mint)?
             .create_withdrawal_request(receipt_token_amount, current_timestamp)
     }
 
     pub(super) fn cancel_withdrawal_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
-        self.get_asset_flow_state_mut(request.supported_token_mint)?
+        self.get_asset_state_mut(request.supported_token_mint)?
             .cancel_withdrawal_request(request)
     }
 }
@@ -598,8 +560,8 @@ mod tests {
     fn test_initialize_update_fund_account() {
         let mut fund = create_initialized_fund_account();
 
-        fund.sol_flow.accumulated_deposit_amount = 1_000_000_000_000;
-        fund.sol_flow
+        fund.sol.accumulated_deposit_amount = 1_000_000_000_000;
+        fund.sol
             .set_accumulated_deposit_capacity_amount(0)
             .unwrap_err();
 
@@ -626,12 +588,11 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
-            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token1)
             .unwrap()
-            .token_flow
+            .token
             .set_accumulated_deposit_capacity_amount(1_000_000_000)
             .unwrap();
 
@@ -642,12 +603,11 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
-            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token2)
             .unwrap()
-            .token_flow
+            .token
             .set_accumulated_deposit_capacity_amount(1_000_000_000)
             .unwrap();
 
@@ -658,23 +618,20 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
-            0,
         )
         .unwrap_err();
         assert_eq!(fund.num_supported_tokens, 2);
         assert_eq!(
             fund.supported_tokens[0]
-                .token_flow
+                .token
                 .accumulated_deposit_capacity_amount,
             1_000_000_000
         );
 
-        fund.supported_tokens[0]
-            .token_flow
-            .accumulated_deposit_amount = 1_000_000_000;
+        fund.supported_tokens[0].token.accumulated_deposit_amount = 1_000_000_000;
         fund.get_supported_token_mut(&token1)
             .unwrap()
-            .token_flow
+            .token
             .set_accumulated_deposit_capacity_amount(0)
             .unwrap_err();
     }
@@ -682,18 +639,18 @@ mod tests {
     #[test]
     fn test_deposit_sol() {
         let mut fund = create_initialized_fund_account();
-        fund.sol_flow
+        fund.sol
             .set_accumulated_deposit_capacity_amount(100_000)
             .unwrap();
 
-        assert_eq!(fund.sol_operation_reserved_amount, 0);
-        assert_eq!(fund.sol_flow.accumulated_deposit_amount, 0);
+        assert_eq!(fund.sol.operation_reserved_amount, 0);
+        assert_eq!(fund.sol.accumulated_deposit_amount, 0);
 
-        fund.deposit_sol(100_000).unwrap();
-        assert_eq!(fund.sol_operation_reserved_amount, 100_000);
-        assert_eq!(fund.sol_flow.accumulated_deposit_amount, 100_000);
+        fund.deposit(None, 100_000).unwrap();
+        assert_eq!(fund.sol.operation_reserved_amount, 100_000);
+        assert_eq!(fund.sol.accumulated_deposit_amount, 100_000);
 
-        fund.deposit_sol(100_000).unwrap_err();
+        fund.sol.deposit(100_000).unwrap_err();
     }
 
     #[test]
@@ -707,31 +664,27 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
-            0,
         )
         .unwrap();
         fund.supported_tokens[0]
-            .token_flow
+            .token
             .set_accumulated_deposit_capacity_amount(1_000)
             .unwrap();
 
-        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 0);
-        assert_eq!(
-            fund.supported_tokens[0]
-                .token_flow
-                .accumulated_deposit_amount,
-            0
-        );
+        assert_eq!(fund.supported_tokens[0].token.operation_reserved_amount, 0);
+        assert_eq!(fund.supported_tokens[0].token.accumulated_deposit_amount, 0);
 
-        fund.supported_tokens[0].deposit_token(1_000).unwrap();
-        assert_eq!(fund.supported_tokens[0].operation_reserved_amount, 1_000);
+        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
+            .unwrap();
         assert_eq!(
-            fund.supported_tokens[0]
-                .token_flow
-                .accumulated_deposit_amount,
+            fund.supported_tokens[0].token.operation_reserved_amount,
+            1_000
+        );
+        assert_eq!(
+            fund.supported_tokens[0].token.accumulated_deposit_amount,
             1_000
         );
 
-        fund.supported_tokens[0].deposit_token(1_000).unwrap_err();
+        fund.supported_tokens[0].token.deposit(1_000).unwrap_err();
     }
 }
