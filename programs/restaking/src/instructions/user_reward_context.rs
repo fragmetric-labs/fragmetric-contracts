@@ -1,5 +1,6 @@
 use anchor_lang::{prelude::*, solana_program};
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
@@ -17,6 +18,24 @@ pub struct UserRewardAccountInitialContext<'info> {
 
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
         init,
@@ -42,6 +61,15 @@ pub struct UserRewardAccountUpdateContext<'info> {
     #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
     #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
@@ -55,7 +83,7 @@ pub struct UserRewardAccountUpdateContext<'info> {
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.get_bump()?,
-        // DO NOT Use has_one constraint, since reward_account is not safe yet
+        // DO NOT use has_one constraint, since reward_account is not safe yet
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

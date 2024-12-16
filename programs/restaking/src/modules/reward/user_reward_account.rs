@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::events;
@@ -49,7 +50,9 @@ impl ZeroCopyHeader for UserRewardAccount {
 }
 
 impl UserRewardAccount {
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) {
+    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) -> bool {
+        let old_data_version = self.data_version;
+
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -62,16 +65,45 @@ impl UserRewardAccount {
         //     self.data_version = 2;
         //     self.max_user_reward_pools += USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_2;
         // }
+
+        old_data_version < self.data_version
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey, user: Pubkey) {
-        self.initialize(self.bump, receipt_token_mint, user);
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+    ) -> bool {
+        self.migrate(
+            bump,
+            receipt_token_mint.key(),
+            user_receipt_token_account.owner,
+        )
+    }
+
+    #[inline(always)]
+    pub(super) fn update_if_needed(
+        &mut self,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+    ) -> bool {
+        self.migrate(
+            self.bump,
+            receipt_token_mint.key(),
+            user_receipt_token_account.owner,
+        )
     }
 
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == USER_REWARD_ACCOUNT_CURRENT_VERSION
+    }
+
+    #[inline(always)]
+    pub fn is_initializing(&self) -> bool {
+        self.data_version == 0
     }
 
     fn add_new_user_reward_pool(
@@ -125,14 +157,16 @@ impl UserRewardAccount {
     pub(super) fn update_user_reward_pools(
         &mut self,
         reward_account: &mut RewardAccount,
+        deltas: Option<Vec<TokenAllocatedAmountDelta>>,
         current_slot: u64,
     ) -> Result<()> {
         self.backfill_not_existing_pools(reward_account)?;
 
+        let deltas = deltas.unwrap_or_default();
         self.get_user_reward_pools_iter_mut()
             .zip(reward_account.get_reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {
-                user_reward_pool.update(reward_pool, vec![], current_slot)?;
+                user_reward_pool.update(reward_pool, deltas.clone(), current_slot)?;
                 Ok::<_, Error>(())
             })
     }

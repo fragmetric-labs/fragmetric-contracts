@@ -46,7 +46,9 @@ impl UserFundAccount {
         receipt_token_mint: Pubkey,
         receipt_token_amount: u64,
         user: Pubkey,
-    ) {
+    ) -> bool {
+        let old_data_version = self.data_version;
+
         if self.data_version == 0 {
             self.data_version = 1;
             self.bump = bump;
@@ -54,21 +56,23 @@ impl UserFundAccount {
             self.receipt_token_amount = receipt_token_amount;
             self.user = user;
         }
+
+        old_data_version < self.data_version
     }
 
     #[inline(always)]
     pub(super) fn initialize(
         &mut self,
-        bump: u8,
+        user_fund_account_bump: u8,
         receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) {
+    ) -> bool {
         self.migrate(
-            bump,
+            user_fund_account_bump,
             receipt_token_mint.key(),
             user_receipt_token_account.amount,
             user_receipt_token_account.owner,
-        );
+        )
     }
 
     #[inline(always)]
@@ -76,8 +80,8 @@ impl UserFundAccount {
         &mut self,
         receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) {
-        self.initialize(self.bump, receipt_token_mint, user_receipt_token_account);
+    ) -> bool {
+        self.initialize(self.bump, receipt_token_mint, user_receipt_token_account)
     }
 
     pub(super) fn reload_receipt_token_amount(

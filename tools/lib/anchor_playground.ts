@@ -244,7 +244,6 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 events[name] = event.value.data;
                 found.add(name);
             } else {
-                console.log('ignored', event.value);
                 ignored.add(name);
             }
         }
@@ -264,7 +263,6 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                                 events[name] = event.data;
                                 found.add(name);
                             } else {
-                                console.log('ignored2', event);
                                 ignored.add(name);
                             }
                         }

@@ -22,6 +22,13 @@ pub struct UserFundAccountInitialContext<'info> {
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
         init,
         payer = user,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
@@ -29,13 +36,6 @@ pub struct UserFundAccountInitialContext<'info> {
         space = 8 + UserFundAccount::INIT_SPACE,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
-
-    #[account(
-        associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
-        associated_token::authority = user,
-    )]
-    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
 #[event_cpi]
@@ -52,6 +52,13 @@ pub struct UserFundAccountUpdateContext<'info> {
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_fund_account.get_bump(),
@@ -59,13 +66,6 @@ pub struct UserFundAccountUpdateContext<'info> {
         has_one = user,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
-
-    #[account(
-        associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
-        associated_token::authority = user,
-    )]
-    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
 #[event_cpi]

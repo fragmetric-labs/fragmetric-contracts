@@ -573,7 +573,7 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
-        modules::fund::UserFundConfigurationService::new(
+        let event = modules::fund::UserFundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
@@ -582,6 +582,10 @@ pub mod restaking {
             ctx.bumps.user_fund_account,
             &ctx.accounts.user_receipt_token_account,
         )?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
 
         Ok(())
     }
@@ -593,12 +597,16 @@ pub mod restaking {
     pub fn user_update_fund_account_if_needed(
         ctx: Context<UserFundAccountUpdateContext>,
     ) -> Result<()> {
-        modules::fund::UserFundConfigurationService::new(
+        let event = modules::fund::UserFundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_fund_account,
         )?
         .process_update_user_fund_account_if_needed(&ctx.accounts.user_receipt_token_account)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
 
         Ok(())
     }
@@ -772,12 +780,20 @@ pub mod restaking {
     pub fn user_initialize_reward_account(
         ctx: Context<UserRewardAccountInitialContext>,
     ) -> Result<()> {
-        modules::reward::UserRewardConfigurationService::new(
+        let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
+            &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-        .process_initialize_user_reward_account(ctx.bumps.user_reward_account)?;
+        .process_initialize_user_reward_account(
+            &ctx.accounts.user_receipt_token_account,
+            ctx.bumps.user_reward_account,
+        )?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
 
         Ok(())
     }
@@ -790,15 +806,21 @@ pub mod restaking {
         ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        modules::reward::UserRewardConfigurationService::new(
+        let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
+            &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_update_user_reward_account_if_needed(
+            &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.system_program,
             desired_account_size,
         )?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
 
         Ok(())
     }

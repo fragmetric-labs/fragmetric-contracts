@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::*;
 
-use crate::modules::fund::*;
+use crate::events;
+
+use super::*;
 
 pub struct UserFundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -30,23 +32,37 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
 
     pub fn process_initialize_user_fund_account(
         &mut self,
-        bump: u8,
+        user_fund_account_bump: u8,
         user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
-    ) -> Result<()> {
-        self.user_fund_account.initialize(
-            bump,
+    ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
+        if self.user_fund_account.initialize(
+            user_fund_account_bump,
             self.receipt_token_mint,
             user_receipt_token_account,
-        );
-        Ok(())
+        ) {
+            Ok(Some(events::UserCreatedOrUpdatedFundAccount {
+                receipt_token_mint: self.receipt_token_mint.key(),
+                user_fund_account: self.user_fund_account.key(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn process_update_user_fund_account_if_needed(
         &mut self,
         user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
-    ) -> Result<()> {
-        self.user_fund_account
-            .update_if_needed(self.receipt_token_mint, user_receipt_token_account);
-        Ok(())
+    ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
+        if self
+            .user_fund_account
+            .update_if_needed(self.receipt_token_mint, user_receipt_token_account)
+        {
+            Ok(Some(events::UserCreatedOrUpdatedFundAccount {
+                receipt_token_mint: self.receipt_token_mint.key(),
+                user_fund_account: self.user_fund_account.key(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }

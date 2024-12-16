@@ -189,6 +189,7 @@ impl TokenAllocatedAmountRecord {
 }
 
 /// A change over [`TokenAllocatedAmount`].
+#[derive(Clone)]
 pub(super) struct TokenAllocatedAmountDelta {
     /// Contribution accrual rate per 1 lamports (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35

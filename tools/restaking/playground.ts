@@ -1402,28 +1402,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
         return [
-            ...(currentRewardVersion == 0 ? [
-                this.program.methods.userInitializeRewardAccount()
-                    .accounts({user: user.publicKey})
-                    .instruction()
-            ] : [
-                // ...
-            ]),
-            ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-                this.program.methods
-                    .userUpdateRewardAccountIfNeeded(null)
-                    .accounts({user: user.publicKey})
-                    .instruction()
+            spl.createAssociatedTokenAccountIdempotentInstruction(
+                user.publicKey,
+                this.knownAddress.fragSOLUserTokenAccount(user.publicKey),
+                user.publicKey,
+                this.knownAddress.fragSOLTokenMint,
+                spl.TOKEN_2022_PROGRAM_ID,
             ),
             ...(currentFundVersion == 0
                 ? [
-                    spl.createAssociatedTokenAccountIdempotentInstruction(
-                        user.publicKey,
-                        this.knownAddress.fragSOLUserTokenAccount(user.publicKey),
-                        user.publicKey,
-                        this.knownAddress.fragSOLTokenMint,
-                        spl.TOKEN_2022_PROGRAM_ID,
-                    ),
                     this.program.methods.userInitializeFundAccount()
                         .accounts({user: user.publicKey})
                         .instruction(),
@@ -1432,6 +1419,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.program.methods.userUpdateFundAccountIfNeeded()
                         .accountsPartial({user: user.publicKey})
                         .instruction(),
+                ]),
+            ...(currentRewardVersion == 0 ? [
+                this.program.methods.userInitializeRewardAccount()
+                    .accounts({user: user.publicKey})
+                    .instruction(),
+                ]
+                : [
+                    ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
+                        this.program.methods
+                            .userUpdateRewardAccountIfNeeded(null)
+                            .accounts({user: user.publicKey})
+                            .instruction(),
+                    ),
                 ]),
         ];
     }
