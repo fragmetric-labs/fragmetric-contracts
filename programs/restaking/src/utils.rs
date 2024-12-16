@@ -4,19 +4,8 @@ use anchor_lang::{CheckId, CheckOwner, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
-
-    fn get_seed_phrase(&self) -> [&[u8]; N];
-    fn get_bump_ref(&self) -> &u8;
-
-    fn get_seeds(&self) -> Vec<&[u8]> {
-        let mut signer_seeds = self.get_seed_phrase().to_vec();
-        signer_seeds.push(std::slice::from_ref(self.get_bump_ref()));
-        signer_seeds
-    }
-
-    fn get_bump(&self) -> u8 {
-        *self.get_bump_ref()
-    }
+    fn get_bump(&self) -> u8;
+    fn get_seeds(&self) -> [&[u8]; N];
 }
 
 /// Zero-copy account that has header (data-version, bump).
@@ -28,7 +17,7 @@ pub trait ZeroCopyHeader: ZeroCopy {
 /// An extension trait for [AccountLoader].
 pub trait AccountLoaderExt<'info> {
     /// Sets zero-copy header when initializing the account
-    /// without enough account data size provided.
+    /// even without enough account data size provided.
     ///
     /// This operation is almost equivalent to [load_init](AccountLoader::load_init),
     /// but skips bytemuck's pointer type casting and accesses directly
@@ -149,7 +138,7 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 }
 
 /// drops sub-decimal values.
-/// when both numerator and denominator are zero, returns amount.
+/// when both numerator and denominator are zero, returns `amount`.
 pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
     if numerator == denominator {
         return Ok(amount);
@@ -189,12 +178,13 @@ pub trait AccountInfoExt<'info> {
     where
         T: ZeroCopy + Owner;
 
+    /// Treats system program account as `None`.
     fn to_option(&self) -> Option<&Self>;
 }
 
 impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
     fn is_initialized(&self) -> bool {
-        self.lamports() != 0 || self.owner != &system_program::ID
+        self.owner != &system_program::ID || !self.data_is_empty()
     }
 
     #[inline(never)]
@@ -252,17 +242,12 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         AccountLoader::try_from(self).map(Some)
     }
 
-    /// treat zeroed pubkey as None
     fn to_option(&self) -> Option<&Self> {
-        if self.key().to_bytes().iter().all(|b| *b == 0) {
-            None
-        } else {
-            Some(self)
-        }
+        (self.key != &system_program::ID).then_some(self)
     }
 }
 
-pub trait AccountExt<'info> {
+pub trait AsAccountInfo<'info> {
     /// SAFETY: `info: &'info AccountInfo<'info>` field of `Account` type
     /// is returned by `AsRef::<AccountInfo<'info>>::as_ref()`, but due to
     /// the trait's signature, its lifetime('info) is narrowed down to `'a`.
@@ -271,6 +256,7 @@ pub trait AccountExt<'info> {
     /// back to `&'info AccountInfo<'info>`.
     ///
     /// ```rs
+    /// // account.rs
     /// pub struct Account<'info, T> {
     ///     account: T,
     ///     info: &'info AccountInfo<'info>,
@@ -287,7 +273,7 @@ pub trait AccountExt<'info> {
     fn as_account_info(&self) -> &'info AccountInfo<'info>;
 }
 
-impl<'info, T> AccountExt<'info> for AccountLoader<'info, T>
+impl<'info, T> AsAccountInfo<'info> for AccountLoader<'info, T>
 where
     T: ZeroCopy + Owner + Clone,
 {
@@ -296,7 +282,7 @@ where
     }
 }
 
-impl<'info, T> AccountExt<'info> for Account<'info, T>
+impl<'info, T> AsAccountInfo<'info> for Account<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
@@ -305,7 +291,7 @@ where
     }
 }
 
-impl<'info, T> AccountExt<'info> for InterfaceAccount<'info, T>
+impl<'info, T> AsAccountInfo<'info> for InterfaceAccount<'info, T>
 where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
@@ -314,82 +300,79 @@ where
     }
 }
 
-impl<'info, T> AccountExt<'info> for Program<'info, T> {
+impl<'info, T> AsAccountInfo<'info> for Program<'info, T> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
         unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
-impl<'info, T> AccountExt<'info> for Interface<'info, T> {
+impl<'info, T> AsAccountInfo<'info> for Interface<'info, T> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
         unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
 pub trait SystemProgramExt<'info> {
-    fn create_account(
+    /// Need signer seeds of every PDAs.
+    fn initialize_account(
         &self,
-        account_to_create: &AccountInfo<'info>,
-        account_to_create_seeds: &[&[u8]],
-        payer: &(impl ToAccountInfo<'info> + Key),
-        payer_seeds: &[&[u8]],
+        account_to_initialize: &AccountInfo<'info>,
+        payer: &AccountInfo<'info>,
+        signer_seeds: &[&[&[u8]]],
         space: usize,
-        lamports: Option<u64>,
+        desired_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()>;
 }
 
 impl<'info> SystemProgramExt<'info> for Program<'info, System> {
-    fn create_account(
+    fn initialize_account(
         &self,
-        account_to_create: &AccountInfo<'info>,
-        account_to_create_seeds: &[&[u8]],
-        payer: &(impl ToAccountInfo<'info> + Key),
-        payer_seeds: &[&[u8]],
+        account_to_initialize: &AccountInfo<'info>,
+        payer: &AccountInfo<'info>,
+        signer_seeds: &[&[&[u8]]],
         space: usize,
-        lamports: Option<u64>,
+        desired_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()> {
         let rent = Rent::get()?;
-        let current_lamports = account_to_create.lamports();
+        let minimum_lamports = rent.minimum_balance(space);
+        let target_lamports = desired_lamports
+            .unwrap_or(minimum_lamports)
+            .max(minimum_lamports);
+
+        let current_lamports = account_to_initialize.lamports();
         if current_lamports == 0 {
             anchor_lang::system_program::create_account(
                 CpiContext::new_with_signer(
                     self.to_account_info(),
                     anchor_lang::system_program::CreateAccount {
                         from: payer.to_account_info(),
-                        to: account_to_create.clone(),
+                        to: account_to_initialize.clone(),
                     },
-                    &[payer_seeds, account_to_create_seeds],
+                    signer_seeds,
                 ),
-                if let Some(lamports) = lamports {
-                    lamports
-                } else {
-                    rent.minimum_balance(space)
-                },
+                target_lamports,
                 space as u64,
                 owner,
             )?;
         } else {
             require_keys_neq!(
                 payer.key(),
-                account_to_create.key(),
+                account_to_initialize.key(),
                 ErrorCode::TryingToInitPayerAsProgramAccount
             );
 
-            let required_lamports = rent
-                .minimum_balance(space)
-                .max(1)
-                .saturating_sub(current_lamports);
+            let required_lamports = target_lamports.max(1).saturating_sub(current_lamports);
             if required_lamports > 0 {
                 anchor_lang::system_program::transfer(
                     CpiContext::new_with_signer(
                         self.to_account_info(),
                         anchor_lang::system_program::Transfer {
                             from: payer.to_account_info(),
-                            to: account_to_create.clone(),
+                            to: account_to_initialize.clone(),
                         },
-                        &[payer_seeds],
+                        signer_seeds,
                     ),
                     required_lamports,
                 )?;
@@ -398,9 +381,9 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 CpiContext::new_with_signer(
                     self.to_account_info(),
                     anchor_lang::system_program::Allocate {
-                        account_to_allocate: account_to_create.clone(),
+                        account_to_allocate: account_to_initialize.clone(),
                     },
-                    &[account_to_create_seeds],
+                    signer_seeds,
                 ),
                 space as u64,
             )?;
@@ -408,9 +391,9 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 CpiContext::new_with_signer(
                     self.to_account_info(),
                     anchor_lang::system_program::Assign {
-                        account_to_assign: account_to_create.clone(),
+                        account_to_assign: account_to_initialize.clone(),
                     },
-                    &[account_to_create_seeds],
+                    signer_seeds,
                 ),
                 owner,
             )?;
@@ -421,15 +404,26 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
 }
 
 #[allow(unused)]
-pub fn debug_msg_heap_size(marker: &str) {
-    let heap_total = entrypoint::HEAP_LENGTH as u64;
-    let heap_top = heap_total + entrypoint::HEAP_START_ADDRESS;
-    #[allow(unused_allocation)]
-    let heap_usage: u64 = heap_top.saturating_sub(Box::new(0u8).as_ref() as *const u8 as u64);
-    msg!(
-        "HEAP#{} = {:?}bytes ({}%)",
-        marker,
-        heap_usage,
-        (heap_usage * 100) as f32 / heap_total as f32
-    );
+#[macro_use]
+macro_rules! debug_msg_heap_size {
+    ($marker:expr) => {
+        #[allow(unexpected_cfgs)]
+        {
+            #[cfg(all(not(feature = "custom-heap"), target_os = "solana"))]
+            {
+                let pos = unsafe { *(crate::A.start as *mut usize) };
+                let heap_top = crate::A.start + crate::A.len;
+                let heap_usage = heap_top.saturating_sub(pos);
+                msg!(
+                    "HEAP#{} = {:?}bytes ({}%)",
+                    $marker,
+                    heap_usage,
+                    (heap_usage * 100) as f32 / crate::A.len as f32,
+                );
+            }
+        }
+    };
 }
+
+#[allow(unused_imports)]
+pub(crate) use debug_msg_heap_size;

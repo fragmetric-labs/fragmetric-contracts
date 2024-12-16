@@ -8,7 +8,7 @@ use crate::modules::staking::{
     AvailableWithdrawals, SPLStakePool, SPLStakePoolInterface, SPLStakePoolService,
     SanctumSingleValidatorSPLStakePool, SanctumSingleValidatorSPLStakePoolService,
 };
-use crate::utils::{AccountExt, PDASeeds};
+use crate::utils::{AsAccountInfo, PDASeeds};
 
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,

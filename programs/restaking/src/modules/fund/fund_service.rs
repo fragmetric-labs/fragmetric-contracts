@@ -765,9 +765,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     );
                 require_keys_eq!(uninitialized_batch_account.key(), batch_account_address);
                 let mut batch_account = {
-                    system_program.create_account(
+                    system_program.initialize_account(
                         uninitialized_batch_account,
-                        FundWithdrawalBatchAccount::get_seeds(
+                        operator,
+                        &[FundWithdrawalBatchAccount::get_seeds(
                             &self.receipt_token_mint.key(),
                             supported_token_mint_key.as_ref(),
                             batch.batch_id,
@@ -775,9 +776,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         .iter()
                         .map(Vec::as_slice)
                         .collect::<Vec<_>>()
-                        .as_slice(),
-                        operator,
-                        &[],
+                        .as_slice()],
                         8 + FundWithdrawalBatchAccount::INIT_SPACE,
                         None,
                         &crate::ID,

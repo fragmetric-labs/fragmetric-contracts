@@ -26,19 +26,20 @@ pub struct NormalizedTokenWithdrawalAccount {
     _reserved: [u8; 32],
 }
 
-impl PDASeeds<3> for NormalizedTokenWithdrawalAccount {
+impl PDASeeds<4> for NormalizedTokenWithdrawalAccount {
     const SEED: &'static [u8] = b"nt_withdrawal";
 
-    fn get_seed_phrase(&self) -> [&[u8]; 3] {
+    fn get_bump(&self) -> u8 {
+        self.bump
+    }
+
+    fn get_seeds(&self) -> [&[u8]; 4] {
         [
             Self::SEED,
             self.normalized_token_mint.as_ref(),
             self.withdrawal_authority.as_ref(),
+            std::slice::from_ref(&self.bump),
         ]
-    }
-
-    fn get_bump_ref(&self) -> &u8 {
-        &self.bump
     }
 }
 

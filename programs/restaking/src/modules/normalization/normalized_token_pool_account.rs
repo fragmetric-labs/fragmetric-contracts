@@ -36,15 +36,19 @@ pub struct NormalizedTokenPoolAccount {
     _reserved: [u8; 128],
 }
 
-impl PDASeeds<2> for NormalizedTokenPoolAccount {
+impl PDASeeds<3> for NormalizedTokenPoolAccount {
     const SEED: &'static [u8] = b"nt_pool";
 
-    fn get_seed_phrase(&self) -> [&[u8]; 2] {
-        [Self::SEED, self.normalized_token_mint.as_ref()]
+    fn get_bump(&self) -> u8 {
+        self.bump
     }
 
-    fn get_bump_ref(&self) -> &u8 {
-        &self.bump
+    fn get_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::SEED,
+            self.normalized_token_mint.as_ref(),
+            std::slice::from_ref(&self.bump),
+        ]
     }
 }
 

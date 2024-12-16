@@ -269,11 +269,10 @@ impl<'info> MarinadeStakePoolService<'info> {
         new_ticket_account_seeds: &[&[u8]],
     ) -> Result<()> {
         let space = 8 + std::mem::size_of::<TicketAccountData>();
-        system_program.create_account(
+        system_program.initialize_account(
             new_ticket_account,
-            new_ticket_account_seeds,
             ticket_account_rent_payer,
-            &[],
+            &[new_ticket_account_seeds],
             space,
             None,
             &crate::ID,

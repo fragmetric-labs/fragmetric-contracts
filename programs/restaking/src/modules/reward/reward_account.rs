@@ -32,15 +32,19 @@ pub struct RewardAccount {
     reward_pools_1: [RewardPool; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
 }
 
-impl PDASeeds<2> for RewardAccount {
+impl PDASeeds<3> for RewardAccount {
     const SEED: &'static [u8] = b"reward";
 
-    fn get_seed_phrase(&self) -> [&[u8]; 2] {
-        [Self::SEED, self.receipt_token_mint.as_ref()]
+    fn get_bump(&self) -> u8 {
+        self.bump
     }
 
-    fn get_bump_ref(&self) -> &u8 {
-        &self.bump
+    fn get_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::SEED,
+            self.receipt_token_mint.as_ref(),
+            std::slice::from_ref(&self.bump),
+        ]
     }
 }
 

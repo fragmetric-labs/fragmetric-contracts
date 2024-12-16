@@ -9,7 +9,7 @@ use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::modules::pricing::{PricingService, TokenPricingSource};
-use crate::utils::{AccountExt, PDASeeds};
+use crate::utils::{AsAccountInfo, PDASeeds};
 
 use super::*;
 
