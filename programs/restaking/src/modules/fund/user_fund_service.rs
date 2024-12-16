@@ -91,7 +91,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .new_pricing_service(pricing_sources)?;
         let receipt_token_mint_amount =
             pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
-        let event1 = self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+        let event1 =
+            self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user $SOL to fund
         self.fund_account.load_mut()?.deposit_sol(sol_amount)?;
@@ -167,7 +168,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         )?;
 
         // mint receipt token to user & update user reward accrual status
-        let event1 = self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
+        let event1 =
+            self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
         // transfer user supported token to fund
         self.fund_account

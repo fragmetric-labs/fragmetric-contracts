@@ -22,13 +22,13 @@ pub use user_withdrew_from_fund::*;
 
 use anchor_lang::prelude::*;
 
-pub fn emit_cpi<'info>(event_authority_info: &'info AccountInfo<'info>, program_info: &'info AccountInfo<'info>, event: &impl anchor_lang::Event) -> Result<()> {
-    let (event_authority_address, event_authority_bump) = Pubkey::find_program_address(
-        &[
-            b"__event_authority",
-        ],
-        &crate::ID,
-    );
+pub fn emit_cpi<'info>(
+    event_authority_info: &'info AccountInfo<'info>,
+    program_info: &'info AccountInfo<'info>,
+    event: &impl anchor_lang::Event,
+) -> Result<()> {
+    let (event_authority_address, event_authority_bump) =
+        Pubkey::find_program_address(&[b"__event_authority"], &crate::ID);
     require_keys_eq!(event_authority_info.key(), event_authority_address);
     require_keys_eq!(program_info.key(), crate::ID);
 
@@ -39,12 +39,7 @@ pub fn emit_cpi<'info>(event_authority_info: &'info AccountInfo<'info>, program_
     let ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
         crate::ID,
         &ix_data,
-        vec![
-            AccountMeta::new_readonly(
-                *event_authority_info.key,
-                true,
-            ),
-        ],
+        vec![AccountMeta::new_readonly(*event_authority_info.key, true)],
     );
 
     anchor_lang::solana_program::program::invoke_signed(
@@ -52,5 +47,5 @@ pub fn emit_cpi<'info>(event_authority_info: &'info AccountInfo<'info>, program_
         &[event_authority_info.to_account_info()],
         &[&[b"__event_authority", &[event_authority_bump]]],
     )
-        .map_err(anchor_lang::error::Error::from)
+    .map_err(anchor_lang::error::Error::from)
 }

@@ -18,5 +18,4 @@ pub struct UserWithdrewFromFund {
     pub returned_receipt_token_amount: u64,
     pub withdrawn_amount: u64,
     pub deducted_fee_amount: u64,
-
 }

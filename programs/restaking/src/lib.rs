@@ -14,8 +14,8 @@ use instructions::*;
 
 #[program]
 pub mod restaking {
-    use crate::modules::normalization::NormalizedTokenPoolAccount;
     use super::*;
+    use crate::modules::normalization::NormalizedTokenPoolAccount;
 
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
@@ -375,13 +375,11 @@ pub mod restaking {
         description: String,
         pubkeys: Vec<Pubkey>,
     ) -> Result<()> {
-        emit_cpi!(
-            modules::reward::RewardConfigurationService::new(
+        emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-        .process_add_reward_pool_holder(name, description, pubkeys)?
-        );
+        .process_add_reward_pool_holder(name, description, pubkeys)?);
 
         Ok(())
     }
@@ -792,7 +790,7 @@ pub mod restaking {
         ctx: Context<UserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let event = modules::reward::UserRewardConfigurationService::new(
+        modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.user_reward_account,
@@ -801,11 +799,6 @@ pub mod restaking {
             &ctx.accounts.system_program,
             desired_account_size,
         )?;
-
-        match event {
-            Some(event) => emit_cpi!(event),
-            _ => {}
-        };
 
         Ok(())
     }
@@ -856,12 +849,12 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.source_receipt_token_account,
             &mut ctx.accounts.destination_receipt_token_account,
-            &ctx.remaining_accounts[2..],
+            &ctx.remaining_accounts,
             amount,
         )?;
 
-        let event_authority_info = &ctx.remaining_accounts[0];
-        let program_info = &ctx.remaining_accounts[1];
+        let event_authority_info = &ctx.remaining_accounts[4];
+        let program_info = &ctx.remaining_accounts[5];
         events::emit_cpi(event_authority_info, program_info, &event)?;
 
         Ok(())
