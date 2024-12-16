@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
@@ -16,13 +15,13 @@ pub const NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION: u16 = 1;
 pub struct NormalizedTokenWithdrawalAccount {
     data_version: u16,
     bump: u8,
-    pub(super) withdrawal_authority: Pubkey,
+    pub withdrawal_authority: Pubkey,
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_pool: Pubkey,
-    normalized_token_amount: u64,
+    pub(super) normalized_token_amount: u64,
     #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
-    claimable_tokens: Vec<NormalizedClaimableToken>,
-    created_at: i64,
+    pub(super) claimable_tokens: Vec<NormalizedClaimableToken>,
+    pub(super) created_at: i64,
     _reserved: [u8; 32],
 }
 
@@ -139,14 +138,14 @@ impl NormalizedTokenWithdrawalAccount {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub(super) struct NormalizedClaimableToken {
-    mint: Pubkey,
-    program: Pubkey,
+    pub mint: Pubkey,
+    pub program: Pubkey,
     pub claimable_amount: u64,
-    claimed: bool,
+    pub claimed: bool,
 }
 
 impl NormalizedClaimableToken {
-    pub fn new(mint: Pubkey, program: Pubkey, claimable_amount: u64) -> Self {
+    pub(super) fn new(mint: Pubkey, program: Pubkey, claimable_amount: u64) -> Self {
         Self {
             mint,
             program,
@@ -155,7 +154,7 @@ impl NormalizedClaimableToken {
         }
     }
 
-    pub fn settle(&mut self) -> Result<()> {
+    pub(super) fn settle(&mut self) -> Result<()> {
         require!(
             !self.claimed,
             ErrorCode::NormalizedTokenPoolNonClaimableTokenError

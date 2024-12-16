@@ -2,11 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::Mint;
 
-#[cfg(any(feature = "devnet", feature = "mainnet"))]
-use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::normalization::{NormalizedClaimableToken, NormalizedTokenWithdrawalAccount};
-use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
 #[constant]
@@ -84,6 +81,8 @@ impl NormalizedTokenPoolAccount {
 
                     #[cfg(feature = "devnet")]
                     {
+                        use crate::constants::*;
+
                         supported_token.pricing_source = match supported_token.mint {
                             DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
                                 address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
@@ -97,6 +96,8 @@ impl NormalizedTokenPoolAccount {
 
                     #[cfg(feature = "mainnet")]
                     {
+                        use crate::constants::*;
+
                         supported_token.pricing_source = match supported_token.mint {
                             MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
                                 address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
@@ -155,11 +156,11 @@ impl NormalizedTokenPoolAccount {
         self.data_version == NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION
     }
 
-    pub fn find_account_address_by_token_mint(normalized_token_mint: &Pubkey) -> Pubkey {
+    pub fn find_account_address(normalized_token_mint: &Pubkey) -> Pubkey {
         Pubkey::find_program_address(
             &[
                 NormalizedTokenPoolAccount::SEED,
-                normalized_token_mint.to_bytes().as_ref(),
+                normalized_token_mint.as_ref(),
             ],
             &crate::ID,
         )
@@ -171,13 +172,7 @@ impl NormalizedTokenPoolAccount {
         supported_token_mint: &Pubkey,
     ) -> Result<Pubkey> {
         let supported_token = self.get_supported_token(supported_token_mint)?;
-        Ok(
-            spl_associated_token_account::get_associated_token_address_with_program_id(
-                &Self::find_account_address_by_token_mint(&self.normalized_token_mint),
-                &supported_token.mint,
-                &supported_token.program,
-            ),
-        )
+        Ok(supported_token.find_reserve_account_address(&self.normalized_token_mint))
     }
 
     pub(super) fn add_new_supported_token(
@@ -213,25 +208,12 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
-    #[inline]
-    pub(super) fn get_supported_tokens_iter(
-        &self,
-    ) -> impl Iterator<Item = &NormalizedSupportedToken> {
-        self.supported_tokens.iter()
-    }
-
-    #[inline]
-    pub(super) fn get_supported_tokens_iter_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut NormalizedSupportedToken> {
-        self.supported_tokens.iter_mut()
-    }
-
     pub(super) fn get_supported_token(
         &self,
         supported_token_mint: &Pubkey,
     ) -> Result<&NormalizedSupportedToken> {
-        self.get_supported_tokens_iter()
+        self.supported_tokens
+            .iter()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
@@ -240,7 +222,8 @@ impl NormalizedTokenPoolAccount {
         &mut self,
         supported_token_mint: &Pubkey,
     ) -> Result<&mut NormalizedSupportedToken> {
-        self.get_supported_tokens_iter_mut()
+        self.supported_tokens
+            .iter_mut()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
@@ -294,6 +277,14 @@ impl NormalizedSupportedToken {
             pricing_source,
             _reserved: [0; 14],
         }
+    }
+
+    pub(super) fn find_reserve_account_address(&self, normalized_token_mint: &Pubkey) -> Pubkey {
+        spl_associated_token_account::get_associated_token_address_with_program_id(
+            &NormalizedTokenPoolAccount::find_account_address(normalized_token_mint),
+            &self.mint,
+            &self.program,
+        )
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {

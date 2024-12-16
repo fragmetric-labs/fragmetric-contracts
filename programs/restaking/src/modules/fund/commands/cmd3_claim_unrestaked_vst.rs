@@ -540,7 +540,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         &normalized_token_account_parsed,
                         &supported_token_account_parsed,
                         &ctx.fund_account.as_ref(),
-                        &[&ctx.fund_account.load()?.get_seeds().as_ref()],
+                        &[ctx.fund_account.load()?.get_seeds().as_ref()],
                         reserved_restake_token.operation_reserved_amount,
                         &mut pricing_service,
                     )?;

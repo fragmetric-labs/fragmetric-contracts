@@ -3,12 +3,11 @@ use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::modules::fund::FundService;
-use crate::modules::pricing::{PricingService, TokenPricingSource};
+use crate::modules::pricing::TokenPricingSource;
 
 use super::*;
 
-pub struct NormalizedTokenPoolConfigurationService<'info: 'a, 'a> {
+pub struct NormalizedTokenPoolConfigurationService<'a, 'info> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
     normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     normalized_token_program: &'a Program<'info, Token>,
@@ -20,7 +19,7 @@ impl Drop for NormalizedTokenPoolConfigurationService<'_, '_> {
     }
 }
 
-impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
+impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
         normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -44,11 +43,10 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
         );
 
         // set token mint authority
-        if self
+        if !self
             .normalized_token_mint
             .mint_authority
-            .unwrap_or_default()
-            != self.normalized_token_pool_account.key()
+            .contains(&self.normalized_token_pool_account.key())
         {
             anchor_spl::token::set_authority(
                 CpiContext::new(
@@ -75,9 +73,9 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
 
     pub fn process_add_supported_token(
         &mut self,
-        pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        pool_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
-        supported_token_program: &Interface<'info, TokenInterface>,
+        supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
@@ -90,8 +88,8 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             supported_token_mint.key()
         );
         require_keys_eq!(
-            *supported_token_mint.to_account_info().owner,
-            supported_token_program.key()
+            *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
+            supported_token_program.key(),
         );
 
         self.normalized_token_pool_account.add_new_supported_token(

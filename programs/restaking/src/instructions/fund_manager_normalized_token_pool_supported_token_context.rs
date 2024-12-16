@@ -3,6 +3,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
+use crate::errors::ErrorCode;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
@@ -19,6 +20,7 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
         seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_pool_account.get_bump(),
         has_one = normalized_token_mint,
+        constraint = normalized_token_pool_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 

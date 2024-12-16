@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
-use anchor_lang::{CheckId, CheckOwner, ZeroCopy};
+use anchor_lang::{CheckOwner, ZeroCopy};
 
 use crate::errors;
 
@@ -153,6 +153,7 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
         .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))
 }
 
+#[allow(dead_code)]
 pub trait AccountInfoExt<'info> {
     fn is_initialized(&self) -> bool;
 
@@ -163,14 +164,6 @@ pub trait AccountInfoExt<'info> {
     fn parse_interface_account_boxed<T>(&'info self) -> Result<Box<InterfaceAccount<'info, T>>>
     where
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner;
-
-    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
-    where
-        T: Id;
-
-    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
-    where
-        T: CheckId;
 
     fn parse_optional_account_boxed<T>(&'info self) -> Result<Option<Box<Account<'info, T>>>>
     where
@@ -203,22 +196,6 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
     {
         InterfaceAccount::try_from(self).map(Box::new)
-    }
-
-    #[inline(never)]
-    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
-    where
-        T: Id,
-    {
-        Program::try_from(self).map(Box::new)
-    }
-
-    #[inline(never)]
-    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
-    where
-        T: CheckId,
-    {
-        Interface::try_from(self).map(Box::new)
     }
 
     #[inline(never)]

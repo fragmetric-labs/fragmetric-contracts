@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
+use crate::errors::ErrorCode;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount};
 use crate::utils::PDASeeds;
 
@@ -21,6 +22,7 @@ pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
         seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_pool_account.get_bump(),
         has_one = normalized_token_mint,
+        constraint = normalized_token_pool_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 
@@ -61,6 +63,7 @@ pub struct SlasherNormalizedTokenWithdrawContext<'info> {
         seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_pool_account.get_bump(),
         has_one = normalized_token_mint,
+        constraint = normalized_token_pool_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub normalized_token_pool_account: Box<Account<'info, NormalizedTokenPoolAccount>>,
 
@@ -71,6 +74,7 @@ pub struct SlasherNormalizedTokenWithdrawContext<'info> {
         seeds = [NormalizedTokenWithdrawalAccount::SEED, normalized_token_mint.key().as_ref(), slasher.key().as_ref()],
         bump = slasher_normalized_token_withdrawal_ticket_account.get_bump(),
         has_one = normalized_token_mint,
+        constraint = slasher_normalized_token_withdrawal_ticket_account.withdrawal_authority == slasher.key(),
     )]
     pub slasher_normalized_token_withdrawal_ticket_account:
         Box<Account<'info, NormalizedTokenWithdrawalAccount>>,

@@ -37,7 +37,7 @@ use crate::modules::fund;
 use super::*;
 
 // propagate common accounts and values to all commands
-pub struct OperationCommandContext<'info: 'a, 'a> {
+pub struct OperationCommandContext<'info, 'a> {
     pub(super) operator: &'a Signer<'info>,
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     pub(super) fund_account: &'a mut AccountLoader<'info, FundAccount>,
