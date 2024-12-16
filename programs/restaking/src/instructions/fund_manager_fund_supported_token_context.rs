@@ -6,6 +6,7 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerFundSupportedTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]

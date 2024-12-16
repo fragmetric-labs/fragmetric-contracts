@@ -97,7 +97,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 let fund_account = ctx.fund_account.load()?;
-                let num_queued_batches = fund_account.get_withdrawal_queued_batches_iter().count();
+                let num_queued_batches = fund_account
+                    .sol_flow
+                    .get_withdrawal_queued_batches_iter()
+                    .count();
                 let num_supported_token_pricing_sources = fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
@@ -287,20 +290,24 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     for (i, supported_token) in
                         fund_account.get_supported_tokens_iter_mut().enumerate()
                     {
-                        supported_token.set_accumulated_deposit_capacity_amount(
-                            supported_token
-                                .accumulated_deposit_capacity_amount
-                                .saturating_add(pricing_service.get_sol_amount_as_token(
-                                    &supported_token.mint,
-                                    strategy.get_participant_last_put_amount_by_index(i)?,
-                                )?),
-                        )?;
+                        supported_token
+                            .token_flow
+                            .set_accumulated_deposit_capacity_amount(
+                                supported_token
+                                    .token_flow
+                                    .accumulated_deposit_capacity_amount
+                                    .saturating_add(pricing_service.get_sol_amount_as_token(
+                                        &supported_token.mint,
+                                        strategy.get_participant_last_put_amount_by_index(i)?,
+                                    )?),
+                            )?;
                     }
 
                     let sol_increasing_capacity =
                         receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
-                    fund_account.sol_accumulated_deposit_capacity_amount = fund_account
-                        .sol_accumulated_deposit_capacity_amount
+                    fund_account.sol_flow.accumulated_deposit_capacity_amount = fund_account
+                        .sol_flow
+                        .accumulated_deposit_capacity_amount
                         .saturating_add(sol_increasing_capacity);
                 }
             }

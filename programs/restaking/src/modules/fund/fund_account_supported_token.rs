@@ -4,6 +4,8 @@ use bytemuck::{Pod, Zeroable};
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
+use super::AssetFlowState;
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub(super) struct SupportedToken {
@@ -17,16 +19,8 @@ pub(super) struct SupportedToken {
     /// informative
     pub one_token_as_sol: u64,
 
-    /// configurations: token deposit & withdraw
-    pub accumulated_deposit_capacity_amount: u64,
-    pub accumulated_deposit_amount: u64,
-    _padding2: [u8; 5],
-    pub withdrawable: u8,
-    pub normal_reserve_rate_bps: u16,
-    pub normal_reserve_max_amount: u64,
-
-    /// informative: reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund.
-    pub withdrawal_user_reserved_amount: u64,
+    /// token deposit & withdrawal
+    pub token_flow: AssetFlowState,
 
     /// asset
     pub operation_reserved_amount: u64,
@@ -67,56 +61,8 @@ impl SupportedToken {
         self.operation_reserved_amount = operation_reserved_amount;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
+        self.token_flow.initialize(Some(mint));
         Ok(())
-    }
-
-    pub(super) fn set_accumulated_deposit_amount(&mut self, token_amount: u64) -> Result<()> {
-        require_gte!(
-            self.accumulated_deposit_capacity_amount,
-            token_amount,
-            ErrorCode::FundInvalidUpdateError
-        );
-
-        self.accumulated_deposit_amount = token_amount;
-
-        Ok(())
-    }
-
-    pub(super) fn set_accumulated_deposit_capacity_amount(
-        &mut self,
-        token_amount: u64,
-    ) -> Result<()> {
-        require_gte!(
-            token_amount,
-            self.accumulated_deposit_amount,
-            ErrorCode::FundInvalidUpdateError
-        );
-
-        self.accumulated_deposit_capacity_amount = token_amount;
-
-        Ok(())
-    }
-
-    #[inline(always)]
-    pub(super) fn set_normal_reserve_max_amount(&mut self, token_amount: u64) {
-        self.normal_reserve_max_amount = token_amount;
-    }
-
-    pub(super) fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
-        require_gte!(
-            10_00, // 10%
-            reserve_rate_bps,
-            ErrorCode::FundInvalidUpdateError
-        );
-
-        self.normal_reserve_rate_bps = reserve_rate_bps;
-
-        Ok(())
-    }
-
-    #[inline(always)]
-    pub(super) fn set_withdrawable(&mut self, withdrawable: bool) {
-        self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
     pub(super) fn set_sol_allocation_strategy(
@@ -144,17 +90,18 @@ impl SupportedToken {
 
     pub(super) fn deposit_token(&mut self, amount: u64) -> Result<()> {
         let new_accumulated_deposit_amount = self
+            .token_flow
             .accumulated_deposit_amount
             .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         require_gte!(
-            self.accumulated_deposit_capacity_amount,
+            self.token_flow.accumulated_deposit_capacity_amount,
             new_accumulated_deposit_amount,
             ErrorCode::FundExceededTokenCapacityAmountError
         );
 
-        self.accumulated_deposit_amount = new_accumulated_deposit_amount;
+        self.token_flow.accumulated_deposit_amount = new_accumulated_deposit_amount;
         self.operation_reserved_amount = self
             .operation_reserved_amount
             .checked_add(amount)

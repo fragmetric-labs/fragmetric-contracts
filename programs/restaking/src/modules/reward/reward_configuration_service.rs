@@ -65,21 +65,21 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         name: String,
         description: String,
         pubkeys: Vec<Pubkey>,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
         self.reward_account
             .load_mut()?
             .add_new_holder(name, description, pubkeys)?;
 
-        self.emit_fund_manager_updated_reward_pool_event()
+        self.create_fund_manager_updated_reward_pool_event()
     }
 
-    fn emit_fund_manager_updated_reward_pool_event(&self) -> Result<()> {
-        emit!(events::FundManagerUpdatedRewardPool {
+    fn create_fund_manager_updated_reward_pool_event(
+        &self,
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
+        Ok(events::FundManagerUpdatedRewardPool {
             receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account_address: self.reward_account.key(),
-        });
-
-        Ok(())
+            reward_account: self.reward_account.key(),
+        })
     }
 
     pub fn process_add_reward_pool(
@@ -87,7 +87,7 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         name: String,
         holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
         self.reward_account.load_mut()?.add_new_reward_pool(
             name,
             holder_id,
@@ -95,15 +95,18 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
             self.current_slot,
         )?;
 
-        self.emit_fund_manager_updated_reward_pool_event()
+        self.create_fund_manager_updated_reward_pool_event()
     }
 
-    pub fn process_close_reward_pool(&self, reward_pool_id: u8) -> Result<()> {
+    pub fn process_close_reward_pool(
+        &self,
+        reward_pool_id: u8,
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
         self.reward_account
             .load_mut()?
             .close_reward_pool(reward_pool_id, self.current_slot)?;
 
-        self.emit_fund_manager_updated_reward_pool_event()
+        self.create_fund_manager_updated_reward_pool_event()
     }
 
     pub fn process_add_reward(
@@ -113,14 +116,14 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         name: String,
         description: String,
         reward_type: RewardType,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
         Self::validate_token_reward_type(reward_token_mint, reward_token_program, &reward_type)?;
 
         self.reward_account
             .load_mut()?
             .add_new_reward(name, description, reward_type)?;
 
-        self.emit_fund_manager_updated_reward_pool_event()
+        self.create_fund_manager_updated_reward_pool_event()
     }
 
     fn validate_token_reward_type(
@@ -165,7 +168,7 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         reward_pool_id: u8,
         reward_id: u16,
         amount: u64,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
         // TODO v0.4/reward: ensure substantial asset transfer for certain type of rewards
 
         self.reward_account.load_mut()?.settle_reward(
@@ -175,6 +178,6 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
             self.current_slot,
         )?;
 
-        self.emit_fund_manager_updated_reward_pool_event()
+        self.create_fund_manager_updated_reward_pool_event()
     }
 }

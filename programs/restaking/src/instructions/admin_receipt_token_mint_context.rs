@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::fund::*;
 
 // will be used only once
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
     #[account(mut)]
@@ -32,6 +33,7 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
     pub extra_account_meta_list: UncheckedAccount<'info>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
     pub payer: Signer<'info>,

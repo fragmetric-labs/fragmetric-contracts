@@ -6,6 +6,7 @@ use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct OperatorRewardContext<'info> {
     #[account(mut)]

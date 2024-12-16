@@ -60,6 +60,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 Some(self.fund_account.key()),
             )?;
         }
+
         Ok(())
     }
 
@@ -91,7 +92,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key());
         require_keys_eq!(
             fund_supported_token_account.mint,
@@ -114,9 +115,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        self.emit_fund_manager_updated_fund_event()?;
-
-        Ok(())
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_set_normalized_token(
@@ -126,7 +125,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         normalized_token_program: &Program<'info, Token>,
         normalized_token_pool: &mut Account<'info, NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(fund_normalized_token_account.owner, self.fund_account.key());
         require_keys_eq!(
             fund_normalized_token_account.mint,
@@ -157,7 +156,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_add_restaking_vault(
@@ -174,7 +173,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault_receipt_token_program: &Interface<TokenInterface>,
 
         pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
             fund_vault_supported_token_account.owner,
             self.fund_account.key()
@@ -217,7 +216,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_add_restaking_operator(
@@ -225,7 +224,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,
         vault_operator: &UncheckedAccount,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             let restaking_vault = fund_account.get_restaking_vault_mut(vault.key)?;
@@ -236,7 +235,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             restaking_vault.add_operator(vault_operator.key)?;
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_update_fund_strategy(
@@ -244,7 +243,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         withdrawal_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account.set_withdrawal_enabled(withdrawal_enabled);
@@ -253,7 +252,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_update_sol_strategy(
@@ -263,25 +262,29 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         sol_withdrawable: bool,
         sol_withdrawal_normal_reserve_rate_bps: u16,
         sol_withdrawal_normal_reserve_max_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
 
-            fund_account.set_sol_accumulated_deposit_capacity_amount(
-                sol_accumulated_deposit_capacity_amount,
-            )?;
+            fund_account
+                .sol_flow
+                .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
             if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
                 fund_account
-                    .set_sol_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
+                    .sol_flow
+                    .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_amount)?;
             }
 
-            fund_account.set_sol_withdrawable(sol_withdrawable);
-            fund_account.set_sol_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
+            fund_account.sol_flow.set_withdrawable(sol_withdrawable);
             fund_account
-                .set_sol_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
+                .sol_flow
+                .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
+            fund_account
+                .sol_flow
+                .set_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_update_supported_token_strategy(
@@ -295,21 +298,29 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
-            supported_token.set_accumulated_deposit_capacity_amount(
-                token_accumulated_deposit_capacity_amount,
-            )?;
-            if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
-                supported_token.set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
-            }
-            supported_token.set_withdrawable(token_withdrawable);
             supported_token
+                .token_flow
+                .set_accumulated_deposit_capacity_amount(
+                    token_accumulated_deposit_capacity_amount,
+                )?;
+            if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
+                supported_token
+                    .token_flow
+                    .set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
+            }
+            supported_token
+                .token_flow
+                .set_withdrawable(token_withdrawable);
+            supported_token
+                .token_flow
                 .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?;
             supported_token
+                .token_flow
                 .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
             if let Some(token_amount) = token_rebalancing_amount {
@@ -321,7 +332,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             )?;
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_update_restaking_vault_strategy(
@@ -329,7 +340,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault: &Pubkey,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             let vault = fund_account.get_restaking_vault_mut(vault)?;
@@ -339,14 +350,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             )?;
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_add_restaking_vault_operator(
         &mut self,
         vault: &Pubkey,
         operator: &Pubkey,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account
@@ -354,7 +365,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 .add_operator(operator)?;
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_update_restaking_vault_operator_strategy(
@@ -364,7 +375,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
         token_redelegation_amount: Option<u64>,
-    ) -> Result<()> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             let operator = fund_account
@@ -379,17 +390,13 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             }
         }
 
-        self.emit_fund_manager_updated_fund_event()
+        self.create_fund_manager_updated_fund_event()
     }
 
-    fn emit_fund_manager_updated_fund_event(&self) -> Result<()> {
-        let fund_account = self.fund_account.load()?;
-
-        emit!(events::FundManagerUpdatedFund {
+    fn create_fund_manager_updated_fund_event(&self) -> Result<events::FundManagerUpdatedFund> {
+        Ok(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: FundAccountInfo::from(fund_account)?,
-        });
-
-        Ok(())
+            fund_account: self.fund_account.key(),
+        })
     }
 }

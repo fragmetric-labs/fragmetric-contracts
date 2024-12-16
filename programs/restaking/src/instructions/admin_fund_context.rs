@@ -8,6 +8,7 @@ use crate::modules::fund::FundAccount;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // will be used only once
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminFundAccountInitialContext<'info> {
     #[account(mut)]
@@ -48,6 +49,7 @@ pub struct AdminFundAccountInitialContext<'info> {
     pub fund_receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct AdminFundAccountUpdateContext<'info> {
     #[account(mut)]

@@ -8,6 +8,7 @@ use crate::modules::fund::FundAccount;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]

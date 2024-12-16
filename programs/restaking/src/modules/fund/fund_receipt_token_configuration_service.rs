@@ -135,6 +135,20 @@ fn receipt_token_extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
             false, // is_signer
             true,  // is_writable
         )?,
+        // index 11, event authority
+        ExtraAccountMeta::new_with_seeds(
+            &[Seed::Literal {
+                bytes: b"__event_authority".to_vec(),
+            }],
+            false, // is_signer,
+            false, // is_writable
+        )?,
+        // index 12, this program
+        ExtraAccountMeta::new_with_pubkey(
+            &crate::ID,
+            false, // is_signer,
+            false, // is_writable
+        )?,
     ];
 
     Ok(extra_account_metas)

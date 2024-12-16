@@ -25,17 +25,15 @@ impl<'info, 'a> RewardService<'info, 'a> {
         })
     }
 
-    pub fn process_update_reward_pools(&self) -> Result<()> {
+    pub fn process_update_reward_pools(&self) -> Result<events::OperatorUpdatedRewardPools> {
         self.reward_account
             .load_mut()?
             .update_reward_pools(self.current_slot)?;
 
-        emit!(events::OperatorUpdatedRewardPools {
+        Ok(events::OperatorUpdatedRewardPools {
             receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account_address: self.reward_account.key(),
-        });
-
-        Ok(())
+            reward_account: self.reward_account.key(),
+        })
     }
 
     pub(in crate::modules) fn update_reward_pools_token_allocation(
@@ -44,13 +42,13 @@ impl<'info, 'a> RewardService<'info, 'a> {
         to_user_reward_account: Option<&mut AccountLoader<UserRewardAccount>>,
         amount: u64,
         contribution_accrual_rate: Option<u8>,
-    ) -> Result<()> {
-        let mut updated_user_reward_account_addresses = vec![];
+    ) -> Result<events::UserUpdatedRewardPool> {
+        let mut updated_user_reward_accounts = vec![];
         if let Some(from) = from_user_reward_account.as_ref() {
-            updated_user_reward_account_addresses.push(from.key());
+            updated_user_reward_accounts.push(from.key());
         }
         if let Some(to) = to_user_reward_account.as_ref() {
-            updated_user_reward_account_addresses.push(to.key());
+            updated_user_reward_accounts.push(to.key());
         }
 
         let mut from_account_ref = from_user_reward_account
@@ -74,11 +72,9 @@ impl<'info, 'a> RewardService<'info, 'a> {
                 self.current_slot,
             )?;
 
-        emit!(events::UserUpdatedRewardPool {
+        Ok(events::UserUpdatedRewardPool {
             receipt_token_mint: self.receipt_token_mint.key(),
-            updated_user_reward_account_addresses,
-        });
-
-        Ok(())
+            updated_user_reward_accounts,
+        })
     }
 }

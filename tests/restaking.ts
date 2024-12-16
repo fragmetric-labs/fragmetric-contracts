@@ -33,12 +33,12 @@ if (process.env.JUST_OPERATE) {
 
 } else if (process.env.JUST_WITHDRAW) {
     require('./restaking/2_deposit_sol')(1);
-    require('./restaking/4_withdraw');
+    require('./restaking/4_withdraw_sol');
 
 } else if (!process.env.JUST_INIT) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/3_deposit_token')(1);
-    require('./restaking/4_withdraw');
+    require('./restaking/4_withdraw_sol');
     require('./restaking/5_transfer_hook');
     require('./restaking/6_reward');
     require('./restaking/8_operate_deprecating')(1);

@@ -61,11 +61,6 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             self.user_reward_account
                 .load_mut()?
                 .update_if_needed(self.receipt_token_mint.key(), self.user.key());
-
-            emit!(events::UserUpdatedRewardPool {
-                receipt_token_mint: self.receipt_token_mint.key(),
-                updated_user_reward_account_addresses: vec![self.user_reward_account.key()],
-            });
         }
 
         Ok(())

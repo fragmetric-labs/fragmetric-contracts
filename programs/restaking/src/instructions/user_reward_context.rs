@@ -7,6 +7,7 @@ use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
 // will be used only once
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardAccountInitialContext<'info> {
     #[account(mut)]
@@ -30,6 +31,7 @@ pub struct UserRewardAccountInitialContext<'info> {
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardAccountUpdateContext<'info> {
     #[account(mut)]
@@ -58,6 +60,7 @@ pub struct UserRewardAccountUpdateContext<'info> {
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardContext<'info> {
     #[account(mut)]

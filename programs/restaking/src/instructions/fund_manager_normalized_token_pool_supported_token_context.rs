@@ -6,6 +6,7 @@ use crate::constants::*;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
+#[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
