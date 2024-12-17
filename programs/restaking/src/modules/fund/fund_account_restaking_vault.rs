@@ -8,6 +8,7 @@ use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 const MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
+const MAX_COMPOUNDING_TOKENS: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
@@ -35,6 +36,9 @@ pub(super) struct RestakingVault {
     _padding2: [u8; 7],
     num_operators: u8,
     operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
+
+    /// auto-compounding
+    compounding_tokens_mint: [Pubkey; MAX_COMPOUNDING_TOKENS],
 
     _reserved: [u8; 128],
 }
