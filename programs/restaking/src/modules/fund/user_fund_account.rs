@@ -6,7 +6,7 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 6;
+pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 4;
 
 #[account]
 #[derive(InitSpace)]
@@ -118,6 +118,7 @@ impl UserFundAccount {
     }
 }
 
+// reduced max number of req by restructuring: (8+8+8+8+16; 48)x10 >= (8+8+8+8+33+33+14; 112)x4
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
 pub(super) struct WithdrawalRequest {
     pub batch_id: u64,
@@ -125,7 +126,8 @@ pub(super) struct WithdrawalRequest {
     pub receipt_token_amount: u64,
     created_at: i64,
     pub supported_token_mint: Option<Pubkey>,
-    _reserved: [u8; 15],
+    pub supported_token_program: Option<Pubkey>,
+    _reserved: [u8; 14],
 }
 
 impl WithdrawalRequest {
@@ -133,16 +135,17 @@ impl WithdrawalRequest {
         batch_id: u64,
         request_id: u64,
         receipt_token_amount: u64,
-        supported_token_mint: Option<Pubkey>,
+        supported_token_mint_and_program: Option<(Pubkey, Pubkey)>,
         current_timestamp: i64,
     ) -> Self {
         Self {
             batch_id,
             request_id,
             receipt_token_amount,
-            supported_token_mint,
+            supported_token_mint: supported_token_mint_and_program.map(|(mint, _)| mint),
+            supported_token_program: supported_token_mint_and_program.map(|(_, program)| program),
             created_at: current_timestamp,
-            _reserved: [0; 15],
+            _reserved: [0; 14],
         }
     }
 }

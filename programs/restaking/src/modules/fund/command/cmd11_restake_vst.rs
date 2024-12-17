@@ -281,7 +281,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                     &restake_supported_token_state.token_mint,
                                 );
                             let reserved_normalize_token_account = fund_account
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &restake_supported_token_state.token_mint,
                                 )?;
 
@@ -400,7 +400,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 );
 
                             let next_reserved_normalize_token_account = fund_account
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &next_reserved_restake_token.token_mint,
                                 )?;
 
@@ -524,7 +524,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-                            let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
+                            let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -563,7 +563,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 &[fund_account.get_seeds().as_ref()],
                             )?
                             .deposit(
-                                *fund_supported_token_account,
+                                *fund_supported_token_reserve_account,
                                 vault_fee_wallet_token_account,
                                 *fund_receipt_token_account,
                                 operation_reserved_token.operation_reserved_amount,

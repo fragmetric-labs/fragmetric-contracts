@@ -229,7 +229,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-                            let [vault_program, vault_config, vault_account, vault_vrt_mint, vault_vst_mint, fund_supported_token_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, token_program, system_program, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
+                            let [vault_program, vault_config, vault_account, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, token_program, system_program, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -277,7 +277,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             .withdraw(
                                 vault_withdrawal_ticket,
                                 vault_withdrawal_ticket_token_account,
-                                fund_supported_token_account,
+                                fund_supported_token_reserve_account,
                                 vault_fee_receipt_token_account,
                                 vault_program_fee_wallet_vrt_account,
                                 &ctx.fund_account.to_account_info(),
@@ -300,7 +300,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                         (vault_config.key(), false),
                                         (vault_vrt_mint.key(), false),
                                         (vault_vst_mint.key(), false),
-                                        (fund_supported_token_account.key(), false),
+                                        (fund_supported_token_reserve_account.key(), false),
                                         (fund_receipt_token_account.key(), false),
                                         (vault_fee_receipt_token_account.key(), false),
                                         (vault_program_fee_wallet_vrt_account.key(), false),
@@ -403,7 +403,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let reserved_normalize_token_account = ctx
                                 .fund_account
                                 .load()?
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &restake_supported_token_state.token_mint,
                                 )?;
                             let required_accounts = vec![
@@ -532,7 +532,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let next_reserved_normalize_token_account = ctx
                                 .fund_account
                                 .load()?
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &next_reserved_denormalize_token.token_mint,
                                 )?;
 

@@ -134,7 +134,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         &mut self,
         supported_token_program: &Interface<'info, TokenInterface>,
         supported_token_mint: &InterfaceAccount<'info, Mint>,
-        fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
@@ -180,7 +180,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 supported_token_program.to_account_info(),
                 token_interface::TransferChecked {
                     from: user_supported_token_account.to_account_info(),
-                    to: fund_supported_token_account.to_account_info(),
+                    to: fund_supported_token_reserve_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     authority: self.user.to_account_info(),
                 },
@@ -257,6 +257,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // validate user receipt token account balance
         require_gte!(self.user_receipt_token_account.amount, receipt_token_amount);
         require_gt!(receipt_token_amount, 0);
+
+        // TODO: check do the fund has requested underlying asset amount.
 
         // create a user withdrawal request
         let withdrawal_request = self.fund_account.load_mut()?.create_withdrawal_request(
@@ -471,7 +473,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         &mut self,
         supported_token_program: &Interface<'info, TokenInterface>,
         supported_token_mint: &InterfaceAccount<'info, Mint>,
-        fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         fund_treasury_account: &SystemAccount<'info>,
@@ -495,14 +497,15 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // transfer supported_token_user_amount $TOKEN to user wallet from reserved account
         let fund_account = self.fund_account.load()?;
         token_interface::transfer_checked(
-            CpiContext::new(
+            CpiContext::new_with_signer(
                 supported_token_program.to_account_info(),
                 token_interface::TransferChecked {
-                    from: fund_supported_token_account.to_account_info(),
+                    from: fund_supported_token_reserve_account.to_account_info(),
                     to: user_supported_token_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     authority: self.fund_account.to_account_info(),
                 },
+                &[self.fund_account.load()?.get_seeds().as_ref()],
             ),
             supported_token_user_amount,
             supported_token_mint.decimals,

@@ -100,7 +100,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     target_participants_count += 1;
 
                     // find the basis participant who has max allocated amount
-                    if p.allocated_amount > target_participant_max_allocated_amount {
+                    if p.allocated_amount >= target_participant_max_allocated_amount {
                         target_participant_max_allocated_amount = p.allocated_amount;
                         basis_participant_index = i;
                     }

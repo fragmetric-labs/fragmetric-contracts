@@ -36,6 +36,7 @@ pub mod restaking {
         .process_initialize_fund_account(
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.admin,
+            &ctx.accounts.fund_reserve_account,
             ctx.bumps.fund_account,
         )
     }
@@ -55,6 +56,7 @@ pub mod restaking {
         .process_update_fund_account_if_needed(
             &ctx.accounts.payer,
             &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
             desired_account_size,
         )
     }
@@ -481,8 +483,11 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
     ) -> Result<()> {
-        if force_reset_command.is_some() {
-            require_eq!(ctx.accounts.operator.key(), FUND_MANAGER_PUBKEY);
+        // TODO: remove temporary ADMIN_PUBKEY authorization
+        if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
+            || force_reset_command.is_none() && ctx.accounts.operator.key() == ADMIN_PUBKEY)
+        {
+            err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
         }
 
         emit_cpi!(modules::fund::FundService::new(
@@ -738,7 +743,7 @@ pub mod restaking {
         .process_deposit_supported_token(
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_supported_token_account,
+            &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &ctx.accounts.instructions_sysvar,
             ctx.remaining_accounts,
@@ -767,7 +772,7 @@ pub mod restaking {
         .process_withdraw_supported_token(
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_supported_token_account,
+            &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &mut ctx.accounts.fund_withdrawal_batch_account,
             &ctx.accounts.fund_treasury_account,

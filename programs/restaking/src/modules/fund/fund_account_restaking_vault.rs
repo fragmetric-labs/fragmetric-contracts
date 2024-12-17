@@ -184,7 +184,7 @@ impl RestakingVaultOperator {
         require_gte!(
             token_amount,
             self.supported_token_delegated_amount,
-            ErrorCode::FundInvalidUpdateError
+            ErrorCode::FundInvalidConfigurationUpdateError
         );
 
         self.supported_token_redelegation_amount = token_amount;

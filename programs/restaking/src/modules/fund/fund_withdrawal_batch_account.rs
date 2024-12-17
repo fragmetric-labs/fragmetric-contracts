@@ -11,6 +11,7 @@ pub struct FundWithdrawalBatchAccount {
     bump: u8,
     pub receipt_token_mint: Pubkey,
     pub supported_token_mint: Option<Pubkey>,
+    pub supported_token_program: Option<Pubkey>,
     pub batch_id: u64,
     num_requests: u64,
     num_claimed_requests: u64,
@@ -94,12 +95,14 @@ impl FundWithdrawalBatchAccount {
         bump: u8,
         receipt_token_mint: Pubkey,
         supported_token_mint: Option<Pubkey>,
+        supported_token_program: Option<Pubkey>,
         batch_id: u64,
     ) {
         if self.data_version == 0 {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.supported_token_mint = supported_token_mint;
+            self.supported_token_program = supported_token_program;
             self.batch_id = batch_id;
             self._reserved = Default::default();
             self.data_version = 1;
@@ -112,9 +115,16 @@ impl FundWithdrawalBatchAccount {
         bump: u8,
         receipt_token_mint: Pubkey,
         supported_token_mint: Option<Pubkey>,
+        supported_token_program: Option<Pubkey>,
         batch_id: u64,
     ) {
-        self.migrate(bump, receipt_token_mint, supported_token_mint, batch_id)
+        self.migrate(
+            bump,
+            receipt_token_mint,
+            supported_token_mint,
+            supported_token_program,
+            batch_id,
+        )
     }
 
     #[inline(always)]
@@ -122,12 +132,14 @@ impl FundWithdrawalBatchAccount {
         &mut self,
         receipt_token_mint: Pubkey,
         supported_token_mint: Option<Pubkey>,
+        supported_token_program: Option<Pubkey>,
         batch_id: u64,
     ) {
         self.migrate(
             self.bump,
             receipt_token_mint,
             supported_token_mint,
+            supported_token_program,
             batch_id,
         )
     }

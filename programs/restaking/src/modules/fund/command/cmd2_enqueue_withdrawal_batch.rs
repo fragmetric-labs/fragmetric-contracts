@@ -23,7 +23,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
         _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .enqueue_withdrawal_batch(self.forced)?;
+            .enqueue_withdrawal_batches(self.forced)?;
 
         Ok(Some(
             ProcessWithdrawalBatchCommand::default().without_required_accounts(),

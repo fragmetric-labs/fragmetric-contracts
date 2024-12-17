@@ -154,7 +154,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 (fund_account.get_reserve_account_address()?, true),
                                 (
                                     fund_account
-                                        .find_supported_token_account_address(&item.mint)?,
+                                        .find_supported_token_reserve_account_address(&item.mint)?,
                                     true,
                                 ),
                             ];
@@ -197,7 +197,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 expected_minted_supported_token_amount,
                             ) = match token_pricing_source.try_deserialize()? {
                                 Some(TokenPricingSource::SPLStakePool { address }) => {
-                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
+                                    let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
                                         accounts
                                     else {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -230,7 +230,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         reserve_stake_account,
                                         manager_fee_account,
                                         fund_reserve_account,
-                                        fund_supported_token_account,
+                                        fund_supported_token_reserve_account,
                                         &fund_account.get_reserve_account_seeds(),
                                         item.sol_amount,
                                     )?;
@@ -243,7 +243,7 @@ impl SelfExecutable for StakeSOLCommand {
                                     )
                                 }
                                 Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                                    let [fund_reserve_account, fund_supported_token_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
+                                    let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
                                         accounts
                                     else {
                                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -279,7 +279,7 @@ impl SelfExecutable for StakeSOLCommand {
                                         pool_reserve,
                                         pool_token_mint_authority,
                                         fund_reserve_account,
-                                        fund_supported_token_account,
+                                        fund_supported_token_reserve_account,
                                         &fund_account.get_reserve_account_seeds(),
                                         item.sol_amount,
                                     )?;

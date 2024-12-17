@@ -86,10 +86,10 @@ describe("withdraw SOL", async () => {
         expect(res2.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber());
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessWithdrawalBatches(user5, true)).rejectedWith('RequireEqViolated');
+        await expect(restaking.runOperatorProcessWithdrawalBatches(null, user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
 
         await restaking.sleep(1);
-        const res3 = await restaking.runOperatorProcessWithdrawalBatches(restaking.keychain.getKeypair('FUND_MANAGER'), true);
+        const res3 = await restaking.runOperatorProcessWithdrawalBatches(null, restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
         expect(res3.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');
         expect(res3.fragSOLFund.sol.withdrawalUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(2).muln(10000 - res3.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL');

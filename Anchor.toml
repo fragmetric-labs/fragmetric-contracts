@@ -25,6 +25,13 @@ sync-test-accounts = "tsx tests/mock_mainnet_accounts.ts"
 [test]
 startup_wait = 50000
 
+[test.validator]
+#url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
+slots_per_epoch = "32"
+bind_address = "0.0.0.0"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
+
 # *metaplex
 # clone mainnet metaplex program to localnet
 [[test.genesis]]

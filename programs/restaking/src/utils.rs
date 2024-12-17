@@ -181,6 +181,8 @@ pub trait AccountInfoExt<'info> {
     fn parse_optional_account_loader<T>(&'info self) -> Result<Option<AccountLoader<'info, T>>>
     where
         T: ZeroCopy + Owner;
+
+    fn to_option(&self) -> Option<&Self>;
 }
 
 impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
@@ -225,6 +227,15 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         }
 
         AccountLoader::try_from(self).map(Some)
+    }
+
+    /// treat zeroed pubkey as None
+    fn to_option(&self) -> Option<&Self> {
+        if self.key().to_bytes().iter().all(|b| *b == 0) {
+            None
+        } else {
+            Some(self)
+        }
     }
 }
 
@@ -381,7 +392,6 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
 }
 
 #[allow(unused)]
-#[cfg(debug_assertions)]
 pub fn debug_msg_heap_size(marker: &str) {
     let heap_total = entrypoint::HEAP_LENGTH as u64;
     let heap_top = heap_total + entrypoint::HEAP_START_ADDRESS;

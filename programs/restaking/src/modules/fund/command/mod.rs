@@ -146,7 +146,8 @@ impl OperationCommandAccountMetaPod {
     }
 }
 
-const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 27;
+/// Technically, can contain up to 57 accounts out of 64 with reserved 6 accounts and payer.
+pub const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 32;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandEntry {
