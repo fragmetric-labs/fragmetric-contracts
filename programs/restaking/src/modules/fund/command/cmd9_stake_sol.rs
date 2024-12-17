@@ -154,7 +154,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 (fund_account.get_reserve_account_address()?, true),
                                 (
                                     fund_account
-                                        .find_supported_token_account_address(&item.mint)?,
+                                        .find_supported_token_reserve_account_address(&item.mint)?,
                                     true,
                                 ),
                             ];

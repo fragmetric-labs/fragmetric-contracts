@@ -189,11 +189,28 @@ impl FundAccount {
         )
     }
 
-    pub(super) fn find_supported_token_account_address(&self, token: &Pubkey) -> Result<Pubkey> {
+    pub(super) fn find_supported_token_reserve_account_address(
+        &self,
+        token: &Pubkey,
+    ) -> Result<Pubkey> {
         let supported_token = self.get_supported_token(token)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.find_account_address()?,
+                &supported_token.mint,
+                &supported_token.program,
+            ),
+        )
+    }
+
+    pub(super) fn find_supported_token_treasury_account_address(
+        &self,
+        token: &Pubkey,
+    ) -> Result<Pubkey> {
+        let supported_token = self.get_supported_token(token)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.get_treasury_account_address()?,
                 &supported_token.mint,
                 &supported_token.program,
             ),

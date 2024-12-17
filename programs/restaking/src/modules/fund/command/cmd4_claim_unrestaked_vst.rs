@@ -397,7 +397,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let reserved_normalize_token_account = ctx
                                 .fund_account
                                 .load()?
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &restake_supported_token_state.token_mint,
                                 )?;
                             let required_accounts = vec![
@@ -526,7 +526,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let next_reserved_normalize_token_account = ctx
                                 .fund_account
                                 .load()?
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &next_reserved_denormalize_token.token_mint,
                                 )?;
 

@@ -12,7 +12,7 @@ pub const ADMIN_PUBKEY: Pubkey = pubkey!("fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqq
 pub const FUND_MANAGER_PUBKEY: Pubkey = pubkey!("5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"); // ledger-e1
 
 #[constant]
-pub const FUND_REVENUE_ADDRESS: Pubkey = pubkey!("SRCMj3B7cYjvwTtqJxUSptgJPWkL8bHLrQme6q4zHn7");
+pub const PROGRAM_REVENUE_ADDRESS: Pubkey = pubkey!("SRCMj3B7cYjvwTtqJxUSptgJPWkL8bHLrQme6q4zHn7");
 
 #[constant]
 pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");

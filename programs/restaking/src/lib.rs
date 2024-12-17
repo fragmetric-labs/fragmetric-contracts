@@ -479,7 +479,10 @@ pub mod restaking {
         force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
     ) -> Result<()> {
         if force_reset_command.is_some() {
-            require_eq!(ctx.accounts.operator.key(), FUND_MANAGER_PUBKEY);
+            require_keys_eq!(ctx.accounts.operator.key(), FUND_MANAGER_PUBKEY);
+        } else {
+            // TODO: remove this temporary authorization
+            require_keys_eq!(ctx.accounts.operator.key(), ADMIN_PUBKEY);
         }
 
         emit_cpi!(modules::fund::FundService::new(

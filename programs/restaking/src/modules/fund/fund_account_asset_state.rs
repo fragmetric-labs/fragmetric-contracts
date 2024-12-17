@@ -1,16 +1,17 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 
-use crate::errors::ErrorCode;
-
 use super::WithdrawalRequest;
+use crate::errors::ErrorCode;
+use crate::modules::pricing::PricingService;
+use crate::utils::get_proportional_amount;
 
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub(super) struct AssetState {
-    pub token_mint: Pubkey, // Pubkey::default() for SOL
+pub struct AssetState {
+    token_mint: Pubkey, // Pubkey::default() for SOL
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
     _padding: [u8; 5],
@@ -43,17 +44,21 @@ pub(super) struct AssetState {
 }
 
 impl AssetState {
-    pub(super) fn initialize(
-        &mut self,
-        asset_token_mint: Option<Pubkey>,
-        operation_reserved_amount: u64,
-    ) {
+    pub fn initialize(&mut self, asset_token_mint: Option<Pubkey>, operation_reserved_amount: u64) {
         self.token_mint = asset_token_mint.unwrap_or_default();
         self.withdrawal_pending_batch.initialize(1);
         self.operation_reserved_amount = operation_reserved_amount;
     }
 
-    pub(super) fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn get_token_mint(&self) -> Option<Pubkey> {
+        if self.token_mint == Pubkey::default() {
+            None
+        } else {
+            Some(self.token_mint)
+        }
+    }
+
+    pub fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
             amount,
@@ -65,7 +70,7 @@ impl AssetState {
         Ok(())
     }
 
-    pub(super) fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<()> {
         require_gte!(
             amount,
             self.accumulated_deposit_amount,
@@ -78,11 +83,11 @@ impl AssetState {
     }
 
     #[inline(always)]
-    pub(super) fn set_normal_reserve_max_amount(&mut self, amount: u64) {
+    pub fn set_normal_reserve_max_amount(&mut self, amount: u64) {
         self.normal_reserve_max_amount = amount;
     }
 
-    pub(super) fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+    pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
         require_gte!(
             10_00, // 10%
             reserve_rate_bps,
@@ -95,11 +100,11 @@ impl AssetState {
     }
 
     #[inline(always)]
-    pub(super) fn set_withdrawable(&mut self, withdrawable: bool) {
+    pub fn set_withdrawable(&mut self, withdrawable: bool) {
         self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
-    pub(super) fn deposit(&mut self, amount: u64) -> Result<()> {
+    pub fn deposit(&mut self, amount: u64) -> Result<()> {
         let new_accumulated_deposit_amount = self.accumulated_deposit_amount + amount;
         require_gte!(
             self.accumulated_deposit_capacity_amount,
@@ -113,7 +118,7 @@ impl AssetState {
         Ok(())
     }
 
-    pub(super) fn create_withdrawal_request(
+    pub fn create_withdrawal_request(
         &mut self,
         receipt_token_amount: u64,
         current_timestamp: i64,
@@ -139,7 +144,7 @@ impl AssetState {
         Ok(request)
     }
 
-    pub(super) fn cancel_withdrawal_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
+    pub fn cancel_withdrawal_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
         // assert not queued yet
         require_eq!(
             request.batch_id,
@@ -151,7 +156,7 @@ impl AssetState {
     }
 
     /// returns [enqueued]
-    pub(super) fn enqueue_withdrawal_pending_batch(
+    pub fn enqueue_withdrawal_pending_batch(
         &mut self,
         withdrawal_batch_threshold_interval_seconds: i64,
         current_timestamp: i64,
@@ -182,7 +187,7 @@ impl AssetState {
         true
     }
 
-    pub(super) fn dequeue_withdrawal_batches(
+    pub fn dequeue_withdrawal_batches(
         &mut self,
         mut count: usize,
         current_timestamp: i64,
@@ -209,13 +214,11 @@ impl AssetState {
         Ok(processing_batches)
     }
 
-    pub(super) fn get_withdrawal_queued_batches_iter(
-        &self,
-    ) -> impl Iterator<Item = &WithdrawalBatch> {
+    pub fn get_withdrawal_queued_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
         self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
     }
 
-    pub(super) fn get_withdrawal_queued_batches_iter_to_process(
+    pub fn get_withdrawal_queued_batches_iter_to_process(
         &self,
         withdrawal_batch_threshold_interval_seconds: i64,
         current_timestamp: i64,
@@ -231,7 +234,7 @@ impl AssetState {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub(super) struct WithdrawalBatch {
+pub struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,

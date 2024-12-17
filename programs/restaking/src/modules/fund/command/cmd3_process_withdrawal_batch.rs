@@ -1,6 +1,5 @@
-use anchor_lang::prelude::*;
-
-use crate::constants::FUND_REVENUE_ADDRESS;
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::fund::{
     FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
@@ -9,8 +8,9 @@ use crate::modules::fund::{
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
-
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use crate::utils::AccountInfoExt;
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ProcessWithdrawalBatchCommand {
@@ -24,12 +24,18 @@ impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum ProcessWithdrawalBatchCommandState {
-    #[default]
-    New,
-    /// max receipt_token_amount to process withdrawal
-    Process(u64),
+    /// supported_token_mint, None means SOL ... this is temporary implementation
+    New(Option<Pubkey>),
+    /// supported_token_mint, max_receipt_token_amount to process withdrawal
+    Process(Option<Pubkey>, u64),
+}
+
+impl Default for ProcessWithdrawalBatchCommandState {
+    fn default() -> Self {
+        Self::New(None)
+    }
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
@@ -39,22 +45,39 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<Option<OperationCommandEntry>> {
         match self.state {
-            ProcessWithdrawalBatchCommandState::New => {
+            ProcessWithdrawalBatchCommandState::New(supported_token_mint_key) => {
                 let (receipt_token_amount_to_process, mut required_accounts) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
-                    let receipt_token_amount_to_process =
-                        fund_service.get_receipt_token_withdrawal_obligated_amount()?;
+                    let receipt_token_amount_to_process = fund_service
+                        .get_receipt_token_withdrawal_obligated_amount(supported_token_mint_key)?;
 
-                    let mut required_accounts =
-                        fund_service.find_accounts_to_process_withdrawal_batches()?;
+                    let mut required_accounts = fund_service
+                        .find_accounts_to_process_withdrawal_batches(supported_token_mint_key)?;
 
                     (receipt_token_amount_to_process, required_accounts)
                 };
 
-                // to harvest fund revenue (prepended)
-                required_accounts.insert(0, (FUND_REVENUE_ADDRESS, true));
+                // to harvest program revenue (prepended)
+                required_accounts.insert(0, (PROGRAM_REVENUE_ADDRESS, true));
+                required_accounts.insert(
+                    1,
+                    supported_token_mint_key
+                        .map(|mint| {
+                            let fund_account = ctx.fund_account.load()?;
+                            let supported_token = fund_account.get_supported_token(&mint)?;
+                            Ok::<(Pubkey, bool), Error>((
+                        spl_associated_token_account::get_associated_token_address_with_program_id(
+                            &PROGRAM_REVENUE_ADDRESS,
+                            &supported_token.mint,
+                            &supported_token.program,
+                        ),
+                        true,
+                    ))
+                        })
+                        .unwrap_or_else(|| Ok((Pubkey::default(), false)))?,
+                );
 
                 // to calculate LST cycle fee (appended)
                 let fund_account = ctx.fund_account.load()?;
@@ -84,13 +107,22 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 let mut command = self.clone();
-                command.state =
-                    ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process);
+                command.state = ProcessWithdrawalBatchCommandState::Process(
+                    supported_token_mint_key,
+                    receipt_token_amount_to_process,
+                );
+
+                msg!("required accounts: {:?}", required_accounts.len());
 
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
-            ProcessWithdrawalBatchCommandState::Process(receipt_token_amount_to_process) => {
-                let [fund_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, remaining_accounts @ ..] =
+            ProcessWithdrawalBatchCommandState::Process(
+                supported_token_mint_key,
+                receipt_token_amount_to_process,
+            ) => {
+                msg!("given accounts: {:?}", accounts.len());
+
+                let [program_revenue_account, program_supported_token_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -237,6 +269,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         receipt_token_lock_account,
                         fund_reserve_account,
                         fund_treasury_account,
+                        supported_token_mint.to_option(),
+                        supported_token_program.to_option(),
+                        fund_supported_token_reserve_account.to_option(),
+                        fund_supported_token_treasury_account.to_option(),
                         uninitialized_withdrawal_batch_accounts,
                         pricing_sources,
                         self.forced,
@@ -246,7 +282,11 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     fund_service.harvest_from_treasury_account(
                         ctx.system_program,
                         fund_treasury_account,
-                        fund_revenue_account,
+                        program_revenue_account,
+                        supported_token_mint.to_option(),
+                        supported_token_program.to_option(),
+                        fund_supported_token_treasury_account.to_option(),
+                        program_supported_token_revenue_account.to_option(),
                     )?;
 
                     let pricing_service =

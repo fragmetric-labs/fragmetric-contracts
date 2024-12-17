@@ -281,7 +281,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                     &restake_supported_token_state.token_mint,
                                 );
                             let reserved_normalize_token_account = fund_account
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &restake_supported_token_state.token_mint,
                                 )?;
 
@@ -400,7 +400,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 );
 
                             let next_reserved_normalize_token_account = fund_account
-                                .find_supported_token_account_address(
+                                .find_supported_token_reserve_account_address(
                                     &next_reserved_restake_token.token_mint,
                                 )?;
 
