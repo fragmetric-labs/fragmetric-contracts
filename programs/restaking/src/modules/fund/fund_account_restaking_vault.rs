@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-use std::mem::zeroed;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
@@ -38,7 +37,7 @@ pub(super) struct RestakingVault {
     operators: [RestakingVaultOperator; MAX_RESTAKING_VAULT_OPERATORS],
 
     /// auto-compounding
-    compounding_tokens_mint: [Pubkey; MAX_COMPOUNDING_TOKENS],
+    compounding_token_mints: [Pubkey; MAX_COMPOUNDING_TOKENS],
 
     _reserved: [u8; 128],
 }

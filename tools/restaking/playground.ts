@@ -431,10 +431,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 },
             };
 
-            // remove bSOL from mainnet
-            if (this.isMainnet) {
-                delete metadata.bSOL;
-            }
+            // Later we will remove bSOL from mainnet.
+            // If you also want to remove bSOL from localnet and from test,
+            // you will have to fix tests.
+
+            // // remove bSOL from mainnet
+            // if (this.isMainnet) {
+            //     delete metadata.bSOL;
+            // }
 
             return metadata
         }

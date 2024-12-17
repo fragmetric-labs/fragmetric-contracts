@@ -100,19 +100,20 @@ impl NormalizedTokenPoolAccount {
                     }
                 });
 
-            // Mainnet BSOL is removed HERE
-            #[cfg(feature = "mainnet")]
-            {
-                self.supported_tokens = std::mem::take(&mut self.supported_tokens)
-                    .into_iter()
-                    .filter(|supported_token| {
-                        supported_token.mint != MAINNET_BSOL_MINT_ADDRESS || {
-                            assert_eq!(supported_token.locked_amount, 0);
-                            false
-                        }
-                    })
-                    .collect();
-            }
+            // Later we will remove bSOL(and ATA) - via remove supported token instruction
+            // // Mainnet BSOL is removed HERE
+            // #[cfg(feature = "mainnet")]
+            // {
+            //     self.supported_tokens = std::mem::take(&mut self.supported_tokens)
+            //         .into_iter()
+            //         .filter(|supported_token| {
+            //             supported_token.mint != MAINNET_BSOL_MINT_ADDRESS || {
+            //                 assert_eq!(supported_token.locked_amount, 0);
+            //                 false
+            //             }
+            //         })
+            //         .collect();
+            // }
 
             self.data_version = 2;
         }
