@@ -18,7 +18,6 @@ pub struct AdminRewardAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -45,7 +44,6 @@ pub struct AdminRewardAccountUpdateContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

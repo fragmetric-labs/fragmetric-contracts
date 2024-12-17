@@ -118,7 +118,13 @@ impl FundWithdrawalBatchAccount {
         supported_token_program: Option<Pubkey>,
         batch_id: u64,
     ) {
-        self.migrate(bump, receipt_token_mint, supported_token_mint, supported_token_program, batch_id)
+        self.migrate(
+            bump,
+            receipt_token_mint,
+            supported_token_mint,
+            supported_token_program,
+            batch_id,
+        )
     }
 
     #[inline(always)]

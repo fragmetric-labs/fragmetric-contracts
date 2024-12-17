@@ -105,8 +105,12 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let mut required_accounts =
                                 JitoRestakingVaultService::find_accounts_for_vault(address)?;
-                            required_accounts
-                                .append(&mut JitoRestakingVaultService::find_withdrawal_tickets());
+                            required_accounts.append(
+                                &mut JitoRestakingVaultService::find_withdrawal_tickets(
+                                    &restaking_vault.vault,
+                                    &ctx.receipt_token_mint.key(),
+                                ),
+                            );
 
                             return Ok(Some(command.with_required_accounts(required_accounts)));
                         }
@@ -157,6 +161,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let (vault_update_state_tracker, expected_ncn_epoch) =
                                 JitoRestakingVaultService::get_vault_update_state_tracker(
                                     vault_config,
+                                    vault_account,
                                     clock.slot,
                                     false,
                                 )?;
@@ -166,6 +171,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 delayed_ncn_epoch,
                             ) = JitoRestakingVaultService::get_vault_update_state_tracker(
                                 vault_config,
+                                vault_account,
                                 clock.slot,
                                 true,
                             )?;

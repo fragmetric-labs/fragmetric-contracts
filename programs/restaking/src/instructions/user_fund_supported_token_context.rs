@@ -2,7 +2,6 @@ use anchor_lang::{prelude::*, solana_program::sysvar::instructions as instructio
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::{fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};
@@ -17,7 +16,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -94,13 +93,11 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
-
     pub receipt_token_program: Program<'info, Token2022>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

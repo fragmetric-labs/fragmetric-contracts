@@ -46,7 +46,11 @@ pub struct AssetState {
 }
 
 impl AssetState {
-    pub fn initialize(&mut self, asset_token_mint_and_program: Option<(Pubkey, Pubkey)>, operation_reserved_amount: u64) {
+    pub fn initialize(
+        &mut self,
+        asset_token_mint_and_program: Option<(Pubkey, Pubkey)>,
+        operation_reserved_amount: u64,
+    ) {
         if let Some((token_mint, token_program)) = asset_token_mint_and_program {
             self.token_mint = token_mint;
             self.token_program = token_program;

@@ -127,6 +127,9 @@ describe("withdraw SOL", async () => {
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )
+                    .accountsPartial({
+                        receiptTokenMint: restaking.knownAddress.fragSOLTokenMint,
+                    })
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
@@ -143,6 +146,9 @@ describe("withdraw SOL", async () => {
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )
+                    .accountsPartial({
+                        receiptTokenMint: restaking.knownAddress.fragSOLTokenMint,
+                    })
                     .instruction(),
             ],
             signerNames: ['FUND_MANAGER'],

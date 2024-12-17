@@ -21,7 +21,6 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     #[account(
         mut,
-        address = FRAGSOL_MINT_ADDRESS,
         mint::authority = admin,
         constraint = receipt_token_mint.supply == 0,
     )]
@@ -66,7 +65,6 @@ pub struct AdminFundAccountUpdateContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -81,4 +79,22 @@ pub struct AdminFundAccountUpdateContext<'info> {
         bump,
     )]
     pub fund_reserve_account: SystemAccount<'info>,
+}
+
+// TODO: migration v0.3.2
+#[derive(Accounts)]
+pub struct AdminFundAccountCloseContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        close = payer,
+        seeds = [FundAccount::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+        bump,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
 }

@@ -26,7 +26,7 @@ sync-test-accounts = "tsx tests/mock_mainnet_accounts.ts"
 startup_wait = 50000
 
 [test.validator]
-url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
+#url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
 slots_per_epoch = "32"
 bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
@@ -158,6 +158,6 @@ address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
 filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
 
 # clone initial ALT of fragsol for faster bootstrap
-#[[test.validator.account]]
-#address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
-#filename = "./tests/mocks/local/fragsol_address_lookup_table.json"
+[[test.validator.account]]
+address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
+filename = "./tests/mocks/local/fragsol_address_lookup_table.json"

@@ -54,7 +54,8 @@ impl SupportedToken {
         self.decimals = decimals;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
-        self.token.initialize(Some((mint, program)), operation_reserved_amount);
+        self.token
+            .initialize(Some((mint, program)), operation_reserved_amount);
         Ok(())
     }
 

@@ -107,11 +107,11 @@ impl JitoRestakingVault {
     }
 
     pub fn find_accounts_for_vault(vault: Pubkey) -> Result<Vec<(Pubkey, bool)>> {
-        require_eq!(vault, FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS);
+        // require_eq!(vault, FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS);
         Ok(vec![
             (JITO_VAULT_PROGRAM_ID, false),
-            (FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS, false),
-            (FRAGSOL_JITO_VAULT_CONFIG_ADDRESS, false),
+            (vault, false),
+            (JITO_VAULT_CONFIG_ADDRESS, false),
         ])
     }
 
@@ -135,11 +135,19 @@ impl JitoRestakingVault {
                 &vault_vst_mint,
             );
         let clock = Clock::get()?;
-        let vault_update_state_tracker =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
+        let vault_update_state_tracker = Self::get_vault_update_state_tracker(
+            jito_vault_config,
+            jito_vault_account,
+            clock.slot,
+            false,
+        )?;
 
-        let vault_update_state_tracker_prepare_for_delaying =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, true)?;
+        let vault_update_state_tracker_prepare_for_delaying = Self::get_vault_update_state_tracker(
+            jito_vault_config,
+            jito_vault_account,
+            clock.slot,
+            true,
+        )?;
 
         let vault_fee_wallet_token_account =
             associated_token::get_associated_token_address_with_program_id(
@@ -190,11 +198,19 @@ impl JitoRestakingVault {
                 &vault_vst_mint,
             );
         let clock = Clock::get()?;
-        let vault_update_state_tracker =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, false)?;
+        let vault_update_state_tracker = Self::get_vault_update_state_tracker(
+            jito_vault_config,
+            jito_vault_account,
+            clock.slot,
+            false,
+        )?;
 
-        let vault_update_state_tracker_prepare_for_delaying =
-            Self::get_vault_update_state_tracker(jito_vault_config, clock.slot, true)?;
+        let vault_update_state_tracker_prepare_for_delaying = Self::get_vault_update_state_tracker(
+            jito_vault_config,
+            jito_vault_account,
+            clock.slot,
+            true,
+        )?;
 
         let vault_fee_wallet_token_account =
             associated_token::get_associated_token_address_with_program_id(
@@ -234,6 +250,7 @@ impl JitoRestakingVault {
 
     pub fn get_vault_update_state_tracker(
         jito_vault_config: &AccountInfo,
+        jito_vault_account: &AccountInfo,
         current_slot: u64,
         delayed: bool,
     ) -> Result<Pubkey> {
@@ -253,7 +270,7 @@ impl JitoRestakingVault {
         let (vault_update_state_tracker, _) = Pubkey::find_program_address(
             &[
                 b"vault_update_state_tracker",
-                FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS.as_ref(),
+                jito_vault_account.key.as_ref(),
                 &ncn_epoch.to_le_bytes(),
             ],
             &JITO_VAULT_PROGRAM_ID,
@@ -279,36 +296,38 @@ impl JitoRestakingVault {
         }
     }
 
-    pub fn find_withdrawal_tickets() -> Vec<(Pubkey, bool)> {
+    pub fn find_withdrawal_tickets(
+        vault_account_address: &Pubkey,
+        receipt_token_mint: &Pubkey,
+    ) -> Vec<(Pubkey, bool)> {
         const BASE_ACCOUNTS_LENGTH: u8 = 5;
         let mut withdrawal_tickets = Vec::with_capacity(BASE_ACCOUNTS_LENGTH as usize);
 
         for i in 1..=BASE_ACCOUNTS_LENGTH {
             withdrawal_tickets.push((
-                Self::find_withdrawal_ticket_account(&Self::find_vault_base_account(i)),
+                Self::find_withdrawal_ticket_account(
+                    vault_account_address,
+                    &Self::find_vault_base_account(receipt_token_mint, i),
+                ),
                 false,
             ));
         }
         withdrawal_tickets
     }
 
-    pub fn find_vault_base_account(index: u8) -> Pubkey {
+    pub fn find_vault_base_account(receipt_token_mint: &Pubkey, index: u8) -> Pubkey {
         let base = Pubkey::find_program_address(
-            &[
-                Self::VAULT_BASE_ACCOUNT1_SEED,
-                (FRAGSOL_MINT_ADDRESS as Pubkey).as_ref(),
-            ],
+            &[Self::VAULT_BASE_ACCOUNT1_SEED, receipt_token_mint.as_ref()],
             &JITO_VAULT_PROGRAM_ID,
         )
         .0;
         base
     }
-    pub fn find_withdrawal_ticket_account(base: &Pubkey) -> Pubkey {
-        let vault_account: Pubkey = FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS;
+    pub fn find_withdrawal_ticket_account(vault_account_address: &Pubkey, base: &Pubkey) -> Pubkey {
         let withdrawal_ticket_account = Pubkey::find_program_address(
             &[
                 Self::VAULT_WITHDRAWAL_TICKET_SEED,
-                vault_account.as_ref(),
+                vault_account_address.as_ref(),
                 base.as_ref(),
             ],
             &JITO_VAULT_PROGRAM_ID,
@@ -316,10 +335,13 @@ impl JitoRestakingVault {
         withdrawal_ticket_account.0
     }
 
-    pub fn find_withdrawal_ticket_token_account(withdrawal_ticket_account: &Pubkey) -> Pubkey {
+    pub fn find_withdrawal_ticket_token_account(
+        withdrawal_ticket_account: &Pubkey,
+        vault_supported_token_mint: &Pubkey,
+    ) -> Pubkey {
         let withdrawal_ticket_token_account = associated_token::get_associated_token_address(
-            &withdrawal_ticket_account,
-            &FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS,
+            withdrawal_ticket_account,
+            vault_supported_token_mint,
         );
         withdrawal_ticket_token_account
     }

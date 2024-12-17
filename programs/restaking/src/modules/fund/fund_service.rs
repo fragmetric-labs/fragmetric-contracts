@@ -11,7 +11,10 @@ use crate::modules::reward;
 use crate::utils::*;
 use crate::{events, utils};
 
-use super::command::{OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable, OPERATION_COMMAND_MAX_ACCOUNT_SIZE};
+use super::command::{
+    OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+    OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
+};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -243,12 +246,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
         let mut required_account_infos = Vec::with_capacity(OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
-        let mut remaining_accounts_used: [bool; OPERATION_COMMAND_MAX_ACCOUNT_SIZE] = [false; OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
+        let mut remaining_accounts_used: [bool; OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
+            [false; OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
 
         for required_account in required_accounts {
             // append required accounts in exact order
             let mut found = false;
-            for (i, remaining_account) in remaining_accounts.iter().take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE).enumerate() {
+            for (i, remaining_account) in remaining_accounts
+                .iter()
+                .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+                .enumerate()
+            {
                 if required_account.pubkey == *remaining_account.key {
                     required_account_infos.push(remaining_account);
                     remaining_accounts_used[i] = true;
@@ -672,7 +680,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     bump,
                     self.receipt_token_mint.key(),
                     supported_token_mint_key,
-                    supported_token_program.as_ref().map(|program| program.key()),
+                    supported_token_program
+                        .as_ref()
+                        .map(|program| program.key()),
                     batch.batch_id,
                 );
 

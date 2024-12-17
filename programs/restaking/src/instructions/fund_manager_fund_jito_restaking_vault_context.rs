@@ -23,7 +23,6 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: just need to validate vault state is owned by the vault program
@@ -31,16 +30,13 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     pub vault_program: UncheckedAccount<'info>,
 
     /// CHECK: will be validated by pricing service
-    #[account(address = FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS)]
     pub vault_account: UncheckedAccount<'info>,
 
-    #[account(address = FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS)]
     pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(address = anchor_spl::token::ID)]
     pub vault_receipt_token_program: Interface<'info, TokenInterface>,
 
-    #[account(address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
     pub vault_supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(address = anchor_spl::token::ID)]

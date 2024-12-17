@@ -25,10 +25,8 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub normalized_token_program: Program<'info, Token>,

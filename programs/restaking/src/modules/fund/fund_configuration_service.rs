@@ -98,7 +98,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(fund_supported_token_reserve_account.owner, self.fund_account.key());
+        require_keys_eq!(
+            fund_supported_token_reserve_account.owner,
+            self.fund_account.key()
+        );
         require_keys_eq!(
             fund_supported_token_reserve_account.mint,
             supported_token_mint.key()
@@ -205,7 +208,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_receipt_token_program.key()
         );
 
+        // TODO add more vault validation since we do not check vault address anymore
         require_keys_eq!(*vault.to_account_info().owner, vault_program.key());
+
+        // TODO add more vault receipt token mint validation since we do not check mint address anymore
 
         self.fund_account.load_mut()?.add_restaking_vault(
             vault.key(),

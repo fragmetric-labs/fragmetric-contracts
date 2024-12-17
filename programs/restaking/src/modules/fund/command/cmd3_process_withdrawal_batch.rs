@@ -318,11 +318,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 .collect::<Result<Vec<_>>>()?,
                         );
 
-                    let mut supported_token_increasing_capacity_as_sol = if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
-                        receipt_token_amount_processed_as_sol.div_ceil(2)
-                    } else {
-                        receipt_token_amount_processed_as_sol
-                    };
+                    let mut supported_token_increasing_capacity_as_sol =
+                        if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
+                            receipt_token_amount_processed_as_sol.div_ceil(2)
+                        } else {
+                            receipt_token_amount_processed_as_sol
+                        };
                     supported_token_increasing_capacity_as_sol -=
                         strategy.put(receipt_token_amount_processed_as_sol)?;
 
@@ -343,8 +344,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
 
                     if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
-                        let sol_increasing_capacity =
-                            receipt_token_amount_processed_as_sol - supported_token_increasing_capacity_as_sol;
+                        let sol_increasing_capacity = receipt_token_amount_processed_as_sol
+                            - supported_token_increasing_capacity_as_sol;
                         fund_account.sol.accumulated_deposit_capacity_amount = fund_account
                             .sol
                             .accumulated_deposit_capacity_amount

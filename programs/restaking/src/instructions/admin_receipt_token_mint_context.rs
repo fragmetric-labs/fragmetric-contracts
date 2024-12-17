@@ -17,7 +17,6 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: ExtraAccountMetaList Account, must use these seeds
@@ -41,7 +40,6 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: ExtraAccountMetaList Account, must use these seeds

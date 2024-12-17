@@ -485,6 +485,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             let (vault_update_state_tracker, expected_ncn_epoch) =
                                 JitoRestakingVaultService::get_vault_update_state_tracker(
                                     vault_config,
+                                    vault_account,
                                     clock.slot,
                                     false,
                                 )?;
@@ -493,6 +494,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 delayed_ncn_epoch,
                             ) = JitoRestakingVaultService::get_vault_update_state_tracker(
                                 vault_config,
+                                vault_account,
                                 clock.slot,
                                 true,
                             )?;

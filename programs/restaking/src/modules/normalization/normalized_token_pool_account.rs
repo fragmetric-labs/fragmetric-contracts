@@ -100,6 +100,21 @@ impl NormalizedTokenPoolAccount {
                     }
                 });
 
+            // Later we will remove bSOL(and ATA) - via remove supported token instruction
+            // // Mainnet BSOL is removed HERE
+            // #[cfg(feature = "mainnet")]
+            // {
+            //     self.supported_tokens = std::mem::take(&mut self.supported_tokens)
+            //         .into_iter()
+            //         .filter(|supported_token| {
+            //             supported_token.mint != MAINNET_BSOL_MINT_ADDRESS || {
+            //                 assert_eq!(supported_token.locked_amount, 0);
+            //                 false
+            //             }
+            //         })
+            //         .collect();
+            // }
+
             self.data_version = 2;
         }
     }
@@ -218,7 +233,7 @@ pub(super) struct SupportedToken {
     pub locked_amount: u64,
     pub withdrawal_reserved_amount: u64,
     pub pricing_source: TokenPricingSource,
-    _reserved: [u8; 23],
+    _reserved: [u8; 55],
 }
 
 impl SupportedToken {
@@ -235,7 +250,7 @@ impl SupportedToken {
             locked_amount: 0,
             withdrawal_reserved_amount: 0,
             pricing_source,
-            _reserved: [0; 23],
+            _reserved: [0; 55],
         }
     }
 
