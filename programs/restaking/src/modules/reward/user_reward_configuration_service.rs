@@ -41,24 +41,22 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             self.user_reward_account
                 .initialize_zero_copy_header(user_reward_account_bump)?;
         } else {
-            let mut user_reward_account = self.user_reward_account.load_init()?;
-
             // initialize account
-            user_reward_account.initialize(
+            self.user_reward_account.load_init()?.initialize(
                 user_reward_account_bump,
                 self.receipt_token_mint,
                 user_receipt_token_account,
             );
+            self.user_reward_account.exit(&crate::ID)?;
 
             // reflect existing token amount
-            user_reward_account.update_user_reward_pools(
-                &mut *self.reward_account.load_mut()?,
-                Some(vec![TokenAllocatedAmountDelta::new_positive(
+            RewardService::new(self.receipt_token_mint, self.reward_account)?
+                .update_reward_pools_token_allocation(
                     None,
+                    Some(self.user_reward_account),
                     user_receipt_token_account.amount,
-                )]),
-                self.current_slot,
-            )?;
+                    None,
+                )?;
 
             return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
@@ -70,7 +68,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
     }
 
     pub fn process_update_user_reward_account_if_needed(
-        &self,
+        &mut self,
         user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
@@ -84,21 +82,23 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
         if self.user_reward_account.as_ref().data_len()
             >= 8 + std::mem::size_of::<UserRewardAccount>()
         {
-            let mut user_reward_account = self.user_reward_account.load_mut()?;
-            let initializing = user_reward_account.is_initializing();
-            let updated = user_reward_account
-                .update_if_needed(self.receipt_token_mint, user_receipt_token_account);
+            let (initializing, updated) = {
+                let mut user_reward_account = self.user_reward_account.load_mut()?;
+                let initializing = user_reward_account.is_initializing();
+                let updated = user_reward_account
+                    .update_if_needed(self.receipt_token_mint, user_receipt_token_account);
+                (initializing, updated)
+            };
 
             // reflect existing token amount
             if initializing {
-                user_reward_account.update_user_reward_pools(
-                    &mut *self.reward_account.load_mut()?,
-                    Some(vec![TokenAllocatedAmountDelta::new_positive(
+                RewardService::new(self.receipt_token_mint, self.reward_account)?
+                    .update_reward_pools_token_allocation(
                         None,
+                        Some(self.user_reward_account),
                         user_receipt_token_account.amount,
-                    )]),
-                    self.current_slot,
-                )?;
+                        None,
+                    )?;
             }
 
             if initializing || updated {

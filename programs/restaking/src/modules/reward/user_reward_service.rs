@@ -35,7 +35,6 @@ impl<'info, 'a> UserRewardService<'info, 'a> {
             .load_mut()?
             .update_user_reward_pools(
                 &mut *self.reward_account.load_mut()?,
-                None,
                 self.current_slot,
             )?;
 

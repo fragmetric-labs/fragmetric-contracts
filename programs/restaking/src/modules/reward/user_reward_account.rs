@@ -157,17 +157,16 @@ impl UserRewardAccount {
     pub(super) fn update_user_reward_pools(
         &mut self,
         reward_account: &mut RewardAccount,
-        deltas: Option<Vec<TokenAllocatedAmountDelta>>,
         current_slot: u64,
     ) -> Result<()> {
         self.backfill_not_existing_pools(reward_account)?;
 
-        let deltas = deltas.unwrap_or_default();
-        self.get_user_reward_pools_iter_mut()
+        for (user_reward_pool, reward_pool) in self
+            .get_user_reward_pools_iter_mut()
             .zip(reward_account.get_reward_pools_iter_mut())
-            .try_for_each(|(user_reward_pool, reward_pool)| {
-                user_reward_pool.update(reward_pool, deltas.clone(), current_slot)?;
-                Ok::<_, Error>(())
-            })
+        {
+            user_reward_pool.update(reward_pool, vec![], current_slot)?;
+        }
+        Ok(())
     }
 }
