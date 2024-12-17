@@ -11,7 +11,9 @@ pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct AssetState {
-    token_mint: Pubkey, // Pubkey::default() for SOL
+    token_mint: Pubkey,
+    token_program: Pubkey,
+
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
     _padding: [u8; 5],
@@ -44,17 +46,20 @@ pub struct AssetState {
 }
 
 impl AssetState {
-    pub fn initialize(&mut self, asset_token_mint: Option<Pubkey>, operation_reserved_amount: u64) {
-        self.token_mint = asset_token_mint.unwrap_or_default();
+    pub fn initialize(&mut self, asset_token_mint_and_program: Option<(Pubkey, Pubkey)>, operation_reserved_amount: u64) {
+        if let Some((token_mint, token_program)) = asset_token_mint_and_program {
+            self.token_mint = token_mint;
+            self.token_program = token_program;
+        }
         self.withdrawal_pending_batch.initialize(1);
         self.operation_reserved_amount = operation_reserved_amount;
     }
 
-    pub fn get_token_mint(&self) -> Option<Pubkey> {
+    pub fn get_token_mint_and_program(&self) -> Option<(Pubkey, Pubkey)> {
         if self.token_mint == Pubkey::default() {
             None
         } else {
-            Some(self.token_mint)
+            Some((self.token_mint, self.token_program))
         }
     }
 
@@ -62,7 +67,7 @@ impl AssetState {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
             amount,
-            ErrorCode::FundInvalidUpdateError
+            ErrorCode::FundInvalidConfigurationUpdateError
         );
 
         self.accumulated_deposit_amount = amount;
@@ -74,7 +79,7 @@ impl AssetState {
         require_gte!(
             amount,
             self.accumulated_deposit_amount,
-            ErrorCode::FundInvalidUpdateError
+            ErrorCode::FundInvalidConfigurationUpdateError
         );
 
         self.accumulated_deposit_capacity_amount = amount;
@@ -91,7 +96,7 @@ impl AssetState {
         require_gte!(
             10_00, // 10%
             reserve_rate_bps,
-            ErrorCode::FundInvalidUpdateError
+            ErrorCode::FundInvalidConfigurationUpdateError
         );
 
         self.normal_reserve_rate_bps = reserve_rate_bps;
@@ -132,11 +137,7 @@ impl AssetState {
             self.withdrawal_pending_batch.batch_id,
             self.withdrawal_last_created_request_id,
             receipt_token_amount,
-            if self.token_mint == Pubkey::default() {
-                None
-            } else {
-                Some(self.token_mint)
-            },
+            self.get_token_mint_and_program(),
             current_timestamp,
         );
         self.withdrawal_pending_batch.add_request(&request)?;

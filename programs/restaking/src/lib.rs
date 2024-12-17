@@ -478,11 +478,9 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
     ) -> Result<()> {
-        if force_reset_command.is_some() {
-            require_keys_eq!(ctx.accounts.operator.key(), FUND_MANAGER_PUBKEY);
-        } else {
-            // TODO: remove this temporary authorization
-            require_keys_eq!(ctx.accounts.operator.key(), ADMIN_PUBKEY);
+        // TODO: remove temporary ADMIN_PUBKEY authorization
+        if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY || force_reset_command.is_none() && ctx.accounts.operator.key() == ADMIN_PUBKEY) {
+            err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
         }
 
         emit_cpi!(modules::fund::FundService::new(
@@ -738,7 +736,7 @@ pub mod restaking {
         .process_deposit_supported_token(
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_supported_token_account,
+            &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &ctx.accounts.instructions_sysvar,
             ctx.remaining_accounts,
@@ -768,7 +766,7 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.fund_supported_token_account,
+            &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &mut ctx.accounts.fund_withdrawal_batch_account,
             &ctx.accounts.fund_treasury_account,

@@ -112,16 +112,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     receipt_token_amount_to_process,
                 );
 
-                msg!("required accounts: {:?}", required_accounts.len());
-
                 return Ok(Some(command.with_required_accounts(required_accounts)));
             }
             ProcessWithdrawalBatchCommandState::Process(
                 supported_token_mint_key,
                 receipt_token_amount_to_process,
             ) => {
-                msg!("given accounts: {:?}", accounts.len());
-
                 let [program_revenue_account, program_supported_token_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
@@ -130,7 +126,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                 let fund_account = ctx.fund_account.load()?;
                 let num_queued_batches = fund_account
-                    .sol
+                    .get_asset_state(supported_token_mint_key)?
                     .get_withdrawal_queued_batches_iter()
                     .count();
                 let num_supported_token_pricing_sources = fund_account
@@ -296,8 +292,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 if receipt_token_amount_processed > 0 {
-                    // adjust accumulated deposit capacity configuration as much as the SOL amount withdrawn
-                    // the policy is: half to SOL cap, half to LST caps based on their weighted allocation strategy
+                    // adjust accumulated deposit capacity configuration as much as the asset value withdrawn
+                    // the policy is: allocate half to SOL cap if it is currently greater than zero, then allocate rest to LST caps based on their weighted allocation strategy
                     let receipt_token_amount_processed_as_sol = pricing_service
                         .get_token_amount_as_sol(
                             &ctx.receipt_token_mint.key(),
@@ -322,9 +318,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 .collect::<Result<Vec<_>>>()?,
                         );
 
-                    let mut supported_token_increasing_capacity =
-                        receipt_token_amount_processed_as_sol.div_ceil(2);
-                    supported_token_increasing_capacity -=
+                    let mut supported_token_increasing_capacity_as_sol = if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
+                        receipt_token_amount_processed_as_sol.div_ceil(2)
+                    } else {
+                        receipt_token_amount_processed_as_sol
+                    };
+                    supported_token_increasing_capacity_as_sol -=
                         strategy.put(receipt_token_amount_processed_as_sol)?;
 
                     for (i, supported_token) in
@@ -343,12 +342,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             )?;
                     }
 
-                    let sol_increasing_capacity =
-                        receipt_token_amount_processed_as_sol - supported_token_increasing_capacity;
-                    fund_account.sol.accumulated_deposit_capacity_amount = fund_account
-                        .sol
-                        .accumulated_deposit_capacity_amount
-                        .saturating_add(sol_increasing_capacity);
+                    if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
+                        let sol_increasing_capacity =
+                            receipt_token_amount_processed_as_sol - supported_token_increasing_capacity_as_sol;
+                        fund_account.sol.accumulated_deposit_capacity_amount = fund_account
+                            .sol
+                            .accumulated_deposit_capacity_amount
+                            .saturating_add(sol_increasing_capacity);
+                    }
                 }
             }
         }

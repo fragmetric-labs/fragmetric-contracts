@@ -112,8 +112,8 @@ pub enum ErrorCode {
     #[msg("pricing: token pricing source is not found")]
     TokenPricingSourceAccountNotFoundError,
 
-    #[msg("fund: cannot apply invalid update")]
-    FundInvalidUpdateError,
+    #[msg("fund: cannot apply invalid configuration update")]
+    FundInvalidConfigurationUpdateError,
 
     #[msg("fund: already supported token")]
     FundAlreadySupportedTokenError,
@@ -174,6 +174,9 @@ pub enum ErrorCode {
 
     #[msg("fund: exceeded max restaking vault operators")]
     FundExceededMaxRestakingVaultOperatorsError,
+
+    #[msg("fund: unauhorized operation command")]
+    FundOperationUnauthorizedCommandError,
 
     #[msg("fund: failed to compute required accounts for the operation command")]
     FundOperationCommandAccountComputationException,

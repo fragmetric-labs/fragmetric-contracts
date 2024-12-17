@@ -36,7 +36,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         associated_token::authority = fund_account,
         associated_token::token_program = supported_token_program,
     )]
-    pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -146,7 +146,7 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
         associated_token::authority = fund_account,
         associated_token::token_program = supported_token_program,
     )]
-    pub fund_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,

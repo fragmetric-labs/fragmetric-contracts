@@ -1,8 +1,3 @@
-use crate::errors::ErrorCode;
-use crate::modules::pricing::{PricingService, TokenPricingSource};
-use crate::modules::reward;
-use crate::utils::*;
-use crate::{events, utils};
 use anchor_lang::prelude::*;
 use anchor_spl::token::accessor::{amount, mint};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -10,9 +5,13 @@ use anchor_spl::{token_2022, token_interface};
 use std::cell::RefMut;
 use std::cmp::min;
 
-use super::command::{
-    OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
-};
+use crate::errors::ErrorCode;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
+use crate::modules::reward;
+use crate::utils::*;
+use crate::{events, utils};
+
+use super::command::{OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable, OPERATION_COMMAND_MAX_ACCOUNT_SIZE};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -243,16 +242,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
-        let mut required_account_infos = Vec::with_capacity(32);
-        let mut remaining_accounts_used: [bool; 32] = [false; 32];
+        let mut required_account_infos = Vec::with_capacity(OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
+        let mut remaining_accounts_used: [bool; OPERATION_COMMAND_MAX_ACCOUNT_SIZE] = [false; OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
 
         for required_account in required_accounts {
             // append required accounts in exact order
             let mut found = false;
-            for (i, remaining_account) in remaining_accounts.iter().enumerate() {
+            for (i, remaining_account) in remaining_accounts.iter().take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE).enumerate() {
                 if required_account.pubkey == *remaining_account.key {
                     required_account_infos.push(remaining_account);
-                    // SAFETY: the length of remaining_accounts is less or equal to 25
                     remaining_accounts_used[i] = true;
                     found = true;
                     break;
@@ -333,7 +331,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         })
     }
 
-    pub(super) fn enqueue_withdrawal_batch(&mut self, forced: bool) -> Result<bool> {
+    pub(super) fn enqueue_withdrawal_batches(&mut self, forced: bool) -> Result<bool> {
         let withdrawal_batch_threshold_interval_seconds = self
             .fund_account
             .load()?
@@ -674,6 +672,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     bump,
                     self.receipt_token_mint.key(),
                     supported_token_mint_key,
+                    supported_token_program.as_ref().map(|program| program.key()),
                     batch.batch_id,
                 );
 

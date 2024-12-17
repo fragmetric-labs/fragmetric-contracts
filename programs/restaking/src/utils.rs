@@ -392,7 +392,6 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
 }
 
 #[allow(unused)]
-#[cfg(debug_assertions)]
 pub fn debug_msg_heap_size(marker: &str) {
     let heap_total = entrypoint::HEAP_LENGTH as u64;
     let heap_top = heap_total + entrypoint::HEAP_START_ADDRESS;

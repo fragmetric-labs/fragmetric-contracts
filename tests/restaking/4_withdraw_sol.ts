@@ -86,7 +86,7 @@ describe("withdraw SOL", async () => {
         expect(res2.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber());
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessWithdrawalBatches(null, user5, true)).rejectedWith('RequireEqViolated');
+        await expect(restaking.runOperatorProcessWithdrawalBatches(null, user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
 
         await restaking.sleep(1);
         const res3 = await restaking.runOperatorProcessWithdrawalBatches(null, restaking.keychain.getKeypair('FUND_MANAGER'), true);

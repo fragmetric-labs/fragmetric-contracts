@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::accessor::amount;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
@@ -91,15 +92,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_add_supported_token(
         &mut self,
-        fund_supported_token_account: &InterfaceAccount<TokenAccount>,
+        fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(fund_supported_token_account.owner, self.fund_account.key());
+        require_keys_eq!(fund_supported_token_reserve_account.owner, self.fund_account.key());
         require_keys_eq!(
-            fund_supported_token_account.mint,
+            fund_supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
         require_keys_eq!(
@@ -112,7 +113,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
-            fund_supported_token_account.amount,
+            fund_supported_token_reserve_account.amount,
         )?;
 
         // validate pricing source
@@ -312,6 +313,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 .set_accumulated_deposit_capacity_amount(
                     token_accumulated_deposit_capacity_amount,
                 )?;
+
             if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
                 supported_token
                     .token
@@ -325,8 +327,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 .token
                 .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
-            if let Some(token_amount) = token_rebalancing_amount {
-                supported_token.set_rebalancing_strategy(token_amount)?;
+            if let Some(token_rebalancing_amount) = token_rebalancing_amount {
+                supported_token.set_rebalancing_strategy(token_rebalancing_amount)?;
             }
             supported_token.set_sol_allocation_strategy(
                 sol_allocation_weight,

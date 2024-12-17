@@ -54,7 +54,7 @@ impl SupportedToken {
         self.decimals = decimals;
         pricing_source.serialize_as_pod(&mut self.pricing_source);
 
-        self.token.initialize(Some(mint), operation_reserved_amount);
+        self.token.initialize(Some((mint, program)), operation_reserved_amount);
         Ok(())
     }
 
@@ -71,9 +71,9 @@ impl SupportedToken {
 
     pub(super) fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
-            token_amount,
             self.token.operation_reserved_amount,
-            ErrorCode::FundInvalidUpdateError
+            token_amount,
+            ErrorCode::FundInvalidConfigurationUpdateError
         );
 
         self.rebalancing_amount = token_amount;

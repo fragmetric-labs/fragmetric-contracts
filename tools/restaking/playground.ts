@@ -1667,7 +1667,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runOperatorProcessWithdrawalBatches(supported_token_mint: web3.PublicKey|null = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
-        const {event, error} = await this.runOperatorRun({
+        const {event: _event, error: _error} = await this.runOperatorRun({
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
@@ -1678,21 +1678,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             requiredAccounts: [],
         }, operator);
 
-        // const {event, error} = await this.runOperatorRun({
-        //     command: {
-        //         processWithdrawalBatch: {
-        //             0: {
-        //                 state: {
-        //                     new: {
-        //                         0: supported_token_mint ?? null,
-        //                     },
-        //                 },
-        //                 forced: forced,
-        //             }
-        //         }
-        //     },
-        //     requiredAccounts: [],
-        // }, operator);
+        const {event, error} = await this.runOperatorRun({
+            command: {
+                processWithdrawalBatch: {
+                    0: {
+                        state: {
+                            new: {
+                                0: supported_token_mint ?? null,
+                            },
+                        },
+                        forced: forced,
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
 
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
@@ -1711,20 +1711,48 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (!request) {
             throw "request not found";
         }
+        const userSupportedTokenAccount = request.supportedTokenMint ? spl.getAssociatedTokenAddressSync(request.supportedTokenMint, user.publicKey, true, request.supportedTokenProgram) : null;
         const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
 
-        // TODO: branch based on request.supportedTokenMint
+        console.log({
+            user: user.publicKey,
+            userSupportedTokenAccount,
+            fundWithdrawalBatchAccount,
+            supportedTokenMint: request.supportedTokenMint,
+            supportedTokenProgram: request.supportedTokenProgram,
+        })
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
-                this.program.methods
-                    .userWithdrawSol(requestId)
-                    .accountsPartial({
-                        user: user.publicKey,
-                        fundWithdrawalBatchAccount,
-                    })
-                    .remainingAccounts(this.pricingSourceAccounts)
-                    .instruction(),
+                ...(
+                    request.supportedTokenMint ? [
+                        spl.createAssociatedTokenAccountIdempotentInstruction(
+                            this.wallet.publicKey,
+                            userSupportedTokenAccount,
+                            user.publicKey,
+                            request.supportedTokenMint,
+                            request.supportedTokenProgram,
+                        ),
+                        this.program.methods
+                            .userWithdrawSupportedToken(requestId)
+                            .accountsPartial({
+                                user: user.publicKey,
+                                userSupportedTokenAccount,
+                                fundWithdrawalBatchAccount,
+                                supportedTokenMint: request.supportedTokenMint,
+                                supportedTokenProgram: request.supportedTokenProgram,
+                            })
+                            .instruction(),
+                    ] : [
+                        this.program.methods
+                            .userWithdrawSol(requestId)
+                            .accountsPartial({
+                                user: user.publicKey,
+                                fundWithdrawalBatchAccount,
+                            })
+                            .instruction(),
+                    ]
+                )
             ],
             signers: [user],
             events: ["userWithdrewFromFund"],
@@ -1830,7 +1858,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], setComputeUnitLimitUnits: number = 1_600_000, setComputeUnitPriceMicroLamports: number = 1_000_000) {
         // prepare accounts according to the current state of operation.
-        // - can contain 25 accounts out of 32 with reserved 6 accounts and payer.
+        // - can contain 57 accounts out of 64 with reserved 6 accounts and payer.
         // - order doesn't matter, no need to put duplicate.
         const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
         this.pricingSourceAccounts.forEach(accoutMeta => {
@@ -1839,7 +1867,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         requiredAccounts.set(this.knownAddress.programEventAuthority, {
             pubkey: this.knownAddress.programEventAuthority,
             isWritable: false,
-            isSigner: true,
+            isSigner: false,
         });
         requiredAccounts.set(this.programId, {
             pubkey: this.programId,
