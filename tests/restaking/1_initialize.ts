@@ -131,12 +131,21 @@ describe("initialize", async () => {
         expect(fragSOLFundAccount.normalizedToken.mint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
     });
 
-    step("initialize fund jito restaking vault", async () => {
+    step("initialize fund fragSOL jito restaking vault", async () => {
         const {fragSOLFundJitoVRTAccount, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
         expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
         expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
         expect(fragSOLFundAccount.numRestakingVaults).eq(1);
         expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoVaultAccount.toString());
+    });
+
+    step("create new jito restaking vault with jitoSOL", async () => {
+        await restaking.runAdminCreateNewJitoVault(restaking.supportedTokenMetadata.jitoSOL.mint, "jitoSOL");
+    });
+
+    step("initialize fund jitoSOL jito restaking vault", async () => {
+        const vstMint = restaking.supportedTokenMetadata.jitoSOL.mint;
+        await restaking.runFundManagerInitializeFundVSTJitoRestakingVault("jitoSOL", vstMint);
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {

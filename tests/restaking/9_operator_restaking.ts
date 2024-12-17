@@ -19,7 +19,8 @@ describe("operator_restake_with_normalize", async () => {
                         0: {
                             items: [
                                 {
-                                    vaultAddress: restaking.knownAddress.fragSOLJitoVaultAccount,
+                                    // vaultAddress: restaking.knownAddress.fragSOLJitoVaultAccount,
+                                    vaultAddress: restaking.getPublicKeyFromAccountFile("./tests/mocks/local/jitoSOL_jito_vault.json"),
                                     solAmount: restakeSolAmount,
                                 },
                             ],
@@ -45,7 +46,8 @@ describe("operator_restake_with_normalize", async () => {
                         0: {
                             items: [
                                 {
-                                    vaultAddress: restaking.knownAddress.fragSOLJitoVaultAccount,
+                                    // vaultAddress: restaking.knownAddress.fragSOLJitoVaultAccount,
+                                    vaultAddress: restaking.getPublicKeyFromAccountFile("./tests/mocks/local/jitoSOL_jito_vault.json"),
                                     solAmount: unrestakeSolAmount,
                                 },
                             ],

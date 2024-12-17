@@ -1,5 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import {BN, web3} from "@coral-xyz/anchor";
+import fs from "fs";
+import path from "path";
+import {execSync} from "child_process";
 // @ts-ignore
 import * as splTokenMetadata from "@solana/spl-token-metadata";
 import * as splStakePool from "@solana/spl-stake-pool";
@@ -338,7 +341,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLJitoVaultWithdrawalTicketTokenAccount1,
             vaultBaseAccount2,
             fragSOLJitoVaultWithdrawalTicketAccount2,
-            fragSOLJitoVaultWithdrawalTicketTokenAccount2
+            fragSOLJitoVaultWithdrawalTicketTokenAccount2,
         };
     }
 
@@ -447,8 +450,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         } else {
             // for 'localnet', it would be cloned from mainnet
             return {
-                jito1: {
+                jito1: { // fragSOL jito nSOL vault
                     vault: this.getConstantAsPublicKey("fragsolJitoVaultAccountAddress"),
+                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                },
+                jitoSOL: { // fragSOL jito jitoSOL vault
+                    vault: this.getPublicKeyFromAccountFile("./tests/mocks/local/jitoSOL_jito_vault.json"),
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                 },
             };
@@ -995,6 +1002,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
                 this.program.methods.fundManagerInitializeFundJitoRestakingVault()
+                    .accounts({
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        vaultAccount: this.knownAddress.fragSOLJitoVaultAccount,
+                        vaultReceiptTokenMint: this.knownAddress.fragSOLJitoVRTMint,
+                        vaultSupportedTokenMint: this.knownAddress.nSOLTokenMint,
+                    })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
@@ -1021,6 +1034,189 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice("jito VRT account (of program fee wallet) created".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLJitoVaultProgramFeeWalletTokenAccount.toString());
 
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
+    }
+
+    public async runAdminInitializeVSTMint() { // for jito restaking vault
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        const vstMintFilePath = "../../tests/mocks/local/jito_vst1_token_mint.json";
+        let vstMintRaw: Buffer, vstKeypair: web3.Keypair, vstSecretKey: Uint8Array;
+        try {
+            vstMintRaw = fs.readFileSync(path.join(__dirname, vstMintFilePath));
+            vstSecretKey = JSON.parse(vstMintRaw.toString());
+            vstSecretKey = Uint8Array.from(vstSecretKey);
+        } catch (err) {
+            if (err.message.includes("no such file or directory")) {
+                vstKeypair = web3.Keypair.generate();
+                vstSecretKey = vstKeypair.secretKey;
+                let vstSecretKeyArray = Array.from(vstSecretKey);
+                fs.writeFileSync(path.join(__dirname, vstMintFilePath), JSON.stringify(vstSecretKeyArray, null, 0));
+            }
+        }
+        vstKeypair = web3.Keypair.fromSecretKey(vstSecretKey);
+        const vstDecimals = 9;
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: vstKeypair.publicKey,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    vstKeypair.publicKey,
+                    vstDecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID,
+                ),
+            ],
+            signers: [this.wallet, vstKeypair],
+        });
+
+        const vstMint = await spl.getMint(this.connection, vstKeypair.publicKey, "confirmed", spl.TOKEN_PROGRAM_ID);
+        logger.notice("new vst mint created".padEnd(LOG_PAD_LARGE), vstKeypair.publicKey.toString());
+        return {vstMint};
+    }
+
+    public async runAdminCreateNewJitoVault(vstMint: web3.PublicKey, vstName: string, depositFeeBPS = 0, withdrawalFeeBPS = 0, rewardFeeBPS = 0, vstDecimals = 9, payerPath = "./keypairs/shared_wallet_GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF.json") {
+        // if (fs.existsSync(path.join(__dirname, `../../tests/mocks/local/${vstName}_jito_vault.json`))) return;
+
+        const keypairPath = path.join(__dirname, `../../${payerPath}`);
+        let command = `jito-restaking-cli vault vault initialize ${vstMint.toString()} ${depositFeeBPS} ${withdrawalFeeBPS} ${rewardFeeBPS} ${vstDecimals} --keypair ${keypairPath} 2>&1`;
+
+        const stdout = execSync(command, { encoding: "utf-8" });
+        logger.debug(`stdout:`, stdout);
+
+        const vaultAddressRegex = /Vault address: ([a-zA-Z0-9]+)/;
+        const vrtMintAddressRegex = /VRT mint address: ([a-zA-Z0-9]+)/;
+
+        const vaultAddressMatch = stdout.match(vaultAddressRegex);
+        const vrtMintAddressMatch = stdout.match(vrtMintAddressRegex);
+
+        const vaultAddress = vaultAddressMatch ? vaultAddressMatch[1] : null;
+        const vrtMintAddress = vrtMintAddressMatch ? vrtMintAddressMatch[1] : null;
+        logger.notice("new vault address".padEnd(LOG_PAD_LARGE), vaultAddress);
+        logger.notice("new vault's vrt mint address".padEnd(LOG_PAD_LARGE), vrtMintAddress);
+
+        const vaultAccountFilePath = path.join(__dirname, `../../tests/mocks/local/${vstName}_jito_vault.json`);
+        const vrtMintAccountFilePath = path.join(__dirname, `../../tests/mocks/local/${vstName}_jito_vrt_mint.json`);
+
+        command = `solana account ${vaultAddress} --output-file ${vaultAccountFilePath} --output json`;
+        execSync(command);
+
+        command = `solana account ${vrtMintAddress} --output-file ${vrtMintAccountFilePath} --output json`;
+        execSync(command);
+    }
+
+    public async runFundManagerInitializeFundVSTJitoRestakingVault(vstName: string, vstMint: web3.PublicKey) {
+        const fragSOLFundVstJitoVRTMint = this.getPublicKeyFromAccountFile(`./tests/mocks/local/${vstName}_jito_vrt_mint.json`);
+        const fragSOLVstJitoVaultAccountAddress = this.getPublicKeyFromAccountFile(`./tests/mocks/local/${vstName}_jito_vault.json`);
+        const fragSOLJitoVaultVstAccountAddress = spl.getAssociatedTokenAddressSync(
+            vstMint,
+            fragSOLVstJitoVaultAccountAddress,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        const fragSOLFundVstJitoVRTAccountAddress = spl.getAssociatedTokenAddressSync(
+            fragSOLFundVstJitoVRTMint,
+            this.knownAddress.fragSOLFund,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        const fragSOLVstJitoVaultFeeWalletTokenAccountAddress = spl.getAssociatedTokenAddressSync(
+            fragSOLFundVstJitoVRTMint,
+            this.keychain.getPublicKey('ADMIN'),
+            false,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        const fragSOLVstJitoVaultProgramFeeWalletTokenAccountAddress = spl.getAssociatedTokenAddressSync(
+            fragSOLFundVstJitoVRTMint,
+            this.knownAddress.jitoVaultProgramFeeWallet,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+
+        this._knownAddress[`fragSOLFund${vstName}JitoVRTMint`] = fragSOLFundVstJitoVRTMint;
+        this._knownAddress[`fragSOL${vstName}JitoVaultAccount`] = fragSOLVstJitoVaultAccountAddress;
+        this._knownAddress[`fragSOLJitoVault${vstName}Account`] = fragSOLJitoVaultVstAccountAddress;
+        this._knownAddress[`fragSOLFund${vstName}JitoVRTAccount`] = fragSOLFundVstJitoVRTAccountAddress;
+        this._knownAddress[`fragSOL${vstName}JitoVaultFeeWalletTokenAccount`] = fragSOLVstJitoVaultFeeWalletTokenAccountAddress;
+        this._knownAddress[`fragSOL${vstName}JitoVaultProgramFeeWalletTokenAccount`] = fragSOLVstJitoVaultProgramFeeWalletTokenAccountAddress;
+
+        this.pricingSourceAccounts.push({
+            pubkey: this.getPublicKeyFromAccountFile(`./tests/mocks/local/${vstName}_jito_vault.json`),
+            isSigner: false,
+            isWritable: false,
+        });
+
+        await this.run({
+            instructions: [
+                // TODO v0.3/restaking: adjust authority of fee wallet
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    fragSOLVstJitoVaultFeeWalletTokenAccountAddress,
+                    this.keychain.getPublicKey('ADMIN'),
+                    fragSOLFundVstJitoVRTMint,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    fragSOLJitoVaultVstAccountAddress,
+                    fragSOLVstJitoVaultAccountAddress,
+                    vstMint,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    fragSOLFundVstJitoVRTAccountAddress,
+                    this.knownAddress.fragSOLFund,
+                    fragSOLFundVstJitoVRTMint,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    fragSOLVstJitoVaultProgramFeeWalletTokenAccountAddress,
+                    this.knownAddress.jitoVaultProgramFeeWallet,
+                    fragSOLFundVstJitoVRTMint,
+                ),
+                this.program.methods.fundManagerInitializeFundJitoRestakingVault()
+                    .accounts({
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        vaultAccount: fragSOLVstJitoVaultAccountAddress,
+                        vaultReceiptTokenMint: fragSOLFundVstJitoVRTMint,
+                        vaultSupportedTokenMint: vstMint,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ['fundManagerUpdatedFund'],
+        });
+
+        const [
+            fragSOLVstJitoVaultFeeWalletTokenAccount,
+            fragSOLJitoVaultVstAccount,
+            fragSOLFundVstJitoVRTAccount,
+            fragSOLVstJitoVaultProgramFeeWalletTokenAccount,
+            fragSOLFundAccount,
+        ] = await Promise.all([
+            spl.getAccount(this.connection, fragSOLVstJitoVaultFeeWalletTokenAccountAddress, 'confirmed'),
+            spl.getAccount(this.connection, fragSOLJitoVaultVstAccountAddress, 'confirmed'),
+            spl.getAccount(this.connection, fragSOLFundVstJitoVRTAccountAddress, 'confirmed'),
+            spl.getAccount(this.connection, fragSOLVstJitoVaultProgramFeeWalletTokenAccountAddress, 'confirmed'),
+            this.getFragSOLFundAccount(),
+        ]);
+        logger.notice(`jito ${vstName} VRT fee account created`.padEnd(LOG_PAD_LARGE), fragSOLVstJitoVaultFeeWalletTokenAccountAddress.toString());
+        logger.notice(`jito ${vstName} account created`.padEnd(LOG_PAD_LARGE), fragSOLJitoVaultVstAccountAddress.toString());
+        logger.notice(`jito ${vstName} VRT account created`.padEnd(LOG_PAD_LARGE), fragSOLFundVstJitoVRTAccountAddress.toString());
+        logger.notice(`jito ${vstName} VRT account (of program fee wallet) created`.padEnd(LOG_PAD_LARGE), fragSOLVstJitoVaultProgramFeeWalletTokenAccountAddress.toString());
+
+        return {fragSOLFundVstJitoVRTAccount, fragSOLJitoVaultVstAccount, fragSOLVstJitoVaultFeeWalletTokenAccount, fragSOLVstJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
     public async runAdminInitializeFragSOLExtraAccountMetaList() {
@@ -1142,6 +1338,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     switch (symbol) {
                         case "jito1":
                             return new BN(this.isMainnet ? 1 : 1);
+                        case "jitoSOL":
+                            return new BN(this.isMainnet ? 1 : 1);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -1149,6 +1347,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "jito1":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        case "jitoSOL":
                             return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;

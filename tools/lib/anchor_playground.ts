@@ -8,6 +8,8 @@ import {IdlTypes} from "@coral-xyz/anchor/dist/cjs/program/namespace/types";
 // @ts-ignore
 import chalk from "chalk";
 import {PartiallyDecodedInstruction} from "@solana/web3.js";
+import fs from "fs";
+import path from "path";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
@@ -222,6 +224,13 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
     public getConstantAsPublicKey(name: ExtractConstantNames<IDL>): web3.PublicKey {
         return new web3.PublicKey(this.getConstant(name));
+    }
+
+    public getPublicKeyFromAccountFile(filePath: string): web3.PublicKey {
+        const realPath = path.join(__dirname, `../../${filePath}`);
+        const accountInfoRaw = fs.readFileSync(realPath, { encoding: "utf-8" });
+        const accountInfo = JSON.parse(accountInfoRaw);
+        return new web3.PublicKey(accountInfo["pubkey"]);
     }
 
     public asType<K extends ExtractTypeNames<IDL>>(value: IdlTypes<IDL>[K]) {
