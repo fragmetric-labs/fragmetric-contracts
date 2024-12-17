@@ -23,3 +23,21 @@ pub struct FundManagerFundContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 }
+
+// TODO: migration v0.3.2
+#[derive(Accounts)]
+pub struct FundManagerFundAccountCloseContext<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        close = payer,
+        seeds = [FundAccount::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+        bump,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+}

@@ -948,7 +948,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerCloseFundAccount() {
         await this.run({
             instructions: [
-                this.program.methods.adminCloseFundAccount().instruction(),
+                this.program.methods.fundManagerCloseFundAccount().instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
         });
