@@ -161,6 +161,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     private _knownAddress: ReturnType<typeof this._getKnownAddress>;
 
     private _getKnownAddress() {
+        // for emit_cpi!
+        const programEventAuthority = web3.PublicKey.findProgramAddressSync([Buffer.from("__event_authority")], this.programId)[0];
+
         // fragSOL
         const fragSOLTokenMint = this.getConstantAsPublicKey("fragsolMintAddress");
         const fragSOLTokenMintBuf = fragSOLTokenMint.toBuffer();
@@ -301,6 +304,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
 
         return {
+            programEventAuthority,
             nSOLTokenMint,
             fragSOLFundNSOLAccount,
             nSOLTokenPool,
@@ -1103,7 +1107,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     }
                 })(),
                 tokenAccumulatedDepositAmount : null,
-                withdrawalable: this.isMainnet ? false : false,
+                withdrawable: this.isMainnet ? false : false,
                 withdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
                 withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(10 ** v.decimals)),
                 tokenRebalancingAmount: null as BN | null,
@@ -1210,7 +1214,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             v.tokenMint,
                             v.tokenAccumulatedDepositCapacity,
                             v.tokenAccumulatedDepositAmount,
-                            v.withdrawalable,
+                            v.withdrawable,
                             v.withdrawalNormalReserveRateBPS,
                             v.withdrawalNormalReserveMaxAmount,
                             v.tokenRebalancingAmount,
@@ -1662,8 +1666,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
-        const {event: _event, error: _error} = await this.runOperatorRun({
+    public async runOperatorProcessWithdrawalBatches(supported_token_mint: web3.PublicKey|null = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+        const {event, error} = await this.runOperatorRun({
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
@@ -1674,19 +1678,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             requiredAccounts: [],
         }, operator);
 
-        const {event, error} = await this.runOperatorRun({
-            command: {
-                processWithdrawalBatch: {
-                    0: {
-                        state: {
-                            new: {},
-                        },
-                        forced: forced,
-                    }
-                }
-            },
-            requiredAccounts: [],
-        }, operator);
+        // const {event, error} = await this.runOperatorRun({
+        //     command: {
+        //         processWithdrawalBatch: {
+        //             0: {
+        //                 state: {
+        //                     new: {
+        //                         0: supported_token_mint ?? null,
+        //                     },
+        //                 },
+        //                 forced: forced,
+        //             }
+        //         }
+        //     },
+        //     requiredAccounts: [],
+        // }, operator);
 
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
             this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
@@ -1822,13 +1828,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
     }
 
-    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], setComputeUnitLimitUnits: number = 800_000, setComputeUnitPriceMicroLamports?: number) {
+    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], setComputeUnitLimitUnits: number = 1_600_000, setComputeUnitPriceMicroLamports: number = 1_000_000) {
         // prepare accounts according to the current state of operation.
-        // - can contain 27/32 accounts with reserved four accounts and payer.
+        // - can contain 25 accounts out of 32 with reserved 6 accounts and payer.
         // - order doesn't matter, no need to put duplicate.
         const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
         this.pricingSourceAccounts.forEach(accoutMeta => {
             requiredAccounts.set(accoutMeta.pubkey, accoutMeta);
+        });
+        requiredAccounts.set(this.knownAddress.programEventAuthority, {
+            pubkey: this.knownAddress.programEventAuthority,
+            isWritable: false,
+            isSigner: true,
+        });
+        requiredAccounts.set(this.programId, {
+            pubkey: this.programId,
+            isWritable: false,
+            isSigner: false,
         });
         requiredAccounts.set(operator.publicKey, {
             pubkey: operator.publicKey,

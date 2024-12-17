@@ -18,7 +18,10 @@ export const restakingPlayground = RestakingPlayground.create('local', {
 
 require('./restaking/1_initialize');
 
-if (process.env.JUST_OPERATE) {
+if (process.env.JUST_WITHDRAW_TOKEN) {
+    require('./restaking/4_withdraw_token');
+
+} else if (process.env.JUST_OPERATE) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/7_operate_todo')(1);
 
