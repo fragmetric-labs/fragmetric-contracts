@@ -92,6 +92,7 @@ impl FundAccount {
         receipt_token_mint: Pubkey,
         receipt_token_decimals: u8,
         receipt_token_supply: u64,
+        sol_operation_reserved_amount: u64,
     ) {
         if self.data_version == 0 {
             self.bump = bump;
@@ -104,24 +105,34 @@ impl FundAccount {
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
-            self.sol.initialize(None);
+            self.sol.initialize(None, sol_operation_reserved_amount);
             self.data_version = 4;
         }
     }
 
     #[inline(always)]
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: &InterfaceAccount<Mint>) {
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        sol_operation_reserved_amount: u64,
+    ) {
         self.migrate(
             bump,
             receipt_token_mint.key(),
             receipt_token_mint.decimals,
             receipt_token_mint.supply,
+            sol_operation_reserved_amount,
         );
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: &InterfaceAccount<Mint>) {
-        self.initialize(self.bump, receipt_token_mint);
+    pub(super) fn update_if_needed(
+        &mut self,
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        sol_operation_reserved_amount: u64,
+    ) {
+        self.initialize(self.bump, receipt_token_mint, sol_operation_reserved_amount);
     }
 
     #[inline(always)]
@@ -319,6 +330,7 @@ impl FundAccount {
         program: Pubkey,
         decimals: u8,
         pricing_source: TokenPricingSource,
+        operation_reserved_amount: u64,
     ) -> Result<()> {
         if self
             .get_supported_tokens_iter()
@@ -334,7 +346,13 @@ impl FundAccount {
         );
 
         let mut supported_token = SupportedToken::zeroed();
-        supported_token.initialize(mint, program, decimals, pricing_source)?;
+        supported_token.initialize(
+            mint,
+            program,
+            decimals,
+            pricing_source,
+            operation_reserved_amount,
+        )?;
         self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
@@ -552,7 +570,7 @@ mod tests {
     fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + std::mem::size_of::<FundAccount>()];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
-        fund.migrate(0, Pubkey::new_unique(), 9, 0);
+        fund.migrate(0, Pubkey::new_unique(), 9, 0, 0);
         fund
     }
 
@@ -588,6 +606,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token1)
@@ -603,6 +622,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.get_supported_token_mut(&token2)
@@ -618,6 +638,7 @@ mod tests {
             TokenPricingSource::MarinadeStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap_err();
         assert_eq!(fund.num_supported_tokens, 2);
@@ -664,6 +685,7 @@ mod tests {
             TokenPricingSource::SPLStakePool {
                 address: Pubkey::new_unique(),
             },
+            0,
         )
         .unwrap();
         fund.supported_tokens[0]

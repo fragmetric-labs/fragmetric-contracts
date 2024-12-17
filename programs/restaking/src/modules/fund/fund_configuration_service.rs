@@ -35,15 +35,18 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &mut self,
         receipt_token_program: &Program<'info, Token2022>,
         receipt_token_mint_current_authority: &Signer<'info>,
+        fund_reserve_account: &SystemAccount<'info>,
         fund_account_bump: u8,
     ) -> Result<()> {
         if self.fund_account.as_ref().data_len() < 8 + std::mem::size_of::<FundAccount>() {
             self.fund_account
                 .initialize_zero_copy_header(fund_account_bump)?;
         } else {
-            self.fund_account
-                .load_init()?
-                .initialize(fund_account_bump, self.receipt_token_mint);
+            self.fund_account.load_init()?.initialize(
+                fund_account_bump,
+                self.receipt_token_mint,
+                fund_reserve_account.lamports(),
+            );
         }
 
         // set token mint authority
@@ -68,6 +71,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         &self,
         payer: &Signer<'info>,
         system_program: &Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
         self.fund_account.expand_account_size_if_needed(
@@ -79,7 +83,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         if self.fund_account.as_ref().data_len() >= 8 + std::mem::size_of::<FundAccount>() {
             self.fund_account
                 .load_mut()?
-                .update_if_needed(self.receipt_token_mint);
+                .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports());
         }
 
         Ok(())
@@ -108,6 +112,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
+            fund_supported_token_account.amount,
         )?;
 
         // validate pricing source

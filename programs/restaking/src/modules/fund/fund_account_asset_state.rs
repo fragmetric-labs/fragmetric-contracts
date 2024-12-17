@@ -9,39 +9,6 @@ pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub(super) struct WithdrawalBatch {
-    pub batch_id: u64,
-    pub num_requests: u64,
-    pub receipt_token_amount: u64,
-    pub enqueued_at: i64,
-    _reserved: [u8; 32],
-}
-
-impl WithdrawalBatch {
-    fn initialize(&mut self, batch_id: u64) {
-        self.batch_id = batch_id;
-        self.num_requests = 0;
-        self.receipt_token_amount = 0;
-        self.enqueued_at = 0;
-    }
-
-    fn add_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
-        self.num_requests += 1;
-        self.receipt_token_amount += request.receipt_token_amount;
-
-        Ok(())
-    }
-
-    fn remove_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
-        self.num_requests -= 1;
-        self.receipt_token_amount -= request.receipt_token_amount;
-
-        Ok(())
-    }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
-#[repr(C)]
 pub(super) struct AssetState {
     pub token_mint: Pubkey, // Pubkey::default() for SOL
     pub accumulated_deposit_capacity_amount: u64,
@@ -76,9 +43,14 @@ pub(super) struct AssetState {
 }
 
 impl AssetState {
-    pub(super) fn initialize(&mut self, asset_token_mint: Option<Pubkey>) {
+    pub(super) fn initialize(
+        &mut self,
+        asset_token_mint: Option<Pubkey>,
+        operation_reserved_amount: u64,
+    ) {
         self.token_mint = asset_token_mint.unwrap_or_default();
         self.withdrawal_pending_batch.initialize(1);
+        self.operation_reserved_amount = operation_reserved_amount;
     }
 
     pub(super) fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
@@ -257,6 +229,39 @@ impl AssetState {
     }
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[repr(C)]
+pub(super) struct WithdrawalBatch {
+    pub batch_id: u64,
+    pub num_requests: u64,
+    pub receipt_token_amount: u64,
+    pub enqueued_at: i64,
+    _reserved: [u8; 32],
+}
+
+impl WithdrawalBatch {
+    fn initialize(&mut self, batch_id: u64) {
+        self.batch_id = batch_id;
+        self.num_requests = 0;
+        self.receipt_token_amount = 0;
+        self.enqueued_at = 0;
+    }
+
+    fn add_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
+        self.num_requests += 1;
+        self.receipt_token_amount += request.receipt_token_amount;
+
+        Ok(())
+    }
+
+    fn remove_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
+        self.num_requests -= 1;
+        self.receipt_token_amount -= request.receipt_token_amount;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,7 +269,7 @@ mod tests {
     #[test]
     fn withdraw_basic_test() {
         let mut asset = AssetState::zeroed();
-        asset.initialize(None);
+        asset.initialize(None, 0);
         assert_eq!(asset.token_mint, Pubkey::default());
         assert_eq!(asset.withdrawal_pending_batch.batch_id, 1);
         assert_eq!(asset.withdrawal_last_created_request_id, 0);

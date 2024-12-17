@@ -31,6 +31,7 @@ pub mod restaking {
         .process_initialize_fund_account(
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.admin,
+            &ctx.accounts.fund_reserve_account,
             ctx.bumps.fund_account,
         )
     }
@@ -50,6 +51,7 @@ pub mod restaking {
         .process_update_fund_account_if_needed(
             &ctx.accounts.payer,
             &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
             desired_account_size,
         )
     }
