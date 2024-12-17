@@ -218,7 +218,7 @@ pub(super) struct SupportedToken {
     pub locked_amount: u64,
     pub withdrawal_reserved_amount: u64,
     pub pricing_source: TokenPricingSource,
-    _reserved: [u8; 23],
+    _reserved: [u8; 55],
 }
 
 impl SupportedToken {
@@ -235,7 +235,7 @@ impl SupportedToken {
             locked_amount: 0,
             withdrawal_reserved_amount: 0,
             pricing_source,
-            _reserved: [0; 23],
+            _reserved: [0; 55],
         }
     }
 
