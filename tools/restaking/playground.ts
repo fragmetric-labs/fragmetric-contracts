@@ -925,6 +925,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLMint, fragSOLFundAccount};
     }
 
+    // TODO: migration v0.3.2
+    public async runAdminCloseFundAccount() {
+        await this.run({
+            instructions: [
+                this.program.methods.adminCloseFundAccount().instruction(),
+            ],
+            signerNames: ['ADMIN'],
+        });
+
+        logger.notice("fragSOL fund account closed".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund);
+    }
+
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [

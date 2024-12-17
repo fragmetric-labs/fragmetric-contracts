@@ -17,6 +17,11 @@ pub mod restaking {
     use super::*;
     use crate::modules::normalization::NormalizedTokenPoolAccount;
 
+    // TODO: migration v0.3.2
+    pub fn admin_close_fund_account(_ctx: Context<AdminFundAccountCloseContext>) -> Result<()> {
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
