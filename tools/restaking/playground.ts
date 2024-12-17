@@ -92,10 +92,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         } else {
             const authority = this.keychain.getKeypair('ADMIN').publicKey;
             const payer = this.wallet.publicKey;
+            const recentSlot = await this.connection.getSlot({commitment: 'recent'});
             const [createIx, lookupTableAddress] = web3.AddressLookupTableProgram.createLookupTable({
                 authority,
                 payer,
-                recentSlot: 0, // for fragSOL: 0
+                recentSlot,
             });
             await this.run({
                 instructions: [createIx],
