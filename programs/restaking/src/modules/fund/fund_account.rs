@@ -14,7 +14,7 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v4: migrate to new layout including new fields using bytemuck. (35376 ~= 35KB)
+/// * v4: migrate to new layout including new fields using bytemuck. (31248 ~= 31KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;

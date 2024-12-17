@@ -27,7 +27,6 @@ pub struct UserReceiptTokenTransferContext<'info> {
     )]
     pub source_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

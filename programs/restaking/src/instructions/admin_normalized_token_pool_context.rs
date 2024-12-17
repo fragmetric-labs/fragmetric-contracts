@@ -21,7 +21,6 @@ pub struct AdminNormalizedTokenPoolInitialContext<'info> {
 
     #[account(
         mut,
-        address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS,
         constraint = normalized_token_mint.supply == 0,
     )]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -49,7 +48,6 @@ pub struct AdminNormalizedTokenPoolUpdateContext<'info> {
 
     pub normalized_token_program: Program<'info, Token>,
 
-    #[account(address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

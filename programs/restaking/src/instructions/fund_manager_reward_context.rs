@@ -12,7 +12,6 @@ pub struct FundManagerRewardContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -31,7 +30,6 @@ pub struct FundManagerRewardDistributionContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

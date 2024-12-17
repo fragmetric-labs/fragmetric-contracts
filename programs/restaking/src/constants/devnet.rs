@@ -21,14 +21,17 @@ pub const JITO_VAULT_PROGRAM_ID: Pubkey = pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZM
 pub const JITO_VAULT_PROGRAM_FEE_WALLET: Pubkey =
     pubkey!("9eZbWiHsPRsxLSiHxzg2pkXsAuQMwAjQrda7C7e21Fw6");
 
+#[constant]
+pub const JITO_VAULT_CONFIG_ADDRESS: Pubkey =
+    pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
+
 ////////////////////////////////////////////
 // receipt token: fragSOL
 ////////////////////////////////////////////
 
-// TODO/v0.3: replace ALT address after creation
 #[constant]
 pub const FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
-    pubkey!("G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc");
+    pubkey!("5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU");
 
 #[constant]
 pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo");
@@ -36,10 +39,6 @@ pub const FRAGSOL_MINT_ADDRESS: Pubkey = pubkey!("FRAGSEthVFL7fdqM8hxfxkfCZzUvmg
 #[constant]
 pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
-
-#[constant]
-pub const FRAGSOL_JITO_VAULT_CONFIG_ADDRESS: Pubkey =
-    pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 #[constant]
 pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey =

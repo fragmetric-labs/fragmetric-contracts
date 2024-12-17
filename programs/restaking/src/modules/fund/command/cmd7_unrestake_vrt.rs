@@ -2,7 +2,6 @@ use super::{
     ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, OperationCommand,
     OperationCommandContext, OperationCommandEntry, SelfExecutable,
 };
-use crate::constants::FRAGSOL_MINT_ADDRESS;
 use crate::errors;
 use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
@@ -80,8 +79,12 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let required_accounts =
                                 &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
-                            required_accounts
-                                .append(&mut JitoRestakingVaultService::find_withdrawal_tickets());
+                            required_accounts.append(
+                                &mut JitoRestakingVaultService::find_withdrawal_tickets(
+                                    &restaking_vault.vault,
+                                    &ctx.receipt_token_mint.key(),
+                                ),
+                            );
                             return Ok(Some(
                                 command.with_required_accounts(required_accounts.to_vec()),
                             ));
@@ -124,13 +127,19 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                     let ticket_token_account = JitoRestakingVaultService::find_withdrawal_ticket_token_account(&withdrawal_ticket.key(), &restaking_vault.receipt_token_mint, &restaking_vault.receipt_token_program);
                                     withdrawal_ticket_position = i as u8;
                                     ticket_set = (
-                                        JitoRestakingVaultService::find_vault_base_account(i as u8)
-                                            .0,
+                                        JitoRestakingVaultService::find_vault_base_account(
+                                            &ctx.receipt_token_mint.key(),
+                                            i as u8,
+                                        )
+                                        .0,
                                         withdrawal_ticket.key(),
                                         ticket_token_account,
                                     );
                                     let (_, base_account_bump) =
-                                        JitoRestakingVaultService::find_vault_base_account(i as u8);
+                                        JitoRestakingVaultService::find_vault_base_account(
+                                            &ctx.receipt_token_mint.key(),
+                                            i as u8,
+                                        );
 
                                     signer_seed.push(
                                         JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED.to_vec(),

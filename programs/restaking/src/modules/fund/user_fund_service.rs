@@ -469,7 +469,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
     pub fn process_withdraw_supported_token(
         &mut self,
-        system_program: &Program<'info, System>,
         supported_token_program: &Interface<'info, TokenInterface>,
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         fund_supported_token_account: &InterfaceAccount<'info, TokenAccount>,

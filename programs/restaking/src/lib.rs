@@ -17,6 +17,11 @@ pub mod restaking {
     use super::*;
     use crate::modules::normalization::NormalizedTokenPoolAccount;
 
+    // TODO: migration v0.3.2
+    pub fn admin_close_fund_account(_ctx: Context<AdminFundAccountCloseContext>) -> Result<()> {
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
@@ -760,7 +765,6 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_supported_token(
-            &ctx.accounts.system_program,
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.fund_supported_token_account,
