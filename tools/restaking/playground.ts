@@ -85,22 +85,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             return this._knownAddressLookupTableAddress;
         }
 
-        const authority = this.keychain.getKeypair('ADMIN').publicKey;
-        const payer = this.wallet.publicKey;
-        const [createIx, lookupTable] = web3.AddressLookupTableProgram.createLookupTable({
-            authority,
-            payer,
-            recentSlot: 0, // for fragSOL: 0
-        });
-        const existingLookupTable = await this.connection.getAccountInfo(lookupTable).catch(() => null);
-        if (!existingLookupTable) {
+        const existinglookupTableAddress = this.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
+        const existingLookupTable = await this.connection.getAccountInfo(existinglookupTableAddress).catch(() => null);
+        if (existingLookupTable) {
+            this._knownAddressLookupTableAddress = existinglookupTableAddress;
+        } else {
+            const authority = this.keychain.getKeypair('ADMIN').publicKey;
+            const payer = this.wallet.publicKey;
+            const [createIx, lookupTableAddress] = web3.AddressLookupTableProgram.createLookupTable({
+                authority,
+                payer,
+                recentSlot: 0, // for fragSOL: 0
+            });
             await this.run({
                 instructions: [createIx],
                 signerNames: ['ADMIN']
             });
-            logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTable.toString());
+            logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTableAddress.toString());
+            this._knownAddressLookupTableAddress = lookupTableAddress;
         }
-        this._knownAddressLookupTableAddress = lookupTable;
 
         await this.updateKnownAddressLookupTable();
         await this.setAddressLookupTableAddresses([this._knownAddressLookupTableAddress]);
