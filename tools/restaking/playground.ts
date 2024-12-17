@@ -231,18 +231,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ...obj,
         }), {} as { string: web3.PublicKey });
 
-        // staking
-        const fundStakeAccounts = [...Array(5).keys()].map((i) =>
-            web3.PublicKey.findProgramAddressSync(
-                [
-                    fragSOLFund.toBuffer(),
-                    this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
-                    Buffer.from([i]),
-                ],
-                this.programId,
-            )[0]
-        );
-        // console.log(`fundStakeAccounts:`, fundStakeAccounts);
+        // // staking
+        // const fundStakeAccounts = [...Array(5).keys()].map((i) =>
+        //     web3.PublicKey.findProgramAddressSync(
+        //         [
+        //             fragSOLFund.toBuffer(),
+        //             this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
+        //             Buffer.from([i]),
+        //         ],
+        //         this.programId,
+        //     )[0]
+        // );
+        // // console.log(`fundStakeAccounts:`, fundStakeAccounts);
 
         // Restaking
         const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
@@ -322,7 +322,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ...fragSOLSupportedTokenAccounts,
             userSupportedTokenAccount,
             fragSOLFundWithdrawalBatch,
-            fundStakeAccounts,
+            // fundStakeAccounts,
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
             fragSOLJitoVaultProgramFeeWalletTokenAccount,
@@ -380,7 +380,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             };
         } else {
             // for 'localnet', it would be cloned from mainnet
-            return {
+            let metadata = {
                 bSOL: {
                     mint: this.getConstantAsPublicKey("mainnetBsolMintAddress"),
                     program: spl.TOKEN_PROGRAM_ID,
@@ -426,6 +426,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     decimals: 9,
                 },
             };
+
+            // remove bSOL from mainnet
+            if (this.isMainnet) {
+                delete metadata.bSOL;
+            }
+
+            return metadata
         }
     }
 
