@@ -17,7 +17,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -100,7 +100,7 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

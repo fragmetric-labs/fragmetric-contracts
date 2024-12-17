@@ -16,7 +16,6 @@ pub struct UserFundAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -46,7 +45,6 @@ pub struct UserFundAccountUpdateContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -78,7 +76,7 @@ pub struct UserFundContext<'info> {
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -156,7 +154,6 @@ pub struct UserFundWithdrawContext<'info> {
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

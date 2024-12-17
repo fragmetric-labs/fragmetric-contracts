@@ -21,7 +21,6 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     #[account(
         mut,
-        address = FRAGSOL_MINT_ADDRESS,
         mint::authority = admin,
         constraint = receipt_token_mint.supply == 0,
     )]
@@ -60,7 +59,6 @@ pub struct AdminFundAccountUpdateContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(address = FRAGSOL_MINT_ADDRESS)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

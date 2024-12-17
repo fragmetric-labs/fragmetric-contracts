@@ -14,7 +14,7 @@ pub struct OperatorFundContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(mut, address = FRAGSOL_MINT_ADDRESS)]
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

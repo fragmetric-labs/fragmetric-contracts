@@ -14,7 +14,7 @@ pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
 
     pub slasher: Signer<'info>,
 
-    #[account(mut, address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
+    #[account(mut)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -54,7 +54,7 @@ pub struct SlasherNormalizedTokenWithdrawContext<'info> {
     #[account(mut)]
     pub slasher: Signer<'info>,
 
-    #[account(mut, address = FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS)]
+    #[account(mut)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
