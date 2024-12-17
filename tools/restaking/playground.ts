@@ -1714,13 +1714,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const userSupportedTokenAccount = request.supportedTokenMint ? spl.getAssociatedTokenAddressSync(request.supportedTokenMint, user.publicKey, true, request.supportedTokenProgram) : null;
         const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
 
-        console.log({
-            user: user.publicKey,
-            userSupportedTokenAccount,
-            fundWithdrawalBatchAccount,
-            supportedTokenMint: request.supportedTokenMint,
-            supportedTokenProgram: request.supportedTokenProgram,
-        })
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
@@ -1767,7 +1760,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenLockAccount(),
         ]);
-        logger.notice(`user withdrew: ${this.lamportsToSOL(event.userWithdrewFromFund.withdrawnAmount)} #${requestId.toString()}, (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.notice(`user withdrew: ${this.lamportsToX(event.userWithdrewFromFund.withdrawnAmount, 9, event.userWithdrewFromFund.supportedTokenMint?.toString().substring(0, 4) ?? 'SOL' /** TODO: later.. **/)} #${requestId.toString()}, (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
 
         return {
             event,
