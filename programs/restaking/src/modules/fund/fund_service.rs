@@ -58,6 +58,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(pricing_service)
     }
 
+    pub fn process_update_prices(
+        &mut self,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<events::OperatorUpdatedFundPrices> {
+        self.new_pricing_service(pricing_sources)?;
+        Ok(events::OperatorUpdatedFundPrices {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+        })
+    }
+
     fn get_pricing_source_infos(
         &self,
         remaining_accounts: &'info [AccountInfo<'info>],
@@ -225,13 +236,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(Box::new(self.fund_account.load()?.operation.clone()))
     }
 
-    pub fn process_run(
+    pub fn process_run_command(
         &mut self,
         operator: &Signer<'info>,
         system_program: &Program<'info, System>,
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
-    ) -> Result<events::OperatorRanFund> {
+    ) -> Result<events::OperatorRanFundCommand> {
         let pricing_source_infos = self.get_pricing_source_infos(remaining_accounts)?;
 
         let mut operation_state = self.clone_operation_state()?;
@@ -331,7 +342,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             operation_state.as_mut(),
         );
 
-        Ok(events::OperatorRanFund {
+        Ok(events::OperatorRanFundCommand {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
             executed_command: command.clone(),

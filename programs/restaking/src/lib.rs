@@ -480,7 +480,7 @@ pub mod restaking {
     // OperatorFundContext
     ////////////////////////////////////////////
 
-    pub fn operator_run<'info>(
+    pub fn operator_run_fund_command<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
     ) -> Result<()> {
@@ -495,11 +495,25 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_run(
+        .process_run_command(
             &ctx.accounts.operator,
             &ctx.accounts.system_program,
             ctx.remaining_accounts,
             force_reset_command,
+        )?);
+
+        Ok(())
+    }
+
+    pub fn operator_update_fund_prices<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_update_prices(
+            ctx.remaining_accounts,
         )?);
 
         Ok(())
@@ -515,6 +529,25 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
         )?
         .process_update_reward_pools()?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // OperatorNormalizedTokenPoolContext
+    ////////////////////////////////////////////
+
+    pub fn operator_update_normalized_token_pool_prices<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorNormalizedTokenPoolContext<'info>>,
+    ) -> Result<()> {
+        emit_cpi!(modules::normalization::NormalizedTokenPoolService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+        .process_update_prices(
+            ctx.remaining_accounts,
+        )?);
 
         Ok(())
     }

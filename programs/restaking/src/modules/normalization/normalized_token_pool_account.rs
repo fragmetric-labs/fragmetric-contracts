@@ -73,6 +73,7 @@ impl NormalizedTokenPoolAccount {
             self.supported_tokens
                 .iter_mut()
                 .for_each(|supported_token| {
+                    supported_token.decimals = 9;
                     supported_token.withdrawal_reserved_amount = 0;
 
                     supported_token.pricing_source = match supported_token.mint {
@@ -165,6 +166,7 @@ impl NormalizedTokenPoolAccount {
         &mut self,
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
+        supported_token_decimals: u8,
         supported_token_lock_account: Pubkey,
         supported_token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
@@ -185,6 +187,7 @@ impl NormalizedTokenPoolAccount {
         self.supported_tokens.push(SupportedToken::new(
             supported_token_mint,
             supported_token_program,
+            supported_token_decimals,
             supported_token_lock_account,
             supported_token_pricing_source,
         ));
@@ -192,12 +195,21 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
+    #[inline]
+    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
+        self.supported_tokens.iter()
+    }
+
+    #[inline]
+    pub(super) fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
+        self.supported_tokens.iter_mut()
+    }
+
     pub(super) fn get_supported_token(
         &self,
         supported_token_mint: &Pubkey,
     ) -> Result<&SupportedToken> {
-        self.supported_tokens
-            .iter()
+        self.get_supported_tokens_iter()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
@@ -206,8 +218,7 @@ impl NormalizedTokenPoolAccount {
         &mut self,
         supported_token_mint: &Pubkey,
     ) -> Result<&mut SupportedToken> {
-        self.supported_tokens
-            .iter_mut()
+        self.get_supported_tokens_iter_mut()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
@@ -229,28 +240,33 @@ impl NormalizedTokenPoolAccount {
 pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
+    pub decimals: u8,
     pub lock_account: Pubkey,
     pub locked_amount: u64,
     pub withdrawal_reserved_amount: u64,
+    pub one_token_as_sol: u64,
     pub pricing_source: TokenPricingSource,
-    _reserved: [u8; 55],
+    _reserved: [u8; 46],
 }
 
 impl SupportedToken {
     fn new(
         mint: Pubkey,
         program: Pubkey,
+        decimals: u8,
         lock_account: Pubkey,
         pricing_source: TokenPricingSource,
     ) -> Self {
         Self {
             mint,
             program,
+            decimals,
             lock_account,
             locked_amount: 0,
             withdrawal_reserved_amount: 0,
+            one_token_as_sol: 0,
             pricing_source,
-            _reserved: [0; 55],
+            _reserved: [0; 46],
         }
     }
 

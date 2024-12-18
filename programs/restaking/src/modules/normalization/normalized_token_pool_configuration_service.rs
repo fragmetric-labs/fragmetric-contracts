@@ -95,6 +95,7 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
         self.normalized_token_pool_account.add_new_supported_token(
             supported_token_mint.key(),
             supported_token_program.key(),
+            supported_token_mint.decimals,
             pool_supported_token_account.key(),
             pricing_source,
         )?;

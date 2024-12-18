@@ -16,7 +16,7 @@ describe("operator_spl_stake_pool", async () => {
 
     step("stake SOL to jito stake pool", async function () {
         await restaking.runUserDepositSOL(restaking.wallet, depositSolAmount, null);
-        await restaking.runOperatorRun({
+        await restaking.runOperatorFundCommands({
             command: {
                 stakeSol: {
                     0: {
@@ -50,7 +50,7 @@ describe("operator_spl_stake_pool", async () => {
         const jitoSolSupportedTokenBalance0 = new BN(jitoSolSupportedTokenBalance0_.value.amount)
         logger.debug(`before withdraw-sol from jito stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance0}, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance0}`);
 
-        await restaking.runOperatorRun({
+        await restaking.runOperatorFundCommands({
             command: {
                 unstakeLst: {
                     0: {
@@ -91,7 +91,7 @@ describe("operator_spl_stake_pool", async () => {
 
     step("claim sol", async function () {
         // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
-        await restaking.runOperatorRun({
+        await restaking.runOperatorFundCommands({
             command: {
                 claimUnstakedSol: {
                     0: {

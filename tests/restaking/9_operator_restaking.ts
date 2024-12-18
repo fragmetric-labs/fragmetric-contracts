@@ -13,7 +13,7 @@ describe("operator_restake_with_normalize", async () => {
 
     step("restake LSTs to jito vault through normalizing", async function () {
         const restakeSolAmount = new BN(5 * web3.LAMPORTS_PER_SOL);
-        await restaking.runOperatorRun({
+        await restaking.runOperatorFundCommands({
                 command: {
                     restakeVst: {
                         0: {
@@ -39,7 +39,7 @@ describe("operator_restake_with_normalize", async () => {
 
     step("request VRT from jito restaking pool", async function () {
         const unrestakeSolAmount = new BN(4 * web3.LAMPORTS_PER_SOL);
-        await restaking.runOperatorRun({
+        await restaking.runOperatorFundCommands({
                 command: {
                     unrestakeVrt: {
                         0: {

@@ -5,6 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use std::cmp;
 
 use crate::errors::ErrorCode;
+use crate::events;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::utils::{AccountExt, PDASeeds};
@@ -412,6 +413,17 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         Ok(())
     }
 
+    pub fn process_update_prices(
+        &mut self,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<events::OperatorUpdatedNormalizedTokenPoolPrices> {
+        self.new_pricing_service(pricing_sources)?;
+        Ok(events::OperatorUpdatedNormalizedTokenPoolPrices {
+            normalized_token_mint: self.normalized_token_mint.key(),
+            normalized_token_pool_account: self.normalized_token_pool_account.key(),
+        })
+    }
+
     // create a pricing service and register pool assets' value resolver
     pub(super) fn new_pricing_service(
         &mut self,
@@ -429,7 +441,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
     }
 
     fn update_asset_values(&mut self, pricing_service: &mut PricingService) -> Result<()> {
-        // ensure any update on fund account written before do pricing
+        // ensure any update on pool account written before do pricing
         self.normalized_token_pool_account.exit(&crate::ID)?;
 
         // update pool asset values
@@ -449,6 +461,15 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 .checked_pow(self.normalized_token_mint.decimals as u32)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )?;
+
+        for supported_token in self.normalized_token_pool_account.get_supported_tokens_iter_mut() {
+            supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
+                &supported_token.mint,
+                10u64
+                    .checked_pow(supported_token.decimals as u32)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            )?;
+        }
 
         self.normalized_token_pool_account.normalized_token_value =
             pricing_service.get_token_total_value_as_atomic(normalized_token_mint_key)?;

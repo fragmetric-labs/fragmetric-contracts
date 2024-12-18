@@ -1369,6 +1369,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         supportedTokenMint: token.mint,
                         supportedTokenProgram: token.program,
                     })
+                    .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signerNames: ["FUND_MANAGER"],
@@ -1757,8 +1758,64 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
+    public async runOperatorUpdateFundPrices(operator: web3.Keypair = this.wallet) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .operatorUpdateFundPrices()
+                    .accountsPartial({
+                        operator: operator.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorUpdatedFundPrices"],
+        });
+
+        const [fragSOLFund] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
+        ]);
+        logger.notice(`operator updated fund prices: ${this.lamportsToSOL(fragSOLFund.oneReceiptTokenAsSol)}/fragSOL`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+        };
+    }
+
+    public async runOperatorUpdateNormalizedTokenPoolPrices(operator: web3.Keypair = this.wallet) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .operatorUpdateNormalizedTokenPoolPrices()
+                    .accountsPartial({
+                        operator: operator.publicKey,
+                        normalizedTokenMint: this.knownAddress.nSOLTokenMint,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorUpdatedNormalizedTokenPoolPrices"],
+        });
+
+        const [nSOLTokenPoolAccount] = await Promise.all([
+            this.getNSOLTokenPoolAccount(),
+        ]);
+        logger.notice(`operator updated normalized token pool prices: ${this.lamportsToSOL(nSOLTokenPoolAccount.oneNormalizedTokenAsSol)}/nSOL`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {
+            event,
+            error,
+            nSOLTokenPoolAccount,
+        };
+    }
+
     public async runOperatorProcessWithdrawalBatches(supported_token_mint: web3.PublicKey|null = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
-        const {event: _event, error: _error} = await this.runOperatorRun({
+        const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
@@ -1769,7 +1826,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             requiredAccounts: [],
         }, operator);
 
-        const {event, error} = await this.runOperatorRun({
+        const {event, error} = await this.runOperatorFundCommands({
             command: {
                 processWithdrawalBatch: {
                     0: {
@@ -1933,18 +1990,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorRun(resetCommand: Parameters<typeof this.program.methods.operatorRun>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
+    public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
         let txCount = 0;
         while (txCount < 100) {
-            const {event, error} = await this.runOperatorRunSingle(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
+            const {event, error} = await this.runOperatorSingleFundCommand(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
             txCount++;
-            if (txCount == 100 || event.operatorRanFund.nextOperationSequence == 0) {
+            if (txCount == 100 || event.operatorRanFundCommand.nextOperationSequence == 0) {
                 return {event, error}
             }
         }
     }
 
-    private async runOperatorRunSingle(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRun>[0], setComputeUnitLimitUnits: number = 1_600_000, setComputeUnitPriceMicroLamports: number = 1_000_000) {
+    private async runOperatorSingleFundCommand(operator: web3.Keypair, resetCommand?: Parameters<typeof this.program.methods.operatorRunFundCommand>[0], setComputeUnitLimitUnits: number = 1_600_000, setComputeUnitPriceMicroLamports: number = 1_000_000) {
         // prepare accounts according to the current state of operation.
         // - can contain 57 accounts out of 64 with reserved 6 accounts and payer.
         // - order doesn't matter, no need to put duplicate.
@@ -2005,7 +2062,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const tx = await this.run({
             instructions: [
                 this.program.methods
-                    .operatorRun(resetCommand)
+                    .operatorRunFundCommand(resetCommand)
                     .accountsPartial({
                         operator: operator.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
@@ -2014,7 +2071,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorRanFund"],
+            events: ["operatorRanFundCommand"],
             skipPreflight: true,
             // TODO: why is requestHeapFrameBytes not working?
             // requestHeapFrameBytes, : 64 * 1024,
@@ -2022,7 +2079,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             setComputeUnitPriceMicroLamports,
         });
 
-        let executedCommand = tx.event.operatorRanFund.executedCommand;
+        let executedCommand = tx.event.operatorRanFundCommand.executedCommand;
         const commandName = Object.keys(executedCommand)[0];
         const commandArgs = executedCommand[commandName][0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
