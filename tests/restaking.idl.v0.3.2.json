@@ -2,7 +2,7 @@
   "address": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ",
   "metadata": {
     "name": "restaking",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "spec": "0.1.0",
     "description": "Fragmetric Liquid Restaking Token Program"
   },
