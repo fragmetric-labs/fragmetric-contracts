@@ -74,9 +74,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeNormalizeTokenPoolSupportedTokens(), // 6
             () => this.runFundManagerInitializeRewardPools(), // 7
             () => this.runFundManagerSettleReward({ poolName: "bonus", rewardName: "fPoint", amount: new BN(0) }), // 8
-            () => this.runFundManagerInitializeFundNormalizedToken(), // 9
-            () => this.runFundManagerInitializeFundJitoRestakingVault(), // 10
-            () => this.runFundManagerUpdateFundConfigurations(), // 11
+            () => this.runFundManagerInitializeFundSupportedTokens(), // 9
+            () => this.runFundManagerInitializeFundNormalizedToken(), // 10
+            () => this.runFundManagerInitializeFundJitoRestakingVault(), // 11
+            () => this.runFundManagerUpdateFundConfigurations(), // 12
+            () => this.runOperatorUpdateFundPrices(), // 13
+            () => this.runOperatorUpdateNormalizedTokenPoolPrices(), // 14
         ];
     }
 
@@ -200,7 +203,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFund, true, this.supportedTokenMetadata[symbol].program);
         const fragSOLSupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
-            [`nSOLSupportedTokenLockAccount_${symbol}`]: fragSOLSupportedTokenAccount(symbol as any),
+            [`fragSOLFundReservedSupportedTokenAccount_${symbol}`]: fragSOLSupportedTokenAccount(symbol as any),
             ...obj,
         }), {} as { string: web3.PublicKey });
 
@@ -1089,6 +1092,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     payer: this.wallet.publicKey,
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                 }).instruction(),
+            ],
+            signerNames: ["ADMIN"],
+        });
+        const fragSOLExtraAccountMetasAccount = await this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId)).then((acc) => spl.getExtraAccountMetas(acc));
+        logger.notice(`initialized fragSOL extra account meta list`.padEnd(LOG_PAD_LARGE));
+
+        return {fragSOLExtraAccountMetasAccount};
+    }
+
+    public async runAdminUpdateFragSOLExtraAccountMetaList() {
+        await this.run({
+            instructions: [
                 this.program.methods.adminUpdateExtraAccountMetaListIfNeeded().accounts({
                     payer: this.wallet.publicKey,
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
@@ -1097,7 +1112,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signerNames: ["ADMIN"],
         });
         const fragSOLExtraAccountMetasAccount = await this.connection.getAccountInfo(spl.getExtraAccountMetaAddress(this.knownAddress.fragSOLTokenMint, this.programId)).then((acc) => spl.getExtraAccountMetas(acc));
-        logger.notice(`initialized fragSOL extra account meta list`.padEnd(LOG_PAD_LARGE));
+        logger.notice(`updated fragSOL extra account meta list`.padEnd(LOG_PAD_LARGE));
 
         return {fragSOLExtraAccountMetasAccount};
     }
@@ -1147,7 +1162,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
 
             solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
-            solAccumulatedDepositAmount:  null,
+            // TODO: migration v0.3.2 save sol_accumulated_deposit_amount
+            solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
             solWithdrawalable: this.isMainnet ? true : true,
             solWithdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
             solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
@@ -1168,7 +1184,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
                 })(),
-                tokenAccumulatedDepositAmount : null,
+                // solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
+                tokenAccumulatedDepositAmount : this.isMainnet ? (() => {
+                    switch (symbol) {
+                        case "bSOL":
+                            return new BN(0).mul(new BN(10 ** (v.decimals - 3)));
+                        case "jitoSOL":
+                            return new BN(22_680_370).mul(new BN(10 ** (v.decimals - 3)));
+                        case "mSOL":
+                            return new BN(4_500_000).mul(new BN(10 ** (v.decimals - 3)));
+                        case "BNSOL":
+                            return new BN(2_617_170).mul(new BN(10 ** (v.decimals - 3)));
+                        default:
+                            throw `invalid accumulated deposit amount for ${symbol}`;
+                    }
+                })() : null,
                 withdrawable: this.isMainnet ? false : false,
                 withdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
                 withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(10 ** v.decimals)),

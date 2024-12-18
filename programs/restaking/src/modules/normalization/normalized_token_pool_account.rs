@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
+#[cfg(any(feature = "devnet", feature = "mainnet"))]
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalAccount};
@@ -76,28 +77,36 @@ impl NormalizedTokenPoolAccount {
                     supported_token.decimals = 9;
                     supported_token.withdrawal_reserved_amount = 0;
 
-                    supported_token.pricing_source = match supported_token.mint {
-                        MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                            address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
-                        },
-                        MAINNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
-                            address: MAINNET_MSOL_STAKE_POOL_ADDRESS,
-                        },
-                        MAINNET_JITOSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                            address: MAINNET_JITOSOL_STAKE_POOL_ADDRESS,
-                        },
-                        MAINNET_BNSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                            address: MAINNET_BNSOL_STAKE_POOL_ADDRESS,
-                        },
-                        #[allow(unreachable_patterns)]
-                        DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                            address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
-                        },
-                        #[allow(unreachable_patterns)]
-                        DEVNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
-                            address: DEVNET_MSOL_STAKE_POOL_ADDRESS,
-                        },
-                        _ => panic!("normalized token pool pricing source migration failed"),
+                    #[cfg(feature = "devnet")]
+                    {
+                        supported_token.pricing_source = match supported_token.mint {
+                            DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                                address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
+                            },
+                            DEVNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                                address: DEVNET_MSOL_STAKE_POOL_ADDRESS,
+                            },
+                            _ => panic!("normalized token pool pricing source migration failed"),
+                        }
+                    }
+
+                    #[cfg(feature = "mainnet")]
+                    {
+                        supported_token.pricing_source = match supported_token.mint {
+                            MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                                address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
+                            },
+                            MAINNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
+                                address: MAINNET_MSOL_STAKE_POOL_ADDRESS,
+                            },
+                            MAINNET_JITOSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                                address: MAINNET_JITOSOL_STAKE_POOL_ADDRESS,
+                            },
+                            MAINNET_BNSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
+                                address: MAINNET_BNSOL_STAKE_POOL_ADDRESS,
+                            },
+                            _ => panic!("normalized token pool pricing source migration failed"),
+                        }
                     }
                 });
 
@@ -242,13 +251,13 @@ impl NormalizedTokenPoolAccount {
 pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
-    pub decimals: u8,
     pub lock_account: Pubkey,
     pub locked_amount: u64,
+    pub decimals: u8,
     pub withdrawal_reserved_amount: u64,
     pub one_token_as_sol: u64,
     pub pricing_source: TokenPricingSource,
-    _reserved: [u8; 46],
+    _reserved: [u8; 14],
 }
 
 impl SupportedToken {
@@ -268,7 +277,7 @@ impl SupportedToken {
             withdrawal_reserved_amount: 0,
             one_token_as_sol: 0,
             pricing_source,
-            _reserved: [0; 46],
+            _reserved: [0; 14],
         }
     }
 

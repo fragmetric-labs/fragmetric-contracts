@@ -146,6 +146,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 )?;
             }
 
+            for restaking_vault in fund_account.get_restaking_vaults_iter_mut() {
+                restaking_vault.one_receipt_token_as_sol = pricing_service
+                    .get_token_amount_as_sol(
+                        &restaking_vault.receipt_token_mint,
+                        10u64
+                            .checked_pow(restaking_vault.receipt_token_decimals as u32)
+                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                    )?;
+            }
+
             let receipt_token_mint_key = &self.receipt_token_mint.key();
             fund_account.one_receipt_token_as_sol = pricing_service.get_token_amount_as_sol(
                 receipt_token_mint_key,
