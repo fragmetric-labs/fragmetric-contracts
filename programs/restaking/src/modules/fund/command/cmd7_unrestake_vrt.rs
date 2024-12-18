@@ -1,6 +1,6 @@
 use super::{
     ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, OperationCommand,
-    OperationCommandContext, OperationCommandEntry, SelfExecutable,
+    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
 };
 use crate::errors;
 use crate::modules::fund::FundService;
@@ -18,12 +18,6 @@ pub struct UnrestakeVRTCommand {
     #[max_len(2)]
     items: Vec<UnrestakeVSTCommandItem>,
     state: UnrestakeVRTCommandState,
-}
-
-impl From<UnrestakeVRTCommand> for OperationCommand {
-    fn from(command: UnrestakeVRTCommand) -> Self {
-        Self::UnrestakeVRT(command)
-    }
 }
 
 impl UnrestakeVRTCommand {
@@ -57,12 +51,18 @@ pub enum UnrestakeVRTCommandState {
     Unstake(#[max_len(4, 32)] Vec<Vec<u8>>),
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct UnrestakeVRTCommandResult {}
+
 impl SelfExecutable for UnrestakeVRTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         if let Some(item) = self.items.first() {
             match &self.state {
                 UnrestakeVRTCommandState::Init if item.sol_amount > 0 => {
@@ -85,8 +85,9 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                     &ctx.receipt_token_mint.key(),
                                 ),
                             );
-                            return Ok(Some(
-                                command.with_required_accounts(required_accounts.to_vec()),
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts.to_vec())),
                             ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
@@ -177,7 +178,10 @@ impl SelfExecutable for UnrestakeVRTCommand {
 
                             let mut command = self.clone();
                             command.state = UnrestakeVRTCommandState::Unstake(signer_seed);
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -233,6 +237,6 @@ impl SelfExecutable for UnrestakeVRTCommand {
                 _ => (),
             }
         }
-        Ok(None)
+        Ok((None, None))
     }
 }

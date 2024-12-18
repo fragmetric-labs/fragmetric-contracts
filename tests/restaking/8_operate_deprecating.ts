@@ -12,7 +12,6 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
     step("update fund/ntp prices", async function () {
         const { fragSOLFund } = await restaking.runOperatorUpdateFundPrices();
         const { nSOLTokenPoolAccount } = await restaking.runOperatorUpdateNormalizedTokenPoolPrices();
-        console.log({nSOLTokenPoolAccount});
     });
 
     step("fund operation: staking, normalize, restaking", async function () {

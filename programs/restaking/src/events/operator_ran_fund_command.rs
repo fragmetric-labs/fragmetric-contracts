@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund::command::OperationCommand;
+use crate::modules::fund::command::{OperationCommand, OperationCommandResult};
 
 #[event]
 pub struct OperatorRanFundCommand {
     pub receipt_token_mint: Pubkey,
     pub fund_account: Pubkey,
-    pub executed_command: OperationCommand,
-    pub next_operation_sequence: u16,
+    pub next_sequence: u16,
+    pub num_operated: u64,
+    pub command: OperationCommand,
+    pub result: Option<OperationCommandResult>,
 }

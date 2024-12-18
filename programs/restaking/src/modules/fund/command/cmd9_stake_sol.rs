@@ -1,4 +1,7 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable,
+};
 use crate::constants::MAINNET_JITOSOL_MINT_ADDRESS;
 use crate::errors;
 use crate::modules::fund::command::OperationCommand::StakeSOL;
@@ -15,12 +18,6 @@ pub struct StakeSOLCommand {
     #[max_len(10)]
     items: Vec<StakeSOLCommandItem>,
     state: StakeSOLCommandState,
-}
-
-impl From<StakeSOLCommand> for OperationCommand {
-    fn from(command: StakeSOLCommand) -> Self {
-        StakeSOL(command)
-    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
@@ -51,12 +48,18 @@ impl Default for StakeSOLCommand {
     }
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct StakeSOLCommandResult {}
+
 impl SelfExecutable for StakeSOLCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         match &self.state {
             StakeSOLCommandState::New => {
                 let (pricing_service, sol_staking_reserved_amount) = {
@@ -107,12 +110,15 @@ impl SelfExecutable for StakeSOLCommand {
                         })
                         .collect::<Result<Vec<_>>>()?;
 
-                    return Ok(Some(
-                        StakeSOLCommand {
-                            items,
-                            state: StakeSOLCommandState::Init,
-                        }
-                        .with_required_accounts(vec![]),
+                    return Ok((
+                        None,
+                        Some(
+                            StakeSOLCommand {
+                                items,
+                                state: StakeSOLCommandState::Init,
+                            }
+                            .with_required_accounts(vec![]),
+                        ),
                     ));
                 }
             }
@@ -130,9 +136,9 @@ impl SelfExecutable for StakeSOLCommand {
                                 match token.pricing_source.try_deserialize()? {
                                     Some(TokenPricingSource::SPLStakePool { address })
                                     | Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                                        return Ok(Some(
+                                        return Ok((None, Some(
                                             command.with_required_accounts([(address, false)]),
-                                        ));
+                                        )));
                                     }
                                     _ => err!(
                                         errors::ErrorCode::FundOperationCommandExecutionFailedException
@@ -179,7 +185,10 @@ impl SelfExecutable for StakeSOLCommand {
                                 )?,
                             });
 
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         StakeSOLCommandState::Stake => {
                             let token_pricing_source = {
@@ -319,12 +328,15 @@ impl SelfExecutable for StakeSOLCommand {
 
                     // proceed to next token
                     if self.items.len() > 1 {
-                        return Ok(Some(
-                            StakeSOLCommand {
-                                items: self.items[1..].to_vec(),
-                                state: StakeSOLCommandState::Init,
-                            }
-                            .without_required_accounts(),
+                        return Ok((
+                            None,
+                            Some(
+                                StakeSOLCommand {
+                                    items: self.items[1..].to_vec(),
+                                    state: StakeSOLCommandState::Init,
+                                }
+                                .without_required_accounts(),
+                            ),
                         ));
                     }
                 }
@@ -332,6 +344,6 @@ impl SelfExecutable for StakeSOLCommand {
         }
 
         // TODO v0.3/operation: next step after stake sol
-        Ok(None)
+        Ok((None, None))
     }
 }

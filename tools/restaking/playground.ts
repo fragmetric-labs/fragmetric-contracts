@@ -1995,7 +1995,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         while (txCount < 100) {
             const {event, error} = await this.runOperatorSingleFundCommand(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
             txCount++;
-            if (txCount == 100 || event.operatorRanFundCommand.nextOperationSequence == 0) {
+            if (txCount == 100 || event.operatorRanFundCommand.nextSequence == 0) {
                 return {event, error}
             }
         }
@@ -2079,10 +2079,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             setComputeUnitPriceMicroLamports,
         });
 
-        let executedCommand = tx.event.operatorRanFundCommand.executedCommand;
+        const executedCommand = tx.event.operatorRanFundCommand.command;
+        const commandResult = tx.event.operatorRanFundCommand.result;
         const commandName = Object.keys(executedCommand)[0];
         const commandArgs = executedCommand[commandName][0];
-        logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE), JSON.stringify(commandArgs));
+        logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
+        console.log(commandArgs, commandResult);
 
         return {
             event: tx.event,

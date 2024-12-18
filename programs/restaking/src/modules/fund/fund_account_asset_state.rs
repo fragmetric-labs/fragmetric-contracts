@@ -160,13 +160,13 @@ impl AssetState {
         self.withdrawal_pending_batch.remove_request(request)
     }
 
-    /// returns [enqueued]
+    /// returns [enqueued_receipt_token_amount]
     pub fn enqueue_withdrawal_pending_batch(
         &mut self,
         withdrawal_batch_threshold_interval_seconds: i64,
         current_timestamp: i64,
         forced: bool,
-    ) -> bool {
+    ) -> u64 {
         if !((forced
             || current_timestamp - self.withdrawal_last_batch_enqueued_at
                 >= withdrawal_batch_threshold_interval_seconds)
@@ -174,7 +174,7 @@ impl AssetState {
                 < FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES as u8
             && self.withdrawal_pending_batch.num_requests > 0)
         {
-            return false;
+            return 0;
         }
 
         let next_batch_id = self.withdrawal_pending_batch.batch_id + 1;
@@ -189,7 +189,7 @@ impl AssetState {
         self.withdrawal_queued_batches[self.withdrawal_num_queued_batches as usize] = pending_batch;
         self.withdrawal_num_queued_batches += 1;
 
-        true
+        pending_batch.receipt_token_amount
     }
 
     pub fn dequeue_withdrawal_batches(
@@ -309,16 +309,22 @@ mod tests {
         assert_eq!(asset.withdrawal_last_created_request_id, 3);
         assert_eq!(asset.withdrawal_pending_batch.num_requests, 2);
 
-        assert!(!asset.enqueue_withdrawal_pending_batch(
-            withdrawal_batch_threshold_interval_seconds,
-            0,
-            false
-        ));
-        assert!(asset.enqueue_withdrawal_pending_batch(
-            withdrawal_batch_threshold_interval_seconds,
-            1,
-            false
-        ));
+        assert_eq!(
+            asset.enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                0,
+                false
+            ),
+            0
+        );
+        assert_ne!(
+            asset.enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                1,
+                false
+            ),
+            0
+        );
 
         assert!(asset.cancel_withdrawal_request(&req3).is_err());
         assert_eq!(asset.withdrawal_pending_batch.batch_id, 2);
@@ -389,16 +395,22 @@ mod tests {
             1
         );
 
-        assert!(!asset.enqueue_withdrawal_pending_batch(
-            withdrawal_batch_threshold_interval_seconds,
-            1,
-            false
-        ));
-        assert!(!asset.enqueue_withdrawal_pending_batch(
-            withdrawal_batch_threshold_interval_seconds,
-            1,
-            true
-        ));
+        assert_eq!(
+            asset.enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                1,
+                false
+            ),
+            0
+        );
+        assert_eq!(
+            asset.enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                1,
+                true
+            ),
+            0
+        );
 
         let req4 = asset.create_withdrawal_request(30, 2).unwrap();
         assert_eq!(req4.batch_id, asset.withdrawal_pending_batch.batch_id);
@@ -406,11 +418,14 @@ mod tests {
         assert_eq!(asset.withdrawal_last_created_request_id, 4);
         assert_eq!(asset.withdrawal_pending_batch.num_requests, 1);
 
-        assert!(asset.enqueue_withdrawal_pending_batch(
-            withdrawal_batch_threshold_interval_seconds,
-            2,
-            false
-        ));
+        assert_eq!(
+            asset.enqueue_withdrawal_pending_batch(
+                withdrawal_batch_threshold_interval_seconds,
+                2,
+                false
+            ),
+            30
+        );
         assert_eq!(asset.get_withdrawal_queued_batches_iter().count(), 2);
         assert_eq!(asset.withdrawal_pending_batch.batch_id, 3);
         assert_eq!(asset.withdrawal_pending_batch.num_requests, 0);

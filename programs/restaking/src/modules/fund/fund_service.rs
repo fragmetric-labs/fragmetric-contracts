@@ -311,8 +311,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             fund_account: self.fund_account,
             system_program,
         };
-        match command.execute(&mut ctx, required_account_infos.as_slice()) {
-            Ok(next_command) => {
+        let result = match command.execute(&mut ctx, required_account_infos.as_slice()) {
+            Ok((result, next_command)) => {
                 msg!(
                     "COMMAND#{}: {:?} passed",
                     operation_state.next_sequence,
@@ -323,6 +323,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     self.current_slot,
                     self.current_timestamp,
                 )?;
+                Ok(result)
             }
             Err(error) => {
                 msg!(
@@ -330,11 +331,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     operation_state.next_sequence,
                     command
                 );
-                return Err(error);
+                Err(error)
             }
-        };
+        }?;
 
-        let next_operation_sequence = operation_state.next_sequence;
+        let next_sequence = operation_state.next_sequence;
+        let num_operated = operation_state.num_operated;
 
         // write back operation state
         std::mem::swap(
@@ -345,12 +347,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(events::OperatorRanFundCommand {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
-            executed_command: command.clone(),
-            next_operation_sequence,
+            next_sequence,
+            num_operated,
+            command: command.clone(),
+            result,
         })
     }
 
-    pub(super) fn enqueue_withdrawal_batches(&mut self, forced: bool) -> Result<bool> {
+    /// returns [enqueued_receipt_token_amount]
+    pub(super) fn enqueue_withdrawal_batches(&mut self, forced: bool) -> Result<u64> {
         let withdrawal_batch_threshold_interval_seconds = self
             .fund_account
             .load()?
@@ -364,13 +369,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         );
 
         for supported_token in fund_account.get_supported_tokens_iter_mut() {
-            if supported_token.token.enqueue_withdrawal_pending_batch(
+            enqueued += supported_token.token.enqueue_withdrawal_pending_batch(
                 withdrawal_batch_threshold_interval_seconds,
                 self.current_timestamp,
                 forced,
-            ) {
-                enqueued = true;
-            }
+            );
         }
 
         Ok(enqueued)
@@ -438,7 +441,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(accounts)
     }
 
-    /// returns (receipt_token_amount_processed)
+    /// returns [processed_receipt_token_amount, reserved_asset_user_amount, deducted_asset_fee_amount]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -460,7 +463,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
-    ) -> Result<u64> {
+    ) -> Result<(u64, u64, u64)> {
         let (
             supported_token_mint,
             supported_token_mint_key,
@@ -637,6 +640,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         let receipt_token_amount_processed = receipt_token_amount_processing;
+        let asset_user_amount_reserved = asset_user_amount_processing;
+        let asset_fee_amount_deducted = asset_fee_amount_processing;
 
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
@@ -797,7 +802,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 + receipt_token_amount_processing,
             0
         );
-        Ok(receipt_token_amount_processed)
+        Ok((
+            receipt_token_amount_processed,
+            asset_user_amount_reserved,
+            asset_fee_amount_deducted,
+        ))
     }
 
     /// returns (sol_amount_transferred)

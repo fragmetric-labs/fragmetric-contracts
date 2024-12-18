@@ -1,4 +1,7 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable,
+};
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::fund::{
@@ -18,12 +21,6 @@ pub struct ProcessWithdrawalBatchCommand {
     forced: bool,
 }
 
-impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
-    fn from(command: ProcessWithdrawalBatchCommand) -> Self {
-        Self::ProcessWithdrawalBatch(command)
-    }
-}
-
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum ProcessWithdrawalBatchCommandState {
     /// supported_token_mint, None means SOL ... this is temporary implementation
@@ -38,12 +35,24 @@ impl Default for ProcessWithdrawalBatchCommandState {
     }
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct ProcessWithdrawalBatchCommandResult {
+    pub supported_token_mint: Option<Pubkey>,
+    pub requested_receipt_token_amount: u64,
+    pub processed_receipt_token_amount: u64,
+    pub reserved_asset_user_amount: u64,
+    pub deducted_asset_fee_amount: u64,
+}
+
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         match self.state {
             ProcessWithdrawalBatchCommandState::New(supported_token_mint_key) => {
                 let (receipt_token_amount_to_process, mut required_accounts) = {
@@ -112,11 +121,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     receipt_token_amount_to_process,
                 );
 
-                return Ok(Some(command.with_required_accounts(required_accounts)));
+                return Ok((
+                    None,
+                    Some(command.with_required_accounts(required_accounts)),
+                ));
             }
             ProcessWithdrawalBatchCommandState::Process(
                 supported_token_mint_key,
-                receipt_token_amount_to_process,
+                requested_receipt_token_amount,
             ) => {
                 let [program_revenue_account, program_supported_token_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
@@ -255,10 +267,19 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 // do process withdrawal
-                let (receipt_token_amount_processed, pricing_service) = {
+                let (
+                    processed_receipt_token_amount,
+                    reserved_asset_user_amount,
+                    deducted_asset_fee_amount,
+                    pricing_service,
+                ) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                    let receipt_token_amount_processed = fund_service.process_withdrawal_batches(
+                    let (
+                        processed_receipt_token_amount,
+                        reserved_asset_user_amount,
+                        deducted_asset_fee_amount,
+                    ) = fund_service.process_withdrawal_batches(
                         ctx.operator,
                         ctx.system_program,
                         receipt_token_program,
@@ -272,7 +293,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         uninitialized_withdrawal_batch_accounts,
                         pricing_sources,
                         self.forced,
-                        receipt_token_amount_to_process,
+                        requested_receipt_token_amount,
                     )?;
 
                     fund_service.harvest_from_treasury_account(
@@ -288,16 +309,21 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     let pricing_service =
                         fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
 
-                    (receipt_token_amount_processed, pricing_service)
+                    (
+                        processed_receipt_token_amount,
+                        reserved_asset_user_amount,
+                        deducted_asset_fee_amount,
+                        pricing_service,
+                    )
                 };
 
-                if receipt_token_amount_processed > 0 {
+                if processed_receipt_token_amount > 0 {
                     // adjust accumulated deposit capacity configuration as much as the asset value withdrawn
                     // the policy is: allocate half to SOL cap if it is currently greater than zero, then allocate rest to LST caps based on their weighted allocation strategy
                     let receipt_token_amount_processed_as_sol = pricing_service
                         .get_token_amount_as_sol(
                             &ctx.receipt_token_mint.key(),
-                            receipt_token_amount_processed,
+                            processed_receipt_token_amount,
                         )?;
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
@@ -352,10 +378,24 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .saturating_add(sol_increasing_capacity);
                     }
                 }
+
+                return Ok((
+                    Some(
+                        ProcessWithdrawalBatchCommandResult {
+                            supported_token_mint: supported_token_mint_key,
+                            requested_receipt_token_amount,
+                            processed_receipt_token_amount,
+                            reserved_asset_user_amount,
+                            deducted_asset_fee_amount,
+                        }
+                        .into(),
+                    ),
+                    None,
+                ));
             }
         }
 
         // TODO: ProcessWithdrawalBatchCommand.execute
-        Ok(None)
+        Ok((None, None))
     }
 }

@@ -201,7 +201,9 @@ impl NormalizedTokenPoolAccount {
     }
 
     #[inline]
-    pub(super) fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
+    pub(super) fn get_supported_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut SupportedToken> {
         self.supported_tokens.iter_mut()
     }
 

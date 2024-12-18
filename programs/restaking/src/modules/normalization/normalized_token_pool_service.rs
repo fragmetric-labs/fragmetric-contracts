@@ -462,7 +462,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )?;
 
-        for supported_token in self.normalized_token_pool_account.get_supported_tokens_iter_mut() {
+        for supported_token in self
+            .normalized_token_pool_account
+            .get_supported_tokens_iter_mut()
+        {
             supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
                 &supported_token.mint,
                 10u64

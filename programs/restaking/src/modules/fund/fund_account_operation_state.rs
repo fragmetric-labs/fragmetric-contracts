@@ -18,6 +18,7 @@ pub(super) struct OperationState {
     /// the purpose of this flag is for internal testing by set boundary of the reset command operation.
     no_transition: u8,
     pub next_sequence: u16,
+    pub num_operated: u64,
 
     next_command: OperationCommandEntryPod,
 
@@ -78,6 +79,7 @@ impl OperationState {
         self.updated_slot = current_slot;
         self.updated_at = current_timestamp;
         self.expired_at = current_timestamp + OPERATION_COMMAND_EXPIRATION_SECONDS;
+        self.num_operated += 1;
         self.next_sequence = match next_command {
             Some(_) => self.next_sequence + 1,
             None => 0,

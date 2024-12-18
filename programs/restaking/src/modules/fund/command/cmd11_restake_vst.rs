@@ -1,4 +1,7 @@
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable,
+};
 use crate::errors;
 use crate::modules::fund::fund_account_restaking_vault::RestakingVault;
 use crate::modules::fund::{
@@ -24,12 +27,6 @@ pub struct RestakeVSTCommand {
     items: Vec<RestakeVSTCommandItem>,
     state: RestakeVSTCommandState,
     operation_reserved_restake_token: Option<OperationReservedRestakeToken>,
-}
-
-impl From<RestakeVSTCommand> for OperationCommand {
-    fn from(command: RestakeVSTCommand) -> Self {
-        Self::RestakeVST(command)
-    }
 }
 
 impl RestakeVSTCommand {
@@ -80,12 +77,18 @@ pub enum RestakeVSTCommandState {
     Restake([u64; 2]),
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct RestakeVSTCommandResult {}
+
 impl SelfExecutable for RestakeVSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         // let mut vaults = vec![];
         // if let Some(item) = self.items.first() {
         //     vaults.push((
@@ -122,20 +125,26 @@ impl SelfExecutable for RestakeVSTCommand {
                                     &normalized_token.program,
                                 );
                             command.state = RestakeVSTCommandState::SetupNormalize;
-                            return Ok(Some(command.with_required_accounts([
-                                (normalized_token.mint, true),
-                                (normalized_token_pool_address, true),
-                                (normalized_token.program, false),
-                                (normalized_token_account, true),
-                            ])));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts([
+                                    (normalized_token.mint, true),
+                                    (normalized_token_pool_address, true),
+                                    (normalized_token.program, false),
+                                    (normalized_token_account, true),
+                                ])),
+                            ));
                         }
                     }
 
                     command.state = RestakeVSTCommandState::SetupRestake;
-                    return Ok(Some(command.with_required_accounts([(
-                        restaking_vault.supported_token_mint.key(),
-                        false,
-                    )])));
+                    return Ok((
+                        None,
+                        Some(command.with_required_accounts([(
+                            restaking_vault.supported_token_mint.key(),
+                            false,
+                        )])),
+                    ));
                 }
                 RestakeVSTCommandState::SetupRestake => {
                     let [supported_token_mint, remaining_accounts @ ..] = accounts else {
@@ -193,9 +202,12 @@ impl SelfExecutable for RestakeVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            return Ok(Some(command.with_required_accounts(
-                                JitoRestakingVaultService::find_accounts_for_vault(address)?,
-                            )));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(
+                                    JitoRestakingVaultService::find_accounts_for_vault(address)?,
+                                )),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -311,16 +323,22 @@ impl SelfExecutable for RestakeVSTCommand {
                                 (restake_supported_token_state.token_program, false),
                             ];
 
-                            Ok(Some(command.with_required_accounts(required_accounts)))
+                            Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ))
                         }
                         None => {
                             if self.items.len() > 1 {
-                                return Ok(Some(
-                                    RestakeVSTCommand::new_init(self.items[1..].to_vec())
-                                        .without_required_accounts(),
+                                return Ok((
+                                    None,
+                                    Some(
+                                        RestakeVSTCommand::new_init(self.items[1..].to_vec())
+                                            .without_required_accounts(),
+                                    ),
                                 ));
                             }
-                            Ok(None)
+                            Ok((None, None))
                         }
                     };
                 }
@@ -426,7 +444,10 @@ impl SelfExecutable for RestakeVSTCommand {
                                 (next_reserved_normalize_token_account, true),
                                 (next_reserved_restake_token.token_program, false),
                             ];
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         None => {
                             command.state = RestakeVSTCommandState::ReadVaultState;
@@ -442,11 +463,14 @@ impl SelfExecutable for RestakeVSTCommand {
                                             operation_reserved_amount:
                                                 normalized_token_account_parsed.amount,
                                         });
-                                    return Ok(Some(command.with_required_accounts(
-                                        JitoRestakingVaultService::find_accounts_for_vault(
-                                            address,
-                                        )?,
-                                    )));
+                                    return Ok((
+                                        None,
+                                        Some(command.with_required_accounts(
+                                            JitoRestakingVaultService::find_accounts_for_vault(
+                                                address,
+                                            )?,
+                                        )),
+                                    ));
                                 }
                                 _ => err!(
                                     errors::ErrorCode::FundOperationCommandExecutionFailedException
@@ -508,7 +532,10 @@ impl SelfExecutable for RestakeVSTCommand {
                                 expected_ncn_epoch,
                                 delayed_ncn_epoch,
                             ]);
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
@@ -588,11 +615,15 @@ impl SelfExecutable for RestakeVSTCommand {
         }
 
         if self.items.len() > 1 {
-            return Ok(Some(
-                RestakeVSTCommand::new_init(self.items[1..].to_vec()).without_required_accounts(),
+            return Ok((
+                None,
+                Some(
+                    RestakeVSTCommand::new_init(self.items[1..].to_vec())
+                        .without_required_accounts(),
+                ),
             ));
         }
 
-        Ok(None)
+        Ok((None, None))
     }
 }

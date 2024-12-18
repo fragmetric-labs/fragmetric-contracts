@@ -8,19 +8,16 @@ use crate::{
     },
 };
 
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ClaimUnstakedSOLCommand {
     #[max_len(10)]
     items: Vec<ClaimUnstakedSOLCommandItem>,
     state: ClaimUnstakedSOLCommandState,
-}
-
-impl From<ClaimUnstakedSOLCommand> for OperationCommand {
-    fn from(command: ClaimUnstakedSOLCommand) -> Self {
-        Self::ClaimUnstakedSOL(command)
-    }
 }
 
 impl ClaimUnstakedSOLCommand {
@@ -46,12 +43,18 @@ pub enum ClaimUnstakedSOLCommandState {
     Claim,
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct ClaimUnstakedSOLCommandResult {}
+
 impl SelfExecutable for ClaimUnstakedSOLCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         if let Some(item) = self.items.first() {
             let mut fund_account = ctx.fund_account.load_mut()?;
             let token = fund_account.get_supported_token(&item.mint)?;
@@ -63,7 +66,10 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
                     match token.pricing_source.try_deserialize()? {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
-                            return Ok(Some(command.with_required_accounts([(address, false)])));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts([(address, false)])),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
@@ -91,7 +97,10 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                             .map(|&account| (account, true)),
                     );
 
-                    return Ok(Some(command.with_required_accounts(required_accounts)));
+                    return Ok((
+                        None,
+                        Some(command.with_required_accounts(required_accounts)),
+                    ));
                 }
                 ClaimUnstakedSOLCommandState::Claim => {
                     let [sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_stake_accounts @ ..] =
@@ -135,13 +144,16 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
             // proceed to next token
             if self.items.len() > 1 {
-                return Ok(Some(
-                    ClaimUnstakedSOLCommand::new_init(self.items[1..].to_vec())
-                        .without_required_accounts(),
+                return Ok((
+                    None,
+                    Some(
+                        ClaimUnstakedSOLCommand::new_init(self.items[1..].to_vec())
+                            .without_required_accounts(),
+                    ),
                 ));
             }
         }
 
-        Ok(None)
+        Ok((None, None))
     }
 }

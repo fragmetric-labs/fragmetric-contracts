@@ -31,6 +31,7 @@ use anchor_spl::token_interface::Mint;
 use bytemuck::{Pod, Zeroable};
 
 use crate::modules::fund;
+use crate::modules::fund::command::OperationCommand::StakeSOL;
 
 // propagate common accounts and values to all commands
 pub struct OperationCommandContext<'info: 'a, 'a> {
@@ -56,6 +57,178 @@ pub enum OperationCommand {
     NormalizeLST(NormalizeLSTCommand),
     RestakeVST(RestakeVSTCommand),
     DelegateVST(DelegateVSTCommand),
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub enum OperationCommandResult {
+    Initialize(InitializeCommandResult),
+    ClaimUnstakedSOL(ClaimUnstakedSOLCommandResult),
+    EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommandResult),
+    ProcessWithdrawalBatch(ProcessWithdrawalBatchCommandResult),
+    ClaimUnrestakedVST(ClaimUnrestakedVSTCommandResult),
+    DenormalizeNT(DenormalizeNTCommandResult),
+    UndelegateVST(UndelegateVSTCommandResult),
+    UnrestakeVRT(UnrestakeVRTCommandResult),
+    UnstakeLST(UnstakeLSTCommandResult),
+    StakeSOL(StakeSOLCommandResult),
+    NormalizeLST(NormalizeLSTCommandResult),
+    RestakeVST(RestakeVSTCommandResult),
+    DelegateVST(DelegateVSTCommandResult),
+}
+
+impl From<InitializeCommand> for OperationCommand {
+    fn from(command: InitializeCommand) -> Self {
+        Self::Initialize(command)
+    }
+}
+
+impl From<InitializeCommandResult> for OperationCommandResult {
+    fn from(result: InitializeCommandResult) -> Self {
+        Self::Initialize(result)
+    }
+}
+
+impl From<EnqueueWithdrawalBatchCommand> for OperationCommand {
+    fn from(command: EnqueueWithdrawalBatchCommand) -> Self {
+        Self::EnqueueWithdrawalBatch(command)
+    }
+}
+
+impl From<EnqueueWithdrawalBatchCommandResult> for OperationCommandResult {
+    fn from(result: EnqueueWithdrawalBatchCommandResult) -> Self {
+        Self::EnqueueWithdrawalBatch(result)
+    }
+}
+
+impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
+    fn from(command: ProcessWithdrawalBatchCommand) -> Self {
+        Self::ProcessWithdrawalBatch(command)
+    }
+}
+
+impl From<ProcessWithdrawalBatchCommandResult> for OperationCommandResult {
+    fn from(result: ProcessWithdrawalBatchCommandResult) -> Self {
+        Self::ProcessWithdrawalBatch(result)
+    }
+}
+impl From<ClaimUnrestakedVSTCommand> for OperationCommand {
+    fn from(command: ClaimUnrestakedVSTCommand) -> Self {
+        Self::ClaimUnrestakedVST(command)
+    }
+}
+
+impl From<ClaimUnrestakedVSTCommandResult> for OperationCommandResult {
+    fn from(result: ClaimUnrestakedVSTCommandResult) -> Self {
+        Self::ClaimUnrestakedVST(result)
+    }
+}
+
+impl From<ClaimUnstakedSOLCommand> for OperationCommand {
+    fn from(command: ClaimUnstakedSOLCommand) -> Self {
+        Self::ClaimUnstakedSOL(command)
+    }
+}
+
+impl From<ClaimUnstakedSOLCommandResult> for OperationCommandResult {
+    fn from(result: ClaimUnstakedSOLCommandResult) -> Self {
+        Self::ClaimUnstakedSOL(result)
+    }
+}
+
+impl From<DenormalizeNTCommand> for OperationCommand {
+    fn from(command: DenormalizeNTCommand) -> Self {
+        Self::DenormalizeNT(command)
+    }
+}
+
+impl From<DenormalizeNTCommandResult> for OperationCommandResult {
+    fn from(result: DenormalizeNTCommandResult) -> Self {
+        Self::DenormalizeNT(result)
+    }
+}
+
+impl From<UndelegateVSTCommand> for OperationCommand {
+    fn from(command: UndelegateVSTCommand) -> Self {
+        Self::UndelegateVST(command)
+    }
+}
+
+impl From<UndelegateVSTCommandResult> for OperationCommandResult {
+    fn from(result: UndelegateVSTCommandResult) -> Self {
+        Self::UndelegateVST(result)
+    }
+}
+
+impl From<UnrestakeVRTCommand> for OperationCommand {
+    fn from(command: UnrestakeVRTCommand) -> Self {
+        Self::UnrestakeVRT(command)
+    }
+}
+
+impl From<UnrestakeVRTCommandResult> for OperationCommandResult {
+    fn from(result: UnrestakeVRTCommandResult) -> Self {
+        Self::UnrestakeVRT(result)
+    }
+}
+
+impl From<UnstakeLSTCommand> for OperationCommand {
+    fn from(command: UnstakeLSTCommand) -> Self {
+        Self::UnstakeLST(command)
+    }
+}
+
+impl From<UnstakeLSTCommandResult> for OperationCommandResult {
+    fn from(result: UnstakeLSTCommandResult) -> Self {
+        Self::UnstakeLST(result)
+    }
+}
+
+impl From<StakeSOLCommand> for OperationCommand {
+    fn from(command: StakeSOLCommand) -> Self {
+        StakeSOL(command)
+    }
+}
+
+impl From<StakeSOLCommandResult> for OperationCommandResult {
+    fn from(result: StakeSOLCommandResult) -> Self {
+        Self::StakeSOL(result)
+    }
+}
+
+impl From<NormalizeLSTCommand> for OperationCommand {
+    fn from(command: NormalizeLSTCommand) -> Self {
+        Self::NormalizeLST(command)
+    }
+}
+
+impl From<NormalizeLSTCommandResult> for OperationCommandResult {
+    fn from(result: NormalizeLSTCommandResult) -> Self {
+        Self::NormalizeLST(result)
+    }
+}
+
+impl From<RestakeVSTCommand> for OperationCommand {
+    fn from(command: RestakeVSTCommand) -> Self {
+        Self::RestakeVST(command)
+    }
+}
+
+impl From<RestakeVSTCommandResult> for OperationCommandResult {
+    fn from(result: RestakeVSTCommandResult) -> Self {
+        Self::RestakeVST(result)
+    }
+}
+
+impl From<DelegateVSTCommand> for OperationCommand {
+    fn from(command: DelegateVSTCommand) -> Self {
+        Self::DelegateVST(command)
+    }
+}
+
+impl From<DelegateVSTCommandResult> for OperationCommandResult {
+    fn from(result: DelegateVSTCommandResult) -> Self {
+        Self::DelegateVST(result)
+    }
 }
 
 impl OperationCommand {
@@ -213,7 +386,10 @@ impl SelfExecutable for OperationCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
             OperationCommand::ClaimUnstakedSOL(command) => command.execute(ctx, accounts),
@@ -237,7 +413,10 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>>;
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )>;
 
     fn with_required_accounts(
         self,

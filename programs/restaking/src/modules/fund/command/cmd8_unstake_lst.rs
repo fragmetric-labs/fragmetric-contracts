@@ -7,7 +7,10 @@ use crate::modules::staking;
 use crate::modules::staking::AvailableWithdrawals;
 use crate::utils::{AccountExt, PDASeeds};
 
-use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, SelfExecutable};
+use super::{
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnstakeLSTCommand {
@@ -16,12 +19,6 @@ pub struct UnstakeLSTCommand {
     state: UnstakeLSTCommandState,
     #[max_len(5)]
     spl_withdraw_stake_items: Vec<SplWithdrawStakeItem>,
-}
-
-impl From<UnstakeLSTCommand> for OperationCommand {
-    fn from(command: UnstakeLSTCommand) -> Self {
-        Self::UnstakeLST(command)
-    }
 }
 
 impl UnstakeLSTCommand {
@@ -66,12 +63,18 @@ pub struct SplWithdrawStakeItem {
     token_amount: u64,
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct UnstakeLSTCommandResult {}
+
 impl SelfExecutable for UnstakeLSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         // there are remaining tokens to handle
         if let Some(item) = self.items.first() {
             match &self.state {
@@ -88,7 +91,10 @@ impl SelfExecutable for UnstakeLSTCommand {
                     {
                         Some(TokenPricingSource::SPLStakePool { address })
                         | Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                            return Ok(Some(command.with_required_accounts([(address, false)])));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts([(address, false)])),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
@@ -121,7 +127,10 @@ impl SelfExecutable for UnstakeLSTCommand {
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
 
-                    return Ok(Some(command.with_required_accounts(required_accounts)));
+                    return Ok((
+                        None,
+                        Some(command.with_required_accounts(required_accounts)),
+                    ));
                 }
                 UnstakeLSTCommandState::GetAvailableUnstakeAccount => {
                     let mut command = self.clone();
@@ -222,7 +231,10 @@ impl SelfExecutable for UnstakeLSTCommand {
                         command.state = UnstakeLSTCommandState::Unstake;
                     }
 
-                    return Ok(Some(command.with_required_accounts(required_accounts)));
+                    return Ok((
+                        None,
+                        Some(command.with_required_accounts(required_accounts)),
+                    ));
                 }
                 UnstakeLSTCommandState::Unstake => {
                     // TODO put accounts definition into each token_pricing_source
@@ -387,11 +399,12 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                                 if command.spl_withdraw_stake_items.len() > 0 {
                                     command.state = UnstakeLSTCommandState::RequestUnstake;
-                                    return Ok(Some(
-                                        command.with_required_accounts(
-                                            accounts
-                                                .iter()
-                                                .map(|account| (*account.key, account.is_writable)),
+                                    return Ok((
+                                        None,
+                                        Some(
+                                            command.with_required_accounts(accounts.iter().map(
+                                                |account| (*account.key, account.is_writable),
+                                            )),
                                         ),
                                     ));
                                 }
@@ -412,17 +425,23 @@ impl SelfExecutable for UnstakeLSTCommand {
 
             // proceed to next token
             if self.items.len() > 1 {
-                return Ok(Some(
-                    UnstakeLSTCommand::new_init(self.items[1..].to_vec())
-                        .without_required_accounts(),
+                return Ok((
+                    None,
+                    Some(
+                        UnstakeLSTCommand::new_init(self.items[1..].to_vec())
+                            .without_required_accounts(),
+                    ),
                 ));
             }
         }
 
         // TODO v0.3/operation: next step ... stake sol
-        Ok(Some(
-            OperationCommand::EnqueueWithdrawalBatch(Default::default())
-                .without_required_accounts(),
+        Ok((
+            None,
+            Some(
+                OperationCommand::EnqueueWithdrawalBatch(Default::default())
+                    .without_required_accounts(),
+            ),
         ))
     }
 }

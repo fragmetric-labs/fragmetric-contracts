@@ -1,5 +1,5 @@
 use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     OperationReservedRestakeToken, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
 };
 use crate::constants::{ADMIN_PUBKEY, JITO_VAULT_PROGRAM_FEE_WALLET};
@@ -24,12 +24,6 @@ pub struct ClaimUnrestakedVSTCommand {
     #[max_len(2)]
     items: Vec<ClaimUnrestakedVSTCommandItem>,
     state: ClaimUnrestakedVSTCommandState,
-}
-
-impl From<ClaimUnrestakedVSTCommand> for OperationCommand {
-    fn from(command: ClaimUnrestakedVSTCommand) -> Self {
-        Self::ClaimUnrestakedVST(command)
-    }
 }
 
 impl ClaimUnrestakedVSTCommand {
@@ -84,12 +78,18 @@ pub enum ClaimUnrestakedVSTCommandState {
     Denormalize(#[max_len(4)] Vec<DenormalizeSupportedTokenAsset>),
 }
 
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct ClaimUnrestakedVSTCommandResult {}
+
 impl SelfExecutable for ClaimUnrestakedVSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<Option<OperationCommandEntry>> {
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
         if let Some(item) = self.items.first() {
             match &self.state {
                 ClaimUnrestakedVSTCommandState::Init => {
@@ -112,7 +112,10 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 ),
                             );
 
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -147,14 +150,17 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 )?;
                             if claimable_tickets.len() == 0 {
                                 if self.items.len() > 1 {
-                                    return Ok(Some(
-                                        ClaimUnrestakedVSTCommand::new_init(
-                                            self.items[1..].to_vec(),
-                                        )
-                                        .with_required_accounts([]),
+                                    return Ok((
+                                        None,
+                                        Some(
+                                            ClaimUnrestakedVSTCommand::new_init(
+                                                self.items[1..].to_vec(),
+                                            )
+                                            .with_required_accounts([]),
+                                        ),
                                     ));
                                 }
-                                return Ok(None);
+                                return Ok((None, None));
                             };
 
                             let clock = Clock::get()?;
@@ -214,7 +220,10 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                     unrestaked_vst_amount: 0,
                                 },
                             );
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -294,26 +303,35 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                         next_withdrawal_status,
                                     );
 
-                                    return Ok(Some(command.with_required_accounts([
-                                        (vault_program.key(), false),
-                                        (vault_account.key(), false),
-                                        (vault_config.key(), false),
-                                        (vault_vrt_mint.key(), false),
-                                        (vault_vst_mint.key(), false),
-                                        (fund_supported_token_reserve_account.key(), false),
-                                        (fund_receipt_token_account.key(), false),
-                                        (vault_fee_receipt_token_account.key(), false),
-                                        (vault_program_fee_wallet_vrt_account.key(), false),
-                                        (vault_update_state_tracker.key(), false),
-                                        (
-                                            vault_update_state_tracker_prepare_for_delaying.key(),
-                                            false,
+                                    return Ok((
+                                        None,
+                                        Some(
+                                            command.with_required_accounts([
+                                                (vault_program.key(), false),
+                                                (vault_account.key(), false),
+                                                (vault_config.key(), false),
+                                                (vault_vrt_mint.key(), false),
+                                                (vault_vst_mint.key(), false),
+                                                (fund_supported_token_reserve_account.key(), false),
+                                                (fund_receipt_token_account.key(), false),
+                                                (vault_fee_receipt_token_account.key(), false),
+                                                (vault_program_fee_wallet_vrt_account.key(), false),
+                                                (vault_update_state_tracker.key(), false),
+                                                (
+                                                    vault_update_state_tracker_prepare_for_delaying
+                                                        .key(),
+                                                    false,
+                                                ),
+                                                (token_program.key(), false),
+                                                (system_program.key(), false),
+                                                (next_ticket.withdrawal_ticket_account, false),
+                                                (
+                                                    next_ticket.withdrawal_ticket_token_account,
+                                                    false,
+                                                ),
+                                            ]),
                                         ),
-                                        (token_program.key(), false),
-                                        (system_program.key(), false),
-                                        (next_ticket.withdrawal_ticket_account, false),
-                                        (next_ticket.withdrawal_ticket_token_account, false),
-                                    ])));
+                                    ));
                                 }
                                 None => {
                                     let fund_account = ctx.fund_account.load()?;
@@ -336,13 +354,16 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                         ClaimUnrestakedVSTCommandState::SetupDenormalize(
                                             unrestaked_vst_amount,
                                         );
-                                    return Ok(Some(command.with_required_accounts([
-                                        (normalized_token.mint, true),
-                                        (normalized_token_pool_address, true),
-                                        (normalized_token.program, false),
-                                        (normalized_token_account, true),
-                                        (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop
-                                    ])));
+                                    return Ok((
+                                        None,
+                                        Some(command.with_required_accounts([
+                                            (normalized_token.mint, true),
+                                            (normalized_token_pool_address, true),
+                                            (normalized_token.program, false),
+                                            (normalized_token_account, true),
+                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop
+                                        ])),
+                                    ));
                                 }
                             }
                         }
@@ -432,16 +453,24 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             command.state = ClaimUnrestakedVSTCommandState::Denormalize(
                                 denormalize_supported_tokens_state,
                             );
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
                         None => {
                             if self.items.len() > 1 {
-                                return Ok(Some(
-                                    ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec())
+                                return Ok((
+                                    None,
+                                    Some(
+                                        ClaimUnrestakedVSTCommand::new_init(
+                                            self.items[1..].to_vec(),
+                                        )
                                         .without_required_accounts(),
+                                    ),
                                 ));
                             }
-                            return Ok(None);
+                            return Ok((None, None));
                         }
                     };
                 }
@@ -558,9 +587,12 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 (next_reserved_normalize_token_account, true),
                                 (next_reserved_denormalize_token.token_program, false),
                             ];
-                            return Ok(Some(command.with_required_accounts(required_accounts)));
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts(required_accounts)),
+                            ));
                         }
-                        _ => Ok(None),
+                        _ => Ok((None, None)),
                     };
                 }
 
@@ -568,11 +600,14 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
             }
         }
         if self.items.len() > 1 {
-            return Ok(Some(
-                ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec())
-                    .with_required_accounts([]),
+            return Ok((
+                None,
+                Some(
+                    ClaimUnrestakedVSTCommand::new_init(self.items[1..].to_vec())
+                        .with_required_accounts([]),
+                ),
             ));
         }
-        Ok(None)
+        Ok((None, None))
     }
 }
