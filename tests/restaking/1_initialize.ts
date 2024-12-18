@@ -45,7 +45,8 @@ describe("initialize", async () => {
     })
 
     step("initialize fragSOL extra account meta list", async () => {
-        const { fragSOLExtraAccountMetasAccount } = await restaking.runAdminInitializeFragSOLExtraAccountMetaList();
+        await restaking.runAdminInitializeFragSOLExtraAccountMetaList();
+        const { fragSOLExtraAccountMetasAccount } = await restaking.runAdminUpdateFragSOLExtraAccountMetaList();
 
         expect(fragSOLExtraAccountMetasAccount.length).eq(8);
     })
