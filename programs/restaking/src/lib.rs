@@ -523,6 +523,46 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn operator_donate_sol_to_fund<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundDonationContext<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_donate_sol(
+            &ctx.accounts.operator,
+            &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
+            ctx.remaining_accounts,
+            amount,
+        )?);
+
+        Ok(())
+    }
+
+    pub fn operator_donate_supported_token_to_fund<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundSupportedTokenDonationContext<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_donate_supported_token(
+            &ctx.accounts.operator,
+            &ctx.accounts.supported_token_program,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.fund_supported_token_reserve_account,
+            &ctx.accounts.operator_supported_token_account,
+            ctx.remaining_accounts,
+            amount,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////

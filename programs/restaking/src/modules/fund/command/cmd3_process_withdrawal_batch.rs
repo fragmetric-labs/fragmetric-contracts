@@ -299,9 +299,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         pricing_sources,
                         self.forced,
                         requested_receipt_token_amount,
+                        0,
                     )?;
 
-                    // TODO: will it be better to move it to separated command.....?
                     fund_service.harvest_from_treasury_account(
                         ctx.operator,
                         ctx.system_program,

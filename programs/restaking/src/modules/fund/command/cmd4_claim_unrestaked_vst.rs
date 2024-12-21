@@ -359,7 +359,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                             (normalized_token_pool_address, true),
                                             (normalized_token.program, false),
                                             (normalized_token_account, true),
-                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop
+                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop => now it always runs a single command in a tx
                                         ])),
                                     ));
                                 }

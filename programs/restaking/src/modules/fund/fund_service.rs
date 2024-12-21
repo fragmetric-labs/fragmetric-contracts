@@ -972,7 +972,138 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
     }
 
-    /// receipt token amount in queued withdrawals.
+    pub fn process_donate_sol(
+        &mut self,
+        operator: &Signer<'info>,
+
+        system_program: &Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
+
+        pricing_sources: &'info [AccountInfo<'info>],
+
+        asset_amount: u64,
+    ) -> Result<events::OperatorUpdatedFundPrices> {
+        self.process_donate(
+            operator,
+            Some(system_program),
+            Some(fund_reserve_account),
+            None,
+            None,
+            None,
+            None,
+            pricing_sources,
+            asset_amount,
+        )
+    }
+
+    pub fn process_donate_supported_token(
+        &mut self,
+        operator: &Signer<'info>,
+
+        supported_token_program: &Interface<'info, TokenInterface>,
+        supported_token_mint: &InterfaceAccount<'info, Mint>,
+        fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        operator_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+
+        pricing_sources: &'info [AccountInfo<'info>],
+
+        asset_amount: u64,
+    ) -> Result<events::OperatorUpdatedFundPrices> {
+        self.process_donate(
+            operator,
+            None,
+            None,
+            Some(supported_token_program),
+            Some(supported_token_mint),
+            Some(fund_supported_token_reserve_account),
+            Some(operator_supported_token_account),
+            pricing_sources,
+            asset_amount,
+        )
+    }
+
+    /// for testing and operation purposes
+    fn process_donate(
+        &mut self,
+        operator: &Signer<'info>,
+
+        // for SOL
+        system_program: Option<&Program<'info, System>>,
+        fund_reserve_account: Option<&SystemAccount<'info>>,
+
+        // for supported tokens
+        supported_token_program: Option<&Interface<'info, TokenInterface>>,
+        supported_token_mint: Option<&InterfaceAccount<'info, Mint>>,
+        fund_supported_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        operator_supported_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+
+        pricing_sources: &'info [AccountInfo<'info>],
+
+        asset_amount: u64,
+    ) -> Result<events::OperatorUpdatedFundPrices> {
+        let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
+
+        // validate operator asset balance
+        match supported_token_mint_key {
+            Some(..) => {
+                require_gte!(
+                    operator_supported_token_account.unwrap().amount,
+                    asset_amount
+                );
+            }
+            None => {
+                require_gte!(operator.lamports(), asset_amount);
+            }
+        }
+
+        // transfer operator asset to the fund
+        self.fund_account
+            .load_mut()?
+            .deposit(supported_token_mint_key, asset_amount)?;
+
+        match supported_token_mint {
+            Some(supported_token_mint) => {
+                token_interface::transfer_checked(
+                    CpiContext::new(
+                        supported_token_program.unwrap().to_account_info(),
+                        token_interface::TransferChecked {
+                            from: operator_supported_token_account.unwrap().to_account_info(),
+                            to: fund_supported_token_reserve_account
+                                .unwrap()
+                                .to_account_info(),
+                            mint: supported_token_mint.to_account_info(),
+                            authority: operator.to_account_info(),
+                        },
+                    ),
+                    asset_amount,
+                    supported_token_mint.decimals,
+                )?;
+            }
+            None => {
+                anchor_lang::system_program::transfer(
+                    CpiContext::new(
+                        system_program.unwrap().to_account_info(),
+                        anchor_lang::system_program::Transfer {
+                            from: operator.to_account_info(),
+                            to: fund_reserve_account.unwrap().to_account_info(),
+                        },
+                    ),
+                    asset_amount,
+                )?;
+            }
+        }
+
+        // update asset value
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources)?;
+
+        Ok(events::OperatorUpdatedFundPrices {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+        })
+    }
+
+    /// receipt token amount in the queued withdrawal batches for an asset.
     pub(super) fn get_receipt_token_withdrawal_obligated_amount(
         &self,
         supported_token_mint: Option<Pubkey>,
