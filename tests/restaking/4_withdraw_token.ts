@@ -44,6 +44,7 @@ describe("withdraw token", async () => {
                 restaking.methods
                     .fundManagerUpdateSupportedTokenStrategy(
                         supportedToken.mint,
+                        true,
                         supportedToken.token.accumulatedDepositCapacityAmount,
                         null, // Option<token_accumulated_deposit_amount>
                         true, // withdrawable,
@@ -174,6 +175,7 @@ describe("withdraw token", async () => {
             instructions: [
                 restaking.methods
                     .fundManagerUpdateFundStrategy(
+                        true,
                         false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
@@ -193,6 +195,7 @@ describe("withdraw token", async () => {
             instructions: [
                 restaking.methods
                     .fundManagerUpdateFundStrategy(
+                        true,
                         true,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,

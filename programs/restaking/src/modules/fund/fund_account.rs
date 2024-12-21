@@ -45,7 +45,8 @@ pub struct FundAccount {
     pub(super) withdrawal_batch_threshold_interval_seconds: i64,
     pub(super) withdrawal_fee_rate_bps: u16,
     pub(super) withdrawal_enabled: u8,
-    _padding4: [u8; 5],
+    pub(super) deposit_enabled: u8,
+    _padding4: [u8; 4],
 
     /// SOL deposit & withdrawal
     pub(super) sol: AssetState,
@@ -329,6 +330,11 @@ impl FundAccount {
     }
 
     #[inline(always)]
+    pub(super) fn set_deposit_enabled(&mut self, enabled: bool) {
+        self.deposit_enabled = if enabled { 1 } else { 0 };
+    }
+
+    #[inline(always)]
     pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) {
         self.withdrawal_enabled = if enabled { 1 } else { 0 };
     }
@@ -514,6 +520,9 @@ impl FundAccount {
         supported_token_mint: Option<Pubkey>,
         amount: u64,
     ) -> Result<()> {
+        if self.deposit_enabled == 0 {
+            err!(ErrorCode::FundDepositDisabledError)?
+        }
         self.get_asset_state_mut(supported_token_mint)?
             .deposit(amount)
     }
@@ -684,6 +693,10 @@ mod tests {
         assert_eq!(fund.sol.operation_reserved_amount, 0);
         assert_eq!(fund.sol.accumulated_deposit_amount, 0);
 
+        fund.deposit(None, 100_000).unwrap_err();
+        fund.set_deposit_enabled(true);
+        fund.deposit(None, 100_000).unwrap_err();
+        fund.sol.set_depositable(true);
         fund.deposit(None, 100_000).unwrap();
         assert_eq!(fund.sol.operation_reserved_amount, 100_000);
         assert_eq!(fund.sol.accumulated_deposit_amount, 100_000);
@@ -713,6 +726,10 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].token.operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].token.accumulated_deposit_amount, 0);
 
+        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
+            .unwrap_err();
+        fund.set_deposit_enabled(true);
+        fund.supported_tokens[0].token.set_depositable(true);
         fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
             .unwrap();
         assert_eq!(

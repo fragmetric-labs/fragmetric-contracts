@@ -16,7 +16,8 @@ pub struct AssetState {
 
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
-    _padding: [u8; 5],
+    pub depositable: u8,
+    _padding: [u8; 4],
     pub withdrawable: u8,
     pub normal_reserve_rate_bps: u16,
     pub normal_reserve_max_amount: u64,
@@ -109,11 +110,20 @@ impl AssetState {
     }
 
     #[inline(always)]
+    pub fn set_depositable(&mut self, depositable: bool) {
+        self.depositable = if depositable { 1 } else { 0 };
+    }
+
+    #[inline(always)]
     pub fn set_withdrawable(&mut self, withdrawable: bool) {
         self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
     pub fn deposit(&mut self, amount: u64) -> Result<()> {
+        if self.depositable == 0 {
+            err!(ErrorCode::FundDepositNotSupportedAsset)?
+        }
+
         let new_accumulated_deposit_amount = self.accumulated_deposit_amount + amount;
         require_gte!(
             self.accumulated_deposit_capacity_amount,

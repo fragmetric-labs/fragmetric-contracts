@@ -121,8 +121,14 @@ pub enum ErrorCode {
     #[msg("fund: not supported token")]
     FundNotSupportedTokenError,
 
+    #[msg("fund: deposit is currently disabled")]
+    FundDepositDisabledError,
+
     #[msg("fund: exceeded deposit capacity amount")]
     FundExceededDepositCapacityAmountError,
+
+    #[msg("fund: deposit is not supported for the given asset")]
+    FundDepositNotSupportedAsset,
 
     #[msg("fund: exceeded max withdrawal request per user")]
     FundExceededMaxWithdrawalRequestError,

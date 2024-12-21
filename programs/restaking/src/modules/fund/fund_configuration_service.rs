@@ -251,12 +251,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_fund_strategy(
         &mut self,
+        deposit_enabled: bool,
         withdrawal_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.set_deposit_enabled(deposit_enabled);
             fund_account.set_withdrawal_enabled(withdrawal_enabled);
             fund_account.set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
             fund_account
@@ -268,6 +270,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_update_sol_strategy(
         &mut self,
+        sol_depositable: bool,
         sol_accumulated_deposit_capacity_amount: u64,
         sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawable: bool,
@@ -277,6 +280,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
 
+            fund_account.sol.set_depositable(sol_depositable);
             fund_account
                 .sol
                 .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
@@ -301,6 +305,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn process_update_supported_token_strategy(
         &mut self,
         token_mint: &Pubkey,
+        token_depositable: bool,
         token_accumulated_deposit_capacity_amount: u64,
         token_accumulated_deposit_amount: Option<u64>,
         token_withdrawable: bool,
@@ -314,6 +319,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             let mut fund_account = self.fund_account.load_mut()?;
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
+            supported_token.token.set_depositable(token_depositable);
             supported_token
                 .token
                 .set_accumulated_deposit_capacity_amount(

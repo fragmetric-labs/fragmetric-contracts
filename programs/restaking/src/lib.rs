@@ -159,6 +159,7 @@ pub mod restaking {
 
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        deposit_enabled: bool,
         withdrawal_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
@@ -168,6 +169,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_strategy(
+            deposit_enabled,
             withdrawal_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
@@ -178,6 +180,7 @@ pub mod restaking {
 
     pub fn fund_manager_update_sol_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        sol_depositable: bool,
         sol_accumulated_deposit_capacity_amount: u64,
         sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawable: bool,
@@ -189,6 +192,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_sol_strategy(
+            sol_depositable,
             sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount,
             sol_withdrawable,
@@ -202,6 +206,7 @@ pub mod restaking {
     pub fn fund_manager_update_supported_token_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         token_mint: Pubkey,
+        token_depositable: bool,
         token_accumulated_deposit_capacity_amount: u64,
         token_accumulated_deposit_amount: Option<u64>,
         token_withdrawable: bool,
@@ -217,6 +222,7 @@ pub mod restaking {
         )?
         .process_update_supported_token_strategy(
             &token_mint,
+            token_depositable,
             token_accumulated_deposit_capacity_amount,
             token_accumulated_deposit_amount,
             token_withdrawable,

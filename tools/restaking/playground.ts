@@ -1191,10 +1191,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
+            depositEnabled: true,
             withdrawalEnabled: this.isMainnet ? false : true,
             WithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
 
+            solDepositable: true,
             solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
             // TODO: migration v0.3.2 save sol_accumulated_deposit_amount
             solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
@@ -1204,6 +1206,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
+                tokenDepositable: true,
                 tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "bSOL":
@@ -1324,6 +1327,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods.fundManagerUpdateFundStrategy(
+                    config.depositEnabled,
                     config.withdrawalEnabled,
                     config.WithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.withdrawalBatchThresholdSeconds,
@@ -1331,6 +1335,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                 }).instruction(),
                 this.program.methods.fundManagerUpdateSolStrategy(
+                    config.solDepositable,
                     config.solAccumulatedDepositCapacity,
                     config.solAccumulatedDepositAmount,
                     config.solWithdrawalable,
@@ -1343,6 +1348,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     return [
                         this.program.methods.fundManagerUpdateSupportedTokenStrategy(
                             v.tokenMint,
+                            v.tokenDepositable,
                             v.tokenAccumulatedDepositCapacity,
                             v.tokenAccumulatedDepositAmount,
                             v.withdrawable,
