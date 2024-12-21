@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 #[cfg(any(feature = "devnet", feature = "mainnet"))]
 use crate::constants::*;
 use crate::errors::ErrorCode;
-use crate::modules::normalization::{ClaimableToken, NormalizedTokenWithdrawalAccount};
+use crate::modules::normalization::{NormalizedClaimableToken, NormalizedTokenWithdrawalAccount};
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
@@ -14,7 +14,7 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-pub(super) const MAX_SUPPORTED_TOKENS_SIZE: usize = 10;
+pub(super) const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 10;
 
 #[account]
 #[derive(InitSpace)]
@@ -23,8 +23,8 @@ pub struct NormalizedTokenPoolAccount {
     bump: u8,
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_program: Pubkey,
-    #[max_len(MAX_SUPPORTED_TOKENS_SIZE)]
-    pub(super) supported_tokens: Vec<SupportedToken>,
+    #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
+    pub(super) supported_tokens: Vec<NormalizedSupportedToken>,
 
     pub(super) normalized_token_decimals: u8,
     pub(super) normalized_token_supply_amount: u64,
@@ -188,12 +188,12 @@ impl NormalizedTokenPoolAccount {
         }
 
         require_gt!(
-            MAX_SUPPORTED_TOKENS_SIZE,
+            NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE,
             self.supported_tokens.len(),
             ErrorCode::NormalizedTokenPoolExceededMaxSupportedTokensError
         );
 
-        self.supported_tokens.push(SupportedToken::new(
+        self.supported_tokens.push(NormalizedSupportedToken::new(
             supported_token_mint,
             supported_token_program,
             supported_token_decimals,
@@ -205,21 +205,21 @@ impl NormalizedTokenPoolAccount {
     }
 
     #[inline]
-    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
+    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &NormalizedSupportedToken> {
         self.supported_tokens.iter()
     }
 
     #[inline]
     pub(super) fn get_supported_tokens_iter_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut SupportedToken> {
+    ) -> impl Iterator<Item = &mut NormalizedSupportedToken> {
         self.supported_tokens.iter_mut()
     }
 
     pub(super) fn get_supported_token(
         &self,
         supported_token_mint: &Pubkey,
-    ) -> Result<&SupportedToken> {
+    ) -> Result<&NormalizedSupportedToken> {
         self.get_supported_tokens_iter()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
@@ -228,7 +228,7 @@ impl NormalizedTokenPoolAccount {
     pub(super) fn get_supported_token_mut(
         &mut self,
         supported_token_mint: &Pubkey,
-    ) -> Result<&mut SupportedToken> {
+    ) -> Result<&mut NormalizedSupportedToken> {
         self.get_supported_tokens_iter_mut()
             .find(|token| token.mint == *supported_token_mint)
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
@@ -248,7 +248,7 @@ impl NormalizedTokenPoolAccount {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub(super) struct SupportedToken {
+pub(super) struct NormalizedSupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub lock_account: Pubkey,
@@ -260,7 +260,7 @@ pub(super) struct SupportedToken {
     _reserved: [u8; 14],
 }
 
-impl SupportedToken {
+impl NormalizedSupportedToken {
     fn new(
         mint: Pubkey,
         program: Pubkey,

@@ -93,6 +93,8 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
+    pub system_program: Program<'info, System>,
+
     pub receipt_token_program: Program<'info, Token2022>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,

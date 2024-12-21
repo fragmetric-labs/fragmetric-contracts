@@ -4,7 +4,8 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
 use std::cell::RefMut;
 use std::cmp::min;
-
+use anchor_lang::solana_program::program::invoke;
+use anchor_spl::associated_token::spl_associated_token_account;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward;
@@ -13,7 +14,7 @@ use crate::{events, utils};
 
 use super::command::{
     OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
-    OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
+    FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
 };
 use super::*;
 
@@ -266,16 +267,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
-        let mut required_account_infos = Vec::with_capacity(OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
-        let mut remaining_accounts_used: [bool; OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
-            [false; OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
+        let mut required_account_infos = Vec::with_capacity(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
+        let mut remaining_accounts_used: [bool; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
+            [false; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
 
         for required_account in required_accounts {
             // append required accounts in exact order
             let mut found = false;
             for (i, remaining_account) in remaining_accounts
                 .iter()
-                .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+                .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
                 .enumerate()
             {
                 if required_account.pubkey == *remaining_account.key {
@@ -621,7 +622,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     }
                 }
 
-                // increase debt, can use this variable as the entire asset_fee_amount_processing should be given to the treasury account in the first place
+                // increase debt, can use this variable as the entire asset_fee_amount_processing will be paid back to the treasury account.
                 asset_fee_amount_processing += asset_debt_amount_from_treasury;
 
                 // reserve transferred cash
@@ -632,8 +633,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
         }
 
+        // burn receipt tokens
         if receipt_token_amount_processing > 0 {
-            // burn receipt tokens
             let fund_account = self.fund_account.load()?;
             anchor_spl::token_2022::burn(
                 CpiContext::new_with_signer(
@@ -652,6 +653,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let receipt_token_amount_processed = receipt_token_amount_processing;
         let asset_user_amount_reserved = asset_user_amount_processing;
         let asset_fee_amount_deducted = asset_fee_amount_processing;
+        let mut treasury_revenue_amount = 0;
 
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
@@ -712,7 +714,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     batch.batch_id,
                 );
 
-                // reserve user_sol_amount of the batch account
+                // to reserve user_asset_amount of the batch account
                 let sol_amount = pricing_service.get_token_amount_as_sol(
                     &self.receipt_token_mint.key(),
                     batch.receipt_token_amount,
@@ -728,13 +730,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .get_withdrawal_fee_amount(asset_amount)?;
                 let asset_user_amount = asset_amount - asset_fee_amount;
 
-                // offset sol_user_amount and sol_fee_amount by sol_operation_reserved_amount
+                // offset asset_user_amount by asset_operation_reserved_amount
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
-                asset.operation_reserved_amount -= asset_amount;
+                asset.operation_reserved_amount -= asset_user_amount;
                 asset.withdrawal_user_reserved_amount += asset_user_amount;
                 asset_user_amount_processing -= asset_user_amount;
-                asset_fee_amount_processing -= asset_fee_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
 
                 batch_account.set_claimable_amount(
@@ -780,9 +781,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                         .unwrap()
                                         .to_account_info(),
                                     mint: supported_token_mint.to_account_info(),
-                                    authority: fund_reserve_account.to_account_info(),
+                                    authority: self.fund_account.to_account_info(),
                                 },
-                                &[&fund_account.get_reserve_account_seeds()],
+                                &[&fund_account.get_seeds()],
                             ),
                             asset_fee_amount_processing,
                             supported_token_mint.decimals,
@@ -819,16 +820,18 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ))
     }
 
-    /// returns (sol_amount_transferred)
+    /// returns (asset_amount_transferred)
     pub(super) fn harvest_from_treasury_account(
         &mut self,
+        payer: &Signer<'info>,
         system_program: &Program<'info, System>,
 
-        // for SOL
+        // for SOL and supported token
         fund_treasury_account: &AccountInfo<'info>,
         program_revenue_account: &'info AccountInfo<'info>,
 
         // for supported token
+        associated_token_account_program: Option<&'info AccountInfo<'info>>,
         supported_token_mint: Option<&'info AccountInfo<'info>>,
         supported_token_program: Option<&'info AccountInfo<'info>>,
         fund_supported_token_treasury_account: Option<&'info AccountInfo<'info>>,
@@ -847,16 +850,35 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 if fund_supported_token_treasury_account.amount == 0 {
                     Ok(0)
                 } else {
-                    // TODO: create program_supported_token_revenue_account if not exists
+                    // create program_supported_token_revenue_account if not exists
+                    let program_supported_token_revenue_account = program_supported_token_revenue_account.unwrap();
+                    let supported_token_program = supported_token_program.unwrap();
+                    if !program_supported_token_revenue_account.is_initialized() {
+                        invoke(
+                            &spl_associated_token_account::instruction::create_associated_token_account(
+                                &payer.key(),
+                                &program_revenue_account.key(),
+                                &supported_token_mint.key(),
+                                &supported_token_program.key(),
+                            ),
+                            &[
+                                payer.to_account_info(),
+                                program_supported_token_revenue_account.to_account_info(),
+                                program_revenue_account.to_account_info(),
+                                supported_token_mint.to_account_info(),
+                                system_program.to_account_info(),
+                                supported_token_program.to_account_info(),
+                                associated_token_account_program.unwrap().to_account_info(),
+                            ],
+                        )?;
+                    }
 
                     token_interface::transfer_checked(
                         CpiContext::new_with_signer(
-                            supported_token_program.unwrap().to_account_info(),
+                            supported_token_program.to_account_info(),
                             token_interface::TransferChecked {
                                 from: fund_supported_token_treasury_account.to_account_info(),
-                                to: program_supported_token_revenue_account
-                                    .unwrap()
-                                    .to_account_info(),
+                                to: program_supported_token_revenue_account.to_account_info(),
                                 mint: supported_token_mint.to_account_info(),
                                 authority: fund_treasury_account.to_account_info(),
                             },

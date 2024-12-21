@@ -89,8 +89,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // mint receipt token to user & update user reward accrual status
         let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
-        let receipt_token_mint_amount =
-            pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?;
+        // receipt_token_mint_amount will be equal to sol_amount at the initial minting, so 1SOL = 1RECEIPT-TOKEN.
+        let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
+            sol_amount
+        } else {
+            pricing_service.get_token_amount_as_sol(&self.receipt_token_mint.key(), sol_amount)?
+        };
         let event1 =
             self.mint_receipt_token_to_user(receipt_token_mint_amount, *contribution_accrual_rate)?;
 
@@ -161,11 +165,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // calculate receipt token minting amount
         let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
-        let receipt_token_mint_amount = pricing_service.get_sol_amount_as_token(
-            &self.receipt_token_mint.key(),
-            pricing_service
-                .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?,
-        )?;
+        // receipt_token_mint_amount will be equal to supported_token_amount at the initial minting, so 1SUPPORTED-TOKEN = 1RECEIPT-TOKEN.
+        let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
+            supported_token_amount
+        } else {
+            pricing_service.get_sol_amount_as_token(
+                &self.receipt_token_mint.key(),
+                pricing_service
+                    .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?,
+            )?
+        };
 
         // mint receipt token to user & update user reward accrual status
         let event1 =
@@ -410,6 +419,116 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         })
     }
 
+    fn process_withdraw(
+        &mut self,
+        system_program: &Program<'info, System>,
+
+        // for supported token
+        supported_token_program: Option<&Interface<'info, TokenInterface>>,
+        supported_token_mint: Option<&InterfaceAccount<'info, Mint>>,
+        fund_supported_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        user_supported_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+
+        // for SOL
+        fund_reserve_account: Option<&SystemAccount<'info>>,
+
+        fund_treasury_account: &SystemAccount<'info>,
+        fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
+        request_id: u64,
+    ) -> Result<events::UserWithdrewFromFund> {
+        // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
+        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+
+        let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
+        match supported_token_mint_key {
+            Some(supported_token_mint_key) => {
+                require_keys_eq!(withdrawal_request.supported_token_mint.unwrap(), supported_token_mint_key)
+            }
+            None => {
+                require_eq!(withdrawal_request.supported_token_mint.is_none(), true)
+            }
+        };
+
+        let (asset_user_amount, asset_fee_amount, receipt_token_amount) =
+            fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
+        self.fund_account
+            .load_mut()?
+            .get_asset_state_mut(supported_token_mint_key)?
+            .withdrawal_user_reserved_amount -= asset_user_amount;
+
+
+        // transfer either SOL or token to user account
+        {
+            let fund_account = self.fund_account.load()?;
+            match supported_token_mint {
+                Some(supported_token_mint) => {
+                    token_interface::transfer_checked(
+                        CpiContext::new_with_signer(
+                            supported_token_program.unwrap().to_account_info(),
+                            token_interface::TransferChecked {
+                                from: fund_supported_token_reserve_account.unwrap().to_account_info(),
+                                to: user_supported_token_account.unwrap().to_account_info(),
+                                mint: supported_token_mint.to_account_info(),
+                                authority: self.fund_account.to_account_info(),
+                            },
+                            &[self.fund_account.load()?.get_seeds().as_ref()],
+                        ),
+                        asset_user_amount,
+                        supported_token_mint.decimals,
+                    )?;
+                }
+                None => {
+                    anchor_lang::system_program::transfer(
+                        CpiContext::new_with_signer(
+                            system_program.to_account_info(),
+                            anchor_lang::system_program::Transfer {
+                                from: fund_reserve_account.unwrap().to_account_info(),
+                                to: self.user.to_account_info(),
+                            },
+                            &[&fund_account.get_reserve_account_seeds()],
+                        ),
+                        asset_user_amount,
+                    )?;
+                }
+            };
+        }
+
+        // after all requests are settled
+        if fund_withdrawal_batch_account.is_settled() {
+            // move small remains to operation reserved
+            let remaining_asset_amount = fund_withdrawal_batch_account.get_remaining_asset_amount_after_settled();
+            {
+                let mut fund_account = self.fund_account.load_mut()?;
+                let asset_state = fund_account.get_asset_state_mut(None)?;
+                asset_state.withdrawal_user_reserved_amount -= remaining_asset_amount;
+                asset_state.operation_reserved_amount += remaining_asset_amount;
+            }
+
+            // close the ticket to collect rent
+            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
+        }
+
+        let fund_account = self.fund_account.load()?;
+        Ok(events::UserWithdrewFromFund {
+            receipt_token_mint: fund_account.receipt_token_mint,
+            fund_account: self.fund_account.key(),
+            supported_token_mint: supported_token_mint_key,
+
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: user_supported_token_account.map(|token_account| token_account.key()),
+
+            fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
+            batch_id: withdrawal_request.batch_id,
+            request_id: withdrawal_request.request_id,
+            burnt_receipt_token_amount: receipt_token_amount,
+            returned_receipt_token_amount: 0, // TODO: deal with returning receipt token ... if fund is lack of the asset by any means
+            withdrawn_amount: asset_user_amount,
+            deducted_fee_amount: asset_fee_amount,
+        })
+    }
+
     pub fn process_withdraw_sol(
         &mut self,
         system_program: &Program<'info, System>,
@@ -418,59 +537,22 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
-        // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
-        require_eq!(withdrawal_request.supported_token_mint.is_none(), true);
-
-        let (sol_user_amount, sol_fee_amount, receipt_token_amount) =
-            fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
-
-        self.fund_account
-            .load_mut()?
-            .get_asset_state_mut(None)?
-            .withdrawal_user_reserved_amount -= sol_user_amount;
-
-        // transfer asset_user_amount $SOL to user wallet from reserved account
-        let fund_account = self.fund_account.load()?;
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: fund_reserve_account.to_account_info(),
-                    to: self.user.to_account_info(),
-                },
-                &[&fund_account.get_reserve_account_seeds()],
-            ),
-            sol_user_amount,
-        )?;
-
-        // close the ticket to collect rent after all requests are settled
-        if fund_withdrawal_batch_account.is_settled() {
-            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
-        }
-
-        Ok(events::UserWithdrewFromFund {
-            receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: self.fund_account.key(),
-            supported_token_mint: None,
-
-            user: self.user.key(),
-            user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: self.user_fund_account.key(),
-            user_supported_token_account: None,
-
-            fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
-            batch_id: withdrawal_request.batch_id,
-            request_id: withdrawal_request.request_id,
-            burnt_receipt_token_amount: receipt_token_amount,
-            returned_receipt_token_amount: 0,
-            withdrawn_amount: sol_user_amount,
-            deducted_fee_amount: sol_fee_amount,
-        })
+        self.process_withdraw(
+            system_program,
+            None,
+            None,
+            None,
+            None,
+            Some(fund_reserve_account),
+            fund_treasury_account,
+            fund_withdrawal_batch_account,
+            request_id,
+        )
     }
 
     pub fn process_withdraw_supported_token(
         &mut self,
+        system_program: &Program<'info, System>,
         supported_token_program: &Interface<'info, TokenInterface>,
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
@@ -479,60 +561,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
-        // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
-        require_eq!(withdrawal_request.supported_token_mint.is_some(), true);
-        require_eq!(
-            withdrawal_request.supported_token_mint.unwrap(),
-            supported_token_mint.key()
-        );
-        let (supported_token_user_amount, supported_token_fee_amount, receipt_token_amount) =
-            fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
-
-        self.fund_account
-            .load_mut()?
-            .get_asset_state_mut(withdrawal_request.supported_token_mint)?
-            .withdrawal_user_reserved_amount -= supported_token_user_amount;
-
-        // transfer supported_token_user_amount $TOKEN to user wallet from reserved account
-        let fund_account = self.fund_account.load()?;
-        token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                supported_token_program.to_account_info(),
-                token_interface::TransferChecked {
-                    from: fund_supported_token_reserve_account.to_account_info(),
-                    to: user_supported_token_account.to_account_info(),
-                    mint: supported_token_mint.to_account_info(),
-                    authority: self.fund_account.to_account_info(),
-                },
-                &[self.fund_account.load()?.get_seeds().as_ref()],
-            ),
-            supported_token_user_amount,
-            supported_token_mint.decimals,
-        )?;
-
-        // close the ticket to collect rent after all requests are settled
-        if fund_withdrawal_batch_account.is_settled() {
-            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
-        }
-
-        Ok(events::UserWithdrewFromFund {
-            receipt_token_mint: fund_account.receipt_token_mint,
-            fund_account: self.fund_account.key(),
-            supported_token_mint: Some(supported_token_mint.key()),
-
-            user: self.user.key(),
-            user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: self.user_fund_account.key(),
-            user_supported_token_account: Some(user_supported_token_account.key()),
-
-            fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
-            batch_id: withdrawal_request.batch_id,
-            request_id: withdrawal_request.request_id,
-            burnt_receipt_token_amount: receipt_token_amount,
-            returned_receipt_token_amount: 0,
-            withdrawn_amount: supported_token_user_amount,
-            deducted_fee_amount: supported_token_fee_amount,
-        })
+        self.process_withdraw(
+            system_program,
+            Some(supported_token_program),
+            Some(supported_token_mint),
+            Some(fund_supported_token_reserve_account),
+            Some(user_supported_token_account),
+            None,
+            fund_treasury_account,
+            fund_withdrawal_batch_account,
+            request_id,
+        )
     }
 }

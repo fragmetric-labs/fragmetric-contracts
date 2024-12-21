@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 
-const TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
+const REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
@@ -11,7 +11,7 @@ pub struct TokenAllocatedAmount {
     total_amount: u64,
     num_records: u8,
     _padding: [u8; 7],
-    records: [TokenAllocatedAmountRecord; TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN],
+    records: [TokenAllocatedAmountRecord; REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN],
 }
 
 impl TokenAllocatedAmount {
@@ -26,7 +26,7 @@ impl TokenAllocatedAmount {
 
     fn add_new_record(&mut self, amount: u64, contribution_accrual_rate: u8) -> Result<()> {
         require_gt!(
-            TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN,
+            REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN,
             self.num_records as usize,
             ErrorCode::RewardExceededMaxTokenAllocatedAmountRecordException
         );

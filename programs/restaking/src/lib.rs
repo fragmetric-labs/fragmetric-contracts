@@ -800,6 +800,7 @@ pub mod restaking {
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_supported_token(
+            &ctx.accounts.system_program,
             &ctx.accounts.supported_token_program,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.fund_supported_token_reserve_account,

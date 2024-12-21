@@ -258,13 +258,13 @@ impl OperationCommand {
     }
 }
 
-const OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
+const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct OperationCommandPod {
     discriminant: u8,
-    buffer: [u8; OPERATION_COMMAND_BUFFER_SIZE],
+    buffer: [u8; FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE],
 }
 
 impl OperationCommandPod {
@@ -320,12 +320,12 @@ impl OperationCommandAccountMetaPod {
 }
 
 /// Technically, can contain up to 57 accounts out of 64 with reserved 6 accounts and payer.
-pub const OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 32;
+pub const FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 32;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandEntry {
     pub(super) command: OperationCommand,
-    #[max_len(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
+    #[max_len(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
     pub(super) required_accounts: Vec<OperationCommandAccountMeta>,
 }
 
@@ -335,7 +335,7 @@ impl OperationCommandEntry {
         for (i, account_meta) in self
             .required_accounts
             .iter()
-            .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+            .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
             .enumerate()
         {
             account_meta.serialize_as_pod(&mut pod.required_accounts[i]);
@@ -349,7 +349,7 @@ impl OperationCommandEntry {
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,
     _padding: [u8; 7],
-    required_accounts: [OperationCommandAccountMetaPod; OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
+    required_accounts: [OperationCommandAccountMetaPod; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
     command: OperationCommandPod,
 }
 
@@ -426,7 +426,7 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
             command: self.into(),
             required_accounts: required_accounts
                 .into_iter()
-                .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+                .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
                 .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
                     pubkey,
                     is_writable,
@@ -451,11 +451,11 @@ mod tests {
     fn size_command_buffer() {
         println!(
             "\ncommand buffer_size={}, init_size={}",
-            OPERATION_COMMAND_BUFFER_SIZE,
+            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE,
             OperationCommand::INIT_SPACE,
         );
         assert_eq!(
-            OPERATION_COMMAND_BUFFER_SIZE > OperationCommand::INIT_SPACE,
+            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE > OperationCommand::INIT_SPACE,
             true
         );
     }

@@ -126,10 +126,15 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         let supported_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?;
-        let normalized_token_amount = pricing_service.get_sol_amount_as_token(
-            &self.normalized_token_mint.key(),
-            supported_token_amount_as_sol,
-        )?;
+        // normalized_token_mint_amount will be equal to supported_token_amount_as_sol at the initial minting, so 1SOL = 1NT.
+        let normalized_token_mint_amount = if self.normalized_token_mint.supply == 0 {
+            supported_token_amount_as_sol
+        } else {
+            pricing_service.get_sol_amount_as_token(
+                &self.normalized_token_mint.key(),
+                supported_token_amount_as_sol,
+            )?
+        };
 
         self.normalized_token_pool_account
             .get_supported_token_mut(&supported_token_mint.key())?
@@ -160,7 +165,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 },
                 &[self.normalized_token_pool_account.get_seeds().as_ref()],
             ),
-            normalized_token_amount,
+            normalized_token_mint_amount,
         )?;
 
         self.normalized_token_pool_account
@@ -297,7 +302,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 )?;
 
                 Ok(if supported_token_claimable_amount > 0 {
-                    Some(ClaimableToken::new(
+                    Some(NormalizedClaimableToken::new(
                         supported_token.mint,
                         supported_token.program,
                         supported_token_claimable_amount,
