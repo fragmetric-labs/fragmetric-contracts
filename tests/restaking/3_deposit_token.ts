@@ -1,4 +1,4 @@
-import {BN} from '@coral-xyz/anchor';
+import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
@@ -13,15 +13,15 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
 
     step("try airdrop SOL and supported tokens to mock accounts", async function () {
         await Promise.all([
-            restaking.tryAirdrop(user3.publicKey, 100),
-            restaking.tryAirdrop(user4.publicKey, 100),
+            restaking.tryAirdrop(user3.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
+            restaking.tryAirdrop(user4.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
         ]);
 
         await restaking.sleep(1); // ...block hash not found?
 
         await Promise.all([
-            restaking.tryAirdropSupportedTokens(user3.publicKey, 100_000),
-            restaking.tryAirdropSupportedTokens(user4.publicKey, 100_000),
+            restaking.tryAirdropSupportedTokens(user3.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100_000)),
+            restaking.tryAirdropSupportedTokens(user4.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100_000)),
         ]);
 
         await restaking.sleep(1);

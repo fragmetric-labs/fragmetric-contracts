@@ -1,4 +1,4 @@
-import {BN} from '@coral-xyz/anchor';
+import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
@@ -10,9 +10,9 @@ describe("withdraw token", async () => {
 
     step("try airdrop SOL and tokens to mock accounts", async function () {
         await Promise.all([
-            restaking.tryAirdrop(user5.publicKey, 100),
-            restaking.tryAirdropSupportedTokens(user5.publicKey, 100),
-            restaking.tryAirdrop(user6.publicKey, 100),
+            restaking.tryAirdrop(user5.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
+            restaking.tryAirdropSupportedTokens(user5.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
+            restaking.tryAirdrop(user6.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
         ]);
 
         await restaking.sleep(1); // ...block hash not found?
@@ -31,6 +31,7 @@ describe("withdraw token", async () => {
         const res1 = await restaking.runUserDepositSupportedToken(user5, 'bSOL', amountTokenDeposited, null);
         const account1 = await restaking.getUserFragSOLAccount(user5.publicKey);
         expect(res1.event.userDepositedToFund.mintedReceiptTokenAmount.toString()).eq(account1.amount.toString());
+        expect(res1.fragSOLFund.supportedTokens[0].token.withdrawableValueAsReceiptTokenAmount.toString()).eq(amountTokenDeposited.toString(), 'withdrawable token amount 1');
     });
 
     step("user5 cannot withdraw non-withdrawable token", async function () {
@@ -104,6 +105,7 @@ describe("withdraw token", async () => {
 
         expect(res2.fragSOLFund.supportedTokens[0].token.withdrawalPendingBatch.receiptTokenAmount.toString()).eq(res2.fragSOLLockAccount.amount.toString(), '3');
         expect(res2.fragSOLUserFund.receiptTokenAmount.divn(10).toString()).eq(amountTokenDeposited.mul(fragSOLFund0.supportedTokens[0].oneTokenAsSol).div(fragSOLFund0.oneReceiptTokenAsSol).sub(amountFragSOLWithdrawalEach.mul(new BN(2))).divn(10).toString(), '4');
+        expect(res2.fragSOLFund.supportedTokens[0].token.withdrawableValueAsReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(3).toString(), 'withdrawable token amount 2');
 
         const account2 = await restaking.getUserFragSOLAccount(user5.publicKey);
         expect(account2.amount.toString()).eq(res2.fragSOLUserFund.receiptTokenAmount.toString(), '5');

@@ -1,4 +1,4 @@
-import {BN, IdlAccounts} from "@coral-xyz/anchor";
+import {BN, IdlAccounts, web3} from "@coral-xyz/anchor";
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {getLogger} from "../../tools/lib";
@@ -27,8 +27,8 @@ describe("reward", async function () {
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
-            restaking.tryAirdrop(userA.publicKey, 1_000),
-            restaking.tryAirdrop(userB.publicKey, 1_000),
+            restaking.tryAirdrop(userA.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(1_000)),
+            restaking.tryAirdrop(userB.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(1_000)),
         ]);
 
         await restaking.sleep(1);
