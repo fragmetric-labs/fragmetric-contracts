@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 
-const REWARD_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
+const REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
@@ -23,7 +23,7 @@ pub struct RewardSettlement {
     settled_amount: u64,
     settlement_blocks_last_slot: u64,
     settlement_blocks_last_reward_pool_contribution: u128,
-    settlement_blocks: [RewardSettlementBlock; REWARD_SETTLEMENT_BLOCK_MAX_LEN],
+    settlement_blocks: [RewardSettlementBlock; REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN],
 }
 
 impl RewardSettlement {
@@ -49,7 +49,7 @@ impl RewardSettlement {
 
     #[inline(always)]
     fn is_settlement_blocks_full(&self) -> bool {
-        self.num_settlement_blocks as usize == REWARD_SETTLEMENT_BLOCK_MAX_LEN
+        self.num_settlement_blocks as usize == REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN
     }
 
     #[inline(always)]
@@ -76,7 +76,7 @@ impl RewardSettlement {
             current_slot,
         )?;
         self.settlement_blocks_tail =
-            (self.settlement_blocks_tail + 1) % (REWARD_SETTLEMENT_BLOCK_MAX_LEN as u8);
+            (self.settlement_blocks_tail + 1) % (REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8);
         self.num_settlement_blocks += 1;
 
         Ok(())
@@ -85,7 +85,7 @@ impl RewardSettlement {
     fn pop_settlement_block(&mut self) {
         if !self.is_settlement_blocks_empty() {
             self.settlement_blocks_head =
-                (self.settlement_blocks_head + 1) % (REWARD_SETTLEMENT_BLOCK_MAX_LEN as u8);
+                (self.settlement_blocks_head + 1) % (REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8);
             self.num_settlement_blocks -= 1;
         }
     }

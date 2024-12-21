@@ -4,7 +4,8 @@ use std::mem::discriminant;
 
 use super::command::*;
 
-const OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
+#[constant]
+const FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
@@ -78,7 +79,7 @@ impl OperationState {
 
         self.updated_slot = current_slot;
         self.updated_at = current_timestamp;
-        self.expired_at = current_timestamp + OPERATION_COMMAND_EXPIRATION_SECONDS;
+        self.expired_at = current_timestamp + FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS;
         self.num_operated += 1;
         self.next_sequence = match next_command {
             Some(_) => self.next_sequence + 1,

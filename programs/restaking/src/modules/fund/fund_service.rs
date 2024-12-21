@@ -13,7 +13,7 @@ use crate::{events, utils};
 
 use super::command::{
     OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
-    OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
+    FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
 };
 use super::*;
 
@@ -266,16 +266,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
-        let mut required_account_infos = Vec::with_capacity(OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
-        let mut remaining_accounts_used: [bool; OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
-            [false; OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
+        let mut required_account_infos = Vec::with_capacity(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
+        let mut remaining_accounts_used: [bool; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
+            [false; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
 
         for required_account in required_accounts {
             // append required accounts in exact order
             let mut found = false;
             for (i, remaining_account) in remaining_accounts
                 .iter()
-                .take(OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
+                .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
                 .enumerate()
             {
                 if required_account.pubkey == *remaining_account.key {
