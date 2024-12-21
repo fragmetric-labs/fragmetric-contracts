@@ -181,7 +181,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 pool_account,
                             )?
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        Some(TokenPricingSource::MarinadeStakePool { .. }) => {
                             todo!()
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,

@@ -10,7 +10,7 @@ pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub(super) struct AssetState {
+pub struct AssetState {
     token_mint: Pubkey,
     token_program: Pubkey,
 

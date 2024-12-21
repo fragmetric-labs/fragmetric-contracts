@@ -1117,7 +1117,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     fn get_asset_withdrawal_normal_reserve_amount(
         &self,
         supported_token_mint: Option<Pubkey>,
-        pricing_service: &PricingService,
     ) -> Result<u64> {
         let fund_account = self.fund_account.load()?;
         let asset = fund_account.get_asset_state(supported_token_mint)?;
@@ -1174,7 +1173,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         Ok(asset_withdrawal_obligated_reserve_amount
             + self
-                .get_asset_withdrawal_normal_reserve_amount(supported_token_mint, pricing_service)?
+                .get_asset_withdrawal_normal_reserve_amount(supported_token_mint)?
                 .min(
                     self.fund_account
                         .load()?
