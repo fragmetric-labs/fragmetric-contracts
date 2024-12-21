@@ -1751,6 +1751,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     })
+                    .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],
@@ -1796,6 +1797,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     })
+                    .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],

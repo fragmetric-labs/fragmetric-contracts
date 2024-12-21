@@ -689,8 +689,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn user_request_withdrawal(
-        ctx: Context<UserFundContext>,
+    pub fn user_request_withdrawal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         receipt_token_amount: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
@@ -707,14 +707,15 @@ pub mod restaking {
         .process_request_withdrawal(
             &mut ctx.accounts.receipt_token_lock_account,
             supported_token_mint,
+            ctx.remaining_accounts,
             receipt_token_amount,
         )?);
 
         Ok(())
     }
 
-    pub fn user_cancel_withdrawal_request(
-        ctx: Context<UserFundContext>,
+    pub fn user_cancel_withdrawal_request<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         request_id: u64,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
@@ -729,6 +730,7 @@ pub mod restaking {
         )?
         .process_cancel_withdrawal_request(
             &mut ctx.accounts.receipt_token_lock_account,
+            ctx.remaining_accounts,
             request_id
         )?);
 

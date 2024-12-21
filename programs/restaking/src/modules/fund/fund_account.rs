@@ -518,29 +518,37 @@ impl FundAccount {
     pub(super) fn deposit(
         &mut self,
         supported_token_mint: Option<Pubkey>,
-        amount: u64,
+        asset_amount: u64,
     ) -> Result<()> {
         if self.deposit_enabled == 0 {
             err!(ErrorCode::FundDepositDisabledError)?
         }
         self.get_asset_state_mut(supported_token_mint)?
-            .deposit(amount)
+            .deposit(asset_amount)
     }
 
+    /// requested receipt_token_amount can be reduced based on the status of the underlying asset.
+    /// asset value should be up-to-date before call this.
     pub(super) fn create_withdrawal_request(
         &mut self,
         supported_token_mint: Option<Pubkey>,
-        receipt_token_amount: u64,
+        mut receipt_token_amount: u64,
         current_timestamp: i64,
     ) -> Result<WithdrawalRequest> {
         if self.withdrawal_enabled == 0 {
             err!(ErrorCode::FundWithdrawalDisabledError)?
         }
 
-        self.get_asset_state_mut(supported_token_mint)?
-            .create_withdrawal_request(receipt_token_amount, current_timestamp)
+        let asset = self.get_asset_state_mut(supported_token_mint)?;
+        if asset.withdrawable_value_as_receipt_token_amount == 0 {
+            err!(ErrorCode::FundWithdrawalReserveExhaustedSupportedAsset)?
+        }
+        receipt_token_amount =
+            receipt_token_amount.min(asset.withdrawable_value_as_receipt_token_amount);
+        asset.create_withdrawal_request(receipt_token_amount, current_timestamp)
     }
 
+    /// asset value should be updated after call this to estimate fresh withdrawable_value_as_receipt_token_amount.
     pub(super) fn cancel_withdrawal_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
         self.get_asset_state_mut(request.supported_token_mint)?
             .cancel_withdrawal_request(request)

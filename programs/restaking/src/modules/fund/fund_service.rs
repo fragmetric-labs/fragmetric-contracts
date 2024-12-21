@@ -1,8 +1,3 @@
-use crate::errors::ErrorCode;
-use crate::modules::pricing::{PricingService, TokenPricingSource};
-use crate::modules::reward;
-use crate::utils::*;
-use crate::{events, utils};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_spl::associated_token::spl_associated_token_account;
@@ -11,6 +6,13 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
 use std::cell::RefMut;
 use std::cmp::min;
+
+use crate::errors::ErrorCode;
+use crate::modules::pricing::{Asset, PricingService, TokenPricingSource};
+use crate::modules::reward;
+use crate::modules::reward::RewardService;
+use crate::utils::*;
+use crate::{events, utils};
 
 use super::command::{
     OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
@@ -170,6 +172,60 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .serialize_as_pod(&mut fund_account.receipt_token_value)?;
 
             fund_account.receipt_token_value_updated_slot = self.current_slot;
+
+            // now estimate withdrawal-request acceptable amount for each assets.
+            let receipt_token_value = fund_account.receipt_token_value.try_deserialize()?;
+            let mut total_receipt_token_withdrawal_obligated_amount = 0;
+
+            // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
+            for asset_value in &receipt_token_value.numerator {
+                match asset_value {
+                    Asset::SOL(..) => {
+                        // just count the already processing withdrawal amount
+                        total_receipt_token_withdrawal_obligated_amount += fund_account
+                            .sol
+                            .get_receipt_token_withdrawal_obligated_amount(true);
+                    }
+                    Asset::Token(token_mint, pricing_source, token_amount) => {
+                        match pricing_source {
+                            None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
+                            Some(pricing_source) => {
+                                match pricing_source {
+                                    TokenPricingSource::SPLStakePool { .. }
+                                    | TokenPricingSource::MarinadeStakePool { .. } => {
+                                        let asset =
+                                            fund_account.get_asset_state_mut(Some(*token_mint))?;
+                                        let asset_value_as_receipt_token_amount = pricing_service
+                                            .get_sol_amount_as_token(
+                                            &self.receipt_token_mint.key(),
+                                            pricing_service.get_token_amount_as_sol(
+                                                token_mint,
+                                                *token_amount,
+                                            )?,
+                                        )?;
+                                        let receipt_token_withdrawal_obligated_amount = asset
+                                            .get_receipt_token_withdrawal_obligated_amount(true);
+                                        asset.withdrawable_value_as_receipt_token_amount =
+                                            asset_value_as_receipt_token_amount.saturating_sub(
+                                                receipt_token_withdrawal_obligated_amount,
+                                            );
+
+                                        // sum the already processing withdrawal amount
+                                        total_receipt_token_withdrawal_obligated_amount +=
+                                            receipt_token_withdrawal_obligated_amount;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // when SOL is withdrawable, it will be assumed that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
+            fund_account.sol.withdrawable_value_as_receipt_token_amount = fund_account
+                .receipt_token_supply_amount
+                - total_receipt_token_withdrawal_obligated_amount;
         }
 
         Ok(())
@@ -202,7 +258,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         )?;
 
         // transfer source's reward accrual rate to destination
-        let event1 = reward::RewardService::new(self.receipt_token_mint, reward_account)?
+        let event = RewardService::new(self.receipt_token_mint, reward_account)?
             .update_reward_pools_token_allocation(
                 source_reward_account_option.as_mut(),
                 destination_reward_account_option.as_mut(),
@@ -228,7 +284,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(events::UserTransferredReceiptToken {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
-            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+            updated_user_reward_accounts: event.updated_user_reward_accounts,
 
             source: source_receipt_token_account.owner,
             source_receipt_token_account: source_receipt_token_account.key(),
@@ -475,6 +531,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
+        _receipt_token_amount_to_return: u64, // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
     ) -> Result<(u64, u64, u64)> {
         let (
             supported_token_mint,
@@ -920,40 +977,44 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         &self,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<u64> {
-        Ok(self
-            .fund_account
-            .load()?
-            .get_asset_state(supported_token_mint)?
-            .get_withdrawal_queued_batches_iter()
-            .map(|b| b.receipt_token_amount)
-            .sum())
+        let fund_account = self.fund_account.load()?;
+        let asset = fund_account.get_asset_state(supported_token_mint)?;
+        Ok(asset.get_receipt_token_withdrawal_obligated_amount(false))
     }
 
-    /// estimated $SOL amount to process queued withdrawals.
-    pub(super) fn get_asset_withdrawal_obligated_reserve_amount(
-        &self,
-        supported_token_mint: Option<Pubkey>,
-        pricing_service: &PricingService,
-    ) -> Result<u64> {
-        pricing_service.get_token_amount_as_sol(
-            &self.receipt_token_mint.key(),
-            self.get_receipt_token_withdrawal_obligated_amount(supported_token_mint)?,
-        )
-    }
-
-    /// based on asset normal reserve configuration, the normal reserve amount relative to total value of the fund.
+    /// based on asset normal reserve configuration, the normal reserve amount relative to current total asset value of the fund.
     fn get_asset_withdrawal_normal_reserve_amount(
         &self,
         supported_token_mint: Option<Pubkey>,
         pricing_service: &PricingService,
     ) -> Result<u64> {
-        let (total_token_value_as_sol, _total_token_amount) =
-            pricing_service.get_token_total_value_as_sol(&self.receipt_token_mint.key())?;
         let fund_account = self.fund_account.load()?;
         let asset = fund_account.get_asset_state(supported_token_mint)?;
+        let total_asset_amount = fund_account
+            .receipt_token_value
+            .try_deserialize()?
+            .numerator
+            .iter()
+            .find_map(|asset| match asset {
+                Asset::SOL(sol_amount) => {
+                    if supported_token_mint.is_none() {
+                        Some(*sol_amount)
+                    } else {
+                        None
+                    }
+                }
+                Asset::Token(mint, _, token_amount) => {
+                    if supported_token_mint.is_some() && supported_token_mint.unwrap() == *mint {
+                        Some(*token_amount)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .unwrap_or_default();
 
         Ok(get_proportional_amount(
-            total_token_value_as_sol,
+            total_asset_amount,
             asset.normal_reserve_rate_bps as u64,
             10_000,
         )
@@ -968,8 +1029,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         supported_token_mint: Option<Pubkey>,
         pricing_service: &PricingService,
     ) -> Result<u64> {
-        let asset_withdrawal_obligated_reserve_amount = self
-            .get_asset_withdrawal_obligated_reserve_amount(supported_token_mint, pricing_service)?;
+        let sol_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_sol(
+            &self.receipt_token_mint.key(),
+            self.get_receipt_token_withdrawal_obligated_amount(supported_token_mint)?,
+        )?;
+        let asset_withdrawal_obligated_reserve_amount = match supported_token_mint {
+            None => sol_withdrawal_obligated_reserve_amount,
+            Some(supported_token_mint) => pricing_service.get_sol_amount_as_token(
+                &supported_token_mint,
+                sol_withdrawal_obligated_reserve_amount,
+            )?,
+        };
 
         Ok(asset_withdrawal_obligated_reserve_amount
             + self
