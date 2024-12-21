@@ -10,7 +10,6 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 
-use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::{fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};

@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::Mint;
 
-use crate::constants::*;
-use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount};
+use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::utils::PDASeeds;
 
 #[event_cpi]

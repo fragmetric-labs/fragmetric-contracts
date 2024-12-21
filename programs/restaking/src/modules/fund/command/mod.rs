@@ -349,7 +349,8 @@ impl OperationCommandEntry {
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,
     _padding: [u8; 7],
-    required_accounts: [OperationCommandAccountMetaPod; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
+    required_accounts:
+        [OperationCommandAccountMetaPod; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE],
     command: OperationCommandPod,
 }
 

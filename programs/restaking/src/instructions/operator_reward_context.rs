@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};

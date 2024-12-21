@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::constants::*;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenWithdrawalAccount};
 use crate::utils::PDASeeds;
 

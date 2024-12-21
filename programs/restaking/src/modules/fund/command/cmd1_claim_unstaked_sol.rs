@@ -139,7 +139,6 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         }
                     }
                 }
-                _ => (),
             }
 
             // proceed to next token

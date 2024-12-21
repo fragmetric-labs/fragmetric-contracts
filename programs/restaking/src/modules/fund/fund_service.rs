@@ -1,16 +1,16 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::{amount, mint};
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use anchor_spl::{token_2022, token_interface};
-use std::cell::RefMut;
-use std::cmp::min;
-use anchor_lang::solana_program::program::invoke;
-use anchor_spl::associated_token::spl_associated_token_account;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::reward;
 use crate::utils::*;
 use crate::{events, utils};
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program::invoke;
+use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token::accessor::{amount, mint};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::{token_2022, token_interface};
+use std::cell::RefMut;
+use std::cmp::min;
 
 use super::command::{
     OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
@@ -267,7 +267,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
-        let mut required_account_infos = Vec::with_capacity(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
+        let mut required_account_infos =
+            Vec::with_capacity(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
         let mut remaining_accounts_used: [bool; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
             [false; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
 
@@ -653,7 +654,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let receipt_token_amount_processed = receipt_token_amount_processing;
         let asset_user_amount_reserved = asset_user_amount_processing;
         let asset_fee_amount_deducted = asset_fee_amount_processing;
-        let mut treasury_revenue_amount = 0;
 
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
@@ -851,7 +851,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     Ok(0)
                 } else {
                     // create program_supported_token_revenue_account if not exists
-                    let program_supported_token_revenue_account = program_supported_token_revenue_account.unwrap();
+                    let program_supported_token_revenue_account =
+                        program_supported_token_revenue_account.unwrap();
                     let supported_token_program = supported_token_program.unwrap();
                     if !program_supported_token_revenue_account.is_initialized() {
                         invoke(
@@ -980,24 +981,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         .operation_reserved_amount
                         .saturating_sub(asset_withdrawal_obligated_reserve_amount),
                 ))
-    }
-
-    /// which is going to be executed in a single withdrawal command. there can be remains after the execution.
-    /// MIN(asset_withdrawal_obligated_reserve_amount, asset_operation_reserved_amount)
-    pub(super) fn get_asset_withdrawal_execution_amount(
-        &self,
-        supported_token_mint: Option<Pubkey>,
-        pricing_service: &PricingService,
-    ) -> Result<u64> {
-        Ok(self
-            .fund_account
-            .load()?
-            .get_asset_state(supported_token_mint)?
-            .operation_reserved_amount
-            .min(self.get_asset_withdrawal_obligated_reserve_amount(
-                supported_token_mint,
-                pricing_service,
-            )?))
     }
 
     /// surplus/shortage will be handled in staking stage.

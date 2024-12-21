@@ -268,7 +268,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_update_state_tracker: &'info AccountInfo<'info>,
         expected_ncn_epoch: u64,
         next_vault_update_state_tracker: &'info AccountInfo<'info>,
-        delayed_ncn_epoch: u64,
+        _delayed_ncn_epoch: u64,
     ) -> Result<(&'info AccountInfo<'info>, u64, u64)> {
         let vault_config_data = &**vault_config.try_borrow_data()?;
         let vault_config = Config::try_from_slice_unchecked(vault_config_data)?;
@@ -297,8 +297,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         current_epoch: u64,
         epoch_length: u64,
         system_program: &AccountInfo<'info>,
-        signer: &AccountInfo<'info>,
-        signer_seeds: &[&[&[u8]]],
+        _signer: &AccountInfo<'info>,
+        _signer_seeds: &[&[&[u8]]],
     ) -> Result<&Self> {
         let updated_slot = Vault::try_from_slice_unchecked(&self.vault.try_borrow_data()?)?
             .last_full_state_update_slot();

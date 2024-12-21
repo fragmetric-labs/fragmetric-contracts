@@ -7,7 +7,7 @@ use super::*;
 
 pub struct UserRewardService<'info: 'a, 'a> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    user: &'a Signer<'info>,
+    _user: &'a Signer<'info>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     current_slot: u64,
@@ -23,7 +23,7 @@ impl<'info, 'a> UserRewardService<'info, 'a> {
         let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
-            user,
+            _user: user,
             reward_account,
             user_reward_account,
             current_slot: clock.slot,

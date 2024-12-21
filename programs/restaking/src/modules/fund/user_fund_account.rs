@@ -120,7 +120,7 @@ impl UserFundAccount {
 
 // reduced max number of req by restructuring: (8+8+8+8+16; 48)x10 >= (8+8+8+8+33+33+14; 112)x4
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-pub(super) struct WithdrawalRequest {
+pub struct WithdrawalRequest {
     pub batch_id: u64,
     pub request_id: u64,
     pub receipt_token_amount: u64,

@@ -205,7 +205,9 @@ impl NormalizedTokenPoolAccount {
     }
 
     #[inline]
-    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &NormalizedSupportedToken> {
+    pub(super) fn get_supported_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &NormalizedSupportedToken> {
         self.supported_tokens.iter()
     }
 

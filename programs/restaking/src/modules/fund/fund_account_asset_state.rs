@@ -194,7 +194,7 @@ impl AssetState {
 
     pub fn dequeue_withdrawal_batches(
         &mut self,
-        mut count: usize,
+        count: usize,
         current_timestamp: i64,
     ) -> Result<Vec<WithdrawalBatch>> {
         if count == 0 {

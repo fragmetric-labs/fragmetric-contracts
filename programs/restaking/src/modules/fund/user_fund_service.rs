@@ -442,7 +442,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
         match supported_token_mint_key {
             Some(supported_token_mint_key) => {
-                require_keys_eq!(withdrawal_request.supported_token_mint.unwrap(), supported_token_mint_key)
+                require_keys_eq!(
+                    withdrawal_request.supported_token_mint.unwrap(),
+                    supported_token_mint_key
+                )
             }
             None => {
                 require_eq!(withdrawal_request.supported_token_mint.is_none(), true)
@@ -456,7 +459,6 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .get_asset_state_mut(supported_token_mint_key)?
             .withdrawal_user_reserved_amount -= asset_user_amount;
 
-
         // transfer either SOL or token to user account
         {
             let fund_account = self.fund_account.load()?;
@@ -466,7 +468,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                         CpiContext::new_with_signer(
                             supported_token_program.unwrap().to_account_info(),
                             token_interface::TransferChecked {
-                                from: fund_supported_token_reserve_account.unwrap().to_account_info(),
+                                from: fund_supported_token_reserve_account
+                                    .unwrap()
+                                    .to_account_info(),
                                 to: user_supported_token_account.unwrap().to_account_info(),
                                 mint: supported_token_mint.to_account_info(),
                                 authority: self.fund_account.to_account_info(),
@@ -496,7 +500,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         // after all requests are settled
         if fund_withdrawal_batch_account.is_settled() {
             // move small remains to operation reserved
-            let remaining_asset_amount = fund_withdrawal_batch_account.get_remaining_asset_amount_after_settled();
+            let remaining_asset_amount =
+                fund_withdrawal_batch_account.get_remaining_asset_amount_after_settled();
             {
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset_state = fund_account.get_asset_state_mut(None)?;
@@ -517,7 +522,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: self.user_fund_account.key(),
-            user_supported_token_account: user_supported_token_account.map(|token_account| token_account.key()),
+            user_supported_token_account: user_supported_token_account
+                .map(|token_account| token_account.key()),
 
             fund_withdrawal_batch_account: fund_withdrawal_batch_account.key(),
             batch_id: withdrawal_request.batch_id,

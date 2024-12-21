@@ -8,7 +8,7 @@ use super::AssetState;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
-pub(super) struct SupportedToken {
+pub struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,

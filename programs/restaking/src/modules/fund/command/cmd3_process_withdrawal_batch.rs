@@ -56,13 +56,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         match self.state {
             ProcessWithdrawalBatchCommandState::New(supported_token_mint_key) => {
                 let (receipt_token_amount_to_process, mut required_accounts) = {
-                    let mut fund_service =
-                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                    let fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
                     let receipt_token_amount_to_process = fund_service
                         .get_receipt_token_withdrawal_obligated_amount(supported_token_mint_key)?;
 
-                    let mut required_accounts = fund_service
+                    let required_accounts = fund_service
                         .find_accounts_to_process_withdrawal_batches(supported_token_mint_key)?;
 
                     (receipt_token_amount_to_process, required_accounts)
@@ -87,7 +86,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         })
                         .unwrap_or_else(|| Ok((Pubkey::default(), false)))?,
                 );
-                required_accounts.insert(2, supported_token_mint_key.map(|_| (spl_associated_token_account::ID, false)).unwrap_or_else(|| (Pubkey::default(), false)));
+                required_accounts.insert(
+                    2,
+                    supported_token_mint_key
+                        .map(|_| (spl_associated_token_account::ID, false))
+                        .unwrap_or_else(|| (Pubkey::default(), false)),
+                );
 
                 // to calculate LST cycle fee (appended)
                 let fund_account = ctx.fund_account.load()?;
@@ -122,10 +126,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     receipt_token_amount_to_process,
                 );
 
-                return Ok((
+                Ok((
                     None,
                     Some(command.with_required_accounts(required_accounts)),
-                ));
+                ))
             }
             ProcessWithdrawalBatchCommandState::Process(
                 supported_token_mint_key,
@@ -246,7 +250,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 // calculate LRT max cycle fee to ensure withdrawal fee is equal or greater than max fee expense during cash-out
-                let mut lrt_max_cycle_fee_rate = 1.0
+                let lrt_max_cycle_fee_rate = 1.0
                     - (1.0
                         - (lst_max_cycle_fee_numerator as f32
                             / lst_max_cycle_fee_denominator.max(1) as f32))
@@ -394,12 +398,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         }
                         .into(),
                     ),
+                    // TODO: ProcessWithdrawalBatchCommand.execute
                     None,
                 ));
             }
         }
-
-        // TODO: ProcessWithdrawalBatchCommand.execute
-        Ok((None, None))
     }
 }
