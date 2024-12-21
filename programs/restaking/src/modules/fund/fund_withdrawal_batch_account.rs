@@ -166,6 +166,10 @@ impl FundWithdrawalBatchAccount {
         self.claimed_receipt_token_amount == self.receipt_token_amount
     }
 
+    pub(super) fn get_remaining_asset_amount_after_settled(&self) -> u64 {
+        self.asset_user_amount - self.claimed_asset_user_amount
+    }
+
     /// Returns (asset_user_amount, asset_fee_amount, receipt_token_amount)
     pub(super) fn settle_withdrawal_request(
         &mut self,

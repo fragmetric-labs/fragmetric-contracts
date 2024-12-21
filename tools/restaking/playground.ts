@@ -309,6 +309,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
+        const programRevenueAccount = new web3.PublicKey(this.getConstant('programRevenueAddress'));
+        const programSupportedTokenRevenueAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
+            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, programRevenueAccount, true, this.supportedTokenMetadata[symbol].program);
+        const programSupportedTokenRevenueAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
+            [`programSupportedTokenRevenueAccount_${symbol}`]: programSupportedTokenRevenueAccount(symbol as any),
+            ...obj,
+        }), {} as { string: web3.PublicKey });
 
         return {
             programEventAuthority,
@@ -349,7 +356,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLJitoVaultWithdrawalTicketTokenAccount1,
             vaultBaseAccount2,
             fragSOLJitoVaultWithdrawalTicketAccount2,
-            fragSOLJitoVaultWithdrawalTicketTokenAccount2
+            fragSOLJitoVaultWithdrawalTicketTokenAccount2,
+            programRevenueAccount,
+            programSupportedTokenRevenueAccount,
+            ...programSupportedTokenRevenueAccounts,
         };
     }
 
@@ -583,6 +593,30 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             "confirmed",
             spl.TOKEN_2022_PROGRAM_ID
         );
+    }
+
+    public getFragSOLSupportedTokenTreasuryAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
+        return spl.getAccount(
+            // @ts-ignore
+            this.connection,
+            this.knownAddress.fragSOLFundTreasurySupportedTokenAccount(symbol),
+            "confirmed",
+            this.supportedTokenMetadata[symbol].program
+        ).then(v => new BN(v.amount));
+    }
+
+    public getProgramSupportedTokenRevenueAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
+        return spl.getAccount(
+            // @ts-ignore
+            this.connection,
+            this.knownAddress.programSupportedTokenRevenueAccount(symbol),
+            "confirmed",
+            this.supportedTokenMetadata[symbol].program
+        ).then(v => new BN(v.amount.toString()));
+    }
+
+    public getProgramRevenueAccountBalance() {
+        return this.connection.getAccountInfo(this.knownAddress.programRevenueAccount).then(v => new BN(v.lamports));
     }
 
     public getFragSOLSupportedTokenAccount(symbol: keyof typeof this.supportedTokenMetadata) {

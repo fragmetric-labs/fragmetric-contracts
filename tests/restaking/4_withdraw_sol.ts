@@ -76,6 +76,7 @@ describe("withdraw SOL", async () => {
     });
 
     step("user5 (operator) processes queued withdrawals", async () => {
+        const programRevenueAmount0 = await restaking.getProgramRevenueAccountBalance().catch(_ => new BN(0));
         const res1 = await restaking.runOperatorProcessWithdrawalBatches();
 
         expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
@@ -90,10 +91,15 @@ describe("withdraw SOL", async () => {
 
         await restaking.sleep(1);
         const res3 = await restaking.runOperatorProcessWithdrawalBatches(null, restaking.keychain.getKeypair('FUND_MANAGER'), true);
+        const programRevenueAmount1 = await restaking.getProgramRevenueAccountBalance();
 
         expect(res3.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');
         expect(res3.fragSOLFund.sol.withdrawalUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(2).muln(10000 - res3.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL');
         expect(res3.fragSOLLockAccount.amount.toString()).eq('0');
+        expect(
+            amountFragSOLWithdrawalEach.mul(new BN(2)).muln(res3.fragSOLFund.withdrawalFeeRateBps).divn(10_000)
+                .sub(programRevenueAmount1.sub(programRevenueAmount0)).toNumber()
+        ).lt(10, 'check fee; here 1SOL=1RT');
     });
 
     step("user5 can withdraw SOL", async () => {

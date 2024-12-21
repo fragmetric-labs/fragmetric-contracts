@@ -87,6 +87,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         })
                         .unwrap_or_else(|| Ok((Pubkey::default(), false)))?,
                 );
+                required_accounts.insert(2, supported_token_mint_key.map(|_| (spl_associated_token_account::ID, false)).unwrap_or_else(|| (Pubkey::default(), false)));
 
                 // to calculate LST cycle fee (appended)
                 let fund_account = ctx.fund_account.load()?;
@@ -130,7 +131,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 supported_token_mint_key,
                 requested_receipt_token_amount,
             ) => {
-                let [program_revenue_account, program_supported_token_revenue_account, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, remaining_accounts @ ..] =
+                let [program_revenue_account, program_supported_token_revenue_account, optional_associated_token_account_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, optional_supported_token_mint, optional_supported_token_program, optional_fund_supported_token_reserve_account, optional_fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -286,23 +287,26 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         receipt_token_lock_account,
                         fund_reserve_account,
                         fund_treasury_account,
-                        supported_token_mint.to_option(),
-                        supported_token_program.to_option(),
-                        fund_supported_token_reserve_account.to_option(),
-                        fund_supported_token_treasury_account.to_option(),
+                        optional_supported_token_mint.to_option(),
+                        optional_supported_token_program.to_option(),
+                        optional_fund_supported_token_reserve_account.to_option(),
+                        optional_fund_supported_token_treasury_account.to_option(),
                         uninitialized_withdrawal_batch_accounts,
                         pricing_sources,
                         self.forced,
                         requested_receipt_token_amount,
                     )?;
 
+                    // TODO: will it be better to move it to separated command.....?
                     fund_service.harvest_from_treasury_account(
+                        ctx.operator,
                         ctx.system_program,
                         fund_treasury_account,
                         program_revenue_account,
-                        supported_token_mint.to_option(),
-                        supported_token_program.to_option(),
-                        fund_supported_token_treasury_account.to_option(),
+                        optional_associated_token_account_program.to_option(),
+                        optional_supported_token_mint.to_option(),
+                        optional_supported_token_program.to_option(),
+                        optional_fund_supported_token_treasury_account.to_option(),
                         program_supported_token_revenue_account.to_option(),
                     )?;
 
