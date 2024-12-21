@@ -297,7 +297,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 )?;
 
                 Ok(if supported_token_claimable_amount > 0 {
-                    Some(ClaimableToken::new(
+                    Some(NormalizedClaimableToken::new(
                         supported_token.mint,
                         supported_token.program,
                         supported_token_claimable_amount,

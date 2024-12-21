@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
-use super::MAX_SUPPORTED_TOKENS_SIZE;
+use super::NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE;
 
 #[constant]
 /// ## Version History
@@ -20,8 +20,8 @@ pub struct NormalizedTokenWithdrawalAccount {
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_pool: Pubkey,
     normalized_token_amount: u64,
-    #[max_len(MAX_SUPPORTED_TOKENS_SIZE)]
-    claimable_tokens: Vec<ClaimableToken>,
+    #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
+    claimable_tokens: Vec<NormalizedClaimableToken>,
     created_at: i64,
     _reserved: [u8; 32],
 }
@@ -97,7 +97,7 @@ impl NormalizedTokenWithdrawalAccount {
     pub(super) fn set_claimable_tokens(
         &mut self,
         normalized_token_amount: u64,
-        claimable_tokens: Vec<ClaimableToken>,
+        claimable_tokens: Vec<NormalizedClaimableToken>,
         current_timestamp: i64,
     ) -> Result<()> {
         require_eq!(
@@ -128,7 +128,7 @@ impl NormalizedTokenWithdrawalAccount {
     pub(super) fn get_claimable_token_mut(
         &mut self,
         supported_token_mint: &Pubkey,
-    ) -> Result<&mut ClaimableToken> {
+    ) -> Result<&mut NormalizedClaimableToken> {
         self.claimable_tokens
             .iter_mut()
             .find(|token| token.mint == *supported_token_mint && !token.claimed)
@@ -137,14 +137,14 @@ impl NormalizedTokenWithdrawalAccount {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub(super) struct ClaimableToken {
+pub(super) struct NormalizedClaimableToken {
     mint: Pubkey,
     program: Pubkey,
     pub claimable_amount: u64,
     claimed: bool,
 }
 
-impl ClaimableToken {
+impl NormalizedClaimableToken {
     pub fn new(mint: Pubkey, program: Pubkey, claimable_amount: u64) -> Self {
         Self {
             mint,
