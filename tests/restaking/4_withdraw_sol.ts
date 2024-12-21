@@ -1,4 +1,4 @@
-import {BN} from '@coral-xyz/anchor';
+import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
@@ -10,8 +10,8 @@ describe("withdraw SOL", async () => {
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
-            restaking.tryAirdrop(user5.publicKey, 100),
-            restaking.tryAirdrop(user6.publicKey, 100),
+            restaking.tryAirdrop(user5.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
+            restaking.tryAirdrop(user6.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
         ]);
 
         await restaking.sleep(1); // ...block hash not found?
@@ -129,6 +129,7 @@ describe("withdraw SOL", async () => {
             instructions: [
                 restaking.methods
                     .fundManagerUpdateFundStrategy(
+                        true,
                         false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
@@ -148,6 +149,7 @@ describe("withdraw SOL", async () => {
             instructions: [
                 restaking.methods
                     .fundManagerUpdateFundStrategy(
+                        true,
                         true,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,

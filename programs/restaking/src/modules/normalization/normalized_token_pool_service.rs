@@ -58,8 +58,8 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
     // TODO: move it to fund operation side
     pub(in crate::modules) fn get_denormalize_tokens_asset(
         &self,
-        pricing_service: &PricingService,
-        denormalize_amount_as_sol: u64,
+        _pricing_service: &PricingService,
+        _denormalize_amount_as_sol: u64,
     ) -> Result<Vec<(Pubkey, Pubkey, u64)>> {
         // let mut participants = vec![];
         // let supported_tokens = self
@@ -85,7 +85,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         //
         // WeightedAllocationStrategy::put(&mut participants, denormalize_amount_as_sol);
 
-        let mut supported_tokens_state = vec![];
+        let supported_tokens_state = vec![];
         // for (i, supported_token) in supported_tokens.iter().enumerate() {
         //     let need_to_denormalize_amount = pricing_service.get_sol_amount_as_token(
         //         &supported_token.mint,

@@ -21,10 +21,12 @@ pub struct FundWithdrawalBatchAccount {
     /// asset to be withdrawn
     pub(super) asset_user_amount: u64,
     claimed_asset_user_amount: u64,
-    /// informative: withdrawal fee is already paid to the treasury account.
+
+    /// informative: withdrawal fee is already paid to the treasury account, just informative.
     pub(super) asset_fee_amount: u64,
 
     processed_at: i64,
+    // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
     _reserved: [u8; 32],
 }
 

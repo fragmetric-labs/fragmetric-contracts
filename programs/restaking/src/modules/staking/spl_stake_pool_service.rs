@@ -177,7 +177,7 @@ impl<'info> SPLStakePoolService<'info> {
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = vec![
+        let accounts = vec![
             // for self.withdraw_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
@@ -342,7 +342,7 @@ impl<'info> SPLStakePoolService<'info> {
                 {
                     let count = validators.len() as u64;
                     let each_fee = pool_tokens_fee / count;
-                    for (validator_key, token_amount) in validators.iter_mut() {
+                    for (_validator_key, token_amount) in validators.iter_mut() {
                         *token_amount += each_fee;
                     }
                 }

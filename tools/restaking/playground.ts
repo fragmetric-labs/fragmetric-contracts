@@ -516,11 +516,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
-    public async tryAirdropSupportedTokens(account: web3.PublicKey, amount = 100) {
-        await this.tryAirdrop(this.wallet.publicKey, amount * Object.keys(this.supportedTokenMetadata).length);
-
+    public async tryAirdropSupportedTokens(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
+        await this.tryAirdrop(account, lamports.muln(Object.keys(this.supportedTokenMetadata).length));
         const txData = await Promise.all(
-            Object.values(this.supportedTokenMetadata).map(async (token) => {
+            Object.entries(this.supportedTokenMetadata).map(async ([_, token]) => {
                 const ata = await spl.getOrCreateAssociatedTokenAccount(
                     this.connection,
                     this.wallet,
@@ -536,7 +535,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 );
                 const splStakePoolAddress: web3.PublicKey | null = token.pricingSource["splStakePool"]?.address ?? null;
                 if (splStakePoolAddress) {
-                    const res = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, amount * web3.LAMPORTS_PER_SOL, ata.address);
+                    const res = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, lamports.toNumber(), ata.address);
                     return {
                         instructions: res.instructions,
                         signers: res.signers,
@@ -551,7 +550,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             publicKey: this.wallet.publicKey,
                         })
                     );
-                    const res = await marinadeStakePool.deposit(new BN(amount * web3.LAMPORTS_PER_SOL), {
+                    const res = await marinadeStakePool.deposit(lamports, {
                         mintToOwnerAddress: account,
                     });
                     return {
@@ -571,7 +570,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
             const ata = await this.getUserSupportedTokenAccount(account, symbol as any);
             const balance = new BN(ata.amount.toString());
-            logger.debug(`${symbol} airdropped (+${amount}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
+            logger.debug(`${symbol} airdropped (+${this.lamportsToSOL(lamports)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
         }
     }
 
@@ -1191,10 +1190,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
+            depositEnabled: true,
             withdrawalEnabled: this.isMainnet ? false : true,
             WithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
 
+            solDepositable: true,
             solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
             // TODO: migration v0.3.2 save sol_accumulated_deposit_amount
             solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
@@ -1204,6 +1205,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
+                tokenDepositable: true,
                 tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "bSOL":
@@ -1324,6 +1326,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods.fundManagerUpdateFundStrategy(
+                    config.depositEnabled,
                     config.withdrawalEnabled,
                     config.WithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.withdrawalBatchThresholdSeconds,
@@ -1331,6 +1334,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                 }).instruction(),
                 this.program.methods.fundManagerUpdateSolStrategy(
+                    config.solDepositable,
                     config.solAccumulatedDepositCapacity,
                     config.solAccumulatedDepositAmount,
                     config.solWithdrawalable,
@@ -1343,6 +1347,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     return [
                         this.program.methods.fundManagerUpdateSupportedTokenStrategy(
                             v.tokenMint,
+                            v.tokenDepositable,
                             v.tokenAccumulatedDepositCapacity,
                             v.tokenAccumulatedDepositAmount,
                             v.withdrawable,
@@ -1735,6 +1740,77 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
+    public async runOperatorDonateSOLToFund(operator: web3.Keypair, amount: BN) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .operatorDonateSolToFund(amount)
+                    .accountsPartial({
+                        operator: operator.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorUpdatedFundPrices"],
+        });
+
+        const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
+            this.getFragSOLFundReserveAccountBalance(),
+        ]);
+        logger.notice(`operator donated: ${this.lamportsToSOL(amount)} (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+            fragSOLFundReserveAccountBalance,
+        };
+    }
+
+    public async runOperatorDonateSupportedTokenToFund(
+        operator: web3.Keypair,
+        tokenSymbol: keyof typeof this.supportedTokenMetadata,
+        amount: BN,
+    ) {
+        const supportedToken = this.supportedTokenMetadata[tokenSymbol];
+        const operatorSupportedTokenAddress = this.knownAddress.userSupportedTokenAccount(operator.publicKey, tokenSymbol);
+
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .operatorDonateSupportedTokenToFund(amount)
+                    .accountsPartial({
+                        operator: operator.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        supportedTokenMint: supportedToken.mint,
+                        supportedTokenProgram: supportedToken.program,
+                        operatorSupportedTokenAccount: operatorSupportedTokenAddress,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            ],
+            signers: [operator],
+            events: ["operatorUpdatedFundPrices"],
+        });
+
+        const [fragSOLFund, fragSOLFundSupportedTokenAccount] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
+            this.getFragSOLFundReserveAccountBalance(),
+            this.getFragSOLSupportedTokenAccount(tokenSymbol),
+        ]);
+        logger.notice(`operator donated: ${this.lamportsToX(amount, supportedToken.decimals, tokenSymbol)} (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), operatorSupportedTokenAddress.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+            fragSOLFundSupportedTokenAccount,
+        };
+    }
+
     public async runUserRequestWithdrawal(user: web3.Keypair, amount: BN, supported_token_mint: web3.PublicKey|null = null) {
         const {event, error} = await this.run({
             instructions: [
@@ -1745,6 +1821,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     })
+                    .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],
@@ -1790,6 +1867,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     })
+                    .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
             signers: [user],

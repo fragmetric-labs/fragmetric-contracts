@@ -103,20 +103,18 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                            require_keys_eq!(address, restaking_vault.vault);
+
                             let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
-                            let withdrawal_tickets = &remaining_accounts[..5] else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
+                            let withdrawal_tickets = &remaining_accounts[..5];
 
-                            let remaining_accounts = &remaining_accounts[5..] else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
+                            let _remaining_accounts = &remaining_accounts[5..];
 
-                            let mut withdrawal_ticket_position = 0;
+                            let mut _withdrawal_ticket_position = 0;
                             let mut ticket_set: (Pubkey, Pubkey, Pubkey) =
                                 (Pubkey::default(), Pubkey::default(), Pubkey::default());
                             let mut signer_seed = vec![];
@@ -126,7 +124,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                     &withdrawal_ticket,
                                 )? {
                                     let ticket_token_account = JitoRestakingVaultService::find_withdrawal_ticket_token_account(&withdrawal_ticket.key(), &restaking_vault.receipt_token_mint, &restaking_vault.receipt_token_program);
-                                    withdrawal_ticket_position = i as u8;
+                                    _withdrawal_ticket_position = i as u8;
                                     ticket_set = (
                                         JitoRestakingVaultService::find_vault_base_account(
                                             &ctx.receipt_token_mint.key(),
@@ -202,7 +200,6 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         &vault_receipt_token_mint.key(),
                         item.sol_amount,
                     )?;
-                    let signer_seed = raw_signer_seed.to_vec();
                     let signer_seed: Vec<&[u8]> = raw_signer_seed
                         .iter()
                         .map(|inner_vec| inner_vec.as_slice())

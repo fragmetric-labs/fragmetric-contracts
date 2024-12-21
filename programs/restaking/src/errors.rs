@@ -109,6 +109,7 @@ pub enum ErrorCode {
 
     #[msg("reward: cannot close the reward pool")]
     RewardPoolCloseConditionError,
+
     #[msg("pricing: token pricing source is not found")]
     TokenPricingSourceAccountNotFoundError,
 
@@ -121,8 +122,14 @@ pub enum ErrorCode {
     #[msg("fund: not supported token")]
     FundNotSupportedTokenError,
 
+    #[msg("fund: deposit is currently disabled")]
+    FundDepositDisabledError,
+
     #[msg("fund: exceeded deposit capacity amount")]
     FundExceededDepositCapacityAmountError,
+
+    #[msg("fund: deposit is not supported for the given asset")]
+    FundDepositNotSupportedAsset,
 
     #[msg("fund: exceeded max withdrawal request per user")]
     FundExceededMaxWithdrawalRequestError,
@@ -138,6 +145,9 @@ pub enum ErrorCode {
 
     #[msg("fund: withdrawal is not supported for the given asset")]
     FundWithdrawalNotSupportedAsset,
+
+    #[msg("fund: withdrawal reserve is exhausted for the given asset")]
+    FundWithdrawalReserveExhaustedSupportedAsset,
 
     #[msg("fund: withdrawal request is already in progress")]
     FundWithdrawalRequestAlreadyQueuedError,

@@ -234,7 +234,6 @@ impl SelfExecutable for RestakeVSTCommand {
 
                     let mut participants = vec![];
                     let fund_account = ctx.fund_account.load()?;
-                    let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
                     let supported_tokens = fund_account
                         .get_supported_tokens_iter()
                         .filter_map(|t| {
@@ -600,7 +599,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             )?;
                             {
                                 let mut fund_account = ctx.fund_account.load_mut()?;
-                                let mut restaking_vault =
+                                let restaking_vault =
                                     fund_account.get_restaking_vault_mut(&item.vault_address)?;
                                 restaking_vault.receipt_token_operation_reserved_amount +=
                                     minted_vrt_amount;

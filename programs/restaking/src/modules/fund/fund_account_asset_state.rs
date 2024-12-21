@@ -16,7 +16,8 @@ pub struct AssetState {
 
     pub accumulated_deposit_capacity_amount: u64,
     pub accumulated_deposit_amount: u64,
-    _padding: [u8; 5],
+    pub depositable: u8,
+    _padding: [u8; 4],
     pub withdrawable: u8,
     pub normal_reserve_rate_bps: u16,
     pub normal_reserve_max_amount: u64,
@@ -30,7 +31,12 @@ pub struct AssetState {
     _padding2: [u8; 15],
     withdrawal_num_queued_batches: u8,
     withdrawal_queued_batches: [WithdrawalBatch; FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES],
-    _reserved: [u8; 64],
+    _reserved: [u8; 56],
+
+    /// receipt token amount that users can request to withdraw with the given asset from the fund.
+    /// it can be conditionally inaccurate on price changes among multiple assets, so make sure to update this properly before any use of it.
+    /// do not make any hard limit constraints with this value from off-chain. a requested withdrawal amount will be adjusted on-chain based on the status.
+    pub withdrawable_value_as_receipt_token_amount: u64,
 
     /// informative: reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund.
     pub withdrawal_user_reserved_amount: u64,
@@ -109,12 +115,21 @@ impl AssetState {
     }
 
     #[inline(always)]
+    pub fn set_depositable(&mut self, depositable: bool) {
+        self.depositable = if depositable { 1 } else { 0 };
+    }
+
+    #[inline(always)]
     pub fn set_withdrawable(&mut self, withdrawable: bool) {
         self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
-    pub fn deposit(&mut self, amount: u64) -> Result<()> {
-        let new_accumulated_deposit_amount = self.accumulated_deposit_amount + amount;
+    pub fn deposit(&mut self, asset_amount: u64) -> Result<()> {
+        if self.depositable == 0 {
+            err!(ErrorCode::FundDepositNotSupportedAsset)?
+        }
+
+        let new_accumulated_deposit_amount = self.accumulated_deposit_amount + asset_amount;
         require_gte!(
             self.accumulated_deposit_capacity_amount,
             new_accumulated_deposit_amount,
@@ -122,7 +137,7 @@ impl AssetState {
         );
 
         self.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount = self.operation_reserved_amount + amount;
+        self.operation_reserved_amount = self.operation_reserved_amount + asset_amount;
 
         Ok(())
     }
@@ -145,6 +160,9 @@ impl AssetState {
             current_timestamp,
         );
         self.withdrawal_pending_batch.add_request(&request)?;
+        self.withdrawable_value_as_receipt_token_amount = self
+            .withdrawable_value_as_receipt_token_amount
+            .saturating_sub(receipt_token_amount);
 
         Ok(request)
     }
@@ -157,7 +175,12 @@ impl AssetState {
             ErrorCode::FundWithdrawalRequestAlreadyQueuedError
         );
 
-        self.withdrawal_pending_batch.remove_request(request)
+        self.withdrawal_pending_batch.remove_request(request)?;
+        self.withdrawable_value_as_receipt_token_amount = self
+            .withdrawable_value_as_receipt_token_amount
+            .saturating_add(request.receipt_token_amount);
+
+        Ok(())
     }
 
     /// returns [enqueued_receipt_token_amount]
@@ -194,7 +217,7 @@ impl AssetState {
 
     pub fn dequeue_withdrawal_batches(
         &mut self,
-        mut count: usize,
+        count: usize,
         current_timestamp: i64,
     ) -> Result<Vec<WithdrawalBatch>> {
         if count == 0 {
@@ -234,6 +257,17 @@ impl AssetState {
                 >= withdrawal_batch_threshold_interval_seconds;
         self.get_withdrawal_queued_batches_iter()
             .filter(move |_| available)
+    }
+
+    pub fn get_receipt_token_withdrawal_obligated_amount(&self, count_pending_batch: bool) -> u64 {
+        let mut receipt_token_amount = self
+            .get_withdrawal_queued_batches_iter()
+            .map(|b| b.receipt_token_amount)
+            .sum();
+        if count_pending_batch {
+            receipt_token_amount += self.withdrawal_pending_batch.receipt_token_amount;
+        }
+        receipt_token_amount
     }
 }
 

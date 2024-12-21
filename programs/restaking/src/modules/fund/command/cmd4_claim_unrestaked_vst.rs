@@ -128,18 +128,16 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                            require_keys_eq!(address, restaking_vault.vault);
+
                             let [vault_program, vault_account, vault_config, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
 
-                            let withdrawal_tickets = &remaining_accounts[0..5] else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
-                            let remaining_accounts = &remaining_accounts[5..] else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
+                            let withdrawal_tickets = &remaining_accounts[0..5];
+                            let _remaining_accounts = &remaining_accounts[5..];
 
                             let (claimable_tickets, _) =
                                 JitoRestakingVaultService::get_claimable_withdrawal_tickets(
@@ -238,7 +236,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-                            let [vault_program, vault_config, vault_account, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, token_program, system_program, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, remaining_accounts @ ..] =
+                            let [vault_program, vault_config, vault_account, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_receipt_token_account, vault_program_fee_wallet_vrt_account, token_program, system_program, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_withdrawal_ticket, vault_withdrawal_ticket_token_account, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -252,7 +250,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                     t.withdrawal_ticket_account == vault_withdrawal_ticket.key()
                                 })
                                 .unwrap();
-                            let reserved_unrestaked_ticket =
+                            let _reserved_unrestaked_ticket =
                                 unused_claimable_unrestaked_tickets.swap_remove(token_index);
 
                             let (current_vault_update_state_tracker, current_epoch, epoch_length) =
@@ -361,7 +359,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                             (normalized_token_pool_address, true),
                                             (normalized_token.program, false),
                                             (normalized_token_account, true),
-                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop
+                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop => now it always runs a single command in a tx
                                         ])),
                                     ));
                                 }

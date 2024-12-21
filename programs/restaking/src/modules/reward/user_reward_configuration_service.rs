@@ -11,7 +11,7 @@ pub struct UserRewardConfigurationService<'info: 'a, 'a> {
     user: &'a Signer<'info>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
-    current_slot: u64,
+    _current_slot: u64,
 }
 
 impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
@@ -26,7 +26,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             user,
             reward_account,
             user_reward_account,
-            current_slot: Clock::get()?.slot,
+            _current_slot: Clock::get()?.slot,
         })
     }
 

@@ -175,11 +175,13 @@ impl SelfExecutable for UnstakeLSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
+                            require_keys_eq!(address, pool_account.key());
+
                             staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
                                 pool_account,
                             )?
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        Some(TokenPricingSource::MarinadeStakePool { .. }) => {
                             todo!()
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,

@@ -1,6 +1,6 @@
 // @ts-ignore
 import * as spl from '@solana/spl-token-3.x';
-import {BN} from '@coral-xyz/anchor';
+import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from 'chai';
 import {step} from 'mocha-steps';
 import {restakingPlayground} from '../restaking';
@@ -12,8 +12,8 @@ describe("transfer_hook", async function () {
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
-            restaking.tryAirdrop(user7.publicKey, 100),
-            restaking.tryAirdrop(user8.publicKey, 100),
+            restaking.tryAirdrop(user7.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
+            restaking.tryAirdrop(user8.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(100)),
         ]);
 
         await restaking.sleep(1); // ...block hash not found?

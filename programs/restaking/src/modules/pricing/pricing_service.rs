@@ -62,21 +62,21 @@ impl<'info> PricingService<'info> {
     fn get_token_pricing_source(&self, mint: &Pubkey) -> Option<&TokenPricingSource> {
         self.token_pricing_sources
             .iter()
-            .find(|(key, source)| key == mint)
+            .find(|(key, _)| key == mint)
             .map(|(_, source)| source)
     }
 
     fn get_token_value(&self, mint: &Pubkey) -> Option<&TokenValue> {
         self.token_values
             .iter()
-            .find(|(key, value)| key == mint)
+            .find(|(key, _)| key == mint)
             .map(|(_, value)| value)
     }
 
     fn get_token_value_mut(&mut self, mint: &Pubkey) -> Option<&mut TokenValue> {
         self.token_values
             .iter_mut()
-            .find(|(key, value)| key == mint)
+            .find(|(key, _)| key == mint)
             .map(|(_, value)| value)
     }
 
@@ -492,7 +492,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut token_vaule_as_atomic = pricing_service
+        let token_vaule_as_atomic = pricing_service
             .get_token_total_value_as_atomic(&basket_mint_24_10)
             .unwrap();
         let token_value_as_sol = pricing_service

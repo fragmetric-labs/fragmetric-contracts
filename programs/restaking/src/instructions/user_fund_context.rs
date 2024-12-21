@@ -3,7 +3,6 @@ use anchor_lang::solana_program::sysvar::instructions as instructions_sysvar;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::{fund::*, reward::*};
 use crate::utils::{AccountLoaderExt, PDASeeds};

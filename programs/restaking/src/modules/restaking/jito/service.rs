@@ -315,7 +315,7 @@ impl JitoRestakingVault {
         withdrawal_tickets
     }
 
-    pub fn find_vault_base_account(receipt_token_mint: &Pubkey, index: u8) -> Pubkey {
+    pub fn find_vault_base_account(receipt_token_mint: &Pubkey, _index: u8) -> Pubkey {
         let base = Pubkey::find_program_address(
             &[Self::VAULT_BASE_ACCOUNT1_SEED, receipt_token_mint.as_ref()],
             &JITO_VAULT_PROGRAM_ID,

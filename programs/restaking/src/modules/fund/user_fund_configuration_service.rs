@@ -7,7 +7,7 @@ use super::*;
 
 pub struct UserFundConfigurationService<'info: 'a, 'a> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    user: &'a Signer<'info>,
+    _user: &'a Signer<'info>,
     user_fund_account: &'a mut Account<'info, UserFundAccount>,
 }
 
@@ -25,7 +25,7 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
     ) -> Result<Self> {
         Ok(Self {
             receipt_token_mint,
-            user,
+            _user: user,
             user_fund_account,
         })
     }

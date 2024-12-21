@@ -198,11 +198,11 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         return this.program.account;
     }
 
-    public async tryAirdrop(account: web3.PublicKey, sol = 100) {
+    public async tryAirdrop(account: web3.PublicKey, lamports: anchor.BN = new anchor.BN(100 * web3.LAMPORTS_PER_SOL)) {
         let [txSig, { blockhash, lastValidBlockHeight }] = await Promise.all([
             this.connection.requestAirdrop(
                 account,
-                sol * web3.LAMPORTS_PER_SOL
+                lamports.toNumber()
             ),
             this.connection.getLatestBlockhash(),
         ]);
@@ -213,7 +213,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             signature: txSig,
         });
         const balance = new anchor.BN((await this.connection.getBalance(account)).toString());
-        logger.debug(`SOL airdropped (+${sol}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
+        logger.debug(`SOL airdropped (+${this.lamportsToSOL(lamports)}): ${this.lamportsToSOL(balance)}`.padEnd(LOG_PAD_LARGE), account.toString());
     }
 
     public getConstant(name: ExtractConstantNames<IDL>): string {

@@ -159,6 +159,7 @@ pub mod restaking {
 
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        deposit_enabled: bool,
         withdrawal_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
@@ -168,6 +169,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_fund_strategy(
+            deposit_enabled,
             withdrawal_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
@@ -178,6 +180,7 @@ pub mod restaking {
 
     pub fn fund_manager_update_sol_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+        sol_depositable: bool,
         sol_accumulated_deposit_capacity_amount: u64,
         sol_accumulated_deposit_amount: Option<u64>,
         sol_withdrawable: bool,
@@ -189,6 +192,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_update_sol_strategy(
+            sol_depositable,
             sol_accumulated_deposit_capacity_amount,
             sol_accumulated_deposit_amount,
             sol_withdrawable,
@@ -202,6 +206,7 @@ pub mod restaking {
     pub fn fund_manager_update_supported_token_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         token_mint: Pubkey,
+        token_depositable: bool,
         token_accumulated_deposit_capacity_amount: u64,
         token_accumulated_deposit_amount: Option<u64>,
         token_withdrawable: bool,
@@ -217,6 +222,7 @@ pub mod restaking {
         )?
         .process_update_supported_token_strategy(
             &token_mint,
+            token_depositable,
             token_accumulated_deposit_capacity_amount,
             token_accumulated_deposit_amount,
             token_withdrawable,
@@ -517,6 +523,46 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn operator_donate_sol_to_fund<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundDonationContext<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_donate_sol(
+            &ctx.accounts.operator,
+            &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
+            ctx.remaining_accounts,
+            amount,
+        )?);
+
+        Ok(())
+    }
+
+    pub fn operator_donate_supported_token_to_fund<'info>(
+        ctx: Context<'_, '_, 'info, 'info, OperatorFundSupportedTokenDonationContext<'info>>,
+        amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_donate_supported_token(
+            &ctx.accounts.operator,
+            &ctx.accounts.supported_token_program,
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.fund_supported_token_reserve_account,
+            &ctx.accounts.operator_supported_token_account,
+            ctx.remaining_accounts,
+            amount,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // OperatorRewardContext
     ////////////////////////////////////////////
@@ -683,8 +729,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn user_request_withdrawal(
-        ctx: Context<UserFundContext>,
+    pub fn user_request_withdrawal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         receipt_token_amount: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
@@ -701,14 +747,15 @@ pub mod restaking {
         .process_request_withdrawal(
             &mut ctx.accounts.receipt_token_lock_account,
             supported_token_mint,
+            ctx.remaining_accounts,
             receipt_token_amount,
         )?);
 
         Ok(())
     }
 
-    pub fn user_cancel_withdrawal_request(
-        ctx: Context<UserFundContext>,
+    pub fn user_cancel_withdrawal_request<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         request_id: u64,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
@@ -723,6 +770,7 @@ pub mod restaking {
         )?
         .process_cancel_withdrawal_request(
             &mut ctx.accounts.receipt_token_lock_account,
+            ctx.remaining_accounts,
             request_id
         )?);
 

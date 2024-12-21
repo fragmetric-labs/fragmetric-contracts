@@ -2,7 +2,6 @@ use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::reward::*;
 use crate::utils::{AccountLoaderExt, PDASeeds};

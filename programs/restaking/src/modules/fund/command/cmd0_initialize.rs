@@ -15,7 +15,7 @@ pub struct InitializeCommandResult {}
 impl SelfExecutable for InitializeCommand {
     fn execute<'a, 'info: 'a>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        _ctx: &mut OperationCommandContext<'info, 'a>,
         _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
