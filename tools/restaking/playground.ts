@@ -2223,9 +2223,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const executedCommand = tx.event.operatorRanFundCommand.command;
         const commandResult = tx.event.operatorRanFundCommand.result;
         const commandName = Object.keys(executedCommand)[0];
-        const commandArgs = executedCommand[commandName][0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
-        console.log(commandArgs, commandResult);
+        console.log(executedCommand[commandName][0], commandResult && commandResult[commandName][0]);
 
         return {
             event: tx.event,

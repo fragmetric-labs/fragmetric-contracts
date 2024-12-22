@@ -117,7 +117,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    /// returns (to_pool_token_account_amount, minted_pool_token_amount)
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount]
     #[inline(never)]
     pub(in crate::modules) fn deposit_sol(
         &mut self,
@@ -164,6 +164,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         let to_pool_token_account_amount = to_pool_token_account.amount;
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
+
+        msg!("STAKE#marinade: pool_token_mint={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }

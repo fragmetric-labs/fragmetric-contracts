@@ -41,13 +41,13 @@ pub struct AssetState {
     /// informative: reserved amount that users can claim for processed withdrawal requests, which is not accounted for as an asset of the fund.
     pub withdrawal_user_reserved_amount: u64,
 
-    /// asset: A receivable that the fund may charge the users requesting withdrawals.
+    /// asset: receivable amount that the fund may charge the users requesting withdrawals.
     /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
     /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
     /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub operation_receivable_amount: u64,
 
-    /// asset
+    /// asset: remaining asset for cash-in/out
     pub operation_reserved_amount: u64,
 }
 
@@ -259,7 +259,7 @@ impl AssetState {
             .filter(move |_| available)
     }
 
-    pub fn get_receipt_token_withdrawal_obligated_amount(&self, count_pending_batch: bool) -> u64 {
+    pub fn get_withdrawal_requested_receipt_token_amount(&self, count_pending_batch: bool) -> u64 {
         let mut receipt_token_amount = self
             .get_withdrawal_queued_batches_iter()
             .map(|b| b.receipt_token_amount)
@@ -268,6 +268,10 @@ impl AssetState {
             receipt_token_amount += self.withdrawal_pending_batch.receipt_token_amount;
         }
         receipt_token_amount
+    }
+
+    pub fn get_total_reserved_amount(&self) -> u64 {
+        self.operation_reserved_amount + self.withdrawal_user_reserved_amount
     }
 }
 

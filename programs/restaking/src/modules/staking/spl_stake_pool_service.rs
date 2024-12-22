@@ -103,7 +103,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(accounts)
     }
 
-    /// gives (to_pool_token_account_amount, minted_pool_token_amount)
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount]
     pub fn deposit_sol(
         &self,
         withdraw_authority: &'info AccountInfo<'info>,
@@ -116,20 +116,19 @@ impl<'info> SPLStakePoolService<'info> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64)> {
-        let mut to_pool_token_account_parsed =
+        let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
-        let to_pool_token_account_amount_before = to_pool_token_account_parsed.amount;
+        let to_pool_token_account_amount_before = to_pool_token_account.amount;
 
-        // TODO: consider using spl_stake_pool::instruction::deposit_sol_with_slippage
         let ix = spl_stake_pool::instruction::deposit_sol(
             self.spl_stake_pool_program.key,
             self.pool_account.key,
             withdraw_authority.key,
             reserve_stake_account.key,
             from_sol_account.key,
-            to_pool_token_account.key,
+            &to_pool_token_account.key(),
             manager_fee_account.key,
-            to_pool_token_account.key, // referer pool token account
+            &to_pool_token_account.key(), // referer pool token account
             self.pool_token_mint.key,
             self.pool_token_program.key,
             sol_amount,
@@ -143,19 +142,21 @@ impl<'info> SPLStakePoolService<'info> {
                 withdraw_authority.clone(),
                 reserve_stake_account.clone(),
                 from_sol_account.clone(),
-                to_pool_token_account.clone(),
+                to_pool_token_account.to_account_info(),
                 manager_fee_account.clone(),
-                to_pool_token_account.clone(),
+                to_pool_token_account.to_account_info(),
                 self.pool_token_mint.clone(),
                 self.pool_token_program.clone(),
             ],
             &[from_sol_account_signer_seeds],
         )?;
 
-        to_pool_token_account_parsed.reload()?;
-        let to_pool_token_account_amount = to_pool_token_account_parsed.amount;
+        to_pool_token_account.reload()?;
+        let to_pool_token_account_amount = to_pool_token_account.amount;
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
+
+        msg!("STAKE#spl: pool_token_mint={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }

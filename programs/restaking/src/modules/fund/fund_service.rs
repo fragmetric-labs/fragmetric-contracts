@@ -175,16 +175,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // now estimate withdrawal-request acceptable amount for each assets.
             let receipt_token_value = fund_account.receipt_token_value.try_deserialize()?;
-            let mut total_receipt_token_withdrawal_obligated_amount = 0;
+            let mut total_withdrawal_requested_receipt_token_amount = 0;
 
             // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
             for asset_value in &receipt_token_value.numerator {
                 match asset_value {
                     Asset::SOL(..) => {
                         // just count the already processing withdrawal amount
-                        total_receipt_token_withdrawal_obligated_amount += fund_account
+                        total_withdrawal_requested_receipt_token_amount += fund_account
                             .sol
-                            .get_receipt_token_withdrawal_obligated_amount(true);
+                            .get_withdrawal_requested_receipt_token_amount(true);
                     }
                     Asset::Token(token_mint, pricing_source, token_amount) => {
                         match pricing_source {
@@ -203,16 +203,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                                 *token_amount,
                                             )?,
                                         )?;
-                                        let receipt_token_withdrawal_obligated_amount = asset
-                                            .get_receipt_token_withdrawal_obligated_amount(true);
+                                        let withdrawal_requested_receipt_token_amount = asset
+                                            .get_withdrawal_requested_receipt_token_amount(true);
                                         asset.withdrawable_value_as_receipt_token_amount =
                                             asset_value_as_receipt_token_amount.saturating_sub(
-                                                receipt_token_withdrawal_obligated_amount,
+                                                withdrawal_requested_receipt_token_amount,
                                             );
 
                                         // sum the already processing withdrawal amount
-                                        total_receipt_token_withdrawal_obligated_amount +=
-                                            receipt_token_withdrawal_obligated_amount;
+                                        total_withdrawal_requested_receipt_token_amount +=
+                                            withdrawal_requested_receipt_token_amount;
                                     }
                                     _ => {}
                                 }
@@ -222,10 +222,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 }
             }
 
-            // when SOL is withdrawable, it will be assumed that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
+            // when SOL is withdrawable, it assumes that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
             fund_account.sol.withdrawable_value_as_receipt_token_amount = fund_account
                 .receipt_token_supply_amount
-                - total_receipt_token_withdrawal_obligated_amount;
+                - total_withdrawal_requested_receipt_token_amount;
         }
 
         Ok(())
@@ -1109,7 +1109,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .fund_account
             .load()?
             .get_asset_states_iter()
-            .map(|asset| asset.get_receipt_token_withdrawal_obligated_amount(false))
+            .map(|asset| asset.get_withdrawal_requested_receipt_token_amount(false))
             .sum())
     }
 
@@ -1120,7 +1120,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<u64> {
         let fund_account = self.fund_account.load()?;
         let asset = fund_account.get_asset_state(supported_token_mint)?;
-        Ok(asset.get_receipt_token_withdrawal_obligated_amount(false))
+        Ok(asset.get_withdrawal_requested_receipt_token_amount(false))
     }
 
     /// based on asset normal reserve configuration, the normal reserve amount relative to current total asset value of the fund.
@@ -1159,7 +1159,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             10_000,
         )
         .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(asset.normal_reserve_max_amount))
+        .min(asset.normal_reserve_max_amount))
     }
 
     /// total asset amount required for withdrawal in current state, including normal reserve if there is remaining asset_operation_reserved_amount after withdrawal obligation met.
@@ -1169,15 +1169,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         supported_token_mint: Option<Pubkey>,
         pricing_service: &PricingService,
     ) -> Result<u64> {
-        let sol_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_sol(
-            &self.receipt_token_mint.key(),
-            self.get_receipt_token_withdrawal_obligated_amount(supported_token_mint)?,
-        )?;
+        let asset_withdrawal_obligated_reserve_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(
+                &self.receipt_token_mint.key(),
+                self.get_receipt_token_withdrawal_obligated_amount(supported_token_mint)?,
+            )?;
         let asset_withdrawal_obligated_reserve_amount = match supported_token_mint {
-            None => sol_withdrawal_obligated_reserve_amount,
+            None => asset_withdrawal_obligated_reserve_amount_as_sol,
             Some(supported_token_mint) => pricing_service.get_sol_amount_as_token(
                 &supported_token_mint,
-                sol_withdrawal_obligated_reserve_amount,
+                asset_withdrawal_obligated_reserve_amount_as_sol,
             )?,
         };
 
@@ -1193,15 +1194,18 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 ))
     }
 
-    /// surplus/shortage will be handled in staking stage.
-    /// sol_operation_reserved_amount - sol_withdrawal_reserve_amount
-    pub(super) fn get_sol_staking_reserved_amount(
+    /// represents the surplus or shortage amount after fulfilling the withdrawal obligations for the given asset.
+    pub(super) fn get_asset_net_operation_reserved_amount(
         &self,
+        supported_token_mint: Option<Pubkey>,
         pricing_service: &PricingService,
     ) -> Result<i128> {
-        Ok(
-            self.fund_account.load()?.sol.operation_reserved_amount as i128
-                - self.get_asset_withdrawal_reserve_amount(None, pricing_service)? as i128,
-        )
+        Ok(self
+            .fund_account
+            .load()?
+            .get_asset_state(supported_token_mint)?
+            .operation_reserved_amount as i128
+            - self.get_asset_withdrawal_reserve_amount(supported_token_mint, pricing_service)?
+                as i128)
     }
 }

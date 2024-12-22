@@ -23,13 +23,13 @@ pub struct ProcessWithdrawalBatchCommand {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum ProcessWithdrawalBatchCommandState {
-    /// initializes a new command for an eligible asset.
+    /// Initializes a prepare command for an eligible asset.
     #[default]
     New,
-    /// sets up a processing command for a specific asset.
+    /// Prepares to execute withdrawal for a specific asset.
     Prepare { asset_token_mint: Option<Pubkey> },
-    /// executes a withdrawal for a specific asset and transitions to the next command,
-    /// which could be either a preparation for another asset or a staking operation.
+    /// Executes withdrawal for a specific asset and transitions to the next command,
+    /// either preparing the next eligible asset or performing a staking operation.
     Execute {
         asset_token_mint: Option<Pubkey>,
         receipt_token_amount: u64,
@@ -57,6 +57,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         Option<OperationCommandEntry>,
     )> {
         let mut result: Option<OperationCommandResult> = None;
+
         match self.state {
             ProcessWithdrawalBatchCommandState::New => {}
             ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint } => {
@@ -413,14 +414,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
             }
         }
 
-        // prepare next command
+        // transition to next command
         Ok((
             result,
             Some({
                 let fund_account = ctx.fund_account.load()?;
                 let target_asset_token_mints = fund_account
                     .get_asset_states_iter()
-                    .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount(false) > 0)
+                    .filter(|asset| asset.get_withdrawal_requested_receipt_token_amount(false) > 0)
                     .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
                     .collect::<Vec<_>>();
 
