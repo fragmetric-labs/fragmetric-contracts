@@ -130,7 +130,7 @@ impl FundWithdrawalBatchAccount {
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(
+    pub(super) fn _update_if_needed(
         &mut self,
         receipt_token_mint: Pubkey,
         supported_token_mint: Option<Pubkey>,

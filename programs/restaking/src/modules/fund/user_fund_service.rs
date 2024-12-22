@@ -521,7 +521,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                 fund_withdrawal_batch_account.get_remaining_asset_amount_after_settled();
             {
                 let mut fund_account = self.fund_account.load_mut()?;
-                let asset_state = fund_account.get_asset_state_mut(None)?;
+                let asset_state = fund_account.get_asset_state_mut(supported_token_mint_key)?;
                 asset_state.withdrawal_user_reserved_amount -= remaining_asset_amount;
                 asset_state.operation_reserved_amount += remaining_asset_amount;
             }
