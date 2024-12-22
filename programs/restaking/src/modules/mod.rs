@@ -8,3 +8,4 @@ pub mod pricing;
 pub mod restaking;
 pub mod reward;
 pub mod staking;
+pub mod swap;

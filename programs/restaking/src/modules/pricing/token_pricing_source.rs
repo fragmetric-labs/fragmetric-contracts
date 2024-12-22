@@ -22,6 +22,9 @@ pub enum TokenPricingSource {
     FragmetricRestakingFund {
         address: Pubkey,
     },
+    OrcaLiqPool {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -41,6 +44,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::FragmetricRestakingFund { address } => {
                 write!(f, "FragmetricRestakingFund({})", address)
+            }
+            Self::OrcaLiqPool { address } => {
+                write!(f, "OrcaLiqPool({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -69,6 +75,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::FragmetricRestakingFund { address } => {
                 pod.discriminant = 5;
+                pod.address = *address;
+            }
+            TokenPricingSource::OrcaLiqPool { address } => {
+                pod.discriminant = 6;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -113,6 +123,9 @@ impl TokenPricingSourcePod {
                         address: self.address,
                     },
                     5 => TokenPricingSource::FragmetricRestakingFund {
+                        address: self.address,
+                    },
+                    6 => TokenPricingSource::OrcaLiqPool {
                         address: self.address,
                     },
                     #[cfg(all(test, not(feature = "idl-build")))]
