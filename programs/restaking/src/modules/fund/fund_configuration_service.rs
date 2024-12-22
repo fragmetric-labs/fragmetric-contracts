@@ -269,19 +269,6 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    /// all underlying assets should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
-    fn validate_asset_strategies(&self) -> Result<()> {
-        let fund_account = self.fund_account.load()?;
-        require!(
-            fund_account.sol.withdrawable == 1
-                || fund_account
-                    .get_supported_tokens_iter()
-                    .all(|supported_token| supported_token.token.withdrawable == 1),
-            errors::ErrorCode::FundInvalidConfigurationUpdateError
-        );
-        Ok(())
-    }
-
     pub fn process_update_sol_strategy(
         &mut self,
         sol_depositable: bool,
@@ -311,9 +298,17 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             fund_account
                 .sol
                 .set_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
+
+            // all underlying assets should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
+            require!(
+                fund_account.sol.withdrawable == 1
+                    || fund_account
+                        .get_supported_tokens_iter()
+                        .all(|supported_token| supported_token.token.withdrawable == 1),
+                errors::ErrorCode::FundInvalidConfigurationUpdateError
+            );
         }
 
-        self.validate_asset_strategies()?;
         self.create_fund_manager_updated_fund_event()
     }
 
@@ -332,6 +327,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
+            let sol_withdrawable = fund_account.sol.withdrawable == 1;
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
             supported_token.token.set_depositable(token_depositable);
@@ -361,9 +357,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 sol_allocation_weight,
                 sol_allocation_capacity_amount,
             )?;
+
+            // given underlying asset should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
+            require!(
+                sol_withdrawable || supported_token.token.withdrawable == 1,
+                errors::ErrorCode::FundInvalidConfigurationUpdateError
+            );
         }
 
-        self.validate_asset_strategies()?;
         self.create_fund_manager_updated_fund_event()
     }
 
