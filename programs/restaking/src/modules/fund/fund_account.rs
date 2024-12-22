@@ -307,11 +307,6 @@ impl FundAccount {
     }
 
     #[inline(always)]
-    pub fn get_withdrawal_fee_rate_as_percent(&self) -> f32 {
-        self.withdrawal_fee_rate_bps as f32 / 100.0
-    }
-
-    #[inline(always)]
     pub(super) fn get_withdrawal_fee_amount(&self, amount: u64) -> Result<u64> {
         get_proportional_amount(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
@@ -513,6 +508,10 @@ impl FundAccount {
             }
             None => &mut self.sol,
         })
+    }
+
+    pub(super) fn get_asset_states_iter(&self) -> impl Iterator<Item = &AssetState> {
+        std::iter::once(&self.sol).chain(self.get_supported_tokens_iter().map(|v| &v.token))
     }
 
     pub(super) fn deposit(

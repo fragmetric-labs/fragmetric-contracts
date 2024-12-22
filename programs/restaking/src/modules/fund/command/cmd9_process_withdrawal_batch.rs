@@ -1,6 +1,6 @@
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
+    SelfExecutable, StakeSOLCommand,
 };
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
@@ -21,27 +21,30 @@ pub struct ProcessWithdrawalBatchCommand {
     forced: bool,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum ProcessWithdrawalBatchCommandState {
-    /// supported_token_mint, None means SOL ... this is temporary implementation
-    New(Option<Pubkey>),
-    /// supported_token_mint, max_receipt_token_amount to process withdrawal
-    Process(Option<Pubkey>, u64),
-}
-
-impl Default for ProcessWithdrawalBatchCommandState {
-    fn default() -> Self {
-        Self::New(None)
-    }
+    /// initializes a new command for an eligible asset.
+    #[default]
+    New,
+    /// sets up a processing command for a specific asset.
+    Prepare { asset_token_mint: Option<Pubkey> },
+    /// executes a withdrawal for a specific asset and transitions to the next command,
+    /// which could be either a preparation for another asset or a staking operation.
+    Execute {
+        asset_token_mint: Option<Pubkey>,
+        receipt_token_amount: u64,
+    },
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ProcessWithdrawalBatchCommandResult {
-    pub supported_token_mint: Option<Pubkey>,
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
+    pub asset_token_mint: Option<Pubkey>,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
+    pub transferred_asset_revenue_amount: u64,
+    pub withdrawal_fee_rate_bps: u16,
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
@@ -53,25 +56,27 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
+        let mut result: Option<OperationCommandResult> = None;
         match self.state {
-            ProcessWithdrawalBatchCommandState::New(supported_token_mint_key) => {
-                let (receipt_token_amount_to_process, mut required_accounts) = {
+            ProcessWithdrawalBatchCommandState::New => {}
+            ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint } => {
+                let (requested_receipt_token_amount, mut required_accounts) = {
                     let fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
-                    let receipt_token_amount_to_process = fund_service
-                        .get_receipt_token_withdrawal_obligated_amount(supported_token_mint_key)?;
+                    let requested_receipt_token_amount = fund_service
+                        .get_receipt_token_withdrawal_obligated_amount(asset_token_mint)?;
 
                     let required_accounts = fund_service
-                        .find_accounts_to_process_withdrawal_batches(supported_token_mint_key)?;
+                        .find_accounts_to_process_withdrawal_batches(asset_token_mint)?;
 
-                    (receipt_token_amount_to_process, required_accounts)
+                    (requested_receipt_token_amount, required_accounts)
                 };
 
                 // to harvest program revenue (prepended)
                 required_accounts.insert(0, (PROGRAM_REVENUE_ADDRESS, true));
                 required_accounts.insert(
                     1,
-                    supported_token_mint_key
+                    asset_token_mint
                         .map(|mint| {
                             let fund_account = ctx.fund_account.load()?;
                             let supported_token = fund_account.get_supported_token(&mint)?;
@@ -88,7 +93,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 );
                 required_accounts.insert(
                     2,
-                    supported_token_mint_key
+                    asset_token_mint
                         .map(|_| (spl_associated_token_account::ID, false))
                         .unwrap_or_else(|| (Pubkey::default(), false)),
                 );
@@ -120,21 +125,24 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
                 }
 
-                let mut command = self.clone();
-                command.state = ProcessWithdrawalBatchCommandState::Process(
-                    supported_token_mint_key,
-                    receipt_token_amount_to_process,
-                );
-
-                Ok((
+                return Ok((
                     None,
-                    Some(command.with_required_accounts(required_accounts)),
-                ))
+                    Some(
+                        ProcessWithdrawalBatchCommand {
+                            state: ProcessWithdrawalBatchCommandState::Execute {
+                                asset_token_mint,
+                                receipt_token_amount: requested_receipt_token_amount,
+                            },
+                            forced: false,
+                        }
+                        .with_required_accounts(required_accounts),
+                    ),
+                ));
             }
-            ProcessWithdrawalBatchCommandState::Process(
-                supported_token_mint_key,
-                requested_receipt_token_amount,
-            ) => {
+            ProcessWithdrawalBatchCommandState::Execute {
+                asset_token_mint,
+                receipt_token_amount: requested_receipt_token_amount,
+            } => {
                 let [program_revenue_account, program_supported_token_revenue_account, optional_associated_token_account_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, optional_supported_token_mint, optional_supported_token_program, optional_fund_supported_token_reserve_account, optional_fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
@@ -143,7 +151,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                 let fund_account = ctx.fund_account.load()?;
                 let num_queued_batches = fund_account
-                    .get_asset_state(supported_token_mint_key)?
+                    .get_asset_state(asset_token_mint)?
                     .get_withdrawal_queued_batches_iter()
                     .count();
                 let num_supported_token_pricing_sources = fund_account
@@ -276,6 +284,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     processed_receipt_token_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
+                    transferred_asset_revenue_amount,
                     pricing_service,
                 ) = {
                     let mut fund_service =
@@ -302,17 +311,18 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         0,
                     )?;
 
-                    fund_service.harvest_from_treasury_account(
-                        ctx.operator,
-                        ctx.system_program,
-                        fund_treasury_account,
-                        program_revenue_account,
-                        optional_associated_token_account_program.to_option(),
-                        optional_supported_token_mint.to_option(),
-                        optional_supported_token_program.to_option(),
-                        optional_fund_supported_token_treasury_account.to_option(),
-                        program_supported_token_revenue_account.to_option(),
-                    )?;
+                    let transferred_asset_revenue_amount = fund_service
+                        .harvest_from_treasury_account(
+                            ctx.operator,
+                            ctx.system_program,
+                            fund_treasury_account,
+                            program_revenue_account,
+                            optional_associated_token_account_program.to_option(),
+                            optional_supported_token_mint.to_option(),
+                            optional_supported_token_program.to_option(),
+                            optional_fund_supported_token_treasury_account.to_option(),
+                            program_supported_token_revenue_account.to_option(),
+                        )?;
 
                     let pricing_service =
                         fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
@@ -321,6 +331,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         processed_receipt_token_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
+                        transferred_asset_revenue_amount,
                         pricing_service,
                     )
                 };
@@ -387,21 +398,65 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
                 }
 
-                return Ok((
-                    Some(
-                        ProcessWithdrawalBatchCommandResult {
-                            supported_token_mint: supported_token_mint_key,
-                            requested_receipt_token_amount,
-                            processed_receipt_token_amount,
-                            reserved_asset_user_amount,
-                            deducted_asset_fee_amount,
-                        }
-                        .into(),
-                    ),
-                    // TODO: ProcessWithdrawalBatchCommand.execute
-                    None,
-                ));
+                result = Some(
+                    ProcessWithdrawalBatchCommandResult {
+                        asset_token_mint,
+                        requested_receipt_token_amount,
+                        processed_receipt_token_amount,
+                        reserved_asset_user_amount,
+                        deducted_asset_fee_amount,
+                        transferred_asset_revenue_amount,
+                        withdrawal_fee_rate_bps: ctx.fund_account.load()?.withdrawal_fee_rate_bps,
+                    }
+                    .into(),
+                );
             }
         }
+
+        // prepare next command
+        Ok((
+            result,
+            Some({
+                let fund_account = ctx.fund_account.load()?;
+                let target_asset_token_mints = fund_account
+                    .get_asset_states_iter()
+                    .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount(false) > 0)
+                    .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
+                    .collect::<Vec<_>>();
+
+                let current_asset_token_mint = match self.state {
+                    ProcessWithdrawalBatchCommandState::New => None,
+                    ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
+                    | ProcessWithdrawalBatchCommandState::Execute {
+                        asset_token_mint, ..
+                    } => Some(asset_token_mint),
+                };
+
+                let next_asset_token_mint = match current_asset_token_mint {
+                    Some(current_asset_token_mint) => {
+                        match target_asset_token_mints
+                            .iter()
+                            .position(|&asset_token_mint| {
+                                asset_token_mint == current_asset_token_mint
+                            }) {
+                            Some(index) => {
+                                target_asset_token_mints.into_iter().skip(index + 1).next()
+                            }
+                            None => target_asset_token_mints.into_iter().next(),
+                        }
+                    }
+                    None => target_asset_token_mints.into_iter().next(),
+                };
+
+                match next_asset_token_mint {
+                    Some(asset_token_mint) => ProcessWithdrawalBatchCommand {
+                        state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
+                        forced: false,
+                    }
+                    .without_required_accounts(),
+                    None => StakeSOLCommand::default().without_required_accounts(),
+                }
+            }),
+        ))
     }
 }

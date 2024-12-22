@@ -347,7 +347,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             if !found {
                 // error if it is the first command in this tx
                 msg!(
-                    "COMMAND#{}: {:?} has not given all the required accounts",
+                    "COMMAND#{}: {:?} failed due to missing required account",
                     operation_state.next_sequence,
                     command
                 );
@@ -877,7 +877,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ))
     }
 
-    /// returns (asset_amount_transferred)
+    /// returns (transferred_asset_revenue_amount)
     pub(super) fn harvest_from_treasury_account(
         &mut self,
         payer: &Signer<'info>,
@@ -1101,6 +1101,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
         })
+    }
+
+    /// receipt token amount in the queued withdrawal batches for all assets.
+    pub(super) fn get_total_receipt_token_withdrawal_obligated_amount(&self) -> Result<u64> {
+        Ok(self
+            .fund_account
+            .load()?
+            .get_asset_states_iter()
+            .map(|asset| asset.get_receipt_token_withdrawal_obligated_amount(false))
+            .sum())
     }
 
     /// receipt token amount in the queued withdrawal batches for an asset.
