@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::modules::fund;
 
-use super::cmd3_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
+use super::cmd9_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     SelfExecutable,

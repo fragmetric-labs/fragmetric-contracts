@@ -1,18 +1,19 @@
 use anchor_lang::prelude::*;
 
-use super::cmd9_stake_sol::StakeSOLCommand;
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     SelfExecutable,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct InitializeCommand {}
+pub struct HarvestRewardCommand {
+    // TODO: HarvestRewardCommand
+}
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct InitializeCommandResult {}
+pub struct HarvestRewardCommandResult {}
 
-impl SelfExecutable for InitializeCommand {
+impl SelfExecutable for HarvestRewardCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         _ctx: &mut OperationCommandContext<'info, 'a>,
@@ -21,10 +22,7 @@ impl SelfExecutable for InitializeCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO v0.3/operation: proceed to claim_unstaked_sol command
-        Ok((
-            None,
-            Some(StakeSOLCommand::default().without_required_accounts()),
-        ))
+        // TODO: HarvestRewardCommand.execute
+        Ok((None, None))
     }
 }
