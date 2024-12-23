@@ -37,6 +37,7 @@ impl WeightedAllocationParticipant {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct WeightedAllocationStrategy<const N: usize> {
     participants: [WeightedAllocationParticipant; N],
     num_participants: usize,
@@ -65,7 +66,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         self.participants[..self.num_participants].iter_mut()
     }
 
-    fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
+    pub fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
         self.participants[..self.num_participants]
             .get(index)
             .ok_or_else(|| error!(errors::ErrorCode::IndexOutOfBoundsException))
@@ -120,33 +121,26 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     basis_participant.allocated_amount,
                     p.weight,
                     basis_participant.weight,
-                )
-                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
+                )?;
                 shortage_amounts[*i] = target_amount.saturating_sub(p.allocated_amount);
             }
 
             // first, allocate remaining resources proportionally relative to each shortages
-            let total_shortage_amount = shortage_amounts[..target_participants_count]
-                .iter()
-                .sum::<u64>();
+            let total_shortage_amount = shortage_amounts.iter().sum::<u64>();
             if total_shortage_amount > 0 {
                 let total_allocatable_amount = remaining_amount.min(total_shortage_amount);
                 let mut allocated_amount = 0;
-                for (i, shortage) in shortage_amounts[..target_participants_count]
-                    .iter()
-                    .enumerate()
-                {
+                for (i, shortage) in shortage_amounts.iter().enumerate() {
                     if *shortage == 0 {
                         continue;
                     }
-                    let p = &mut self.participants[target_participants_index[i]];
+                    let p = &mut self.participants[i];
                     let allocatable_amount = p.capacity_amount - p.allocated_amount;
                     let allocating_amount = utils::get_proportional_amount(
                         total_allocatable_amount,
                         *shortage,
                         total_shortage_amount,
-                    )
-                    .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                    )?
                     .min(allocatable_amount);
                     p.allocated_amount += allocating_amount;
                     allocated_amount += allocating_amount;
@@ -170,8 +164,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                 let p = &mut self.participants[*i];
                 let allocatable_amount = p.capacity_amount.saturating_sub(p.allocated_amount);
                 let allocating_amount =
-                    utils::get_proportional_amount(remaining_amount, p.weight, total_weight)
-                        .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                    utils::get_proportional_amount(remaining_amount, p.weight, total_weight)?
                         .min(allocatable_amount);
                 p.allocated_amount += allocating_amount;
                 allocated_amount += allocating_amount;
@@ -264,8 +257,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     required_amount,
                     p.allocated_amount,
                     total_allocated_amount,
-                )
-                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                )?
                 .min(p.allocated_amount);
                 p.allocated_amount -= deallocating_amount;
                 deallocated_amount += deallocating_amount;
@@ -482,5 +474,48 @@ mod tests {
         assert_eq!(strategy.participants[1].allocated_amount, 100);
         assert_eq!(strategy.participants[2].allocated_amount, 100);
         assert_eq!(strategy.participants[3].allocated_amount, 100);
+    }
+
+    #[test]
+    fn test_edge_scenario() {
+        let mut strategy = WeightedAllocationStrategy::<4>::new([
+            WeightedAllocationParticipant {
+                weight: 0,
+                allocated_amount: 1,
+                capacity_amount: 18000000000000000000,
+                last_delta_amount: 0,
+            },
+            WeightedAllocationParticipant {
+                weight: 90,
+                allocated_amount: 0,
+                capacity_amount: 18000000000000000000,
+                last_delta_amount: 0,
+            },
+            WeightedAllocationParticipant {
+                weight: 5,
+                allocated_amount: 1,
+                capacity_amount: 18000000000000000000,
+                last_delta_amount: 0,
+            },
+            WeightedAllocationParticipant {
+                weight: 5,
+                allocated_amount: 1,
+                capacity_amount: 18000000000000000000,
+                last_delta_amount: 0,
+            },
+        ]);
+
+        strategy.put(2000).unwrap();
+        assert_eq!(strategy.participants[0].allocated_amount, 1);
+        assert_eq!(strategy.participants[1].allocated_amount, 1802);
+        assert_eq!(strategy.participants[2].allocated_amount, 100);
+        assert_eq!(strategy.participants[3].allocated_amount, 100);
+    }
+
+    #[test]
+    fn test_edge_scenario2() {
+        let mut strategy = WeightedAllocationStrategy::<0>::new([]);
+
+        assert_eq!(strategy.put(2000).unwrap(), 2000);
     }
 }

@@ -1613,7 +1613,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
-    public async runUserDepositSOL(user: web3.Keypair, amount: BN, depositMetadata?: IdlTypes<Restaking>["depositMetadata"], depositMetadataSigningKeypair?: web3.Keypair) {
+    public async runUserDepositSOL(user: web3.Keypair, amount: BN, depositMetadata: IdlTypes<Restaking>["depositMetadata"]|null = null, depositMetadataSigningKeypair: web3.Keypair|null = null) {
         let depositMetadataInstruction: web3.TransactionInstruction[] = [];
         if (depositMetadata) {
             depositMetadataSigningKeypair = depositMetadataSigningKeypair ?? this.keychain.getKeypair("ADMIN");
@@ -1627,6 +1627,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 })
             );
         }
+
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
@@ -1675,8 +1676,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         user: web3.Keypair,
         tokenSymbol: keyof typeof this.supportedTokenMetadata,
         amount: BN,
-        depositMetadata?: IdlTypes<Restaking>["depositMetadata"],
-        depositMetadataSigningKeypair?: web3.Keypair
+        depositMetadata: IdlTypes<Restaking>["depositMetadata"] | null = null,
+        depositMetadataSigningKeypair: web3.Keypair | null = null
     ) {
         let depositMetadataInstruction: web3.TransactionInstruction[] = [];
         if (depositMetadata) {
@@ -1829,7 +1830,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(
-            `requested withdrawal: ${this.lamportsToFragSOL(amount)} -> ${supported_token_mint ?? 'SOL'} #${event.userRequestedWithdrawalFromFund.requestId.toString()}/${event.userRequestedWithdrawalFromFund.batchId.toString()}`.padEnd(LOG_PAD_LARGE),
+            `requested withdrawal: ${this.lamportsToFragSOL(event.userRequestedWithdrawalFromFund.requestedReceiptTokenAmount)} -> ${supported_token_mint ?? 'SOL'} #${event.userRequestedWithdrawalFromFund.requestId.toString()}/${event.userRequestedWithdrawalFromFund.batchId.toString()}`.padEnd(LOG_PAD_LARGE),
             user.publicKey.toString()
         );
         const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLUserTokenAccount, fragSOLLockAccount] = await Promise.all([
@@ -1956,7 +1957,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorProcessWithdrawalBatches(supported_token_mint: web3.PublicKey|null = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
@@ -1973,9 +1974,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 processWithdrawalBatch: {
                     0: {
                         state: {
-                            new: {
-                                0: supported_token_mint ?? null,
-                            },
+                            new: {},
                         },
                         forced: forced,
                     }
@@ -2224,9 +2223,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const executedCommand = tx.event.operatorRanFundCommand.command;
         const commandResult = tx.event.operatorRanFundCommand.result;
         const commandName = Object.keys(executedCommand)[0];
-        const commandArgs = executedCommand[commandName][0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
-        console.log(commandArgs, commandResult);
+        console.log(executedCommand[commandName][0], commandResult && commandResult[commandName][0]);
 
         return {
             event: tx.event,

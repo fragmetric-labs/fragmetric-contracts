@@ -59,7 +59,7 @@ impl OperationState {
         // deal with no_transition state, to adjust next command.
         if self.no_transition == 1 {
             let prev_command: Option<OperationCommandEntry> =
-                self.next_command.try_deserialize()?;
+                self.next_command.try_deserialize().unwrap_or_default();
             if let (Some(prev_entry), Some(next_entry)) = (&prev_command, &next_command) {
                 if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.

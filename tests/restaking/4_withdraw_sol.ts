@@ -87,10 +87,10 @@ describe("withdraw SOL", async () => {
         expect(res2.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber());
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessWithdrawalBatches(null, user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
+        await expect(restaking.runOperatorProcessWithdrawalBatches(user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
 
         await restaking.sleep(1);
-        const res3 = await restaking.runOperatorProcessWithdrawalBatches(null, restaking.keychain.getKeypair('FUND_MANAGER'), true);
+        const res3 = await restaking.runOperatorProcessWithdrawalBatches(restaking.keychain.getKeypair('FUND_MANAGER'), true);
         const programRevenueAmount1 = await restaking.getProgramRevenueAccountBalance();
 
         expect(res3.fragSOLFund.sol.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.sol.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');

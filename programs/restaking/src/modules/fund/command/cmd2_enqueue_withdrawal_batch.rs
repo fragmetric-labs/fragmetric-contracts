@@ -1,10 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund;
-
-use super::cmd3_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
+use super::cmd9_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
 use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     SelfExecutable,
 };
 
@@ -16,6 +14,7 @@ pub struct EnqueueWithdrawalBatchCommand {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct EnqueueWithdrawalBatchCommandResult {
     pub enqueued_receipt_token_amount: u64,
+    pub total_queued_receipt_token_amount: u64,
 }
 
 impl SelfExecutable for EnqueueWithdrawalBatchCommand {
@@ -28,16 +27,22 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
         Option<OperationCommandEntry>,
     )> {
         let enqueued_receipt_token_amount =
-            fund::FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                 .enqueue_withdrawal_batches(self.forced)?;
+        let total_queued_receipt_token_amount = ctx
+            .fund_account
+            .load()?
+            .get_total_receipt_token_withdrawal_obligated_amount();
 
         Ok((
             Some(
                 EnqueueWithdrawalBatchCommandResult {
                     enqueued_receipt_token_amount,
+                    total_queued_receipt_token_amount,
                 }
                 .into(),
             ),
+            // TODO/v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
             Some(ProcessWithdrawalBatchCommand::default().without_required_accounts()),
         ))
     }

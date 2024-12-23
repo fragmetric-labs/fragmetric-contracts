@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use spl_stake_pool::state::StakePool;
 use std::cmp;
 
 use crate::errors::ErrorCode;
@@ -26,7 +27,7 @@ impl Drop for NormalizedTokenPoolService<'_, '_> {
     }
 }
 
-impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
+impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
         normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
@@ -55,74 +56,69 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         })
     }
 
-    // TODO: move it to fund operation side
-    pub(in crate::modules) fn get_denormalize_tokens_asset(
-        &self,
-        _pricing_service: &PricingService,
-        _denormalize_amount_as_sol: u64,
-    ) -> Result<Vec<(Pubkey, Pubkey, u64)>> {
-        // let mut participants = vec![];
-        // let supported_tokens = self
-        //     .normalized_token_pool_account
-        //     .supported_tokens
-        //     .iter()
-        //     .filter_map(|t| {
-        //         if t.locked_amount == 0 {
-        //             None
-        //         } else {
-        //             let reserved_amount_as_sol = pricing_service
-        //                 .get_token_amount_as_sol(&t.mint, t.locked_amount)
-        //                 .unwrap();
-        //             participants.push(WeightedAllocationParticipant::new(
-        //                 reserved_amount_as_sol,
-        //                 0,
-        //                 u64::MAX,
-        //             ));
-        //             Some(t)
-        //         }
-        //     })
-        //     .collect::<Vec<_>>();
-        //
-        // WeightedAllocationStrategy::put(&mut participants, denormalize_amount_as_sol);
-
-        let supported_tokens_state = vec![];
-        // for (i, supported_token) in supported_tokens.iter().enumerate() {
-        //     let need_to_denormalize_amount = pricing_service.get_sol_amount_as_token(
-        //         &supported_token.mint,
-        //         participants[i].get_last_put_amount()?,
-        //     )?;
-        //
-        //     supported_tokens_state.push((
-        //         supported_token.mint,
-        //         supported_token.program,
-        //         cmp::min(supported_token.locked_amount, need_to_denormalize_amount),
-        //     ));
-        // }
-        Ok(supported_tokens_state)
+    pub(in crate::modules) fn deserialize_pool_account(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<Account<'info, NormalizedTokenPoolAccount>> {
+        Account::<NormalizedTokenPoolAccount>::try_from(pool_account_info)
     }
 
+    /// returns (pubkey, writable) of [normalized_token_pool_account, normalized_token_mint, normalized_token_program]
+    fn find_accounts_to_new(
+        pool_account: &Account<'info, NormalizedTokenPoolAccount>,
+    ) -> Vec<(Pubkey, bool)> {
+        vec![
+            (pool_account.key(), true),
+            (pool_account.normalized_token_mint, true),
+            (pool_account.normalized_token_program, false),
+        ]
+    }
+
+    /// returns (pubkey, writable) of [normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, pool_supported_token_reserve_account]
+    pub fn find_accounts_to_normalize_supported_token(
+        pool_account_info: &'info AccountInfo<'info>,
+        supported_token_mint: &'a Pubkey,
+        supported_token_program: &'a Pubkey,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+        let mut accounts = Self::find_accounts_to_new(&pool_account);
+        accounts.extend(vec![
+            (*supported_token_mint, false),
+            (*supported_token_program, false),
+            (
+                pool_account.find_supported_token_reserve_account_address(supported_token_mint)?,
+                true,
+            ),
+        ]);
+        Ok(accounts)
+    }
+
+    /// returns [to_normalized_token_account_amount, minted_normalized_token_amount]
     pub(in crate::modules) fn normalize_supported_token(
         &mut self,
-        to_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
-        from_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-        pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
+        pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
 
+        // variant
+        to_normalized_token_account: &mut InterfaceAccount<'info, TokenAccount>,
+        from_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_supported_token_account_signer: &AccountInfo<'info>,
         from_supported_token_account_signer_seeds: &[&[&[u8]]],
 
         supported_token_amount: u64,
 
         pricing_service: &mut PricingService,
-    ) -> Result<()> {
+    ) -> Result<(u64, u64)> {
         require_keys_eq!(
-            pool_supported_token_account.key(),
+            pool_supported_token_reserve_account.key(),
             self.normalized_token_pool_account
                 .get_supported_token(&supported_token_mint.key())?
-                .lock_account
+                .reserve_account
         );
         require_gt!(supported_token_amount, 0);
+
+        let to_normalized_token_account_amount_before = to_normalized_token_account.amount;
 
         let supported_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&supported_token_mint.key(), supported_token_amount)?;
@@ -146,7 +142,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                 anchor_spl::token_interface::TransferChecked {
                     from: from_supported_token_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
-                    to: pool_supported_token_account.to_account_info(),
+                    to: pool_supported_token_reserve_account.to_account_info(),
                     authority: from_supported_token_account_signer.to_account_info(),
                 },
                 from_supported_token_account_signer_seeds,
@@ -171,17 +167,30 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         self.normalized_token_pool_account
             .reload_normalized_token_supply(self.normalized_token_mint)?;
         self.update_asset_values(pricing_service)?;
-        Ok(())
+
+        to_normalized_token_account.reload()?;
+        let to_normalized_token_account_amount = to_normalized_token_account.amount;
+        let minted_normalized_token_amount =
+            to_normalized_token_account_amount - to_normalized_token_account_amount_before;
+
+        msg!("NORMALIZE#: pool_token_mint={}, supported_token_mint={}, normalized_supported_token_amount={}, to_normalized_token_account_amount={}, minted_normalized_token_amount={}", self.normalized_token_mint.key(), supported_token_mint.key(), supported_token_amount, to_normalized_token_account_amount, minted_normalized_token_amount);
+
+        Ok((
+            to_normalized_token_account_amount,
+            minted_normalized_token_amount,
+        ))
     }
 
     pub(in crate::modules) fn denormalize_supported_token(
         &mut self,
-        from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
-        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-        pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
+        pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
 
+        // variant
+        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_normalized_token_account_signer: &AccountInfo<'info>,
         from_normalized_token_account_signer_seeds: &[&[&[u8]]],
 
@@ -190,10 +199,10 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
         pricing_service: &mut PricingService,
     ) -> Result<()> {
         require_keys_eq!(
-            pool_supported_token_account.key(),
+            pool_supported_token_reserve_account.key(),
             self.normalized_token_pool_account
                 .get_supported_token(&supported_token_mint.key())?
-                .lock_account
+                .reserve_account
         );
         require_gt!(normalized_token_amount, 0);
 
@@ -223,7 +232,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             CpiContext::new_with_signer(
                 supported_token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
-                    from: pool_supported_token_account.to_account_info(),
+                    from: pool_supported_token_reserve_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     to: to_supported_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),
@@ -244,10 +253,12 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
     pub fn process_initialize_withdrawal_account(
         &mut self,
+        // variant
         withdrawal_account: &mut Account<'info, NormalizedTokenWithdrawalAccount>,
         withdrawal_account_bump: u8,
         from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_normalized_token_account_signer: &Signer<'info>,
+
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
         withdrawal_account.initialize(
@@ -288,8 +299,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
                         normalized_token_amount_as_sol,
                         supported_token_total_value_as_sol,
                         pool_total_value_as_sol,
-                    )
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                    )?;
                 claimable_tokens_value_as_sol += supported_token_claimable_amount_as_sol;
 
                 let supported_token_claimable_amount = pricing_service.get_sol_amount_as_token(
@@ -359,15 +369,16 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
 
     pub fn process_withdraw(
         &mut self,
-        withdrawal_account: &mut Account<'info, NormalizedTokenWithdrawalAccount>,
-        pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
-        to_rent_lamports_account: &UncheckedAccount<'info>,
-
+        // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
+        pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
 
+        // variant
+        withdrawal_account: &mut Account<'info, NormalizedTokenWithdrawalAccount>,
         withdrawal_authority_signer: &Signer<'info>,
+        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        to_rent_lamports_account: &UncheckedAccount<'info>,
     ) -> Result<()> {
         withdrawal_account.update_if_needed();
         require!(
@@ -391,7 +402,7 @@ impl<'info, 'a> NormalizedTokenPoolService<'info, 'a> {
             CpiContext::new_with_signer(
                 supported_token_program.to_account_info(),
                 anchor_spl::token_interface::TransferChecked {
-                    from: pool_supported_token_account.to_account_info(),
+                    from: pool_supported_token_reserve_account.to_account_info(),
                     mint: supported_token_mint.to_account_info(),
                     to: to_supported_token_account.to_account_info(),
                     authority: self.normalized_token_pool_account.to_account_info(),

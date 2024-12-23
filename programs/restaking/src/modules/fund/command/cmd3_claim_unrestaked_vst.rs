@@ -1,16 +1,3 @@
-use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    OperationReservedRestakeToken, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
-};
-use crate::constants::{ADMIN_PUBKEY, JITO_VAULT_PROGRAM_FEE_WALLET};
-use crate::errors;
-use crate::modules::fund::{
-    FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
-};
-use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
-use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::{AccountInfoExt, PDASeeds};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token::Token;
@@ -18,6 +5,19 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::config::Config;
 use std::cmp;
+
+use crate::constants::{ADMIN_PUBKEY, JITO_VAULT_PROGRAM_FEE_WALLET};
+use crate::errors;
+use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
+use crate::modules::pricing::TokenPricingSource;
+use crate::modules::restaking::JitoRestakingVaultService;
+use crate::utils::{AccountInfoExt, PDASeeds};
+
+use super::{
+    FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
+    WeightedAllocationParticipant, WeightedAllocationStrategy,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ClaimUnrestakedVSTCommand {
@@ -398,19 +398,20 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         FundService::new(&mut ctx.receipt_token_mint, &mut ctx.fund_account)?
                             .new_pricing_service(pricing_source)?;
 
-                    let mut denormalize_supported_tokens_state = vec![];
-                    for (token_mint, token_program, operation_reserved_amount) in
-                        normalized_token_pool_service.get_denormalize_tokens_asset(
-                            &pricing_service,
-                            *need_to_denormalize_amount_as_sol,
-                        )?
-                    {
-                        denormalize_supported_tokens_state.push(DenormalizeSupportedTokenAsset {
-                            token_mint,
-                            token_program,
-                            operation_reserved_amount,
-                        });
-                    }
+                    let mut denormalize_supported_tokens_state =
+                        Vec::<DenormalizeSupportedTokenAsset>::new(); // vec![];
+                                                                      // for (token_mint, token_program, operation_reserved_amount) in
+                                                                      //     normalized_token_pool_service.get_denormalize_tokens_asset(
+                                                                      //         &pricing_service,
+                                                                      //         *need_to_denormalize_amount_as_sol,
+                                                                      //     )?
+                                                                      // {
+                                                                      //     denormalize_supported_tokens_state.push(DenormalizeSupportedTokenAsset {
+                                                                      //         token_mint,
+                                                                      //         token_program,
+                                                                      //         operation_reserved_amount,
+                                                                      //     });
+                                                                      // }
 
                     match denormalize_supported_tokens_state.first() {
                         Some(restake_supported_token_state) => {
@@ -533,11 +534,11 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     )?;
 
                     normalized_token_pool_service.denormalize_supported_token(
-                        &normalized_token_account_parsed,
-                        &supported_token_account_parsed,
-                        &pool_supported_token_account_parsed,
                         &supported_token_mint_parsed,
                         &supported_token_program_parsed,
+                        &pool_supported_token_account_parsed,
+                        &normalized_token_account_parsed,
+                        &supported_token_account_parsed,
                         &ctx.fund_account.as_ref(),
                         &[&ctx.fund_account.load()?.get_seeds().as_ref()],
                         reserved_restake_token.operation_reserved_amount,

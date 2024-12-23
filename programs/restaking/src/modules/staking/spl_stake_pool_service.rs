@@ -1,7 +1,3 @@
-use std::num::NonZeroU32;
-
-use crate::errors;
-use crate::utils::SystemProgramExt;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
@@ -9,6 +5,10 @@ use anchor_lang::solana_program::stake::state::StakeStateV2;
 use anchor_spl::token_interface::TokenAccount;
 use spl_stake_pool::big_vec::BigVec;
 use spl_stake_pool::state::StakePool;
+use std::num::NonZeroU32;
+
+use crate::errors;
+use crate::utils::SystemProgramExt;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum AvailableWithdrawals {
@@ -68,7 +68,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(stake_account)
     }
 
-    fn find_accounts_for_new(
+    fn find_accounts_to_new(
         pool_account_info: &AccountInfo,
         pool_account: &StakePool,
     ) -> Vec<(Pubkey, bool)> {
@@ -86,7 +86,7 @@ impl<'info> SPLStakePoolService<'info> {
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
         accounts.extend([
             // for self.deposit_sol
             (
@@ -103,7 +103,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(accounts)
     }
 
-    /// gives (to_pool_token_account_amount, minted_pool_token_amount)
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
     pub fn deposit_sol(
         &self,
         withdraw_authority: &'info AccountInfo<'info>,
@@ -115,21 +115,20 @@ impl<'info> SPLStakePoolService<'info> {
         from_sol_account_signer_seeds: &[&[u8]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64)> {
-        let mut to_pool_token_account_parsed =
+    ) -> Result<(u64, u64, (u64, u64))> {
+        let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
-        let to_pool_token_account_amount_before = to_pool_token_account_parsed.amount;
+        let to_pool_token_account_amount_before = to_pool_token_account.amount;
 
-        // TODO: consider using spl_stake_pool::instruction::deposit_sol_with_slippage
         let ix = spl_stake_pool::instruction::deposit_sol(
             self.spl_stake_pool_program.key,
             self.pool_account.key,
             withdraw_authority.key,
             reserve_stake_account.key,
             from_sol_account.key,
-            to_pool_token_account.key,
+            &to_pool_token_account.key(),
             manager_fee_account.key,
-            to_pool_token_account.key, // referer pool token account
+            &to_pool_token_account.key(), // referer pool token account
             self.pool_token_mint.key,
             self.pool_token_program.key,
             sol_amount,
@@ -143,28 +142,45 @@ impl<'info> SPLStakePoolService<'info> {
                 withdraw_authority.clone(),
                 reserve_stake_account.clone(),
                 from_sol_account.clone(),
-                to_pool_token_account.clone(),
+                to_pool_token_account.to_account_info(),
                 manager_fee_account.clone(),
-                to_pool_token_account.clone(),
+                to_pool_token_account.to_account_info(),
                 self.pool_token_mint.clone(),
                 self.pool_token_program.clone(),
             ],
             &[from_sol_account_signer_seeds],
         )?;
 
-        to_pool_token_account_parsed.reload()?;
-        let to_pool_token_account_amount = to_pool_token_account_parsed.amount;
+        to_pool_token_account.reload()?;
+        let to_pool_token_account_amount = to_pool_token_account.amount;
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
+        let deposit_fee = {
+            let pool_account = Self::deserialize_pool_account(self.pool_account)?;
+            if pool_account.sol_deposit_fee.numerator == 0 {
+                (0, 1)
+            } else {
+                (
+                    pool_account.sol_deposit_fee.numerator,
+                    pool_account.sol_deposit_fee.denominator,
+                )
+            }
+        };
 
-        Ok((to_pool_token_account_amount, minted_pool_token_amount))
+        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
+
+        Ok((
+            to_pool_token_account_amount,
+            minted_pool_token_amount,
+            deposit_fee,
+        ))
     }
 
     pub fn find_accounts_to_get_available_unstake_account(
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
         accounts.extend([
             (pool_account.reserve_stake, true),
             (pool_account.validator_list, true),

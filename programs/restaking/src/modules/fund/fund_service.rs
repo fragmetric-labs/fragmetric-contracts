@@ -21,8 +21,8 @@ use super::command::{
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
-    receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    fund_account: &'a mut AccountLoader<'info, FundAccount>,
+    pub receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+    pub fund_account: &'a mut AccountLoader<'info, FundAccount>,
     current_timestamp: i64,
     current_slot: u64,
 }
@@ -175,16 +175,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // now estimate withdrawal-request acceptable amount for each assets.
             let receipt_token_value = fund_account.receipt_token_value.try_deserialize()?;
-            let mut total_receipt_token_withdrawal_obligated_amount = 0;
+            let mut total_withdrawal_requested_receipt_token_amount = 0;
 
             // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
             for asset_value in &receipt_token_value.numerator {
                 match asset_value {
                     Asset::SOL(..) => {
                         // just count the already processing withdrawal amount
-                        total_receipt_token_withdrawal_obligated_amount += fund_account
+                        total_withdrawal_requested_receipt_token_amount += fund_account
                             .sol
-                            .get_receipt_token_withdrawal_obligated_amount(true);
+                            .get_receipt_token_withdrawal_requested_amount();
                     }
                     Asset::Token(token_mint, pricing_source, token_amount) => {
                         match pricing_source {
@@ -203,16 +203,16 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                                 *token_amount,
                                             )?,
                                         )?;
-                                        let receipt_token_withdrawal_obligated_amount = asset
-                                            .get_receipt_token_withdrawal_obligated_amount(true);
+                                        let withdrawal_requested_receipt_token_amount =
+                                            asset.get_receipt_token_withdrawal_requested_amount();
                                         asset.withdrawable_value_as_receipt_token_amount =
                                             asset_value_as_receipt_token_amount.saturating_sub(
-                                                receipt_token_withdrawal_obligated_amount,
+                                                withdrawal_requested_receipt_token_amount,
                                             );
 
                                         // sum the already processing withdrawal amount
-                                        total_receipt_token_withdrawal_obligated_amount +=
-                                            receipt_token_withdrawal_obligated_amount;
+                                        total_withdrawal_requested_receipt_token_amount +=
+                                            withdrawal_requested_receipt_token_amount;
                                     }
                                     _ => {}
                                 }
@@ -222,10 +222,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 }
             }
 
-            // when SOL is withdrawable, it will be assumed that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
+            // when SOL is withdrawable, it assumes that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
             fund_account.sol.withdrawable_value_as_receipt_token_amount = fund_account
                 .receipt_token_supply_amount
-                - total_receipt_token_withdrawal_obligated_amount;
+                - total_withdrawal_requested_receipt_token_amount;
         }
 
         Ok(())
@@ -347,7 +347,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             if !found {
                 // error if it is the first command in this tx
                 msg!(
-                    "COMMAND#{}: {:?} has not given all the required accounts",
+                    "COMMAND#{}: {:?} failed due to missing required account",
                     operation_state.next_sequence,
                     command
                 );
@@ -447,11 +447,12 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(enqueued)
     }
 
-    /// returns [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, withdrawal_batch_accounts @ ..]
+    /// returns (num_processing_batches, [receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, supported_token_mint, supported_token_program, fund_supported_token_reserve_account, fund_supported_token_treasury_account, withdrawal_batch_accounts @ ..])
     pub(super) fn find_accounts_to_process_withdrawal_batches(
         &self,
         supported_token_mint: Option<Pubkey>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
+        forced: bool,
+    ) -> Result<(u8, Vec<(Pubkey, bool)>)> {
         let fund_account = self.fund_account.load()?;
         let supported_token = supported_token_mint
             .map(|mint| {
@@ -459,9 +460,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             })
             .unwrap_or_else(|| Ok(None))?;
         let asset = fund_account.get_asset_state(supported_token_mint)?;
+        let withdrawal_batches = asset
+            .get_queued_withdrawal_batches_to_process_iter(
+                fund_account.withdrawal_batch_threshold_interval_seconds,
+                self.current_timestamp,
+                forced,
+            )
+            .collect::<Vec<_>>();
 
-        let mut accounts =
-            Vec::with_capacity(8 + asset.get_withdrawal_queued_batches_iter().count());
+        let mut accounts = Vec::with_capacity(8 + withdrawal_batches.len());
         accounts.extend([
             (fund_account.receipt_token_program, false),
             (
@@ -495,7 +502,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 })
                 .unwrap_or_else(|| Ok((Pubkey::default(), false)))?,
         ]);
-        accounts.extend(asset.get_withdrawal_queued_batches_iter().map(|batch| {
+        let num_withdrawal_batches = withdrawal_batches.len() as u8;
+        accounts.extend(withdrawal_batches.into_iter().map(|batch| {
             (
                 FundWithdrawalBatchAccount::find_account_address(
                     &self.receipt_token_mint.key(),
@@ -506,7 +514,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 true,
             )
         }));
-        Ok(accounts)
+        Ok((num_withdrawal_batches, accounts))
     }
 
     /// returns [processed_receipt_token_amount, reserved_asset_user_amount, deducted_asset_fee_amount]
@@ -577,7 +585,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // examine withdrawal batches to process with current fund status
             let asset = fund_account.get_asset_state(supported_token_mint_key)?;
-            for batch in asset.get_withdrawal_queued_batches_iter_to_process(
+            for batch in asset.get_queued_withdrawal_batches_to_process_iter(
                 fund_account.withdrawal_batch_threshold_interval_seconds,
                 self.current_timestamp,
                 forced,
@@ -877,7 +885,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ))
     }
 
-    /// returns (asset_amount_transferred)
+    /// returns (transferred_asset_revenue_amount)
     pub(super) fn harvest_from_treasury_account(
         &mut self,
         payer: &Signer<'info>,
@@ -1101,97 +1109,5 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
         })
-    }
-
-    /// receipt token amount in the queued withdrawal batches for an asset.
-    pub(super) fn get_receipt_token_withdrawal_obligated_amount(
-        &self,
-        supported_token_mint: Option<Pubkey>,
-    ) -> Result<u64> {
-        let fund_account = self.fund_account.load()?;
-        let asset = fund_account.get_asset_state(supported_token_mint)?;
-        Ok(asset.get_receipt_token_withdrawal_obligated_amount(false))
-    }
-
-    /// based on asset normal reserve configuration, the normal reserve amount relative to current total asset value of the fund.
-    fn get_asset_withdrawal_normal_reserve_amount(
-        &self,
-        supported_token_mint: Option<Pubkey>,
-    ) -> Result<u64> {
-        let fund_account = self.fund_account.load()?;
-        let asset = fund_account.get_asset_state(supported_token_mint)?;
-        let total_asset_amount = fund_account
-            .receipt_token_value
-            .try_deserialize()?
-            .numerator
-            .iter()
-            .find_map(|asset| match asset {
-                Asset::SOL(sol_amount) => {
-                    if supported_token_mint.is_none() {
-                        Some(*sol_amount)
-                    } else {
-                        None
-                    }
-                }
-                Asset::Token(mint, _, token_amount) => {
-                    if supported_token_mint.is_some() && supported_token_mint.unwrap() == *mint {
-                        Some(*token_amount)
-                    } else {
-                        None
-                    }
-                }
-            })
-            .unwrap_or_default();
-
-        Ok(get_proportional_amount(
-            total_asset_amount,
-            asset.normal_reserve_rate_bps as u64,
-            10_000,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
-        .max(asset.normal_reserve_max_amount))
-    }
-
-    /// total asset amount required for withdrawal in current state, including normal reserve if there is remaining asset_operation_reserved_amount after withdrawal obligation met.
-    /// asset_withdrawal_obligated_reserve_amount + MIN(asset_withdrawal_normal_reserve_amount, MAX(0, asset_operation_reserved_amount - asset_withdrawal_obligated_reserve_amount))
-    fn get_asset_withdrawal_reserve_amount(
-        &self,
-        supported_token_mint: Option<Pubkey>,
-        pricing_service: &PricingService,
-    ) -> Result<u64> {
-        let sol_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_sol(
-            &self.receipt_token_mint.key(),
-            self.get_receipt_token_withdrawal_obligated_amount(supported_token_mint)?,
-        )?;
-        let asset_withdrawal_obligated_reserve_amount = match supported_token_mint {
-            None => sol_withdrawal_obligated_reserve_amount,
-            Some(supported_token_mint) => pricing_service.get_sol_amount_as_token(
-                &supported_token_mint,
-                sol_withdrawal_obligated_reserve_amount,
-            )?,
-        };
-
-        Ok(asset_withdrawal_obligated_reserve_amount
-            + self
-                .get_asset_withdrawal_normal_reserve_amount(supported_token_mint)?
-                .min(
-                    self.fund_account
-                        .load()?
-                        .get_asset_state(supported_token_mint)?
-                        .operation_reserved_amount
-                        .saturating_sub(asset_withdrawal_obligated_reserve_amount),
-                ))
-    }
-
-    /// surplus/shortage will be handled in staking stage.
-    /// sol_operation_reserved_amount - sol_withdrawal_reserve_amount
-    pub(super) fn get_sol_staking_reserved_amount(
-        &self,
-        pricing_service: &PricingService,
-    ) -> Result<i128> {
-        Ok(
-            self.fund_account.load()?.sol.operation_reserved_amount as i128
-                - self.get_asset_withdrawal_reserve_amount(None, pricing_service)? as i128,
-        )
     }
 }

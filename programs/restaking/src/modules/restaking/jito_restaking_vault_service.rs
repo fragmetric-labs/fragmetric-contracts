@@ -169,7 +169,6 @@ impl<'info> JitoRestakingVaultService<'info> {
     }
 
     pub fn find_accounts_for_vault(vault: Pubkey) -> Result<Vec<(Pubkey, bool)>> {
-        // require_eq!(vault, FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS);
         Ok(vec![
             (JITO_VAULT_PROGRAM_ID, false),
             (vault, false),

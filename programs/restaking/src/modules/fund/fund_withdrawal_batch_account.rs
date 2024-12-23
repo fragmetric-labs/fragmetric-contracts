@@ -130,7 +130,7 @@ impl FundWithdrawalBatchAccount {
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(
+    pub(super) fn _update_if_needed(
         &mut self,
         receipt_token_mint: Pubkey,
         supported_token_mint: Option<Pubkey>,
@@ -201,16 +201,14 @@ impl FundWithdrawalBatchAccount {
             request.receipt_token_amount,
             self.asset_user_amount,
             self.receipt_token_amount,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        )?;
 
         // informative
         let asset_fee_amount = crate::utils::get_proportional_amount(
             request.receipt_token_amount,
             self.asset_fee_amount,
             self.receipt_token_amount,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        )?;
 
         self.num_claimed_requests += 1;
         self.claimed_receipt_token_amount += request.receipt_token_amount;

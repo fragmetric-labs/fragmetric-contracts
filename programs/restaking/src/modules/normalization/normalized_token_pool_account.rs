@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::Mint;
 
 #[cfg(any(feature = "devnet", feature = "mainnet"))]
@@ -129,16 +130,6 @@ impl NormalizedTokenPoolAccount {
         }
     }
 
-    // TODO: remove?
-    pub(in crate::modules) fn has_supported_token(&self, token: &Pubkey) -> bool {
-        let supported_token_mint_list: Vec<&Pubkey> = self
-            .supported_tokens
-            .iter()
-            .map(|token| &token.mint)
-            .collect();
-        supported_token_mint_list.contains(&token)
-    }
-
     #[inline(always)]
     pub(super) fn initialize(&mut self, bump: u8, normalized_token_mint: &InterfaceAccount<Mint>) {
         self.migrate(
@@ -171,12 +162,26 @@ impl NormalizedTokenPoolAccount {
         .0
     }
 
+    pub fn find_supported_token_reserve_account_address(
+        &self,
+        supported_token_mint: &Pubkey,
+    ) -> Result<Pubkey> {
+        let supported_token = self.get_supported_token(supported_token_mint)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &Self::find_account_address_by_token_mint(&self.normalized_token_mint),
+                &supported_token.mint,
+                &supported_token.program,
+            ),
+        )
+    }
+
     pub(super) fn add_new_supported_token(
         &mut self,
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
         supported_token_decimals: u8,
-        supported_token_lock_account: Pubkey,
+        supported_token_reserve_account: Pubkey,
         supported_token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
         if self
@@ -197,7 +202,7 @@ impl NormalizedTokenPoolAccount {
             supported_token_mint,
             supported_token_program,
             supported_token_decimals,
-            supported_token_lock_account,
+            supported_token_reserve_account,
             supported_token_pricing_source,
         ));
 
@@ -236,6 +241,10 @@ impl NormalizedTokenPoolAccount {
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
+    pub(in crate::modules) fn has_supported_token(&self, supported_token_mint: &Pubkey) -> bool {
+        self.get_supported_token(supported_token_mint).is_ok()
+    }
+
     pub(super) fn reload_normalized_token_supply(
         &mut self,
         normalized_token_mint: &mut InterfaceAccount<Mint>,
@@ -253,7 +262,7 @@ impl NormalizedTokenPoolAccount {
 pub(super) struct NormalizedSupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
-    pub lock_account: Pubkey,
+    pub reserve_account: Pubkey,
     pub locked_amount: u64,
     pub decimals: u8,
     pub withdrawal_reserved_amount: u64,
@@ -267,14 +276,14 @@ impl NormalizedSupportedToken {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
-        lock_account: Pubkey,
+        reserve_account: Pubkey,
         pricing_source: TokenPricingSource,
     ) -> Self {
         Self {
             mint,
             program,
             decimals,
-            lock_account,
+            reserve_account,
             locked_amount: 0,
             withdrawal_reserved_amount: 0,
             one_token_as_sol: 0,

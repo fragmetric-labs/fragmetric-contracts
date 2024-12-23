@@ -83,9 +83,9 @@ impl TokenPricingSource {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
-    discriminant: u8,
+    pub discriminant: u8,
     _padding: [u8; 7],
-    address: Pubkey,
+    pub address: Pubkey,
 }
 
 impl TokenPricingSourcePod {

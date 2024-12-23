@@ -640,15 +640,17 @@ pub mod restaking {
             &ctx.accounts.normalized_token_program,
         )?
         .process_withdraw(
+            &ctx.accounts.supported_token_mint,
+            &ctx.accounts.supported_token_program,
+            &mut ctx
+                .accounts
+                .normalized_token_pool_supported_token_reserve_account,
             &mut ctx
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
-            &mut ctx.accounts.normalized_token_pool_supported_token_account,
+            &ctx.accounts.slasher,
             &mut ctx.accounts.destination_supported_token_account,
             &mut ctx.accounts.destination_rent_lamports_account,
-            &ctx.accounts.supported_token_mint,
-            &ctx.accounts.supported_token_program,
-            &ctx.accounts.slasher,
         )?;
 
         Ok(())

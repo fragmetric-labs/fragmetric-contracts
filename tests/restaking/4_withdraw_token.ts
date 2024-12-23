@@ -117,20 +117,20 @@ describe("withdraw token", async () => {
     step("user5 (operator) processes queued withdrawals", async () => {
         const programRevenueAmount0 = await restaking.getProgramSupportedTokenRevenueAccountBalance('bSOL').catch(_ => new BN(0));
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
-        const res1 = await restaking.runOperatorProcessWithdrawalBatches(fragSOLFund0.supportedTokens[0].mint);
+        const res1 = await restaking.runOperatorProcessWithdrawalBatches();
 
         expect(res1.fragSOLLockAccount.amount.toString()).eq('0');
         expect(res1.fragSOLFund.supportedTokens[0].token.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
 
         await restaking.sleep(1);
-        const res2 = await restaking.runOperatorProcessWithdrawalBatches(fragSOLFund0.supportedTokens[0].mint);
+        const res2 = await restaking.runOperatorProcessWithdrawalBatches();
         expect(res2.fragSOLFund.supportedTokens[0].token.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.supportedTokens[0].token.withdrawalLastProcessedBatchId.toNumber(), '1');
 
         await restaking.sleep(1);
-        await expect(restaking.runOperatorProcessWithdrawalBatches(fragSOLFund0.supportedTokens[0].mint, user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
+        await expect(restaking.runOperatorProcessWithdrawalBatches(user5, true)).rejectedWith('FundOperationUnauthorizedCommandError');
 
         await restaking.sleep(1);
-        const res3 = await restaking.runOperatorProcessWithdrawalBatches(fragSOLFund0.supportedTokens[0].mint, restaking.keychain.getKeypair('FUND_MANAGER'), true);
+        const res3 = await restaking.runOperatorProcessWithdrawalBatches(restaking.keychain.getKeypair('FUND_MANAGER'), true);
 
         expect(res3.fragSOLFund.supportedTokens[0].token.withdrawalLastProcessedBatchId.toNumber()).eq(res1.fragSOLFund.supportedTokens[0].token.withdrawalPendingBatch.batchId.toNumber() - 1, 'no processing with no requests');
         // TODO: expect(res3.fragSOLFund.supportedTokens[0].token.withdrawalUserReservedAmount.toString()).eq(amountFragSOLWithdrawalEach.muln(2).muln(10000 - res3.fragSOLFund.withdrawalFeeRateBps).divn(10000).toString(), 'in this test, fragSOL unit price is still 1SOL');

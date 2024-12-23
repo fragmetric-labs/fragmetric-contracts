@@ -5,15 +5,15 @@ use super::{
     SelfExecutable,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct NormalizeLSTCommand {
-    // TODO: NormalizeLSTCommand
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+pub struct HarvestRewardCommand {
+    // TODO: HarvestRewardCommand
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct NormalizeLSTCommandResult {}
+pub struct HarvestRewardCommandResult {}
 
-impl SelfExecutable for NormalizeLSTCommand {
+impl SelfExecutable for HarvestRewardCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         _ctx: &mut OperationCommandContext<'info, 'a>,
@@ -22,7 +22,7 @@ impl SelfExecutable for NormalizeLSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO: NormalizeLSTCommand.execute
+        // TODO: HarvestRewardCommand.execute
         Ok((None, None))
     }
 }

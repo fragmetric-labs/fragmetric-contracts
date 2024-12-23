@@ -107,9 +107,9 @@ impl TokenValue {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
-    numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
-    num_numerator: u64,
-    denominator: u64,
+    pub numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
+    pub num_numerator: u64,
+    pub denominator: u64,
 }
 
 impl TokenValuePod {
@@ -180,12 +180,12 @@ impl Asset {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
 pub struct AssetPod {
-    discriminant: u8,
+    pub discriminant: u8,
     _padding: [u8; 7],
-    sol_amount: u64,
-    token_amount: u64,
-    token_mint: Pubkey,
-    token_pricing_source: TokenPricingSourcePod,
+    pub sol_amount: u64,
+    pub token_amount: u64,
+    pub token_mint: Pubkey,
+    pub token_pricing_source: TokenPricingSourcePod,
 }
 
 impl AssetPod {

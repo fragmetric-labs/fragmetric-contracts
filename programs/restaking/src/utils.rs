@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
-use anchor_lang::{CheckOwner, ZeroCopy};
+use anchor_lang::{CheckId, CheckOwner, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -150,17 +150,16 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns amount.
-pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {
+pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
     if numerator == denominator {
-        return Some(amount);
+        return Ok(amount);
     }
 
-    u64::try_from(
-        (amount as u128)
-            .checked_mul(numerator as u128)?
-            .checked_div(denominator as u128)?,
-    )
-    .ok()
+    (amount as u128)
+        .checked_mul(numerator as u128)
+        .and_then(|v| v.checked_div(denominator as u128))
+        .and_then(|v| u64::try_from(v).ok())
+        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
 }
 
 pub trait AccountInfoExt<'info> {
@@ -173,6 +172,14 @@ pub trait AccountInfoExt<'info> {
     fn parse_interface_account_boxed<T>(&'info self) -> Result<Box<InterfaceAccount<'info, T>>>
     where
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner;
+
+    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
+    where
+        T: Id;
+
+    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
+    where
+        T: CheckId;
 
     fn parse_optional_account_boxed<T>(&'info self) -> Result<Option<Box<Account<'info, T>>>>
     where
@@ -204,6 +211,22 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
     {
         InterfaceAccount::try_from(self).map(Box::new)
+    }
+
+    #[inline(never)]
+    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
+    where
+        T: Id,
+    {
+        Program::try_from(self).map(Box::new)
+    }
+
+    #[inline(never)]
+    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
+    where
+        T: CheckId,
+    {
+        Interface::try_from(self).map(Box::new)
     }
 
     #[inline(never)]

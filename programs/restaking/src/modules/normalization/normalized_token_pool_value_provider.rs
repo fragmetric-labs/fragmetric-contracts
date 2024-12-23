@@ -17,8 +17,7 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
         require_eq!(pricing_source_accounts.len(), 1);
 
         let normalized_token_pool_account =
-            Account::<NormalizedTokenPoolAccount>::try_from(pricing_source_accounts[0])?;
-
+            NormalizedTokenPoolService::deserialize_pool_account(pricing_source_accounts[0])?;
         require_keys_eq!(
             normalized_token_pool_account.normalized_token_mint,
             *token_mint
