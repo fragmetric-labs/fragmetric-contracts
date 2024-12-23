@@ -1,6 +1,9 @@
 {
   "version": "0.1.0",
   "name": "marinade_finance",
+  "metadata": {
+    "address": "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD"
+  },
   "instructions": [
     {
       "name": "initialize",
@@ -36,24 +39,19 @@
           "isSigner": false
         },
         {
-          "name": "liqPool",
-          "accounts": [
-            {
-              "name": "lpMint",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "solLegPda",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "msolLeg",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
+          "name": "lpMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "solLegPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "msolLeg",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "treasuryMsolAccount",
@@ -73,7 +71,7 @@
       ],
       "args": [
         {
-          "name": "data",
+          "name": "value",
           "type": {
             "defined": "InitializeData"
           }
@@ -96,7 +94,7 @@
       ],
       "args": [
         {
-          "name": "data",
+          "name": "value",
           "type": {
             "defined": "ChangeAuthorityData"
           }
@@ -821,69 +819,64 @@
       "name": "updateActive",
       "accounts": [
         {
-          "name": "common",
-          "accounts": [
-            {
-              "name": "state",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeList",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeAccount",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeWithdrawAuthority",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "reservePda",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "msolMint",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "msolMintAuthority",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "treasuryMsolAccount",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "clock",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "stakeHistory",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "stakeProgram",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "tokenProgram",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
+          "name": "state",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeList",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeWithdrawAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reservePda",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "msolMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "msolMintAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryMsolAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeHistory",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "validatorList",
@@ -906,69 +899,64 @@
       "name": "updateDeactivated",
       "accounts": [
         {
-          "name": "common",
-          "accounts": [
-            {
-              "name": "state",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeList",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeAccount",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "stakeWithdrawAuthority",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "reservePda",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "msolMint",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "msolMintAuthority",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "treasuryMsolAccount",
-              "isMut": true,
-              "isSigner": false
-            },
-            {
-              "name": "clock",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "stakeHistory",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "stakeProgram",
-              "isMut": false,
-              "isSigner": false
-            },
-            {
-              "name": "tokenProgram",
-              "isMut": false,
-              "isSigner": false
-            }
-          ]
+          "name": "state",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeList",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeWithdrawAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reservePda",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "msolMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "msolMintAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryMsolAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeHistory",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "operationalSolAccount",

@@ -10309,6 +10309,15 @@
                 "type": "pubkey"
               }
             ]
+          },
+          {
+            "name": "OrcaLiqPool",
+            "fields": [
+              {
+                "name": "address",
+                "type": "pubkey"
+              }
+            ]
           }
         ]
       }

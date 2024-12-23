@@ -19,7 +19,6 @@ no-log-ix-name = []
 idl-build = [
     "anchor-lang/idl-build",
     "anchor-spl/idl-build",
-    "marinade-cpi/idl-build",
 ]
 
 # own features
@@ -36,8 +35,8 @@ jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", vers
 spl-tlv-account-resolution = "0.6.5"
 spl-transfer-hook-interface = "0.6.5"
 spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
-marinade-cpi = { path = "../vendor/marinade_cpi", features = ["no-entrypoint"] }
-whirlpool-cpi = { path = "../vendor/whirlpool_cpi" }
+marinade-cpi = { path = "../../cpis/marinade-cpi" }
+whirlpool-cpi = { path = "../../cpis/whirlpool-cpi" }
 
 [dev-dependencies]
 solana-program-test = "1.18.15"
