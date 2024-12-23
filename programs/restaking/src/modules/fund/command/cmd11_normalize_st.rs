@@ -153,7 +153,6 @@ impl SelfExecutable for NormalizeSTCommand {
                                         restaking_vault.sol_allocation_weight,
                                         pricing_service.get_token_amount_as_sol(
                                             &restaking_vault.receipt_token_mint,
-                                            // TODO: from fund asset...? not available
                                             restaking_vault.receipt_token_operation_reserved_amount,
                                         )?,
                                         restaking_vault.sol_allocation_capacity_amount,

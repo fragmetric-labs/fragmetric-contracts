@@ -266,8 +266,8 @@ impl AssetState {
         self.operation_reserved_amount + self.withdrawal_user_reserved_amount
     }
 
-    /// get total asset amount from given receipt_token_value, so it includes cash, receivable, normalized, restaked assets.
-    fn get_total_asset_amount(&self, receipt_token_value: &TokenValue) -> u64 {
+    /// total asset amount from given receipt_token_value, so it includes cash, receivable, normalized, restaked assets.
+    pub(super) fn get_total_amount(&self, receipt_token_value: &TokenValue) -> u64 {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
         receipt_token_value
             .numerator
@@ -310,7 +310,7 @@ impl AssetState {
         receipt_token_value: &TokenValue,
     ) -> Result<u64> {
         Ok(get_proportional_amount(
-            self.get_total_asset_amount(receipt_token_value),
+            self.get_total_amount(receipt_token_value),
             self.normal_reserve_rate_bps as u64,
             10_000,
         )

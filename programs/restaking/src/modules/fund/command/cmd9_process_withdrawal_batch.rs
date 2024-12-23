@@ -3,7 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
 use crate::utils::AccountInfoExt;
@@ -333,7 +333,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                 if processed_receipt_token_amount > 0 {
                     // adjust accumulated deposit capacity configuration as much as the asset value withdrawn
-                    // the policy is: allocate half to SOL cap if it is currently greater than zero, then allocate rest to LST caps based on their weighted allocation strategy
+                    // the policy is: allocate half to SOL cap if it is currently depositable, then allocate rest to LST caps based on their weighted allocation strategy
                     let receipt_token_amount_processed_as_sol = pricing_service
                         .get_token_amount_as_sol(
                             &ctx.receipt_token_mint.key(),
@@ -341,6 +341,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         )?;
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
+
                     let mut strategy =
                         WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
                             fund_account
@@ -348,10 +349,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 .map(|supported_token| {
                                     Ok(WeightedAllocationParticipant::new(
                                         supported_token.sol_allocation_weight,
-                                        pricing_service.get_token_amount_as_sol(
-                                            &supported_token.mint,
-                                            // TODO: fixed with fund value..
-                                            supported_token.token.operation_reserved_amount,
+                                        fund_account.get_asset_total_amount_as_sol(
+                                            Some(supported_token.mint),
+                                            &pricing_service,
                                         )?,
                                         supported_token.sol_allocation_capacity_amount,
                                     ))
@@ -360,7 +360,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         );
 
                     let mut supported_token_increasing_capacity_as_sol =
-                        if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
+                        if fund_account.sol.depositable == 1 {
                             receipt_token_amount_processed_as_sol.div_ceil(2)
                         } else {
                             receipt_token_amount_processed_as_sol
@@ -384,7 +384,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             )?;
                     }
 
-                    if fund_account.sol.accumulated_deposit_capacity_amount > 0 {
+                    if fund_account.sol.depositable == 1 {
                         let sol_increasing_capacity = receipt_token_amount_processed_as_sol
                             - supported_token_increasing_capacity_as_sol;
                         fund_account.sol.accumulated_deposit_capacity_amount = fund_account

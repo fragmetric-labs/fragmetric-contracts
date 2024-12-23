@@ -606,6 +606,29 @@ impl FundAccount {
                 pricing_service,
             )?)
     }
+
+    /// get total asset amount, so it includes cash, receivable, normalized, restaked amount.
+    pub(super) fn get_asset_total_amount(
+        &self,
+        supported_token_mint: Option<Pubkey>,
+    ) -> Result<u64> {
+        Ok(self
+            .get_asset_state(supported_token_mint)?
+            .get_total_amount(&self.receipt_token_value.try_deserialize()?))
+    }
+
+    /// get total asset amount, so it includes cash, receivable, normalized, restaked amount.
+    pub(super) fn get_asset_total_amount_as_sol(
+        &self,
+        supported_token_mint: Option<Pubkey>,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let asset_total_amount = self.get_asset_total_amount(supported_token_mint)?;
+        Ok(match supported_token_mint {
+            Some(mint) => pricing_service.get_token_amount_as_sol(&mint, asset_total_amount)?,
+            None => asset_total_amount,
+        })
+    }
 }
 
 #[cfg(test)]

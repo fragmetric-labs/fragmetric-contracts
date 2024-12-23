@@ -80,10 +80,9 @@ impl SelfExecutable for StakeSOLCommand {
                             | Some(TokenPricingSource::MarinadeStakePool { .. }) => {
                                 strategy_participants.push(WeightedAllocationParticipant::new(
                                     supported_token.sol_allocation_weight,
-                                    pricing_service.get_token_amount_as_sol(
-                                        &supported_token.mint,
-                                        // TODO: fixed with fund value...
-                                        supported_token.token.operation_reserved_amount,
+                                    fund_account.get_asset_total_amount_as_sol(
+                                        Some(supported_token.mint),
+                                        &pricing_service,
                                     )?,
                                     supported_token.sol_allocation_capacity_amount,
                                 ));
