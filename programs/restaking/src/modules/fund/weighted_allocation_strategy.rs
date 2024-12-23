@@ -121,8 +121,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     basis_participant.allocated_amount,
                     p.weight,
                     basis_participant.weight,
-                )
-                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
+                )?;
                 shortage_amounts[*i] = target_amount.saturating_sub(p.allocated_amount);
             }
 
@@ -141,8 +140,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                         total_allocatable_amount,
                         *shortage,
                         total_shortage_amount,
-                    )
-                    .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                    )?
                     .min(allocatable_amount);
                     p.allocated_amount += allocating_amount;
                     allocated_amount += allocating_amount;
@@ -166,8 +164,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                 let p = &mut self.participants[*i];
                 let allocatable_amount = p.capacity_amount.saturating_sub(p.allocated_amount);
                 let allocating_amount =
-                    utils::get_proportional_amount(remaining_amount, p.weight, total_weight)
-                        .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                    utils::get_proportional_amount(remaining_amount, p.weight, total_weight)?
                         .min(allocatable_amount);
                 p.allocated_amount += allocating_amount;
                 allocated_amount += allocating_amount;
@@ -260,8 +257,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     required_amount,
                     p.allocated_amount,
                     total_allocated_amount,
-                )
-                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?
+                )?
                 .min(p.allocated_amount);
                 p.allocated_amount -= deallocating_amount;
                 deallocated_amount += deallocating_amount;

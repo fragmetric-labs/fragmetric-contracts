@@ -150,17 +150,16 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns amount.
-pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Option<u64> {
+pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
     if numerator == denominator {
-        return Some(amount);
+        return Ok(amount);
     }
 
-    u64::try_from(
-        (amount as u128)
-            .checked_mul(numerator as u128)?
-            .checked_div(denominator as u128)?,
-    )
-    .ok()
+    (amount as u128)
+        .checked_mul(numerator as u128)
+        .and_then(|v| v.checked_div(denominator as u128))
+        .and_then(|v| u64::try_from(v).ok())
+        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
 }
 
 pub trait AccountInfoExt<'info> {

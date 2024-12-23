@@ -313,8 +313,7 @@ impl AssetState {
             self.get_total_amount(receipt_token_value),
             self.normal_reserve_rate_bps as u64,
             10_000,
-        )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+        )?
         .min(self.normal_reserve_max_amount))
     }
 

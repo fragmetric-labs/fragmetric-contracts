@@ -299,8 +299,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
                         normalized_token_amount_as_sol,
                         supported_token_total_value_as_sol,
                         pool_total_value_as_sol,
-                    )
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                    )?;
                 claimable_tokens_value_as_sol += supported_token_claimable_amount_as_sol;
 
                 let supported_token_claimable_amount = pricing_service.get_sol_amount_as_token(

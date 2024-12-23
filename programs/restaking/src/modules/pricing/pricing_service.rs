@@ -201,25 +201,21 @@ impl<'info> PricingService<'info> {
     pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.get_token_total_value_as_sol(token_mint)?;
-        let token_amount = utils::get_proportional_amount(
+        utils::get_proportional_amount(
             sol_amount,
             total_token_amount,
             total_token_value_as_sol,
         )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        Ok(token_amount)
     }
 
     pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.get_token_total_value_as_sol(token_mint)?;
-        let sol_amount = utils::get_proportional_amount(
+        utils::get_proportional_amount(
             token_amount,
             total_token_value_as_sol,
             total_token_amount,
         )
-        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException));
-        Ok(sol_amount?)
     }
 
     /// returns token value being consist of atomic tokens, either SOL or LSTs
@@ -265,10 +261,7 @@ impl<'info> PricingService<'info> {
                                                 *nested_sol_amount,
                                                 *token_amount,
                                                 nested_token_value.denominator,
-                                            )
-                                            .ok_or_else(|| {
-                                                error!(ErrorCode::CalculationArithmeticException)
-                                            })?;
+                                            )?;
 
                                         if proportional_sol_amount > 0 {
                                             atomic_token_value
@@ -285,10 +278,7 @@ impl<'info> PricingService<'info> {
                                                 *nested_token_amount,
                                                 *token_amount,
                                                 nested_token_value.denominator,
-                                            )
-                                            .ok_or_else(|| {
-                                                error!(ErrorCode::CalculationArithmeticException)
-                                            })?;
+                                            )?;
 
                                         if proportional_token_amount > 0 {
                                             atomic_token_value.add(Asset::Token(

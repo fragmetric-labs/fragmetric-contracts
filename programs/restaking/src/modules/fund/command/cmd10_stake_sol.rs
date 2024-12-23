@@ -279,8 +279,7 @@ impl SelfExecutable for StakeSOLCommand {
                             item.allocated_sol_amount,
                             deposit_fee.0,
                             deposit_fee.1,
-                        )
-                        .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
+                        )?;
 
                         let expected_minted_pool_token_amount =
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
