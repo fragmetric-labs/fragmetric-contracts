@@ -1,7 +1,6 @@
 use super::{TokenPricingSource, TokenPricingSourcePod, PRICING_SERVICE_EXPECTED_TOKENS_SIZE};
 use crate::{errors, utils};
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 #[cfg(test)]
 pub use self::mock::*;
@@ -104,7 +103,8 @@ impl TokenValue {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
     pub numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
@@ -177,7 +177,8 @@ impl Asset {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct AssetPod {
     pub discriminant: u8,

@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 
 const REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 pub struct RewardSettlement {
     pub(super) reward_id: u16,
@@ -160,7 +159,7 @@ impl RewardSettlement {
 }
 
 /// Exact settlement block range: [`starting_slot`, `ending_slot`)
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 pub struct RewardSettlementBlock {
     pub(super) amount: u64,

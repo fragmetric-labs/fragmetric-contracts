@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 use super::AssetState;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct SupportedToken {
     pub mint: Pubkey,

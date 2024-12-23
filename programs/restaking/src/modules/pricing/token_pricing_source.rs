@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 #[cfg(all(test, not(feature = "idl-build")))]
 use crate::modules::pricing::MockAsset;
@@ -90,7 +89,8 @@ impl TokenPricingSource {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[zero_copy]
+#[derive(Debug, Default)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
     pub discriminant: u8,

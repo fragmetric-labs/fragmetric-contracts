@@ -30,7 +30,7 @@ pub use cmd9_process_withdrawal_batch::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use bytemuck::{Pod, Zeroable};
+use bytemuck::Zeroable;
 
 use crate::modules::fund;
 
@@ -293,7 +293,8 @@ impl OperationCommand {
 
 const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandPod {
     discriminant: u8,
@@ -335,7 +336,8 @@ impl OperationCommandAccountMeta {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
@@ -377,7 +379,8 @@ impl OperationCommandEntry {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,

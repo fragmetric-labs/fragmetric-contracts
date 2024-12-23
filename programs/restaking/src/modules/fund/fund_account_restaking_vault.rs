@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
+use bytemuck::Zeroable;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
@@ -9,7 +9,8 @@ use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 const FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
 const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
@@ -139,7 +140,8 @@ impl RestakingVault {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub(super) struct RestakingVaultOperator {
     pub operator: Pubkey,

@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 
 const REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 pub struct TokenAllocatedAmount {
     total_amount: u64,
@@ -163,7 +162,7 @@ impl TokenAllocatedAmount {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 struct TokenAllocatedAmountRecord {
     amount: u64,

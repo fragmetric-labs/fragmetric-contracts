@@ -1,14 +1,14 @@
-use crate::errors;
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token_2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
+use bytemuck::Zeroable;
+
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{
     Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
 };
 use crate::utils::{get_proportional_amount, PDASeeds, ZeroCopyHeader};
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token_2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
-use bytemuck::{Pod, Zeroable};
 
 use super::*;
 
@@ -221,7 +221,7 @@ impl FundAccount {
     pub(super) fn find_normalized_token_reserve_account_address(&self) -> Result<Pubkey> {
         let normalized_token = self
             .get_normalized_token()
-            .ok_or_else(|| error!(errors::ErrorCode::FundNormalizedTokenNotSetError))?;
+            .ok_or_else(|| error!(ErrorCode::FundNormalizedTokenNotSetError))?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.find_account_address()?,
