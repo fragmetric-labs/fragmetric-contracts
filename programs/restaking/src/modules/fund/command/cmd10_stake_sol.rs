@@ -187,7 +187,7 @@ impl SelfExecutable for StakeSOLCommand {
                         pool_token_mint,
                         to_pool_token_account_amount,
                         minted_pool_token_amount,
-                        deposit_fee,
+                        deducted_sol_fee_amount,
                     )) = match token_pricing_source {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, _remaining_accounts @ ..] =
@@ -202,7 +202,7 @@ impl SelfExecutable for StakeSOLCommand {
                             let (
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
-                                deposit_fee,
+                                deducted_sol_fee_amount,
                             ) = SPLStakePoolService::new(
                                 pool_program,
                                 pool_account,
@@ -223,7 +223,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 pool_token_mint,
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
-                                deposit_fee,
+                                deducted_sol_fee_amount,
                             ))
                         }
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
@@ -234,10 +234,7 @@ impl SelfExecutable for StakeSOLCommand {
                             };
                             require_keys_eq!(address, pool_account.key());
 
-                            if item.allocated_sol_amount
-                                < MarinadeStakePoolService::get_min_deposit_sol_amount(
-                                    pool_account,
-                                )?
+                            if item.allocated_sol_amount < MarinadeStakePoolService::get_min_deposit_sol_amount(pool_account)?
                             {
                                 None
                             } else {
@@ -245,7 +242,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 let (
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
-                                    deposit_fee,
+                                    deducted_sol_fee_amount,
                                 ) = MarinadeStakePoolService::new(
                                     pool_program,
                                     pool_account,
@@ -269,18 +266,12 @@ impl SelfExecutable for StakeSOLCommand {
                                     pool_token_mint,
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
-                                    deposit_fee,
+                                    deducted_sol_fee_amount,
                                 ))
                             }
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     } {
-                        let deducted_sol_fee_amount = utils::get_proportional_amount(
-                            item.allocated_sol_amount,
-                            deposit_fee.0,
-                            deposit_fee.1,
-                        )?;
-
                         let expected_minted_pool_token_amount =
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                 .new_pricing_service(accounts.into_iter().cloned())?
@@ -291,6 +282,7 @@ impl SelfExecutable for StakeSOLCommand {
 
                         let mut fund_account = ctx.fund_account.load_mut()?;
                         fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
+                        fund_account.sol.operation_receivable_amount += deducted_sol_fee_amount;
 
                         let supported_token =
                             fund_account.get_supported_token_mut(pool_token_mint.key)?;

@@ -42,8 +42,8 @@ pub struct AssetState {
     pub withdrawal_user_reserved_amount: u64,
 
     /// asset: receivable amount that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
-    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
+    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.
+    /// And it shall be settled by the withdrawal fee normally. (TODO) But it also can be written off by an authorized operation.
     /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub operation_receivable_amount: u64,
 

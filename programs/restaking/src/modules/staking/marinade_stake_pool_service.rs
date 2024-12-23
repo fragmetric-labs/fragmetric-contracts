@@ -136,7 +136,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(pool_account.min_deposit)
     }
 
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     #[inline(never)]
     pub(in crate::modules) fn deposit_sol(
         &mut self,
@@ -154,7 +154,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         from_sol_account_seeds: &[&[u8]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64, (u64, u64))> {
+    ) -> Result<(u64, u64, u64)> {
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -185,14 +185,14 @@ impl<'info> MarinadeStakePoolService<'info> {
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
-        let deposit_fee = (0, 1);
+        let deducted_sol_fee_amount = 0;
 
-        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
+        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deducted_sol_fee_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount);
 
         Ok((
             to_pool_token_account_amount,
             minted_pool_token_amount,
-            deposit_fee,
+            deducted_sol_fee_amount,
         ))
     }
 

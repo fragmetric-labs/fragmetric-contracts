@@ -7,7 +7,7 @@ use spl_stake_pool::big_vec::BigVec;
 use spl_stake_pool::state::StakePool;
 use std::num::NonZeroU32;
 
-use crate::errors;
+use crate::{errors, utils};
 use crate::utils::SystemProgramExt;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -103,7 +103,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(accounts)
     }
 
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     pub fn deposit_sol(
         &self,
         withdraw_authority: &'info AccountInfo<'info>,
@@ -115,7 +115,7 @@ impl<'info> SPLStakePoolService<'info> {
         from_sol_account_signer_seeds: &[&[u8]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64, (u64, u64))> {
+    ) -> Result<(u64, u64, u64)> {
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -155,20 +155,21 @@ impl<'info> SPLStakePoolService<'info> {
         let to_pool_token_account_amount = to_pool_token_account.amount;
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
-        let deposit_fee = {
+        let deducted_sol_fee_amount = {
             let pool_account = Self::deserialize_pool_account(self.pool_account)?;
-            (
+            utils::get_proportional_amount(
+                sol_amount,
                 pool_account.sol_deposit_fee.numerator,
                 pool_account.sol_deposit_fee.denominator.max(1),
-            )
+            )?
         };
 
-        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
+        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deducted_sol_fee_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount);
 
         Ok((
             to_pool_token_account_amount,
             minted_pool_token_amount,
-            deposit_fee,
+            deducted_sol_fee_amount,
         ))
     }
 
