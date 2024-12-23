@@ -5,6 +5,7 @@ use anchor_spl::{
 };
 use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
 
+use crate::constants::{DEVNET_MSOL_MINT_ADDRESS, MAINNET_MSOL_MINT_ADDRESS};
 use crate::utils::AccountInfoExt;
 use crate::{errors, utils::SystemProgramExt};
 
@@ -18,7 +19,7 @@ pub struct MarinadeStakePoolService<'info> {
 impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
     pub(in crate::modules) fn is_claimable_ticket_account(
-        &mut self,
+        &self,
         clock: &AccountInfo<'info>,
         ticket_account: &'info AccountInfo<'info>,
         reserve_pda: &'info AccountInfo<'info>,
@@ -54,8 +55,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Box<Self>> {
-        let pool_account = Account::<State>::try_from(pool_account)?;
-        require_keys_eq!(pool_token_mint.key(), pool_account.msol_mint);
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
 
         Ok(Box::new(Self {
             pool_account,
@@ -63,6 +63,18 @@ impl<'info> MarinadeStakePoolService<'info> {
             pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
             pool_token_program: Program::try_from(pool_token_program)?,
         }))
+    }
+
+    pub(super) fn deserialize_pool_account(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<Account<State>> {
+        let pool_account = Account::<State>::try_from(pool_account)?;
+        #[cfg(feature = "devnet")]
+        require_eq!(pool_account.msol_mint, DEVNET_MSOL_MINT_ADDRESS);
+        #[cfg(not(feature = "devnet"))]
+        require_eq!(pool_account.msol_mint, MAINNET_MSOL_MINT_ADDRESS);
+
+        Ok(pool_account)
     }
 
     fn find_pool_account_derived_address(
@@ -88,7 +100,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     pub(in crate::modules) fn find_accounts_to_deposit_sol(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Account::<State>::try_from(pool_account)?;
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
         let mut accounts = Self::find_accounts_to_new(&pool_account);
         accounts.extend([
             // liq_pool_sol_leg
@@ -117,24 +129,32 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount]
+    pub(in crate::modules) fn get_min_deposit_sol_amount(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<u64> {
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
+        Ok(pool_account.min_deposit)
+    }
+
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
     #[inline(never)]
     pub(in crate::modules) fn deposit_sol(
         &mut self,
+        // fixed
         system_program: &Program<'info, System>,
-
         liq_pool_sol_leg: &AccountInfo<'info>,
         liq_pool_token_leg: &AccountInfo<'info>,
         liq_pool_token_leg_authority: &AccountInfo<'info>,
         pool_reserve: &AccountInfo<'info>,
         pool_token_mint_authority: &AccountInfo<'info>,
 
+        // variant
         from_sol_account: &AccountInfo<'info>,
         to_pool_token_account: &'info AccountInfo<'info>,
         from_sol_account_seeds: &[&[u8]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64)> {
+    ) -> Result<(u64, u64, (u64, u64))> {
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -165,23 +185,32 @@ impl<'info> MarinadeStakePoolService<'info> {
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
-        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount);
+        let deposit_fee = (0, 1);
 
-        Ok((to_pool_token_account_amount, minted_pool_token_amount))
+        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
+
+        Ok((
+            to_pool_token_account_amount,
+            minted_pool_token_amount,
+            deposit_fee,
+        ))
     }
 
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
     #[inline(never)]
     pub(in crate::modules) fn get_max_cycle_fee(
-        pool_account_info: &'info AccountInfo<'info>,
+        pool_account: &'info AccountInfo<'info>,
     ) -> Result<(u64, u64)> {
-        let pool_account = Account::<State>::try_from(pool_account_info)?;
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
 
         // it only costs withdrawal fee
         Ok((
             // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/state/fee.rs
-            pool_account.withdraw_stake_account_fee.bp_cents as u64,
+            pool_account
+                .withdraw_stake_account_fee
+                .bp_cents
+                .max(pool_account.delayed_unstake_fee.bp_cents) as u64,
             1_000_000,
         ))
     }
@@ -190,6 +219,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
     pub(in crate::modules) fn order_unstake(
         &mut self,
+        // fixed
         system_program: &Program<'info, System>,
 
         new_ticket_account: &'info AccountInfo<'info>,
@@ -197,7 +227,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         clock: &AccountInfo<'info>,
         rent: &AccountInfo<'info>,
 
-        operator: &Signer<'info>,
+        // variant
+        ticket_account_rent_payer: &Signer<'info>,
         from_pool_token_account: &AccountInfo<'info>,
         from_pool_token_account_authority: &AccountInfo<'info>,
         from_pool_token_account_authority_seeds: &[&[u8]],
@@ -206,7 +237,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     ) -> Result<u64> {
         self.create_ticket_account(
             system_program,
-            operator,
+            ticket_account_rent_payer,
             new_ticket_account,
             new_ticket_account_seeds,
         )?;
@@ -237,7 +268,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         &self,
         system_program: &Program<'info, System>,
 
-        operator: &Signer<'info>,
+        ticket_account_rent_payer: &Signer<'info>,
         new_ticket_account: &AccountInfo<'info>,
         new_ticket_account_seeds: &[&[u8]],
     ) -> Result<()> {
@@ -245,7 +276,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         system_program.create_account(
             new_ticket_account,
             new_ticket_account_seeds,
-            operator,
+            ticket_account_rent_payer,
             &[],
             space,
             &crate::ID,
@@ -302,7 +333,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
         ticket_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Account::<State>::try_from(pool_account)?;
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
         let mut accounts = Self::find_accounts_to_new(&pool_account);
         accounts.extend([
             // new_ticket_account
