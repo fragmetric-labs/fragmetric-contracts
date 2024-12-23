@@ -15,9 +15,8 @@ use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
     FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, OperationReservedRestakeToken, RestakeVSTCommand,
-    RestakeVSTCommandState, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy,
+    OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
+    WeightedAllocationParticipant, WeightedAllocationStrategy,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]

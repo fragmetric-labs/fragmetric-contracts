@@ -201,21 +201,13 @@ impl<'info> PricingService<'info> {
     pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.get_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(
-            sol_amount,
-            total_token_amount,
-            total_token_value_as_sol,
-        )
+        utils::get_proportional_amount(sol_amount, total_token_amount, total_token_value_as_sol)
     }
 
     pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
         let (total_token_value_as_sol, total_token_amount) =
             self.get_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(
-            token_amount,
-            total_token_value_as_sol,
-            total_token_amount,
-        )
+        utils::get_proportional_amount(token_amount, total_token_value_as_sol, total_token_amount)
     }
 
     /// returns token value being consist of atomic tokens, either SOL or LSTs

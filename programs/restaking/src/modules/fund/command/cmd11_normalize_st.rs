@@ -10,8 +10,8 @@ use crate::modules::staking;
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
-    FundService, HarvestRewardCommand, NormalizedToken, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, RestakeVSTCommandState, SelfExecutable,
+    FundService, NormalizedToken, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
     StakeSOLCommand, StakeSOLCommandItem, StakeSOLCommandResult, StakeSOLCommandState,
     SupportedToken, WeightedAllocationParticipant, WeightedAllocationStrategy,
     FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
@@ -347,7 +347,7 @@ impl SelfExecutable for NormalizeSTCommand {
                 }
                 _ => None,
             }
-            .or_else(|| Some(HarvestRewardCommand::default().without_required_accounts())),
+            .or_else(|| Some(RestakeVSTCommand::default().without_required_accounts())),
         ))
     }
 }
