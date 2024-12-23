@@ -164,6 +164,9 @@ pub enum ErrorCode {
     #[msg("fund: normalized token already set")]
     FundNormalizedTokenAlreadySetError,
 
+    #[msg("fund: normalized token is not set")]
+    FundNormalizedTokenNotSetError,
+
     #[msg("fund: restaking vault already registered")]
     FundRestakingVaultAlreadyRegisteredError,
 

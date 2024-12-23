@@ -1,5 +1,5 @@
 mod cmd10_stake_sol;
-mod cmd11_normalize_lst;
+mod cmd11_normalize_st;
 mod cmd12_restake_vst;
 mod cmd13_delegate_vst;
 mod cmd14_harvest_reward;
@@ -14,7 +14,7 @@ mod cmd8_unstake_lst;
 mod cmd9_process_withdrawal_batch;
 
 pub use cmd10_stake_sol::*;
-pub use cmd11_normalize_lst::*;
+pub use cmd11_normalize_st::*;
 pub use cmd12_restake_vst::*;
 pub use cmd13_delegate_vst::*;
 pub use cmd14_harvest_reward::*;
@@ -40,7 +40,7 @@ use super::*;
 pub struct OperationCommandContext<'info: 'a, 'a> {
     pub(super) operator: &'a Signer<'info>,
     pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    pub(super) fund_account: &'a mut AccountLoader<'info, fund::FundAccount>,
+    pub(super) fund_account: &'a mut AccountLoader<'info, FundAccount>,
     pub(super) system_program: &'a Program<'info, System>,
 }
 
@@ -57,7 +57,7 @@ pub enum OperationCommand {
     UnstakeLST(UnstakeLSTCommand),
     ProcessWithdrawalBatch(ProcessWithdrawalBatchCommand),
     StakeSOL(StakeSOLCommand),
-    NormalizeLST(NormalizeLSTCommand),
+    NormalizeST(NormalizeSTCommand),
     RestakeVST(RestakeVSTCommand),
     DelegateVST(DelegateVSTCommand),
     HarvestReward(HarvestRewardCommand),
@@ -75,7 +75,7 @@ pub enum OperationCommandResult {
     UnstakeLST(UnstakeLSTCommandResult),
     ProcessWithdrawalBatch(ProcessWithdrawalBatchCommandResult),
     StakeSOL(StakeSOLCommandResult),
-    NormalizeLST(NormalizeLSTCommandResult),
+    NormalizeST(NormalizeSTCommandResult),
     RestakeVST(RestakeVSTCommandResult),
     DelegateVST(DelegateVSTCommandResult),
     HarvestReward(HarvestRewardCommandResult),
@@ -212,15 +212,15 @@ impl From<StakeSOLCommandResult> for OperationCommandResult {
 }
 
 // cmd11
-impl From<NormalizeLSTCommand> for OperationCommand {
-    fn from(command: NormalizeLSTCommand) -> Self {
-        Self::NormalizeLST(command)
+impl From<NormalizeSTCommand> for OperationCommand {
+    fn from(command: NormalizeSTCommand) -> Self {
+        Self::NormalizeST(command)
     }
 }
 
-impl From<NormalizeLSTCommandResult> for OperationCommandResult {
-    fn from(result: NormalizeLSTCommandResult) -> Self {
-        Self::NormalizeLST(result)
+impl From<NormalizeSTCommandResult> for OperationCommandResult {
+    fn from(result: NormalizeSTCommandResult) -> Self {
+        Self::NormalizeST(result)
     }
 }
 
@@ -276,7 +276,7 @@ impl OperationCommand {
             OperationCommand::UnstakeLST(_) => 8,
             OperationCommand::ProcessWithdrawalBatch(_) => 9,
             OperationCommand::StakeSOL(_) => 10,
-            OperationCommand::NormalizeLST(_) => 11,
+            OperationCommand::NormalizeST(_) => 11,
             OperationCommand::RestakeVST(_) => 12,
             OperationCommand::DelegateVST(_) => 13,
             OperationCommand::HarvestReward(_) => 14,
@@ -435,7 +435,7 @@ impl SelfExecutable for OperationCommand {
             OperationCommand::UnstakeLST(command) => command.execute(ctx, accounts),
             OperationCommand::ProcessWithdrawalBatch(command) => command.execute(ctx, accounts),
             OperationCommand::StakeSOL(command) => command.execute(ctx, accounts),
-            OperationCommand::NormalizeLST(command) => command.execute(ctx, accounts),
+            OperationCommand::NormalizeST(command) => command.execute(ctx, accounts),
             OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
             OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
             OperationCommand::HarvestReward(command) => command.execute(ctx, accounts),

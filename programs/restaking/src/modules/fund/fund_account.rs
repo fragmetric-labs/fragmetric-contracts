@@ -1,14 +1,14 @@
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token_2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
-use bytemuck::{Pod, Zeroable};
-
+use crate::errors;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{
     Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
 };
 use crate::utils::{get_proportional_amount, PDASeeds, ZeroCopyHeader};
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token_2022;
+use anchor_spl::token_interface::{Mint, TokenAccount};
+use bytemuck::{Pod, Zeroable};
 
 use super::*;
 
@@ -218,6 +218,19 @@ impl FundAccount {
         )
     }
 
+    pub(super) fn find_normalized_token_reserve_account_address(&self) -> Result<Pubkey> {
+        let normalized_token = self
+            .get_normalized_token()
+            .ok_or_else(|| error!(errors::ErrorCode::FundNormalizedTokenNotSetError))?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &normalized_token.mint,
+                &normalized_token.program,
+            ),
+        )
+    }
+
     pub const UNSTAKING_TICKET_SEED: &'static [u8] = b"unstaking_ticket";
 
     #[inline(always)]
@@ -291,9 +304,9 @@ impl FundAccount {
         self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
     }
 
-    pub(super) fn get_supported_token(&self, token: &Pubkey) -> Result<&SupportedToken> {
+    pub(super) fn get_supported_token(&self, token_mint: &Pubkey) -> Result<&SupportedToken> {
         self.get_supported_tokens_iter()
-            .find(|supported_token| supported_token.mint == *token)
+            .find(|supported_token| supported_token.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
@@ -381,6 +394,15 @@ impl FundAccount {
     pub(super) fn get_normalized_token(&self) -> Option<&NormalizedToken> {
         if self.normalized_token.enabled == 1 {
             Some(&self.normalized_token)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub(super) fn get_normalized_token_pool_address(&self) -> Option<Pubkey> {
+        if self.normalized_token.enabled == 1 {
+            Some(self.normalized_token.pricing_source.address)
         } else {
             None
         }
@@ -551,6 +573,38 @@ impl FundAccount {
     pub(super) fn cancel_withdrawal_request(&mut self, request: &WithdrawalRequest) -> Result<()> {
         self.get_asset_state_mut(request.supported_token_mint)?
             .cancel_withdrawal_request(request)
+    }
+
+    /// receipt token amount in the queued withdrawal batches for all assets.
+    pub(super) fn get_total_receipt_token_withdrawal_obligated_amount(&self) -> u64 {
+        self.get_asset_states_iter()
+            .map(|asset| asset.get_receipt_token_withdrawal_obligated_amount())
+            .sum()
+    }
+
+    /// receipt token amount in the queued withdrawal batches for an asset.
+    pub(super) fn get_asset_receipt_token_withdrawal_obligated_amount(
+        &self,
+        supported_token_mint: Option<Pubkey>,
+    ) -> Result<u64> {
+        Ok(self
+            .get_asset_state(supported_token_mint)?
+            .get_receipt_token_withdrawal_obligated_amount())
+    }
+
+    /// represents the surplus or shortage amount after fulfilling the withdrawal obligations for the given asset.
+    pub(super) fn get_asset_net_operation_reserved_amount(
+        &self,
+        supported_token_mint: Option<Pubkey>,
+        pricing_service: &PricingService,
+    ) -> Result<i128> {
+        Ok(self
+            .get_asset_state(supported_token_mint)?
+            .get_net_operation_reserved_amount(
+                &self.receipt_token_mint.key(),
+                &self.receipt_token_value.try_deserialize()?,
+                pricing_service,
+            )?)
     }
 }
 

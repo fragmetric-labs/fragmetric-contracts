@@ -37,7 +37,7 @@ impl WeightedAllocationParticipant {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WeightedAllocationStrategy<const N: usize> {
     participants: [WeightedAllocationParticipant; N],
     num_participants: usize,
@@ -66,7 +66,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         self.participants[..self.num_participants].iter_mut()
     }
 
-    fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
+    pub fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
         self.participants[..self.num_participants]
             .get(index)
             .ok_or_else(|| error!(errors::ErrorCode::IndexOutOfBoundsException))
@@ -514,5 +514,12 @@ mod tests {
         assert_eq!(strategy.participants[1].allocated_amount, 1802);
         assert_eq!(strategy.participants[2].allocated_amount, 100);
         assert_eq!(strategy.participants[3].allocated_amount, 100);
+    }
+
+    #[test]
+    fn test_edge_scenario2() {
+        let mut strategy = WeightedAllocationStrategy::<0>::new([]);
+
+        assert_eq!(strategy.put(2000).unwrap(), 2000);
     }
 }

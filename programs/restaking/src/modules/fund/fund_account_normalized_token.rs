@@ -39,4 +39,9 @@ impl NormalizedToken {
 
         Ok(())
     }
+
+    #[inline(always)]
+    pub fn get_total_reserved_amount(&self) -> u64 {
+        self.operation_reserved_amount
+    }
 }

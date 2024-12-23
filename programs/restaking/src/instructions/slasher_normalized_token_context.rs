@@ -85,7 +85,8 @@ pub struct SlasherNormalizedTokenWithdrawContext<'info> {
         associated_token::authority = normalized_token_pool_account,
         associated_token::token_program = supported_token_program,
     )]
-    pub normalized_token_pool_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub normalized_token_pool_supported_token_reserve_account:
+        Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,

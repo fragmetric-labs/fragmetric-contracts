@@ -1,17 +1,14 @@
-use super::{
-    NormalizeLSTCommand, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable,
-};
-use crate::constants::MAINNET_JITOSOL_MINT_ADDRESS;
+use anchor_lang::prelude::*;
+
 use crate::errors;
-use crate::modules::fund::command::OperationCommand::StakeSOL;
-use crate::modules::fund::{
-    weighted_allocation_strategy, FundService, SupportedToken, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking;
-use anchor_lang::prelude::*;
+
+use super::{
+    FundService, NormalizeSTCommand, OperationCommand, OperationCommandContext,
+    OperationCommandEntry, OperationCommandResult, SelfExecutable, SupportedToken,
+    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct StakeSOLCommand {
@@ -20,8 +17,8 @@ pub struct StakeSOLCommand {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
 pub struct StakeSOLCommandItem {
-    mint: Pubkey,
-    sol_amount: u64,
+    token_mint: Pubkey,
+    allocated_sol_amount: u64,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -44,10 +41,10 @@ pub enum StakeSOLCommandState {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct StakeSOLCommandResult {
-    pub pool_token_mint: Pubkey,
+    pub token_mint: Pubkey,
     pub staked_sol_amount: u64,
-    pub minted_pool_token_amount: u64,
-    pub reserved_pool_token_amount: u64,
+    pub minted_token_amount: u64,
+    pub operation_reserved_token_amount: u64,
 }
 
 impl SelfExecutable for StakeSOLCommand {
@@ -64,18 +61,13 @@ impl SelfExecutable for StakeSOLCommand {
 
         match &self.state {
             StakeSOLCommandState::New => {
-                let (pricing_service, sol_net_operation_reserved_amount) = {
-                    let mut fund_service =
-                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                    let pricing_service =
-                        fund_service.new_pricing_service(accounts.into_iter().cloned())?;
-                    let sol_net_operation_reserved_amount = fund_service
-                        .get_asset_net_operation_reserved_amount(None, &pricing_service)?;
-                    (pricing_service, sol_net_operation_reserved_amount)
-                };
+                let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .new_pricing_service(accounts.into_iter().cloned())?;
+                let fund_account = ctx.fund_account.load()?;
+                let sol_net_operation_reserved_amount =
+                    fund_account.get_asset_net_operation_reserved_amount(None, &pricing_service)?;
 
                 if sol_net_operation_reserved_amount > 0 {
-                    let fund_account = ctx.fund_account.load()?;
                     let mut strategy_participants =
                         Vec::<WeightedAllocationParticipant>::with_capacity(
                             FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
@@ -83,13 +75,14 @@ impl SelfExecutable for StakeSOLCommand {
                     let mut strategy_supported_tokens =
                         Vec::<&SupportedToken>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
                     for supported_token in fund_account.get_supported_tokens_iter() {
-                        match supported_token.pricing_source.try_deserialize()?.unwrap() {
-                            TokenPricingSource::SPLStakePool { .. }
-                            | TokenPricingSource::MarinadeStakePool { .. } => {
+                        match supported_token.pricing_source.try_deserialize()? {
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. }) => {
                                 strategy_participants.push(WeightedAllocationParticipant::new(
                                     supported_token.sol_allocation_weight,
                                     pricing_service.get_token_amount_as_sol(
                                         &supported_token.mint,
+                                        // TODO: fixed with fund value...
                                         supported_token.token.operation_reserved_amount,
                                     )?,
                                     supported_token.sol_allocation_capacity_amount,
@@ -118,216 +111,239 @@ impl SelfExecutable for StakeSOLCommand {
                         let sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
                         if sol_amount > 0 {
                             items.push(StakeSOLCommandItem {
-                                mint: supported_token.mint,
-                                sol_amount,
+                                token_mint: supported_token.mint,
+                                allocated_sol_amount: sol_amount,
                             });
                         }
                     }
-                    remaining_items = Some(items);
+                    if items.len() > 0 {
+                        remaining_items = Some(items);
+                    }
                 }
             }
             StakeSOLCommandState::Prepare { items } => {
-                let item = items.first().unwrap();
-                let [pool_account, _remaining_accounts @ ..] = accounts else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
-                };
+                if let Some(item) = items.first() {
+                    let [pool_account, _remaining_accounts @ ..] = accounts else {
+                        err!(ErrorCode::AccountNotEnoughKeys)?
+                    };
 
-                let fund_account = ctx.fund_account.load()?;
-                let supported_token = fund_account.get_supported_token(&item.mint)?;
-                let mut required_accounts = vec![
-                    (fund_account.get_reserve_account_address()?, true),
-                    (
-                        fund_account.find_supported_token_reserve_account_address(&item.mint)?,
-                        true,
-                    ),
-                ];
+                    let fund_account = ctx.fund_account.load()?;
+                    let supported_token = fund_account.get_supported_token(&item.token_mint)?;
+                    let mut required_accounts = vec![
+                        (fund_account.get_reserve_account_address()?, true),
+                        (
+                            fund_account
+                                .find_supported_token_reserve_account_address(&item.token_mint)?,
+                            true,
+                        ),
+                    ];
 
-                required_accounts.extend(
-                    match supported_token.pricing_source.try_deserialize()?.unwrap() {
-                        TokenPricingSource::SPLStakePool { address } => {
-                            require_keys_eq!(address, pool_account.key());
+                    required_accounts.extend(
+                        match supported_token.pricing_source.try_deserialize()? {
+                            Some(TokenPricingSource::SPLStakePool { address }) => {
+                                require_keys_eq!(address, pool_account.key());
 
-                            staking::SPLStakePoolService::find_accounts_to_deposit_sol(
-                                pool_account,
-                            )?
-                        }
-                        TokenPricingSource::MarinadeStakePool { address } => {
-                            require_keys_eq!(address, pool_account.key());
+                                staking::SPLStakePoolService::find_accounts_to_deposit_sol(
+                                    pool_account,
+                                )?
+                            }
+                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                                require_keys_eq!(address, pool_account.key());
 
-                            staking::MarinadeStakePoolService::find_accounts_to_deposit_sol(
-                                pool_account,
-                            )?
-                        }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-                    },
-                );
+                                staking::MarinadeStakePoolService::find_accounts_to_deposit_sol(
+                                    pool_account,
+                                )?
+                            }
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                        },
+                    );
 
-                return Ok((
-                    None,
-                    Some(
-                        StakeSOLCommand {
-                            state: StakeSOLCommandState::Execute {
-                                items: items.clone(),
-                            },
-                        }
-                        .with_required_accounts(required_accounts),
-                    ),
-                ));
+                    return Ok((
+                        None,
+                        Some(
+                            StakeSOLCommand {
+                                state: StakeSOLCommandState::Execute {
+                                    items: items.clone(),
+                                },
+                            }
+                            .with_required_accounts(required_accounts),
+                        ),
+                    ));
+                }
             }
             StakeSOLCommandState::Execute { items } => {
-                let item = items.first().unwrap();
-                remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                if let Some(item) = items.first() {
+                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
 
-                let token_pricing_source = ctx
-                    .fund_account
-                    .load()?
-                    .get_supported_token(&item.mint)?
-                    .pricing_source
-                    .try_deserialize()?
-                    .unwrap();
+                    let token_pricing_source = ctx
+                        .fund_account
+                        .load()?
+                        .get_supported_token(&item.token_mint)?
+                        .pricing_source
+                        .try_deserialize()?;
 
-                let (
-                    pool_token_mint,
-                    to_pool_token_account_amount,
-                    minted_pool_token_amount,
-                    expected_minted_pool_token_amount,
-                ) = match token_pricing_source {
-                    TokenPricingSource::SPLStakePool { address } => {
-                        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
-                            accounts
-                        else {
-                            err!(ErrorCode::AccountNotEnoughKeys)?
-                        };
-
-                        require_keys_eq!(address, pool_account.key());
-
-                        // note: assumes zero deposit fee
-                        let expected_minted_pool_token_amount =
-                            FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                .new_pricing_service(remaining_accounts.into_iter().cloned())?
-                                .get_sol_amount_as_token(pool_token_mint.key, item.sol_amount)?;
-
-                        let fund_account = ctx.fund_account.load()?;
-                        let (to_pool_token_account_amount, minted_pool_token_amount) =
-                            staking::SPLStakePoolService::new(
-                                pool_program,
-                                pool_account,
-                                pool_token_mint,
-                                pool_token_program,
-                            )?
-                            .deposit_sol(
-                                withdraw_authority,
-                                reserve_stake_account,
-                                manager_fee_account,
-                                fund_reserve_account,
-                                fund_supported_token_reserve_account,
-                                &fund_account.get_reserve_account_seeds(),
-                                item.sol_amount,
-                            )?;
-
-                        (
-                            pool_token_mint,
-                            to_pool_token_account_amount,
-                            minted_pool_token_amount,
-                            expected_minted_pool_token_amount,
-                        )
-                    }
-                    TokenPricingSource::MarinadeStakePool { address } => {
-                        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
-                            accounts
-                        else {
-                            err!(ErrorCode::AccountNotEnoughKeys)?
-                        };
-
-                        require_keys_eq!(address, pool_account.key());
-
-                        // note: assumes zero deposit fee
-                        let expected_minted_pool_token_amount =
-                            FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                .new_pricing_service(remaining_accounts.into_iter().cloned())?
-                                .get_sol_amount_as_token(pool_token_mint.key, item.sol_amount)?;
-
-                        let fund_account = ctx.fund_account.load()?;
-                        let (to_pool_token_account_amount, minted_pool_token_amount) =
-                            staking::MarinadeStakePoolService::new(
-                                pool_program,
-                                pool_account,
-                                pool_token_mint,
-                                pool_token_program,
-                            )?
-                            .deposit_sol(
-                                ctx.system_program,
-                                liq_pool_sol_leg,
-                                liq_pool_token_leg,
-                                liq_pool_token_leg_authority,
-                                pool_reserve,
-                                pool_token_mint_authority,
-                                fund_reserve_account,
-                                fund_supported_token_reserve_account,
-                                &fund_account.get_reserve_account_seeds(),
-                                item.sol_amount,
-                            )?;
-
-                        (
-                            pool_token_mint,
-                            to_pool_token_account_amount,
-                            minted_pool_token_amount,
-                            expected_minted_pool_token_amount,
-                        )
-                    }
-                    _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-                };
-
-                let mut fund_account = ctx.fund_account.load_mut()?;
-                fund_account.sol.operation_reserved_amount -= item.sol_amount;
-
-                let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                supported_token.token.operation_reserved_amount += minted_pool_token_amount;
-
-                let reserved_pool_token_amount = supported_token.token.get_total_reserved_amount();
-                require_gte!(minted_pool_token_amount, expected_minted_pool_token_amount);
-                require_gte!(to_pool_token_account_amount, reserved_pool_token_amount);
-
-                result = Some(
-                    StakeSOLCommandResult {
-                        pool_token_mint: item.mint,
-                        staked_sol_amount: item.sol_amount,
+                    let (
+                        pool_token_mint,
+                        to_pool_token_account_amount,
                         minted_pool_token_amount,
-                        reserved_pool_token_amount,
-                    }
-                    .into(),
-                );
+                        expected_minted_pool_token_amount,
+                    ) = match token_pricing_source {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, remaining_accounts @ ..] =
+                                accounts
+                            else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+
+                            require_keys_eq!(address, pool_account.key());
+
+                            // note: assumes zero deposit fee
+                            let expected_minted_pool_token_amount =
+                                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                    .new_pricing_service(remaining_accounts.into_iter().cloned())?
+                                    .get_sol_amount_as_token(
+                                        pool_token_mint.key,
+                                        item.allocated_sol_amount,
+                                    )?;
+
+                            let fund_account = ctx.fund_account.load()?;
+                            let (to_pool_token_account_amount, minted_pool_token_amount) =
+                                staking::SPLStakePoolService::new(
+                                    pool_program,
+                                    pool_account,
+                                    pool_token_mint,
+                                    pool_token_program,
+                                )?
+                                .deposit_sol(
+                                    withdraw_authority,
+                                    reserve_stake_account,
+                                    manager_fee_account,
+                                    fund_reserve_account,
+                                    fund_supported_token_reserve_account,
+                                    &fund_account.get_reserve_account_seeds(),
+                                    item.allocated_sol_amount,
+                                )?;
+
+                            (
+                                pool_token_mint,
+                                to_pool_token_account_amount,
+                                minted_pool_token_amount,
+                                expected_minted_pool_token_amount,
+                            )
+                        }
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, remaining_accounts @ ..] =
+                                accounts
+                            else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+
+                            require_keys_eq!(address, pool_account.key());
+
+                            // note: assumes zero deposit fee
+                            let expected_minted_pool_token_amount =
+                                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                    .new_pricing_service(remaining_accounts.into_iter().cloned())?
+                                    .get_sol_amount_as_token(
+                                        pool_token_mint.key,
+                                        item.allocated_sol_amount,
+                                    )?;
+
+                            let fund_account = ctx.fund_account.load()?;
+                            let (to_pool_token_account_amount, minted_pool_token_amount) =
+                                staking::MarinadeStakePoolService::new(
+                                    pool_program,
+                                    pool_account,
+                                    pool_token_mint,
+                                    pool_token_program,
+                                )?
+                                .deposit_sol(
+                                    ctx.system_program,
+                                    liq_pool_sol_leg,
+                                    liq_pool_token_leg,
+                                    liq_pool_token_leg_authority,
+                                    pool_reserve,
+                                    pool_token_mint_authority,
+                                    fund_reserve_account,
+                                    fund_supported_token_reserve_account,
+                                    &fund_account.get_reserve_account_seeds(),
+                                    item.allocated_sol_amount,
+                                )?;
+
+                            (
+                                pool_token_mint,
+                                to_pool_token_account_amount,
+                                minted_pool_token_amount,
+                                expected_minted_pool_token_amount,
+                            )
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    };
+
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
+
+                    let supported_token =
+                        fund_account.get_supported_token_mut(pool_token_mint.key)?;
+                    supported_token.token.operation_reserved_amount += minted_pool_token_amount;
+
+                    require_gte!(minted_pool_token_amount, expected_minted_pool_token_amount);
+                    require_gte!(
+                        to_pool_token_account_amount,
+                        supported_token.token.get_total_reserved_amount()
+                    );
+
+                    result = Some(
+                        StakeSOLCommandResult {
+                            token_mint: item.token_mint,
+                            staked_sol_amount: item.allocated_sol_amount,
+                            minted_token_amount: minted_pool_token_amount,
+                            operation_reserved_token_amount: supported_token
+                                .token
+                                .operation_reserved_amount,
+                        }
+                        .into(),
+                    );
+                }
             }
         }
 
         // transition to next command
-        let items = remaining_items.unwrap();
         Ok((
             result,
-            Some(if items.len() > 0 {
-                let pricing_source = ctx
-                    .fund_account
-                    .load()?
-                    .get_supported_token(&items.first().unwrap().mint)?
-                    .pricing_source
-                    .try_deserialize()?
-                    .ok_or_else(|| {
-                        error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
-                    })?;
+            match remaining_items {
+                Some(remaining_items) if remaining_items.len() > 0 => {
+                    let pricing_source = ctx
+                        .fund_account
+                        .load()?
+                        .get_supported_token(&remaining_items.first().unwrap().token_mint)?
+                        .pricing_source
+                        .try_deserialize()?
+                        .ok_or_else(|| {
+                            error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
+                        })?;
 
-                StakeSOLCommand {
-                    state: StakeSOLCommandState::Prepare { items },
+                    Some(
+                        StakeSOLCommand {
+                            state: StakeSOLCommandState::Prepare {
+                                items: remaining_items,
+                            },
+                        }
+                        .with_required_accounts(match pricing_source {
+                            TokenPricingSource::SPLStakePool { address }
+                            | TokenPricingSource::MarinadeStakePool { address } => {
+                                vec![(address, false)]
+                            }
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                        }),
+                    )
                 }
-                .with_required_accounts(match pricing_source {
-                    TokenPricingSource::SPLStakePool { address }
-                    | TokenPricingSource::MarinadeStakePool { address } => {
-                        vec![(address, false)]
-                    }
-                    _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-                })
-            } else {
-                NormalizeLSTCommand::default().without_required_accounts()
-            }),
+                _ => Some(NormalizeSTCommand::default().without_required_accounts()),
+            },
         ))
     }
 }

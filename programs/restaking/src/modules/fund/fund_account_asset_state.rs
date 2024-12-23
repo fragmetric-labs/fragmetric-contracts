@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 use super::WithdrawalRequest;
 use crate::errors::ErrorCode;
-use crate::modules::pricing::PricingService;
+use crate::modules::pricing::{Asset, PricingService, TokenValue};
 use crate::utils::get_proportional_amount;
 
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
@@ -242,11 +242,11 @@ impl AssetState {
         Ok(processing_batches)
     }
 
-    pub fn get_withdrawal_queued_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
+    fn get_queued_withdrawal_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
         self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
     }
 
-    pub fn get_withdrawal_queued_batches_iter_to_process(
+    pub(super) fn get_queued_withdrawal_batches_to_process_iter(
         &self,
         withdrawal_batch_threshold_interval_seconds: i64,
         current_timestamp: i64,
@@ -255,23 +255,112 @@ impl AssetState {
         let available = forced
             || current_timestamp - self.withdrawal_last_batch_processed_at
                 >= withdrawal_batch_threshold_interval_seconds;
-        self.get_withdrawal_queued_batches_iter()
-            .filter(move |_| available)
+        available
+            .then(|| self.get_queued_withdrawal_batches_iter())
+            .into_iter()
+            .flatten()
     }
 
-    pub fn get_withdrawal_requested_receipt_token_amount(&self, count_pending_batch: bool) -> u64 {
-        let mut receipt_token_amount = self
-            .get_withdrawal_queued_batches_iter()
-            .map(|b| b.receipt_token_amount)
-            .sum();
-        if count_pending_batch {
-            receipt_token_amount += self.withdrawal_pending_batch.receipt_token_amount;
-        }
-        receipt_token_amount
-    }
-
+    /// cash of current asset account
     pub fn get_total_reserved_amount(&self) -> u64 {
         self.operation_reserved_amount + self.withdrawal_user_reserved_amount
+    }
+
+    /// get total asset amount from given receipt_token_value, so it includes cash, receivable, normalized, restaked assets.
+    fn get_total_asset_amount(&self, receipt_token_value: &TokenValue) -> u64 {
+        let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
+        receipt_token_value
+            .numerator
+            .iter()
+            .find_map(|asset| match asset {
+                Asset::SOL(sol_amount) => {
+                    if supported_token_mint.is_none() {
+                        Some(*sol_amount)
+                    } else {
+                        None
+                    }
+                }
+                Asset::Token(mint, _, token_amount) => {
+                    if supported_token_mint.is_some() && supported_token_mint.unwrap() == *mint {
+                        Some(*token_amount)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .unwrap_or_default()
+    }
+
+    /// receipt token amount in the queued withdrawal batches for an asset.
+    pub fn get_receipt_token_withdrawal_obligated_amount(&self) -> u64 {
+        self.get_queued_withdrawal_batches_iter()
+            .map(|b| b.receipt_token_amount)
+            .sum()
+    }
+
+    /// receipt token amount in the queued and pending withdrawal batches for an asset.
+    pub fn get_receipt_token_withdrawal_requested_amount(&self) -> u64 {
+        self.get_receipt_token_withdrawal_obligated_amount()
+            + self.withdrawal_pending_batch.receipt_token_amount
+    }
+
+    /// based on asset normal reserve configuration, the normal reserve amount relative to total_asset_amount of the fund.
+    fn get_withdrawal_normal_reserve_amount(
+        &self,
+        receipt_token_value: &TokenValue,
+    ) -> Result<u64> {
+        Ok(get_proportional_amount(
+            self.get_total_asset_amount(receipt_token_value),
+            self.normal_reserve_rate_bps as u64,
+            10_000,
+        )
+        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+        .min(self.normal_reserve_max_amount))
+    }
+
+    /// get asset amount required for withdrawal in current state, including normal reserve if there is remaining asset_operation_reserved_amount after withdrawal obligation met.
+    /// asset_withdrawal_obligated_reserve_amount + MIN(asset_withdrawal_normal_reserve_amount, MAX(0, asset_operation_reserved_amount - asset_withdrawal_obligated_reserve_amount))
+    fn get_total_withdrawal_reserve_amount(
+        &self,
+        receipt_token_mint: &Pubkey,
+        receipt_token_value: &TokenValue,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let asset_withdrawal_obligated_reserve_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(
+                receipt_token_mint,
+                self.get_receipt_token_withdrawal_obligated_amount(),
+            )?;
+        let asset_withdrawal_obligated_reserve_amount = match self.get_token_mint_and_program() {
+            None => asset_withdrawal_obligated_reserve_amount_as_sol,
+            Some((supported_token_mint, _)) => pricing_service.get_sol_amount_as_token(
+                &supported_token_mint,
+                asset_withdrawal_obligated_reserve_amount_as_sol,
+            )?,
+        };
+
+        Ok(asset_withdrawal_obligated_reserve_amount
+            + self
+                .get_withdrawal_normal_reserve_amount(receipt_token_value)?
+                .min(
+                    self.operation_reserved_amount
+                        .saturating_sub(asset_withdrawal_obligated_reserve_amount),
+                ))
+    }
+
+    /// represents the surplus or shortage amount after fulfilling the withdrawal obligations for the given asset.
+    pub(super) fn get_net_operation_reserved_amount(
+        &self,
+        receipt_token_mint: &Pubkey,
+        receipt_token_value: &TokenValue,
+        pricing_service: &PricingService,
+    ) -> Result<i128> {
+        Ok(self.operation_reserved_amount as i128
+            - self.get_total_withdrawal_reserve_amount(
+                receipt_token_mint,
+                receipt_token_value,
+                pricing_service,
+            )? as i128)
     }
 }
 
@@ -370,7 +459,7 @@ mod tests {
         assert_eq!(asset.withdrawal_pending_batch.receipt_token_amount, 0);
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .batch_id,
@@ -378,7 +467,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .num_requests,
@@ -386,7 +475,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .receipt_token_amount,
@@ -394,17 +483,17 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .enqueued_at,
             1
         );
         assert_eq!(asset.withdrawal_last_batch_enqueued_at, 1);
-        assert_eq!(asset.get_withdrawal_queued_batches_iter().count(), 1);
+        assert_eq!(asset.get_queued_withdrawal_batches_iter().count(), 1);
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     0,
                     false
@@ -414,7 +503,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     0,
                     true
@@ -424,7 +513,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     1,
                     false
@@ -464,13 +553,13 @@ mod tests {
             ),
             30
         );
-        assert_eq!(asset.get_withdrawal_queued_batches_iter().count(), 2);
+        assert_eq!(asset.get_queued_withdrawal_batches_iter().count(), 2);
         assert_eq!(asset.withdrawal_pending_batch.batch_id, 3);
         assert_eq!(asset.withdrawal_pending_batch.num_requests, 0);
         assert_eq!(asset.withdrawal_pending_batch.receipt_token_amount, 0);
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .batch_id,
@@ -478,7 +567,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .num_requests,
@@ -486,7 +575,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .receipt_token_amount,
@@ -494,7 +583,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .next()
                 .unwrap()
                 .enqueued_at,
@@ -502,7 +591,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .skip(1)
                 .next()
                 .unwrap()
@@ -511,7 +600,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .skip(1)
                 .next()
                 .unwrap()
@@ -520,7 +609,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .skip(1)
                 .next()
                 .unwrap()
@@ -529,7 +618,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter()
+                .get_queued_withdrawal_batches_iter()
                 .skip(1)
                 .next()
                 .unwrap()
@@ -537,10 +626,10 @@ mod tests {
             2
         );
         assert_eq!(asset.withdrawal_last_batch_enqueued_at, 2);
-        assert_eq!(asset.get_withdrawal_queued_batches_iter().count(), 2);
+        assert_eq!(asset.get_queued_withdrawal_batches_iter().count(), 2);
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     0,
                     false
@@ -550,7 +639,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     0,
                     true
@@ -560,7 +649,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     2,
                     false
@@ -583,10 +672,10 @@ mod tests {
         assert_eq!(asset.withdrawal_last_batch_processed_at, 3);
         assert_eq!(asset.withdrawal_last_processed_batch_id, 2);
 
-        assert_eq!(asset.get_withdrawal_queued_batches_iter().count(), 0);
+        assert_eq!(asset.get_queued_withdrawal_batches_iter().count(), 0);
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     4,
                     false
@@ -596,7 +685,7 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_withdrawal_queued_batches_iter_to_process(
+                .get_queued_withdrawal_batches_to_process_iter(
                     withdrawal_batch_threshold_interval_seconds,
                     4,
                     true

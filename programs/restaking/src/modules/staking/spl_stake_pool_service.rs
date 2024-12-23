@@ -156,7 +156,7 @@ impl<'info> SPLStakePoolService<'info> {
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
-        msg!("STAKE#spl: pool_token_mint={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), to_pool_token_account_amount, minted_pool_token_amount);
+        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }

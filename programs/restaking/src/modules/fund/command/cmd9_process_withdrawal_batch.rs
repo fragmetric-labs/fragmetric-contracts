@@ -1,19 +1,18 @@
-use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, StakeSOLCommand,
-};
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
+
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
-use crate::modules::fund::{
-    FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
 use crate::utils::AccountInfoExt;
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token::spl_associated_token_account;
+
+use super::{
+    FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, StakeSOLCommand, WeightedAllocationParticipant,
+    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ProcessWithdrawalBatchCommand {
@@ -32,6 +31,7 @@ pub enum ProcessWithdrawalBatchCommandState {
     /// either preparing the next eligible asset or performing a staking operation.
     Execute {
         asset_token_mint: Option<Pubkey>,
+        num_processing_batches: u8,
         receipt_token_amount: u64,
     },
 }
@@ -61,17 +61,15 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         match self.state {
             ProcessWithdrawalBatchCommandState::New => {}
             ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint } => {
-                let (requested_receipt_token_amount, mut required_accounts) = {
-                    let fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-
-                    let requested_receipt_token_amount = fund_service
-                        .get_receipt_token_withdrawal_obligated_amount(asset_token_mint)?;
-
-                    let required_accounts = fund_service
-                        .find_accounts_to_process_withdrawal_batches(asset_token_mint)?;
-
-                    (requested_receipt_token_amount, required_accounts)
-                };
+                let (num_processing_batches, mut required_accounts) =
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .find_accounts_to_process_withdrawal_batches(
+                            asset_token_mint,
+                            self.forced,
+                        )?;
+                let fund_account = ctx.fund_account.load()?;
+                let requested_receipt_token_amount = fund_account
+                    .get_asset_receipt_token_withdrawal_obligated_amount(asset_token_mint)?;
 
                 // to harvest program revenue (prepended)
                 required_accounts.insert(0, (PROGRAM_REVENUE_ADDRESS, true));
@@ -79,7 +77,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     1,
                     asset_token_mint
                         .map(|mint| {
-                            let fund_account = ctx.fund_account.load()?;
                             let supported_token = fund_account.get_supported_token(&mint)?;
                             Ok::<(Pubkey, bool), Error>((
                         spl_associated_token_account::get_associated_token_address_with_program_id(
@@ -100,7 +97,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 );
 
                 // to calculate LST cycle fee (appended)
-                let fund_account = ctx.fund_account.load()?;
                 for supported_token in fund_account.get_supported_tokens_iter() {
                     match &supported_token.pricing_source.try_deserialize()? {
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
@@ -132,6 +128,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         ProcessWithdrawalBatchCommand {
                             state: ProcessWithdrawalBatchCommandState::Execute {
                                 asset_token_mint,
+                                num_processing_batches,
                                 receipt_token_amount: requested_receipt_token_amount,
                             },
                             forced: false,
@@ -142,6 +139,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
             }
             ProcessWithdrawalBatchCommandState::Execute {
                 asset_token_mint,
+                num_processing_batches,
                 receipt_token_amount: requested_receipt_token_amount,
             } => {
                 let [program_revenue_account, program_supported_token_revenue_account, optional_associated_token_account_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, optional_supported_token_mint, optional_supported_token_program, optional_fund_supported_token_reserve_account, optional_fund_supported_token_treasury_account, remaining_accounts @ ..] =
@@ -151,10 +149,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 };
 
                 let fund_account = ctx.fund_account.load()?;
-                let num_queued_batches = fund_account
-                    .get_asset_state(asset_token_mint)?
-                    .get_withdrawal_queued_batches_iter()
-                    .count();
                 let num_supported_token_pricing_sources = fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
@@ -186,7 +180,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     .iter()
                     .sum();
                 if remaining_accounts.len()
-                    < num_queued_batches
+                    < num_processing_batches as usize
                         + num_supported_token_pricing_sources
                         + num_restaking_vault_pricing_sources
                 {
@@ -194,7 +188,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
 
                 let (uninitialized_withdrawal_batch_accounts, remaining_accounts) =
-                    remaining_accounts.split_at(num_queued_batches);
+                    remaining_accounts.split_at(num_processing_batches as usize);
 
                 let (supported_token_pricing_sources, remaining_accounts) =
                     remaining_accounts.split_at(num_supported_token_pricing_sources);
@@ -356,6 +350,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                         supported_token.sol_allocation_weight,
                                         pricing_service.get_token_amount_as_sol(
                                             &supported_token.mint,
+                                            // TODO: fixed with fund value..
                                             supported_token.token.operation_reserved_amount,
                                         )?,
                                         supported_token.sol_allocation_capacity_amount,
@@ -421,7 +416,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let fund_account = ctx.fund_account.load()?;
                 let target_asset_token_mints = fund_account
                     .get_asset_states_iter()
-                    .filter(|asset| asset.get_withdrawal_requested_receipt_token_amount(false) > 0)
+                    .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
                     .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
                     .collect::<Vec<_>>();
 

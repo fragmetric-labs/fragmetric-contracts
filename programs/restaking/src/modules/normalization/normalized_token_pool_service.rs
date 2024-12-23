@@ -101,7 +101,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
         pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
 
         // variant
-        to_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
+        to_normalized_token_account: &mut InterfaceAccount<'info, TokenAccount>,
         from_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_supported_token_account_signer: &AccountInfo<'info>,
         from_supported_token_account_signer_seeds: &[&[&[u8]]],
@@ -168,11 +168,12 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
             .reload_normalized_token_supply(self.normalized_token_mint)?;
         self.update_asset_values(pricing_service)?;
 
+        to_normalized_token_account.reload()?;
         let to_normalized_token_account_amount = to_normalized_token_account.amount;
         let minted_normalized_token_amount =
-            to_normalized_token_account_amount_before - to_normalized_token_account_amount;
+            to_normalized_token_account_amount - to_normalized_token_account_amount_before;
 
-        msg!("NORMALIZE#: pool_token_mint={}, to_normalized_token_account_amount={}, minted_normalized_token_amount={}", self.normalized_token_mint.key(), to_normalized_token_account_amount, minted_normalized_token_amount);
+        msg!("NORMALIZE#: pool_token_mint={}, supported_token_mint={}, normalized_supported_token_amount={}, to_normalized_token_account_amount={}, minted_normalized_token_amount={}", self.normalized_token_mint.key(), supported_token_mint.key(), supported_token_amount, to_normalized_token_account_amount, minted_normalized_token_amount);
 
         Ok((
             to_normalized_token_account_amount,

@@ -5,7 +5,7 @@ use super::{
     SelfExecutable,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct HarvestRewardCommand {
     // TODO: HarvestRewardCommand
 }

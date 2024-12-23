@@ -111,31 +111,31 @@ impl SelfExecutable for RestakeVSTCommand {
 
                     let fund_account = ctx.fund_account.load()?;
                     let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
-                    if let Some(normalized_token) = fund_account.get_normalized_token() {
-                        if normalized_token.mint == restaking_vault.supported_token_mint {
-                            let normalized_token_pool_address =
-                                NormalizedTokenPoolAccount::find_account_address_by_token_mint(
-                                    &normalized_token.mint,
-                                );
-
-                            let normalized_token_account =
-                                spl_associated_token_account::get_associated_token_address_with_program_id(
-                                    &ctx.fund_account.key(),
-                                    &normalized_token.mint,
-                                    &normalized_token.program,
-                                );
-                            command.state = RestakeVSTCommandState::SetupNormalize;
-                            return Ok((
-                                None,
-                                Some(command.with_required_accounts([
-                                    (normalized_token.mint, true),
-                                    (normalized_token_pool_address, true),
-                                    (normalized_token.program, false),
-                                    (normalized_token_account, true),
-                                ])),
-                            ));
-                        }
-                    }
+                    // if let Some(normalized_token) = fund_account.get_normalized_token() {
+                    //     if normalized_token.mint == restaking_vault.supported_token_mint {
+                    //         let normalized_token_pool_address =
+                    //             NormalizedTokenPoolAccount::find_account_address_by_token_mint(
+                    //                 &normalized_token.mint,
+                    //             );
+                    //
+                    //         let normalized_token_account =
+                    //             spl_associated_token_account::get_associated_token_address_with_program_id(
+                    //                 &ctx.fund_account.key(),
+                    //                 &normalized_token.mint,
+                    //                 &normalized_token.program,
+                    //             );
+                    //         command.state = RestakeVSTCommandState::SetupNormalize;
+                    //         return Ok((
+                    //             None,
+                    //             Some(command.with_required_accounts([
+                    //                 (normalized_token.mint, true),
+                    //                 (normalized_token_pool_address, true),
+                    //                 (normalized_token.program, false),
+                    //                 (normalized_token_account, true),
+                    //             ])),
+                    //         ));
+                    //     }
+                    // }
 
                     command.state = RestakeVSTCommandState::SetupRestake;
                     return Ok((
@@ -392,11 +392,11 @@ impl SelfExecutable for RestakeVSTCommand {
                     )?;
 
                     normalized_token_pool_service.normalize_supported_token(
-                        &normalized_token_account_parsed,
-                        &supported_token_account_parsed,
-                        &pool_supported_token_account_parsed,
                         &supported_token_mint_parsed,
                         &supported_token_program_parsed,
+                        &pool_supported_token_account_parsed,
+                        &mut normalized_token_account_parsed,
+                        &supported_token_account_parsed,
                         &ctx.fund_account.to_account_info(),
                         &[fund_account.get_seeds().as_ref()],
                         reserved_restake_token.operation_reserved_amount,
