@@ -73,7 +73,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program]
-    fn find_accounts_for_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
+    fn find_accounts_to_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
         vec![
             (marinade_cpi::ID, false),
             (pool_account.key(), true),
@@ -89,7 +89,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
-        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        let mut accounts = Self::find_accounts_to_new(&pool_account);
         accounts.extend([
             // liq_pool_sol_leg
             (
@@ -303,7 +303,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         ticket_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
-        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        let mut accounts = Self::find_accounts_to_new(&pool_account);
         accounts.extend([
             // new_ticket_account
             (ticket_account.key(), true),
@@ -324,7 +324,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         'info: 'a,
     {
         let pool_account = Account::<State>::try_from(pool_account_info)?;
-        let mut accounts = Self::find_accounts_for_new(&pool_account);
+        let mut accounts = Self::find_accounts_to_new(&pool_account);
         accounts.extend([
             // pool_reserve
             Self::find_pool_reserve_account_meta(pool_account.as_ref()),

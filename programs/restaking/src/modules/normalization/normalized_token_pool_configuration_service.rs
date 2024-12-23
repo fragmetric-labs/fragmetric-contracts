@@ -1,10 +1,12 @@
-use super::*;
-use crate::modules::fund::FundService;
-use crate::modules::pricing::{PricingService, TokenPricingSource};
 use anchor_lang::prelude::*;
 use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+use crate::modules::fund::FundService;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
+
+use super::*;
 
 pub struct NormalizedTokenPoolConfigurationService<'info: 'a, 'a> {
     normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
@@ -73,18 +75,18 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
 
     pub fn process_add_supported_token(
         &mut self,
-        pool_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        pool_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<'info, TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<()> {
         require_keys_eq!(
-            pool_supported_token_account.owner,
+            pool_supported_token_reserve_account.owner,
             self.normalized_token_pool_account.key()
         );
         require_keys_eq!(
-            pool_supported_token_account.mint,
+            pool_supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
         require_keys_eq!(
@@ -96,7 +98,7 @@ impl<'info, 'a> NormalizedTokenPoolConfigurationService<'info, 'a> {
             supported_token_mint.key(),
             supported_token_program.key(),
             supported_token_mint.decimals,
-            pool_supported_token_account.key(),
+            pool_supported_token_reserve_account.key(),
             pricing_source,
         )?;
 

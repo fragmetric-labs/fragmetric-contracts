@@ -1,7 +1,3 @@
-use std::num::NonZeroU32;
-
-use crate::errors;
-use crate::utils::SystemProgramExt;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
@@ -9,6 +5,10 @@ use anchor_lang::solana_program::stake::state::StakeStateV2;
 use anchor_spl::token_interface::TokenAccount;
 use spl_stake_pool::big_vec::BigVec;
 use spl_stake_pool::state::StakePool;
+use std::num::NonZeroU32;
+
+use crate::errors;
+use crate::utils::SystemProgramExt;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum AvailableWithdrawals {
@@ -68,7 +68,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(stake_account)
     }
 
-    fn find_accounts_for_new(
+    fn find_accounts_to_new(
         pool_account_info: &AccountInfo,
         pool_account: &StakePool,
     ) -> Vec<(Pubkey, bool)> {
@@ -86,7 +86,7 @@ impl<'info> SPLStakePoolService<'info> {
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
         accounts.extend([
             // for self.deposit_sol
             (
@@ -165,7 +165,7 @@ impl<'info> SPLStakePoolService<'info> {
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_for_new(pool_account_info, &pool_account);
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
         accounts.extend([
             (pool_account.reserve_stake, true),
             (pool_account.validator_list, true),
