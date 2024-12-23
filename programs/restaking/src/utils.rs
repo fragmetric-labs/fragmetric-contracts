@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
-use anchor_lang::{CheckOwner, ZeroCopy};
+use anchor_lang::{CheckId, CheckOwner, ZeroCopy};
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -174,6 +174,14 @@ pub trait AccountInfoExt<'info> {
     where
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner;
 
+    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
+    where
+        T: Id;
+
+    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
+    where
+        T: CheckId;
+
     fn parse_optional_account_boxed<T>(&'info self) -> Result<Option<Box<Account<'info, T>>>>
     where
         T: AccountSerialize + AccountDeserialize + Clone + Owner;
@@ -204,6 +212,22 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
     {
         InterfaceAccount::try_from(self).map(Box::new)
+    }
+
+    #[inline(never)]
+    fn parse_program_boxed<T>(&'info self) -> Result<Box<Program<'info, T>>>
+    where
+        T: Id,
+    {
+        Program::try_from(self).map(Box::new)
+    }
+
+    #[inline(never)]
+    fn parse_interface_boxed<T>(&'info self) -> Result<Box<Interface<'info, T>>>
+    where
+        T: CheckId,
+    {
+        Interface::try_from(self).map(Box::new)
     }
 
     #[inline(never)]
