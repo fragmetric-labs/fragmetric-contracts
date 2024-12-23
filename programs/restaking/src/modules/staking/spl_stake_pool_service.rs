@@ -157,14 +157,10 @@ impl<'info> SPLStakePoolService<'info> {
             to_pool_token_account_amount - to_pool_token_account_amount_before;
         let deposit_fee = {
             let pool_account = Self::deserialize_pool_account(self.pool_account)?;
-            if pool_account.sol_deposit_fee.numerator == 0 {
-                (0, 1)
-            } else {
-                (
-                    pool_account.sol_deposit_fee.numerator,
-                    pool_account.sol_deposit_fee.denominator,
-                )
-            }
+            (
+                pool_account.sol_deposit_fee.numerator,
+                pool_account.sol_deposit_fee.denominator.max(1),
+            )
         };
 
         msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
@@ -226,19 +222,30 @@ impl<'info> SPLStakePoolService<'info> {
     ) -> Result<(u64, u64)> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
 
-        // it only costs withdrawal fee
-        let f1 = pool_account.sol_withdrawal_fee;
-        let f2 = pool_account.stake_withdrawal_fee;
+        // it costs deposit and withdrawal fee
+        let f1 = pool_account.sol_deposit_fee;
+
+        let f2a = pool_account.sol_withdrawal_fee;
+        let f2b = pool_account.stake_withdrawal_fee;
 
         // f1.numerator/f1.denominator > f2.numerator/f2.denominator
-        Ok(
-            if f2.denominator == 0 || f1.numerator * f2.denominator > f2.numerator * f1.denominator
-            {
-                (f1.numerator, f1.denominator)
-            } else {
-                (f2.numerator, f2.denominator)
-            },
-        )
+        let f2 = if f2b.denominator == 0
+            || f2a.numerator * f2b.denominator > f2b.numerator * f2a.denominator
+        {
+            f2a
+        } else {
+            f2b
+        };
+
+        let fee_rate = 1.0
+            - (1.0 - (f1.numerator as f32 / f1.denominator.max(1) as f32))
+                * (1.0 - (f2.numerator as f32 / f2.denominator.max(1) as f32));
+        let fee_rate_bps = (fee_rate * 10_000.0).ceil();
+        if fee_rate_bps > u16::MAX as f32 {
+            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?;
+        }
+
+        Ok((fee_rate_bps as u64, 10_000))
     }
 
     pub fn get_withdrawal_available_from_reserve_or_validator(
