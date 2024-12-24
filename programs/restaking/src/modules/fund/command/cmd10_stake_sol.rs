@@ -234,7 +234,10 @@ impl SelfExecutable for StakeSOLCommand {
                             };
                             require_keys_eq!(address, pool_account.key());
 
-                            if item.allocated_sol_amount < MarinadeStakePoolService::get_min_deposit_sol_amount(pool_account)?
+                            if item.allocated_sol_amount
+                                < MarinadeStakePoolService::get_min_deposit_sol_amount(
+                                    pool_account,
+                                )?
                             {
                                 None
                             } else {

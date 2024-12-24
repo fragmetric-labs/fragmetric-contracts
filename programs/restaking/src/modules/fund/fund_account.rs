@@ -535,16 +535,39 @@ impl FundAccount {
         std::iter::once(&self.sol).chain(self.get_supported_tokens_iter().map(|v| &v.token))
     }
 
+    pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
+        let sol = &mut self.sol;
+        let tokens = self.supported_tokens[..self.num_supported_tokens as usize]
+            .iter_mut()
+            .map(|v| &mut v.token);
+        std::iter::once(sol).chain(tokens)
+    }
+
+    /// returns [deposited_amount]
     pub(super) fn deposit(
         &mut self,
         supported_token_mint: Option<Pubkey>,
         asset_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         if self.deposit_enabled == 0 {
             err!(ErrorCode::FundDepositDisabledError)?
         }
         self.get_asset_state_mut(supported_token_mint)?
             .deposit(asset_amount)
+    }
+
+    /// returns [deposited_amount, offsetted_receivable_amount]
+    pub(super) fn donate(
+        &mut self,
+        supported_token_mint: Option<Pubkey>,
+        asset_amount: u64,
+        offset_receivable: bool,
+    ) -> Result<(u64, u64)> {
+        if self.deposit_enabled == 0 {
+            err!(ErrorCode::FundDepositDisabledError)?
+        }
+        self.get_asset_state_mut(supported_token_mint)?
+            .donate(asset_amount, offset_receivable)
     }
 
     /// requested receipt_token_amount can be reduced based on the status of the underlying asset.

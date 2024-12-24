@@ -43,8 +43,16 @@ pub struct ProcessWithdrawalBatchCommandResult {
     pub asset_token_mint: Option<Pubkey>,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
+    #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+    pub offsetted_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,
     pub transferred_asset_revenue_amount: u64,
     pub withdrawal_fee_rate_bps: u16,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct ProcessWithdrawalBatchCommandResultAssetReceivable {
+    pub asset_token_mint: Option<Pubkey>,
+    pub asset_amount: u64,
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
@@ -252,7 +260,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     }
                 }
 
-                // calculate LRT max cycle fee to ensure withdrawal fee is equal or greater than max fee expense during cash-out
+                // calculate LRT max cycle fee to ensure withdrawal fee is equal or greater than max fee expense during cash-in/out
                 let lrt_max_cycle_fee_rate = 1.0
                     - (1.0
                         - (lst_max_cycle_fee_numerator as f32
@@ -279,6 +287,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     processed_receipt_token_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
+                    offsetted_asset_receivables,
                     transferred_asset_revenue_amount,
                     pricing_service,
                 ) = {
@@ -288,6 +297,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         processed_receipt_token_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
+                        offsetted_asset_receivables,
                     ) = fund_service.process_withdrawal_batches(
                         ctx.operator,
                         ctx.system_program,
@@ -326,6 +336,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         processed_receipt_token_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
+                        offsetted_asset_receivables,
                         transferred_asset_revenue_amount,
                         pricing_service,
                     )
@@ -401,6 +412,15 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         processed_receipt_token_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
+                        offsetted_asset_receivables: offsetted_asset_receivables
+                            .into_iter()
+                            .map(|(asset_token_mint, asset_amount)| {
+                                ProcessWithdrawalBatchCommandResultAssetReceivable {
+                                    asset_token_mint,
+                                    asset_amount,
+                                }
+                            })
+                            .collect::<Vec<_>>(),
                         transferred_asset_revenue_amount,
                         withdrawal_fee_rate_bps: ctx.fund_account.load()?.withdrawal_fee_rate_bps,
                     }

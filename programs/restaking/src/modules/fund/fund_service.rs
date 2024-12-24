@@ -517,7 +517,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok((num_withdrawal_batches, accounts))
     }
 
-    /// returns [processed_receipt_token_amount, reserved_asset_user_amount, deducted_asset_fee_amount]
+    /// returns [processed_receipt_token_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -540,7 +540,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         forced: bool,
         receipt_token_amount_to_process: u64,
         _receipt_token_amount_to_return: u64, // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
-    ) -> Result<(u64, u64, u64)> {
+    ) -> Result<(u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
         let (
             supported_token_mint,
             supported_token_mint_key,
@@ -580,124 +580,141 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let mut processing_batch_count = 0;
 
         let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
-        {
-            let fund_account = self.fund_account.load()?;
+        let fund_account = self.fund_account.load()?;
+        let asset = fund_account.get_asset_state(supported_token_mint_key)?;
 
-            // examine withdrawal batches to process with current fund status
-            let asset = fund_account.get_asset_state(supported_token_mint_key)?;
-            for batch in asset.get_queued_withdrawal_batches_to_process_iter(
-                fund_account.withdrawal_batch_threshold_interval_seconds,
-                self.current_timestamp,
-                forced,
-            ) {
-                let next_receipt_token_amount_processing =
-                    receipt_token_amount_processing + batch.receipt_token_amount;
-                if next_receipt_token_amount_processing > receipt_token_amount_to_process {
-                    break;
-                }
+        let total_operation_receivable_amount_as_sol = fund_account
+            .get_asset_states_iter()
+            .map(|asset| {
+                Ok(match asset.get_token_mint_and_program() {
+                    Some((token_mint, _)) => pricing_service
+                        .get_token_amount_as_sol(&token_mint, asset.operation_receivable_amount)?,
+                    None => asset.operation_receivable_amount,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+            .iter()
+            .sum::<u64>();
 
-                let sol_amount = pricing_service.get_token_amount_as_sol(
-                    &self.receipt_token_mint.key(),
-                    batch.receipt_token_amount,
-                )?;
-                let asset_amount = if let Some(supported_token_mint) = &supported_token_mint_key {
-                    pricing_service.get_sol_amount_as_token(supported_token_mint, sol_amount)?
-                } else {
-                    sol_amount
-                };
-                let asset_fee_amount = fund_account.get_withdrawal_fee_amount(asset_amount)?;
-                let asset_user_amount = asset_amount - asset_fee_amount;
+        let total_operation_receivable_amount_as_asset = match asset.get_token_mint_and_program() {
+            Some((token_mint, _)) => pricing_service
+                .get_sol_amount_as_token(&token_mint, total_operation_receivable_amount_as_sol)?,
+            None => total_operation_receivable_amount_as_sol,
+        };
 
-                let next_asset_user_amount_processing =
-                    asset_user_amount_processing + asset_user_amount;
-                let next_asset_fee_amount_processing =
-                    asset_fee_amount_processing + asset_fee_amount;
-
-                // [asset_user_amount_processing] should primarily be covered by cash.
-                // condition 1: asset_operation_reserved_amount (cash) >= asset_user_amount_processing (cash/debt)
-                // if condition 1 is met, the user's sol withdrawal will be fully processed using cash.
-
-                // if condition 1 fails, the withdrawal can still proceed if:
-                // condition 1-2: asset_operation_reserved_amount (cash) + asset_treasury_reserved_amount (cash/debt) >= asset_user_amount_processing (cash/debt)
-                // in this case, the user's sol withdrawal will rely on the treasury's ability to provide additional liquidity, even by taking on debt.
-
-                // additionally, the [asset_fee_amount_processing], which belongs to the treasury, can be covered using asset_operation_receivable_amount (bonds).
-                // the treasury is willing to accept receivables from the fund to offset its debt obligations.
-                // this leads to condition 2:
-                // asset_operation_reserved_amount (cash) + asset_operation_receivable_amount (bond) >= asset_user_amount_processing (cash/debt) + asset_fee_amount_processing (debt)
-
-                // to summarize:
-                // - asset_operation_reserved_amount + asset_operation_receivable_amount + [optional debt from asset_treasury_reserved_amount] will offset asset_user_amount_processing + asset_fee_amount_processing.
-                // - asset_operation_reserved_amount + [optional debt from asset_treasury_reserved_amount] will offset asset_user_amount_processing.
-                // - asset_operation_receivable_amount will offset asset_fee_amount_processing + [optional debt from asset_treasury_reserved_amount].
-                // - any remaining portion of asset_fee_amount_processing not covered by the receivables will be offset by the leftover asset_operation_reserved_amount, transferring the surplus to the treasury fund as revenue.
-
-                if asset.operation_reserved_amount + asset.operation_receivable_amount
-                    < next_asset_user_amount_processing + next_asset_fee_amount_processing
-                    || asset.operation_reserved_amount + asset_treasury_reserved_amount
-                        < next_asset_user_amount_processing
-                {
-                    break;
-                }
-
-                receipt_token_amount_processing = next_receipt_token_amount_processing;
-                asset_user_amount_processing = next_asset_user_amount_processing;
-                asset_fee_amount_processing = next_asset_fee_amount_processing;
-                processing_batch_count += 1;
+        // examine withdrawal batches to process with current fund status
+        for batch in asset.get_queued_withdrawal_batches_to_process_iter(
+            fund_account.withdrawal_batch_threshold_interval_seconds,
+            self.current_timestamp,
+            forced,
+        ) {
+            let next_receipt_token_amount_processing =
+                receipt_token_amount_processing + batch.receipt_token_amount;
+            if next_receipt_token_amount_processing > receipt_token_amount_to_process {
+                break;
             }
 
-            // borrow asset (cash) from treasury if needed (condition 1-2)
-            if asset_user_amount_processing > asset.operation_reserved_amount {
-                let asset_debt_amount_from_treasury =
-                    asset_user_amount_processing - asset.operation_reserved_amount;
-                match &supported_token_mint {
-                    Some(supported_token_mint) => {
-                        token_interface::transfer_checked(
-                            CpiContext::new_with_signer(
-                                supported_token_program.as_ref().unwrap().to_account_info(),
-                                token_interface::TransferChecked {
-                                    from: fund_supported_token_treasury_account
-                                        .as_ref()
-                                        .unwrap()
-                                        .to_account_info(),
-                                    to: fund_supported_token_reserve_account
-                                        .as_ref()
-                                        .unwrap()
-                                        .to_account_info(),
-                                    mint: supported_token_mint.to_account_info(),
-                                    authority: fund_treasury_account.to_account_info(),
-                                },
-                                &[&fund_account.get_treasury_account_seeds()],
-                            ),
-                            asset_debt_amount_from_treasury,
-                            supported_token_mint.decimals,
-                        )?;
-                    }
-                    None => {
-                        anchor_lang::system_program::transfer(
-                            CpiContext::new_with_signer(
-                                system_program.to_account_info(),
-                                anchor_lang::system_program::Transfer {
-                                    from: fund_treasury_account.to_account_info(),
-                                    to: fund_reserve_account.to_account_info(),
-                                },
-                                &[&fund_account.get_treasury_account_seeds()],
-                            ),
-                            asset_debt_amount_from_treasury,
-                        )?;
-                    }
-                }
+            let sol_amount = pricing_service.get_token_amount_as_sol(
+                &self.receipt_token_mint.key(),
+                batch.receipt_token_amount,
+            )?;
+            let asset_amount = if let Some(supported_token_mint) = &supported_token_mint_key {
+                pricing_service.get_sol_amount_as_token(supported_token_mint, sol_amount)?
+            } else {
+                sol_amount
+            };
+            let asset_fee_amount = fund_account.get_withdrawal_fee_amount(asset_amount)?;
+            let asset_user_amount = asset_amount - asset_fee_amount;
 
-                // increase debt, can use this variable as the entire asset_fee_amount_processing will be paid back to the treasury account.
-                asset_fee_amount_processing += asset_debt_amount_from_treasury;
+            let next_asset_user_amount_processing =
+                asset_user_amount_processing + asset_user_amount;
+            let next_asset_fee_amount_processing = asset_fee_amount_processing + asset_fee_amount;
 
-                // reserve transferred cash
-                self.fund_account
-                    .load_mut()?
-                    .get_asset_state_mut(supported_token_mint_key)?
-                    .operation_reserved_amount += asset_debt_amount_from_treasury;
+            // [asset_user_amount_processing] should primarily be covered by cash.
+            // condition 1: asset_operation_reserved_amount (cash) >= asset_user_amount_processing (cash/debt)
+            // if condition 1 is met, the user's sol withdrawal will be fully processed using cash.
+
+            // if condition 1 fails, the withdrawal can still proceed if:
+            // condition 1-2: asset_operation_reserved_amount (cash) + asset_treasury_reserved_amount (cash/debt) >= asset_user_amount_processing (cash/debt)
+            // in this case, the user's sol withdrawal will rely on the treasury's ability to provide additional liquidity, even by taking on debt.
+
+            // additionally, the [asset_fee_amount_processing], which belongs to the treasury, can be paid by total_operation_receivable_amount_as_sol (bonds).
+            // the treasury is willing to accept receivables from the fund to offset its debt obligations.
+            // this leads to condition 2:
+            // asset_operation_reserved_amount (cash) + total_operation_receivable_amount_as_sol (bond) >= asset_user_amount_processing (cash/debt) + asset_fee_amount_processing (debt)
+
+            // to summarize:
+            // - asset_operation_reserved_amount + total_operation_receivable_amount_as_sol + [optional debt from asset_treasury_reserved_amount] will offset asset_user_amount_processing + asset_fee_amount_processing.
+            // - asset_operation_reserved_amount + [optional debt from asset_treasury_reserved_amount] will offset asset_user_amount_processing.
+            // - total_operation_receivable_amount_as_sol will offset asset_fee_amount_processing + [optional debt from asset_treasury_reserved_amount].
+            // - any remaining portion of asset_fee_amount_processing which cannot be paid by the receivables will be offset by the leftover asset_operation_reserved_amount, transferring the surplus to the treasury fund as revenue.
+
+            if asset.operation_reserved_amount + total_operation_receivable_amount_as_asset
+                < next_asset_user_amount_processing + next_asset_fee_amount_processing
+                || asset.operation_reserved_amount + asset_treasury_reserved_amount
+                    < next_asset_user_amount_processing
+            {
+                break;
             }
+
+            receipt_token_amount_processing = next_receipt_token_amount_processing;
+            asset_user_amount_processing = next_asset_user_amount_processing;
+            asset_fee_amount_processing = next_asset_fee_amount_processing;
+            processing_batch_count += 1;
         }
+
+        // borrow asset (cash) from treasury if needed (condition 1-2)
+        if asset_user_amount_processing > asset.operation_reserved_amount {
+            let asset_debt_amount_from_treasury =
+                asset_user_amount_processing - asset.operation_reserved_amount;
+            match &supported_token_mint {
+                Some(supported_token_mint) => {
+                    token_interface::transfer_checked(
+                        CpiContext::new_with_signer(
+                            supported_token_program.as_ref().unwrap().to_account_info(),
+                            token_interface::TransferChecked {
+                                from: fund_supported_token_treasury_account
+                                    .as_ref()
+                                    .unwrap()
+                                    .to_account_info(),
+                                to: fund_supported_token_reserve_account
+                                    .as_ref()
+                                    .unwrap()
+                                    .to_account_info(),
+                                mint: supported_token_mint.to_account_info(),
+                                authority: fund_treasury_account.to_account_info(),
+                            },
+                            &[&fund_account.get_treasury_account_seeds()],
+                        ),
+                        asset_debt_amount_from_treasury,
+                        supported_token_mint.decimals,
+                    )?;
+                }
+                None => {
+                    anchor_lang::system_program::transfer(
+                        CpiContext::new_with_signer(
+                            system_program.to_account_info(),
+                            anchor_lang::system_program::Transfer {
+                                from: fund_treasury_account.to_account_info(),
+                                to: fund_reserve_account.to_account_info(),
+                            },
+                            &[&fund_account.get_treasury_account_seeds()],
+                        ),
+                        asset_debt_amount_from_treasury,
+                    )?;
+                }
+            }
+
+            // increase debt, can use this variable as the entire asset_fee_amount_processing will be paid back to the treasury account.
+            asset_fee_amount_processing += asset_debt_amount_from_treasury;
+
+            // reserve borrowed cash
+            self.fund_account
+                .load_mut()?
+                .get_asset_state_mut(supported_token_mint_key)?
+                .operation_reserved_amount += asset_debt_amount_from_treasury;
+        }
+        drop(fund_account);
 
         // burn receipt tokens
         if receipt_token_amount_processing > 0 {
@@ -719,6 +736,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let receipt_token_amount_processed = receipt_token_amount_processing;
         let asset_user_amount_reserved = asset_user_amount_processing;
         let asset_fee_amount_deducted = asset_fee_amount_processing;
+        let mut offsetted_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
 
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
@@ -814,19 +832,96 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             // during evaluation, up to [processing_batch_count] amounts can be deducted.
-            // any remaining asset_user_amount_processing simply remains to the fund (no further action).
+            // any remaining asset_user_amount_processing simply remains to the fund.
             require_gte!(processing_batch_count as u64, asset_user_amount_processing);
 
-            // pay the treasury debt with receivables first (no further action).
+            // pay the treasury debt with receivables first.
             let mut fund_account = self.fund_account.load_mut()?;
             let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
-            let receivable_amount_to_pay = asset
-                .operation_receivable_amount
-                .min(asset_fee_amount_processing);
-            asset.operation_receivable_amount -= receivable_amount_to_pay;
-            asset_fee_amount_processing -= receivable_amount_to_pay;
+            let mut receivable_amount_processing =
+                total_operation_receivable_amount_as_asset.min(asset_fee_amount_processing);
 
-            // pay remaining debt with cash
+            // pay with receivable of current asset first.
+            let receivable_amount_processing_for_current_asset = asset
+                .operation_receivable_amount
+                .min(receivable_amount_processing);
+            asset.operation_receivable_amount -= receivable_amount_processing_for_current_asset;
+            asset_fee_amount_processing -= receivable_amount_processing_for_current_asset;
+            receivable_amount_processing -= receivable_amount_processing_for_current_asset;
+            if receivable_amount_processing_for_current_asset > 0 {
+                offsetted_asset_receivables.push((
+                    asset.get_token_mint_and_program().unzip().0,
+                    receivable_amount_processing_for_current_asset,
+                ));
+            }
+
+            let mut receivable_amount_processing_as_sol = if receivable_amount_processing > 0 {
+                match asset.get_token_mint_and_program() {
+                    Some((token_mint, _)) => pricing_service
+                        .get_token_amount_as_sol(&token_mint, receivable_amount_processing)?,
+                    None => receivable_amount_processing,
+                }
+            } else {
+                0
+            };
+            drop(fund_account);
+
+            // pay with receivable of other assets if possible.
+            if receivable_amount_processing_as_sol > 0 {
+                let fund_account = self.fund_account.load()?;
+                let asset = fund_account.get_asset_state(supported_token_mint_key)?;
+
+                let mut fund_account = self.fund_account.load_mut()?;
+                for other_asset in fund_account.get_asset_states_iter_mut() {
+                    if other_asset.operation_receivable_amount > 0 {
+                        let other_asset_operation_receivable_amount_as_sol =
+                            match other_asset.get_token_mint_and_program() {
+                                Some((token_mint, _)) => pricing_service.get_token_amount_as_sol(
+                                    &token_mint,
+                                    other_asset.operation_receivable_amount,
+                                )?,
+                                None => other_asset.operation_receivable_amount,
+                            };
+                        let receivable_amount_processing_as_sol_for_other_asset =
+                            other_asset_operation_receivable_amount_as_sol
+                                .min(receivable_amount_processing_as_sol);
+                        let receivable_amount_processing_as_other_asset_for_other_asset =
+                            match other_asset.get_token_mint_and_program() {
+                                Some((token_mint, _)) => pricing_service.get_sol_amount_as_token(
+                                    &token_mint,
+                                    receivable_amount_processing_as_sol_for_other_asset,
+                                )?,
+                                None => receivable_amount_processing_as_sol_for_other_asset,
+                            };
+                        other_asset.operation_receivable_amount -=
+                            receivable_amount_processing_as_other_asset_for_other_asset;
+                        receivable_amount_processing_as_sol -=
+                            receivable_amount_processing_as_sol_for_other_asset;
+                        offsetted_asset_receivables.push((
+                            other_asset.get_token_mint_and_program().unzip().0,
+                            receivable_amount_processing_as_other_asset_for_other_asset,
+                        ));
+
+                        if receivable_amount_processing_as_sol == 0 {
+                            break;
+                        }
+                    }
+                }
+                let receivable_amount_processed = receivable_amount_processing
+                    - match asset.get_token_mint_and_program() {
+                        Some((token_mint, _)) => pricing_service.get_sol_amount_as_token(
+                            &token_mint,
+                            receivable_amount_processing_as_sol,
+                        )?,
+                        None => receivable_amount_processing_as_sol,
+                    };
+                asset_fee_amount_processing -= receivable_amount_processed;
+                receivable_amount_processing -= receivable_amount_processed;
+            }
+
+            // pay remaining debt with cash with current asset
+            let mut fund_account = self.fund_account.load_mut()?;
+            let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
             asset.operation_reserved_amount -= asset_fee_amount_processing;
             drop(fund_account);
 
@@ -882,6 +977,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             receipt_token_amount_processed,
             asset_user_amount_reserved,
             asset_fee_amount_deducted,
+            offsetted_asset_receivables,
         ))
     }
 
@@ -990,7 +1086,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
 
         asset_amount: u64,
-    ) -> Result<events::OperatorUpdatedFundPrices> {
+        offset_receivable: bool,
+    ) -> Result<events::OperatorDonatedToFund> {
         self.process_donate(
             operator,
             Some(system_program),
@@ -1001,6 +1098,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             None,
             pricing_sources,
             asset_amount,
+            offset_receivable,
         )
     }
 
@@ -1016,7 +1114,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
 
         asset_amount: u64,
-    ) -> Result<events::OperatorUpdatedFundPrices> {
+        offset_receivable: bool,
+    ) -> Result<events::OperatorDonatedToFund> {
         self.process_donate(
             operator,
             None,
@@ -1027,6 +1126,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             Some(operator_supported_token_account),
             pricing_sources,
             asset_amount,
+            offset_receivable,
         )
     }
 
@@ -1048,7 +1148,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: &'info [AccountInfo<'info>],
 
         asset_amount: u64,
-    ) -> Result<events::OperatorUpdatedFundPrices> {
+        offset_receivable: bool,
+    ) -> Result<events::OperatorDonatedToFund> {
         let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
 
         // validate operator asset balance
@@ -1065,9 +1166,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         // transfer operator asset to the fund
-        self.fund_account
+        let (deposited_amount, offsetted_receivable_amount) = self.fund_account
             .load_mut()?
-            .deposit(supported_token_mint_key, asset_amount)?;
+            .donate(supported_token_mint_key, asset_amount, offset_receivable)?;
+        let donated_amount = deposited_amount + offsetted_receivable_amount;
+        assert_eq!(asset_amount, donated_amount);
 
         match supported_token_mint {
             Some(supported_token_mint) => {
@@ -1083,7 +1186,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                             authority: operator.to_account_info(),
                         },
                     ),
-                    asset_amount,
+                    donated_amount,
                     supported_token_mint.decimals,
                 )?;
             }
@@ -1096,7 +1199,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                             to: fund_reserve_account.unwrap().to_account_info(),
                         },
                     ),
-                    asset_amount,
+                    donated_amount,
                 )?;
             }
         }
@@ -1105,9 +1208,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
 
-        Ok(events::OperatorUpdatedFundPrices {
+        Ok(events::OperatorDonatedToFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
+            supported_token_mint: supported_token_mint_key,
+            donated_amount,
+            deposited_amount,
+            offsetted_receivable_amount,
         })
     }
 }

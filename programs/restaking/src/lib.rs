@@ -526,6 +526,7 @@ pub mod restaking {
     pub fn operator_donate_sol_to_fund<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundDonationContext<'info>>,
         amount: u64,
+        offset_receivable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -537,6 +538,7 @@ pub mod restaking {
             &ctx.accounts.fund_reserve_account,
             ctx.remaining_accounts,
             amount,
+            offset_receivable,
         )?);
 
         Ok(())
@@ -545,6 +547,7 @@ pub mod restaking {
     pub fn operator_donate_supported_token_to_fund<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundSupportedTokenDonationContext<'info>>,
         amount: u64,
+        offset_receivable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -558,6 +561,7 @@ pub mod restaking {
             &ctx.accounts.operator_supported_token_account,
             ctx.remaining_accounts,
             amount,
+            offset_receivable,
         )?);
 
         Ok(())

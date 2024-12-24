@@ -1741,11 +1741,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorDonateSOLToFund(operator: web3.Keypair, amount: BN) {
+    public async runOperatorDonateSOLToFund(
+        operator: web3.Keypair,
+        amount: BN,
+        offsetReceivable: boolean = false,
+    ) {
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .operatorDonateSolToFund(amount)
+                    .operatorDonateSolToFund(amount, offsetReceivable)
                     .accountsPartial({
                         operator: operator.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
@@ -1754,7 +1758,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorUpdatedFundPrices"],
+            events: ["operatorDonatedToFund"],
         });
 
         const [fragSOLFund, fragSOLFundReserveAccountBalance] = await Promise.all([
@@ -1775,6 +1779,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         operator: web3.Keypair,
         tokenSymbol: keyof typeof this.supportedTokenMetadata,
         amount: BN,
+        offsetReceivable: boolean = false,
     ) {
         const supportedToken = this.supportedTokenMetadata[tokenSymbol];
         const operatorSupportedTokenAddress = this.knownAddress.userSupportedTokenAccount(operator.publicKey, tokenSymbol);
@@ -1782,7 +1787,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .operatorDonateSupportedTokenToFund(amount)
+                    .operatorDonateSupportedTokenToFund(amount, offsetReceivable)
                     .accountsPartial({
                         operator: operator.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
@@ -1794,7 +1799,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [operator],
-            events: ["operatorUpdatedFundPrices"],
+            events: ["operatorDonatedToFund"],
         });
 
         const [fragSOLFund, fragSOLFundSupportedTokenAccount] = await Promise.all([

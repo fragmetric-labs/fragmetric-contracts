@@ -7,8 +7,8 @@ use spl_stake_pool::big_vec::BigVec;
 use spl_stake_pool::state::StakePool;
 use std::num::NonZeroU32;
 
-use crate::{errors, utils};
 use crate::utils::SystemProgramExt;
+use crate::{errors, utils};
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub enum AvailableWithdrawals {

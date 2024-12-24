@@ -152,9 +152,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             )?;
 
         // transfer user asset to the fund
-        self.fund_account
+        let deposited_amount = self.fund_account
             .load_mut()?
             .deposit(supported_token_mint_key, asset_amount)?;
+        assert_eq!(asset_amount, deposited_amount);
 
         match supported_token_mint {
             Some(supported_token_mint) => {
@@ -170,7 +171,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                             authority: self.user.to_account_info(),
                         },
                     ),
-                    asset_amount,
+                    deposited_amount,
                     supported_token_mint.decimals,
                 )?;
             }
@@ -183,7 +184,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                             to: fund_reserve_account.unwrap().to_account_info(),
                         },
                     ),
-                    asset_amount,
+                    deposited_amount,
                 )?;
             }
         }
@@ -206,7 +207,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
 
             wallet_provider,
             contribution_accrual_rate,
-            deposited_amount: asset_amount,
+            deposited_amount,
             minted_receipt_token_amount: receipt_token_mint_amount,
         })
     }

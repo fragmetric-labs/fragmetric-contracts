@@ -39,13 +39,17 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         const amount = new BN(10 * anchor.web3.LAMPORTS_PER_SOL);
         const res1 = await restaking.runUserDepositSOL(user1, amount, null);
 
+
         // TODO/v0.4: do deposit test also with pricing changes like below ... currently it break other tests
         // await restaking.tryAirdrop(restaking.keychain.wallet.publicKey, new BN(10**9));
         // const resX1 = await restaking.runOperatorDonateSOLToFund(restaking.keychain.wallet, new BN(10**9));
+        // console.log(resX1.event);
         // await restaking.tryAirdropSupportedTokens(restaking.keychain.wallet.publicKey, new BN(10**9 * 2));
         // const resX2 = await restaking.runOperatorDonateSupportedTokenToFund(restaking.keychain.wallet, 'bSOL', new BN(10**9));
+        // console.log(resX2.event);
         // const resX3 = await restaking.runUserDepositSOL(user1, amount, null);
         // expect(resX3.event.userDepositedToFund.mintedReceiptTokenAmount.toNumber()).lt(amount.toNumber());
+
 
         expect(res1.event.userDepositedToFund.supportedTokenMint).eq(null);
         expect(res1.fragSOLFundReserveAccountBalance.sub(fragSOLFundReserveAccountBalance0).toString()).eq(amount.toString(), 'SOL is transferred to fund reserve account');
