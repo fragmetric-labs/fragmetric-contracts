@@ -296,12 +296,16 @@ impl FundAccount {
 
     #[inline]
     pub fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
-        self.supported_tokens[..self.num_supported_tokens as usize].iter()
+        self.supported_tokens
+            .iter()
+            .take(self.num_supported_tokens as usize)
     }
 
     #[inline]
     pub fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
-        self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
+        self.supported_tokens
+            .iter_mut()
+            .take(self.num_supported_tokens as usize)
     }
 
     pub(super) fn get_supported_token(&self, token_mint: &Pubkey) -> Result<&SupportedToken> {
@@ -434,14 +438,18 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
-        self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
+        self.restaking_vaults
+            .iter()
+            .take(self.num_restaking_vaults as usize)
     }
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RestakingVault> {
-        self.restaking_vaults[..self.num_restaking_vaults as usize].iter_mut()
+        self.restaking_vaults
+            .iter_mut()
+            .take(self.num_restaking_vaults as usize)
     }
 
     pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {
@@ -537,8 +545,10 @@ impl FundAccount {
 
     pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
         let sol = &mut self.sol;
-        let tokens = self.supported_tokens[..self.num_supported_tokens as usize]
+        let tokens = self
+            .supported_tokens
             .iter_mut()
+            .take(self.num_supported_tokens as usize)
             .map(|v| &mut v.token);
         std::iter::once(sol).chain(tokens)
     }

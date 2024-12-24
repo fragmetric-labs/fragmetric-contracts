@@ -57,13 +57,13 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
     }
 
     pub fn get_participants_iter(&self) -> impl Iterator<Item = &WeightedAllocationParticipant> {
-        self.participants[..self.num_participants].iter()
+        self.participants.iter().take(self.num_participants)
     }
 
     pub fn get_participants_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut WeightedAllocationParticipant> {
-        self.participants[..self.num_participants].iter_mut()
+        self.participants.iter_mut().take(self.num_participants)
     }
 
     pub fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {

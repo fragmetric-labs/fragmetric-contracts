@@ -1166,7 +1166,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
 
         // transfer operator asset to the fund
-        let (deposited_amount, offsetted_receivable_amount) = self.fund_account
+        let (deposited_amount, offsetted_receivable_amount) = self
+            .fund_account
             .load_mut()?
             .donate(supported_token_mint_key, asset_amount, offset_receivable)?;
         let donated_amount = deposited_amount + offsetted_receivable_amount;

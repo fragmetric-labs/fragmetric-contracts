@@ -213,7 +213,7 @@ impl<'info> SPLStakePoolService<'info> {
         // return (pubkey, is_writable, bump)
         let (fund_stake_account, fund_stake_account_bump) =
             Pubkey::find_program_address(stake_account_signer_seeds, &crate::ID);
-        return (fund_stake_account, true, fund_stake_account_bump);
+        (fund_stake_account, true, fund_stake_account_bump)
     }
 
     /// gives max fee/expense ratio during a cycle of circulation

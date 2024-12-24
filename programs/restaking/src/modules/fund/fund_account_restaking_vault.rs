@@ -6,8 +6,8 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
-const FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
-const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
+pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
 #[repr(C)]
@@ -119,6 +119,10 @@ impl RestakingVault {
         Ok(())
     }
 
+    pub(super) fn get_operators_iter(&self) -> impl Iterator<Item = &RestakingVaultOperator> {
+        self.operators.iter().take(self.num_operators as usize)
+    }
+
     pub(super) fn get_operator(&self, operator: &Pubkey) -> Result<&RestakingVaultOperator> {
         self.operators
             .iter()
@@ -148,7 +152,7 @@ pub(super) struct RestakingVaultOperator {
     pub supported_token_allocation_weight: u64,
     pub supported_token_allocation_capacity_amount: u64,
 
-    /// just informative field
+    /// informative field; this value can be out-dated.
     pub supported_token_delegated_amount: u64,
 
     /// configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount.

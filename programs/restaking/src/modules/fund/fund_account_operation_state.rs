@@ -40,7 +40,8 @@ impl OperationState {
             self.no_transition = 0;
             self.next_sequence = 0;
             self.set_command(
-                reset_command.or_else(|| Some(InitializeCommand {}.without_required_accounts())),
+                reset_command
+                    .or_else(|| Some(InitializeCommand::default().without_required_accounts())),
                 current_slot,
                 current_timestamp,
             )?;

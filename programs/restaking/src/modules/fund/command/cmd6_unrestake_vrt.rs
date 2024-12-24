@@ -78,7 +78,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let required_accounts =
-                                &mut JitoRestakingVaultService::find_accounts_for_vault(address)?;
+                                &mut JitoRestakingVaultService::find_accounts_to_new(address)?;
                             required_accounts.append(
                                 &mut JitoRestakingVaultService::find_withdrawal_tickets(
                                     &restaking_vault.vault,
@@ -105,7 +105,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             require_keys_eq!(address, restaking_vault.vault);
 
-                            let [jito_vault_program, jito_vault_account, jito_vault_config, remaining_accounts @ ..] =
+                            let [jito_vault_program, jito_vault_config, jito_vault_account, remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -140,9 +140,9 @@ impl SelfExecutable for UnrestakeVRTCommand {
                                             i as u8,
                                         );
 
-                                    signer_seed.push(
-                                        JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED.to_vec(),
-                                    );
+                                    // signer_seed.push(
+                                    //     JitoRestakingVaultService::VAULT_BASE_ACCOUNT_SEED.to_vec(),
+                                    // );
                                     signer_seed
                                         .push(ctx.receipt_token_mint.key().as_ref().to_vec());
                                     signer_seed.push(vec![i as u8]);
@@ -205,31 +205,31 @@ impl SelfExecutable for UnrestakeVRTCommand {
                         .map(|inner_vec| inner_vec.as_slice())
                         .collect();
 
-                    JitoRestakingVaultService::new(
-                        vault_program.to_account_info(),
-                        vault_config.to_account_info(),
-                        vault_account.to_account_info(),
-                        vault_receipt_token_mint.to_account_info(),
-                        vault_receipt_token_program.to_account_info(),
-                        vault_supported_token_mint.to_account_info(),
-                        vault_supported_token_program.to_account_info(),
-                        vault_supported_token_account.to_account_info(),
-                    )?
-                    .request_withdraw(
-                        &ctx.operator,
-                        withdrawal_ticket_account,
-                        withdrawal_ticket_token_account,
-                        fund_receipt_token_account,
-                        base_account,
-                        associated_token_program,
-                        system_program,
-                        &ctx.fund_account.to_account_info(),
-                        &[
-                            ctx.fund_account.load()?.get_seeds().as_ref(),
-                            signer_seed.as_slice(),
-                        ],
-                        need_to_withdraw_token_amount,
-                    )?;
+                    // JitoRestakingVaultService::new(
+                    //     vault_program.to_account_info(),
+                    //     vault_config.to_account_info(),
+                    //     vault_account.to_account_info(),
+                    //     vault_receipt_token_mint.to_account_info(),
+                    //     vault_receipt_token_program.to_account_info(),
+                    //     vault_supported_token_mint.to_account_info(),
+                    //     vault_supported_token_program.to_account_info(),
+                    //     vault_supported_token_account.to_account_info(),
+                    // )?
+                    // .request_withdraw(
+                    //     &ctx.operator,
+                    //     withdrawal_ticket_account,
+                    //     withdrawal_ticket_token_account,
+                    //     fund_receipt_token_account,
+                    //     base_account,
+                    //     associated_token_program,
+                    //     system_program,
+                    //     &ctx.fund_account.to_account_info(),
+                    //     &[
+                    //         ctx.fund_account.load()?.get_seeds().as_ref(),
+                    //         signer_seed.as_slice(),
+                    //     ],
+                    //     need_to_withdraw_token_amount,
+                    // )?;
                 }
                 _ => (),
             }

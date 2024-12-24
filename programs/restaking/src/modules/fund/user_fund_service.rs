@@ -152,7 +152,8 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             )?;
 
         // transfer user asset to the fund
-        let deposited_amount = self.fund_account
+        let deposited_amount = self
+            .fund_account
             .load_mut()?
             .deposit(supported_token_mint_key, asset_amount)?;
         assert_eq!(asset_amount, deposited_amount);

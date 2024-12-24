@@ -157,143 +157,150 @@ impl SelfExecutable for RestakeVSTCommand {
                     remaining_items = Some(items);
                 }
             }
-            // RestakeVSTCommandState::ReadVaultState => {
-            //     let mut command = self.clone();
-            //
-            //     let fund_account = ctx.fund_account.load()?;
-            //     let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
-            //
-            //     match restaking_vault
-            //         .receipt_token_pricing_source
-            //         .try_deserialize()?
-            //     {
-            //         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-            //             let [vault_program, vault_account, vault_config, _remaining_accounts @ ..] =
-            //                 accounts
-            //             else {
-            //                 err!(ErrorCode::AccountNotEnoughKeys)?
-            //             };
-            //
-            //             let mut required_accounts =
-            //                 JitoRestakingVaultService::find_accounts_for_restaking_vault(
-            //                     ctx.fund_account.as_ref(),
-            //                     vault_program,
-            //                     vault_config,
-            //                     vault_account,
-            //                 )?;
-            //
-            //             let clock = Clock::get()?;
-            //             let (vault_update_state_tracker, expected_ncn_epoch) =
-            //                 JitoRestakingVaultService::get_vault_update_state_tracker(
-            //                     vault_config,
-            //                     vault_account,
-            //                     clock.slot,
-            //                     false,
-            //                 )?;
-            //             let (
-            //                 vault_update_state_tracker_prepare_for_delaying,
-            //                 delayed_ncn_epoch,
-            //             ) = JitoRestakingVaultService::get_vault_update_state_tracker(
-            //                 vault_config,
-            //                 vault_account,
-            //                 clock.slot,
-            //                 true,
-            //             )?;
-            //
-            //             required_accounts.append(&mut vec![
-            //                 (vault_update_state_tracker, true),
-            //                 (vault_update_state_tracker_prepare_for_delaying, true),
-            //             ]);
-            //
-            //             command.state = RestakeVSTCommandState::Restake([
-            //                 expected_ncn_epoch,
-            //                 delayed_ncn_epoch,
-            //             ]);
-            //             return Ok((
-            //                 None,
-            //                 Some(command.with_required_accounts(required_accounts)),
-            //             ));
-            //         }
-            //         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            //     }
-            // }
-            // RestakeVSTCommandState::Restake(ncn_epoch) => {
-            //     let mut command = self.clone();
-            //
-            //     let fund_account = ctx.fund_account.load()?;
-            //     let restaking_vault = fund_account.get_restaking_vault(&item.vault_address)?;
-            //
-            //     match restaking_vault
-            //         .receipt_token_pricing_source
-            //         .try_deserialize()?
-            //     {
-            //         Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-            //             let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
-            //                 accounts
-            //             else {
-            //                 err!(ErrorCode::AccountNotEnoughKeys)?
-            //             };
-            //
-            //             let operation_reserved_token =
-            //                 command.operation_reserved_restake_token.unwrap();
-            //             require_eq!(&operation_reserved_token.token_mint, vault_vst_mint.key);
-            //
-            //             let (current_vault_update_state_tracker, current_epoch, epoch_length) =
-            //                 JitoRestakingVaultService::find_current_vault_update_state_tracker(
-            //                     &jito_vault_config,
-            //                     vault_update_state_tracker,
-            //                     ncn_epoch[0],
-            //                     vault_update_state_tracker_prepare_for_delaying,
-            //                     ncn_epoch[1],
-            //                 )?;
-            //
-            //             let minted_vrt_amount = JitoRestakingVaultService::new(
-            //                 jito_vault_program.to_account_info(),
-            //                 jito_vault_config.to_account_info(),
-            //                 jito_vault_account.to_account_info(),
-            //                 vault_vrt_mint.to_account_info(),
-            //                 token_program.to_account_info(),
-            //                 token_program.to_account_info(),
-            //                 vault_vst_mint.to_account_info(),
-            //                 vault_supported_token_account.to_account_info(),
-            //             )?
-            //                 .update_vault_if_needed(
-            //                     ctx.operator,
-            //                     current_vault_update_state_tracker,
-            //                     current_epoch,
-            //                     epoch_length,
-            //                     system_program.as_ref(),
-            //                     &ctx.fund_account.to_account_info(),
-            //                     &[fund_account.get_seeds().as_ref()],
-            //                 )?
-            //                 .deposit(
-            //                     *fund_supported_token_reserve_account,
-            //                     vault_fee_wallet_token_account,
-            //                     *fund_receipt_token_account,
-            //                     operation_reserved_token.operation_reserved_amount,
-            //                     operation_reserved_token.operation_reserved_amount,
-            //                     &ctx.fund_account.to_account_info(),
-            //                     &[fund_account.get_seeds().as_ref()],
-            //                 )?;
-            //             {
-            //                 let mut fund_account = ctx.fund_account.load_mut()?;
-            //                 let restaking_vault =
-            //                     fund_account.get_restaking_vault_mut(&item.vault_address)?;
-            //                 restaking_vault.receipt_token_operation_reserved_amount +=
-            //                     minted_vrt_amount;
-            //             }
-            //             command.operation_reserved_restake_token = None;
-            //         }
-            //         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            //     }
-            // }
+            RestakeVSTCommandState::Prepare { items } => {
+                if let Some(item) = items.first() {
+                    let fund_account = ctx.fund_account.load()?;
+                    let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
+
+                    match restaking_vault
+                        .receipt_token_pricing_source
+                        .try_deserialize()?
+                    {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                            let [vault_program, vault_account, vault_config, _remaining_accounts @ ..] =
+                                accounts
+                            else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+                            require_keys_eq!(address, vault_account.key());
+
+                            // let mut required_accounts =
+                            //     JitoRestakingVaultService::find_accounts_for_restaking_vault(
+                            //         ctx.fund_account.as_ref(),
+                            //         vault_program,
+                            //         vault_config,
+                            //         vault_account,
+                            //     )?;
+                            //
+                            // let clock = Clock::get()?;
+                            // let (vault_update_state_tracker, expected_ncn_epoch) =
+                            //     JitoRestakingVaultService::get_vault_update_state_tracker(
+                            //         vault_config,
+                            //         vault_account,
+                            //         clock.slot,
+                            //         false,
+                            //     )?;
+                            // let (
+                            //     vault_update_state_tracker_prepare_for_delaying,
+                            //     delayed_ncn_epoch,
+                            // ) = JitoRestakingVaultService::get_vault_update_state_tracker(
+                            //     vault_config,
+                            //     vault_account,
+                            //     clock.slot,
+                            //     true,
+                            // )?;
+                            //
+                            // required_accounts.append(&mut vec![
+                            //     (vault_update_state_tracker, true),
+                            //     (vault_update_state_tracker_prepare_for_delaying, true),
+                            // ]);
+                            //
+                            // // expected_ncn_epoch,
+                            // // delayed_ncn_epoch,
+
+                            return Ok((
+                                None,
+                                Some(
+                                    RestakeVSTCommand {
+                                        state: RestakeVSTCommandState::Execute {
+                                            items: items.clone(),
+                                        },
+                                    }
+                                    .without_required_accounts(),
+                                ),
+                            ));
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    }
+                }
+            }
+            RestakeVSTCommandState::Execute { items } => {
+                let mut command = self.clone();
+                let item = items.first().unwrap();
+
+                let fund_account = ctx.fund_account.load()?;
+                let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
+
+                match restaking_vault
+                    .receipt_token_pricing_source
+                    .try_deserialize()?
+                {
+                    Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                        let [jito_vault_program, jito_vault_account, jito_vault_config, vault_update_state_tracker, vault_update_state_tracker_prepare_for_delaying, vault_vrt_mint, vault_vst_mint, fund_supported_token_reserve_account, fund_receipt_token_account, vault_supported_token_account, vault_fee_wallet_token_account, token_program, system_program, _remaining_accounts @ ..] =
+                            accounts
+                        else {
+                            err!(ErrorCode::AccountNotEnoughKeys)?
+                        };
+
+                        let operation_reserved_token = 0;
+                        // require_eq!(&operation_reserved_token.token_mint, vault_vst_mint.key);
+
+                        // let (current_vault_update_state_tracker, current_epoch, epoch_length) =
+                        //     JitoRestakingVaultService::find_current_vault_update_state_tracker(
+                        //         &jito_vault_config,
+                        //         vault_update_state_tracker,
+                        //         0,
+                        //         vault_update_state_tracker_prepare_for_delaying,
+                        //         1,
+                        //     )?;
+                        //
+                        // let minted_vrt_amount = JitoRestakingVaultService::new(
+                        //     jito_vault_program.to_account_info(),
+                        //     jito_vault_config.to_account_info(),
+                        //     jito_vault_account.to_account_info(),
+                        //     vault_vrt_mint.to_account_info(),
+                        //     token_program.to_account_info(),
+                        //     token_program.to_account_info(),
+                        //     vault_vst_mint.to_account_info(),
+                        //     vault_supported_token_account.to_account_info(),
+                        // )?
+                        //     .update_vault_if_needed(
+                        //         ctx.operator,
+                        //         current_vault_update_state_tracker,
+                        //         current_epoch,
+                        //         epoch_length,
+                        //         system_program.as_ref(),
+                        //         &ctx.fund_account.to_account_info(),
+                        //         &[fund_account.get_seeds().as_ref()],
+                        //     )?
+                        //     .deposit(
+                        //         *fund_supported_token_reserve_account,
+                        //         vault_fee_wallet_token_account,
+                        //         *fund_receipt_token_account,
+                        //         0,
+                        //         0,
+                        //         &ctx.fund_account.to_account_info(),
+                        //         &[fund_account.get_seeds().as_ref()],
+                        //     )?;
+                        // {
+                        //     let mut fund_account = ctx.fund_account.load_mut()?;
+                        //     let restaking_vault =
+                        //         fund_account.get_restaking_vault_mut(&item.vault_address)?;
+                        //     restaking_vault.receipt_token_operation_reserved_amount +=
+                        //         minted_vrt_amount;
+                        // }
+                        // command.operation_reserved_restake_token = None;
+                    }
+                    _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                }
+            }
             _ => {}
         }
 
         // transition to next command
         Ok((
             result,
-            match remaining_items {
+            Some(match remaining_items {
                 Some(remaining_items) if remaining_items.len() > 0 => {
                     let pricing_source = ctx
                         .fund_account
@@ -305,24 +312,20 @@ impl SelfExecutable for RestakeVSTCommand {
                             error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
                         })?;
 
-                    Some(
-                        RestakeVSTCommand {
-                            state: RestakeVSTCommandState::Prepare {
-                                items: remaining_items,
-                            },
+                    RestakeVSTCommand {
+                        state: RestakeVSTCommandState::Prepare {
+                            items: remaining_items,
+                        },
+                    }
+                    .with_required_accounts(match pricing_source {
+                        TokenPricingSource::JitoRestakingVault { address } => {
+                            JitoRestakingVaultService::find_accounts_to_new(address)?
                         }
-                        .with_required_accounts(match pricing_source {
-                            TokenPricingSource::JitoRestakingVault { address } => {
-                                JitoRestakingVaultService::find_accounts_for_vault(address)?
-                            }
-                            _ => err!(
-                                errors::ErrorCode::FundOperationCommandExecutionFailedException
-                            )?,
-                        }),
-                    )
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    })
                 }
-                _ => Some(HarvestRewardCommand::default().without_required_accounts()),
-            },
+                _ => HarvestRewardCommand::default().without_required_accounts(),
+            }),
         ))
     }
 }

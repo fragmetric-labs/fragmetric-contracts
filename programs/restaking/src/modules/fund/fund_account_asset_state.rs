@@ -250,7 +250,11 @@ impl AssetState {
         self.withdrawal_last_processed_batch_id =
             self.withdrawal_queued_batches[count - 1].batch_id;
         self.withdrawal_last_batch_processed_at = current_timestamp;
-        let processing_batches = self.withdrawal_queued_batches[..count].to_vec();
+        let processing_batches = self
+            .withdrawal_queued_batches
+            .into_iter()
+            .take(count)
+            .collect::<Vec<_>>();
 
         for i in 0..self.withdrawal_num_queued_batches as usize {
             if i < (self.withdrawal_num_queued_batches as usize) - count {
@@ -265,7 +269,9 @@ impl AssetState {
     }
 
     fn get_queued_withdrawal_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
-        self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
+        self.withdrawal_queued_batches
+            .iter()
+            .take(self.withdrawal_num_queued_batches as usize)
     }
 
     pub(super) fn get_queued_withdrawal_batches_to_process_iter(

@@ -334,20 +334,21 @@ impl SelfExecutable for NormalizeSTCommand {
         // transition to next command
         Ok((
             result,
-            match remaining_items {
-                Some(remaining_items) if remaining_items.len() > 0 => {
-                    // practically, specific accounts are not required for the prepare state command. so just run it and proceed to the next command.
-                    NormalizeSTCommand {
-                        state: NormalizeSTCommandState::Prepare {
-                            items: remaining_items,
-                        },
+            Some(
+                match remaining_items {
+                    Some(remaining_items) if remaining_items.len() > 0 => {
+                        NormalizeSTCommand {
+                            state: NormalizeSTCommandState::Prepare {
+                                items: remaining_items,
+                            },
+                        }
+                        .execute(ctx, accounts)?
+                        .1
                     }
-                    .execute(ctx, accounts)?
-                    .1
+                    _ => None,
                 }
-                _ => None,
-            }
-            .or_else(|| Some(RestakeVSTCommand::default().without_required_accounts())),
+                .unwrap_or_else(|| RestakeVSTCommand::default().without_required_accounts()),
+            ),
         ))
     }
 }

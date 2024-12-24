@@ -104,7 +104,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let mut required_accounts =
-                                JitoRestakingVaultService::find_accounts_for_vault(address)?;
+                                JitoRestakingVaultService::find_accounts_to_new(address)?;
                             required_accounts.append(
                                 &mut JitoRestakingVaultService::find_withdrawal_tickets(
                                     &restaking_vault.vault,
@@ -128,100 +128,100 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            require_keys_eq!(address, restaking_vault.vault);
-
-                            let [vault_program, vault_account, vault_config, remaining_accounts @ ..] =
-                                accounts
-                            else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
-                            };
-
-                            let withdrawal_tickets = &remaining_accounts[0..5];
-                            let _remaining_accounts = &remaining_accounts[5..];
-
-                            let (claimable_tickets, _) =
-                                JitoRestakingVaultService::get_claimable_withdrawal_tickets(
-                                    vault_config,
-                                    &restaking_vault.receipt_token_mint,
-                                    &restaking_vault.receipt_token_program,
-                                    withdrawal_tickets.to_vec(),
-                                )?;
-                            if claimable_tickets.len() == 0 {
-                                if self.items.len() > 1 {
-                                    return Ok((
-                                        None,
-                                        Some(
-                                            ClaimUnrestakedVSTCommand::new_init(
-                                                self.items[1..].to_vec(),
-                                            )
-                                            .with_required_accounts([]),
-                                        ),
-                                    ));
-                                }
-                                return Ok((None, None));
-                            };
-
-                            let clock = Clock::get()?;
-                            let (vault_update_state_tracker, expected_ncn_epoch) =
-                                JitoRestakingVaultService::get_vault_update_state_tracker(
-                                    vault_config,
-                                    vault_account,
-                                    clock.slot,
-                                    false,
-                                )?;
-
-                            let (
-                                vault_update_state_tracker_prepare_for_delaying,
-                                delayed_ncn_epoch,
-                            ) = JitoRestakingVaultService::get_vault_update_state_tracker(
-                                vault_config,
-                                vault_account,
-                                clock.slot,
-                                true,
-                            )?;
-                            let mut claimable_unrestaked_tickets = vec![];
-                            for (withdrawal_ticket_account, withdrawal_ticket_token_account) in
-                                &claimable_tickets
-                            {
-                                claimable_unrestaked_tickets.push(
-                                    ClaimableUnrestakeWithdrawalTicket {
-                                        withdrawal_ticket_account: *withdrawal_ticket_account,
-                                        withdrawal_ticket_token_account:
-                                            *withdrawal_ticket_token_account,
-                                    },
-                                )
-                            }
-                            let mut required_accounts =
-                                JitoRestakingVaultService::find_accounts_for_unrestaking_vault(
-                                    &ctx.fund_account.to_account_info(),
-                                    vault_program,
-                                    vault_config,
-                                    vault_account,
-                                )?;
-
-                            required_accounts.append(&mut vec![
-                                (vault_update_state_tracker, true),
-                                (vault_update_state_tracker_prepare_for_delaying, true),
-                            ]);
-
-                            required_accounts.append(&mut vec![
-                                (claimable_tickets[0].0, true),
-                                (claimable_tickets[0].1, true),
-                            ]);
-
-                            let mut command = self.clone();
-                            command.state = ClaimUnrestakedVSTCommandState::Claim(
-                                ClaimableUnrestakeWithdrawalStatus {
-                                    withdrawal_tickets: claimable_unrestaked_tickets,
-                                    expected_ncn_epoch,
-                                    delayed_ncn_epoch,
-                                    unrestaked_vst_amount: 0,
-                                },
-                            );
-                            return Ok((
-                                None,
-                                Some(command.with_required_accounts(required_accounts)),
-                            ));
+                            // require_keys_eq!(address, restaking_vault.vault);
+                            //
+                            // let [vault_program, vault_config, vault_account, remaining_accounts @ ..] =
+                            //     accounts
+                            // else {
+                            //     err!(ErrorCode::AccountNotEnoughKeys)?
+                            // };
+                            //
+                            // let withdrawal_tickets = &remaining_accounts[0..5];
+                            // let _remaining_accounts = &remaining_accounts[5..];
+                            //
+                            // let (claimable_tickets, _) =
+                            //     JitoRestakingVaultService::get_claimable_withdrawal_tickets(
+                            //         vault_config,
+                            //         &restaking_vault.receipt_token_mint,
+                            //         &restaking_vault.receipt_token_program,
+                            //         withdrawal_tickets.to_vec(),
+                            //     )?;
+                            // if claimable_tickets.len() == 0 {
+                            //     if self.items.len() > 1 {
+                            //         return Ok((
+                            //             None,
+                            //             Some(
+                            //                 ClaimUnrestakedVSTCommand::new_init(
+                            //                     self.items[1..].to_vec(),
+                            //                 )
+                            //                 .with_required_accounts([]),
+                            //             ),
+                            //         ));
+                            //     }
+                            //     return Ok((None, None));
+                            // };
+                            //
+                            // let clock = Clock::get()?;
+                            // let (vault_update_state_tracker, expected_ncn_epoch) =
+                            //     JitoRestakingVaultService::get_vault_update_state_tracker(
+                            //         vault_config,
+                            //         vault_account,
+                            //         clock.slot,
+                            //         false,
+                            //     )?;
+                            //
+                            // let (
+                            //     vault_update_state_tracker_prepare_for_delaying,
+                            //     delayed_ncn_epoch,
+                            // ) = JitoRestakingVaultService::get_vault_update_state_tracker(
+                            //     vault_config,
+                            //     vault_account,
+                            //     clock.slot,
+                            //     true,
+                            // )?;
+                            // let mut claimable_unrestaked_tickets = vec![];
+                            // for (withdrawal_ticket_account, withdrawal_ticket_token_account) in
+                            //     &claimable_tickets
+                            // {
+                            //     claimable_unrestaked_tickets.push(
+                            //         ClaimableUnrestakeWithdrawalTicket {
+                            //             withdrawal_ticket_account: *withdrawal_ticket_account,
+                            //             withdrawal_ticket_token_account:
+                            //                 *withdrawal_ticket_token_account,
+                            //         },
+                            //     )
+                            // }
+                            // let mut required_accounts =
+                            //     JitoRestakingVaultService::find_accounts_for_unrestaking_vault(
+                            //         &ctx.fund_account.to_account_info(),
+                            //         vault_program,
+                            //         vault_config,
+                            //         vault_account,
+                            //     )?;
+                            //
+                            // required_accounts.append(&mut vec![
+                            //     (vault_update_state_tracker, true),
+                            //     (vault_update_state_tracker_prepare_for_delaying, true),
+                            // ]);
+                            //
+                            // required_accounts.append(&mut vec![
+                            //     (claimable_tickets[0].0, true),
+                            //     (claimable_tickets[0].1, true),
+                            // ]);
+                            //
+                            // let mut command = self.clone();
+                            // command.state = ClaimUnrestakedVSTCommandState::Claim(
+                            //     ClaimableUnrestakeWithdrawalStatus {
+                            //         withdrawal_tickets: claimable_unrestaked_tickets,
+                            //         expected_ncn_epoch,
+                            //         delayed_ncn_epoch,
+                            //         unrestaked_vst_amount: 0,
+                            //     },
+                            // );
+                            // return Ok((
+                            //     None,
+                            //     Some(command.with_required_accounts(required_accounts)),
+                            // ));
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -253,117 +253,117 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             let _reserved_unrestaked_ticket =
                                 unused_claimable_unrestaked_tickets.swap_remove(token_index);
 
-                            let (current_vault_update_state_tracker, current_epoch, epoch_length) =
-                                JitoRestakingVaultService::find_current_vault_update_state_tracker(
-                                    &vault_config,
-                                    vault_update_state_tracker,
-                                    withdrawal_status.expected_ncn_epoch,
-                                    vault_update_state_tracker_prepare_for_delaying,
-                                    withdrawal_status.delayed_ncn_epoch,
-                                )?;
+                            // let (current_vault_update_state_tracker, current_epoch, epoch_length) =
+                            //     JitoRestakingVaultService::find_current_vault_update_state_tracker(
+                            //         &vault_config,
+                            //         vault_update_state_tracker,
+                            //         withdrawal_status.expected_ncn_epoch,
+                            //         vault_update_state_tracker_prepare_for_delaying,
+                            //         withdrawal_status.delayed_ncn_epoch,
+                            //     )?;
 
-                            let unrestaked_vst_amount = JitoRestakingVaultService::new(
-                                vault_program.to_account_info(),
-                                vault_config.to_account_info(),
-                                vault_account.to_account_info(),
-                                vault_vrt_mint.to_account_info(),
-                                token_program.to_account_info(),
-                                vault_vst_mint.to_account_info(),
-                                token_program.to_account_info(),
-                                vault_supported_token_account.to_account_info(),
-                            )?
-                            .update_vault_if_needed(
-                                ctx.operator,
-                                current_vault_update_state_tracker,
-                                current_epoch,
-                                epoch_length,
-                                system_program.as_ref(),
-                                &ctx.fund_account.to_account_info(),
-                                &[fund_account.get_seeds().as_ref()],
-                            )?
-                            .withdraw(
-                                vault_withdrawal_ticket,
-                                vault_withdrawal_ticket_token_account,
-                                fund_supported_token_reserve_account,
-                                vault_fee_receipt_token_account,
-                                vault_program_fee_wallet_vrt_account,
-                                &ctx.fund_account.to_account_info(),
-                                system_program,
-                            )?;
+                            // let unrestaked_vst_amount = JitoRestakingVaultService::new(
+                            //     vault_program.to_account_info(),
+                            //     vault_config.to_account_info(),
+                            //     vault_account.to_account_info(),
+                            //     vault_vrt_mint.to_account_info(),
+                            //     token_program.to_account_info(),
+                            //     vault_vst_mint.to_account_info(),
+                            //     token_program.to_account_info(),
+                            //     vault_supported_token_account.to_account_info(),
+                            // )?
+                            // .update_vault_if_needed(
+                            //     ctx.operator,
+                            //     current_vault_update_state_tracker,
+                            //     current_epoch,
+                            //     epoch_length,
+                            //     system_program.as_ref(),
+                            //     &ctx.fund_account.to_account_info(),
+                            //     &[fund_account.get_seeds().as_ref()],
+                            // )?
+                            // .withdraw(
+                            //     vault_withdrawal_ticket,
+                            //     vault_withdrawal_ticket_token_account,
+                            //     fund_supported_token_reserve_account,
+                            //     vault_fee_receipt_token_account,
+                            //     vault_program_fee_wallet_vrt_account,
+                            //     &ctx.fund_account.to_account_info(),
+                            //     system_program,
+                            // )?;
 
-                            match unused_claimable_unrestaked_tickets.first() {
-                                Some(next_ticket) => {
-                                    next_withdrawal_status.withdrawal_tickets =
-                                        unused_claimable_unrestaked_tickets.clone();
-                                    next_withdrawal_status.unrestaked_vst_amount +=
-                                        unrestaked_vst_amount;
-                                    command.state = ClaimUnrestakedVSTCommandState::Claim(
-                                        next_withdrawal_status,
-                                    );
-
-                                    return Ok((
-                                        None,
-                                        Some(
-                                            command.with_required_accounts([
-                                                (vault_program.key(), false),
-                                                (vault_account.key(), false),
-                                                (vault_config.key(), false),
-                                                (vault_vrt_mint.key(), false),
-                                                (vault_vst_mint.key(), false),
-                                                (fund_supported_token_reserve_account.key(), false),
-                                                (fund_receipt_token_account.key(), false),
-                                                (vault_fee_receipt_token_account.key(), false),
-                                                (vault_program_fee_wallet_vrt_account.key(), false),
-                                                (vault_update_state_tracker.key(), false),
-                                                (
-                                                    vault_update_state_tracker_prepare_for_delaying
-                                                        .key(),
-                                                    false,
-                                                ),
-                                                (token_program.key(), false),
-                                                (system_program.key(), false),
-                                                (next_ticket.withdrawal_ticket_account, false),
-                                                (
-                                                    next_ticket.withdrawal_ticket_token_account,
-                                                    false,
-                                                ),
-                                            ]),
-                                        ),
-                                    ));
-                                }
-                                None => {
-                                    let fund_account = ctx.fund_account.load()?;
-                                    let normalized_token =
-                                        fund_account.get_normalized_token().unwrap(); // TODO ... fix it
-
-                                    let normalized_token_pool_address =
-                                        NormalizedTokenPoolAccount::find_account_address_by_token_mint(
-                                            &normalized_token.mint,
-                                        );
-
-                                    let normalized_token_account =
-                                        spl_associated_token_account::get_associated_token_address_with_program_id(
-                                            &ctx.fund_account.key(),
-                                            &normalized_token.mint,
-                                            &normalized_token.program,
-                                        );
-
-                                    command.state =
-                                        ClaimUnrestakedVSTCommandState::SetupDenormalize(
-                                            unrestaked_vst_amount,
-                                        );
-                                    return Ok((
-                                        None,
-                                        Some(command.with_required_accounts([
-                                            (normalized_token.mint, true),
-                                            (normalized_token_pool_address, true),
-                                            (normalized_token.program, false),
-                                            (normalized_token_account, true),
-                                            (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop => now it always runs a single command in a tx
-                                        ])),
-                                    ));
-                                }
-                            }
+                            // match unused_claimable_unrestaked_tickets.first() {
+                            //     Some(next_ticket) => {
+                            //         next_withdrawal_status.withdrawal_tickets =
+                            //             unused_claimable_unrestaked_tickets.clone();
+                            //         next_withdrawal_status.unrestaked_vst_amount +=
+                            //             unrestaked_vst_amount;
+                            //         command.state = ClaimUnrestakedVSTCommandState::Claim(
+                            //             next_withdrawal_status,
+                            //         );
+                            //
+                            //         return Ok((
+                            //             None,
+                            //             Some(
+                            //                 command.with_required_accounts([
+                            //                     (vault_program.key(), false),
+                            //                     (vault_account.key(), false),
+                            //                     (vault_config.key(), false),
+                            //                     (vault_vrt_mint.key(), false),
+                            //                     (vault_vst_mint.key(), false),
+                            //                     (fund_supported_token_reserve_account.key(), false),
+                            //                     (fund_receipt_token_account.key(), false),
+                            //                     (vault_fee_receipt_token_account.key(), false),
+                            //                     (vault_program_fee_wallet_vrt_account.key(), false),
+                            //                     (vault_update_state_tracker.key(), false),
+                            //                     (
+                            //                         vault_update_state_tracker_prepare_for_delaying
+                            //                             .key(),
+                            //                         false,
+                            //                     ),
+                            //                     (token_program.key(), false),
+                            //                     (system_program.key(), false),
+                            //                     (next_ticket.withdrawal_ticket_account, false),
+                            //                     (
+                            //                         next_ticket.withdrawal_ticket_token_account,
+                            //                         false,
+                            //                     ),
+                            //                 ]),
+                            //             ),
+                            //         ));
+                            //     }
+                            //     None => {
+                            //         let fund_account = ctx.fund_account.load()?;
+                            //         let normalized_token =
+                            //             fund_account.get_normalized_token().unwrap(); // TODO ... fix it
+                            //
+                            //         let normalized_token_pool_address =
+                            //             NormalizedTokenPoolAccount::find_account_address_by_token_mint(
+                            //                 &normalized_token.mint,
+                            //             );
+                            //
+                            //         let normalized_token_account =
+                            //             spl_associated_token_account::get_associated_token_address_with_program_id(
+                            //                 &ctx.fund_account.key(),
+                            //                 &normalized_token.mint,
+                            //                 &normalized_token.program,
+                            //             );
+                            //
+                            //         command.state =
+                            //             ClaimUnrestakedVSTCommandState::SetupDenormalize(
+                            //                 unrestaked_vst_amount,
+                            //             );
+                            //         return Ok((
+                            //             None,
+                            //             Some(command.with_required_accounts([
+                            //                 (normalized_token.mint, true),
+                            //                 (normalized_token_pool_address, true),
+                            //                 (normalized_token.program, false),
+                            //                 (normalized_token_account, true),
+                            //                 (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop => now it always runs a single command in a tx
+                            //             ])),
+                            //         ));
+                            //     }
+                            // }
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }

@@ -280,7 +280,9 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         let normalized_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
-        let normalized_token_supply_amount = self.normalized_token_pool_account.normalized_token_supply_amount;
+        let normalized_token_supply_amount = self
+            .normalized_token_pool_account
+            .normalized_token_supply_amount;
 
         let mut claimable_tokens_value_as_sol = 0u64;
         let claimable_tokens = self
