@@ -280,9 +280,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
 
         let normalized_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
-        let pool_total_value_as_sol = pricing_service
-            .get_token_total_value_as_sol(&self.normalized_token_mint.key())?
-            .0;
+        let normalized_token_supply_amount = self.normalized_token_pool_account.normalized_token_supply_amount;
 
         let mut claimable_tokens_value_as_sol = 0u64;
         let claimable_tokens = self
@@ -296,9 +294,9 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
                 )?;
                 let supported_token_claimable_amount_as_sol =
                     crate::utils::get_proportional_amount(
-                        normalized_token_amount_as_sol,
                         supported_token_total_value_as_sol,
-                        pool_total_value_as_sol,
+                        normalized_token_amount,
+                        normalized_token_supply_amount,
                     )?;
                 claimable_tokens_value_as_sol += supported_token_claimable_amount_as_sol;
 
