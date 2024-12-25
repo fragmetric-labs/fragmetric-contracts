@@ -2,6 +2,7 @@ use crate::constants::{
     ADMIN_PUBKEY, JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_FEE_WALLET, JITO_VAULT_PROGRAM_ID,
 };
 use crate::errors;
+use crate::utils::AccountInfoExt;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::associated_token;
@@ -37,9 +38,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         require_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
-        msg!("FUCK1");
         let vault_config = Box::new(Self::deserialize_vault_config(vault_config_account)?);
-        msg!("FUCK2: {:?}", vault_config);
         let vault = Box::new(Self::deserialize_vault(vault_account)?);
 
         let current_slot = Clock::get()?.slot;
@@ -61,40 +60,57 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub(super) fn deserialize_vault(
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault::Vault> {
-        Ok(*jito_vault_core::vault::Vault::try_from_slice_unchecked(
-            vault_account.try_borrow_data()?.as_ref(),
-        )?)
+        if !vault_account.is_initialized() {
+            Err(ProgramError::InvalidAccountData.into())
+        } else {
+            Ok(*jito_vault_core::vault::Vault::try_from_slice_unchecked(
+                vault_account.try_borrow_data()?.as_ref(),
+            )?)
+        }
     }
 
     fn deserialize_vault_config(
         vault_config: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::config::Config> {
-        Ok(*jito_vault_core::config::Config::try_from_slice_unchecked(
-            vault_config.try_borrow_data()?.as_ref(),
-        )?)
+        if !vault_config.is_initialized() {
+            Err(ProgramError::InvalidAccountData.into())
+        } else {
+            Ok(*jito_vault_core::config::Config::try_from_slice_unchecked(
+                vault_config.try_borrow_data()?.as_ref(),
+            )?)
+        }
     }
 
     fn deserialize_vault_update_state_tracker(
         vault_update_state_tracker: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker> {
-        Ok(*jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::try_from_slice_unchecked(
-            vault_update_state_tracker.try_borrow_data()?.as_ref(),
-        )?)
+        if !vault_update_state_tracker.is_initialized() {
+            Err(ProgramError::InvalidAccountData.into())
+        } else {
+            Ok(*jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::try_from_slice_unchecked(
+                vault_update_state_tracker.try_borrow_data()?.as_ref(),
+            )?)
+        }
     }
 
     fn deserialize_vault_operator_delegation(
         vault_operator_delegation: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault_operator_delegation::VaultOperatorDelegation> {
-        Ok(*jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::try_from_slice_unchecked(
-            vault_operator_delegation.try_borrow_data()?.as_ref(),
-        )?)
+        if !vault_operator_delegation.is_initialized() {
+            Err(ProgramError::InvalidAccountData.into())
+        } else {
+            Ok(*jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::try_from_slice_unchecked(
+                vault_operator_delegation.try_borrow_data()?.as_ref(),
+            )?)
+        }
     }
 
-    fn find_vault_update_state_tracker_address(&self) -> Pubkey {
+    // retursn (for current epoch, for next epoch)
+    fn find_vault_update_state_tracker_address(&self, epoch: Option<u64>) -> Pubkey {
         jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::find_program_address(
             self.vault_program.key,
             self.vault_account.key,
-            self.current_epoch,
+            epoch.unwrap_or(self.current_epoch),
         )
         .0
     }
@@ -130,26 +146,32 @@ impl<'info> JitoRestakingVaultService<'info> {
         ])
     }
 
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, system_program, vault_update_state_tracker]
+    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, system_program, vault_update_state_tracker_for_current_epoch, vault_update_state_tracker_for_next_epoch]
     pub fn find_account_to_ensure_state_update_required(&self) -> Result<Vec<(Pubkey, bool)>> {
         let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
         accounts.extend(vec![
             (anchor_lang::solana_program::system_program::id(), false),
-            (self.find_vault_update_state_tracker_address(), true),
+            (self.find_vault_update_state_tracker_address(None), true),
+            (
+                self.find_vault_update_state_tracker_address(Some(self.current_epoch + 1)),
+                true,
+            ),
         ]);
         Ok(accounts)
     }
 
-    /// Check whether vault epoch-process should be fulfilled or not.
-    /// After run update_operator_delegation_state for all operators, this method needs to be called again to finalize it.
+    /// check whether vault epoch-process should be fulfilled or not.
+    /// returns current epoch [vault_update_state_tracker] among [vault_update_state_tracker1 or vault_update_state_tracker2] if state update is required.
+    /// after run [update_operator_delegation_state] for all operators, this method needs to be called again to finalize it.
     pub fn ensure_state_update_required(
         &self,
         system_program: &'info AccountInfo<'info>,
-        vault_update_state_tracker: &'info AccountInfo<'info>,
+        vault_update_state_tracker1: &'info AccountInfo<'info>,
+        vault_update_state_tracker2: &'info AccountInfo<'info>,
 
         payer: &Signer<'info>,
         payer_seeds: &[&[&[u8]]],
-    ) -> Result<bool> {
+    ) -> Result<Option<&'info AccountInfo<'info>>> {
         let last_updated_slot = self.vault.last_full_state_update_slot();
         let last_updated_epoch = last_updated_slot
             .checked_div(self.vault_config.epoch_length())
@@ -157,18 +179,20 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         if self.current_epoch > last_updated_epoch {
             // check new tracker is required
-            if match Self::deserialize_vault_update_state_tracker(vault_update_state_tracker) {
-                Ok(old_update_state_tracker) => {
-                    if old_update_state_tracker.ncn_epoch() != self.current_epoch {
+            let initializing_tracker_account = match Self::deserialize_vault_update_state_tracker(
+                vault_update_state_tracker1,
+            ) {
+                Ok(current_tracker) => {
+                    if current_tracker.ncn_epoch() != self.current_epoch {
                         // just close out-dated state tracker
                         let close_vault_update_state_tracker_ix =
                             jito_vault_sdk::sdk::close_vault_update_state_tracker(
                                 self.vault_program.key,
                                 self.vault_config_account.key,
                                 self.vault_account.key,
-                                vault_update_state_tracker.key,
+                                vault_update_state_tracker1.key,
                                 payer.key,
-                                old_update_state_tracker.ncn_epoch(),
+                                current_tracker.ncn_epoch(),
                             );
                         invoke_signed(
                             &close_vault_update_state_tracker_ix,
@@ -176,77 +200,84 @@ impl<'info> JitoRestakingVaultService<'info> {
                                 self.vault_program.clone(),
                                 self.vault_config_account.clone(),
                                 self.vault_account.clone(),
-                                vault_update_state_tracker.to_account_info(),
+                                vault_update_state_tracker1.to_account_info(),
                                 payer.to_account_info(),
                             ],
                             payer_seeds,
                         )?;
-                        msg!("RESTAKING#jito vault_update_state_tracker needs to be initialized: current_epoch={}, closed_epoch={}", self.current_epoch, old_update_state_tracker.ncn_epoch());
-                        true
+                        msg!("RESTAKING#jito vault_update_state_tracker needs to be initialized: current_epoch={}, closed_epoch={}", self.current_epoch, current_tracker.ncn_epoch());
+                        Some(vault_update_state_tracker2)
                     } else {
                         msg!("RESTAKING#jito vault_update_state_tracker needs to be cranked/closed: current_epoch={}", self.current_epoch);
-                        false
+                        None
                     }
                 }
                 Err(err) => {
                     msg!("RESTAKING#jito vault_update_state_tracker needs to be initialized: current_epoch={}, error={}", self.current_epoch, err);
-                    true
+                    Some(vault_update_state_tracker1)
                 }
-            } {
-                let required_space = 8 + std::mem::size_of::<
-                    jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker,
-                >();
-                let current_lamports = vault_update_state_tracker.get_lamports();
-                let required_lamports = Rent::get()?
-                    .minimum_balance(required_space)
-                    .max(1)
-                    .saturating_sub(current_lamports);
+            };
 
-                anchor_lang::system_program::transfer(
-                    CpiContext::new_with_signer(
-                        system_program.to_account_info(),
-                        anchor_lang::system_program::Transfer {
-                            from: payer.to_account_info(),
-                            to: vault_update_state_tracker.to_account_info(),
-                        },
+            let current_tracker_account = match initializing_tracker_account {
+                Some(tracker_account) => {
+                    let required_space = 8 + std::mem::size_of::<
+                        jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker,
+                    >();
+                    let current_lamports = tracker_account.get_lamports();
+                    let required_lamports = Rent::get()?
+                        .minimum_balance(required_space)
+                        .max(1)
+                        .saturating_sub(current_lamports);
+
+                    anchor_lang::system_program::transfer(
+                        CpiContext::new_with_signer(
+                            system_program.to_account_info(),
+                            anchor_lang::system_program::Transfer {
+                                from: payer.to_account_info(),
+                                to: tracker_account.to_account_info(),
+                            },
+                            payer_seeds,
+                        ),
+                        required_lamports,
+                    )?;
+
+                    let initialize_vault_update_state_tracker_ix =
+                        jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
+                            self.vault_program.key,
+                            self.vault_config_account.key,
+                            self.vault_account.key,
+                            tracker_account.key,
+                            payer.key,
+                            jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
+                        );
+
+                    invoke_signed(
+                        &initialize_vault_update_state_tracker_ix,
+                        &[
+                            self.vault_program.to_account_info(),
+                            self.vault_config_account.to_account_info(),
+                            self.vault_account.to_account_info(),
+                            tracker_account.to_account_info(),
+                            payer.to_account_info(),
+                            system_program.to_account_info(),
+                        ],
                         payer_seeds,
-                    ),
-                    required_lamports,
-                )?;
+                    )?;
 
-                let initialize_vault_update_state_tracker_ix =
-                    jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
-                        self.vault_program.key,
-                        self.vault_config_account.key,
-                        self.vault_account.key,
-                        vault_update_state_tracker.key,
-                        payer.key,
-                        jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
+                    msg!(
+                        "RESTAKING#jito initialized vault_update_state_tracker: current_epoch={}",
+                        self.current_epoch
                     );
 
-                invoke_signed(
-                    &initialize_vault_update_state_tracker_ix,
-                    &[
-                        self.vault_program.to_account_info(),
-                        self.vault_config_account.to_account_info(),
-                        self.vault_account.to_account_info(),
-                        vault_update_state_tracker.to_account_info(),
-                        payer.to_account_info(),
-                        system_program.to_account_info(),
-                    ],
-                    payer_seeds,
-                )?;
-
-                msg!(
-                    "RESTAKING#jito initialized vault_update_state_tracker: current_epoch={}",
-                    self.current_epoch
-                );
-            }
+                    tracker_account
+                }
+                None => vault_update_state_tracker1,
+            };
 
             // check all operator has been updated
-            let update_state_tracker =
-                Self::deserialize_vault_update_state_tracker(vault_update_state_tracker)?;
-            let all_operators_updated = update_state_tracker
+            let current_tracker =
+                Self::deserialize_vault_update_state_tracker(current_tracker_account)?;
+            let update_required = !current_tracker
                 .all_operators_updated(self.vault.operator_count())
                 .unwrap_or_else(|err| {
                     msg!(
@@ -257,8 +288,8 @@ impl<'info> JitoRestakingVaultService<'info> {
                 });
 
             // operators still need to be cranked
-            if !all_operators_updated {
-                return Ok(true);
+            if update_required {
+                return Ok(Some(current_tracker_account));
             }
 
             // close the tracker and finalize current epoch process
@@ -267,7 +298,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                     self.vault_program.key,
                     self.vault_config_account.key,
                     self.vault_account.key,
-                    vault_update_state_tracker.key,
+                    current_tracker_account.key,
                     payer.key,
                     self.current_epoch,
                 );
@@ -278,7 +309,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                     self.vault_program.to_account_info(),
                     self.vault_config_account.to_account_info(),
                     self.vault_account.to_account_info(),
-                    vault_update_state_tracker.to_account_info(),
+                    current_tracker_account.to_account_info(),
                     payer.to_account_info(),
                 ],
                 payer_seeds,
@@ -292,7 +323,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         // epoch process not required
         msg!("RESTAKING#jito vault state update (epoch process) not required: current_epoch={}, last_updated_epoch={}", self.current_epoch, last_updated_epoch);
-        Ok(false)
+        Ok(None)
     }
 
     /// returns [staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]

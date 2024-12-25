@@ -152,22 +152,19 @@ pub(super) struct RestakingVaultDelegation {
     pub supported_token_allocation_weight: u64,
     pub supported_token_allocation_capacity_amount: u64,
 
-    /// informative field; this value can be out-dated.
+    /// informative field; these values shall be synced from remote state periodically.
     pub supported_token_delegated_amount: u64,
+    pub supported_token_undelegating_amount: u64,
 
     /// configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount.
     pub supported_token_redelegating_amount: u64,
 
-    _reserved: [u8; 32],
+    _reserved: [u8; 24],
 }
 
 impl RestakingVaultDelegation {
     pub(super) fn initialize(&mut self, operator: Pubkey) {
         self.operator = operator;
-        self.supported_token_allocation_capacity_amount = 0;
-        self.supported_token_redelegating_amount = 0;
-        self.supported_token_allocation_weight = 0;
-        self.supported_token_delegated_amount = 0;
     }
 
     pub(super) fn set_supported_token_allocation_strategy(
