@@ -18,56 +18,25 @@ pub struct MarinadeStakePoolService<'info> {
 
 impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
-    pub(in crate::modules) fn is_claimable_ticket_account(
-        &self,
-        clock: &AccountInfo<'info>,
-        ticket_account: &'info AccountInfo<'info>,
-        reserve_pda: &'info AccountInfo<'info>,
-    ) -> Result<bool> {
-        if !ticket_account.is_initialized() {
-            return Ok(false);
-        }
-
-        let clock = Clock::from_account_info(clock)?;
-        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
-
-        if clock.epoch < ticket_account.created_epoch + 1 {
-            return Ok(false);
-        } else if clock.epoch == ticket_account.created_epoch + 1
-            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
-        {
-            return Ok(false);
-        }
-
-        if ticket_account.lamports_amount
-            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
-        {
-            return Ok(false);
-        }
-
-        Ok(true)
-    }
-
-    #[inline(never)]
     pub fn new(
         marinade_stake_pool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
-    ) -> Result<Box<Self>> {
+    ) -> Result<Self> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
-        Ok(Box::new(Self {
+        Ok(Self {
             pool_account,
             marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
             pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
             pool_token_program: Program::try_from(pool_token_program)?,
-        }))
+        })
     }
 
     pub(super) fn deserialize_pool_account(
         pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<State>> {
+    ) -> Result<Account<'info, State>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
         #[cfg(feature = "devnet")]
         require_eq!(pool_account.msol_mint, DEVNET_MSOL_MINT_ADDRESS);
@@ -97,7 +66,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority]
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_deposit_sol(
+    pub fn find_accounts_to_deposit_sol(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
@@ -129,16 +98,14 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    pub(in crate::modules) fn get_min_deposit_sol_amount(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<u64> {
+    pub fn get_min_deposit_sol_amount(pool_account: &'info AccountInfo<'info>) -> Result<u64> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
         Ok(pool_account.min_deposit)
     }
 
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     #[inline(never)]
-    pub(in crate::modules) fn deposit_sol(
+    pub fn deposit_sol(
         &mut self,
         // fixed
         system_program: &Program<'info, System>,
@@ -154,7 +121,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         from_sol_account_seeds: &[&[u8]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64, (u64, u64))> {
+    ) -> Result<(u64, u64, u64)> {
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -185,23 +152,21 @@ impl<'info> MarinadeStakePoolService<'info> {
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
-        let deposit_fee = (0, 1);
+        let deducted_sol_fee_amount = 0;
 
-        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deposit_fee={:?}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deposit_fee);
+        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, deducted_sol_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_sol_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((
             to_pool_token_account_amount,
             minted_pool_token_amount,
-            deposit_fee,
+            deducted_sol_fee_amount,
         ))
     }
 
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
     #[inline(never)]
-    pub(in crate::modules) fn get_max_cycle_fee(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<(u64, u64)> {
+    pub fn get_max_cycle_fee(pool_account: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
         // it only costs withdrawal fee
@@ -217,7 +182,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns unstaking_sol_amount
     #[inline(never)]
-    pub(in crate::modules) fn order_unstake(
+    pub fn order_unstake(
         &mut self,
         // fixed
         system_program: &Program<'info, System>,
@@ -264,6 +229,37 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(ticket_account.lamports_amount)
     }
 
+    #[inline(never)]
+    pub fn is_claimable_ticket_account(
+        &self,
+        clock: &AccountInfo<'info>,
+        ticket_account: &'info AccountInfo<'info>,
+        reserve_pda: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        if !ticket_account.is_initialized() {
+            return Ok(false);
+        }
+
+        let clock = Clock::from_account_info(clock)?;
+        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
+
+        if clock.epoch < ticket_account.created_epoch + 1 {
+            return Ok(false);
+        } else if clock.epoch == ticket_account.created_epoch + 1
+            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
+        {
+            return Ok(false);
+        }
+
+        if ticket_account.lamports_amount
+            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
+        {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
     fn create_ticket_account(
         &self,
         system_program: &Program<'info, System>,
@@ -285,7 +281,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns unstaked_sol_amount
     #[inline(never)]
-    pub(in crate::modules) fn claim(
+    pub fn claim(
         &mut self,
         system_program: &Program<'info, System>,
 
@@ -329,7 +325,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_order_unstake(
+    pub fn find_accounts_to_order_unstake(
         pool_account: &'info AccountInfo<'info>,
         ticket_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
@@ -347,7 +343,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_claim<'a>(
+    pub fn find_accounts_to_claim<'a>(
         pool_account_info: &'info AccountInfo<'info>,
         ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
     ) -> Result<Vec<(Pubkey, bool)>>

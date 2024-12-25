@@ -42,8 +42,8 @@ pub struct AssetState {
     pub withdrawal_user_reserved_amount: u64,
 
     /// asset: receivable amount that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST (fee from unstaking, unrestaking).
-    /// And it shall be settled by the withdrawal fee normally. But it also can be written off by an authorized operation.
+    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.
+    /// And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.
     /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub operation_receivable_amount: u64,
 
@@ -124,7 +124,8 @@ impl AssetState {
         self.withdrawable = if withdrawable { 1 } else { 0 };
     }
 
-    pub fn deposit(&mut self, asset_amount: u64) -> Result<()> {
+    /// returns [deposited_amount]
+    pub fn deposit(&mut self, asset_amount: u64) -> Result<u64> {
         if self.depositable == 0 {
             err!(ErrorCode::FundDepositNotSupportedAsset)?
         }
@@ -137,9 +138,30 @@ impl AssetState {
         );
 
         self.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount = self.operation_reserved_amount + asset_amount;
+        self.operation_reserved_amount += asset_amount;
 
-        Ok(())
+        Ok(asset_amount)
+    }
+
+    /// returns [deposited_amount, offsetted_receivable_amount]
+    pub fn donate(&mut self, asset_amount: u64, offset_receivable: bool) -> Result<(u64, u64)> {
+        // offset receivable first if requested
+        let offsetting_receivable_amount = if offset_receivable {
+            self.operation_receivable_amount.min(asset_amount)
+        } else {
+            0
+        };
+        self.operation_receivable_amount -= offsetting_receivable_amount;
+        self.operation_reserved_amount += offsetting_receivable_amount;
+
+        let remaining_asset_amount = asset_amount - offsetting_receivable_amount;
+        let deposited_amount = if remaining_asset_amount > 0 {
+            self.deposit(remaining_asset_amount)?
+        } else {
+            0
+        };
+
+        Ok((deposited_amount, offsetting_receivable_amount))
     }
 
     pub fn create_withdrawal_request(
@@ -228,7 +250,11 @@ impl AssetState {
         self.withdrawal_last_processed_batch_id =
             self.withdrawal_queued_batches[count - 1].batch_id;
         self.withdrawal_last_batch_processed_at = current_timestamp;
-        let processing_batches = self.withdrawal_queued_batches[..count].to_vec();
+        let processing_batches = self
+            .withdrawal_queued_batches
+            .into_iter()
+            .take(count)
+            .collect::<Vec<_>>();
 
         for i in 0..self.withdrawal_num_queued_batches as usize {
             if i < (self.withdrawal_num_queued_batches as usize) - count {
@@ -243,7 +269,9 @@ impl AssetState {
     }
 
     fn get_queued_withdrawal_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
-        self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
+        self.withdrawal_queued_batches
+            .iter()
+            .take(self.withdrawal_num_queued_batches as usize)
     }
 
     pub(super) fn get_queued_withdrawal_batches_to_process_iter(

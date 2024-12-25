@@ -312,16 +312,21 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
 
     // it returns over-slept number of slots, zero means it slept as much as requested duration exactly.
     public async sleep(slotDuration: number): Promise<number> {
-        const started = (await this.connection.getSlot('confirmed'));
-        const target = started + slotDuration;
+        const startedSlot = (await this.connection.getSlot('confirmed'));
+        const targetSlot = startedSlot + slotDuration;
+        return this.sleepUntil(targetSlot, startedSlot)
+    }
+
+    public async sleepUntil(targetSlot: number, startedSlot: number|null = null): Promise<number> {
+        startedSlot = startedSlot !== null ? startedSlot : (await this.connection.getSlot('confirmed'));
 
         return new Promise(resolve => {
             let intervalID = setInterval(async () => {
-                const ended = await this.connection.getSlot('confirmed');
-                if (target <= ended) {
+                const endedSlot = await this.connection.getSlot('confirmed');
+                if (targetSlot <= endedSlot) {
                     clearInterval(intervalID);
-                    resolve(ended - target);
-                    logger.debug(`slept for ${ended - started} slots, started=${started}, ended=${ended}, requested=${target}`);
+                    resolve(endedSlot - targetSlot);
+                    logger.debug(`slept for ${endedSlot - startedSlot} slots, started=${startedSlot}, ended=${endedSlot}, requested=${targetSlot}`);
                 }
             }, 200);
         });

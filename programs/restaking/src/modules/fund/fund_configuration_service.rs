@@ -231,7 +231,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_restaking_operator(
+    pub fn process_add_restaking_delegation(
         &mut self,
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,
@@ -244,7 +244,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             require_keys_eq!(restaking_vault.program, vault_program.key());
 
             // TODO: need some validation?
-            restaking_vault.add_operator(vault_operator.key)?;
+            restaking_vault.add_delegation(vault_operator.key)?;
         }
 
         self.create_fund_manager_updated_fund_event()
@@ -395,31 +395,31 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account
                 .get_restaking_vault_mut(vault)?
-                .add_operator(operator)?;
+                .add_delegation(operator)?;
         }
 
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_restaking_vault_operator_strategy(
+    pub fn process_update_restaking_vault_delegation_strategy(
         &mut self,
         vault: &Pubkey,
         operator: &Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegation_amount: Option<u64>,
+        token_redelegating_amount: Option<u64>,
     ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
-            let operator = fund_account
+            let delegation = fund_account
                 .get_restaking_vault_mut(vault)?
-                .get_operator_mut(operator)?;
-            operator.set_supported_token_allocation_strategy(
+                .get_delegation_mut(operator)?;
+            delegation.set_supported_token_allocation_strategy(
                 token_allocation_weight,
                 token_allocation_capacity_amount,
             )?;
-            if let Some(token_amount) = token_redelegation_amount {
-                operator.set_supported_token_redelegation_amount(token_amount)?;
+            if let Some(token_amount) = token_redelegating_amount {
+                delegation.set_supported_token_redelegating_amount(token_amount)?;
             }
         }
 

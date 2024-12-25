@@ -57,13 +57,13 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
     }
 
     pub fn get_participants_iter(&self) -> impl Iterator<Item = &WeightedAllocationParticipant> {
-        self.participants[..self.num_participants].iter()
+        self.participants.iter().take(self.num_participants)
     }
 
     pub fn get_participants_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut WeightedAllocationParticipant> {
-        self.participants[..self.num_participants].iter_mut()
+        self.participants.iter_mut().take(self.num_participants)
     }
 
     pub fn get_participant_by_index(&self, index: usize) -> Result<&WeightedAllocationParticipant> {
@@ -199,8 +199,9 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         Ok(remaining_amount)
     }
 
-    /// returns required_amount after the de-allocation made
-    fn cut(&mut self, amount: u64) -> Result<u64> {
+    /// returns the required_amount remaining after deallocation.
+    /// this method is a greedy way to cut allocations  as much as possible in order of the lowest weighted participants.
+    fn cut_greedy(&mut self, amount: u64) -> Result<u64> {
         let mut required_amount = amount;
 
         // remember original amount
@@ -343,7 +344,7 @@ mod tests {
         assert_eq!(strategy.participants[2].last_delta_amount, 60);
         assert_eq!(strategy.participants[3].last_delta_amount, 0);
 
-        assert_eq!(strategy.cut(300).unwrap(), 0);
+        assert_eq!(strategy.cut_greedy(300).unwrap(), 0);
         assert_eq!(strategy.participants[0].allocated_amount, 1240);
         assert_eq!(strategy.participants[1].allocated_amount, 620);
         assert_eq!(strategy.participants[2].allocated_amount, 10);
@@ -371,7 +372,7 @@ mod tests {
         assert_eq!(strategy.participants[2].last_delta_amount, 310);
         assert_eq!(strategy.participants[3].last_delta_amount, 0);
 
-        assert_eq!(strategy.cut(640).unwrap(), 0);
+        assert_eq!(strategy.cut_greedy(640).unwrap(), 0);
         assert_eq!(strategy.participants[0].allocated_amount, 1280);
         assert_eq!(strategy.participants[1].allocated_amount, 320);
         assert_eq!(strategy.participants[2].allocated_amount, 0);
@@ -391,7 +392,7 @@ mod tests {
         assert_eq!(strategy.participants[2].last_delta_amount, 240);
         assert_eq!(strategy.participants[3].last_delta_amount, 0);
 
-        assert_eq!(strategy.cut(2100).unwrap(), 0);
+        assert_eq!(strategy.cut_greedy(2100).unwrap(), 0);
         assert_eq!(strategy.participants[0].allocated_amount, 0);
         assert_eq!(strategy.participants[1].allocated_amount, 0);
         assert_eq!(strategy.participants[2].allocated_amount, 0);

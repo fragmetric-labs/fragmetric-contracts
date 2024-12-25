@@ -255,24 +255,24 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_restaking_vault_operator_strategy<'info>(
+    pub fn fund_manager_update_restaking_vault_delegation_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         vault: Pubkey,
         operator: Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegation_amount: Option<u64>,
+        token_redelegating_amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_restaking_vault_operator_strategy(
+        .process_update_restaking_vault_delegation_strategy(
             &vault,
             &operator,
             token_allocation_weight,
             token_allocation_capacity_amount,
-            token_redelegation_amount,
+            token_redelegating_amount,
         )?);
 
         Ok(())
@@ -488,7 +488,7 @@ pub mod restaking {
 
     pub fn operator_run_fund_command<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-        force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
+        force_reset_command: Option<modules::fund::commands::OperationCommandEntry>,
     ) -> Result<()> {
         // TODO: remove temporary ADMIN_PUBKEY authorization
         if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
@@ -526,6 +526,7 @@ pub mod restaking {
     pub fn operator_donate_sol_to_fund<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundDonationContext<'info>>,
         amount: u64,
+        offset_receivable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -537,6 +538,7 @@ pub mod restaking {
             &ctx.accounts.fund_reserve_account,
             ctx.remaining_accounts,
             amount,
+            offset_receivable,
         )?);
 
         Ok(())
@@ -545,6 +547,7 @@ pub mod restaking {
     pub fn operator_donate_supported_token_to_fund<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundSupportedTokenDonationContext<'info>>,
         amount: u64,
+        offset_receivable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -558,6 +561,7 @@ pub mod restaking {
             &ctx.accounts.operator_supported_token_account,
             ctx.remaining_accounts,
             amount,
+            offset_receivable,
         )?);
 
         Ok(())

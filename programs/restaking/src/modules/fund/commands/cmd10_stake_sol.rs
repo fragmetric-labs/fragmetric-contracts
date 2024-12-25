@@ -124,10 +124,6 @@ impl SelfExecutable for StakeSOLCommand {
             }
             StakeSOLCommandState::Prepare { items } => {
                 if let Some(item) = items.first() {
-                    let [pool_account, _remaining_accounts @ ..] = accounts else {
-                        err!(ErrorCode::AccountNotEnoughKeys)?
-                    };
-
                     let fund_account = ctx.fund_account.load()?;
                     let supported_token = fund_account.get_supported_token(&item.token_mint)?;
                     let mut required_accounts = vec![
@@ -142,11 +138,17 @@ impl SelfExecutable for StakeSOLCommand {
                     required_accounts.extend(
                         match supported_token.pricing_source.try_deserialize()? {
                             Some(TokenPricingSource::SPLStakePool { address }) => {
+                                let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                    err!(ErrorCode::AccountNotEnoughKeys)?
+                                };
                                 require_keys_eq!(address, pool_account.key());
 
                                 SPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?
                             }
                             Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                                let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                    err!(ErrorCode::AccountNotEnoughKeys)?
+                                };
                                 require_keys_eq!(address, pool_account.key());
 
                                 MarinadeStakePoolService::find_accounts_to_deposit_sol(
@@ -174,8 +176,6 @@ impl SelfExecutable for StakeSOLCommand {
             }
             StakeSOLCommandState::Execute { items } => {
                 if let Some(item) = items.first() {
-                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
-
                     let token_pricing_source = ctx
                         .fund_account
                         .load()?
@@ -187,7 +187,7 @@ impl SelfExecutable for StakeSOLCommand {
                         pool_token_mint,
                         to_pool_token_account_amount,
                         minted_pool_token_amount,
-                        deposit_fee,
+                        deducted_sol_fee_amount,
                     )) = match token_pricing_source {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, _remaining_accounts @ ..] =
@@ -195,14 +195,13 @@ impl SelfExecutable for StakeSOLCommand {
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
-
                             require_keys_eq!(address, pool_account.key());
 
                             let fund_account = ctx.fund_account.load()?;
                             let (
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
-                                deposit_fee,
+                                deducted_sol_fee_amount,
                             ) = SPLStakePoolService::new(
                                 pool_program,
                                 pool_account,
@@ -223,7 +222,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 pool_token_mint,
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
-                                deposit_fee,
+                                deducted_sol_fee_amount,
                             ))
                         }
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
@@ -245,7 +244,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 let (
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
-                                    deposit_fee,
+                                    deducted_sol_fee_amount,
                                 ) = MarinadeStakePoolService::new(
                                     pool_program,
                                     pool_account,
@@ -269,18 +268,12 @@ impl SelfExecutable for StakeSOLCommand {
                                     pool_token_mint,
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
-                                    deposit_fee,
+                                    deducted_sol_fee_amount,
                                 ))
                             }
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     } {
-                        let deducted_sol_fee_amount = utils::get_proportional_amount(
-                            item.allocated_sol_amount,
-                            deposit_fee.0,
-                            deposit_fee.1,
-                        )?;
-
                         let expected_minted_pool_token_amount =
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                 .new_pricing_service(accounts.into_iter().cloned())?
@@ -291,6 +284,7 @@ impl SelfExecutable for StakeSOLCommand {
 
                         let mut fund_account = ctx.fund_account.load_mut()?;
                         fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
+                        fund_account.sol.operation_receivable_amount += deducted_sol_fee_amount;
 
                         let supported_token =
                             fund_account.get_supported_token_mut(pool_token_mint.key)?;
@@ -314,6 +308,8 @@ impl SelfExecutable for StakeSOLCommand {
                             .into(),
                         );
                     }
+
+                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                 }
             }
         }
@@ -321,7 +317,7 @@ impl SelfExecutable for StakeSOLCommand {
         // transition to next command
         Ok((
             result,
-            match remaining_items {
+            Some(match remaining_items {
                 Some(remaining_items) if remaining_items.len() > 0 => {
                     let pricing_source = ctx
                         .fund_account
@@ -333,25 +329,21 @@ impl SelfExecutable for StakeSOLCommand {
                             error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
                         })?;
 
-                    Some(
-                        StakeSOLCommand {
-                            state: StakeSOLCommandState::Prepare {
-                                items: remaining_items,
-                            },
+                    StakeSOLCommand {
+                        state: StakeSOLCommandState::Prepare {
+                            items: remaining_items,
+                        },
+                    }
+                    .with_required_accounts(match pricing_source {
+                        TokenPricingSource::SPLStakePool { address }
+                        | TokenPricingSource::MarinadeStakePool { address } => {
+                            vec![(address, false)]
                         }
-                        .with_required_accounts(match pricing_source {
-                            TokenPricingSource::SPLStakePool { address }
-                            | TokenPricingSource::MarinadeStakePool { address } => {
-                                vec![(address, false)]
-                            }
-                            _ => err!(
-                                errors::ErrorCode::FundOperationCommandExecutionFailedException
-                            )?,
-                        }),
-                    )
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    })
                 }
-                _ => Some(NormalizeSTCommand::default().without_required_accounts()),
-            },
+                _ => NormalizeSTCommand::default().without_required_accounts(),
+            }),
         ))
     }
 }

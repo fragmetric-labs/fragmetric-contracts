@@ -1,5 +1,6 @@
 mod fund_manager_updated_fund;
 mod fund_manager_updated_reward_pool;
+mod operator_donated_to_fund;
 mod operator_ran_fund_command;
 mod operator_updated_fund_prices;
 mod operator_updated_normalized_token_pool_prices;
@@ -15,6 +16,7 @@ mod user_withdrew_from_fund;
 
 pub use fund_manager_updated_fund::*;
 pub use fund_manager_updated_reward_pool::*;
+pub use operator_donated_to_fund::*;
 pub use operator_ran_fund_command::*;
 pub use operator_updated_fund_prices::*;
 pub use operator_updated_normalized_token_pool_prices::*;

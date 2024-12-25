@@ -241,7 +241,7 @@ impl NormalizedTokenPoolAccount {
             .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))
     }
 
-    pub(in crate::modules) fn has_supported_token(&self, supported_token_mint: &Pubkey) -> bool {
+    pub fn has_supported_token(&self, supported_token_mint: &Pubkey) -> bool {
         self.get_supported_token(supported_token_mint).is_ok()
     }
 
