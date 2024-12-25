@@ -23,45 +23,45 @@ pub enum InitializeCommandState {
     #[default]
     New,
     /// Prepares to execute restaking vault epoch process for a single item, intended to be used as a manual reset command.
-    PrepareSingleRestakingVaultEpochProcess { vault: Pubkey, operator: Pubkey },
+    PrepareSingleRestakingVaultUpdate { vault: Pubkey, operator: Pubkey },
     /// Prepares to execute restaking vault epoch process for the first item in the list.
-    PrepareRestakingVaultEpochProcess {
+    PrepareRestakingVaultUpdate {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
-        items: Vec<InitializeCommandRestakingVaultEpochProcessItem>,
+        items: Vec<InitializeCommandRestakingVaultUpdateItem>,
     },
     /// Executes restaking vault epoch process for the first item and transitions to the next command,
     /// either preparing the next item or performing a withdrawal operation.
-    ExecuteRestakingVaultEpochProcess {
+    ExecuteRestakingVaultUpdate {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
-        items: Vec<InitializeCommandRestakingVaultEpochProcessItem>,
+        items: Vec<InitializeCommandRestakingVaultUpdateItem>,
     },
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct InitializeCommandRestakingVaultEpochProcessItem {
+pub struct InitializeCommandRestakingVaultUpdateItem {
     vault: Pubkey,
     #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS)]
     delegations_updated_bitmap: Vec<bool>,
 }
 
-const RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE: usize = 5;
+const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 5;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct InitializeCommandResult {
-    restaking_vault_epoch_processed: Option<InitializeCommandResultRestakingVaultEpochProcessed>,
+    restaking_vault_updated: Option<InitializeCommandResultRestakingVaultUpdated>,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct InitializeCommandResultRestakingVaultEpochProcessed {
+pub struct InitializeCommandResultRestakingVaultUpdated {
     vault: Pubkey,
     epoch: u64,
     supported_token_mint: Pubkey,
-    #[max_len(RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE)]
-    delegations: Vec<InitializeCommandResultRestakingVaultEpochProcessedDelegation>,
+    #[max_len(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)]
+    delegations: Vec<InitializeCommandResultRestakingVaultDelegationUpdate>,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct InitializeCommandResultRestakingVaultEpochProcessedDelegation {
+pub struct InitializeCommandResultRestakingVaultDelegationUpdate {
     pub operator: Pubkey,
     pub delegated_amount: u64,
     pub undelegating_amount: u64,
@@ -77,8 +77,8 @@ impl SelfExecutable for InitializeCommand {
         Option<OperationCommandEntry>,
     )> {
         let mut result: Option<OperationCommandResult> = None;
-        let mut restaking_vault_epoch_process_items: Option<
-            Vec<InitializeCommandRestakingVaultEpochProcessItem>,
+        let mut restaking_vault_update_items: Option<
+            Vec<InitializeCommandRestakingVaultUpdateItem>,
         > = None;
 
         match &self.state {
@@ -95,7 +95,7 @@ impl SelfExecutable for InitializeCommand {
                                 .try_deserialize()?
                             {
                                 Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-                                    InitializeCommandRestakingVaultEpochProcessItem {
+                                    InitializeCommandRestakingVaultUpdateItem {
                                         vault: restaking_vault.vault,
                                         delegations_updated_bitmap: restaking_vault
                                             .get_delegations_iter()
@@ -112,16 +112,16 @@ impl SelfExecutable for InitializeCommand {
                     .collect::<Result<Vec<_>>>()?;
 
                 if items.len() > 0 {
-                    restaking_vault_epoch_process_items = Some(items);
+                    restaking_vault_update_items = Some(items);
                 }
             }
-            InitializeCommandState::PrepareSingleRestakingVaultEpochProcess { vault, operator } => {
+            InitializeCommandState::PrepareSingleRestakingVaultUpdate { vault, operator } => {
                 let fund_account = ctx.fund_account.load()?;
                 let restaking_vault = fund_account.get_restaking_vault(vault)?;
                 restaking_vault.get_delegation(operator)?; // check existence
 
-                restaking_vault_epoch_process_items =
-                    Some(vec![InitializeCommandRestakingVaultEpochProcessItem {
+                restaking_vault_update_items =
+                    Some(vec![InitializeCommandRestakingVaultUpdateItem {
                         vault: *vault,
                         delegations_updated_bitmap: restaking_vault
                             .get_delegations_iter()
@@ -129,7 +129,7 @@ impl SelfExecutable for InitializeCommand {
                             .collect::<Vec<_>>(),
                     }]);
             }
-            InitializeCommandState::PrepareRestakingVaultEpochProcess { items } => {
+            InitializeCommandState::PrepareRestakingVaultUpdate { items } => {
                 match items.first() {
                     Some(item) => {
                         let fund_account = ctx.fund_account.load()?;
@@ -163,7 +163,7 @@ impl SelfExecutable for InitializeCommand {
                                         .filter(|(index, _)| {
                                             !item.delegations_updated_bitmap.get(*index).unwrap()
                                         })
-                                        .take(RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE)
+                                        .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
                                         .flat_map(|(_, delegation)| {
                                             [
                                                 (
@@ -189,10 +189,9 @@ impl SelfExecutable for InitializeCommand {
                             None,
                             Some(
                                 InitializeCommand {
-                                    state:
-                                        InitializeCommandState::ExecuteRestakingVaultEpochProcess {
-                                            items: items.clone(),
-                                        },
+                                    state: InitializeCommandState::ExecuteRestakingVaultUpdate {
+                                        items: items.clone(),
+                                    },
                                 }
                                 .with_required_accounts(required_accounts),
                             ),
@@ -202,9 +201,12 @@ impl SelfExecutable for InitializeCommand {
                 }
             }
 
-            InitializeCommandState::ExecuteRestakingVaultEpochProcess { items } => {
+            InitializeCommandState::ExecuteRestakingVaultUpdate { items } => {
                 match items.first() {
                     Some(item) => {
+                        let mut remaining_items =
+                            items.into_iter().skip(1).cloned().collect::<Vec<_>>();
+
                         let fund_account = ctx.fund_account.load()?;
                         let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
                         match restaking_vault
@@ -245,12 +247,11 @@ impl SelfExecutable for InitializeCommand {
                                         .filter(|(index, _)| {
                                             !item.delegations_updated_bitmap.get(*index).unwrap()
                                         })
-                                        .take(RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE)
+                                        .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
                                         .flat_map(|(bitmap_index, delegation)| {
-                                            match remaining_accounts
-                                                .iter()
-                                                .position(|account| delegation.operator == account.key())
-                                            {
+                                            match remaining_accounts.iter().position(|account| {
+                                                delegation.operator == account.key()
+                                            }) {
                                                 Some(account_index) => Some((
                                                     bitmap_index,
                                                     remaining_accounts[account_index - 1],
@@ -267,14 +268,14 @@ impl SelfExecutable for InitializeCommand {
                                     let restaking_vault =
                                         fund_account.get_restaking_vault_mut(&item.vault)?;
 
-                                    let mut restaking_vault_epoch_processed_items = Vec::<
-                                        InitializeCommandResultRestakingVaultEpochProcessedDelegation,
+                                    let mut restaking_vault_delegation_update_items = Vec::<
+                                        InitializeCommandResultRestakingVaultDelegationUpdate,
                                     >::with_capacity(
-                                        RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE,
+                                        RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE,
                                     );
 
                                     // update target delegations one by one.
-                                    let mut updated_item = item.clone();
+                                    let mut processing_item = item.clone();
                                     for (bitmap_index, vault_operator_delegation, operator) in
                                         processing_delegations
                                     {
@@ -290,7 +291,7 @@ impl SelfExecutable for InitializeCommand {
                                                 ctx.operator,
                                                 &[],
                                             )?;
-                                        updated_item.delegations_updated_bitmap[bitmap_index] =
+                                        processing_item.delegations_updated_bitmap[bitmap_index] =
                                             true;
 
                                         // sync the state of the delegation
@@ -302,27 +303,40 @@ impl SelfExecutable for InitializeCommand {
                                             undelegation_requested_amount + undelegating_amount;
 
                                         // store result items
-                                        restaking_vault_epoch_processed_items.push(
-                                            InitializeCommandResultRestakingVaultEpochProcessedDelegation {
+                                        restaking_vault_delegation_update_items.push(
+                                            InitializeCommandResultRestakingVaultDelegationUpdate {
                                                 operator: operator.key(),
-                                                delegated_amount: delegation.supported_token_delegated_amount,
-                                                undelegating_amount: delegation.supported_token_undelegating_amount,
-                                            }
+                                                delegated_amount: delegation
+                                                    .supported_token_delegated_amount,
+                                                undelegating_amount: delegation
+                                                    .supported_token_undelegating_amount,
+                                            },
                                         );
                                     }
 
                                     // store the result
-                                    result = Some(InitializeCommandResult {
-                                        restaking_vault_epoch_processed: Some(InitializeCommandResultRestakingVaultEpochProcessed {
-                                            vault: restaking_vault.vault,
-                                            epoch: vault_service.get_current_epoch(),
-                                            supported_token_mint: restaking_vault.supported_token_mint,
-                                            delegations: restaking_vault_epoch_processed_items,
-                                        }),
-                                    }.into());
+                                    result = Some(
+                                        InitializeCommandResult {
+                                            restaking_vault_updated: Some(
+                                                InitializeCommandResultRestakingVaultUpdated {
+                                                    vault: restaking_vault.vault,
+                                                    epoch: vault_service.get_current_epoch(),
+                                                    supported_token_mint: restaking_vault
+                                                        .supported_token_mint,
+                                                    delegations:
+                                                        restaking_vault_delegation_update_items,
+                                                },
+                                            ),
+                                        }
+                                        .into(),
+                                    );
 
-                                    // finalize the update if all delegations have been updated.
-                                    if updated_item.delegations_updated_bitmap.iter().all(|b| *b) {
+                                    if processing_item
+                                        .delegations_updated_bitmap
+                                        .iter()
+                                        .all(|b| *b)
+                                    {
+                                        // finalize the update if all delegations have been updated.
                                         vault_service.ensure_state_update_required(
                                             system_program,
                                             vault_update_state_tracker,
@@ -330,21 +344,13 @@ impl SelfExecutable for InitializeCommand {
                                             ctx.operator,
                                             &[],
                                         )?;
-                                    }
-
-                                    let mut remaining_items =
-                                        items.into_iter().skip(1).cloned().collect::<Vec<_>>();
-                                    if remaining_items.len() > 0 {
-                                        remaining_items.insert(0, updated_item);
-                                        restaking_vault_epoch_process_items = Some(remaining_items);
-                                    }
-                                } else {
-                                    let remaining_items =
-                                        items.into_iter().skip(1).cloned().collect::<Vec<_>>();
-                                    if remaining_items.len() > 0 {
-                                        restaking_vault_epoch_process_items = Some(remaining_items);
+                                    } else {
+                                        // push the item back as the process not completed yet
+                                        remaining_items.insert(0, processing_item)
                                     }
                                 }
+
+                                restaking_vault_update_items = Some(remaining_items);
                             }
                             _ => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
@@ -360,7 +366,7 @@ impl SelfExecutable for InitializeCommand {
         Ok((
             result,
             Some({
-                if let Some(items) = restaking_vault_epoch_process_items {
+                if let Some(items) = restaking_vault_update_items {
                     match items.first() {
                         Some(item) => {
 
@@ -379,7 +385,7 @@ impl SelfExecutable for InitializeCommand {
                             Some(
                                 InitializeCommand {
                                     state:
-                                    InitializeCommandState::PrepareRestakingVaultEpochProcess {
+                                    InitializeCommandState::PrepareRestakingVaultUpdate {
                                         items,
                                     },
                                 }

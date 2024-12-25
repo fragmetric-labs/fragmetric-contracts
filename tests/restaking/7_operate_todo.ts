@@ -55,9 +55,9 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runOperatorFundCommands();
     });
 
-    step("fund operation for initial phase of a cycle after an epoch shift", async () => {
+    step("fund operation for the next cycle after an epoch shift", async () => {
         logger.info('waiting for an epoch shift...')
-        await restaking.sleepUntil(256);
-        await restaking.runOperatorFundCommands(undefined, undefined, 5);
+        await restaking.sleepUntil(254); // wait until just before the end of the current epoch (instead of 256) to make more complex scenario
+        await restaking.runOperatorFundCommands();
     });
 });
