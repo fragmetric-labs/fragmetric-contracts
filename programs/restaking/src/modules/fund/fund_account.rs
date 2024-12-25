@@ -221,12 +221,26 @@ impl FundAccount {
     pub(super) fn find_normalized_token_reserve_account_address(&self) -> Result<Pubkey> {
         let normalized_token = self
             .get_normalized_token()
-            .ok_or_else(|| error!(errors::ErrorCode::FundNormalizedTokenNotSetError))?;
+            .ok_or_else(|| error!(ErrorCode::FundNormalizedTokenNotSetError))?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.find_account_address()?,
                 &normalized_token.mint,
                 &normalized_token.program,
+            ),
+        )
+    }
+
+    pub(super) fn find_vault_receipt_token_reserve_account_address(
+        &self,
+        vault: &Pubkey,
+    ) -> Result<Pubkey> {
+        let restaking_vault = self.get_restaking_vault(vault)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &restaking_vault.receipt_token_mint,
+                &restaking_vault.receipt_token_program,
             ),
         )
     }

@@ -18,37 +18,6 @@ pub struct MarinadeStakePoolService<'info> {
 
 impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
-    pub fn is_claimable_ticket_account(
-        &self,
-        clock: &AccountInfo<'info>,
-        ticket_account: &'info AccountInfo<'info>,
-        reserve_pda: &'info AccountInfo<'info>,
-    ) -> Result<bool> {
-        if !ticket_account.is_initialized() {
-            return Ok(false);
-        }
-
-        let clock = Clock::from_account_info(clock)?;
-        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
-
-        if clock.epoch < ticket_account.created_epoch + 1 {
-            return Ok(false);
-        } else if clock.epoch == ticket_account.created_epoch + 1
-            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
-        {
-            return Ok(false);
-        }
-
-        if ticket_account.lamports_amount
-            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
-        {
-            return Ok(false);
-        }
-
-        Ok(true)
-    }
-
-    #[inline(never)]
     pub fn new(
         marinade_stake_pool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
@@ -185,7 +154,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         let deducted_sol_fee_amount = 0;
 
-        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deducted_sol_fee_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount);
+        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, deducted_sol_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_sol_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((
             to_pool_token_account_amount,
@@ -258,6 +227,37 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         let ticket_account = Account::<TicketAccountData>::try_from(new_ticket_account)?;
         Ok(ticket_account.lamports_amount)
+    }
+
+    #[inline(never)]
+    pub fn is_claimable_ticket_account(
+        &self,
+        clock: &AccountInfo<'info>,
+        ticket_account: &'info AccountInfo<'info>,
+        reserve_pda: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        if !ticket_account.is_initialized() {
+            return Ok(false);
+        }
+
+        let clock = Clock::from_account_info(clock)?;
+        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
+
+        if clock.epoch < ticket_account.created_epoch + 1 {
+            return Ok(false);
+        } else if clock.epoch == ticket_account.created_epoch + 1
+            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
+        {
+            return Ok(false);
+        }
+
+        if ticket_account.lamports_amount
+            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
+        {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 
     fn create_ticket_account(

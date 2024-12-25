@@ -239,8 +239,6 @@ impl SelfExecutable for NormalizeSTCommand {
             }
             NormalizeSTCommandState::Execute { items } => {
                 if let Some(item) = items.first() {
-                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
-
                     let [normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, pool_supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, _remaining_accounts @ ..] =
                         accounts
                     else {
@@ -327,6 +325,8 @@ impl SelfExecutable for NormalizeSTCommand {
                         }
                         .into(),
                     );
+
+                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                 }
             }
         }

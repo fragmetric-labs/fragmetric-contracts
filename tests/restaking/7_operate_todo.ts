@@ -49,11 +49,15 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(2));
         const res3 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(4), restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
         const res4 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(4), restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
-        logger.info('waiting for an epoch shift...')
-        await restaking.sleep(32);
     });
 
-    step("fund operation for a full cycle", async () => {
+    step("fund operation for a full cycle (ncn_epoch = 256 slot)", async () => {
         await restaking.runOperatorFundCommands();
+    });
+
+    step("fund operation for initial phase of a cycle after an epoch shift", async () => {
+        logger.info('waiting for an epoch shift...')
+        await restaking.sleepUntil(256);
+        await restaking.runOperatorFundCommands(undefined, undefined, 5);
     });
 });

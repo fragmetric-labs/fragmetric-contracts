@@ -164,7 +164,7 @@ impl<'info> SPLStakePoolService<'info> {
             )?
         };
 
-        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}, deducted_sol_fee_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount);
+        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, deducted_sol_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_sol_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
 
         Ok((
             to_pool_token_account_amount,

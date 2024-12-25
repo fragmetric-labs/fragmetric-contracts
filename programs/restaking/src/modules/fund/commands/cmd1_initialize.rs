@@ -54,6 +54,7 @@ pub struct InitializeCommandResult {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct InitializeCommandResultRestakingVaultEpochProcessed {
     vault: Pubkey,
+    epoch: u64,
     supported_token_mint: Pubkey,
     #[max_len(RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE)]
     delegations: Vec<InitializeCommandResultRestakingVaultEpochProcessedDelegation>,
@@ -206,7 +207,7 @@ impl SelfExecutable for InitializeCommand {
                     Some(item) => {
                         let fund_account = ctx.fund_account.load()?;
                         let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-                        let required_accounts = match restaking_vault
+                        match restaking_vault
                             .receipt_token_pricing_source
                             .try_deserialize()?
                         {
@@ -224,7 +225,7 @@ impl SelfExecutable for InitializeCommand {
                                     vault_account,
                                 )?;
 
-                                let mut update_required_state_tracker = vault_service
+                                let update_required_state_tracker = vault_service
                                     .ensure_state_update_required(
                                         system_program,
                                         vault_update_state_tracker1,
@@ -241,7 +242,7 @@ impl SelfExecutable for InitializeCommand {
                                         .get_delegations_iter()
                                         .take(item.delegations_updated_bitmap.len())
                                         .enumerate()
-                                        .filter(|(index, o)| {
+                                        .filter(|(index, _)| {
                                             !item.delegations_updated_bitmap.get(*index).unwrap()
                                         })
                                         .take(RESTAKING_VAULT_EPOCH_PROCESS_DELEGATION_UPDATE_BATCH_SIZE)
@@ -263,7 +264,7 @@ impl SelfExecutable for InitializeCommand {
                                     drop(fund_account);
 
                                     let mut fund_account = ctx.fund_account.load_mut()?;
-                                    let mut restaking_vault =
+                                    let restaking_vault =
                                         fund_account.get_restaking_vault_mut(&item.vault)?;
 
                                     let mut restaking_vault_epoch_processed_items = Vec::<
@@ -314,6 +315,7 @@ impl SelfExecutable for InitializeCommand {
                                     result = Some(InitializeCommandResult {
                                         restaking_vault_epoch_processed: Some(InitializeCommandResultRestakingVaultEpochProcessed {
                                             vault: restaking_vault.vault,
+                                            epoch: vault_service.get_current_epoch(),
                                             supported_token_mint: restaking_vault.supported_token_mint,
                                             delegations: restaking_vault_epoch_processed_items,
                                         }),

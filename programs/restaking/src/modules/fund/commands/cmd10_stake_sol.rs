@@ -176,8 +176,6 @@ impl SelfExecutable for StakeSOLCommand {
             }
             StakeSOLCommandState::Execute { items } => {
                 if let Some(item) = items.first() {
-                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
-
                     let token_pricing_source = ctx
                         .fund_account
                         .load()?
@@ -310,6 +308,8 @@ impl SelfExecutable for StakeSOLCommand {
                             .into(),
                         );
                     }
+
+                    remaining_items = Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                 }
             }
         }
