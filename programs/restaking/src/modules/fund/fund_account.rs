@@ -231,6 +231,20 @@ impl FundAccount {
         )
     }
 
+    pub(super) fn find_vault_receipt_token_reserve_account_address(
+        &self,
+        vault: &Pubkey,
+    ) -> Result<Pubkey> {
+        let restaking_vault = self.get_restaking_vault(vault)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.find_account_address()?,
+                &restaking_vault.receipt_token_mint,
+                &restaking_vault.receipt_token_program,
+            ),
+        )
+    }
+
     pub const UNSTAKING_TICKET_SEED: &'static [u8] = b"unstaking_ticket";
 
     #[inline(always)]
@@ -296,12 +310,16 @@ impl FundAccount {
 
     #[inline]
     pub fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
-        self.supported_tokens[..self.num_supported_tokens as usize].iter()
+        self.supported_tokens
+            .iter()
+            .take(self.num_supported_tokens as usize)
     }
 
     #[inline]
     pub fn get_supported_tokens_iter_mut(&mut self) -> impl Iterator<Item = &mut SupportedToken> {
-        self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
+        self.supported_tokens
+            .iter_mut()
+            .take(self.num_supported_tokens as usize)
     }
 
     pub(super) fn get_supported_token(&self, token_mint: &Pubkey) -> Result<&SupportedToken> {
@@ -434,14 +452,18 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
-        self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
+        self.restaking_vaults
+            .iter()
+            .take(self.num_restaking_vaults as usize)
     }
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RestakingVault> {
-        self.restaking_vaults[..self.num_restaking_vaults as usize].iter_mut()
+        self.restaking_vaults
+            .iter_mut()
+            .take(self.num_restaking_vaults as usize)
     }
 
     pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {
@@ -535,16 +557,41 @@ impl FundAccount {
         std::iter::once(&self.sol).chain(self.get_supported_tokens_iter().map(|v| &v.token))
     }
 
+    pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
+        let sol = &mut self.sol;
+        let tokens = self
+            .supported_tokens
+            .iter_mut()
+            .take(self.num_supported_tokens as usize)
+            .map(|v| &mut v.token);
+        std::iter::once(sol).chain(tokens)
+    }
+
+    /// returns [deposited_amount]
     pub(super) fn deposit(
         &mut self,
         supported_token_mint: Option<Pubkey>,
         asset_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         if self.deposit_enabled == 0 {
             err!(ErrorCode::FundDepositDisabledError)?
         }
         self.get_asset_state_mut(supported_token_mint)?
             .deposit(asset_amount)
+    }
+
+    /// returns [deposited_amount, offsetted_receivable_amount]
+    pub(super) fn donate(
+        &mut self,
+        supported_token_mint: Option<Pubkey>,
+        asset_amount: u64,
+        offset_receivable: bool,
+    ) -> Result<(u64, u64)> {
+        if self.deposit_enabled == 0 {
+            err!(ErrorCode::FundDepositDisabledError)?
+        }
+        self.get_asset_state_mut(supported_token_mint)?
+            .donate(asset_amount, offset_receivable)
     }
 
     /// requested receipt_token_amount can be reduced based on the status of the underlying asset.

@@ -1,4 +1,4 @@
-pub(crate) mod command;
+pub(crate) mod commands;
 mod deposit_metadata;
 mod fund_account;
 mod fund_account_asset_state;

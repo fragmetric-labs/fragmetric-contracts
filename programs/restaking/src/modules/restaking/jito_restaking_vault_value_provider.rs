@@ -5,6 +5,7 @@ use jito_vault_core::vault::Vault;
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
+use crate::modules::restaking::JitoRestakingVaultService;
 
 pub struct JitoRestakingVaultValueProvider;
 
@@ -17,9 +18,8 @@ impl TokenValueProvider for JitoRestakingVaultValueProvider {
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let vault_data = pricing_source_accounts[0].data.borrow();
-        let vault_account = Vault::try_from_slice_unchecked(vault_data.as_ref())?;
-
+        let vault_account =
+            JitoRestakingVaultService::deserialize_vault(pricing_source_accounts[0])?;
         require_keys_eq!(vault_account.vrt_mint, *token_mint);
 
         Ok(TokenValue {

@@ -178,8 +178,8 @@ impl<'info> PricingService<'info> {
         Ok(())
     }
 
-    /// returns (total sol value of the token, total token amount)
-    pub fn get_token_total_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
+    /// returns the token value in (numerator_as_sol, denominator_as_token)
+    fn get_token_value_as_sol(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
         let token_value = self
             .get_token_value(token_mint)
             .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
@@ -206,15 +206,13 @@ impl<'info> PricingService<'info> {
     }
 
     pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
-        let (total_token_value_as_sol, total_token_amount) =
-            self.get_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(sol_amount, total_token_amount, total_token_value_as_sol)
+        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
+        utils::get_proportional_amount(sol_amount, denominator_as_token, numerator_as_sol)
     }
 
     pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
-        let (total_token_value_as_sol, total_token_amount) =
-            self.get_token_total_value_as_sol(token_mint)?;
-        utils::get_proportional_amount(token_amount, total_token_value_as_sol, total_token_amount)
+        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
+        utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
     }
 
     /// returns token value being consist of atomic tokens, either SOL or LSTs
@@ -485,7 +483,7 @@ mod tests {
             .get_token_total_value_as_atomic(&basket_mint_24_10)
             .unwrap();
         let token_value_as_sol = pricing_service
-            .get_token_total_value_as_sol(&basket_mint_24_10)
+            .get_token_value_as_sol(&basket_mint_24_10)
             .unwrap();
 
         assert_eq!(format!("{:?}", token_vaule_as_atomic), "TokenValue { numerator: [SOL(30), Token(bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1, Some(Mock { numerator: [SOL(10)], denominator: 10 }), 5), Token(mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So, Some(Mock { numerator: [SOL(12)], denominator: 10 }), 5), Token(J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn, Some(Mock { numerator: [SOL(16)], denominator: 10 }), 5)], denominator: 10 }");

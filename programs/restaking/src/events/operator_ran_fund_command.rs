@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund::command::{OperationCommand, OperationCommandResult};
+use crate::modules::fund::commands::{OperationCommand, OperationCommandResult};
 
 #[event]
 pub struct OperatorRanFundCommand {

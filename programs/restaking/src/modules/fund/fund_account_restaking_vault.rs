@@ -6,8 +6,8 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
-const FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS: usize = 30;
-const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
+pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
 
 #[zero_copy]
 #[derive(Debug)]
@@ -34,8 +34,8 @@ pub(super) struct RestakingVault {
     pub sol_allocation_capacity_amount: u64,
 
     _padding2: [u8; 7],
-    num_operators: u8,
-    operators: [RestakingVaultOperator; FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS],
+    num_delegations: u8,
+    delegations: [RestakingVaultDelegation; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS],
 
     /// auto-compounding
     compounding_token_mints: [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS],
@@ -80,7 +80,7 @@ impl RestakingVault {
         self.sol_allocation_weight = 0;
         self.sol_allocation_capacity_amount = 0;
 
-        self.num_operators = 0;
+        self.num_delegations = 0;
 
         Ok(())
     }
@@ -96,45 +96,49 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub(super) fn add_operator(&mut self, operator_key: &Pubkey) -> Result<()> {
+    pub(super) fn add_delegation(&mut self, operator: &Pubkey) -> Result<()> {
         if self
-            .operators
+            .delegations
             .iter()
-            .take(self.num_operators as usize)
-            .any(|op| op.operator == *operator_key)
+            .take(self.num_delegations as usize)
+            .any(|delegation| delegation.operator == *operator)
         {
             err!(ErrorCode::FundRestakingVaultOperatorAlreadyRegisteredError)?
         }
 
         require_gt!(
-            FUND_ACCOUNT_MAX_RESTAKING_VAULT_OPERATORS,
-            self.num_operators as usize,
-            ErrorCode::FundExceededMaxRestakingVaultOperatorsError
+            FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
+            self.num_delegations as usize,
+            ErrorCode::FundExceededMaxRestakingVaultDelegationsError
         );
 
-        let mut operator = RestakingVaultOperator::zeroed();
-        operator.initialize(*operator_key);
-        self.operators[self.num_operators as usize] = operator;
-        self.num_operators += 1;
+        let mut delegation = RestakingVaultDelegation::zeroed();
+        delegation.initialize(*operator);
+        self.delegations[self.num_delegations as usize] = delegation;
+        self.num_delegations += 1;
 
         Ok(())
     }
 
-    pub(super) fn get_operator(&self, operator: &Pubkey) -> Result<&RestakingVaultOperator> {
-        self.operators
+    pub(super) fn get_delegations_iter(&self) -> impl Iterator<Item = &RestakingVaultDelegation> {
+        self.delegations.iter().take(self.num_delegations as usize)
+    }
+
+    pub(super) fn get_delegation(&self, operator: &Pubkey) -> Result<&RestakingVaultDelegation> {
+        self.delegations
             .iter()
-            .take(self.num_operators as usize)
+            .take(self.num_delegations as usize)
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
 
-    pub(super) fn get_operator_mut(
+    pub(super) fn get_delegation_mut(
         &mut self,
         operator: &Pubkey,
-    ) -> Result<&mut RestakingVaultOperator> {
-        self.operators
+    ) -> Result<&mut RestakingVaultDelegation> {
+        self.delegations
             .iter_mut()
-            .take(self.num_operators as usize)
+            .take(self.num_delegations as usize)
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
@@ -143,29 +147,26 @@ impl RestakingVault {
 #[zero_copy]
 #[derive(Debug)]
 #[repr(C)]
-pub(super) struct RestakingVaultOperator {
+pub(super) struct RestakingVaultDelegation {
     pub operator: Pubkey,
 
     /// configuration: used for delegation strategy.
     pub supported_token_allocation_weight: u64,
     pub supported_token_allocation_capacity_amount: u64,
 
-    /// just informative field
+    /// informative field; these values shall be synced from remote state periodically.
     pub supported_token_delegated_amount: u64,
+    pub supported_token_undelegating_amount: u64,
 
     /// configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount.
-    pub supported_token_redelegation_amount: u64,
+    pub supported_token_redelegating_amount: u64,
 
-    _reserved: [u8; 32],
+    _reserved: [u8; 24],
 }
 
-impl RestakingVaultOperator {
+impl RestakingVaultDelegation {
     pub(super) fn initialize(&mut self, operator: Pubkey) {
         self.operator = operator;
-        self.supported_token_allocation_capacity_amount = 0;
-        self.supported_token_redelegation_amount = 0;
-        self.supported_token_allocation_weight = 0;
-        self.supported_token_delegated_amount = 0;
     }
 
     pub(super) fn set_supported_token_allocation_strategy(
@@ -179,7 +180,7 @@ impl RestakingVaultOperator {
         Ok(())
     }
 
-    pub(super) fn set_supported_token_redelegation_amount(
+    pub(super) fn set_supported_token_redelegating_amount(
         &mut self,
         token_amount: u64,
     ) -> Result<()> {
@@ -189,7 +190,7 @@ impl RestakingVaultOperator {
             ErrorCode::FundInvalidConfigurationUpdateError
         );
 
-        self.supported_token_redelegation_amount = token_amount;
+        self.supported_token_redelegating_amount = token_amount;
 
         Ok(())
     }
