@@ -2,9 +2,6 @@ use crate::constants::{
     ADMIN_PUBKEY, JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_FEE_WALLET, JITO_VAULT_PROGRAM_ID,
 };
 use crate::errors;
-use crate::modules::restaking::jito::{
-    JitoRestakingVault, JitoRestakingVaultContext, JitoVaultOperatorDelegation,
-};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::associated_token;
@@ -18,15 +15,6 @@ use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 use jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker;
 use jito_vault_sdk::error::VaultError;
-
-pub struct JitoRestakingVaultStatus {
-    pub vault_receipt_token_claimable_amount: u64,
-    pub vault_receipt_token_unrestake_pending_amount: u64,
-    pub vault_supported_token_restaked_amount: u64,
-    pub supported_token_undelegate_pending_amount: u64,
-    pub supported_token_delegated_amount: u64,
-    pub vault_operators_delegation_status: Vec<JitoVaultOperatorDelegation>,
-}
 
 pub struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
@@ -49,7 +37,9 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         require_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
+        msg!("FUCK1");
         let vault_config = Box::new(Self::deserialize_vault_config(vault_config_account)?);
+        msg!("FUCK2: {:?}", vault_config);
         let vault = Box::new(Self::deserialize_vault(vault_account)?);
 
         let current_slot = Clock::get()?.slot;
@@ -316,6 +306,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         payer: &Signer<'info>,
         payer_seeds: &[&[&[u8]]],
     ) -> Result<(u64, u64, u64)> {
+        // TODO: create and init if not exists
+
         let mut delegation =
             Self::deserialize_vault_operator_delegation(vault_operator_delegation)?;
         if !match delegation.check_is_already_updated(self.current_slot, self.current_epoch) {
@@ -422,10 +414,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         todo!()
     }
 
-    fn get_status(
-        vault: AccountInfo,
-        vault_operators_delegation: &[AccountInfo],
-    ) -> Result<JitoRestakingVaultStatus> {
+    fn get_status(vault: AccountInfo, vault_operators_delegation: &[AccountInfo]) -> Result<()> {
         let vault_data_ref = vault.data.borrow();
         let vault_data = vault_data_ref.as_ref();
         let vault = Vault::try_from_slice_unchecked(vault_data)?;
@@ -459,7 +448,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         }
 
         // VaultOperatorDelegation's status
-        let mut vault_operators_delegation_status = Vec::new();
+        // let mut vault_operators_delegation_status = Vec::new();
         for vault_operator_delegation in vault_operators_delegation {
             if vault_operator_delegation.owner != &vault.operator_admin {
                 msg!("owner and operator admin do not match.");
@@ -482,20 +471,21 @@ impl<'info> JitoRestakingVaultService<'info> {
                     .checked_add(operator_supported_token_enqueued_for_undelegate_amount)
                     .unwrap();
 
-            vault_operators_delegation_status.push(JitoVaultOperatorDelegation {
-                operator_supported_token_delegated_amount,
-                operator_supported_token_undelegate_pending_amount,
-            });
+            // vault_operators_delegation_status.push(JitoVaultOperatorDelegation {
+            //     operator_supported_token_delegated_amount,
+            //     operator_supported_token_undelegate_pending_amount,
+            // });
         }
 
-        Ok(JitoRestakingVaultStatus {
-            vault_receipt_token_claimable_amount,
-            vault_receipt_token_unrestake_pending_amount,
-            vault_supported_token_restaked_amount,
-            supported_token_undelegate_pending_amount,
-            supported_token_delegated_amount,
-            vault_operators_delegation_status,
-        })
+        // Ok(JitoRestakingVaultStatus {
+        //     vault_receipt_token_claimable_amount,
+        //     vault_receipt_token_unrestake_pending_amount,
+        //     vault_supported_token_restaked_amount,
+        //     supported_token_undelegate_pending_amount,
+        //     supported_token_delegated_amount,
+        //     vault_operators_delegation_status,
+        // })
+        Ok(())
     }
 
     fn get_vault_operator_delegation_key(self: &Self, operator: &Pubkey) -> Pubkey {

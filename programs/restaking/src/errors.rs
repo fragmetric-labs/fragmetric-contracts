@@ -185,8 +185,8 @@ pub enum ErrorCode {
     #[msg("fund: restaking vault operator already registered")]
     FundRestakingVaultOperatorAlreadyRegisteredError,
 
-    #[msg("fund: exceeded max restaking vault operators")]
-    FundExceededMaxRestakingVaultOperatorsError,
+    #[msg("fund: exceeded max restaking vault delegations")]
+    FundExceededMaxRestakingVaultDelegationsError,
 
     #[msg("fund: unauhorized operation command")]
     FundOperationUnauthorizedCommandError,

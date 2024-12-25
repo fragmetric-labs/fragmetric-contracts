@@ -67,7 +67,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     pub(super) fn deserialize_pool_account(
         pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<State>> {
+    ) -> Result<Account<'info, State>> {
         let pool_account = Account::<State>::try_from(pool_account)?;
         #[cfg(feature = "devnet")]
         require_eq!(pool_account.msol_mint, DEVNET_MSOL_MINT_ADDRESS);

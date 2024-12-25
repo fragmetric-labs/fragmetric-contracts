@@ -255,24 +255,24 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_restaking_vault_operator_strategy<'info>(
+    pub fn fund_manager_update_restaking_vault_delegation_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         vault: Pubkey,
         operator: Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegation_amount: Option<u64>,
+        token_redelegating_amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_restaking_vault_operator_strategy(
+        .process_update_restaking_vault_delegation_strategy(
             &vault,
             &operator,
             token_allocation_weight,
             token_allocation_capacity_amount,
-            token_redelegation_amount,
+            token_redelegating_amount,
         )?);
 
         Ok(())

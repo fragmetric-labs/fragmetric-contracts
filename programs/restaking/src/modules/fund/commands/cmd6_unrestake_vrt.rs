@@ -5,7 +5,6 @@ use super::{
 use crate::errors;
 use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::jito::JitoRestakingVault;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 use anchor_lang::prelude::*;
