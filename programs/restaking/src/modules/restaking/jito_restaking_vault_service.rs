@@ -12,6 +12,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::TokenAccount;
 use jito_bytemuck::types::PodU64;
 use jito_bytemuck::AccountDeserialize;
+use jito_vault_core::vault;
 use jito_vault_core::vault::{BurnSummary, Vault};
 use jito_vault_core::vault_operator_delegation::VaultOperatorDelegation;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
@@ -30,9 +31,9 @@ pub struct JitoRestakingVaultStatus {
 pub struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
     vault_config_account: &'info AccountInfo<'info>,
-    vault_config: jito_vault_core::config::Config,
+    vault_config: Box<jito_vault_core::config::Config>,
     vault_account: &'info AccountInfo<'info>,
-    vault: jito_vault_core::vault::Vault,
+    vault: Box<jito_vault_core::vault::Vault>,
     current_slot: u64,
     current_epoch: u64,
 }
@@ -48,8 +49,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         require_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
-        let vault_config = Self::deserialize_vault_config(vault_config_account)?;
-        let vault = Self::deserialize_vault(vault_account)?;
+        let vault_config = Box::new(Self::deserialize_vault_config(vault_config_account)?);
+        let vault = Box::new(Self::deserialize_vault(vault_account)?);
 
         let current_slot = Clock::get()?.slot;
         let current_epoch = current_slot
@@ -67,7 +68,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         })
     }
 
-    pub fn deserialize_vault(
+    pub(super) fn deserialize_vault(
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault::Vault> {
         Ok(*jito_vault_core::vault::Vault::try_from_slice_unchecked(
@@ -75,7 +76,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         )?)
     }
 
-    pub fn deserialize_vault_config(
+    fn deserialize_vault_config(
         vault_config: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::config::Config> {
         Ok(*jito_vault_core::config::Config::try_from_slice_unchecked(
@@ -83,7 +84,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         )?)
     }
 
-    pub fn deserialize_vault_update_state_tracker(
+    fn deserialize_vault_update_state_tracker(
         vault_update_state_tracker: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker> {
         Ok(*jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::try_from_slice_unchecked(
@@ -91,7 +92,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         )?)
     }
 
-    pub fn deserialize_vault_operator_delegation(
+    fn deserialize_vault_operator_delegation(
         vault_operator_delegation: &'info AccountInfo<'info>,
     ) -> Result<jito_vault_core::vault_operator_delegation::VaultOperatorDelegation> {
         Ok(*jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::try_from_slice_unchecked(
@@ -119,9 +120,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
-    pub(in crate::modules) fn get_max_cycle_fee(
-        vault_account: &'info AccountInfo<'info>,
-    ) -> Result<(u64, u64)> {
+    pub fn get_max_cycle_fee(vault_account: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
         let vault = Self::deserialize_vault(vault_account)?;
 
         Ok((

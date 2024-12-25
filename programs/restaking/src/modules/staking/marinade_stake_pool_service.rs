@@ -18,7 +18,7 @@ pub struct MarinadeStakePoolService<'info> {
 
 impl<'info> MarinadeStakePoolService<'info> {
     #[inline(never)]
-    pub(in crate::modules) fn is_claimable_ticket_account(
+    pub fn is_claimable_ticket_account(
         &self,
         clock: &AccountInfo<'info>,
         ticket_account: &'info AccountInfo<'info>,
@@ -54,15 +54,15 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
-    ) -> Result<Box<Self>> {
+    ) -> Result<Self> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
-        Ok(Box::new(Self {
+        Ok(Self {
             pool_account,
             marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
             pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
             pool_token_program: Program::try_from(pool_token_program)?,
-        }))
+        })
     }
 
     pub(super) fn deserialize_pool_account(
@@ -97,7 +97,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority]
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_deposit_sol(
+    pub fn find_accounts_to_deposit_sol(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Vec<(Pubkey, bool)>> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
@@ -129,16 +129,14 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
-    pub(in crate::modules) fn get_min_deposit_sol_amount(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<u64> {
+    pub fn get_min_deposit_sol_amount(pool_account: &'info AccountInfo<'info>) -> Result<u64> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
         Ok(pool_account.min_deposit)
     }
 
     /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     #[inline(never)]
-    pub(in crate::modules) fn deposit_sol(
+    pub fn deposit_sol(
         &mut self,
         // fixed
         system_program: &Program<'info, System>,
@@ -199,9 +197,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
     #[inline(never)]
-    pub(in crate::modules) fn get_max_cycle_fee(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<(u64, u64)> {
+    pub fn get_max_cycle_fee(pool_account: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
         // it only costs withdrawal fee
@@ -217,7 +213,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns unstaking_sol_amount
     #[inline(never)]
-    pub(in crate::modules) fn order_unstake(
+    pub fn order_unstake(
         &mut self,
         // fixed
         system_program: &Program<'info, System>,
@@ -285,7 +281,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
     /// returns unstaked_sol_amount
     #[inline(never)]
-    pub(in crate::modules) fn claim(
+    pub fn claim(
         &mut self,
         system_program: &Program<'info, System>,
 
@@ -329,7 +325,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_order_unstake(
+    pub fn find_accounts_to_order_unstake(
         pool_account: &'info AccountInfo<'info>,
         ticket_account: &AccountInfo,
     ) -> Result<Vec<(Pubkey, bool)>> {
@@ -347,7 +343,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     #[inline(never)]
-    pub(in crate::modules) fn find_accounts_to_claim<'a>(
+    pub fn find_accounts_to_claim<'a>(
         pool_account_info: &'info AccountInfo<'info>,
         ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
     ) -> Result<Vec<(Pubkey, bool)>>

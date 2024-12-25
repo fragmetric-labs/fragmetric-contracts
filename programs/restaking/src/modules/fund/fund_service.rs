@@ -14,7 +14,7 @@ use crate::modules::reward::RewardService;
 use crate::utils::*;
 use crate::{events, utils};
 
-use super::command::{
+use super::commands::{
     OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
     FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
 };
@@ -48,7 +48,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     // create a pricing service and register fund assets' value resolver
-    pub(in crate::modules) fn new_pricing_service(
+    pub fn new_pricing_service(
         &mut self,
         pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
     ) -> Result<PricingService<'info>> {

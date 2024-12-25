@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use std::mem::discriminant;
 
-use super::command::*;
+use super::commands::*;
 
 #[constant]
 const FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;

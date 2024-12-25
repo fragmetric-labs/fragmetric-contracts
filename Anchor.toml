@@ -140,7 +140,7 @@ program = "./tests/mocks/mainnet/jito_restaking_vault.so"
 # clone mainnet Jito restaking protocol global config to localnet
 [[test.validator.account]]
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-filename = "./tests/mocks/mainnet/jito_vault_config.json"
+filename = "./tests/mocks/mainnet/jito_vault_config_epoch_length_32.json"
 
 # clone mainnet Jito restaking protocol program fee wallet to localnet
 [[test.validator.account]]

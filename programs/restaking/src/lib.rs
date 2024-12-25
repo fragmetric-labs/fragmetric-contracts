@@ -488,7 +488,7 @@ pub mod restaking {
 
     pub fn operator_run_fund_command<'info>(
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
-        force_reset_command: Option<modules::fund::command::OperationCommandEntry>,
+        force_reset_command: Option<modules::fund::commands::OperationCommandEntry>,
     ) -> Result<()> {
         // TODO: remove temporary ADMIN_PUBKEY authorization
         if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY

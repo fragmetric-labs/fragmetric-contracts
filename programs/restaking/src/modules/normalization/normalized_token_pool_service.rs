@@ -56,7 +56,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
         })
     }
 
-    pub(in crate::modules) fn deserialize_pool_account(
+    pub fn deserialize_pool_account(
         pool_account_info: &'info AccountInfo<'info>,
     ) -> Result<Account<'info, NormalizedTokenPoolAccount>> {
         Account::<NormalizedTokenPoolAccount>::try_from(pool_account_info)
@@ -93,7 +93,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
     }
 
     /// returns [to_normalized_token_account_amount, minted_normalized_token_amount]
-    pub(in crate::modules) fn normalize_supported_token(
+    pub fn normalize_supported_token(
         &mut self,
         // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
@@ -181,7 +181,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
         ))
     }
 
-    pub(in crate::modules) fn denormalize_supported_token(
+    pub fn denormalize_supported_token(
         &mut self,
         // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,

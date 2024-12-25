@@ -239,6 +239,7 @@ impl SelfExecutable for InitializeCommand {
                                         .filter(|(index, o)| {
                                             !item.operators_processed_bitmap.get(*index).unwrap()
                                         })
+                                        .take(RESTAKING_VAULT_EPOCH_PROCESS_BATCH_SIZE)
                                         .flat_map(|(bitmap_index, o)| {
                                             match remaining_accounts
                                                 .iter()
@@ -260,7 +261,8 @@ impl SelfExecutable for InitializeCommand {
 
                                     let mut restaking_vault_epoch_processed_items = Vec::<
                                         InitializeCommandResultRestakingVaultEpochProcessedItem,
-                                    >::new(
+                                    >::with_capacity(
+                                        RESTAKING_VAULT_EPOCH_PROCESS_BATCH_SIZE,
                                     );
 
                                     let mut updated_item = item.clone();

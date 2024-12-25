@@ -218,9 +218,7 @@ impl<'info> SPLStakePoolService<'info> {
 
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
-    pub(in crate::modules) fn get_max_cycle_fee(
-        pool_account_info: &'info AccountInfo<'info>,
-    ) -> Result<(u64, u64)> {
+    pub fn get_max_cycle_fee(pool_account_info: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
         let pool_account = Self::deserialize_pool_account(pool_account_info)?;
 
         // it costs deposit and withdrawal fee

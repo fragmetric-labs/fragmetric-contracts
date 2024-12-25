@@ -4,6 +4,7 @@ use marinade_cpi::state::State;
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
+use crate::modules::staking::MarinadeStakePoolService;
 
 pub struct MarinadeStakePoolValueProvider;
 
@@ -17,8 +18,8 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
         require_eq!(pricing_source_accounts.len(), 1);
 
         // ref: https://docs.rs/marinade-cpi/latest/marinade_cpi/state/struct.State.html
-        let pool_account = Account::<State>::try_from(pricing_source_accounts[0])?;
-
+        let pool_account =
+            MarinadeStakePoolService::deserialize_pool_account(pricing_source_accounts[0])?;
         require_keys_eq!(pool_account.msol_mint, *token_mint);
 
         let total_cooling_down = pool_account.stake_system.delayed_unstake_cooling_down
