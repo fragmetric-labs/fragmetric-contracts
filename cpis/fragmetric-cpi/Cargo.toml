@@ -1,0 +1,15 @@
+[package]
+name = "fragmetric-cpi"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1.21.0", features = ["min_const_generics"] }
+
+[dependencies.anchor-lang]
+version = "0.30.1"
+git = "https://github.com/fragmetric-labs/anchor.git"
+branch = "v0.30.1"
+
+[features]
+devnet = []

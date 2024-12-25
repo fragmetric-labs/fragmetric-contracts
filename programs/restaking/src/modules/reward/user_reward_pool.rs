@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
+use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 
@@ -8,7 +8,7 @@ use super::*;
 const USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 // const USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_2: usize = 8;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 pub struct UserRewardPool {
     token_allocated_amount: TokenAllocatedAmount,

@@ -5,6 +5,7 @@ use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
 use crate::modules::restaking::JitoRestakingVaultValueProvider;
 use crate::modules::staking::{MarinadeStakePoolValueProvider, SPLStakePoolValueProvider};
+use crate::modules::swap::{mint_address::NativeMint, OrcaLiqPoolValueProvider};
 use crate::utils;
 
 #[cfg(all(test, not(feature = "idl-build")))]
@@ -126,6 +127,12 @@ impl<'info> PricingService<'info> {
             }
             TokenPricingSource::FragmetricRestakingFund { address } => {
                 FundReceiptTokenValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &[self.get_token_pricing_source_account_info(address)?],
+                )?
+            }
+            TokenPricingSource::OrcaSOLBaseLiqPool { address } => {
+                OrcaLiqPoolValueProvider::<NativeMint>::new().resolve_underlying_assets(
                     token_mint,
                     &[self.get_token_pricing_source_account_info(address)?],
                 )?

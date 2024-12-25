@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 use crate::modules::reward::RewardType::Token;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub(super) struct NormalizedToken {
     pub mint: Pubkey,

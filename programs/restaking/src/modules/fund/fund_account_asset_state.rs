@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
+use bytemuck::Zeroable;
 
 use super::WithdrawalRequest;
 use crate::errors::ErrorCode;
@@ -8,7 +8,8 @@ use crate::utils::get_proportional_amount;
 
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct AssetState {
     token_mint: Pubkey,
@@ -391,7 +392,8 @@ impl AssetState {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub struct WithdrawalBatch {
     pub batch_id: u64,

@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 use std::mem::discriminant;
 
 use super::commands::*;
@@ -7,7 +6,8 @@ use super::commands::*;
 #[constant]
 const FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug)]
+#[zero_copy]
+#[derive(Debug)]
 #[repr(C)]
 pub(super) struct OperationState {
     updated_slot: u64,

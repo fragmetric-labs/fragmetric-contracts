@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 #[cfg(all(test, not(feature = "idl-build")))]
 use crate::modules::pricing::MockAsset;
@@ -22,6 +21,9 @@ pub enum TokenPricingSource {
     FragmetricRestakingFund {
         address: Pubkey,
     },
+    OrcaSOLBaseLiqPool {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -41,6 +43,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::FragmetricRestakingFund { address } => {
                 write!(f, "FragmetricRestakingFund({})", address)
+            }
+            Self::OrcaSOLBaseLiqPool { address } => {
+                write!(f, "OrcaLiqPool({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -71,6 +76,10 @@ impl TokenPricingSource {
                 pod.discriminant = 5;
                 pod.address = *address;
             }
+            TokenPricingSource::OrcaSOLBaseLiqPool { address } => {
+                pod.discriminant = 6;
+                pod.address = *address;
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock { .. } => {
                 pod.discriminant = 255;
@@ -80,7 +89,8 @@ impl TokenPricingSource {
     }
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod, Debug, Default)]
+#[zero_copy]
+#[derive(Debug, Default)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
     pub discriminant: u8,
@@ -113,6 +123,9 @@ impl TokenPricingSourcePod {
                         address: self.address,
                     },
                     5 => TokenPricingSource::FragmetricRestakingFund {
+                        address: self.address,
+                    },
+                    6 => TokenPricingSource::OrcaSOLBaseLiqPool {
                         address: self.address,
                     },
                     #[cfg(all(test, not(feature = "idl-build")))]

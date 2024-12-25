@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 use crate::errors::ErrorCode;
 
@@ -7,7 +6,7 @@ const REWARD_NAME_MAX_LEN: usize = 14;
 const REWARD_DESCRIPTION_MAX_LEN: usize = 128;
 
 /// Reward type.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Zeroable, Pod)]
+#[zero_copy]
 #[repr(C)]
 pub struct Reward {
     /// ID is determined by reward account.

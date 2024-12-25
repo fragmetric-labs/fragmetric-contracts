@@ -1,5 +1,5 @@
 {
-  "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
+  "address": "fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3",
   "metadata": {
     "name": "restaking",
     "version": "0.3.3",
@@ -28,7 +28,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -129,7 +129,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -304,7 +304,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -398,7 +398,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -485,7 +485,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "receipt_token_mint"
@@ -582,7 +582,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -703,7 +703,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -799,7 +799,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -889,7 +889,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "normalized_token_mint",
@@ -1047,7 +1047,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1154,7 +1154,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1251,7 +1251,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1348,7 +1348,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1504,7 +1504,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "fund_account",
@@ -1523,38 +1523,38 @@
               {
                 "kind": "const",
                 "value": [
-                  176,
-                  64,
-                  228,
-                  130,
                   214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
+                  52,
+                  8,
+                  155,
+                  182,
+                  149,
+                  115,
                   57,
-                  242,
-                  137,
-                  226
+                  20,
+                  131,
+                  125,
+                  232,
+                  82,
+                  251,
+                  210,
+                  76,
+                  255,
+                  40,
+                  78,
+                  39,
+                  34,
+                  166,
+                  52,
+                  128,
+                  105,
+                  118,
+                  67,
+                  202,
+                  117,
+                  247,
+                  108,
+                  146
                 ]
               }
             ]
@@ -1579,7 +1579,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1666,7 +1666,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "system_program",
@@ -1939,7 +1939,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "system_program",
@@ -2113,7 +2113,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2216,7 +2216,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2313,7 +2313,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2416,7 +2416,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2509,7 +2509,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2616,7 +2616,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -7468,6 +7468,7 @@
     },
     {
       "name": "AssetPod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -7512,6 +7513,7 @@
     },
     {
       "name": "AssetState",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -8400,6 +8402,7 @@
     },
     {
       "name": "NormalizedToken",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -8737,6 +8740,7 @@
     },
     {
       "name": "OperationCommandAccountMetaPod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -8791,6 +8795,7 @@
     },
     {
       "name": "OperationCommandEntryPod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -8836,6 +8841,7 @@
     },
     {
       "name": "OperationCommandPod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9014,6 +9020,7 @@
     },
     {
       "name": "OperationState",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9346,6 +9353,7 @@
     },
     {
       "name": "RestakingVault",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9474,6 +9482,7 @@
     },
     {
       "name": "RestakingVaultOperator",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9526,6 +9535,7 @@
       "docs": [
         "Reward type."
       ],
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9692,6 +9702,7 @@
     },
     {
       "name": "RewardPool",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9789,6 +9800,7 @@
       "docs": [
         "Reward pool holder type."
       ],
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9850,6 +9862,7 @@
     },
     {
       "name": "RewardSettlement",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -9933,6 +9946,7 @@
       "docs": [
         "Exact settlement block range: [`starting_slot`, `ending_slot`)"
       ],
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10104,6 +10118,7 @@
     },
     {
       "name": "SupportedToken",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10189,6 +10204,7 @@
     },
     {
       "name": "TokenAllocatedAmount",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10230,6 +10246,7 @@
     },
     {
       "name": "TokenAllocatedAmountRecord",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10324,6 +10341,7 @@
     },
     {
       "name": "TokenPricingSourcePod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10377,6 +10395,7 @@
     },
     {
       "name": "TokenValuePod",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10883,6 +10902,7 @@
     },
     {
       "name": "UserRewardPool",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -10949,6 +10969,7 @@
     },
     {
       "name": "UserRewardSettlement",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -11129,6 +11150,7 @@
     },
     {
       "name": "WithdrawalBatch",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
@@ -11213,7 +11235,7 @@
     {
       "name": "ADMIN_PUBKEY",
       "type": "pubkey",
-      "value": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+      "value": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
     },
     {
       "name": "DEVNET_BSOL_MINT_ADDRESS",
@@ -11253,22 +11275,22 @@
     {
       "name": "FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS",
       "type": "pubkey",
-      "value": "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
+      "value": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S"
     },
     {
       "name": "FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
+      "value": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg"
     },
     {
       "name": "FRAGSOL_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"
+      "value": "FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo"
     },
     {
       "name": "FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX"
+      "value": "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e"
     },
     {
       "name": "FUND_ACCOUNT_CURRENT_VERSION",
@@ -11287,7 +11309,7 @@
     {
       "name": "FUND_MANAGER_PUBKEY",
       "type": "pubkey",
-      "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+      "value": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
     },
     {
       "name": "JITO_VAULT_CONFIG_ADDRESS",
@@ -11379,7 +11401,7 @@
     {
       "name": "PROGRAM_REVENUE_ADDRESS",
       "type": "pubkey",
-      "value": "GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA"
+      "value": "XEhpR3UauMkARQ8ztwaU9Kbv16jEpBbXs9ftELka9wj"
     },
     {
       "name": "REWARD_ACCOUNT_CURRENT_VERSION",
@@ -11393,7 +11415,7 @@
     {
       "name": "TARGET",
       "type": "string",
-      "value": "\"local\""
+      "value": "\"mainnet\""
     },
     {
       "name": "USER_REWARD_ACCOUNT_CURRENT_VERSION",
