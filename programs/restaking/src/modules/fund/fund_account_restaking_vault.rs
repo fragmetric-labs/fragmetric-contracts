@@ -38,7 +38,7 @@ pub(super) struct RestakingVault {
     delegations: [RestakingVaultDelegation; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS],
 
     /// auto-compounding
-    compounding_token_mints: [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS],
+    compounding_reward_token_mints: [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS],
 
     _reserved: [u8; 128],
 }
