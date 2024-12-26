@@ -4,13 +4,9 @@ use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-use super::mint_address::*;
+pub struct OrcaLiqPoolValueProvider;
 
-pub struct OrcaLiqPoolValueProvider<BaseTokenMint: MintAddress> {
-    _marker: std::marker::PhantomData<BaseTokenMint>,
-}
-
-impl<BaseTokenMint: MintAddress> TokenValueProvider for OrcaLiqPoolValueProvider<BaseTokenMint> {
+impl TokenValueProvider for OrcaLiqPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
@@ -22,7 +18,6 @@ impl<BaseTokenMint: MintAddress> TokenValueProvider for OrcaLiqPoolValueProvider
         let pool_account = Account::<Whirlpool>::try_from(pricing_source_accounts[0])?;
 
         require_keys_eq!(pool_account.token_mint_a, *token_mint);
-        require_keys_eq!(pool_account.token_mint_b, BaseTokenMint::mint_address());
 
         // First, calculate price from pool account.
         //
@@ -42,7 +37,7 @@ impl<BaseTokenMint: MintAddress> TokenValueProvider for OrcaLiqPoolValueProvider
         let (numerator, denominator) = self.fit_price_into_u64(price);
 
         // Check base mint
-        let asset = match BaseTokenMint::mint_address() {
+        let asset = match pool_account.token_mint_b {
             spl_token::native_mint::ID => Asset::SOL(numerator),
             mint => Asset::Token(mint, None, numerator),
         };
@@ -54,19 +49,7 @@ impl<BaseTokenMint: MintAddress> TokenValueProvider for OrcaLiqPoolValueProvider
     }
 }
 
-impl<BaseTokenMint: MintAddress> Default for OrcaLiqPoolValueProvider<BaseTokenMint> {
-    fn default() -> Self {
-        Self {
-            _marker: Default::default(),
-        }
-    }
-}
-
-impl<BaseTokenMint: MintAddress> OrcaLiqPoolValueProvider<BaseTokenMint> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
+impl OrcaLiqPoolValueProvider {
     /// In orca pool, sqrt_price is a square root value of the price,
     /// which is represented as Q32.64 fixed point decimal notation.
     ///
@@ -129,11 +112,11 @@ impl<BaseTokenMint: MintAddress> OrcaLiqPoolValueProvider<BaseTokenMint> {
     /// First, convert price into fraction.
     /// Let's denote numerator as N and denominator as M.
     ///
-    ///
+    /// ```txt
     ///                         N      (price[2] << 128) + (price[1] << 64) + price[0]
     ///    price_as_fraction = --- = ---------------------------------------------------
     ///                         M                           2^128
-    ///
+    /// ```
     ///
     /// To reduce the number of significant bits, we can shift both N and M to right.
     /// M is 129 bits, so we need to shift at least 65 times.
@@ -142,11 +125,11 @@ impl<BaseTokenMint: MintAddress> OrcaLiqPoolValueProvider<BaseTokenMint> {
     /// we know that 2^64 < N = p * 2^128 < 2^192, so N is at least 65 bits and at most 192 bits.
     /// Therefore we can shift at least 64 times.
     ///
-    ///
+    /// ```txt
     ///                         N      (price[2] << 64) + price[1]
     ///    price_after_shift = --- = -------------------------------
     ///                         M                  2^64
-    ///
+    /// ```
     ///
     /// Now, only one more shift will make M to fit to 64-bit integer.
     /// If N needs more shift, we don't have to care about M anymore.
@@ -187,7 +170,7 @@ mod tests {
     fn test_math() {
         let sqrt_price = 2 << 64;
         assert_eq!(
-            OrcaLiqPoolValueProvider::<NativeMint>::new().calculate_price_from_sqrt(sqrt_price),
+            OrcaLiqPoolValueProvider.calculate_price_from_sqrt(sqrt_price),
             [0, 0, 4]
         );
     }
