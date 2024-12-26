@@ -4,9 +4,9 @@ use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-pub struct OrcaLiqPoolValueProvider;
+pub struct OrcaDEXLiquidityPoolValueProvider;
 
-impl TokenValueProvider for OrcaLiqPoolValueProvider {
+impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
@@ -49,7 +49,7 @@ impl TokenValueProvider for OrcaLiqPoolValueProvider {
     }
 }
 
-impl OrcaLiqPoolValueProvider {
+impl OrcaDEXLiquidityPoolValueProvider {
     /// In orca pool, sqrt_price is a square root value of the price,
     /// which is represented as Q32.64 fixed point decimal notation.
     ///
@@ -170,7 +170,7 @@ mod tests {
     fn test_math() {
         let sqrt_price = 2 << 64;
         assert_eq!(
-            OrcaLiqPoolValueProvider.calculate_price_from_sqrt(sqrt_price),
+            OrcaDEXLiquidityPoolValueProvider.calculate_price_from_sqrt(sqrt_price),
             [0, 0, 4]
         );
     }
