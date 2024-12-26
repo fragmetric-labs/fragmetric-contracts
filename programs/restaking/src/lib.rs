@@ -504,11 +504,23 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::commands::OperationCommandEntry>,
     ) -> Result<()> {
-        // TODO: remove temporary ADMIN_PUBKEY authorization
+        // TODO: remove this temporary authorization after audit
         if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
-            || force_reset_command.is_none() && ctx.accounts.operator.key() == ADMIN_PUBKEY)
+            || ctx.accounts.operator.key() == ADMIN_PUBKEY)
         {
             err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
+        }
+
+        // check force reset command is authorized
+        if let Some(command_entry) = &force_reset_command {
+            // fund manager can reset the operation state anytime.
+            // and admin can reset the operation state only if the command is safe.
+            if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
+                || ctx.accounts.operator.key() == ADMIN_PUBKEY
+                    && command_entry.is_safe_with_unchecked_params())
+            {
+                err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
+            }
         }
 
         emit_cpi!(modules::fund::FundService::new(
