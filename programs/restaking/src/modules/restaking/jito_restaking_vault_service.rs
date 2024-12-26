@@ -155,7 +155,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// check whether vault epoch-process should be fulfilled or not.
     /// returns valid [vault_update_state_tracker] among [vault_update_state_tracker1 or vault_update_state_tracker2] if state update is required.
-    /// after run [update_operator_delegation_state] for all operators, this method needs to be called again to finalize it.
+    /// after run [update_delegation_state] for all operators, this method should to be called to finalize it.
     pub fn ensure_state_update_required(
         &self,
         system_program: &'info AccountInfo<'info>,
@@ -293,7 +293,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         // check all operator has been updated
         let current_tracker =
             Self::deserialize_vault_update_state_tracker(current_tracker_account)?;
-        let closing_tracker = vault_operator_count == 0 || current_tracker
+        let all_cranked = vault_operator_count == 0 || current_tracker
             .all_operators_updated(vault_operator_count)
             .unwrap_or_else(|err| {
                 msg!(
@@ -304,8 +304,8 @@ impl<'info> JitoRestakingVaultService<'info> {
                 false
             });
 
-        // operators still need to be cranked
-        if !closing_tracker {
+        // update still need to be cranked then closed
+        if !all_cranked {
             msg!("RESTAKE#jito vault_update_state_tracker needs to be cranked then closed: vault_operator_count={}, current_epoch={}", vault_operator_count, self.current_epoch);
             return Ok(Some(current_tracker_account));
         }
@@ -342,7 +342,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// returns [staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
     /// in other words [restaked_amount, undelegation_requested_amount, undelegating_amount]
-    pub fn update_operator_delegation_state_if_needed(
+    pub fn update_delegation_state(
         self: &Self,
         vault_update_state_tracker: &'info AccountInfo<'info>,
         vault_operator_delegation: &'info AccountInfo<'info>,
@@ -445,6 +445,31 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         supported_token_amount: u64,
     ) -> Result<(u64, u64, u64, u64)> {
+        // ensure update of fee related vault state
+        let update_vault_balance_ix = jito_vault_sdk::sdk::update_vault_balance(
+            self.vault_program.key,
+            self.vault_config_account.key,
+            self.vault_account.key,
+            vault_supported_token_reserve_account.key,
+            vault_receipt_token_mint.key,
+            vault_receipt_token_fee_wallet_account.key,
+            token_program.key,
+        );
+        invoke_signed(
+            &update_vault_balance_ix,
+            &[
+                self.vault_program.to_account_info(),
+                self.vault_config_account.to_account_info(),
+                self.vault_account.to_account_info(),
+                vault_supported_token_reserve_account.to_account_info(),
+                vault_receipt_token_mint.to_account_info(),
+                vault_receipt_token_fee_wallet_account.to_account_info(),
+                token_program.to_account_info(),
+            ],
+            signer_seeds,
+        )?;
+
+        // do mint
         let mut to_vault_receipt_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_vault_receipt_token_account)?;
         let to_vault_receipt_token_account_amount_before = to_vault_receipt_token_account.amount;

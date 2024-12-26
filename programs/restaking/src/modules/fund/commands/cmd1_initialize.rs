@@ -39,25 +39,26 @@ pub enum InitializeCommandState {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct InitializeCommandRestakingVaultUpdateItem {
-    vault: Pubkey,
+    pub vault: Pubkey,
     #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS)]
-    delegations_updated_bitmap: Vec<bool>,
+    pub delegations_updated_bitmap: Vec<bool>,
 }
 
 const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 5;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct InitializeCommandResult {
-    restaking_vault_updated: Option<InitializeCommandResultRestakingVaultUpdated>,
+    pub restaking_vault_updated: Option<InitializeCommandResultRestakingVaultUpdated>,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct InitializeCommandResultRestakingVaultUpdated {
-    vault: Pubkey,
-    epoch: u64,
-    supported_token_mint: Pubkey,
+    pub vault: Pubkey,
+    pub epoch: u64,
+    pub finalized: bool,
+    pub supported_token_mint: Pubkey,
     #[max_len(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)]
-    delegations: Vec<InitializeCommandResultRestakingVaultDelegationUpdate>,
+    pub delegations: Vec<InitializeCommandResultRestakingVaultDelegationUpdate>,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -283,14 +284,13 @@ impl SelfExecutable for InitializeCommand {
                                             restaked_amount,
                                             undelegation_requested_amount,
                                             undelegating_amount,
-                                        ) = vault_service
-                                            .update_operator_delegation_state_if_needed(
-                                                vault_update_state_tracker,
-                                                vault_operator_delegation,
-                                                operator,
-                                                ctx.operator,
-                                                &[],
-                                            )?;
+                                        ) = vault_service.update_delegation_state(
+                                            vault_update_state_tracker,
+                                            vault_operator_delegation,
+                                            operator,
+                                            ctx.operator,
+                                            &[],
+                                        )?;
                                         processing_item.delegations_updated_bitmap[bitmap_index] =
                                             true;
 
@@ -314,6 +314,27 @@ impl SelfExecutable for InitializeCommand {
                                         );
                                     }
 
+                                    let mut finalized = false;
+                                    if processing_item
+                                        .delegations_updated_bitmap
+                                        .iter()
+                                        .all(|b| *b)
+                                    {
+                                        // finalize the update if all delegations have been updated.
+                                        finalized = vault_service
+                                            .ensure_state_update_required(
+                                                system_program,
+                                                vault_update_state_tracker,
+                                                vault_update_state_tracker,
+                                                ctx.operator,
+                                                &[],
+                                            )?
+                                            .is_none();
+                                    } else {
+                                        // push the item back as the process not completed yet
+                                        remaining_items.insert(0, processing_item)
+                                    }
+
                                     // store the result
                                     result = Some(
                                         InitializeCommandResult {
@@ -321,6 +342,7 @@ impl SelfExecutable for InitializeCommand {
                                                 InitializeCommandResultRestakingVaultUpdated {
                                                     vault: restaking_vault.vault,
                                                     epoch: vault_service.get_current_epoch(),
+                                                    finalized,
                                                     supported_token_mint: restaking_vault
                                                         .supported_token_mint,
                                                     delegations:
@@ -330,24 +352,6 @@ impl SelfExecutable for InitializeCommand {
                                         }
                                         .into(),
                                     );
-
-                                    if processing_item
-                                        .delegations_updated_bitmap
-                                        .iter()
-                                        .all(|b| *b)
-                                    {
-                                        // finalize the update if all delegations have been updated.
-                                        vault_service.ensure_state_update_required(
-                                            system_program,
-                                            vault_update_state_tracker,
-                                            vault_update_state_tracker,
-                                            ctx.operator,
-                                            &[],
-                                        )?;
-                                    } else {
-                                        // push the item back as the process not completed yet
-                                        remaining_items.insert(0, processing_item)
-                                    }
                                 }
 
                                 restaking_vault_update_items = Some(remaining_items);
