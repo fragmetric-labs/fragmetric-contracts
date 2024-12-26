@@ -281,6 +281,8 @@ impl SelfExecutable for RestakeVSTCommand {
                                 item.allocated_token_amount,
                             )?;
 
+                            let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                .new_pricing_service(accounts.into_iter().cloned())?;
                             let mut fund_account = ctx.fund_account.load_mut()?;
                             match fund_account.get_normalized_token_mut() {
                                 Some(normalized_token)
@@ -288,12 +290,15 @@ impl SelfExecutable for RestakeVSTCommand {
                                 {
                                     normalized_token.operation_reserved_amount -=
                                         deposited_supported_token_amount;
+                                    // accounting receivable of normalized token as SOL
+                                    fund_account.sol.operation_receivable_amount += pricing_service.get_token_amount_as_sol(&normalized_token.mint, deducted_supported_token_fee_amount)?;
                                 }
                                 _ => {
                                     let supported_token = fund_account
                                         .get_supported_token_mut(&item.supported_token_mint)?;
                                     supported_token.token.operation_reserved_amount -=
                                         deposited_supported_token_amount;
+                                    supported_token.token.operation_receivable_amount += deducted_supported_token_fee_amount;
                                 }
                             }
 

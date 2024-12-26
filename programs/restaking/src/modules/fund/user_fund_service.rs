@@ -288,6 +288,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         )?;
 
         // requested receipt_token_amount can be reduced based on the status of the underlying asset.
+        require_gte!(receipt_token_amount, withdrawal_request.receipt_token_amount);
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
