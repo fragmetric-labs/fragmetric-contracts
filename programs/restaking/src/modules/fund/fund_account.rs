@@ -107,7 +107,7 @@ impl FundAccount {
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
             self.sol.initialize(None, sol_operation_reserved_amount);
-            self.data_version = 4;
+            self.data_version = 15;
         }
     }
 
