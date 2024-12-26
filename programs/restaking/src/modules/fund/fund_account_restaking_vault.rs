@@ -7,7 +7,7 @@ use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
-pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS: usize = 10;
 
 #[zero_copy]
 #[derive(Debug)]
@@ -38,7 +38,8 @@ pub(super) struct RestakingVault {
     delegations: [RestakingVaultDelegation; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS],
 
     /// auto-compounding
-    compounding_reward_token_mints: [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_TOKENS],
+    compounding_reward_token_mints:
+        [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],
 
     _reserved: [u8; 128],
 }

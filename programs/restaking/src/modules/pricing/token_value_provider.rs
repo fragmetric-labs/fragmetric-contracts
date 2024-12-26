@@ -1,4 +1,4 @@
-use super::{TokenPricingSource, TokenPricingSourcePod, PRICING_SERVICE_EXPECTED_TOKENS_SIZE};
+use super::{TokenPricingSource, TokenPricingSourcePod};
 use crate::{errors, utils};
 use anchor_lang::prelude::*;
 
@@ -14,7 +14,7 @@ pub trait TokenValueProvider {
     ) -> Result<TokenValue>;
 }
 
-const TOKEN_VALUE_MAX_NUMERATORS_SIZE: usize = PRICING_SERVICE_EXPECTED_TOKENS_SIZE + 1;
+const TOKEN_VALUE_MAX_NUMERATORS_SIZE: usize = 33;
 
 /// a value representing total asset value of a pricing source.
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]

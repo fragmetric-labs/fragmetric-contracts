@@ -291,7 +291,7 @@ impl OperationCommand {
     }
 }
 
-const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
+const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2535;
 
 #[zero_copy]
 #[derive(Debug)]
