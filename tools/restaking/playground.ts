@@ -984,12 +984,35 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerCloseFundAccount() {
         await this.run({
             instructions: [
+                // @ts-ignore
                 this.program.methods.fundManagerCloseFundAccount().instruction(),
             ],
             signerNames: ['FUND_MANAGER'],
         });
 
         logger.notice("fragSOL fund account closed".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund);
+    }
+
+    // TODO: migration v0.3.3
+    public async runFundManagerClearUserSOLWithdrawalRequests(
+        user: web3.PublicKey,
+        numExpectedRequestsLeft: number,
+    ) {
+        await this.run({
+            instructions: [
+                this.program.methods.fundManagerClearUserSolWithdrawalRequests(
+                    user,
+                    numExpectedRequestsLeft,
+                )
+                .instruction(),
+            ],
+            signerNames: ['FUND_MANAGER'],
+        });
+
+        const userFundAccount = await this.getUserFragSOLFundAccount(user);
+        logger.notice("old SOL withdrawal requests cleared".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLUserFund(user));
+
+        return {userFundAccount};
     }
 
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
