@@ -2029,7 +2029,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             throw "request not found";
         }
         const userSupportedTokenAccount = request.supportedTokenMint ? spl.getAssociatedTokenAddressSync(request.supportedTokenMint, user.publicKey, true, request.supportedTokenProgram) : null;
-        const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
+        // const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
 
         const {event, error} = await this.run({
             instructions: [
@@ -2044,23 +2044,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             request.supportedTokenProgram,
                         ),
                         this.program.methods
-                            .userWithdrawSupportedToken(requestId)
+                            .userWithdrawSupportedToken(request.batchId, request.requestId)
                             .accountsPartial({
                                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                                 user: user.publicKey,
                                 userSupportedTokenAccount,
-                                fundWithdrawalBatchAccount,
+                                // fundWithdrawalBatchAccount,
                                 supportedTokenMint: request.supportedTokenMint,
                                 supportedTokenProgram: request.supportedTokenProgram,
                             })
                             .instruction(),
                     ] : [
                         this.program.methods
-                            .userWithdrawSol(requestId)
+                            .userWithdrawSol(request.batchId, request.requestId)
                             .accountsPartial({
                                 user: user.publicKey,
                                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                                fundWithdrawalBatchAccount,
+                                // fundWithdrawalBatchAccount,
                             })
                             .instruction(),
                     ]

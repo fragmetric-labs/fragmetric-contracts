@@ -89,6 +89,7 @@ pub struct UserFundSupportedTokenContext<'info> {
 
 #[event_cpi]
 #[derive(Accounts)]
+#[instruction(batch_id: u64)]
 pub struct UserFundWithdrawSupportedTokenContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -131,10 +132,10 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
 
     /// Users can derive proper account address with target batch id for each withdrawal requests.
     /// And the batch id can be read from a user fund account which the withdrawal requests belong to.
-    /// seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref(), &fund_withdrawal_batch_account.batch_id.to_le_bytes()],
-    /// bump = fund_withdrawal_batch_account.get_bump(),
     #[account(
         mut,
+        seeds = [FundWithdrawalBatchAccount::SEED, receipt_token_mint.key().as_ref(), supported_token_mint.key().as_ref(), &batch_id.to_le_bytes()],
+        bump = fund_withdrawal_batch_account.get_bump(),
         has_one = receipt_token_mint,
     )]
     pub fund_withdrawal_batch_account: Box<Account<'info, FundWithdrawalBatchAccount>>,

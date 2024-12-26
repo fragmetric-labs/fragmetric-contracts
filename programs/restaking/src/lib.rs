@@ -809,7 +809,11 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn user_withdraw_sol(ctx: Context<UserFundWithdrawContext>, request_id: u64) -> Result<()> {
+    pub fn user_withdraw_sol(
+        ctx: Context<UserFundWithdrawContext>,
+        batch_id: u64,
+        request_id: u64,
+    ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
@@ -867,6 +871,7 @@ pub mod restaking {
 
     pub fn user_withdraw_supported_token(
         ctx: Context<UserFundWithdrawSupportedTokenContext>,
+        batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
