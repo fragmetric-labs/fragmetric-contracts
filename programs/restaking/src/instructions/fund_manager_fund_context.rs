@@ -31,7 +31,7 @@ pub struct FundManagerFundAccountCloseContext<'info> {
     pub payer: Signer<'info>,
 
     #[account(address = FUND_MANAGER_PUBKEY)]
-    pub admin: Signer<'info>,
+    pub fund_manager: Signer<'info>,
 
     #[account(
         mut,
@@ -40,4 +40,27 @@ pub struct FundManagerFundAccountCloseContext<'info> {
         bump,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
+}
+
+use crate::modules::fund::UserFundAccount;
+
+// TODO: migration v0.3.3 - only dev
+#[derive(Accounts)]
+#[instruction(user: Pubkey)]
+pub struct FundManagerUserFundContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    #[account(
+        seeds = [FundAccount::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
+        bump,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, FRAGSOL_MINT_ADDRESS.as_ref(), user.as_ref()],
+        bump,
+    )]
+    pub user_fund_account: Account<'info, UserFundAccount>,
 }

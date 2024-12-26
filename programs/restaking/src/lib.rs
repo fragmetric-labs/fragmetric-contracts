@@ -23,6 +23,20 @@ pub mod restaking {
         Ok(())
     }
 
+    // TODO: migration v0.3.3 - only dev
+    pub fn fund_manager_clear_user_sol_withdrawal_requests(
+        ctx: Context<FundManagerUserFundContext>,
+        _user: Pubkey,
+        num_expected_requests_left: u8,
+    ) -> Result<()> {
+        ctx.accounts
+            .user_fund_account
+            .clear_sol_withdrawal_requests(
+                &*ctx.accounts.fund_account.load()?,
+                num_expected_requests_left,
+            )
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
