@@ -354,6 +354,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         let mut delegation =
             Self::deserialize_vault_operator_delegation(vault_operator_delegation)?;
 
+        // assertion: `check_is_already_updated` returns Err when already updated
         if !match delegation.check_is_already_updated(self.current_slot, self.current_epoch) {
             Ok(_) => false,
             Err(err) => {

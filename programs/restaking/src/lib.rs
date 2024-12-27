@@ -23,6 +23,20 @@ pub mod restaking {
         Ok(())
     }
 
+    // TODO: migration v0.3.3 - only dev
+    pub fn fund_manager_clear_user_sol_withdrawal_requests(
+        ctx: Context<FundManagerUserFundContext>,
+        _user: Pubkey,
+        num_expected_requests_left: u8,
+    ) -> Result<()> {
+        ctx.accounts
+            .user_fund_account
+            .clear_sol_withdrawal_requests(
+                &*ctx.accounts.fund_account.load()?,
+                num_expected_requests_left,
+            )
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
@@ -490,11 +504,23 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::commands::OperationCommandEntry>,
     ) -> Result<()> {
-        // TODO: remove temporary ADMIN_PUBKEY authorization
+        // TODO: remove this temporary authorization after audit
         if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
-            || force_reset_command.is_none() && ctx.accounts.operator.key() == ADMIN_PUBKEY)
+            || ctx.accounts.operator.key() == ADMIN_PUBKEY)
         {
             err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
+        }
+
+        // check force reset command is authorized
+        if let Some(command_entry) = &force_reset_command {
+            // fund manager can reset the operation state anytime.
+            // and admin can reset the operation state only if the command is safe.
+            if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
+                || ctx.accounts.operator.key() == ADMIN_PUBKEY
+                    && command_entry.is_safe_with_unchecked_params())
+            {
+                err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
+            }
         }
 
         emit_cpi!(modules::fund::FundService::new(
@@ -783,7 +809,11 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn user_withdraw_sol(ctx: Context<UserFundWithdrawContext>, request_id: u64) -> Result<()> {
+    pub fn user_withdraw_sol(
+        ctx: Context<UserFundWithdrawContext>,
+        batch_id: u64,
+        request_id: u64,
+    ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
@@ -841,6 +871,7 @@ pub mod restaking {
 
     pub fn user_withdraw_supported_token(
         ctx: Context<UserFundWithdrawSupportedTokenContext>,
+        batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(

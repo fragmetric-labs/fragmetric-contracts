@@ -14,12 +14,12 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v4: migrate to new layout including new fields using bytemuck. (31248 ~= 31KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 4;
+/// * v15: migrate to new layout including new fields using bytemuck. (150312 ~= 147KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 15;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
-pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 10;
-pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 4;
+pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 30;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -107,7 +107,7 @@ impl FundAccount {
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
             self.sol.initialize(None, sol_operation_reserved_amount);
-            self.data_version = 4;
+            self.data_version = 15;
         }
     }
 

@@ -21,7 +21,7 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     #[account(
         mut,
-        // TODO v0.5: uncomment this constraints
+        // TODO v0.4: uncomment this constraints
         // mint::authority = admin,
         // constraint = receipt_token_mint.supply == 0,
     )]

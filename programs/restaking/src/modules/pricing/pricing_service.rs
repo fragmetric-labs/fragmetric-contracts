@@ -12,7 +12,7 @@ use crate::utils;
 use super::MockPricingSourceValueProvider;
 use super::{Asset, TokenPricingSource, TokenValue, TokenValuePod, TokenValueProvider};
 
-pub const PRICING_SERVICE_EXPECTED_TOKENS_SIZE: usize = 16;
+const PRICING_SERVICE_EXPECTED_TOKENS_SIZE: usize = 32;
 
 pub struct PricingService<'info> {
     token_pricing_sources_account_infos: Vec<&'info AccountInfo<'info>>,

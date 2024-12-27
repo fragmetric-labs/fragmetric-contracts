@@ -291,7 +291,7 @@ impl OperationCommand {
     }
 }
 
-const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2023;
+const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2535;
 
 #[zero_copy]
 #[derive(Debug)]
@@ -365,6 +365,15 @@ pub struct OperationCommandEntry {
 }
 
 impl OperationCommandEntry {
+    pub fn is_safe_with_unchecked_params(&self) -> bool {
+        match self.command {
+            OperationCommand::Initialize(..)
+            | OperationCommand::EnqueueWithdrawalBatch(..)
+            | OperationCommand::ProcessWithdrawalBatch(..) => true,
+            _ => false,
+        }
+    }
+
     pub fn serialize_as_pod(&self, pod: &mut OperationCommandEntryPod) -> Result<()> {
         pod.num_required_accounts = self.required_accounts.len() as u8;
         for (i, account_meta) in self
