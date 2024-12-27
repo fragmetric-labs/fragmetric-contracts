@@ -5,7 +5,7 @@ import idlFile from './program.idl.v0.3.3.json';
 import type {Restaking} from './program.idl.v0.3.3';
 export type RestakingIDL = Restaking;
 
-export class RestakingProgram extends Program<Restaking> {
+export class RestakingProgram extends Program<RestakingIDL> {
     public static readonly ID = {
         mainnet: new web3.PublicKey('fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3'),
         devnet: new web3.PublicKey('frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ'),
@@ -20,10 +20,10 @@ export class RestakingProgram extends Program<Restaking> {
 
     public readonly cluster: keyof typeof RestakingProgram['ID'];
 
-    constructor({ cluster = 'mainnet', connection, idl = <Restaking>idlFile }: {
+    constructor({ cluster = 'mainnet', connection, idl = <RestakingIDL>idlFile }: {
         cluster?: keyof typeof RestakingProgram['ID'],
         connection?: web3.Connection,
-        idl?: Restaking,
+        idl?: RestakingIDL,
     }|undefined = {}) {
         const programID = RestakingProgram.ID[cluster] ?? new web3.PublicKey(idl.address);
 

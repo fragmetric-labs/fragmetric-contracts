@@ -30,6 +30,9 @@ export class Program<IDL extends anchor.Idl> {
         setComputeUnitPriceMicroLamports?: number,
     }) {
 
+        // TODO: ... here some interceptor needed.. for logging and more..
+        // or just.. provide create instructions & remaining accounts for UserContext usage?
+        // for ledger Signer interface as Promise? signers: PromiseLike<web3.Signer[]> ?
         return {
             signature: new web3.PublicKey('dd'),
             error: this.parseError(null as any),

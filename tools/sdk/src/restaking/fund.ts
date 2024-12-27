@@ -2,11 +2,8 @@ import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 
 import {RestakingProgram} from './program';
-import {AddressBook} from '../program';
-import {BN} from '@coral-xyz/anchor';
-import * as anchor from '@coral-xyz/anchor';
 
-class RestakingFund extends RestakingProgram {
+export class RestakingFund extends RestakingProgram {
     private readonly receiptTokenMint: web3.PublicKey;
     private readonly normalizedTokenMint: web3.PublicKey | null;
     private addressBook: ReturnType<typeof this.updateAddressBook>;
@@ -29,6 +26,7 @@ class RestakingFund extends RestakingProgram {
     private async updateAddressBook() {
         const fundAccount = await this.fetchFundAccount().catch(() => null);
         const supportedTokens = fundAccount?.supportedTokens.slice(fundAccount!.numSupportedTokens) ?? [];
+        const restakingVaults = fundAccount?.restakingVaults.slice(fundAccount!.numRestakingVaults) ?? [];
 
         const entries = (() => {
             // emit_cpi! macro
@@ -64,9 +62,13 @@ class RestakingFund extends RestakingProgram {
             const programRevenue = this.getConstantAsPublicKey('programRevenueAddress');
             const programRevenueSupportedTokens = Object.fromEntries(supportedTokens.map((v, i) => [`normalizedTokenPoolReserveSupportedToken${i}`, spl.getAssociatedTokenAddressSync(v.mint, programRevenue, true, v.program)]));
 
-            // jito restaking
-            const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
-            const jitoVaultConfig = this.getConstantAsPublicKey('jitoVaultConfigAddress');
+            // restaking vaults
+            const fundRestakingVaults = Object.fromEntries(restakingVaults.map((v, i) => [`fundRestakingVault${i}`, v.vault]));
+            const fundRestakingVaultPrograms = Object.fromEntries(restakingVaults.map((v, i) => [`fundRestakingVaultProgram${i}`, v.program]));
+            const fundRestakingVaultReceiptTokenMints = Object.fromEntries(restakingVaults.map((v, i) => [`fundRestakingVaultReceiptTokenMint${i}`, v.receiptTokenMint]));
+            const fundReserveRestakingVaultReceiptTokens = Object.fromEntries(restakingVaults.map((v, i) => [`fundReserveRestakingVaultReceiptToken${i}`, spl.getAssociatedTokenAddressSync(v.receiptTokenMint, fund, true, v.receiptTokenProgram)]));
+            const fundRestakingVaultSupportedTokenMints = Object.fromEntries(restakingVaults.map((v, i) => [`fundRestakingVaultSupportedTokenMint${i}`, v.supportedTokenMint]));
+            const fundRestakingVaultReserveSupportedTokens = Object.fromEntries(restakingVaults.map((v, i) => [`fundRestakingVaultReserveSupportedToken${i}`, spl.getAssociatedTokenAddressSync(v.supportedTokenMint, v.vault, true, tokenProgram)]));
 
             return {
                 programEventAuthority,
@@ -100,95 +102,24 @@ class RestakingFund extends RestakingProgram {
                 programRevenueSupportedToken0: null,
                 ...programRevenueSupportedTokens,
 
-                jitoVaultProgram,
-                jitoVaultConfig,
+                fundRestakingVault0: null,
+                ...fundRestakingVaults,
+                fundRestakingVaultProgram0: null,
+                ...fundRestakingVaultPrograms,
+                fundRestakingVaultReceiptTokenMint0: null,
+                ...fundRestakingVaultReceiptTokenMints,
+                fundReserveRestakingVaultReceiptToken0: null,
+                ...fundReserveRestakingVaultReceiptTokens,
+                fundRestakingVaultSupportedTokenMint0: null,
+                ...fundRestakingVaultSupportedTokenMints,
+                fundRestakingVaultReserveSupportedToken0: null,
+                ...fundRestakingVaultReserveSupportedTokens,
             };
         })();
 
         const addressBook = super.createAddressBook<keyof typeof entries>();
-        const effectiveEntries = Object.fromEntries(Object.entries(entries).filter(([_, v]) => v && typeof (v as any)['toBase58'] == 'function'));
+        const effectiveEntries = Object.fromEntries(Object.entries(entries).filter(([_, v]) => !!v));
         addressBook.addAll(effectiveEntries);
         return addressBook;
     }
 }
-
-/*
-TODO: ... moving lookup tables.... maybe use [string, web3.PublicKey, true] params in add method to denote what have to be put into ALT
-fragSOLReward,
-
-jitoVaultProgram,
-jitoVaultConfig,
-jitoVaultProgramFeeWallet,
-fragSOLJitoVaultProgramFeeWalletTokenAccount,
-fragSOLJitoVaultAccount,
-fragSOLJitoVRTMint,
-fragSOLJitoVaultFeeWalletTokenAccount,
-fragSOLFundJitoVRTAccount,
-fragSOLJitoVaultNSOLAccount,
-
-private _getKnownAddress() {
-
-    // fragSOL jito VRT
-    const fragSOLJitoVRTMint = this.getConstantAsPublicKey('fragsolJitoVaultReceiptTokenMintAddress');
-
-    const fragSOLFundJitoVRTAccount = spl.getAssociatedTokenAddressSync(
-        fragSOLJitoVRTMint,
-        fragSOLFund,
-        true,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    );
-
-    // reward
-    const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from('reward'), fragSOLTokenMintBuf], this.programId);
-
-    // jito
-    const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
-    const jitoVaultProgramFeeWallet = this.getConstantAsPublicKey('jitoVaultProgramFeeWallet');
-    const jitoVaultConfig = this.getConstantAsPublicKey('jitoVaultConfigAddress');
-
-    // fragSOL jito vault
-    const fragSOLJitoVaultAccount = this.getConstantAsPublicKey('fragsolJitoVaultAccountAddress');
-    const fragSOLJitoVaultUpdateStateTracker = (slot: anchor.BN, epoch_length: anchor.BN) => {
-        let ncn_epoch = slot.div(epoch_length).toBuffer('le', 8);
-        return web3.PublicKey.findProgramAddressSync([Buffer.from('vault_update_state_tracker'), fragSOLJitoVaultAccount.toBuffer(), ncn_epoch], jitoVaultProgram)[0];
-    };
-    const fragSOLJitoVaultNSOLAccount = spl.getAssociatedTokenAddressSync(
-        nSOLTokenMint,
-        fragSOLJitoVaultAccount,
-        true,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    );
-    const fragSOLJitoVaultWithdrawalTicketAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from('vault_staker_withdrawal_ticket'), fragSOLJitoVaultAccount.toBuffer(), vaultBaseAccount1.toBuffer()], jitoVaultProgram)[0];
-    const fragSOLJitoVaultWithdrawalTicketTokenAccount1 = spl.getAssociatedTokenAddressSync(
-        fragSOLJitoVRTMint,
-        fragSOLJitoVaultWithdrawalTicketAccount1,
-        true,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    )
-    const fragSOLJitoVaultWithdrawalTicketAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from('vault_staker_withdrawal_ticket'), fragSOLJitoVaultAccount.toBuffer(), vaultBaseAccount2.toBuffer()], jitoVaultProgram)[0];
-    const fragSOLJitoVaultWithdrawalTicketTokenAccount2 = spl.getAssociatedTokenAddressSync(
-        fragSOLJitoVRTMint,
-        fragSOLJitoVaultWithdrawalTicketAccount2,
-        true,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    );
-    const fragSOLJitoVaultProgramFeeWalletTokenAccount = spl.getAssociatedTokenAddressSync(
-        fragSOLJitoVRTMint,
-        jitoVaultProgramFeeWallet,
-        true,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    );
-    const fragSOLJitoVaultFeeWalletTokenAccount = spl.getAssociatedTokenAddressSync(
-        fragSOLJitoVRTMint,
-        this.keychain.getPublicKey('ADMIN'),
-        false,
-        spl.TOKEN_PROGRAM_ID,
-        spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-    );
-}
- */
