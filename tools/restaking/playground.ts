@@ -241,18 +241,33 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ...obj,
         }), {} as { string: web3.PublicKey });
 
-        // // staking
+        // staking
+        // const fundStakeAccounts = Object.fromEntries(
+        //     Object.keys(this.supportedTokenMetadata).map((symbol) => [
+        //         symbol,
+        //         [...Array(5).keys()].map((i) =>
+        //             web3.PublicKey.findProgramAddressSync(
+        //                 [
+        //                     fragSOLFund.toBuffer(),
+        //                     this.supportedTokenMetadata[symbol].pricingSourceAddress.toBuffer(),
+        //                     Buffer.from([i]),
+        //                 ],
+        //                 this.programId,
+        //             )[0]
+        //         )
+        //     ])
+        // );
         // const fundStakeAccounts = [...Array(5).keys()].map((i) =>
         //     web3.PublicKey.findProgramAddressSync(
         //         [
         //             fragSOLFund.toBuffer(),
-        //             this.supportedTokenMetadata.jitoSOL.pricingSourceAddress.toBuffer(),
+        //             this.supportedTokenMetadata.bbSOL.pricingSourceAddress.toBuffer(),
         //             Buffer.from([i]),
         //         ],
         //         this.programId,
         //     )[0]
         // );
-        // // console.log(`fundStakeAccounts:`, fundStakeAccounts);
+        // console.log(`fundStakeAccounts:`, fundStakeAccounts);
 
         // Restaking
         const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
@@ -442,6 +457,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     pricingSource: {
                         splStakePool: {
                             address: this.getConstantAsPublicKey("mainnetBnsolStakePoolAddress"),
+                        },
+                    },
+                    decimals: 9,
+                },
+                bbSOL: {
+                    mint: this.getConstantAsPublicKey("mainnetBbsolMintAddress"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    pricingSourceAddress: this.getConstantAsPublicKey("mainnetBbsolStakePoolAddress"),
+                    pricingSource: {
+                        sanctumSingleValidatorSplStakePool: {
+                            address: this.getConstantAsPublicKey("mainnetBbsolStakePoolAddress"),
                         },
                     },
                     decimals: 9,
@@ -1239,6 +1265,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             return new BN(this.isMainnet ? 4_500_000 : 70_000).mul(new BN(10 ** (v.decimals - 3)));
                         case "BNSOL":
                             return new BN(this.isMainnet ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
+                        case "bbSOL":
+                            return new BN(this.isMainnet ? 0 : 60_000).mul(new BN(10 ** (v.decimals - 3))); // TODO
                         default:
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
@@ -1267,11 +1295,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(this.isMainnet ? 0 : 0);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? 90 : 90);
+                            return new BN(this.isMainnet ? 90 : 85); // TODO
                         case "mSOL":
                             return new BN(this.isMainnet ? 5 : 5);
                         case "BNSOL":
                             return new BN(this.isMainnet ? 5 : 5);
+                        case "bbSOL":
+                            return new BN(this.isMainnet ? 0 : 5); // TODO
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -1285,6 +1315,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "mSOL":
                             return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "BNSOL":
+                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                        case "bbSOL":
                             return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;

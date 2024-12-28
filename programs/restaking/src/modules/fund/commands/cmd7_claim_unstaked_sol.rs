@@ -4,7 +4,7 @@ use crate::{
     errors,
     modules::{
         pricing::TokenPricingSource,
-        staking::{self, SPLStakePoolService},
+        staking::{self, SPLStakePool, SPLStakePoolService, SanctumSPLStakePool},
     },
 };
 
@@ -71,6 +71,14 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 Some(command.with_required_accounts([(address, false)])),
                             ));
                         }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            return Ok((
+                                None,
+                                Some(command.with_required_accounts([(address, false)])),
+                            ));
+                        }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
@@ -86,7 +94,15 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
-                            staking::SPLStakePoolService::find_accounts_to_claim_sol()
+                            staking::SPLStakePoolService::<SPLStakePool>::find_accounts_to_claim_sol(
+                            )
+                        }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            require_keys_eq!(address, *pool_account_info.key);
+
+                            staking::SPLStakePoolService::<SanctumSPLStakePool>::find_accounts_to_claim_sol()
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -109,34 +125,74 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
 
-                    for (index, fund_stake_account) in fund_stake_accounts
-                        .iter()
-                        .take(item.fund_stake_accounts.len())
-                        .enumerate()
-                    {
-                        msg!(
-                            "fund_stake_account {} key {}, lamports {}",
-                            index,
-                            fund_stake_account.key,
-                            fund_stake_account.lamports()
-                        );
-                        if fund_stake_account.lamports() > 0 {
-                            let received_sol_amount = fund_stake_account.lamports();
-                            msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-                            staking::SPLStakePoolService::claim_sol(
-                                sysvar_clock_program,
-                                sysvar_stake_history_program,
-                                stake_program,
-                                fund_stake_account,
-                                fund_reserve_account,
-                                &fund_account.get_reserve_account_seeds(),
-                            )?;
+                    match token.pricing_source.try_deserialize()? {
+                        Some(TokenPricingSource::SPLStakePool { .. }) => {
+                            for (index, fund_stake_account) in fund_stake_accounts
+                                .iter()
+                                .take(item.fund_stake_accounts.len())
+                                .enumerate()
+                            {
+                                msg!(
+                                    "fund_stake_account {} key {}, lamports {}",
+                                    index,
+                                    fund_stake_account.key,
+                                    fund_stake_account.lamports()
+                                );
+                                if fund_stake_account.lamports() > 0 {
+                                    let received_sol_amount = fund_stake_account.lamports();
+                                    msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+                                    staking::SPLStakePoolService::<SPLStakePool>::claim_sol(
+                                        sysvar_clock_program,
+                                        sysvar_stake_history_program,
+                                        stake_program,
+                                        fund_stake_account,
+                                        fund_reserve_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                    )?;
 
-                            msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+                                    msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
 
-                            fund_account.sol.operation_receivable_amount -= received_sol_amount;
-                            fund_account.sol.operation_reserved_amount += received_sol_amount;
+                                    fund_account.sol.operation_receivable_amount -=
+                                        received_sol_amount;
+                                    fund_account.sol.operation_reserved_amount +=
+                                        received_sol_amount;
+                                }
+                            }
                         }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                            for (index, fund_stake_account) in fund_stake_accounts
+                                .iter()
+                                .take(item.fund_stake_accounts.len())
+                                .enumerate()
+                            {
+                                msg!(
+                                    "fund_stake_account {} key {}, lamports {}",
+                                    index,
+                                    fund_stake_account.key,
+                                    fund_stake_account.lamports()
+                                );
+                                if fund_stake_account.lamports() > 0 {
+                                    let received_sol_amount = fund_stake_account.lamports();
+                                    msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+                                    staking::SPLStakePoolService::<SanctumSPLStakePool>::claim_sol(
+                                        sysvar_clock_program,
+                                        sysvar_stake_history_program,
+                                        stake_program,
+                                        fund_stake_account,
+                                        fund_reserve_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                    )?;
+
+                                    msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
+
+                                    fund_account.sol.operation_receivable_amount -=
+                                        received_sol_amount;
+                                    fund_account.sol.operation_reserved_amount +=
+                                        received_sol_amount;
+                                }
+                            }
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
             }

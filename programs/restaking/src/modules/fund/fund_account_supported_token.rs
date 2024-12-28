@@ -43,7 +43,8 @@ impl SupportedToken {
     ) -> Result<()> {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
-            | TokenPricingSource::MarinadeStakePool { .. } => {}
+            | TokenPricingSource::MarinadeStakePool { .. }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {}
             _ => {
                 err!(ErrorCode::FundNotSupportedTokenError)?;
             }

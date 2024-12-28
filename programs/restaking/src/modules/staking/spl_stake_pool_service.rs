@@ -25,24 +25,37 @@ impl From<AvailableWithdrawals> for Option<Vec<(Pubkey, u64)>> {
     }
 }
 
-pub struct SPLStakePoolService<'info> {
-    pub spl_stake_pool_program: &'info AccountInfo<'info>,
+pub trait SPLStakePoolInterface: anchor_lang::Id {}
+
+pub struct SPLStakePool;
+
+impl anchor_lang::Id for SPLStakePool {
+    fn id() -> Pubkey {
+        spl_stake_pool::ID
+    }
+}
+
+impl SPLStakePoolInterface for SPLStakePool {}
+
+pub struct SPLStakePoolService<'info, T = SPLStakePool>
+where
+    T: SPLStakePoolInterface,
+{
+    pub spl_stake_pool_program: Program<'info, T>, // &'info AccountInfo<'info>,
     pub pool_account: &'info AccountInfo<'info>,
     pub pool_token_mint: &'info AccountInfo<'info>,
     pub pool_token_program: &'info AccountInfo<'info>,
 }
 
-impl<'info> SPLStakePoolService<'info> {
+impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     pub fn new(
         spl_stake_pool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_eq!(spl_stake_pool::ID, spl_stake_pool_program.key());
-
         Ok(Self {
-            spl_stake_pool_program,
+            spl_stake_pool_program: Program::try_from(spl_stake_pool_program)?,
             pool_account,
             pool_token_mint,
             pool_token_program,
@@ -68,42 +81,7 @@ impl<'info> SPLStakePoolService<'info> {
         Ok(stake_account)
     }
 
-    fn find_accounts_to_new(
-        pool_account_info: &AccountInfo,
-        pool_account: &StakePool,
-    ) -> Vec<(Pubkey, bool)> {
-        vec![
-            // for Self::new
-            (spl_stake_pool::ID, false),
-            (pool_account_info.key(), true),
-            (pool_account.pool_mint, true),
-            (pool_account.token_program_id, false),
-        ]
-    }
-
-    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account]
-    pub fn find_accounts_to_deposit_sol(
-        pool_account_info: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
-        accounts.extend([
-            // for self.deposit_sol
-            (
-                spl_stake_pool::find_withdraw_authority_program_address(
-                    &spl_stake_pool::ID,
-                    &pool_account_info.key(),
-                )
-                .0,
-                false,
-            ),
-            (pool_account.reserve_stake, true),
-            (pool_account.manager_fee_account, true),
-        ]);
-        Ok(accounts)
-    }
-
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, (deposit_fee_numerator, deposit_fee_denominator)]
     pub fn deposit_sol(
         &self,
         withdraw_authority: &'info AccountInfo<'info>,
@@ -171,40 +149,6 @@ impl<'info> SPLStakePoolService<'info> {
             minted_pool_token_amount,
             deducted_sol_fee_amount,
         ))
-    }
-
-    pub fn find_accounts_to_get_available_unstake_account(
-        pool_account_info: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
-        accounts.extend([
-            (pool_account.reserve_stake, true),
-            (pool_account.validator_list, true),
-            (solana_program::stake::program::ID, false),
-        ]);
-        Ok(accounts)
-    }
-
-    pub fn find_accounts_to_withdraw_sol_or_stake(
-        pool_account_info: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let accounts = vec![
-            // for self.withdraw_sol
-            (
-                spl_stake_pool::find_withdraw_authority_program_address(
-                    &spl_stake_pool::id(),
-                    &pool_account_info.key(),
-                )
-                .0,
-                false,
-            ),
-            (pool_account.manager_fee_account, true),
-            (solana_program::sysvar::clock::ID, false),
-            (solana_program::sysvar::stake_history::ID, false),
-        ];
-        Ok(accounts)
     }
 
     pub fn find_fund_stake_accounts_for_withdraw_stake(
@@ -283,7 +227,6 @@ impl<'info> SPLStakePoolService<'info> {
         let reserve_stake_state = Self::deserialize_stake_account(reserve_stake_account_info)?;
         if let StakeStateV2::Initialized(meta) = reserve_stake_state {
             let minimum_reserve_lamports = spl_stake_pool::minimum_reserve_lamports(&meta);
-            msg!("minimum_reserve_lamports {}", minimum_reserve_lamports);
             if new_reserve_lamports < minimum_reserve_lamports {
                 msg!("Attempting to withdraw {} lamports, maximum possible SOL withdrawal is {} lamports", withdraw_lamports, reserve_stake_account_info.lamports().saturating_sub(minimum_reserve_lamports));
                 msg!("You should try to withdraw from validators");
@@ -606,6 +549,7 @@ impl<'info> SPLStakePoolService<'info> {
             payer,
             payer_signer_seeds,
             StakeStateV2::size_of(),
+            Some(0u64),
             &solana_program::stake::program::ID,
         )
     }
@@ -799,5 +743,76 @@ impl<'info> SPLStakePoolService<'info> {
         }
 
         Ok(())
+    }
+}
+
+impl<'info> SPLStakePoolService<'info, SPLStakePool> {
+    fn find_accounts_to_new(
+        pool_account_info: &AccountInfo,
+        pool_account: &StakePool,
+    ) -> Vec<(Pubkey, bool)> {
+        vec![
+            // for Self::new
+            (SPLStakePool::id(), false),
+            (pool_account_info.key(), true),
+            (pool_account.pool_mint, true),
+            (pool_account.token_program_id, false),
+        ]
+    }
+
+    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account]
+    pub fn find_accounts_to_deposit_sol(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
+        accounts.extend([
+            // for self.deposit_sol
+            (
+                spl_stake_pool::find_withdraw_authority_program_address(
+                    &SPLStakePool::id(),
+                    &pool_account_info.key(),
+                )
+                .0,
+                false,
+            ),
+            (pool_account.reserve_stake, true),
+            (pool_account.manager_fee_account, true),
+        ]);
+        Ok(accounts)
+    }
+
+    pub fn find_accounts_to_get_available_unstake_account(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+        let mut accounts = Self::find_accounts_to_new(pool_account_info, &pool_account);
+        accounts.extend([
+            (pool_account.reserve_stake, true),
+            (pool_account.validator_list, true),
+            (solana_program::stake::program::ID, false),
+        ]);
+        Ok(accounts)
+    }
+
+    pub fn find_accounts_to_withdraw_sol_or_stake(
+        pool_account_info: &'info AccountInfo<'info>,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
+        let accounts = vec![
+            // for self.withdraw_sol
+            (
+                spl_stake_pool::find_withdraw_authority_program_address(
+                    &SPLStakePool::id(),
+                    &pool_account_info.key(),
+                )
+                .0,
+                false,
+            ),
+            (pool_account.manager_fee_account, true),
+            (solana_program::sysvar::clock::ID, false),
+            (solana_program::sysvar::stake_history::ID, false),
+        ];
+        Ok(accounts)
     }
 }

@@ -95,6 +95,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .map(|pricing_source| match pricing_source.try_deserialize()? {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
                     for remaining_account in remaining_accounts {
@@ -192,7 +193,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                             Some(pricing_source) => {
                                 match pricing_source {
                                     TokenPricingSource::SPLStakePool { .. }
-                                    | TokenPricingSource::MarinadeStakePool { .. } => {
+                                    | TokenPricingSource::MarinadeStakePool { .. }
+                                    | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                        ..
+                                    } => {
                                         let asset =
                                             fund_account.get_asset_state_mut(Some(*token_mint))?;
                                         let asset_value_as_receipt_token_amount = pricing_service
@@ -781,6 +785,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         operator,
                         &[],
                         8 + FundWithdrawalBatchAccount::INIT_SPACE,
+                        None,
                         &crate::ID,
                     )?;
                     Account::<FundWithdrawalBatchAccount>::try_from_unchecked(

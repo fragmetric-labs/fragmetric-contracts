@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 
 use crate::errors;
 use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::staking;
-use crate::modules::staking::AvailableWithdrawals;
+use crate::modules::staking::{self, SPLStakePool};
+use crate::modules::staking::{AvailableWithdrawals, SanctumSPLStakePool};
 use crate::utils::{AccountExt, PDASeeds};
 
 use super::{
@@ -18,7 +19,9 @@ pub struct UnstakeLSTCommand {
     items: Vec<UnstakeLSTCommandItem>,
     state: UnstakeLSTCommandState,
     #[max_len(5)]
-    spl_withdraw_stake_items: Vec<SplWithdrawStakeItem>,
+    spl_withdraw_stake_items: Option<Vec<SplWithdrawStakeItem>>,
+    #[max_len(5)]
+    sanctum_withdraw_stake_items: Option<Vec<SanctumSplWithdrawStakeItem>>,
 }
 
 impl UnstakeLSTCommand {
@@ -26,7 +29,8 @@ impl UnstakeLSTCommand {
         Self {
             items,
             state: UnstakeLSTCommandState::Init,
-            spl_withdraw_stake_items: vec![],
+            spl_withdraw_stake_items: None,
+            sanctum_withdraw_stake_items: None,
         }
     }
 }
@@ -64,6 +68,15 @@ pub struct SplWithdrawStakeItem {
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+pub struct SanctumSplWithdrawStakeItem {
+    validator_stake_account: Pubkey,
+    fund_stake_account: Pubkey, // pda
+    #[max_len(4, 32)] // there would be total 3 seeds, max bytes would be 32 bytes per seed
+    fund_stake_account_signer_seeds: Vec<Vec<u8>>,
+    token_amount: u64,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnstakeLSTCommandResult {}
 
 impl SelfExecutable for UnstakeLSTCommand {
@@ -90,7 +103,10 @@ impl SelfExecutable for UnstakeLSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::SPLStakePool { address })
-                        | Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                        | Some(TokenPricingSource::MarinadeStakePool { address })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
                             return Ok((
                                 None,
                                 Some(command.with_required_accounts([(address, false)])),
@@ -124,6 +140,13 @@ impl SelfExecutable for UnstakeLSTCommand {
 
                             todo!() // TODO: support marinade..
                         }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            require_keys_eq!(address, *pool_account_info.key);
+
+                            staking::SanctumSingleValidatorSPLStakePoolService::find_accounts_to_get_available_unstake_account(pool_account_info)?
+                        }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
 
@@ -141,8 +164,6 @@ impl SelfExecutable for UnstakeLSTCommand {
                     else {
                         err!(ErrorCode::AccountNotEnoughKeys)?
                     };
-
-                    let available_withdrawals_from_reserve_or_validator = staking::SPLStakePoolService::get_withdrawal_available_from_reserve_or_validator(pool_program, pool_account, reserve_stake_account, validator_list_account, item.token_amount)?;
 
                     let mut required_accounts = Vec::new();
                     required_accounts.extend([
@@ -169,20 +190,39 @@ impl SelfExecutable for UnstakeLSTCommand {
                             true,
                         ),
                     ]);
-                    let required_withdraw_sol_or_stake_accounts = match fund_account
+
+                    let supported_token_pricing_source = fund_account
                         .get_supported_token(&item.mint)?
                         .pricing_source
-                        .try_deserialize()?
-                    {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
-                            require_keys_eq!(address, pool_account.key());
+                        .try_deserialize()?;
 
+                    let available_withdrawals_from_reserve_or_validator =
+                        match supported_token_pricing_source {
+                            Some(TokenPricingSource::SPLStakePool { address }) => {
+                                require_keys_eq!(address, pool_account.key());
+
+                                staking::SPLStakePoolService::<SPLStakePool>::get_withdrawal_available_from_reserve_or_validator(pool_program, pool_account, reserve_stake_account, validator_list_account, item.token_amount)?
+                            }
+                            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                address,
+                            }) => {
+                                require_keys_eq!(address, pool_account.key());
+
+                                staking::SPLStakePoolService::<SanctumSPLStakePool>::get_withdrawal_available_from_reserve_or_validator(pool_program, pool_account, reserve_stake_account, validator_list_account, item.token_amount)?
+                            }
+                            _ => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                        };
+
+                    let required_withdraw_sol_or_stake_accounts = match supported_token_pricing_source {
+                        Some(TokenPricingSource::SPLStakePool { .. }) => {
                             staking::SPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(
                                 pool_account,
                             )?
                         }
-                        Some(TokenPricingSource::MarinadeStakePool { .. }) => {
-                            todo!()
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                            staking::SanctumSingleValidatorSPLStakePoolService::find_accounts_to_withdraw_sol_or_stake(pool_account)?
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -199,33 +239,81 @@ impl SelfExecutable for UnstakeLSTCommand {
                         );
                         command.state = UnstakeLSTCommandState::RequestUnstake;
 
-                        let fund_stake_accounts: Vec<(Pubkey, bool, u8)> = available_withdrawals_from_reserve_or_validator.iter().enumerate().map(|(account_index, _)| {
-                            staking::SPLStakePoolService::find_fund_stake_accounts_for_withdraw_stake(&[ctx.fund_account.key().as_ref(), pool_account.key.as_ref(), &[account_index as u8]])
-                        }).collect();
+                        let fund_stake_accounts = available_withdrawals_from_reserve_or_validator.iter().enumerate().map(|(account_index, _)| {
+                            match supported_token_pricing_source {
+                                Some(TokenPricingSource::SPLStakePool { .. }) => {
+                                    Ok(staking::SPLStakePoolService::<SPLStakePool>::find_fund_stake_accounts_for_withdraw_stake(&[ctx.fund_account.key().as_ref(), pool_account.key.as_ref(), &[account_index as u8]]))
+                                }
+                                Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                                    Ok(staking::SPLStakePoolService::<SanctumSPLStakePool>::find_fund_stake_accounts_for_withdraw_stake(&[ctx.fund_account.key().as_ref(), pool_account.key.as_ref(), &[account_index as u8]]))
+                                }
+                                _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException),
+                            }
+                        }).collect::<Result<Vec<_>>>()?;
 
                         command.spl_withdraw_stake_items =
+                            available_withdrawals_from_reserve_or_validator
+                                .iter()
+                                .enumerate()
+                                .map(|(index, (validator_stake_account, token_amount))| {
+                                    match supported_token_pricing_source {
+                                        Some(TokenPricingSource::SPLStakePool { .. }) => {
+                                            Some(SplWithdrawStakeItem {
+                                                validator_stake_account: *validator_stake_account,
+                                                fund_stake_account: fund_stake_accounts[index].0,
+                                                fund_stake_account_signer_seeds: vec![
+                                                    ctx.fund_account.key().as_ref().to_vec(),
+                                                    pool_account.key.as_ref().to_vec(),
+                                                    vec![index as u8],
+                                                    vec![fund_stake_accounts[index].2],
+                                                ],
+                                                token_amount: *token_amount,
+                                            })
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .collect::<Option<Vec<_>>>();
+                        command.sanctum_withdraw_stake_items =
                             available_withdrawals_from_reserve_or_validator
                                 .into_iter()
                                 .enumerate()
                                 .map(|(index, (validator_stake_account, token_amount))| {
-                                    SplWithdrawStakeItem {
-                                        validator_stake_account,
-                                        fund_stake_account: fund_stake_accounts[index].0,
-                                        fund_stake_account_signer_seeds: vec![
-                                            ctx.fund_account.key().as_ref().to_vec(),
-                                            pool_account.key.as_ref().to_vec(),
-                                            vec![index as u8],
-                                            vec![fund_stake_accounts[index].2],
-                                        ],
-                                        token_amount,
+                                    match supported_token_pricing_source {
+                                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                                            Some(SanctumSplWithdrawStakeItem {
+                                                validator_stake_account,
+                                                fund_stake_account: fund_stake_accounts[index].0,
+                                                fund_stake_account_signer_seeds: vec![
+                                                    ctx.fund_account.key().as_ref().to_vec(),
+                                                    pool_account.key.as_ref().to_vec(),
+                                                    vec![index as u8],
+                                                    vec![fund_stake_accounts[index].2],
+                                                ],
+                                                token_amount,
+                                            })
+                                        }
+                                        _ => None,
                                     }
-                                })
-                                .collect();
-                        required_accounts.extend(command.spl_withdraw_stake_items.iter().map(
-                            |spl_withdraw_stake_item| {
-                                (spl_withdraw_stake_item.validator_stake_account, true)
-                            },
-                        ));
+                                }).collect::<Option<Vec<_>>>();
+                        required_accounts.extend(
+                            command
+                                .spl_withdraw_stake_items
+                                .iter()
+                                .flat_map(|vec| vec.iter())
+                                .map(|spl_withdraw_stake_item| {
+                                    (spl_withdraw_stake_item.validator_stake_account, true)
+                                }),
+                        );
+                        required_accounts.extend(
+                            command
+                                .sanctum_withdraw_stake_items
+                                .iter()
+                                .flat_map(|vec| vec.iter())
+                                .map(|sanctum_withdraw_stake_item| {
+                                    (sanctum_withdraw_stake_item.validator_stake_account, true)
+                                }),
+                        );
                         required_accounts.extend(fund_stake_accounts.iter().map(
                             |fund_stake_account| (fund_stake_account.0, fund_stake_account.1),
                         ));
@@ -256,7 +344,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                             Some(TokenPricingSource::SPLStakePool { address }) => {
                                 require_keys_eq!(address, *pool_account.key);
 
-                                staking::SPLStakePoolService::new(
+                                staking::SPLStakePoolService::<SPLStakePool>::new(
                                     pool_program,
                                     pool_account,
                                     pool_token_mint,
@@ -280,6 +368,31 @@ impl SelfExecutable for UnstakeLSTCommand {
                                 require_keys_eq!(address, *pool_account.key);
 
                                 todo!() // TODO: support marinade..
+                            }
+                            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                address,
+                            }) => {
+                                require_keys_eq!(address, *pool_account.key);
+
+                                staking::SPLStakePoolService::<SanctumSPLStakePool>::new(
+                                    pool_program,
+                                    pool_account,
+                                    pool_token_mint,
+                                    pool_token_program,
+                                )?
+                                .withdraw_sol(
+                                    withdraw_authority,
+                                    reserve_stake_account,
+                                    manager_fee_account,
+                                    sysvar_clock_program,
+                                    sysvar_stake_history_program,
+                                    stake_program,
+                                    fund_supported_token_reserve_account,
+                                    fund_reserve_account,
+                                    ctx.fund_account.as_account_info(),
+                                    &fund_account.get_seeds(),
+                                    item.token_amount,
+                                )?
                             }
                             _ => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
@@ -327,88 +440,108 @@ impl SelfExecutable for UnstakeLSTCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account.key);
 
-                            let spl_withdraw_stake_item = command.spl_withdraw_stake_items.pop();
-                            if let Some(spl_withdraw_stake_item) = spl_withdraw_stake_item {
-                                let fund_account = ctx.fund_account.load()?;
-                                let validator_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts_with_remainings, &spl_withdraw_stake_item.validator_stake_account)?;
-                                let fund_stake_account = staking::SPLStakePoolService::find_stake_account_info_by_address(stake_accounts_with_remainings, &spl_withdraw_stake_item.fund_stake_account)?;
-                                // should create stake account and pass it the cpi call
-                                staking::SPLStakePoolService::create_stake_account_if_needed(
-                                    fund_reserve_account,
-                                    fund_stake_account,
-                                    &fund_account.get_reserve_account_seeds(),
-                                    &spl_withdraw_stake_item
-                                        .fund_stake_account_signer_seeds
-                                        .iter()
-                                        .map(|seed| seed.as_slice())
-                                        .collect::<Vec<&[u8]>>()[..],
-                                    ctx.system_program,
-                                )?;
+                            if let Some(mut spl_withdraw_stake_items) =
+                                command.spl_withdraw_stake_items.take()
+                            {
+                                let spl_withdraw_stake_item = spl_withdraw_stake_items.pop();
+                                if let Some(spl_withdraw_stake_item) = spl_withdraw_stake_item {
+                                    let fund_account = ctx.fund_account.load()?;
+                                    let validator_stake_account = staking::SPLStakePoolService::<
+                                        SPLStakePool,
+                                    >::find_stake_account_info_by_address(
+                                        stake_accounts_with_remainings,
+                                        &spl_withdraw_stake_item.validator_stake_account,
+                                    )?;
+                                    let fund_stake_account = staking::SPLStakePoolService::<
+                                        SPLStakePool,
+                                    >::find_stake_account_info_by_address(
+                                        stake_accounts_with_remainings,
+                                        &spl_withdraw_stake_item.fund_stake_account,
+                                    )?;
+                                    // should create stake account and pass it the cpi call
+                                    staking::SPLStakePoolService::<SPLStakePool>::create_stake_account_if_needed(
+                                        fund_reserve_account,
+                                        fund_stake_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                        &spl_withdraw_stake_item
+                                            .fund_stake_account_signer_seeds
+                                            .iter()
+                                            .map(|seed| seed.as_slice())
+                                            .collect::<Vec<&[u8]>>()[..],
+                                        ctx.system_program,
+                                    )?;
 
-                                let returned_sol_amount = staking::SPLStakePoolService::new(
-                                    pool_program,
-                                    pool_account,
-                                    pool_token_mint,
-                                    pool_token_program,
-                                )?
-                                .withdraw_stake(
-                                    withdraw_authority,
-                                    validator_list_account,
-                                    validator_stake_account,
-                                    manager_fee_account,
-                                    sysvar_clock_program,
-                                    stake_program,
-                                    fund_supported_token_reserve_account,
-                                    fund_stake_account,
-                                    ctx.fund_account.as_account_info(),
-                                    &fund_account.get_seeds(),
-                                    fund_reserve_account,
-                                    spl_withdraw_stake_item.token_amount,
-                                )?;
-                                msg!("returned_sol_amount {}", returned_sol_amount);
+                                    let returned_sol_amount =
+                                        staking::SPLStakePoolService::<SPLStakePool>::new(
+                                            pool_program,
+                                            pool_account,
+                                            pool_token_mint,
+                                            pool_token_program,
+                                        )?
+                                        .withdraw_stake(
+                                            withdraw_authority,
+                                            validator_list_account,
+                                            validator_stake_account,
+                                            manager_fee_account,
+                                            sysvar_clock_program,
+                                            stake_program,
+                                            fund_supported_token_reserve_account,
+                                            fund_stake_account,
+                                            ctx.fund_account.as_account_info(),
+                                            &fund_account.get_seeds(),
+                                            fund_reserve_account,
+                                            spl_withdraw_stake_item.token_amount,
+                                        )?;
+                                    msg!("returned_sol_amount {}", returned_sol_amount);
 
-                                // deactivate fund_stake_account
-                                staking::SPLStakePoolService::deactivate_stake_account(
-                                    sysvar_clock_program,
-                                    fund_stake_account,
-                                    fund_reserve_account,
-                                    &fund_account.get_reserve_account_seeds(),
-                                )?;
-                                drop(fund_account);
+                                    // deactivate fund_stake_account
+                                    staking::SPLStakePoolService::<SPLStakePool>::deactivate_stake_account(
+                                        sysvar_clock_program,
+                                        fund_stake_account,
+                                        fund_reserve_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                    )?;
+                                    drop(fund_account);
 
-                                // returned_sol_amount + pool_token_fee as sol
-                                let receivable_sol_amount = FundService::new(
-                                    ctx.receipt_token_mint,
-                                    ctx.fund_account,
-                                )?
-                                .new_pricing_service(
-                                    [&stake_accounts_with_remainings[..], &[pool_account]] // TODO stake_accounts includes remaining_accounts, should be redefined..
-                                        .concat()
-                                        .into_iter(),
-                                )?
-                                .get_token_amount_as_sol(
-                                    pool_token_mint.key,
-                                    spl_withdraw_stake_item.token_amount,
-                                )?;
+                                    // returned_sol_amount + pool_token_fee as sol
+                                    let receivable_sol_amount =
+                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                            .new_pricing_service(
+                                                [
+                                                    &stake_accounts_with_remainings[..],
+                                                    &[pool_account],
+                                                ] // TODO stake_accounts includes remaining_accounts, should be redefined..
+                                                .concat()
+                                                .into_iter(),
+                                            )?
+                                            .get_token_amount_as_sol(
+                                                pool_token_mint.key,
+                                                spl_withdraw_stake_item.token_amount,
+                                            )?;
 
-                                let mut fund_account = ctx.fund_account.load_mut()?;
-                                let supported_token =
-                                    fund_account.get_supported_token_mut(pool_token_mint.key)?;
-                                supported_token.token.operation_reserved_amount -=
-                                    spl_withdraw_stake_item.token_amount;
-                                fund_account.sol.operation_receivable_amount +=
-                                    receivable_sol_amount;
+                                    let mut fund_account = ctx.fund_account.load_mut()?;
+                                    let supported_token = fund_account
+                                        .get_supported_token_mut(pool_token_mint.key)?;
+                                    supported_token.token.operation_reserved_amount -=
+                                        spl_withdraw_stake_item.token_amount;
+                                    fund_account.sol.operation_receivable_amount +=
+                                        receivable_sol_amount;
 
-                                if command.spl_withdraw_stake_items.len() > 0 {
-                                    command.state = UnstakeLSTCommandState::RequestUnstake;
-                                    return Ok((
-                                        None,
-                                        Some(
-                                            command.with_required_accounts(accounts.iter().map(
-                                                |account| (*account.key, account.is_writable),
+                                    if spl_withdraw_stake_items.len() > 0 {
+                                        command.state = UnstakeLSTCommandState::RequestUnstake;
+                                        command.spl_withdraw_stake_items =
+                                            Some(spl_withdraw_stake_items);
+                                        return Ok((
+                                            None,
+                                            Some(command.with_required_accounts(
+                                                accounts.iter().map(|account| {
+                                                    (*account.key, account.is_writable)
+                                                }),
                                             )),
-                                        ),
-                                    ));
+                                        ));
+                                    }
+                                } else {
+                                    // nothing to do
                                 }
                             } else {
                                 // nothing to do
@@ -418,6 +551,119 @@ impl SelfExecutable for UnstakeLSTCommand {
                             require_keys_eq!(address, *pool_account.key);
 
                             todo!() // TODO: support marinade..
+                        }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            require_keys_eq!(address, *pool_account.key);
+
+                            if let Some(mut sanctum_withdraw_stake_items) =
+                                command.sanctum_withdraw_stake_items.take()
+                            {
+                                let sanctum_withdraw_stake_item =
+                                    sanctum_withdraw_stake_items.pop();
+                                if let Some(sanctum_withdraw_stake_item) =
+                                    sanctum_withdraw_stake_item
+                                {
+                                    let fund_account = ctx.fund_account.load()?;
+                                    let validator_stake_account = staking::SPLStakePoolService::<SanctumSPLStakePool>::find_stake_account_info_by_address(
+                                        stake_accounts_with_remainings,
+                                        &sanctum_withdraw_stake_item.validator_stake_account,
+                                    )?;
+                                    let fund_stake_account = staking::SPLStakePoolService::<
+                                        SanctumSPLStakePool,
+                                    >::find_stake_account_info_by_address(
+                                        stake_accounts_with_remainings,
+                                        &sanctum_withdraw_stake_item.fund_stake_account,
+                                    )?;
+                                    // should create stake account and pass it the cpi call
+                                    staking::SPLStakePoolService::<SanctumSPLStakePool>::create_stake_account_if_needed(
+                                        fund_reserve_account,
+                                        fund_stake_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                        &sanctum_withdraw_stake_item
+                                            .fund_stake_account_signer_seeds
+                                            .iter()
+                                            .map(|seed| seed.as_slice())
+                                            .collect::<Vec<&[u8]>>()[..],
+                                        ctx.system_program,
+                                    )?;
+
+                                    let returned_sol_amount =
+                                        staking::SPLStakePoolService::<SanctumSPLStakePool>::new(
+                                            pool_program,
+                                            pool_account,
+                                            pool_token_mint,
+                                            pool_token_program,
+                                        )?
+                                        .withdraw_stake(
+                                            withdraw_authority,
+                                            validator_list_account,
+                                            validator_stake_account,
+                                            manager_fee_account,
+                                            sysvar_clock_program,
+                                            stake_program,
+                                            fund_supported_token_reserve_account,
+                                            fund_stake_account,
+                                            ctx.fund_account.as_account_info(),
+                                            &fund_account.get_seeds(),
+                                            fund_reserve_account,
+                                            sanctum_withdraw_stake_item.token_amount,
+                                        )?;
+                                    msg!("returned_sol_amount {}", returned_sol_amount);
+
+                                    // deactivate fund_stake_account
+                                    staking::SPLStakePoolService::<SanctumSPLStakePool>::deactivate_stake_account(
+                                        sysvar_clock_program,
+                                        fund_stake_account,
+                                        fund_reserve_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                    )?;
+                                    drop(fund_account);
+
+                                    // returned_sol_amount + pool_token_fee as sol
+                                    let receivable_sol_amount =
+                                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                            .new_pricing_service(
+                                                [
+                                                    &stake_accounts_with_remainings[..],
+                                                    &[pool_account],
+                                                ] // TODO stake_accounts includes remaining_accounts, should be redefined..
+                                                .concat()
+                                                .into_iter(),
+                                            )?
+                                            .get_token_amount_as_sol(
+                                                pool_token_mint.key,
+                                                sanctum_withdraw_stake_item.token_amount,
+                                            )?;
+
+                                    let mut fund_account = ctx.fund_account.load_mut()?;
+                                    let supported_token = fund_account
+                                        .get_supported_token_mut(pool_token_mint.key)?;
+                                    supported_token.token.operation_reserved_amount -=
+                                        sanctum_withdraw_stake_item.token_amount;
+                                    fund_account.sol.operation_receivable_amount +=
+                                        receivable_sol_amount;
+
+                                    if sanctum_withdraw_stake_items.len() > 0 {
+                                        command.state = UnstakeLSTCommandState::RequestUnstake;
+                                        command.sanctum_withdraw_stake_items =
+                                            Some(sanctum_withdraw_stake_items);
+                                        return Ok((
+                                            None,
+                                            Some(command.with_required_accounts(
+                                                accounts.iter().map(|account| {
+                                                    (*account.key, account.is_writable)
+                                                }),
+                                            )),
+                                        ));
+                                    }
+                                } else {
+                                    // nothing to do
+                                }
+                            } else {
+                                // nothing to do
+                            }
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };

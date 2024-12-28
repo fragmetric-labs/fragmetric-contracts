@@ -5,7 +5,10 @@ use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
+use crate::modules::staking::{
+    MarinadeStakePoolService, SPLStakePool, SPLStakePoolService, SanctumSPLStakePool,
+    SanctumSingleValidatorSPLStakePoolService,
+};
 use crate::utils::AccountInfoExt;
 
 use super::{
@@ -113,6 +116,11 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            required_accounts.push((*address, false));
+                        }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
@@ -162,7 +170,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     .map(|supported_token| {
                         match &supported_token.pricing_source.try_deserialize()? {
                             Some(TokenPricingSource::MarinadeStakePool { .. })
-                            | Some(TokenPricingSource::SPLStakePool { .. }) => Ok(1),
+                            | Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            }) => Ok(1),
                             _ => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             )?,
@@ -220,7 +231,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
-                            SPLStakePoolService::get_max_cycle_fee(account)?
+                            SPLStakePoolService::<SPLStakePool>::get_max_cycle_fee(account)?
+                        }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            SPLStakePoolService::<SanctumSPLStakePool>::get_max_cycle_fee(account)?
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };

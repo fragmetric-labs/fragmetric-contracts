@@ -334,6 +334,7 @@ pub trait SystemProgramExt<'info> {
         payer: &(impl ToAccountInfo<'info> + Key),
         payer_seeds: &[&[u8]],
         space: usize,
+        lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()>;
 }
@@ -346,6 +347,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         payer: &(impl ToAccountInfo<'info> + Key),
         payer_seeds: &[&[u8]],
         space: usize,
+        lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()> {
         let rent = Rent::get()?;
@@ -360,7 +362,11 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                     },
                     &[payer_seeds, account_to_create_seeds],
                 ),
-                rent.minimum_balance(space),
+                if let Some(lamports) = lamports {
+                    lamports
+                } else {
+                    rent.minimum_balance(space)
+                },
                 space as u64,
                 owner,
             )?;

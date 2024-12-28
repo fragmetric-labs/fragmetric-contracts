@@ -94,10 +94,10 @@ filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_3.j
 address = "EusU4msAfQWBq2ME6Aip9AyokFJWuPm3VfdAnjEZyjwx"
 filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_4.json"
 
-# clone mainnet jitoSOL stake pool fee account to localnet
+# clone mainnet jitoSOL stake pool manager fee account to localnet
 [[test.validator.account]]
 address = "feeeFLLsam6xZJFc6UQFrHqkvVt4jfmVvi2BRLkUZ4i"
-filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_fee_account.json"
+filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_manager_fee_account.json"
 
 # clone mainnet BNSOL mint to localnet
 [[test.validator.account]]
@@ -130,6 +130,42 @@ filename = "./tests/mocks/mainnet/mSOL_stake_pool_account.json"
 [[test.validator.account]]
 address = "7GgPYjS5Dza89wV6FpZ23kUJRG5vbQ1GM25ezspYFSoE"
 filename = "./tests/mocks/mainnet/mSOL_liquidity_pool_account.json"
+
+# *bbSOL
+# clone mainnet Sanctum single validator stake pool program to localnet
+[[test.genesis]]
+address = "SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY"
+program = "./tests/mocks/mainnet/sanctum_single_validator_stake_pool.so"
+
+# clone mainnet bbSOL mint to localnet
+[[test.validator.account]]
+address = "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B"
+filename = "./tests/mocks/mainnet/bbSOL_mint.json"
+
+# clone mainnet bbSOL stake pool to localnet
+[[test.validator.account]]
+address = "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq"
+filename = "./tests/mocks/mainnet/bbSOL_stake_pool_account.json"
+
+# clone mainnet bbSOL stake pool's validator list account to localnet
+[[test.validator.account]]
+address = "BPVx5RBixdZVecvoDSFECMc8jXkLNTmQp65WYKJz9nr5"
+filename = "./tests/mocks/mainnet/bbSOL_stake_pool_validator_list_account.json"
+
+# clone mainnet bbSOL stake pool reserve stake account to localnet
+[[test.validator.account]]
+address = "7huMsYqSXb1m4okiAJgQLPTamgHD2GvWhAou7vhzF51r"
+filename = "./tests/mocks/mainnet/bbSOL_stake_pool_reserve_stake_account.json"
+
+# clone mainnet bbSOL stake pool manager fee account to localnet
+[[test.validator.account]]
+address = "HcacehDEp8W4wSdy2oi4HgVoSWwMJDr1kZwXUBSuFfKK"
+filename = "./tests/mocks/mainnet/bbSOL_stake_pool_manager_fee_account.json"
+
+# clone mainnet bbSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "71t7QTJ5HsoCdP7gmz2eupSRYzAXFXBKzZwZjmyrWzjz"
+filename = "./tests/mocks/mainnet/bbSOL_stake_pool_validator_stake_account_1.json"
 
 # *jitoVRT
 # clone mainnet Jito restaking protocol to localnet
