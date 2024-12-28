@@ -137,7 +137,7 @@ impl TokenPricingSourcePod {
                     },
                     6 => TokenPricingSource::OrcaDEXLiquidityPool {
                         address: self.address,
-                    }
+                    },
                     7 => TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                         address: self.address,
                     },

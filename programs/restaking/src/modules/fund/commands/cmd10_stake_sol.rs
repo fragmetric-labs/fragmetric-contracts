@@ -161,6 +161,9 @@ impl SelfExecutable for StakeSOLCommand {
                                 )?
                             }
                             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
+                                let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                    err!(ErrorCode::AccountNotEnoughKeys)?
+                                };
                                 require_keys_eq!(address, pool_account.key());
 
                                 SanctumSingleValidatorSPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?
