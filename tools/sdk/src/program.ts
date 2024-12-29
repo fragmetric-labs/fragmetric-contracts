@@ -8,7 +8,7 @@ export class Program<IDL extends anchor.Idl> {
     private readonly anchorEventParser: anchor.EventParser;
     private readonly anchorErrorMap: Map<number, string>;
 
-    public readonly transactionHandlers: ProgramTransactionHandlers | null = null;
+    public readonly transactionHandlers: ProgramTransactionHandlers<IDL> | null = null;
 
     public static readonly defaultClusterURL = {
         mainnet: 'https://api.mainnet-beta.solana.com',
@@ -24,7 +24,7 @@ export class Program<IDL extends anchor.Idl> {
         programID: web3.PublicKey,
         idl: IDL,
         connection?: web3.Connection,
-        transactionHandlers?: ProgramTransactionHandlers | null,
+        transactionHandlers?: ProgramTransactionHandlers<IDL> | null,
     }) {
         this.cluster = cluster;
         this.programID = programID;
@@ -48,9 +48,6 @@ export class Program<IDL extends anchor.Idl> {
         this.anchorProgram = new anchor.Program<IDL>({ ...idl, address: programID.toString() }, anchorProvider);
         this.anchorEventParser = new anchor.EventParser(this.programID, this.anchorProgram.coder);
         this.anchorErrorMap = anchor.parseIdlErrors(this.anchorProgram.idl);
-
-        const x= this.idl.parseEvents<'FundManagerUpdatedFund'>({} as any);
-        const y = x.operatorUpdatedFundPrices[0];
     }
 
     public readonly idl = {
@@ -60,10 +57,10 @@ export class Program<IDL extends anchor.Idl> {
         getConstantAsPublicKey: (name: ProgramConstantName<IDL>): web3.PublicKey => {
             return new web3.PublicKey(this.idl.getConstant(name));
         },
-        parseEvents: <EVENT extends ProgramEventName<IDL>>(tx: web3.ParsedTransactionWithMeta, expectedEventNames: EVENT[] = []) => {
-            const events: {[k in EVENT]: (ProgramEvent<IDL>[EVENT])[]} = {} as any;
+        parseEvents: <EVENT extends keyof ProgramEvent<IDL>>(tx: web3.ParsedTransactionWithMeta) => {
+            const events: {[k in EVENT]: ProgramEvent<IDL>[k][]} = {} as any;
 
-            // parse event data from emit!
+            // parse event data from emit! macro
             const eventsFromEmitMacro = this.anchorEventParser.parseLogs(tx.meta?.logMessages ?? [], false);
             while (true) {
                 const event = eventsFromEmitMacro.next().value;
@@ -72,7 +69,7 @@ export class Program<IDL extends anchor.Idl> {
                 (events[name] = events[name] ?? []).push(event as any);
             }
 
-            // parse event data from emit_cpi!
+            // parse event data from emit_cpi! macro
             for (const ixs of tx.meta?.innerInstructions ?? []) {
                 for (const ix of ixs.instructions) {
                     if (ix.programId.equals(this.programID)) {
@@ -107,7 +104,7 @@ export class Program<IDL extends anchor.Idl> {
         return this.anchorProgram.account;
     }
 
-    public createUnsignedTransactionMessage<SIGNER extends string, EVENT extends ProgramEventName<IDL>>(args: Omit<ConstructorParameters<typeof ProgramTransactionMessage<IDL, SIGNER, EVENT>>[0], 'program'>) {
+    public createUnsignedTransactionMessage<SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>>(args: Omit<ConstructorParameters<typeof ProgramTransactionMessage<IDL, SIGNER, EVENT>>[0], 'program'>) {
         return new ProgramTransactionMessage<IDL, SIGNER, EVENT>({
             ...args,
             program: this,
@@ -115,13 +112,10 @@ export class Program<IDL extends anchor.Idl> {
     }
 }
 
-export type ProgramAccount<IDL extends anchor.Idl> = anchor.IdlAccounts<IDL>;
-
 export type ProgramEvent<IDL extends anchor.Idl> = anchor.IdlEvents<IDL>;
-
+export type ProgramAccount<IDL extends anchor.Idl> = anchor.IdlAccounts<IDL>;
 export type ProgramType<IDL extends anchor.Idl> = anchor.IdlTypes<IDL>;
-
-type ProgramEventName<IDL extends anchor.Idl> = IDL['events'] extends Array<infer U>
+export type ProgramConstantName<IDL extends anchor.Idl> = IDL['constants'] extends Array<infer U>
     ? U extends { name: infer N }
         ? N extends string
             ? N
@@ -129,54 +123,30 @@ type ProgramEventName<IDL extends anchor.Idl> = IDL['events'] extends Array<infe
         : never
     : never;
 
-type ProgramAccountName<IDL extends anchor.Idl> = IDL['accounts'] extends Array<infer U>
-    ? U extends { name: infer N }
-        ? N extends string
-            ? N
-            : never
-        : never
-    : never;
-
-type ProgramTypeName<IDL extends anchor.Idl> = IDL['types'] extends Array<infer U>
-    ? U extends { name: infer N }
-        ? N extends string
-            ? N
-            : never
-        : never
-    : never;
-
-type ProgramConstantName<IDL extends anchor.Idl> = IDL['constants'] extends Array<infer U>
-    ? U extends { name: infer N }
-        ? N extends string
-            ? N
-            : never
-        : never
-    : never;
-
-export type ProgramTransactionSigner = (name: string, publicKey: web3.PublicKey, message: Buffer) => Promise<web3.SignaturePubkeyPair | web3.Signer> | web3.SignaturePubkeyPair | web3.Signer;
-export type ProgramTransactionBeforeHook = (tx: ProgramTransactionMessage<any, any, never>) => Promise<void>;
+export type ProgramTransactionSigner<SIGNER extends string> = (name: 'payer' | SIGNER, publicKey: web3.PublicKey, buffer: Buffer) => Promise<web3.SignaturePubkeyPair | web3.Signer> | web3.SignaturePubkeyPair | web3.Signer;
+export type ProgramTransactionBeforeHook<IDL extends anchor.Idl> = (tx: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>) => Promise<void>;
 export type UnsignedTransactionAfterHook = (result: Awaited<ReturnType<typeof ProgramTransactionMessage.prototype.signAndSend>>) => Promise<void>;
-export type ProgramTransactionHandlers = {
-    signer: ProgramTransactionSigner,
-    before: ProgramTransactionBeforeHook,
+export type ProgramTransactionHandlers<IDL extends anchor.Idl> = {
+    signer: ProgramTransactionSigner<'payer'|string>,
+    before: ProgramTransactionBeforeHook<IDL>,
     after: UnsignedTransactionAfterHook,
 };
 
-export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends string, EVENT extends ProgramEventName<IDL>> extends web3.TransactionMessage {
+export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>> extends web3.TransactionMessage {
     public readonly descriptions: any[] | null;
-    public readonly signers: { [k in "payer" | SIGNER]: web3.PublicKey | web3.Signer };
+    public readonly expectedEvents: EVENT[];
+    public readonly signers: { [k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer };
     public readonly addressLookupTables: web3.AddressLookupTableAccount[] = [];
-    private readonly program: Program<any>;
-    private readonly expectedEventNames: EVENT[];
+    private readonly program: Program<IDL>;
 
-    constructor({ descriptions = [], instructions, expectedEventNames = [], signers, recentBlockhash = null, addressLookupTables = [], program }: {
+    constructor({ descriptions = [], instructions, events = [], signers, recentBlockhash = null, addressLookupTables = [], program }: {
         descriptions?: any[] | null,
-        expectedEventNames?: EVENT[],
+        events?: EVENT[],
         instructions: web3.TransactionInstruction[],
-        signers: {[k in SIGNER | 'payer']: web3.PublicKey | web3.Signer},
+        signers: {[k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer},
         recentBlockhash?: web3.Blockhash | null,
         addressLookupTables?: web3.AddressLookupTableAccount[],
-        program: Program<any>,
+        program: Program<IDL>,
     }) {
         super({
             payerKey: (signers.payer as web3.Signer).secretKey ? (signers.payer as web3.Signer).publicKey : signers.payer as web3.PublicKey,
@@ -184,7 +154,7 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
             instructions,
         });
         this.descriptions = descriptions;
-        this.expectedEventNames = expectedEventNames;
+        this.expectedEvents = events;
         this.signers = signers;
         this.addressLookupTables = addressLookupTables;
         this.program = program;
@@ -196,19 +166,19 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
 
     public compileToLegacyMessage() {
         if (this.addressLookupTables.length > 0) {
-            console.warn(`transaction might fail due to size limits; compile as a v0 message to utilize the preset address lookup tables`);
+            console.warn(`[warning] transaction might fail due to size limits; compile as a v0 message to utilize the preset address lookup tables`);
         }
         return super.compileToLegacyMessage();
     }
 
     public async signAndSend({ signer = this.program.transactionHandlers?.signer ?? null, sendOptions, confirmOptions, commitment = 'confirmed' } : {
-        signer?: ProgramTransactionSigner | null,
+        signer?: ProgramTransactionSigner<SIGNER> | null,
         sendOptions?: web3.SendOptions,
         confirmOptions?: web3.TransactionConfirmationStrategy,
         commitment?: web3.Finality,
     } = {}) {
         if (this.program.transactionHandlers?.before) {
-            await this.program.transactionHandlers.before(this);
+            await this.program.transactionHandlers.before(this as any);
         }
 
         if (!this.recentBlockhash) {
@@ -234,11 +204,11 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
                 if (!message) {
                     message = Buffer.from(tx.message.serialize());
                 }
-                const sigPair = signer ? await signer(name, publicKey, message) : null;
+                const sigPair = signer ? await signer(name as SIGNER, publicKey, message) : null;
                 if (!sigPair) {
-                    throw new Error(`unhandled signer key: ${name} (${key})`);
+                    throw new Error(`unhandled signer key: ${key} (${name})`);
                 } else if (!sigPair.publicKey.equals(publicKey)) {
-                    console.warn(`signed key does not match with the requested signer key: ${publicKey} (${name}) != ${sigPair.publicKey}`);
+                    console.warn(`[warning] signed key does not match with the requested signer key: ${publicKey} (${name}) != ${sigPair.publicKey}`);
                 }
                 if ((sigPair as web3.Signer).secretKey) {
                     signersWithSecretKey.push(sigPair as web3.Signer)
@@ -274,38 +244,52 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         const result = {
             signature,
             descriptions: this.descriptions,
+            events: this.program.idl.parseEvents<EVENT>(txResult),
             logs: txResult.meta?.logMessages ?? [],
             error: this.program.idl.parseError(txResult),
-            events: this.program.idl.parseEvents<EVENT>(txResult),
         };
 
+        if (!result.error) {
+            for (const event of Object.keys(result.events)) {
+                if (!this.expectedEvents.includes(event as EVENT)) {
+                    console.warn(`[warning] unexpected event: ${event}`);
+                }
+            }
+
+            for (const expectedEvent of this.expectedEvents) {
+                if (!result.events[expectedEvent]?.length) {
+                    console.warn(`[warning] missing expected event: ${expectedEvent}`);
+                }
+            }
+        }
+
         if (this.program.transactionHandlers?.after) {
-            await this.program.transactionHandlers.after(result);
+            await this.program.transactionHandlers.after(result as any);
         }
 
         return result;
     }
 }
 
-export class AddressBook<KEYS extends string> {
-    public readonly entries = new Map<KEYS, web3.PublicKey>();
+export class AddressBook<NAME extends string> {
+    public readonly entries = new Map<NAME, web3.PublicKey>();
     private readonly program: Program<any>;
 
     constructor({ program }: { program: Program<any> }) {
         this.program = program;
     }
 
-    public add(name: KEYS, address: web3.PublicKey) {
+    public add(name: NAME, address: web3.PublicKey) {
         this.entries.set(name, address);
     }
 
-    public addAll(addresses: Partial<{[name in KEYS]: web3.PublicKey}>) {
+    public addAll(addresses: Partial<{[name in NAME]: web3.PublicKey}>) {
         for (let [name, address] of Object.entries(addresses)) {
-            this.entries.set(name as KEYS, address as web3.PublicKey);
+            this.entries.set(name as NAME, address as web3.PublicKey);
         }
     }
 
-    public get(name: KEYS): web3.PublicKey|null {
+    public get(name: NAME): web3.PublicKey|null {
         return this.entries.get(name) ?? null;
     }
 
@@ -313,7 +297,7 @@ export class AddressBook<KEYS extends string> {
         lookupTableAddress: web3.PublicKey|null,
         payer: web3.PublicKey,
         authority: web3.PublicKey,
-        signer?: ProgramTransactionSigner | null,
+        signer?: ProgramTransactionSigner<'payer'|'authority'> | null,
     }) {
         const exists = lookupTableAddress ? await this.program.connection.getAccountInfo(lookupTableAddress).then(() => true).catch(() => false) : false;
         if (!exists) {

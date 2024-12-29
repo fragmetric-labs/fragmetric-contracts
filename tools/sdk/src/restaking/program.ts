@@ -26,6 +26,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
 
     public getAddressLookupTable(): web3.PublicKey | null {
         if (this.receiptTokenMint.equals(RestakingProgram.receiptTokenMint.fragSOL)) {
+            // TODO: register ALT address to the fund account
             return this.idl.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
         }
         return null;
@@ -95,6 +96,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
         updateFundPrices: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
             return this.createUnsignedTransactionMessage({
                 descriptions: ['update prices of the fund'],
+                events: ['operatorUpdatedFundPrices'],
                 instructions: await Promise.all([
                     this.programMethods
                         .operatorUpdateFundPrices()
@@ -119,6 +121,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
             }
             return this.createUnsignedTransactionMessage({
                 descriptions: ['update prices of the normalized token pool'],
+                events: ['operatorUpdatedNormalizedTokenPoolPrices'],
                 instructions: await Promise.all([
                     this.programMethods
                         .operatorUpdateNormalizedTokenPoolPrices()
@@ -139,6 +142,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
         updateRewardPools: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
             return this.createUnsignedTransactionMessage({
                 descriptions: ['update reward pools of the fund'],
+                events: ['operatorUpdatedRewardPools'],
                 instructions: await Promise.all([
                     this.programMethods
                         .operatorUpdateRewardPools()
@@ -155,8 +159,9 @@ export class RestakingProgram extends Program<RestakingIDL> {
             });
         },
         donateSOLToFund: async ({ operator, amount, offsetReceivable }: { operator: web3.PublicKey | web3.Keypair, amount: BN, offsetReceivable: boolean }) => {
-            return this.createUnsignedTransactionMessage<'who', 'operatorUpdatedFundPrices'>({
+            return this.createUnsignedTransactionMessage({
                 descriptions: [`donate SOL to the fund`, {amount, offsetReceivable}],
+                events: ['operatorDonatedToFund'],
                 instructions: await Promise.all([
                     this.programMethods
                         .operatorDonateSolToFund(amount, offsetReceivable)
