@@ -1,1 +1,1 @@
-export * as Restaking from './restaking/index';
+export * from './restaking/index';

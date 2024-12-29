@@ -1,5 +1,6 @@
+import nodeResolve from '@rollup/plugin-node-resolve';
+import nodePolyfills from 'rollup-plugin-polyfill-node';
 import json from '@rollup/plugin-json';
-import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import { terser } from 'rollup-plugin-terser';
@@ -31,8 +32,9 @@ export default {
         },
     ],
     plugins: [
+        nodeResolve(), // resolves Node modules so they can be bundled
+        nodePolyfills(), // polifills for Node native modules for browser
         json(), // resolve JSON files
-        resolve(), // resolves Node modules so they can be bundled
         commonjs(), // converts CJS modules to ES6 so Rollup can process them
         typescript({
             tsconfig: './tsconfig.json',
