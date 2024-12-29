@@ -422,11 +422,9 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token_pool_address(&self) -> Option<Pubkey> {
-        if self.normalized_token.enabled == 1 {
-            Some(self.normalized_token.pricing_source.address)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1)
+            .then(|| self.normalized_token.pricing_source.address())
+            .flatten()
     }
 
     #[inline]

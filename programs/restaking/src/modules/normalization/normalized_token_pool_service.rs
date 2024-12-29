@@ -93,7 +93,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
     }
 
     /// returns [to_normalized_token_account_amount, minted_normalized_token_amount]
-    pub fn normalize_supported_token(
+    pub(in crate::modules) fn normalize_supported_token(
         &mut self,
         // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
@@ -181,7 +181,7 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
         ))
     }
 
-    pub fn denormalize_supported_token(
+    pub(in crate::modules) fn denormalize_supported_token(
         &mut self,
         // fixed
         supported_token_mint: &InterfaceAccount<'info, Mint>,
@@ -490,8 +490,10 @@ impl<'info: 'a, 'a> NormalizedTokenPoolService<'info, 'a> {
             )?;
         }
 
-        self.normalized_token_pool_account.normalized_token_value =
-            pricing_service.get_token_total_value_as_atomic(normalized_token_mint_key)?;
+        pricing_service.update_token_value_summary(
+            normalized_token_mint_key,
+            &mut self.normalized_token_pool_account.normalized_token_value,
+        )?;
 
         self.normalized_token_pool_account
             .normalized_token_value_updated_slot = self.current_slot;

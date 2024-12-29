@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[cfg(all(test, not(feature = "idl-build")))]
-use crate::modules::pricing::MockAsset;
+use super::MockAsset;
 
 #[derive(Clone, Debug, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq)]
 #[non_exhaustive]
@@ -100,26 +100,32 @@ impl TokenPricingSource {
 }
 
 #[zero_copy]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
-    pub discriminant: u8,
+    discriminant: u8,
     _padding: [u8; 7],
-    pub address: Pubkey,
+    address: Pubkey,
 }
 
 impl TokenPricingSourcePod {
+    pub fn is_some(&self) -> bool {
+        self.discriminant != 0
+    }
+
+    pub fn address(&self) -> Option<Pubkey> {
+        self.is_some().then_some(self.address)
+    }
+
     pub fn clear(&mut self) {
         self.discriminant = 0;
         self.address = Pubkey::default();
     }
 
     pub fn try_deserialize(&self) -> Result<Option<TokenPricingSource>> {
-        Ok({
-            if self.discriminant == 0 {
-                None
-            } else {
-                Some(match self.discriminant {
+        self.is_some()
+            .then(|| {
+                Ok(match self.discriminant {
                     1 => TokenPricingSource::SPLStakePool {
                         address: self.address,
                     },
@@ -148,7 +154,7 @@ impl TokenPricingSourcePod {
                     },
                     _ => Err(Error::from(ProgramError::InvalidAccountData))?,
                 })
-            }
-        })
+            })
+            .transpose()
     }
 }

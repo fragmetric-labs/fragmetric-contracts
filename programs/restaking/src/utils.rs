@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
 use anchor_lang::{CheckId, CheckOwner, ZeroCopy};
 
+use crate::errors;
+
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
     fn get_bump(&self) -> u8;
@@ -148,7 +150,7 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
         .checked_mul(numerator as u128)
         .and_then(|v| v.checked_div(denominator as u128))
         .and_then(|v| u64::try_from(v).ok())
-        .ok_or_else(|| error!(crate::errors::ErrorCode::CalculationArithmeticException))
+        .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))
 }
 
 pub trait AccountInfoExt<'info> {
@@ -427,3 +429,125 @@ macro_rules! debug_msg_heap_size {
 
 #[allow(unused_imports)]
 pub(crate) use debug_msg_heap_size;
+
+/// Test utils.
+#[cfg(test)]
+pub mod tests {
+    use std::{
+        cell::{RefCell, RefMut},
+        collections::HashMap,
+    };
+
+    use solana_sdk::account::Account;
+
+    use super::*;
+
+    /// Mocks `solana_account_db::accounts_db::AccountDb`.
+    ///
+    /// This type is useful for testing methods that requires `AccountInfo` value,
+    /// but not solana runtime support, such as Sysvars or System Calls.
+    ///
+    /// Usage:
+    ///
+    /// ```ignore
+    /// fn method_to_test(state: &Account<State>) -> Result<()> { /* ... */ }
+    ///
+    /// #[test]
+    /// fn test_method() {
+    ///     let key = Pubkey::find_program_address(/* ... */).0;
+    ///     let state = State { /* ... */ };
+    ///     let mut data = vec![];
+    ///     state.try_serialize(&mut data).unwrap();
+    ///     let lamports = 1000000;
+    ///     let owner = crate::ID;
+    ///     
+    ///     let mut accounts = MockAccountsDb::default();
+    ///     accounts.add_or_update_accounts(
+    ///         key,
+    ///         lamports,
+    ///         data,
+    ///         owner,
+    ///         false,
+    ///     );
+    ///     accounts.run_with_accounts(
+    ///         &[AccountMeta::new_readonly(key, false)],
+    ///         |account_infos| {
+    ///             let state = Account::try_from(&account_infos[0])?;
+    ///             method_to_test(&state)
+    ///         }
+    ///     )
+    ///     .expect("Method failed");
+    /// }
+    /// ```
+    #[derive(Default)]
+    pub struct MockAccountsDb(HashMap<Pubkey, RefCell<Account>>);
+
+    impl MockAccountsDb {
+        pub fn add_or_update_accounts(
+            &mut self,
+            key: Pubkey,
+            lamports: u64,
+            data: Vec<u8>,
+            owner: Pubkey,
+            executable: bool,
+        ) {
+            self.0.insert(
+                key,
+                RefCell::new(Account {
+                    lamports,
+                    data,
+                    owner,
+                    executable,
+                    rent_epoch: u64::MAX,
+                }),
+            );
+        }
+
+        #[allow(clippy::expect_fun_call)]
+        pub fn run_with_accounts<'a, F, R>(
+            &self,
+            account_metas: impl IntoIterator<Item = &'a AccountMeta>,
+            f: F,
+        ) -> R
+        where
+            F: for<'info> FnOnce(&'info [AccountInfo<'info>]) -> R,
+        {
+            let mut guards: Vec<(&Pubkey, RefMut<Account>, &'a AccountMeta)> = account_metas
+                .into_iter()
+                .map(|meta| {
+                    let (key, account) = self
+                        .0
+                        .get_key_value(&meta.pubkey)
+                        .expect(&format!("Account {:?} not in DB", meta.pubkey));
+
+                    (key, account.borrow_mut(), meta)
+                })
+                .collect();
+
+            let account_infos: Vec<AccountInfo> = guards
+                .iter_mut()
+                .map(|(key, guard, meta)| {
+                    let Account {
+                        lamports,
+                        data,
+                        owner,
+                        executable,
+                        rent_epoch,
+                    } = &mut **guard;
+                    AccountInfo::new(
+                        key,
+                        meta.is_signer,
+                        meta.is_writable,
+                        lamports,
+                        data,
+                        owner,
+                        *executable,
+                        *rent_epoch,
+                    )
+                })
+                .collect();
+
+            f(account_infos.as_slice())
+        }
+    }
+}
