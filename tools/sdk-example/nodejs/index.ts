@@ -11,8 +11,8 @@ async function example() {
         connection: undefined, // default RPC
         idl: undefined, // default IDL
         receiptTokenMint: RestakingProgram.receiptTokenMint.fragSOL,
-        transactionHandlers: {
-            before: async (msg) => {
+        transactionHandler: {
+            before: async (msg) =>{
                 console.log(`[before] ${msg.descriptions.join(', ')}`);
             },
             after: async (result) => {
@@ -27,7 +27,7 @@ async function example() {
     const result = await program
         .operator
         .updateFundPrices({ operator: wallet.publicKey })
-        .then(tx => tx.signAndSend());
+        .then(tx => tx.send());
     console.log(result);
 }
 

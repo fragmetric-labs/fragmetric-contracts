@@ -1,5 +1,6 @@
 import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
+import {ProgramTransactionHandler, ProgramTransactionMessage, ProgramTransactionSigner} from "./program_transaction";
 
 export class Program<IDL extends anchor.Idl> {
     public programID: web3.PublicKey;
@@ -8,7 +9,7 @@ export class Program<IDL extends anchor.Idl> {
     private readonly anchorEventParser: anchor.EventParser;
     private readonly anchorErrorMap: Map<number, string>;
 
-    public readonly transactionHandlers: ProgramTransactionHandlers<IDL> | null = null;
+    public readonly transactionHandler: ProgramTransactionHandler<IDL> | null = null;
 
     public static readonly defaultClusterURL = {
         mainnet: 'https://api.mainnet-beta.solana.com',
@@ -19,12 +20,12 @@ export class Program<IDL extends anchor.Idl> {
 
     public readonly cluster: keyof typeof Program['defaultClusterURL'];
 
-    constructor({cluster, programID, idl, connection, transactionHandlers = null }: {
+    constructor({cluster, programID, idl, connection, transactionHandler = null }: {
         cluster: keyof typeof Program['defaultClusterURL'],
         programID: web3.PublicKey,
         idl: IDL,
         connection?: web3.Connection,
-        transactionHandlers?: ProgramTransactionHandlers<IDL> | null,
+        transactionHandler?: ProgramTransactionHandler<IDL> | null,
     }) {
         this.cluster = cluster;
         this.programID = programID;
@@ -41,14 +42,17 @@ export class Program<IDL extends anchor.Idl> {
             throw new Error(`provided connection URL does not match the specified cluster: ${cluster} != ${usingDefaultClusterURL[0]} (${usingDefaultClusterURL[1]})`);
         }
 
-        this.transactionHandlers = transactionHandlers;
+        this.transactionHandler = transactionHandler
+            ? Object.fromEntries(Object.entries(transactionHandler).map(([k, v]) => [k, v.bind(this)])) as ProgramTransactionHandler<IDL>
+            : null;
 
-        // this instance never uses the given wallet, it is just a placeholder.
-        const anchorProvider = new anchor.AnchorProvider(this.connection, new anchor.Wallet(new anchor.web3.Keypair()));
-        this.anchorProgram = new anchor.Program<IDL>({ ...idl, address: programID.toString() }, anchorProvider);
+        this.anchorProgram = new anchor.Program<IDL>({ ...idl, address: programID.toString() }, new anchor.AnchorProvider(this.connection, null as any));
         this.anchorEventParser = new anchor.EventParser(this.programID, this.anchorProgram.coder);
         this.anchorErrorMap = anchor.parseIdlErrors(this.anchorProgram.idl);
     }
+
+    // TODO: universal cache, localstorage or memory
+    // public readonly cache: Map<string, any> = new Map();
 
     public readonly idl = {
         getConstant: (name: ProgramConstantName<IDL>): string => {
@@ -94,7 +98,7 @@ export class Program<IDL extends anchor.Idl> {
             if (!err) err = anchor.AnchorError.parse(tx.meta?.logMessages ?? []);
             return err ?? null;
         },
-    }
+    };
 
     public get programMethods() {
         return this.anchorProgram.methods;
@@ -104,7 +108,7 @@ export class Program<IDL extends anchor.Idl> {
         return this.anchorProgram.account;
     }
 
-    public createUnsignedTransactionMessage<SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>>(args: Omit<ConstructorParameters<typeof ProgramTransactionMessage<IDL, SIGNER, EVENT>>[0], 'program'>) {
+    public createTransactionMessage<SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>>(args: Omit<ConstructorParameters<typeof ProgramTransactionMessage<IDL, SIGNER, EVENT>>[0], 'program'>) {
         return new ProgramTransactionMessage<IDL, SIGNER, EVENT>({
             ...args,
             program: this,
@@ -122,239 +126,3 @@ export type ProgramConstantName<IDL extends anchor.Idl> = IDL['constants'] exten
             : never
         : never
     : never;
-
-export type ProgramTransactionSigner<SIGNER extends string> = (name: 'payer' | SIGNER, publicKey: web3.PublicKey, buffer: Buffer) => Promise<web3.SignaturePubkeyPair | web3.Signer> | web3.SignaturePubkeyPair | web3.Signer;
-export type ProgramTransactionBeforeHook<IDL extends anchor.Idl> = (tx: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>) => Promise<void>;
-export type UnsignedTransactionAfterHook = (result: Awaited<ReturnType<typeof ProgramTransactionMessage.prototype.signAndSend>>) => Promise<void>;
-export type ProgramTransactionHandlers<IDL extends anchor.Idl> = {
-    signer: ProgramTransactionSigner<'payer'|string>,
-    before: ProgramTransactionBeforeHook<IDL>,
-    after: UnsignedTransactionAfterHook,
-};
-
-export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>> extends web3.TransactionMessage {
-    public readonly descriptions: any[] | null;
-    public readonly expectedEvents: EVENT[];
-    public readonly signers: { [k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer };
-    public readonly addressLookupTables: web3.AddressLookupTableAccount[] = [];
-    private readonly program: Program<IDL>;
-
-    constructor({ descriptions = [], instructions, events = [], signers, recentBlockhash = null, addressLookupTables = [], program }: {
-        descriptions?: any[] | null,
-        events?: EVENT[],
-        instructions: web3.TransactionInstruction[],
-        signers: {[k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer},
-        recentBlockhash?: web3.Blockhash | null,
-        addressLookupTables?: web3.AddressLookupTableAccount[],
-        program: Program<IDL>,
-    }) {
-        super({
-            payerKey: (signers.payer as web3.Signer).secretKey ? (signers.payer as web3.Signer).publicKey : signers.payer as web3.PublicKey,
-            recentBlockhash: recentBlockhash ?? '',
-            instructions,
-        });
-        this.descriptions = descriptions;
-        this.expectedEvents = events;
-        this.signers = signers;
-        this.addressLookupTables = addressLookupTables;
-        this.program = program;
-    }
-
-    public compileToV0Message(addressLookupTableAccounts?: web3.AddressLookupTableAccount[]) {
-        return super.compileToV0Message([...this.addressLookupTables, ...(addressLookupTableAccounts ?? [])]);
-    }
-
-    public compileToLegacyMessage() {
-        if (this.addressLookupTables.length > 0) {
-            console.warn(`[warning] transaction might fail due to size limits; compile as a v0 message to utilize the preset address lookup tables`);
-        }
-        return super.compileToLegacyMessage();
-    }
-
-    public async signAndSend({ signer = this.program.transactionHandlers?.signer ?? null, sendOptions, confirmOptions, commitment = 'confirmed' } : {
-        signer?: ProgramTransactionSigner<SIGNER> | null,
-        sendOptions?: web3.SendOptions,
-        confirmOptions?: web3.TransactionConfirmationStrategy,
-        commitment?: web3.Finality,
-    } = {}) {
-        if (this.program.transactionHandlers?.before) {
-            await this.program.transactionHandlers.before(this as any);
-        }
-
-        if (!this.recentBlockhash) {
-            const { blockhash, lastValidBlockHeight } = await this.program.connection.getLatestBlockhash(commitment);
-            this.recentBlockhash = blockhash;
-            confirmOptions = {
-                abortSignal: undefined,
-                ...(confirmOptions ?? {}),
-                blockhash,
-                lastValidBlockHeight,
-                signature: '',
-            }
-        }
-
-        const tx = new web3.VersionedTransaction(this.compileToV0Message());
-        let message: Buffer | null = null;
-        const signersWithSecretKey: web3.Signer[] = [];
-        for (const [name, key] of Object.entries(this.signers)) {
-            if ((key as web3.Signer).secretKey) {
-                signersWithSecretKey.push(key as web3.Signer);
-            } else {
-                const publicKey = key as web3.PublicKey;
-                if (!message) {
-                    message = Buffer.from(tx.message.serialize());
-                }
-                const sigPair = signer ? await signer(name as SIGNER, publicKey, message) : null;
-                if (!sigPair) {
-                    throw new Error(`unhandled signer key: ${key} (${name})`);
-                } else if (!sigPair.publicKey.equals(publicKey)) {
-                    console.warn(`[warning] signed key does not match with the requested signer key: ${publicKey} (${name}) != ${sigPair.publicKey}`);
-                }
-                if ((sigPair as web3.Signer).secretKey) {
-                    signersWithSecretKey.push(sigPair as web3.Signer)
-                } else {
-                    tx.addSignature(sigPair.publicKey, (sigPair as web3.SignaturePubkeyPair).signature!);
-                }
-            }
-        }
-        tx.sign(signersWithSecretKey);
-
-        const signature: web3.TransactionSignature = await this.program.connection.sendTransaction(tx, sendOptions);
-        const res = await this.program.connection.confirmTransaction({
-            ...(confirmOptions as web3.TransactionConfirmationStrategy),
-            signature,
-        }, commitment);
-        if (res.value.err) {
-            throw res.value.err;
-        }
-
-        const txResult = await this.program.connection.getParsedTransaction(signature, {
-            commitment,
-            maxSupportedTransactionVersion: 0,
-        });
-
-        if (!txResult) {
-            throw new Error("no transaction result found");
-        }
-
-        if (txResult.meta?.err) {
-            throw (this.program.idl.parseError(txResult) ?? txResult?.meta?.err);
-        }
-
-        const result = {
-            signature,
-            descriptions: this.descriptions,
-            events: this.program.idl.parseEvents<EVENT>(txResult),
-            logs: txResult.meta?.logMessages ?? [],
-            error: this.program.idl.parseError(txResult),
-        };
-
-        if (!result.error) {
-            for (const event of Object.keys(result.events)) {
-                if (!this.expectedEvents.includes(event as EVENT)) {
-                    console.warn(`[warning] unexpected event: ${event}`);
-                }
-            }
-
-            for (const expectedEvent of this.expectedEvents) {
-                if (!result.events[expectedEvent]?.length) {
-                    console.warn(`[warning] missing expected event: ${expectedEvent}`);
-                }
-            }
-        }
-
-        if (this.program.transactionHandlers?.after) {
-            await this.program.transactionHandlers.after(result as any);
-        }
-
-        return result;
-    }
-}
-
-export class AddressBook<NAME extends string> {
-    public readonly entries = new Map<NAME, web3.PublicKey>();
-    private readonly program: Program<any>;
-
-    constructor({ program }: { program: Program<any> }) {
-        this.program = program;
-    }
-
-    public add(name: NAME, address: web3.PublicKey) {
-        this.entries.set(name, address);
-    }
-
-    public addAll(addresses: Partial<{[name in NAME]: web3.PublicKey}>) {
-        for (let [name, address] of Object.entries(addresses)) {
-            this.entries.set(name as NAME, address as web3.PublicKey);
-        }
-    }
-
-    public get(name: NAME): web3.PublicKey|null {
-        return this.entries.get(name) ?? null;
-    }
-
-    public async syncWithLookupTable({ lookupTableAddress = null, payer, authority, signer = this.program.transactionHandlers?.signer ?? null }: {
-        lookupTableAddress: web3.PublicKey|null,
-        payer: web3.PublicKey,
-        authority: web3.PublicKey,
-        signer?: ProgramTransactionSigner<'payer'|'authority'> | null,
-    }) {
-        const exists = lookupTableAddress ? await this.program.connection.getAccountInfo(lookupTableAddress).then(() => true).catch(() => false) : false;
-        if (!exists) {
-            const recentSlot = await this.program.connection.getSlot({commitment: 'recent'});
-            const [createIx, newLookupTableAddress] = web3.AddressLookupTableProgram.createLookupTable({
-                authority,
-                payer,
-                recentSlot,
-            });
-            await this.program.createUnsignedTransactionMessage({
-                descriptions: [`create a new address lookup table`],
-                instructions: [createIx],
-                signers: { payer, authority },
-            })
-                .signAndSend({ signer });
-            lookupTableAddress = newLookupTableAddress;
-        }
-
-        let lookupTable = await this.program.connection
-            .getAddressLookupTable(lookupTableAddress!, { commitment: 'confirmed' })
-            .then(res => res.value);
-
-        const existingAddresses = new Set(lookupTable?.state.addresses.map(a => a.toString()) ?? []);
-        const newAddresses = Array.from(this.entries.values()).filter(address => !existingAddresses.has(address.toString()));
-        const listOfNewAddresses = newAddresses.reduce((listOfNewAddresses, address) =>  {
-            if (!listOfNewAddresses[0] || listOfNewAddresses[0].length == 27) { // 27 (addresses) + 5 (admin/authority, payer, alt_program, alt, system_program)
-                listOfNewAddresses.unshift([address]);
-            } else {
-                listOfNewAddresses[0].push(address);
-            }
-            return listOfNewAddresses;
-        }, [] as web3.PublicKey[][]);
-
-        if (listOfNewAddresses.length > 0) {
-            let size = existingAddresses.size;
-            for (let addresses of listOfNewAddresses) {
-                await this.program.createUnsignedTransactionMessage({
-                    descriptions: [`extend the address lookup table (${size} + ${addresses.length})`],
-                    instructions: [
-                        web3.AddressLookupTableProgram.extendLookupTable({
-                            lookupTable: lookupTableAddress!,
-                            authority,
-                            payer,
-                            addresses,
-                        }),
-                    ],
-                    signers: { payer, authority },
-                })
-                    .signAndSend({ signer });
-                size += addresses.length;
-            }
-
-            lookupTable = await this.program.connection
-                .getAddressLookupTable(lookupTableAddress!, { commitment: 'confirmed' })
-                .then(res => res.value!);
-        }
-
-        return lookupTable!;
-    }
-}

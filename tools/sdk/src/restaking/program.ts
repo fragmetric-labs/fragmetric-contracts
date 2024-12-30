@@ -4,7 +4,6 @@ import BN from "bn.js";
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
 import idlFile from './program.idl.v0.3.3.json';
 import type {Restaking} from './program.idl.v0.3.3';
-import {AccountMeta} from "@solana/web3.js";
 
 export type RestakingIDL = Restaking;
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
@@ -23,14 +22,6 @@ export class RestakingProgram extends Program<RestakingIDL> {
         fragSOL: new web3.PublicKey('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
     };
     public readonly receiptTokenMint: web3.PublicKey;
-
-    public getAddressLookupTable(): web3.PublicKey | null {
-        if (this.receiptTokenMint.equals(RestakingProgram.receiptTokenMint.fragSOL)) {
-            // TODO: register ALT address to the fund account
-            return this.idl.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
-        }
-        return null;
-    }
 
     constructor({ receiptTokenMint, cluster = 'mainnet', idl = <RestakingIDL>idlFile, ...args }: Partial<ConstructorParameters<typeof Program<RestakingIDL>>[0]> & {
         receiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['receiptTokenMint'],
@@ -56,6 +47,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
             }
             let address = null;
             if (this.receiptTokenMint.equals(RestakingProgram.receiptTokenMint.fragSOL)) {
+                // TODO: register ALT address to the fund account
                 address = this.idl.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
             }
             if (address) {
@@ -90,11 +82,11 @@ export class RestakingProgram extends Program<RestakingIDL> {
             }
             return this.state._pricingSourcesAccountMeta = addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false }));
         }
-    }
+    };
 
     public readonly operator = {
         updateFundPrices: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
-            return this.createUnsignedTransactionMessage({
+            return this.createTransactionMessage({
                 descriptions: ['update prices of the fund'],
                 events: ['operatorUpdatedFundPrices'],
                 instructions: await Promise.all([
@@ -119,7 +111,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
             if (!normalizedToken) {
                 throw new Error(`normalized token is not enabled for the fund`);
             }
-            return this.createUnsignedTransactionMessage({
+            return this.createTransactionMessage({
                 descriptions: ['update prices of the normalized token pool'],
                 events: ['operatorUpdatedNormalizedTokenPoolPrices'],
                 instructions: await Promise.all([
@@ -140,7 +132,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
             });
         },
         updateRewardPools: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
-            return this.createUnsignedTransactionMessage({
+            return this.createTransactionMessage({
                 descriptions: ['update reward pools of the fund'],
                 events: ['operatorUpdatedRewardPools'],
                 instructions: await Promise.all([
@@ -159,8 +151,8 @@ export class RestakingProgram extends Program<RestakingIDL> {
             });
         },
         donateSOLToFund: async ({ operator, amount, offsetReceivable }: { operator: web3.PublicKey | web3.Keypair, amount: BN, offsetReceivable: boolean }) => {
-            return this.createUnsignedTransactionMessage({
-                descriptions: [`donate SOL to the fund`, {amount, offsetReceivable}],
+            return this.createTransactionMessage({
+                descriptions: [`donate SOL to the fund`, { amount, offsetReceivable }],
                 events: ['operatorDonatedToFund'],
                 instructions: await Promise.all([
                     this.programMethods
