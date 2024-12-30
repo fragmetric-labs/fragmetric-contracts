@@ -5,7 +5,9 @@ use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
+use crate::modules::staking::{
+    MarinadeStakePoolService, SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService,
+};
 use crate::utils::AccountInfoExt;
 
 use super::{
@@ -113,6 +115,11 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             required_accounts.push((*address, false));
                         }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            required_accounts.push((*address, false));
+                        }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     }
                 }
@@ -159,34 +166,31 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let fund_account = ctx.fund_account.load()?;
                 let num_supported_token_pricing_sources = fund_account
                     .get_supported_tokens_iter()
-                    .map(|supported_token| {
+                    .try_fold(0usize, |count, supported_token| {
                         match &supported_token.pricing_source.try_deserialize()? {
                             Some(TokenPricingSource::MarinadeStakePool { .. })
-                            | Some(TokenPricingSource::SPLStakePool { .. }) => Ok(1),
+                            | Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            }) => Ok(count + 1),
                             _ => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
-                            )?,
+                            ),
                         }
-                    })
-                    .collect::<Result<Vec<_>>>()?
-                    .iter()
-                    .sum();
+                    })?;
                 let num_restaking_vault_pricing_sources = fund_account
                     .get_restaking_vaults_iter()
-                    .map(|restaking_vault| {
+                    .try_fold(0usize, |count, restaking_vault| {
                         match &restaking_vault
                             .receipt_token_pricing_source
                             .try_deserialize()?
                         {
-                            Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(1),
+                            Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(count + 1),
                             _ => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
-                            )?,
+                            ),
                         }
-                    })
-                    .collect::<Result<Vec<_>>>()?
-                    .iter()
-                    .sum();
+                    })?;
                 if remaining_accounts.len()
                     < num_processing_batches as usize
                         + num_supported_token_pricing_sources
@@ -220,7 +224,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
-                            SPLStakePoolService::get_max_cycle_fee(account)?
+                            <SPLStakePoolService>::get_max_cycle_fee(account)?
+                        }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -293,6 +304,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 ) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+
+                    let mut pricing_service =
+                        fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
+
                     let (
                         processed_receipt_token_amount,
                         reserved_asset_user_amount,
@@ -310,10 +325,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         optional_fund_supported_token_reserve_account.to_option(),
                         optional_fund_supported_token_treasury_account.to_option(),
                         uninitialized_withdrawal_batch_accounts,
-                        pricing_sources,
                         self.forced,
                         requested_receipt_token_amount,
                         0,
+                        &pricing_service,
                     )?;
 
                     let transferred_asset_revenue_amount = fund_service
@@ -329,8 +344,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             program_supported_token_revenue_account.to_option(),
                         )?;
 
-                    let pricing_service =
-                        fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
+                    fund_service.update_asset_values(&mut pricing_service)?;
 
                     (
                         processed_receipt_token_amount,
@@ -433,13 +447,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         Ok((
             result,
             Some({
-                let fund_account = ctx.fund_account.load()?;
-                let target_asset_token_mints = fund_account
-                    .get_asset_states_iter()
-                    .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
-                    .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
-                    .collect::<Vec<_>>();
-
                 let current_asset_token_mint = match self.state {
                     ProcessWithdrawalBatchCommandState::New => None,
                     ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
@@ -448,20 +455,27 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     } => Some(asset_token_mint),
                 };
 
-                let next_asset_token_mint = match current_asset_token_mint {
-                    Some(current_asset_token_mint) => {
-                        match target_asset_token_mints
-                            .iter()
-                            .position(|&asset_token_mint| {
-                                asset_token_mint == current_asset_token_mint
-                            }) {
-                            Some(index) => {
-                                target_asset_token_mints.into_iter().skip(index + 1).next()
+                let next_asset_token_mint = {
+                    let fund_account = ctx.fund_account.load()?;
+                    let mut target_asset_token_mints = fund_account
+                        .get_asset_states_iter()
+                        .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
+                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
+                        .peekable();
+
+                    let mut next_asset_token_mint_candidate =
+                        target_asset_token_mints.peek().cloned();
+
+                    if let Some(current_asset_token_mint) = current_asset_token_mint {
+                        while let Some(asset_token_mint) = target_asset_token_mints.next() {
+                            if asset_token_mint == current_asset_token_mint {
+                                next_asset_token_mint_candidate = target_asset_token_mints.next();
+                                break;
                             }
-                            None => target_asset_token_mints.into_iter().next(),
                         }
                     }
-                    None => target_asset_token_mints.into_iter().next(),
+
+                    next_asset_token_mint_candidate
                 };
 
                 match next_asset_token_mint {

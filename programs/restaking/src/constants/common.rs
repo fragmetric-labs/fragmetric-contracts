@@ -50,6 +50,13 @@ pub const MAINNET_BNSOL_STAKE_POOL_ADDRESS: Pubkey =
     pubkey!("Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r");
 
 #[constant]
+pub const MAINNET_BBSOL_MINT_ADDRESS: Pubkey =
+    pubkey!("Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B");
+#[constant]
+pub const MAINNET_BBSOL_STAKE_POOL_ADDRESS: Pubkey =
+    pubkey!("2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq");
+
+#[constant]
 pub const MAINNET_NSOL_MINT_ADDRESS: Pubkey =
     pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 #[constant]

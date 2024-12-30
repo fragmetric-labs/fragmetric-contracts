@@ -95,6 +95,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             .map(|pricing_source| match pricing_source.try_deserialize()? {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
                     for remaining_account in remaining_accounts {
@@ -192,7 +193,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                             Some(pricing_source) => {
                                 match pricing_source {
                                     TokenPricingSource::SPLStakePool { .. }
-                                    | TokenPricingSource::MarinadeStakePool { .. } => {
+                                    | TokenPricingSource::MarinadeStakePool { .. }
+                                    | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                        ..
+                                    } => {
                                         let asset =
                                             fund_account.get_asset_state_mut(Some(*token_mint))?;
                                         let asset_value_as_receipt_token_amount = pricing_service
@@ -536,10 +540,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         fund_supported_token_treasury_account: Option<&'info AccountInfo<'info>>,
 
         uninitialized_withdrawal_batch_accounts: &[&'info AccountInfo<'info>],
-        pricing_sources: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
         _receipt_token_amount_to_return: u64, // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
+
+        pricing_service: &PricingService,
     ) -> Result<(u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
         let (
             supported_token_mint,
@@ -549,37 +554,30 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             fund_supported_token_treasury_account,
         ) = match &supported_token_mint {
             Some(supported_token_mint) => (
-                Some(supported_token_mint.parse_interface_account_boxed::<Mint>()?),
+                Some(InterfaceAccount::<Mint>::try_from(supported_token_mint)?),
                 Some(supported_token_mint.key()),
                 Some(Interface::<TokenInterface>::try_from(
                     supported_token_program.unwrap(),
                 )?),
-                Some(
-                    fund_supported_token_reserve_account
-                        .unwrap()
-                        .parse_interface_account_boxed::<TokenAccount>()?,
-                ),
-                Some(
-                    fund_supported_token_treasury_account
-                        .unwrap()
-                        .parse_interface_account_boxed::<TokenAccount>()?,
-                ),
+                Some(InterfaceAccount::<TokenAccount>::try_from(
+                    fund_supported_token_reserve_account.unwrap(),
+                )?),
+                Some(InterfaceAccount::<TokenAccount>::try_from(
+                    fund_supported_token_treasury_account.unwrap(),
+                )?),
             ),
             _ => (None, None, None, None, None),
         };
-        let asset_treasury_reserved_amount = match &fund_supported_token_treasury_account {
-            Some(fund_supported_token_treasury_account) => {
-                fund_supported_token_treasury_account.amount
-            }
-            None => fund_treasury_account.lamports(),
-        };
+        let asset_treasury_reserved_amount = fund_supported_token_treasury_account
+            .as_ref()
+            .map(|account| account.amount)
+            .unwrap_or_else(|| fund_treasury_account.lamports());
 
         let mut asset_user_amount_processing = 0;
         let mut asset_fee_amount_processing = 0;
         let mut receipt_token_amount_processing = 0;
         let mut processing_batch_count = 0;
 
-        let pricing_service = self.new_pricing_service(pricing_sources.iter().cloned())?;
         let fund_account = self.fund_account.load()?;
         let asset = fund_account.get_asset_state(supported_token_mint_key)?;
 
@@ -781,6 +779,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         operator,
                         &[],
                         8 + FundWithdrawalBatchAccount::INIT_SPACE,
+                        None,
                         &crate::ID,
                     )?;
                     Account::<FundWithdrawalBatchAccount>::try_from_unchecked(
@@ -982,6 +981,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     /// returns (transferred_asset_revenue_amount)
+    #[inline(never)]
     pub(super) fn harvest_from_treasury_account(
         &mut self,
         payer: &Signer<'info>,
@@ -1003,10 +1003,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         match supported_token_mint {
             Some(supported_token_mint) => {
                 let supported_token_mint =
-                    supported_token_mint.parse_interface_account_boxed::<Mint>()?;
-                let fund_supported_token_treasury_account = fund_supported_token_treasury_account
-                    .unwrap()
-                    .parse_interface_account_boxed::<TokenAccount>()?;
+                    InterfaceAccount::<Mint>::try_from(supported_token_mint)?;
+                let fund_supported_token_treasury_account =
+                    InterfaceAccount::<TokenAccount>::try_from(
+                        fund_supported_token_treasury_account.unwrap(),
+                    )?;
 
                 if fund_supported_token_treasury_account.amount == 0 {
                     Ok(0)

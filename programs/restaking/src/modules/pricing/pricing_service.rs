@@ -137,6 +137,12 @@ impl<'info> PricingService<'info> {
                     &[self.get_token_pricing_source_account_info(address)?],
                 )?
             }
+            TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
+                SPLStakePoolValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &[self.get_token_pricing_source_account_info(address)?],
+                )?
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

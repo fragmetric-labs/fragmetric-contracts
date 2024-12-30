@@ -275,6 +275,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             ticket_account_rent_payer,
             &[],
             space,
+            None,
             &crate::ID,
         )
     }

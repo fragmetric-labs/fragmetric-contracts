@@ -3,8 +3,7 @@ use anchor_lang::solana_program;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::stake::state::StakeStateV2;
 use anchor_spl::token_interface::TokenAccount;
-use spl_stake_pool::big_vec::BigVec;
-use spl_stake_pool::state::StakePool;
+use spl_stake_pool::{big_vec::BigVec, state::StakePool};
 use std::num::NonZeroU32;
 
 use crate::utils::SystemProgramExt;
@@ -25,24 +24,36 @@ impl From<AvailableWithdrawals> for Option<Vec<(Pubkey, u64)>> {
     }
 }
 
-pub struct SPLStakePoolService<'info> {
-    pub spl_stake_pool_program: &'info AccountInfo<'info>,
+pub trait SPLStakePoolInterface: anchor_lang::Id {}
+impl<T: anchor_lang::Id> SPLStakePoolInterface for T {}
+
+pub struct SPLStakePool;
+
+impl anchor_lang::Id for SPLStakePool {
+    fn id() -> Pubkey {
+        spl_stake_pool::ID
+    }
+}
+
+pub struct SPLStakePoolService<'info, T = SPLStakePool>
+where
+    T: SPLStakePoolInterface,
+{
+    pub spl_stake_pool_program: Program<'info, T>, // &'info AccountInfo<'info>,
     pub pool_account: &'info AccountInfo<'info>,
     pub pool_token_mint: &'info AccountInfo<'info>,
     pub pool_token_program: &'info AccountInfo<'info>,
 }
 
-impl<'info> SPLStakePoolService<'info> {
+impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     pub fn new(
         spl_stake_pool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_eq!(spl_stake_pool::ID, spl_stake_pool_program.key());
-
         Ok(Self {
-            spl_stake_pool_program,
+            spl_stake_pool_program: Program::try_from(spl_stake_pool_program)?,
             pool_account,
             pool_token_mint,
             pool_token_program,
@@ -74,7 +85,7 @@ impl<'info> SPLStakePoolService<'info> {
     ) -> Vec<(Pubkey, bool)> {
         vec![
             // for Self::new
-            (spl_stake_pool::ID, false),
+            (T::id(), false),
             (pool_account_info.key(), true),
             (pool_account.pool_mint, true),
             (pool_account.token_program_id, false),
@@ -91,7 +102,7 @@ impl<'info> SPLStakePoolService<'info> {
             // for self.deposit_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
-                    &spl_stake_pool::ID,
+                    &T::id(),
                     &pool_account_info.key(),
                 )
                 .0,
@@ -157,11 +168,16 @@ impl<'info> SPLStakePoolService<'info> {
             to_pool_token_account_amount - to_pool_token_account_amount_before;
         let deducted_sol_fee_amount = {
             let pool_account = Self::deserialize_pool_account(self.pool_account)?;
-            utils::get_proportional_amount(
-                sol_amount,
-                pool_account.sol_deposit_fee.numerator,
-                pool_account.sol_deposit_fee.denominator.max(1),
-            )?
+            let sol_amount_without_fee = if pool_account.sol_deposit_fee.denominator == 0 {
+                sol_amount
+            } else {
+                utils::get_proportional_amount(
+                    sol_amount,
+                    pool_account.sol_deposit_fee.numerator,
+                    pool_account.sol_deposit_fee.denominator,
+                )?
+            };
+            sol_amount - sol_amount_without_fee
         };
 
         msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, deducted_sol_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_sol_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
@@ -194,7 +210,7 @@ impl<'info> SPLStakePoolService<'info> {
             // for self.withdraw_sol
             (
                 spl_stake_pool::find_withdraw_authority_program_address(
-                    &spl_stake_pool::id(),
+                    &T::id(),
                     &pool_account_info.key(),
                 )
                 .0,
@@ -283,7 +299,6 @@ impl<'info> SPLStakePoolService<'info> {
         let reserve_stake_state = Self::deserialize_stake_account(reserve_stake_account_info)?;
         if let StakeStateV2::Initialized(meta) = reserve_stake_state {
             let minimum_reserve_lamports = spl_stake_pool::minimum_reserve_lamports(&meta);
-            msg!("minimum_reserve_lamports {}", minimum_reserve_lamports);
             if new_reserve_lamports < minimum_reserve_lamports {
                 msg!("Attempting to withdraw {} lamports, maximum possible SOL withdrawal is {} lamports", withdraw_lamports, reserve_stake_account_info.lamports().saturating_sub(minimum_reserve_lamports));
                 msg!("You should try to withdraw from validators");
@@ -606,6 +621,7 @@ impl<'info> SPLStakePoolService<'info> {
             payer,
             payer_signer_seeds,
             StakeStateV2::size_of(),
+            Some(0u64),
             &solana_program::stake::program::ID,
         )
     }

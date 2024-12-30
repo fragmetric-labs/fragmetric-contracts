@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
+use crate::modules::{
+    pricing::{Asset, TokenValue, TokenValueProvider},
+    staking::SPLStakePool,
+};
 
 use super::SPLStakePoolService;
 
@@ -15,8 +18,9 @@ impl TokenValueProvider for SPLStakePoolValueProvider {
     ) -> Result<TokenValue> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let pool_account =
-            SPLStakePoolService::deserialize_pool_account(pricing_source_accounts[0])?;
+        let pool_account = SPLStakePoolService::<SPLStakePool>::deserialize_pool_account(
+            pricing_source_accounts[0],
+        )?;
         require_keys_eq!(pool_account.pool_mint, *token_mint);
 
         Ok(TokenValue {

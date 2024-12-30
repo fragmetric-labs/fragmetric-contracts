@@ -24,6 +24,9 @@ pub enum TokenPricingSource {
     OrcaDEXLiquidityPool {
         address: Pubkey,
     },
+    SanctumSingleValidatorSPLStakePool {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -46,6 +49,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::OrcaDEXLiquidityPool { address } => {
                 write!(f, "OrcaDEXLiquidityPool({})", address)
+            }
+            Self::SanctumSingleValidatorSPLStakePool { address } => {
+                write!(f, "SanctumSingleValidatorSPLStakePool({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -78,6 +84,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::OrcaDEXLiquidityPool { address } => {
                 pod.discriminant = 6;
+                pod.address = *address;
+            }
+            TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
+                pod.discriminant = 7;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -126,6 +136,9 @@ impl TokenPricingSourcePod {
                         address: self.address,
                     },
                     6 => TokenPricingSource::OrcaDEXLiquidityPool {
+                        address: self.address,
+                    },
+                    7 => TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                         address: self.address,
                     },
                     #[cfg(all(test, not(feature = "idl-build")))]
