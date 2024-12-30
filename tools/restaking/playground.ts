@@ -542,6 +542,32 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
+    public get fundStakeAccounts() {
+        if (this._fundStakeAccounts) return this._fundStakeAccounts;
+        return (this._fundStakeAccounts = this._getFundStakeAccounts());
+    }
+
+    private _fundStakeAccounts: ReturnType<typeof this._getFundStakeAccounts>;
+
+    private _getFundStakeAccounts() {
+        const fundStakeAccounts = Object.fromEntries(
+            Object.keys(this.supportedTokenMetadata).map((symbol) => [
+                symbol,
+                [...Array(5).keys()].map((i) =>
+                    web3.PublicKey.findProgramAddressSync(
+                        [
+                            this.knownAddress.fragSOLFund.toBuffer(),
+                            this.supportedTokenMetadata[symbol].pricingSourceAddress.toBuffer(),
+                            Buffer.from([i]),
+                        ],
+                        this.programId,
+                    )[0]
+                )
+            ])
+        );
+        return fundStakeAccounts;
+    }
+
     public async tryAirdropSupportedTokens(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
         await this.tryAirdrop(account, lamports.muln(Object.keys(this.supportedTokenMetadata).length));
         const txData = await Promise.all(
