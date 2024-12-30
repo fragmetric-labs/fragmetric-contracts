@@ -6,8 +6,7 @@ use crate::errors;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{
-    MarinadeStakePoolService, SPLStakePool, SPLStakePoolService, SanctumSPLStakePool,
-    SanctumSingleValidatorSPLStakePoolService,
+    MarinadeStakePoolService, SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService,
 };
 use crate::utils::AccountInfoExt;
 
@@ -231,14 +230,14 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
-                            SPLStakePoolService::<SPLStakePool>::get_max_cycle_fee(account)?
+                            <SPLStakePoolService>::get_max_cycle_fee(account)?
                         }
                         Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                             address,
                         }) => {
                             let account = supported_token_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
-                            SPLStakePoolService::<SanctumSPLStakePool>::get_max_cycle_fee(account)?
+                            SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };

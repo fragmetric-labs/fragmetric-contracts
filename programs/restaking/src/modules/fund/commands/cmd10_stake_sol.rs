@@ -2,9 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::{
-    self, SPLStakePool, SanctumSPLStakePool, SanctumSingleValidatorSPLStakePoolService,
+    MarinadeStakePoolService, SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService,
 };
-use crate::modules::staking::{MarinadeStakePoolService, SPLStakePoolService};
 use crate::{errors, utils};
 
 use super::{
@@ -148,7 +147,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 };
                                 require_keys_eq!(address, pool_account.key());
 
-                                SPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?
+                                <SPLStakePoolService>::find_accounts_to_deposit_sol(pool_account)?
                             }
                             Some(TokenPricingSource::MarinadeStakePool { address }) => {
                                 let [pool_account, _remaining_accounts @ ..] = accounts else {
@@ -215,7 +214,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
                                 deducted_sol_fee_amount,
-                            ) = SPLStakePoolService::<SPLStakePool>::new(
+                            ) = <SPLStakePoolService>::new(
                                 pool_program,
                                 pool_account,
                                 pool_token_mint,
@@ -301,7 +300,7 @@ impl SelfExecutable for StakeSOLCommand {
                                 to_pool_token_account_amount,
                                 minted_pool_token_amount,
                                 deposit_fee,
-                            ) = SPLStakePoolService::<SanctumSPLStakePool>::new(
+                            ) = SanctumSingleValidatorSPLStakePoolService::new(
                                 pool_program,
                                 pool_account,
                                 pool_token_mint,

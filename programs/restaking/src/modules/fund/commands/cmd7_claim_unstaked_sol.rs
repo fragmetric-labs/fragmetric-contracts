@@ -1,12 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::{
-    errors,
-    modules::{
-        pricing::TokenPricingSource,
-        staking::{self, SPLStakePool, SPLStakePoolService, SanctumSPLStakePool},
-    },
-};
+use crate::errors;
+use crate::modules::pricing::TokenPricingSource;
+use crate::modules::staking::{SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService};
 
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
@@ -94,15 +90,14 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
-                            staking::SPLStakePoolService::<SPLStakePool>::find_accounts_to_claim_sol(
-                            )
+                            <SPLStakePoolService>::find_accounts_to_claim_sol()
                         }
                         Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                             address,
                         }) => {
                             require_keys_eq!(address, *pool_account_info.key);
 
-                            staking::SPLStakePoolService::<SanctumSPLStakePool>::find_accounts_to_claim_sol()
+                            SanctumSingleValidatorSPLStakePoolService::find_accounts_to_claim_sol()
                         }
                         _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
                     };
@@ -141,7 +136,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 if fund_stake_account.lamports() > 0 {
                                     let received_sol_amount = fund_stake_account.lamports();
                                     msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-                                    staking::SPLStakePoolService::<SPLStakePool>::claim_sol(
+                                    <SPLStakePoolService>::claim_sol(
                                         sysvar_clock_program,
                                         sysvar_stake_history_program,
                                         stake_program,
@@ -174,7 +169,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 if fund_stake_account.lamports() > 0 {
                                     let received_sol_amount = fund_stake_account.lamports();
                                     msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-                                    staking::SPLStakePoolService::<SanctumSPLStakePool>::claim_sol(
+                                    SanctumSingleValidatorSPLStakePoolService::claim_sol(
                                         sysvar_clock_program,
                                         sysvar_stake_history_program,
                                         stake_program,
