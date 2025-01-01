@@ -68,15 +68,19 @@ pub struct FundAccount {
     pub(super) operation: OperationState,
 }
 
-impl PDASeeds<2> for FundAccount {
+impl PDASeeds<3> for FundAccount {
     const SEED: &'static [u8] = b"fund";
 
-    fn get_seed_phrase(&self) -> [&[u8]; 2] {
-        [Self::SEED, self.receipt_token_mint.as_ref()]
+    fn get_bump(&self) -> u8 {
+        self.bump
     }
 
-    fn get_bump_ref(&self) -> &u8 {
-        &self.bump
+    fn get_seeds(&self) -> [&[u8]; 3] {
+        [
+            Self::SEED,
+            self.receipt_token_mint.as_ref(),
+            std::slice::from_ref(&self.bump),
+        ]
     }
 }
 
@@ -418,11 +422,9 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token_pool_address(&self) -> Option<Pubkey> {
-        if self.normalized_token.enabled == 1 {
-            Some(self.normalized_token.pricing_source.address)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1)
+            .then(|| self.normalized_token.pricing_source.address())
+            .flatten()
     }
 
     #[inline]

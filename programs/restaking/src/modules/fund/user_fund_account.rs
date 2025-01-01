@@ -23,19 +23,20 @@ pub struct UserFundAccount {
     withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
-impl PDASeeds<3> for UserFundAccount {
+impl PDASeeds<4> for UserFundAccount {
     const SEED: &'static [u8] = b"user_fund";
 
-    fn get_seed_phrase(&self) -> [&[u8]; 3] {
+    fn get_bump(&self) -> u8 {
+        self.bump
+    }
+
+    fn get_seeds(&self) -> [&[u8]; 4] {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
             self.user.as_ref(),
+            std::slice::from_ref(&self.bump),
         ]
-    }
-
-    fn get_bump_ref(&self) -> &u8 {
-        &self.bump
     }
 }
 

@@ -1,6 +1,8 @@
-use super::{TokenPricingSource, TokenPricingSourcePod};
-use crate::{errors, utils};
 use anchor_lang::prelude::*;
+
+use crate::errors;
+
+use super::{TokenPricingSource, TokenPricingSourcePod};
 
 #[cfg(test)]
 pub use self::mock::*;
@@ -9,15 +11,16 @@ pub use self::mock::*;
 pub trait TokenValueProvider {
     fn resolve_underlying_assets<'info>(
         self,
+        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<TokenValue>;
+    ) -> Result<()>;
 }
 
 const TOKEN_VALUE_MAX_NUMERATORS_SIZE: usize = 33;
 
 /// a value representing total asset value of a pricing source.
-#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct TokenValue {
     #[max_len(TOKEN_VALUE_MAX_NUMERATORS_SIZE)]
     pub numerator: Vec<Asset>,
@@ -43,50 +46,53 @@ impl TokenValue {
     /// indicates whether the token is not a kind of basket such as normalized token,
     /// so the value of the token can be resolved by one self without other token information.
     pub fn is_atomic(&self) -> bool {
-        self.numerator.iter().all(|asset| match asset {
-            Asset::Token(..) => false,
-            Asset::SOL(..) => true,
-        })
+        self.numerator
+            .iter()
+            .all(|asset| matches!(asset, Asset::SOL(_)))
     }
 
-    pub fn add(&mut self, asset: Asset) {
-        match &asset {
-            Asset::SOL(sol_amount) => {
-                for asset in &mut self.numerator {
-                    match asset {
-                        Asset::SOL(existing_sol_amount) => {
-                            *existing_sol_amount += *sol_amount;
-                            return;
-                        }
-                        _ => (),
-                    }
-                }
-                self.numerator.push(asset);
-            }
-            Asset::Token(token_mint, token_pricing_source, token_amount) => {
-                for asset in &mut self.numerator {
-                    match asset {
-                        Asset::Token(
-                            existing_token_mint,
-                            existing_token_pricing_source,
-                            existing_token_amount,
-                        ) => {
-                            if existing_token_mint == token_mint {
-                                *existing_token_amount += *token_amount;
-                                if existing_token_pricing_source.is_none()
-                                    && token_pricing_source.is_some()
-                                {
-                                    *existing_token_pricing_source = token_pricing_source.clone();
-                                }
-                                return;
-                            }
-                        }
-                        _ => (),
-                    }
-                }
-                self.numerator.push(asset);
+    pub(super) fn add_sol(&mut self, sol_amount: u64) {
+        for asset in &mut self.numerator {
+            if let Asset::SOL(existing_sol_amount) = asset {
+                *existing_sol_amount += sol_amount;
+                return;
             }
         }
+
+        self.numerator.push(Asset::SOL(sol_amount));
+    }
+
+    pub(super) fn add_token(
+        &mut self,
+        token_mint: &Pubkey,
+        token_pricing_source: Option<&TokenPricingSource>,
+        token_amount: u64,
+    ) {
+        for asset in &mut self.numerator {
+            if let Asset::Token(
+                existing_token_mint,
+                existing_token_pricing_source,
+                existing_token_amount,
+            ) = asset
+            {
+                if existing_token_mint != token_mint {
+                    continue;
+                }
+
+                if existing_token_pricing_source.is_none() && token_pricing_source.is_some() {
+                    *existing_token_pricing_source = token_pricing_source.cloned();
+                }
+
+                *existing_token_amount += token_amount;
+                return;
+            }
+        }
+
+        self.numerator.push(Asset::Token(
+            *token_mint,
+            token_pricing_source.cloned(),
+            token_amount,
+        ));
     }
 
     pub fn serialize_as_pod(&self, pod: &mut TokenValuePod) -> Result<()> {
@@ -94,8 +100,8 @@ impl TokenValue {
             err!(errors::ErrorCode::IndexOutOfBoundsException)?;
         }
         pod.num_numerator = self.numerator.len() as u64;
-        for (i, asset) in self.numerator.iter().enumerate() {
-            asset.serialize_as_pod(&mut pod.numerator[i]);
+        for (numerator, asset) in pod.numerator.iter_mut().zip(&self.numerator) {
+            asset.serialize_as_pod(numerator);
         }
         pod.denominator = self.denominator;
 
@@ -107,23 +113,25 @@ impl TokenValue {
 #[derive(Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
-    pub numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
-    pub num_numerator: u64,
-    pub denominator: u64,
+    numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
+    num_numerator: u64,
+    denominator: u64,
 }
 
 impl TokenValuePod {
     pub fn try_deserialize(&self) -> Result<TokenValue> {
+        let pods = &self.numerator[..self.num_numerator as usize];
+        let count = pods.iter().filter(|pod| pod.is_some()).count();
+
+        let mut numerator = Vec::with_capacity(count);
+        for pod in pods {
+            if let Some(asset) = pod.try_deserialize()? {
+                numerator.push(asset);
+            }
+        }
+
         Ok(TokenValue {
-            numerator: self
-                .numerator
-                .iter()
-                .take(self.num_numerator as usize)
-                .map(|pod| pod.try_deserialize())
-                .collect::<Result<Vec<_>>>()?
-                .into_iter()
-                .filter_map(|a| a)
-                .collect(),
+            numerator,
             denominator: self.denominator,
         })
     }
@@ -150,7 +158,7 @@ impl std::fmt::Display for Asset {
 }
 
 impl Asset {
-    fn serialize_as_pod(&self, pod: &mut AssetPod) {
+    pub fn serialize_as_pod(&self, pod: &mut AssetPod) {
         match self {
             Asset::SOL(sol_amount) => {
                 pod.discriminant = 1;
@@ -164,13 +172,10 @@ impl Asset {
                 pod.sol_amount = 0;
                 pod.token_amount = *token_amount;
                 pod.token_mint = *token_mint;
-                match token_pricing_source {
-                    Some(source) => {
-                        source.serialize_as_pod(&mut pod.token_pricing_source);
-                    }
-                    None => {
-                        pod.token_pricing_source.clear();
-                    }
+                if let Some(source) = token_pricing_source {
+                    source.serialize_as_pod(&mut pod.token_pricing_source);
+                } else {
+                    pod.token_pricing_source.clear();
                 }
             }
         }
@@ -181,29 +186,33 @@ impl Asset {
 #[derive(Debug)]
 #[repr(C)]
 pub struct AssetPod {
-    pub discriminant: u8,
+    discriminant: u8,
     _padding: [u8; 7],
-    pub sol_amount: u64,
-    pub token_amount: u64,
-    pub token_mint: Pubkey,
-    pub token_pricing_source: TokenPricingSourcePod,
+    sol_amount: u64,
+    token_amount: u64,
+    token_mint: Pubkey,
+    token_pricing_source: TokenPricingSourcePod,
 }
 
 impl AssetPod {
-    fn try_deserialize(&self) -> Result<Option<Asset>> {
-        Ok(if self.discriminant == 0 {
-            None
-        } else {
-            Some(match self.discriminant {
-                1 => Asset::SOL(self.sol_amount),
-                2 => Asset::Token(
-                    self.token_mint,
-                    self.token_pricing_source.try_deserialize()?,
-                    self.token_amount,
-                ),
-                _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+    pub fn is_some(&self) -> bool {
+        self.discriminant != 0
+    }
+
+    pub fn try_deserialize(&self) -> Result<Option<Asset>> {
+        self.is_some()
+            .then(|| {
+                Ok(match self.discriminant {
+                    1 => Asset::SOL(self.sol_amount),
+                    2 => Asset::Token(
+                        self.token_mint,
+                        self.token_pricing_source.try_deserialize()?,
+                        self.token_amount,
+                    ),
+                    _ => return Err(Error::from(ProgramError::InvalidAccountData)),
+                })
             })
-        })
+            .transpose()
     }
 }
 
@@ -243,25 +252,31 @@ mod mock {
         }
     }
 
-    impl<'b> TokenValueProvider for MockPricingSourceValueProvider<'b> {
+    impl TokenValueProvider for MockPricingSourceValueProvider<'_> {
         fn resolve_underlying_assets<'info>(
             self,
+            token_value_to_update: &mut TokenValue,
             _token_mint: &Pubkey,
             pricing_source_accounts: &[&'info AccountInfo<'info>],
-        ) -> Result<TokenValue> {
+        ) -> Result<()> {
             require_eq!(pricing_source_accounts.len(), 0);
 
-            Ok(TokenValue {
-                numerator: self
-                    .numerator
-                    .iter()
-                    .map(|&asset| match asset {
-                        MockAsset::SOL(amount) => Asset::SOL(amount),
-                        MockAsset::Token(mint, amount) => Asset::Token(mint, None, amount),
-                    })
-                    .collect(),
-                denominator: *self.denominator,
-            })
+            token_value_to_update.numerator.clear();
+            token_value_to_update
+                .numerator
+                .reserve_exact(self.numerator.len());
+
+            token_value_to_update
+                .numerator
+                .extend(self.numerator.iter().map(|&asset| match asset {
+                    MockAsset::SOL(sol_amount) => Asset::SOL(sol_amount),
+                    MockAsset::Token(token_mint, token_amount) => {
+                        Asset::Token(token_mint, None, token_amount)
+                    }
+                }));
+            token_value_to_update.denominator = *self.denominator;
+
+            Ok(())
         }
     }
 }

@@ -10,14 +10,15 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
+        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<TokenValue> {
+    ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let pool_account = Account::<Whirlpool>::try_from(pricing_source_accounts[0])?;
+        let whirlpool = Account::<Whirlpool>::try_from(pricing_source_accounts[0])?;
 
-        require_keys_eq!(pool_account.token_mint_a, *token_mint);
+        require_keys_eq!(whirlpool.token_mint_a, *token_mint);
 
         // First, calculate price from pool account.
         //
@@ -30,22 +31,25 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
         // Note that array indexing follows little endianness,
         // so `(price[2] << 128) + (price[1] << 64) + price[0]` is the actual
         // Q64.128 notation.
-        let price = self.calculate_price_from_sqrt(pool_account.sqrt_price);
+        let price = self.calculate_price_from_sqrt(whirlpool.sqrt_price);
 
         // fit both numerator and denominator into 64-bit integer
         // by reducing the number of  significant digits.
         let (numerator, denominator) = self.fit_price_into_u64(price);
 
         // Check base mint
-        let asset = match pool_account.token_mint_b {
+        let asset = match whirlpool.token_mint_b {
             spl_token::native_mint::ID => Asset::SOL(numerator),
             mint => Asset::Token(mint, None, numerator),
         };
 
-        Ok(TokenValue {
-            numerator: vec![asset],
-            denominator,
-        })
+        token_value_to_update.numerator.clear();
+        token_value_to_update.numerator.reserve_exact(1);
+
+        token_value_to_update.numerator.extend([asset]);
+        token_value_to_update.denominator = denominator;
+
+        Ok(())
     }
 }
 
@@ -164,14 +168,82 @@ impl OrcaDEXLiquidityPoolValueProvider {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
+    use crate::utils::tests::MockAccountsDb;
+
     use super::*;
 
-    #[test]
-    fn test_math() {
-        let sqrt_price = 2 << 64;
-        assert_eq!(
-            OrcaDEXLiquidityPoolValueProvider.calculate_price_from_sqrt(sqrt_price),
-            [0, 0, 4]
+    // Min/Max sqrt_price to test
+    const MIN_SQRT_PRICE_X64: u128 = 1 << 48; // √p = 2^-16
+    const MAX_SQRT_PRICE_X64: u128 = 1 << 80; // √p = 2^16
+
+    proptest! {
+        #[test]
+        fn test_resolve_token_pricing_source(
+            sqrt_price in MIN_SQRT_PRICE_X64..MAX_SQRT_PRICE_X64,
+        ) {
+            run_test_with_params(sqrt_price);
+        }
+    }
+
+    fn run_test_with_params(sqrt_price: u128) {
+        let buffer = [0u8; 653];
+        let mut whirlpool = Whirlpool::try_deserialize_unchecked(&mut buffer.as_slice()).unwrap();
+        whirlpool.sqrt_price = sqrt_price;
+        let token_amount_a = 1_000_000_000;
+
+        let pool_address = Pubkey::new_unique();
+        let mut data = vec![];
+
+        whirlpool.token_mint_a = Pubkey::new_unique();
+        whirlpool.token_mint_b = spl_token::native_mint::ID;
+        whirlpool
+            .try_serialize(&mut data)
+            .expect("Failed to serialize data");
+
+        let mut accounts = MockAccountsDb::default();
+        accounts.add_or_update_accounts(pool_address, 0, data, whirlpool_cpi::whirlpool::ID, false);
+        accounts.run_with_accounts(
+            &[AccountMeta::new_readonly(pool_address, false)],
+            move |pricing_source_accounts| {
+                let mut token_value = TokenValue::default();
+                OrcaDEXLiquidityPoolValueProvider
+                    .resolve_underlying_assets(
+                        &mut token_value,
+                        &whirlpool.token_mint_a,
+                        &[&pricing_source_accounts[0]],
+                    )
+                    .expect("Failed to resolve underlying asset");
+
+                let numerator = token_value.numerator;
+                assert_eq!(numerator.len(), 1);
+                let Asset::SOL(numerator) = numerator[0] else {
+                    panic!("Asset must be SOL");
+                };
+
+                let sqrt_price_f64 = whirlpool.sqrt_price as f64 / (1u128 << 64) as f64;
+                let price_f64 = sqrt_price_f64 * sqrt_price_f64;
+
+                let denominator = token_value.denominator;
+                let resolved_token_amount_a_as_b =
+                    crate::utils::get_proportional_amount(token_amount_a, numerator, denominator)
+                        .expect("Arithmetic error");
+                let expected_token_amount_a_as_b = (token_amount_a as f64 * price_f64) as u64;
+                let diff = resolved_token_amount_a_as_b.abs_diff(expected_token_amount_a_as_b);
+                let error = if expected_token_amount_a_as_b == 0 {
+                    if diff == 0 {
+                        0f32
+                    } else {
+                        1f32
+                    }
+                } else {
+                    diff as f32 / expected_token_amount_a_as_b as f32
+                };
+
+                // Acceptance Criteria: price error within 2^-14 ~= 0.006%
+                assert!(error < 1e-14);
+            },
         );
     }
 }

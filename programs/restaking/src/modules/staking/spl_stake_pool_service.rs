@@ -615,11 +615,10 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         system_program: &Program<'info, System>,
     ) -> Result<()> {
         // if given stake_account has lamports, it means it's already initialized by spl_stake_pool, so it's already an active stake account
-        system_program.create_account(
+        system_program.initialize_account(
             stake_account,
-            stake_account_signer_seeds,
             payer,
-            payer_signer_seeds,
+            &[stake_account_signer_seeds, payer_signer_seeds],
             StakeStateV2::size_of(),
             Some(0u64),
             &solana_program::stake::program::ID,

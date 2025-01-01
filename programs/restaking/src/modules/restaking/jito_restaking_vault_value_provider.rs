@@ -13,22 +13,25 @@ impl TokenValueProvider for JitoRestakingVaultValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
+        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<TokenValue> {
+    ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let vault_account =
-            JitoRestakingVaultService::deserialize_vault(pricing_source_accounts[0])?;
-        require_keys_eq!(vault_account.vrt_mint, *token_mint);
+        let vault = JitoRestakingVaultService::deserialize_vault(pricing_source_accounts[0])?;
+        require_keys_eq!(vault.vrt_mint, *token_mint);
 
-        Ok(TokenValue {
-            numerator: vec![Asset::Token(
-                vault_account.supported_mint,
-                None,
-                vault_account.tokens_deposited(),
-            )],
-            denominator: vault_account.vrt_supply(),
-        })
+        token_value_to_update.numerator.clear();
+        token_value_to_update.numerator.reserve_exact(1);
+
+        token_value_to_update.numerator.extend([Asset::Token(
+            vault.supported_mint,
+            None,
+            vault.tokens_deposited(),
+        )]);
+        token_value_to_update.denominator = vault.vrt_supply();
+
+        Ok(())
     }
 }

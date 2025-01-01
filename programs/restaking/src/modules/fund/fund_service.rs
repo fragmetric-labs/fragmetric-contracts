@@ -8,7 +8,7 @@ use std::cell::RefMut;
 use std::cmp::min;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenPricingSource};
+use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
 use crate::modules::reward;
 use crate::modules::reward::RewardService;
 use crate::utils::*;
@@ -48,10 +48,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     }
 
     // create a pricing service and register fund assets' value resolver
-    pub fn new_pricing_service(
+    pub(in crate::modules) fn new_pricing_service<I>(
         &mut self,
-        pricing_sources: impl IntoIterator<Item = &'info AccountInfo<'info>>,
-    ) -> Result<PricingService<'info>> {
+        pricing_sources: I,
+    ) -> Result<PricingService<'info>>
+    where
+        I: IntoIterator<Item = &'info AccountInfo<'info>>,
+        I::IntoIter: ExactSizeIterator,
+    {
         let mut pricing_service = PricingService::new(pricing_sources)?
             .register_token_pricing_source_account(self.fund_account.as_account_info());
 
@@ -168,9 +172,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
             )?;
 
+            let mut receipt_token_value = TokenValue::default();
             pricing_service
-                .get_token_total_value_as_atomic(receipt_token_mint_key)?
-                .serialize_as_pod(&mut fund_account.receipt_token_value)?;
+                .update_token_value_summary(receipt_token_mint_key, &mut receipt_token_value)?;
+            receipt_token_value.serialize_as_pod(&mut fund_account.receipt_token_value)?;
 
             fund_account.receipt_token_value_updated_slot = self.current_slot;
 
@@ -765,9 +770,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     );
                 require_keys_eq!(uninitialized_batch_account.key(), batch_account_address);
                 let mut batch_account = {
-                    system_program.create_account(
+                    system_program.initialize_account(
                         uninitialized_batch_account,
-                        FundWithdrawalBatchAccount::get_seeds(
+                        operator,
+                        &[FundWithdrawalBatchAccount::get_seeds(
                             &self.receipt_token_mint.key(),
                             supported_token_mint_key.as_ref(),
                             batch.batch_id,
@@ -775,9 +781,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         .iter()
                         .map(Vec::as_slice)
                         .collect::<Vec<_>>()
-                        .as_slice(),
-                        operator,
-                        &[],
+                        .as_slice()],
                         8 + FundWithdrawalBatchAccount::INIT_SPACE,
                         None,
                         &crate::ID,
