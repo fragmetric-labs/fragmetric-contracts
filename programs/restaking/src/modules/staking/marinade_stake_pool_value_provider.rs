@@ -1,10 +1,8 @@
 use anchor_lang::prelude::*;
-use marinade_cpi::state::State;
 
-use crate::constants::*;
-use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
-use crate::modules::staking::MarinadeStakePoolService;
+
+use super::MarinadeStakePoolService;
 
 pub struct MarinadeStakePoolValueProvider;
 

@@ -1,15 +1,13 @@
-use anchor_lang::{prelude::*, solana_program};
-use anchor_spl::{
-    token::Token,
-    token_interface::{Mint, TokenAccount},
-};
-use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
+use marinade_cpi::marinade::accounts::{State, TicketAccountData};
+use marinade_cpi::marinade::program::MarinadeFinance;
 
-use crate::constants::{DEVNET_MSOL_MINT_ADDRESS, MAINNET_MSOL_MINT_ADDRESS};
-use crate::utils::AccountInfoExt;
-use crate::{errors, utils::SystemProgramExt};
+use crate::utils::{AccountInfoExt, SystemProgramExt};
 
-pub struct MarinadeStakePoolService<'info> {
+pub(in crate::modules) struct MarinadeStakePoolService<'info> {
     marinade_stake_pool_program: Program<'info, MarinadeFinance>,
     pool_account: Account<'info, State>,
     pool_token_mint: InterfaceAccount<'info, Mint>,
@@ -26,6 +24,9 @@ impl<'info> MarinadeStakePoolService<'info> {
     ) -> Result<Self> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
+        require_keys_eq!(pool_account.msol_mint, pool_token_mint.key());
+        require_keys_eq!(*pool_token_mint.owner, *pool_token_program.key);
+
         Ok(Self {
             pool_account,
             marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
@@ -34,73 +35,140 @@ impl<'info> MarinadeStakePoolService<'info> {
         })
     }
 
+    #[inline(always)]
     pub(super) fn deserialize_pool_account(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Account<'info, State>> {
-        let pool_account = Account::<State>::try_from(pool_account)?;
-        #[cfg(feature = "devnet")]
-        require_eq!(pool_account.msol_mint, DEVNET_MSOL_MINT_ADDRESS);
-        #[cfg(not(feature = "devnet"))]
-        require_eq!(pool_account.msol_mint, MAINNET_MSOL_MINT_ADDRESS);
-
-        Ok(pool_account)
+        Account::try_from(pool_account)
     }
 
-    fn find_pool_account_derived_address(
-        pool_account: &AccountInfo,
+    #[inline(always)]
+    fn deserialize_withdrawal_ticket_account(
+        withdrawal_ticket_account: &'info AccountInfo<'info>,
+    ) -> Result<Account<'info, TicketAccountData>> {
+        Account::try_from(withdrawal_ticket_account)
+    }
+
+    fn find_pool_account_derived_address<'a>(
+        pool_account: &impl AsRef<AccountInfo<'a>>,
         seed: &'static [u8],
     ) -> Pubkey {
-        Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
+        Pubkey::find_program_address(
+            &[pool_account.as_ref().key.as_ref(), seed],
+            &marinade_cpi::marinade::ID,
+        )
+        .0
     }
 
-    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program]
-    fn find_accounts_to_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
-        vec![
-            (marinade_cpi::ID, false),
+    /// * pool_reserve_account(writable)
+    fn find_pool_reserve_account_meta<'a>(
+        pool_account: &impl AsRef<AccountInfo<'a>>,
+    ) -> (Pubkey, bool) {
+        (
+            Self::find_pool_account_derived_address(pool_account, b"reserve"),
+            true,
+        )
+    }
+
+    /// * pool_program
+    /// * pool_account(writable)
+    /// * pool_token_mint(writable)
+    /// * pool_token_program
+    fn find_accounts_to_new(pool_account: &Account<State>) -> [(Pubkey, bool); 4] {
+        [
+            (marinade_cpi::marinade::ID, false),
             (pool_account.key(), true),
             (pool_account.msol_mint, true),
             (Token::id(), false),
-            (System::id(), false),
         ]
     }
 
-    /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority]
+    /// * (0) pool_program
+    /// * (1) pool_account(writable)
+    /// * (2) pool_token_mint(writable)
+    /// * (3) pool_token_program
+    /// * (4) liq_pool_sol_leg(writable)
+    /// * (5) liq_pool_mint_leg(wirtable)
+    /// * (6) liq_pool_mint_leg_authority
+    /// * (7) pool_reserve_account(writable)
+    /// * (8) pool_token_mint_authority
     #[inline(never)]
     pub fn find_accounts_to_deposit_sol(
         pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
-        let mut accounts = Self::find_accounts_to_new(&pool_account);
-        accounts.extend([
-            // liq_pool_sol_leg
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let pool_account = &Self::deserialize_pool_account(pool_account)?;
+
+        let accounts = Self::find_accounts_to_new(pool_account).into_iter().chain([
+            // liq_pool_sol_leg(writable)
             (
-                Self::find_pool_account_derived_address(pool_account.as_ref(), b"liq_sol"),
+                Self::find_pool_account_derived_address(pool_account, b"liq_sol"),
                 true,
             ),
-            // liq_pool_mint_leg
+            // liq_pool_mint_leg(writable)
             (pool_account.liq_pool.msol_leg, true),
             // liq_pool_mint_leg_authority
             (
-                Self::find_pool_account_derived_address(
-                    pool_account.as_ref(),
-                    b"liq_st_sol_authority",
-                ),
+                Self::find_pool_account_derived_address(pool_account, b"liq_st_sol_authority"),
                 false,
             ),
-            // pool_reserve
-            Self::find_pool_reserve_account_meta(pool_account.as_ref()),
-            // pool_mint_authority
+            // pool_reserve(writable)
+            Self::find_pool_reserve_account_meta(pool_account),
+            // pool_token_mint_authority
             (
-                Self::find_pool_account_derived_address(pool_account.as_ref(), b"st_mint"),
+                Self::find_pool_account_derived_address(pool_account, b"st_mint"),
                 false,
             ),
         ]);
+
         Ok(accounts)
     }
 
-    pub fn get_min_deposit_sol_amount(pool_account: &'info AccountInfo<'info>) -> Result<u64> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
-        Ok(pool_account.min_deposit)
+    /// * (0) pool_program
+    /// * (1) pool_account(writable)
+    /// * (2) pool_token_mint(writable)
+    /// * (3) pool_token_program
+    /// * (4) sysvar clock
+    /// * (5) sysvar rent
+    #[inline(never)]
+    pub fn find_accounts_to_order_unstake<I>(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let pool_account = &Self::deserialize_pool_account(pool_account)?;
+
+        let accounts = Self::find_accounts_to_new(pool_account).into_iter().chain([
+            // sysvar clock
+            (solana_program::sysvar::clock::ID, false),
+            // sysvar rent
+            (solana_program::sysvar::rent::ID, false),
+        ]);
+
+        Ok(accounts)
+    }
+
+    /// * (0) pool_program
+    /// * (1) pool_account(writable)
+    /// * (2) pool_token_mint(writable)
+    /// * (3) pool_token_program
+    /// * (4) pool_reserve_account(writable)
+    /// * (5) sysvar clock
+    #[inline(never)]
+    pub fn find_accounts_to_claim<I>(
+        pool_account: &'info AccountInfo<'info>,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let pool_account = &Self::deserialize_pool_account(pool_account)?;
+
+        let accounts = Self::find_accounts_to_new(pool_account).into_iter().chain([
+            // pool_reserve_account(writable)
+            Self::find_pool_reserve_account_meta(pool_account),
+            // sysvar clock
+            (solana_program::sysvar::clock::ID, false),
+        ]);
+
+        Ok(accounts)
+    }
+
+    pub fn get_min_deposit_sol_amount(&self) -> u64 {
+        self.pool_account.min_deposit
     }
 
     /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
@@ -112,13 +180,13 @@ impl<'info> MarinadeStakePoolService<'info> {
         liq_pool_sol_leg: &AccountInfo<'info>,
         liq_pool_token_leg: &AccountInfo<'info>,
         liq_pool_token_leg_authority: &AccountInfo<'info>,
-        pool_reserve: &AccountInfo<'info>,
+        pool_reserve_account: &AccountInfo<'info>,
         pool_token_mint_authority: &AccountInfo<'info>,
 
         // variant
-        from_sol_account: &AccountInfo<'info>,
         to_pool_token_account: &'info AccountInfo<'info>,
-        from_sol_account_seeds: &[&[u8]],
+        from_sol_account: &AccountInfo<'info>,
+        from_sol_account_seeds: &[&[&[u8]]],
 
         sol_amount: u64,
     ) -> Result<(u64, u64, u64)> {
@@ -126,23 +194,23 @@ impl<'info> MarinadeStakePoolService<'info> {
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
 
-        marinade_cpi::cpi::deposit(
+        marinade_cpi::marinade::cpi::deposit(
             CpiContext::new_with_signer(
                 self.marinade_stake_pool_program.to_account_info(),
-                marinade_cpi::cpi::accounts::Deposit {
+                marinade_cpi::marinade::cpi::accounts::Deposit {
                     state: self.pool_account.to_account_info(),
                     msol_mint: self.pool_token_mint.to_account_info(),
-                    liq_pool_sol_leg_pda: liq_pool_sol_leg.clone(),
-                    liq_pool_msol_leg: liq_pool_token_leg.clone(),
-                    liq_pool_msol_leg_authority: liq_pool_token_leg_authority.clone(),
-                    reserve_pda: pool_reserve.clone(),
-                    transfer_from: from_sol_account.clone(),
+                    liq_pool_sol_leg_pda: liq_pool_sol_leg.to_account_info(),
+                    liq_pool_msol_leg: liq_pool_token_leg.to_account_info(),
+                    liq_pool_msol_leg_authority: liq_pool_token_leg_authority.to_account_info(),
+                    reserve_pda: pool_reserve_account.to_account_info(),
+                    transfer_from: from_sol_account.to_account_info(),
                     mint_to: to_pool_token_account.to_account_info(),
-                    msol_mint_authority: pool_token_mint_authority.clone(),
+                    msol_mint_authority: pool_token_mint_authority.to_account_info(),
                     system_program: system_program.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
-                &[from_sol_account_seeds],
+                from_sol_account_seeds,
             ),
             sol_amount,
         )?;
@@ -186,125 +254,89 @@ impl<'info> MarinadeStakePoolService<'info> {
         &mut self,
         // fixed
         system_program: &Program<'info, System>,
-
-        new_ticket_account: &'info AccountInfo<'info>,
-        new_ticket_account_seeds: &[&[u8]],
         clock: &AccountInfo<'info>,
         rent: &AccountInfo<'info>,
 
         // variant
-        ticket_account_rent_payer: &Signer<'info>,
+        new_withdrawal_ticket_account: &'info AccountInfo<'info>,
+        new_withdrawal_ticket_account_seeds: &[&[&[u8]]],
+        new_withdrawal_ticket_account_rent_payer: &Signer<'info>,
         from_pool_token_account: &AccountInfo<'info>,
-        from_pool_token_account_authority: &AccountInfo<'info>,
-        from_pool_token_account_authority_seeds: &[&[u8]],
+        from_pool_token_account_signer: &AccountInfo<'info>,
+        from_pool_token_account_signer_seeds: &[&[&[u8]]],
 
         token_amount: u64,
     ) -> Result<u64> {
-        self.create_ticket_account(
-            system_program,
-            ticket_account_rent_payer,
-            new_ticket_account,
-            new_ticket_account_seeds,
+        system_program.initialize_account(
+            new_withdrawal_ticket_account,
+            new_withdrawal_ticket_account_rent_payer, // already signer so we don't need signer seeds
+            new_withdrawal_ticket_account_seeds,
+            8 + std::mem::size_of::<TicketAccountData>(),
+            None,
+            &marinade_cpi::marinade::ID,
         )?;
 
-        marinade_cpi::cpi::order_unstake(
+        marinade_cpi::marinade::cpi::order_unstake(
             CpiContext::new_with_signer(
                 self.marinade_stake_pool_program.to_account_info(),
-                marinade_cpi::cpi::accounts::OrderUnstake {
+                marinade_cpi::marinade::cpi::accounts::OrderUnstake {
                     state: self.pool_account.to_account_info(),
                     msol_mint: self.pool_token_mint.to_account_info(),
                     burn_msol_from: from_pool_token_account.to_account_info(),
-                    burn_msol_authority: from_pool_token_account_authority.to_account_info(),
-                    new_ticket_account: new_ticket_account.to_account_info(),
+                    burn_msol_authority: from_pool_token_account_signer.to_account_info(),
+                    new_ticket_account: new_withdrawal_ticket_account.to_account_info(),
                     clock: clock.to_account_info(),
                     rent: rent.to_account_info(),
                     token_program: self.pool_token_program.to_account_info(),
                 },
-                &[from_pool_token_account_authority_seeds],
+                from_pool_token_account_signer_seeds,
             ),
             token_amount,
         )?;
 
-        let ticket_account = Account::<TicketAccountData>::try_from(new_ticket_account)?;
-        Ok(ticket_account.lamports_amount)
+        let withdrawal_ticket_account =
+            Self::deserialize_withdrawal_ticket_account(new_withdrawal_ticket_account)?;
+        Ok(withdrawal_ticket_account.lamports_amount)
     }
 
-    #[inline(never)]
-    pub fn is_claimable_ticket_account(
-        &self,
-        clock: &AccountInfo<'info>,
-        ticket_account: &'info AccountInfo<'info>,
-        reserve_pda: &'info AccountInfo<'info>,
-    ) -> Result<bool> {
-        if !ticket_account.is_initialized() {
-            return Ok(false);
-        }
-
-        let clock = Clock::from_account_info(clock)?;
-        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
-
-        if clock.epoch < ticket_account.created_epoch + 1 {
-            return Ok(false);
-        } else if clock.epoch == ticket_account.created_epoch + 1
-            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
-        {
-            return Ok(false);
-        }
-
-        if ticket_account.lamports_amount
-            > reserve_pda.lamports() - self.pool_account.rent_exempt_for_token_acc
-        {
-            return Ok(false);
-        }
-
-        Ok(true)
-    }
-
-    fn create_ticket_account(
-        &self,
-        system_program: &Program<'info, System>,
-
-        ticket_account_rent_payer: &Signer<'info>,
-        new_ticket_account: &AccountInfo<'info>,
-        new_ticket_account_seeds: &[&[u8]],
-    ) -> Result<()> {
-        let space = 8 + std::mem::size_of::<TicketAccountData>();
-        system_program.initialize_account(
-            new_ticket_account,
-            ticket_account_rent_payer,
-            &[new_ticket_account_seeds],
-            space,
-            None,
-            &crate::ID,
-        )
-    }
-
-    /// returns unstaked_sol_amount
+    /// returns [unstaked_sol_amount, deducted_sol_fee_amount]
     #[inline(never)]
     pub fn claim(
         &mut self,
+        // fixed
         system_program: &Program<'info, System>,
-
-        pool_reserve_account: &'info AccountInfo<'info>,
+        pool_reserve_account: &AccountInfo<'info>,
         clock: &AccountInfo<'info>,
-        ticket_account: &'info AccountInfo<'info>,
 
+        // variant
+        withdrawal_ticket_account: &'info AccountInfo<'info>,
+        withdrawal_ticket_account_rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
         to_sol_account: &AccountInfo<'info>,
-        to_sol_account_seeds: &[&[u8]],
-        rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
-    ) -> Result<u64> {
-        let ticket_account = Account::<TicketAccountData>::try_from(ticket_account)?;
-        let ticket_account_rent = ticket_account.get_lamports();
-        let unstaked_sol_amount = ticket_account.lamports_amount;
+        to_sol_account_seeds: &[&[&[u8]]],
+    ) -> Result<(u64, u64)> {
+        let withdrawal_ticket_account =
+            &Self::deserialize_withdrawal_ticket_account(withdrawal_ticket_account)?;
 
-        marinade_cpi::cpi::claim(CpiContext::new(
+        // Withdrawal ticket is not claimable yet
+        if self.is_withdrawal_ticket_claimable(
+            pool_reserve_account,
+            clock,
+            withdrawal_ticket_account,
+        )? {
+            return Ok((0, 0));
+        }
+
+        let withdrawal_ticket_account_rent = withdrawal_ticket_account.get_lamports();
+        let unstaked_sol_amount = withdrawal_ticket_account.lamports_amount;
+
+        marinade_cpi::marinade::cpi::claim(CpiContext::new(
             self.marinade_stake_pool_program.to_account_info(),
-            marinade_cpi::cpi::accounts::Claim {
+            marinade_cpi::marinade::cpi::accounts::Claim {
                 state: self.pool_account.to_account_info(),
-                reserve_pda: pool_reserve_account.clone(),
-                ticket_account: ticket_account.to_account_info(),
-                transfer_sol_to: to_sol_account.clone(),
-                clock: clock.clone(),
+                reserve_pda: pool_reserve_account.to_account_info(),
+                ticket_account: withdrawal_ticket_account.to_account_info(),
+                transfer_sol_to: to_sol_account.to_account_info(),
+                clock: clock.to_account_info(),
                 system_program: system_program.to_account_info(),
             },
         ))?;
@@ -314,62 +346,45 @@ impl<'info> MarinadeStakePoolService<'info> {
                 system_program.to_account_info(),
                 anchor_lang::system_program::Transfer {
                     from: to_sol_account.to_account_info(),
-                    to: rent_refund_account.to_account_info(),
+                    to: withdrawal_ticket_account_rent_refund_account.to_account_info(),
                 },
-                &[to_sol_account_seeds],
+                to_sol_account_seeds,
             ),
-            ticket_account_rent,
+            withdrawal_ticket_account_rent,
         )?;
 
-        Ok(unstaked_sol_amount)
+        let deducted_sol_fee_amount = 0;
+
+        Ok((unstaked_sol_amount, deducted_sol_fee_amount))
     }
 
-    #[inline(never)]
-    pub fn find_accounts_to_order_unstake(
-        pool_account: &'info AccountInfo<'info>,
-        ticket_account: &AccountInfo,
-    ) -> Result<Vec<(Pubkey, bool)>> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
-        let mut accounts = Self::find_accounts_to_new(&pool_account);
-        accounts.extend([
-            // new_ticket_account
-            (ticket_account.key(), true),
-            // clock
-            (solana_program::sysvar::clock::ID, false),
-            // rent
-            (solana_program::sysvar::rent::ID, false),
-        ]);
-        Ok(accounts)
-    }
+    fn is_withdrawal_ticket_claimable(
+        &self,
+        pool_reserve_account: &AccountInfo,
+        clock: &AccountInfo,
+        withdrawal_ticket_account: &Account<TicketAccountData>,
+    ) -> Result<bool> {
+        let clock = Clock::from_account_info(clock)?;
 
-    #[inline(never)]
-    pub fn find_accounts_to_claim<'a>(
-        pool_account_info: &'info AccountInfo<'info>,
-        ticket_accounts: impl IntoIterator<Item = &'a AccountInfo<'info>>,
-    ) -> Result<Vec<(Pubkey, bool)>>
-    where
-        'info: 'a,
-    {
-        let pool_account = Account::<State>::try_from(pool_account_info)?;
-        let mut accounts = Self::find_accounts_to_new(&pool_account);
-        accounts.extend([
-            // pool_reserve
-            Self::find_pool_reserve_account_meta(pool_account.as_ref()),
-            // clock
-            (solana_program::sysvar::clock::ID, false),
-        ]);
-        accounts.extend(
-            ticket_accounts
-                .into_iter()
-                .map(|account| (account.key(), true)),
-        );
-        Ok(accounts)
-    }
+        // At least one epoch should pass.
+        if clock.epoch < withdrawal_ticket_account.created_epoch + 1 {
+            return Ok(false);
+        }
 
-    fn find_pool_reserve_account_meta(pool_account: &AccountInfo) -> (Pubkey, bool) {
-        (
-            Self::find_pool_account_derived_address(pool_account, b"reserve"),
-            true,
-        )
+        // Even when one epoch has passed, additional 30 min should pass.
+        if clock.epoch == withdrawal_ticket_account.created_epoch + 1
+            && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
+        {
+            return Ok(false);
+        }
+
+        // There should be enough lamports in pool reserve account.
+        if withdrawal_ticket_account.lamports_amount
+            > pool_reserve_account.lamports() - self.pool_account.rent_exempt_for_token_acc
+        {
+            return Ok(false);
+        }
+
+        Ok(true)
     }
 }

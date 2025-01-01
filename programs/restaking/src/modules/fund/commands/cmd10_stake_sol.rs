@@ -139,39 +139,41 @@ impl SelfExecutable for StakeSOLCommand {
                         ),
                     ];
 
-                    required_accounts.extend(
-                        match supported_token.pricing_source.try_deserialize()? {
-                            Some(TokenPricingSource::SPLStakePool { address }) => {
-                                let [pool_account, _remaining_accounts @ ..] = accounts else {
-                                    err!(ErrorCode::AccountNotEnoughKeys)?
-                                };
-                                require_keys_eq!(address, pool_account.key());
+                    match supported_token.pricing_source.try_deserialize()? {
+                        Some(TokenPricingSource::SPLStakePool { address }) => {
+                            let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+                            require_keys_eq!(address, pool_account.key());
 
-                                <SPLStakePoolService>::find_accounts_to_deposit_sol(pool_account)?
-                            }
-                            Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                                let [pool_account, _remaining_accounts @ ..] = accounts else {
-                                    err!(ErrorCode::AccountNotEnoughKeys)?
-                                };
-                                require_keys_eq!(address, pool_account.key());
+                            required_accounts.extend(
+                                <SPLStakePoolService>::find_accounts_to_deposit_sol(pool_account)?,
+                            );
+                        }
+                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                            let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+                            require_keys_eq!(address, pool_account.key());
 
+                            required_accounts.extend(
                                 MarinadeStakePoolService::find_accounts_to_deposit_sol(
                                     pool_account,
-                                )?
-                            }
-                            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
-                                let [pool_account, _remaining_accounts @ ..] = accounts else {
-                                    err!(ErrorCode::AccountNotEnoughKeys)?
-                                };
-                                require_keys_eq!(address, pool_account.key());
+                                )?,
+                            );
+                        }
+                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
+                            let [pool_account, _remaining_accounts @ ..] = accounts else {
+                                err!(ErrorCode::AccountNotEnoughKeys)?
+                            };
+                            require_keys_eq!(address, pool_account.key());
 
-                                SanctumSingleValidatorSPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?
-                            }
-                            _ => err!(
-                                errors::ErrorCode::FundOperationCommandExecutionFailedException
-                            )?,
-                        },
-                    );
+                            required_accounts.extend(SanctumSingleValidatorSPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?);
+                        }
+                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    }
 
                     return Ok((
                         None,
@@ -238,17 +240,22 @@ impl SelfExecutable for StakeSOLCommand {
                             ))
                         }
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, _remaining_accounts @ ..] =
+                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, pool_account.key());
 
+                            let mut marinade_stake_pool_service = MarinadeStakePoolService::new(
+                                pool_program,
+                                pool_account,
+                                pool_token_mint,
+                                pool_token_program,
+                            )?;
+
                             if item.allocated_sol_amount
-                                < MarinadeStakePoolService::get_min_deposit_sol_amount(
-                                    pool_account,
-                                )?
+                                < marinade_stake_pool_service.get_min_deposit_sol_amount()
                             {
                                 None
                             } else {
@@ -257,22 +264,16 @@ impl SelfExecutable for StakeSOLCommand {
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
                                     deducted_sol_fee_amount,
-                                ) = MarinadeStakePoolService::new(
-                                    pool_program,
-                                    pool_account,
-                                    pool_token_mint,
-                                    pool_token_program,
-                                )?
-                                .deposit_sol(
+                                ) = marinade_stake_pool_service.deposit_sol(
                                     ctx.system_program,
                                     liq_pool_sol_leg,
                                     liq_pool_token_leg,
                                     liq_pool_token_leg_authority,
                                     pool_reserve,
                                     pool_token_mint_authority,
-                                    fund_reserve_account,
                                     fund_supported_token_reserve_account,
-                                    &fund_account.get_reserve_account_seeds(),
+                                    fund_reserve_account,
+                                    &[&fund_account.get_reserve_account_seeds()],
                                     item.allocated_sol_amount,
                                 )?;
 
