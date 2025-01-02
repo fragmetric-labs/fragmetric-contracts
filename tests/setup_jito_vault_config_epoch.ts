@@ -1,11 +1,10 @@
 import fs from "fs";
 import path from "path";
-import * as anchor from "@coral-xyz/anchor";
 
 /// File running command: npx tsx tests/setup_jito_vault_config_epoch.ts
 
 const DISCRIMINATOR_LENGTH = 8;
-const ConfigType = {
+const JitoVaultConfigType = {
     admin: 32, // Pubkey
     restakingProgram: 32, // Pubkey
     epochLength: 8, // PodU64
@@ -52,13 +51,13 @@ const setupJitoVaultConfigEpoch = () => {
         const jitoVaultConfig = JSON.parse(jitoVaultConfigRaw);
         const data = Uint8Array.from(Buffer.from(jitoVaultConfig["account"]["data"][0], "base64"));
 
-        let targetOffset = DISCRIMINATOR_LENGTH + ConfigType.admin;
-        targetOffset = targetOffset + ConfigType.restakingProgram;
+        let targetOffset = DISCRIMINATOR_LENGTH + JitoVaultConfigType.admin;
+        targetOffset = targetOffset + JitoVaultConfigType.restakingProgram;
 
         let epochData = parsePod(64, data, targetOffset);
         console.log(`[Before] ${filename} epoch length ${epochData}`);
 
-        const newEpochLength = convertNumberToUint8Array(ConfigType.epochLength, Number(targetEpochLength));
+        const newEpochLength = convertNumberToUint8Array(JitoVaultConfigType.epochLength, Number(targetEpochLength));
 
         for (let i = 0; i < newEpochLength.length; i++) {
             data[targetOffset + i] = newEpochLength[i];
