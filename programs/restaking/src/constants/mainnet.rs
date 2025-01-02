@@ -29,7 +29,7 @@ pub const JITO_VAULT_CONFIG_ADDRESS: Pubkey =
 // receipt token: fragSOL
 ////////////////////////////////////////////
 
-// TODO/v0.3: replace ALT address after creation
+// TODO v0.3: replace ALT address after creation
 #[constant]
 pub const FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
     pubkey!("G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc");

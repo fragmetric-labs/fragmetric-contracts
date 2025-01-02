@@ -1133,7 +1133,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerInitializeFundJitoRestakingVault() {
         await this.run({
             instructions: [
-                // TODO v0.3/restaking: adjust authority of fee wallet
+                // TODO v0.4/restaking: adjust authority of fee wallet
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLJitoVaultFeeWalletTokenAccount,

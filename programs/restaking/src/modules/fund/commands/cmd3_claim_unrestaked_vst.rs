@@ -334,7 +334,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             //     None => {
                             //         let fund_account = ctx.fund_account.load()?;
                             //         let normalized_token =
-                            //             fund_account.get_normalized_token().unwrap(); // TODO ... fix it
+                            //             fund_account.get_normalized_token().unwrap(); // TODO: ... fix it
                             //
                             //         let normalized_token_pool_address =
                             //             NormalizedTokenPoolAccount::find_account_address_by_token_mint(

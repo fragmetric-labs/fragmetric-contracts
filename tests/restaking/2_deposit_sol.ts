@@ -40,7 +40,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
         const res1 = await restaking.runUserDepositSOL(user1, amount, null);
 
 
-        // TODO/v0.4: do deposit test also with pricing changes like below ... currently it break other tests
+        // TODO v0.4: do deposit test also with pricing changes like below ... currently it break other tests
         // await restaking.tryAirdrop(restaking.keychain.wallet.publicKey, new BN(10**9));
         // const resX1 = await restaking.runOperatorDonateSOLToFund(restaking.keychain.wallet, new BN(10**9));
         // console.log(resX1.event);

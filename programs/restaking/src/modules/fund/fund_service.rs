@@ -547,7 +547,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         uninitialized_withdrawal_batch_accounts: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
-        _receipt_token_amount_to_return: u64, // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
+        _receipt_token_amount_to_return: u64, // TODO v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
 
         pricing_service: &PricingService,
     ) -> Result<(u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {

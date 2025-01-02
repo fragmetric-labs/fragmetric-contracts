@@ -130,7 +130,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     /// * (4) sysvar clock
     /// * (5) sysvar rent
     #[inline(never)]
-    pub fn find_accounts_to_order_unstake<I>(
+    pub fn find_accounts_to_order_unstake(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let pool_account = &Self::deserialize_pool_account(pool_account)?;

@@ -42,7 +42,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                 }
                 .into(),
             ),
-            // TODO/v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
+            // TODO v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
             Some(ProcessWithdrawalBatchCommand::default().without_required_accounts()),
         ))
     }
