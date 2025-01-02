@@ -51,8 +51,7 @@ const setupJitoVaultConfigEpoch = () => {
         const jitoVaultConfig = JSON.parse(jitoVaultConfigRaw);
         const data = Uint8Array.from(Buffer.from(jitoVaultConfig["account"]["data"][0], "base64"));
 
-        let targetOffset = DISCRIMINATOR_LENGTH + JitoVaultConfigType.admin;
-        targetOffset = targetOffset + JitoVaultConfigType.restakingProgram;
+        const targetOffset = DISCRIMINATOR_LENGTH + JitoVaultConfigType.admin + JitoVaultConfigType.restakingProgram;
 
         let epochData = parsePod(64, data, targetOffset);
         console.log(`[Before] ${filename} epoch length ${epochData}`);
