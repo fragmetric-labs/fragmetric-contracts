@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use marinade_cpi::marinade::accounts::{State, TicketAccountData};
 use marinade_cpi::marinade::program::MarinadeFinance;
 
-use crate::utils::{AccountInfoExt, SystemProgramExt};
+use crate::utils::SystemProgramExt;
 
 pub(in crate::modules) struct MarinadeStakePoolService<'info> {
     marinade_stake_pool_program: Program<'info, MarinadeFinance>,
@@ -306,6 +306,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok((unstaking_sol_amount, deducted_sol_fee_amount))
     }
 
+    /// When ticket beneficiary is a program owned account, you don't need seeds.
+    ///
     /// returns [claimed_sol_amount]
     #[inline(never)]
     pub fn claim_sol(
@@ -316,16 +318,17 @@ impl<'info> MarinadeStakePoolService<'info> {
         clock: &AccountInfo<'info>,
 
         // variant
+        to_sol_account: &AccountInfo<'info>,
         withdrawal_ticket_account: &'info AccountInfo<'info>,
         withdrawal_ticket_account_rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
-        to_sol_account: &AccountInfo<'info>,
-        to_sol_account_seeds: &[&[&[u8]]],
+        withdrawal_ticket_account_beneficiary: &AccountInfo<'info>,
+        withdrawal_ticket_account_beneficiary_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
         let withdrawal_ticket_account =
             &Self::deserialize_withdrawal_ticket_account(withdrawal_ticket_account)?;
 
         // Withdrawal ticket is not claimable yet
-        if self.is_withdrawal_ticket_claimable(
+        if !self.is_withdrawal_ticket_claimable(
             pool_reserve_account,
             &Clock::from_account_info(clock)?,
             withdrawal_ticket_account,
@@ -334,6 +337,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         }
 
         let to_sol_account_amount_before = to_sol_account.lamports();
+        let withdrawal_ticket_account_beneficiary_amount_before =
+            withdrawal_ticket_account_beneficiary.lamports();
         let withdrawal_ticket_account_rent = withdrawal_ticket_account.get_lamports();
         let unstaked_sol_amount = withdrawal_ticket_account.lamports_amount;
 
@@ -343,28 +348,36 @@ impl<'info> MarinadeStakePoolService<'info> {
                 state: self.pool_account.to_account_info(),
                 reserve_pda: pool_reserve_account.to_account_info(),
                 ticket_account: withdrawal_ticket_account.to_account_info(),
-                transfer_sol_to: to_sol_account.to_account_info(),
+                transfer_sol_to: withdrawal_ticket_account_beneficiary.to_account_info(),
                 clock: clock.to_account_info(),
                 system_program: system_program.to_account_info(),
             },
         ))?;
 
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: to_sol_account.to_account_info(),
-                    to: withdrawal_ticket_account_rent_refund_account.to_account_info(),
-                },
-                to_sol_account_seeds,
-            ),
+        system_program.transfer_sol(
+            withdrawal_ticket_account_beneficiary,
+            withdrawal_ticket_account_beneficiary_seeds,
+            to_sol_account,
+            unstaked_sol_amount,
+        )?;
+
+        system_program.transfer_sol(
+            withdrawal_ticket_account_beneficiary,
+            withdrawal_ticket_account_beneficiary_seeds,
+            withdrawal_ticket_account_rent_refund_account,
             withdrawal_ticket_account_rent,
         )?;
 
         let to_sol_account_amount = to_sol_account.lamports();
+        let withdrawal_ticket_account_beneficiary_amount =
+            withdrawal_ticket_account_beneficiary.lamports();
         let claimed_sol_amount = to_sol_account_amount - to_sol_account_amount_before;
 
         require_eq!(claimed_sol_amount, unstaked_sol_amount);
+        require_eq!(
+            withdrawal_ticket_account_beneficiary_amount,
+            withdrawal_ticket_account_beneficiary_amount_before
+        );
 
         msg!(
             "CLAIM#marinade: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",

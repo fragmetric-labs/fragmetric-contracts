@@ -5,9 +5,9 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 
 use super::{
-    FundService, NormalizeSTCommand, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable, SupportedToken,
-    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundService, NormalizeSTCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
+    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -246,20 +246,52 @@ impl StakeSOLCommand {
                 )?,
             ),
             _ => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-        };
+        }
+        .map(
+            |(to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount)| {
+                // Update fund account
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
+                fund_account.sol.operation_receivable_amount += deducted_sol_fee_amount;
+
+                let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
+                supported_token.token.operation_reserved_amount += minted_pool_token_amount;
+
+                // Validation
+                require_gte!(
+                    to_pool_token_account_amount,
+                    supported_token.token.get_total_reserved_amount(),
+                );
+
+                Ok(StakeSOLCommandResult {
+                    token_mint: item.token_mint,
+                    staked_sol_amount: item.allocated_sol_amount,
+                    deducted_sol_fee_amount,
+                    minted_token_amount: minted_pool_token_amount,
+                    operation_reserved_token_amount: supported_token
+                        .token
+                        .operation_reserved_amount,
+                    operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
+                    operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
+                }
+                .into())
+            },
+        )
+        .transpose()?;
 
         // prepare state does not require additional accounts,
         // so we can execute directly.
         self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
     }
 
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     fn spl_stake_pool_deposit_sol<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
-    ) -> Result<OperationCommandResult> {
+    ) -> Result<(u64, u64, u64)> {
         let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, ..] =
             accounts
         else {
@@ -306,39 +338,21 @@ impl StakeSOLCommand {
         let deducted_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, deducted_pool_token_fee_amount)?;
 
-        // Update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
-        fund_account.sol.operation_receivable_amount += deducted_sol_fee_amount;
-
-        let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-        supported_token.token.operation_reserved_amount += minted_pool_token_amount;
-
-        // validaiton
-        require_gte!(
+        Ok((
             to_pool_token_account_amount,
-            supported_token.token.get_total_reserved_amount(),
-        );
-
-        Ok(StakeSOLCommandResult {
-            token_mint: item.token_mint,
-            staked_sol_amount: item.allocated_sol_amount,
+            minted_pool_token_amount,
             deducted_sol_fee_amount,
-            minted_token_amount: minted_pool_token_amount,
-            operation_reserved_token_amount: supported_token.token.operation_reserved_amount,
-            operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-            operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-        }
-        .into())
+        ))
     }
 
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
     fn marinade_stake_pool_deposit_sol<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
-    ) -> Result<Option<OperationCommandResult>> {
+    ) -> Result<Option<(u64, u64, u64)>> {
         let &[fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve_account, pool_token_mint_authority, ..] =
             accounts
         else {
@@ -386,30 +400,10 @@ impl StakeSOLCommand {
             expected_minted_pool_token_amount.abs_diff(minted_pool_token_amount)
         );
 
-        // Update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_reserved_amount -= item.allocated_sol_amount;
-
-        let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-        supported_token.token.operation_reserved_amount += minted_pool_token_amount;
-
-        // Validation
-        require_gte!(
+        Ok(Some((
             to_pool_token_account_amount,
-            supported_token.token.get_total_reserved_amount(),
-        );
-
-        Ok(Some(
-            StakeSOLCommandResult {
-                token_mint: item.token_mint,
-                staked_sol_amount: item.allocated_sol_amount,
-                deducted_sol_fee_amount: 0,
-                minted_token_amount: minted_pool_token_amount,
-                operation_reserved_token_amount: supported_token.token.operation_reserved_amount,
-                operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-                operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-            }
-            .into(),
-        ))
+            minted_pool_token_amount,
+            0,
+        )))
     }
 }

@@ -661,7 +661,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         from_stake_account_withdraw_authority_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
         // Stake account is not withdrawable yet
-        if Self::is_stake_account_withdrawable(&Self::deserialize_stake_account(
+        if !Self::is_stake_account_withdrawable(&Self::deserialize_stake_account(
             from_stake_account,
         )?) {
             return Ok(0);

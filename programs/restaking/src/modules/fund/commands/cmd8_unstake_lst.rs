@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
@@ -7,8 +6,8 @@ use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
-    EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommand,
-    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommandContext,
+    OperationCommandEntry, OperationCommandResult, SelfExecutable,
     FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
@@ -95,10 +94,6 @@ impl UnstakeLSTCommand {
         Option<OperationCommandEntry>,
     )> {
         // TODO v0.4/operation: allocate token amounts
-
-        // First ensure that `accounts` contains pool accounts of items.
-        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
 
         // prepare state does not require additional accounts,
         // so we can execute directly.
@@ -188,7 +183,7 @@ impl UnstakeLSTCommand {
             _ => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
         };
 
-        return Ok((previous_execution_result, Some(entry)));
+        Ok((previous_execution_result, Some(entry)))
     }
 
     fn execute_get_available_unstake_account<'info>(
@@ -402,7 +397,7 @@ impl UnstakeLSTCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.into_iter().cloned())?;
+            .new_pricing_service(accounts.iter().cloned())?;
 
         // validation (expects diff <= 1)
         let expected_pool_token_fee_amount = item.allocated_token_amount.saturating_sub(
@@ -413,10 +408,9 @@ impl UnstakeLSTCommand {
             expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
         );
 
-        // calculate exact deducted fund value (will be added to SOL receivable)
+        // calculate deducted fee as SOL (will be added to SOL receivable)
         let deducted_sol_fee_amount = pricing_service
-            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
-            - unstaked_sol_amount;
+            .get_token_amount_as_sol(pool_token_mint.key, deducted_pool_token_fee_amount)?;
 
         // Update fund account
         let mut fund_account = ctx.fund_account.load_mut()?;
@@ -488,13 +482,40 @@ impl UnstakeLSTCommand {
                 )?
             }
             _ => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-        };
+        }
+        .map(
+            |(burnt_token_amount, unstaking_sol_amount, deducted_sol_fee_amount)| {
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                fund_account.sol.operation_receivable_amount +=
+                    unstaking_sol_amount + deducted_sol_fee_amount;
+
+                let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
+                supported_token.token.operation_reserved_amount -= burnt_token_amount;
+
+                Ok::<_, Error>(
+                    UnstakeLSTCommandResult {
+                        token_mint: item.token_mint,
+                        burnt_token_amount: item.allocated_token_amount,
+                        deducted_sol_fee_amount,
+                        unstaking_sol_amount,
+                        unstaked_sol_amount: 0,
+                        operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
+                        operation_receivable_sol_amount: fund_account
+                            .sol
+                            .operation_receivable_amount,
+                    }
+                    .into(),
+                )
+            },
+        )
+        .transpose()?;
 
         // prepare state does not require additional accounts,
         // so we can execute directly.
         self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
     }
 
+    /// returns [burnt_token_amount, unstaking_sol_amount, deducted_sol_fee_amount]
     fn spl_stake_pool_withdraw_stake<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -502,7 +523,7 @@ impl UnstakeLSTCommand {
         command_item: &UnstakeLSTCommandItem,
         withdraw_stake_items: &[WithdrawStakeItem],
         pool_account_address: Pubkey,
-    ) -> Result<Option<OperationCommandResult>> {
+    ) -> Result<Option<(u64, u64, u64)>> {
         let [fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, manager_fee_account, validator_list_account, clock, stake_program, remaining_accounts @ ..] =
             accounts
         else {
@@ -599,7 +620,7 @@ impl UnstakeLSTCommand {
         }
 
         // withdraw stake did not happen
-        if withdraw_stake_count == 0 {
+        if total_burnt_token_amount == 0 {
             return Ok(None);
         }
 
@@ -619,41 +640,25 @@ impl UnstakeLSTCommand {
             expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
         );
 
-        // calculate exact value of burnt tokens (will be added to SOL receivable)
-        // burnt_token_amount_as_sol ~= unstaking_sol_amount + total deducted fee as sol
-        let total_burnt_token_amount_as_sol = pricing_service
-            .get_token_amount_as_sol(pool_token_mint.key, total_burnt_token_amount)?;
-        let total_deducted_sol_fee_amount =
-            total_burnt_token_amount_as_sol - total_unstaking_sol_amount;
+        // calculate deducted fee as SOL (will be added to SOL receivable)
+        let total_deducted_sol_fee_amount = pricing_service
+            .get_token_amount_as_sol(pool_token_mint.key, total_deducted_pool_token_fee_amount)?;
 
-        // update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_receivable_amount += total_burnt_token_amount_as_sol;
-
-        let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-        supported_token.token.operation_reserved_amount -= total_burnt_token_amount;
-
-        Ok(Some(
-            UnstakeLSTCommandResult {
-                token_mint: pool_token_mint.key(),
-                burnt_token_amount: total_burnt_token_amount,
-                deducted_sol_fee_amount: total_deducted_sol_fee_amount,
-                unstaking_sol_amount: total_unstaking_sol_amount,
-                unstaked_sol_amount: 0,
-                operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-                operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-            }
-            .into(),
-        ))
+        Ok(Some((
+            total_burnt_token_amount,
+            total_unstaking_sol_amount,
+            total_deducted_sol_fee_amount,
+        )))
     }
 
+    /// returns [burnt_token_amount, unstaking_sol_amount, deducted_sol_fee_amount]
     fn marinade_stake_pool_order_unstake<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &UnstakeLSTCommandItem,
         pool_account_address: Pubkey,
-    ) -> Result<Option<OperationCommandResult>> {
+    ) -> Result<Option<(u64, u64, u64)>> {
         let [fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, clock, rent, remaining_accounts @ ..] =
             accounts
         else {
@@ -723,34 +728,16 @@ impl UnstakeLSTCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().cloned())?;
 
-        // calculate exact value of burnt tokens (will be added to SOL receivable)
-        // burnt_token_amount_as_sol ~= unstaking_sol_amount + total deducted fee as sol
-        let burnt_token_amount_as_sol = pricing_service
-            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?;
-
         // validation (expects diff <= 1)
-        let expected_sol_fee_amount =
-            burnt_token_amount_as_sol.saturating_sub(unstaking_sol_amount);
+        let expected_sol_fee_amount = pricing_service
+            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
+            .saturating_sub(unstaking_sol_amount);
         require_gte!(1, expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount));
 
-        // update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_receivable_amount += burnt_token_amount_as_sol;
-
-        let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-        supported_token.token.operation_reserved_amount -= item.allocated_token_amount;
-
-        Ok(Some(
-            UnstakeLSTCommandResult {
-                token_mint: item.token_mint,
-                burnt_token_amount: item.allocated_token_amount,
-                deducted_sol_fee_amount,
-                unstaking_sol_amount,
-                unstaked_sol_amount: 0,
-                operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-                operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-            }
-            .into(),
-        ))
+        Ok(Some((
+            item.allocated_token_amount,
+            unstaking_sol_amount,
+            deducted_sol_fee_amount,
+        )))
     }
 }

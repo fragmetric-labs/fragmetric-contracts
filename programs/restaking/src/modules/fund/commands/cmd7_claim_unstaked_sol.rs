@@ -6,7 +6,7 @@ use crate::utils::{AccountInfoExt, PDASeeds};
 use crate::{errors::ErrorCode, utils::AsAccountInfo};
 
 use super::{
-    FundAccount, FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
     OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
@@ -215,7 +215,7 @@ impl ClaimUnstakedSOLCommand {
             .pricing_source
             .try_deserialize()?;
 
-        let result = match token_pricing_source {
+        let claimed_sol_amount = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address }) => {
                 self.spl_stake_pool_claim_sol::<SPLStakePool>(ctx, accounts, item, address)?
             }
@@ -230,18 +230,39 @@ impl ClaimUnstakedSOLCommand {
             _ => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
         };
 
+        let result = if claimed_sol_amount == 0 {
+            // claim did not happen
+            None
+        } else {
+            // update fund account
+            let mut fund_account = ctx.fund_account.load_mut()?;
+            fund_account.sol.operation_reserved_amount += claimed_sol_amount;
+            fund_account.sol.operation_receivable_amount -= claimed_sol_amount;
+
+            Some(
+                ClaimUnstakedSOLCommandResult {
+                    token_mint: item.token_mint,
+                    claimed_sol_amount,
+                    operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
+                    operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
+                }
+                .into(),
+            )
+        };
+
         // prepare state does not require additional accounts,
         // so we can execute directly.
         self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
     }
 
+    /// return [claimed_sol_amount]
     fn spl_stake_pool_claim_sol<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &ClaimUnstakedSOLCommandItem,
         pool_account_address: Pubkey,
-    ) -> Result<Option<OperationCommandResult>> {
+    ) -> Result<u64> {
         let [fund_reserve_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
         else {
@@ -255,7 +276,6 @@ impl ClaimUnstakedSOLCommand {
         };
 
         let mut total_claimed_sol_amount = 0;
-        let mut claim_sol_count = 0;
 
         let fund_account = ctx.fund_account.load()?;
 
@@ -285,39 +305,19 @@ impl ClaimUnstakedSOLCommand {
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
-            claim_sol_count += 1;
         }
 
-        // claim did not happen
-        if claim_sol_count == 0 {
-            return Ok(None);
-        }
-
-        drop(fund_account);
-
-        // update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_reserved_amount += total_claimed_sol_amount;
-        fund_account.sol.operation_receivable_amount -= total_claimed_sol_amount;
-
-        Ok(Some(
-            ClaimUnstakedSOLCommandResult {
-                token_mint: item.token_mint,
-                claimed_sol_amount: total_claimed_sol_amount,
-                operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-                operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-            }
-            .into(),
-        ))
+        Ok(total_claimed_sol_amount)
     }
 
+    /// return [claimed_sol_amount]
     fn marinade_stake_pool_claim_sol<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &ClaimUnstakedSOLCommandItem,
         pool_account_address: Pubkey,
-    ) -> Result<Option<OperationCommandResult>> {
+    ) -> Result<u64> {
         let [fund_reserve_account, fund_treasury_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
             accounts
         else {
@@ -341,9 +341,6 @@ impl ClaimUnstakedSOLCommand {
         )?;
 
         let mut total_claimed_sol_amount = 0;
-        let mut claim_sol_count = 0;
-
-        let fund_account = ctx.fund_account.load()?;
 
         for (index, withdrawal_ticket_account) in withdrawal_ticket_accounts.iter().enumerate() {
             let withdrawal_ticket_account_address =
@@ -367,36 +364,16 @@ impl ClaimUnstakedSOLCommand {
                 ctx.system_program,
                 pool_reserve_account,
                 clock,
+                fund_reserve_account,
                 withdrawal_ticket_account,
                 fund_treasury_account,
-                fund_reserve_account,
-                &[&fund_account.get_reserve_account_seeds()],
+                ctx.fund_account.as_account_info(),
+                &[], // since fund account is program owned account you don't need to provide seeds
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
-            claim_sol_count += 1;
         }
 
-        // claim did not happen
-        if claim_sol_count == 0 {
-            return Ok(None);
-        }
-
-        drop(fund_account);
-
-        // update fund account
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_reserved_amount += total_claimed_sol_amount;
-        fund_account.sol.operation_receivable_amount -= total_claimed_sol_amount;
-
-        Ok(Some(
-            ClaimUnstakedSOLCommandResult {
-                token_mint: item.token_mint,
-                claimed_sol_amount: total_claimed_sol_amount,
-                operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
-                operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
-            }
-            .into(),
-        ))
+        Ok(total_claimed_sol_amount)
     }
 }
