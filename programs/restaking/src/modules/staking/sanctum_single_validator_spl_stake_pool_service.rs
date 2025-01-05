@@ -19,5 +19,5 @@ impl anchor_lang::Id for SanctumSingleValidatorSPLStakePool {
 ///
 /// In the future when there is change,
 /// we can implement this service type.
-pub type SanctumSingleValidatorSPLStakePoolService<'info> =
+pub(in crate::modules) type SanctumSingleValidatorSPLStakePoolService<'info> =
     SPLStakePoolService<'info, SanctumSingleValidatorSPLStakePool>;

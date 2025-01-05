@@ -152,7 +152,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     /// * (4) pool_reserve_account(writable)
     /// * (5) sysvar clock
     #[inline(never)]
-    pub fn find_accounts_to_claim<I>(
+    pub fn find_accounts_to_claim_sol(
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let pool_account = &Self::deserialize_pool_account(pool_account)?;
@@ -171,10 +171,10 @@ impl<'info> MarinadeStakePoolService<'info> {
         self.pool_account.min_deposit
     }
 
-    /// returns [to_pool_token_account_amount, minted_pool_token_amount, deducted_sol_fee_amount]
+    /// returns [to_pool_token_account_amount, minted_pool_token_amount] (no fee)
     #[inline(never)]
     pub fn deposit_sol(
-        &mut self,
+        &self,
         // fixed
         system_program: &Program<'info, System>,
         liq_pool_sol_leg: &AccountInfo<'info>,
@@ -189,7 +189,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         from_sol_account_seeds: &[&[&[u8]]],
 
         sol_amount: u64,
-    ) -> Result<(u64, u64, u64)> {
+    ) -> Result<(u64, u64)> {
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -220,15 +220,9 @@ impl<'info> MarinadeStakePoolService<'info> {
         let minted_pool_token_amount =
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
-        let deducted_sol_fee_amount = 0;
+        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, to_pool_token_account_amount, minted_pool_token_amount);
 
-        msg!("STAKE#marinade: pool_token_mint={}, staked_sol_amount={}, deducted_sol_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_sol_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
-
-        Ok((
-            to_pool_token_account_amount,
-            minted_pool_token_amount,
-            deducted_sol_fee_amount,
-        ))
+        Ok((to_pool_token_account_amount, minted_pool_token_amount))
     }
 
     /// gives max fee/expense ratio during a cycle of circulation
@@ -248,10 +242,10 @@ impl<'info> MarinadeStakePoolService<'info> {
         ))
     }
 
-    /// returns unstaking_sol_amount
+    /// returns [unstaking_sol_amount, deducted_sol_fee_amount]
     #[inline(never)]
     pub fn order_unstake(
-        &mut self,
+        &self,
         // fixed
         system_program: &Program<'info, System>,
         clock: &AccountInfo<'info>,
@@ -265,8 +259,8 @@ impl<'info> MarinadeStakePoolService<'info> {
         from_pool_token_account_signer: &AccountInfo<'info>,
         from_pool_token_account_signer_seeds: &[&[&[u8]]],
 
-        token_amount: u64,
-    ) -> Result<u64> {
+        pool_token_amount: u64,
+    ) -> Result<(u64, u64)> {
         system_program.initialize_account(
             new_withdrawal_ticket_account,
             new_withdrawal_ticket_account_rent_payer, // already signer so we don't need signer seeds
@@ -291,18 +285,31 @@ impl<'info> MarinadeStakePoolService<'info> {
                 },
                 from_pool_token_account_signer_seeds,
             ),
-            token_amount,
+            pool_token_amount,
         )?;
 
         let withdrawal_ticket_account =
             Self::deserialize_withdrawal_ticket_account(new_withdrawal_ticket_account)?;
-        Ok(withdrawal_ticket_account.lamports_amount)
+        let unstaking_sol_amount = withdrawal_ticket_account.lamports_amount;
+        let deducted_sol_fee_amount = {
+            let fee_numerator = self.pool_account.delayed_unstake_fee.bp_cents;
+            let fee_denominator = 1_000_000 - fee_numerator;
+            crate::utils::get_proportional_amount(
+                unstaking_sol_amount,
+                fee_numerator as u64,
+                fee_denominator as u64,
+            )?
+        };
+
+        msg!("UNSTAKE#marinade: pool_token_mint={}, pool_token_amount={}, deducted_sol_fee_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_sol_fee_amount, unstaking_sol_amount);
+
+        Ok((unstaking_sol_amount, deducted_sol_fee_amount))
     }
 
-    /// returns [unstaked_sol_amount, deducted_sol_fee_amount]
+    /// returns [claimed_sol_amount]
     #[inline(never)]
-    pub fn claim(
-        &mut self,
+    pub fn claim_sol(
+        &self,
         // fixed
         system_program: &Program<'info, System>,
         pool_reserve_account: &AccountInfo<'info>,
@@ -313,19 +320,20 @@ impl<'info> MarinadeStakePoolService<'info> {
         withdrawal_ticket_account_rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
         to_sol_account: &AccountInfo<'info>,
         to_sol_account_seeds: &[&[&[u8]]],
-    ) -> Result<(u64, u64)> {
+    ) -> Result<u64> {
         let withdrawal_ticket_account =
             &Self::deserialize_withdrawal_ticket_account(withdrawal_ticket_account)?;
 
         // Withdrawal ticket is not claimable yet
         if self.is_withdrawal_ticket_claimable(
             pool_reserve_account,
-            clock,
+            &Clock::from_account_info(clock)?,
             withdrawal_ticket_account,
-        )? {
-            return Ok((0, 0));
+        ) {
+            return Ok(0);
         }
 
+        let to_sol_account_amount_before = to_sol_account.lamports();
         let withdrawal_ticket_account_rent = withdrawal_ticket_account.get_lamports();
         let unstaked_sol_amount = withdrawal_ticket_account.lamports_amount;
 
@@ -353,38 +361,46 @@ impl<'info> MarinadeStakePoolService<'info> {
             withdrawal_ticket_account_rent,
         )?;
 
-        let deducted_sol_fee_amount = 0;
+        let to_sol_account_amount = to_sol_account.lamports();
+        let claimed_sol_amount = to_sol_account_amount - to_sol_account_amount_before;
 
-        Ok((unstaked_sol_amount, deducted_sol_fee_amount))
+        require_eq!(claimed_sol_amount, unstaked_sol_amount);
+
+        msg!(
+            "CLAIM#marinade: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
+            self.pool_token_mint.key(),
+            to_sol_account_amount,
+            claimed_sol_amount
+        );
+
+        Ok(claimed_sol_amount)
     }
 
     fn is_withdrawal_ticket_claimable(
         &self,
         pool_reserve_account: &AccountInfo,
-        clock: &AccountInfo,
+        clock: &Clock,
         withdrawal_ticket_account: &Account<TicketAccountData>,
-    ) -> Result<bool> {
-        let clock = Clock::from_account_info(clock)?;
-
+    ) -> bool {
         // At least one epoch should pass.
         if clock.epoch < withdrawal_ticket_account.created_epoch + 1 {
-            return Ok(false);
+            return false;
         }
 
         // Even when one epoch has passed, additional 30 min should pass.
         if clock.epoch == withdrawal_ticket_account.created_epoch + 1
             && clock.unix_timestamp - clock.epoch_start_timestamp < 30 * 60
         {
-            return Ok(false);
+            return false;
         }
 
         // There should be enough lamports in pool reserve account.
         if withdrawal_ticket_account.lamports_amount
             > pool_reserve_account.lamports() - self.pool_account.rent_exempt_for_token_acc
         {
-            return Ok(false);
+            return false;
         }
 
-        Ok(true)
+        true
     }
 }

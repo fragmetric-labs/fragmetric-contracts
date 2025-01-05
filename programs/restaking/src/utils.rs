@@ -299,7 +299,7 @@ pub trait SystemProgramExt<'info> {
         payer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
         space: usize,
-        desired_lamports: Option<u64>,
+        target_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()>;
 }
@@ -311,14 +311,11 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         payer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
         space: usize,
-        desired_lamports: Option<u64>,
+        target_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()> {
         let rent = Rent::get()?;
-        let minimum_lamports = rent.minimum_balance(space);
-        let target_lamports = desired_lamports
-            .unwrap_or(minimum_lamports)
-            .max(minimum_lamports);
+        let target_lamports = target_lamports.unwrap_or_else(|| rent.minimum_balance(space));
 
         let current_lamports = account_to_initialize.lamports();
         if current_lamports == 0 {
@@ -342,7 +339,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 ErrorCode::TryingToInitPayerAsProgramAccount
             );
 
-            let required_lamports = target_lamports.max(1).saturating_sub(current_lamports);
+            let required_lamports = target_lamports.saturating_sub(current_lamports);
             if required_lamports > 0 {
                 anchor_lang::system_program::transfer(
                     CpiContext::new_with_signer(

@@ -159,10 +159,10 @@ impl FundAccount {
         [Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
     }
 
-    pub(super) fn get_reserve_account_seeds(&self) -> Vec<&[u8]> {
-        let mut seeds = Vec::with_capacity(3);
-        seeds.extend(self.get_reserve_account_seed_phrase());
-        seeds.push(std::slice::from_ref(&self.reserve_account_bump));
+    pub(super) fn get_reserve_account_seeds(&self) -> [&[u8]; 3] {
+        let mut seeds = <[_; 3]>::default();
+        seeds[..2].copy_from_slice(&self.get_reserve_account_seed_phrase());
+        seeds[2] = std::slice::from_ref(&self.reserve_account_bump);
         seeds
     }
 
@@ -180,10 +180,10 @@ impl FundAccount {
         [Self::TREASURY_SEED, self.receipt_token_mint.as_ref()]
     }
 
-    pub(super) fn get_treasury_account_seeds(&self) -> Vec<&[u8]> {
-        let mut seeds = Vec::with_capacity(3);
-        seeds.extend(self.get_treasury_account_seed_phrase());
-        seeds.push(std::slice::from_ref(&self.treasury_account_bump));
+    pub(super) fn get_treasury_account_seeds(&self) -> [&[u8]; 3] {
+        let mut seeds = <[_; 3]>::default();
+        seeds[..2].copy_from_slice(&self.get_treasury_account_seed_phrase());
+        seeds[2] = std::slice::from_ref(&self.treasury_account_bump);
         seeds
     }
 
@@ -249,57 +249,20 @@ impl FundAccount {
         )
     }
 
-    pub const UNSTAKING_TICKET_SEED: &'static [u8] = b"unstaking_ticket";
-
-    #[inline(always)]
-    fn get_unstaking_ticket_account_seed_phrase(
-        &self,
-        pool_account: &Pubkey,
+    pub(super) fn find_stake_account_address<'a>(
+        fund_account: &'a Pubkey,
+        pool_account: &'a Pubkey,
         index: u8,
-    ) -> [Vec<u8>; 4] {
-        [
-            Self::UNSTAKING_TICKET_SEED.to_vec(),
-            self.receipt_token_mint.as_ref().to_vec(),
-            pool_account.as_ref().to_vec(),
-            vec![index],
-        ]
+    ) -> FundStakeAccountAddress<'a> {
+        FundStakeAccountAddress::new(fund_account, pool_account, index)
     }
 
-    /// usage:
-    /// ```rs
-    /// let seeds: Vec<Vec<u8>> = get_unstaking_ticket_account_seeds();
-    /// let seeds_ref: &[&[u8]] = seeds.iter().map(Vec::as_slice).collect::<Vec<_>>().as_slice();
-    /// // ...
-    /// ctx.with_signer_seeds(&[seeds_ref])
-    /// ```
-    pub(super) fn get_unstaking_ticket_account_seeds(
-        &self,
-        pool_account: &Pubkey,
+    pub(super) fn find_unstaking_ticket_account_address<'a>(
+        fund_account: &'a Pubkey,
+        pool_account: &'a Pubkey,
         index: u8,
-    ) -> Vec<Vec<u8>> {
-        let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
-        let bump = Pubkey::find_program_address(
-            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
-            &crate::ID,
-        )
-        .1;
-
-        let mut seeds = Vec::with_capacity(5);
-        seeds.extend(seed_phrase);
-        seeds.push(vec![bump]);
-        seeds
-    }
-
-    pub(super) fn find_unstaking_ticket_account_address(
-        &self,
-        pool_account: &Pubkey,
-        index: u8,
-    ) -> (Pubkey, u8) {
-        let seed_phrase = self.get_unstaking_ticket_account_seed_phrase(pool_account, index);
-        Pubkey::find_program_address(
-            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
-            &crate::ID,
-        )
+    ) -> FundUnstakingTicketAddress<'a> {
+        FundUnstakingTicketAddress::new(fund_account, pool_account, index)
     }
 
     pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
@@ -676,6 +639,108 @@ impl FundAccount {
             Some(mint) => pricing_service.get_token_amount_as_sol(&mint, asset_total_amount)?,
             None => asset_total_amount,
         })
+    }
+}
+
+pub(super) struct FundStakeAccountAddress<'a> {
+    stake_account_address: Pubkey,
+    fund_account: &'a Pubkey,
+    pool_account: &'a Pubkey,
+    index: u8,
+    bump: u8,
+}
+
+impl<'a> FundStakeAccountAddress<'a> {
+    fn new(fund_account: &'a Pubkey, pool_account: &'a Pubkey, index: u8) -> Self {
+        let (stake_account_address, bump) = Pubkey::find_program_address(
+            &[fund_account.as_ref(), pool_account.as_ref(), &[index]],
+            &crate::ID,
+        );
+        Self {
+            stake_account_address,
+            fund_account,
+            pool_account,
+            index,
+            bump,
+        }
+    }
+
+    pub(super) fn get_signer_seeds(&self) -> [&[u8]; 4] {
+        [
+            self.fund_account.as_ref(),
+            self.pool_account.as_ref(),
+            std::slice::from_ref(&self.index),
+            std::slice::from_ref(&self.bump),
+        ]
+    }
+}
+
+impl std::ops::Deref for FundStakeAccountAddress<'_> {
+    type Target = Pubkey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.stake_account_address
+    }
+}
+
+impl AsRef<Pubkey> for FundStakeAccountAddress<'_> {
+    fn as_ref(&self) -> &Pubkey {
+        &self.stake_account_address
+    }
+}
+
+pub(super) struct FundUnstakingTicketAddress<'a> {
+    unstaking_ticket_address: Pubkey,
+    fund_account: &'a Pubkey,
+    pool_account: &'a Pubkey,
+    index: u8,
+    bump: u8,
+}
+
+impl<'a> FundUnstakingTicketAddress<'a> {
+    pub const SEED: &'static [u8] = b"unstaking_ticket";
+
+    fn new(fund_account: &'a Pubkey, pool_account: &'a Pubkey, index: u8) -> Self {
+        let (unstaking_ticket_address, bump) = Pubkey::find_program_address(
+            &[
+                Self::SEED,
+                fund_account.as_ref(),
+                pool_account.as_ref(),
+                &[index],
+            ],
+            &crate::ID,
+        );
+        Self {
+            unstaking_ticket_address,
+            fund_account,
+            pool_account,
+            index,
+            bump,
+        }
+    }
+
+    pub(super) fn get_signer_seeds(&self) -> [&[u8]; 5] {
+        [
+            Self::SEED,
+            self.fund_account.as_ref(),
+            self.pool_account.as_ref(),
+            std::slice::from_ref(&self.index),
+            std::slice::from_ref(&self.bump),
+        ]
+    }
+}
+
+impl std::ops::Deref for FundUnstakingTicketAddress<'_> {
+    type Target = Pubkey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.unstaking_ticket_address
+    }
+}
+
+impl AsRef<Pubkey> for FundUnstakingTicketAddress<'_> {
+    fn as_ref(&self) -> &Pubkey {
+        &self.unstaking_ticket_address
     }
 }
 
