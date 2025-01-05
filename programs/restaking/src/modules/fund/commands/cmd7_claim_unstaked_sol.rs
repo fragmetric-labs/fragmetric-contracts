@@ -342,6 +342,8 @@ impl ClaimUnstakedSOLCommand {
 
         let mut total_claimed_sol_amount = 0;
 
+        let fund_account = ctx.fund_account.load()?;
+
         for (index, withdrawal_ticket_account) in withdrawal_ticket_accounts.iter().enumerate() {
             let withdrawal_ticket_account_address =
                 *FundAccount::find_unstaking_ticket_account_address(
@@ -364,11 +366,10 @@ impl ClaimUnstakedSOLCommand {
                 ctx.system_program,
                 pool_reserve_account,
                 clock,
-                fund_reserve_account,
                 withdrawal_ticket_account,
                 fund_treasury_account,
-                ctx.fund_account.as_account_info(),
-                &[], // since fund account is program owned account you don't need to provide seeds
+                fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;

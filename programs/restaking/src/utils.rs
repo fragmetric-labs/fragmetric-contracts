@@ -302,21 +302,6 @@ pub trait SystemProgramExt<'info> {
         target_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()>;
-
-    /// System program can only transfer SOL from system accounts (i.e., wallet).
-    /// To avoid such consideration, this method will do that for you.
-    ///
-    /// This method will directly move lamports when `from` account is owned by this program.
-    /// You don't need `from_seeds` in this case.
-    ///
-    /// Otherwise it will call system program CPI.
-    fn transfer_sol(
-        &self,
-        from: &AccountInfo<'info>,
-        from_seeds: &[&[&[u8]]],
-        to: &AccountInfo<'info>,
-        lamports: u64,
-    ) -> Result<()>;
 }
 
 impl<'info> SystemProgramExt<'info> for Program<'info, System> {
@@ -391,34 +376,6 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         }
 
         Ok(())
-    }
-
-    fn transfer_sol(
-        &self,
-        from: &AccountInfo<'info>,
-        from_seeds: &[&[&[u8]]],
-        to: &AccountInfo<'info>,
-        lamports: u64,
-    ) -> Result<()> {
-        // direct transfer
-        if from.owner == &crate::ID {
-            from.sub_lamports(lamports)?;
-            to.add_lamports(lamports)?;
-
-            return Ok(());
-        }
-
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                self.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: from.to_account_info(),
-                    to: to.to_account_info(),
-                },
-                from_seeds,
-            ),
-            lamports,
-        )
     }
 }
 
