@@ -409,7 +409,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         // There should be enough lamports in pool reserve account.
         if withdrawal_ticket_account.lamports_amount
-            > pool_reserve_account.lamports() - self.pool_account.rent_exempt_for_token_acc
+            < pool_reserve_account.lamports() - self.pool_account.rent_exempt_for_token_acc
         {
             return false;
         }
