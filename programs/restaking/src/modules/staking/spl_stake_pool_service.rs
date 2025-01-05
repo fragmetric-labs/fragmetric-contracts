@@ -141,6 +141,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// * (3) pool_token_program
     /// * (4) reserve_stake_account
     /// * (5) validator_list_account
+    /// * (6) stake_program
     #[inline(never)]
     pub fn find_accounts_to_get_available_unstake_account(
         pool_account: &AccountInfo,
@@ -152,6 +153,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             .chain([
                 (pool_account_data.reserve_stake, false),
                 (pool_account_data.validator_list, false),
+                (solana_program::stake::program::ID, false),
             ]);
 
         Ok(accounts)
