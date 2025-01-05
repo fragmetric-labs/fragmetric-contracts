@@ -118,8 +118,8 @@ describe("operator_spl_stake_pool", async () => {
     });
 
 
-    step("claim sol after 2 epoch shift (epoch = 32 slot)", async function () {
-        await restaking.sleepUntil(96);
+    step("claim sol", async function () {
+        // await restaking.sleepUntil(96);
         // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
         await restaking.runOperatorFundCommands({
             command: {

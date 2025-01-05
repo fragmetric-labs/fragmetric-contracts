@@ -84,6 +84,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 }
 
 impl UnstakeLSTCommand {
+    #[inline(never)]
     fn execute_init<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -100,6 +101,7 @@ impl UnstakeLSTCommand {
         self.execute_prepare(ctx, accounts, items.to_vec(), None)
     }
 
+    #[inline(never)]
     fn execute_prepare<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -186,6 +188,7 @@ impl UnstakeLSTCommand {
         Ok((previous_execution_result, Some(entry)))
     }
 
+    #[inline(never)]
     fn execute_get_available_unstake_account<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -318,6 +321,7 @@ impl UnstakeLSTCommand {
         Ok(entry)
     }
 
+    #[inline(never)]
     fn execute_unstake<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -438,6 +442,7 @@ impl UnstakeLSTCommand {
         .into())
     }
 
+    #[inline(never)]
     fn execute_request_unstake<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,

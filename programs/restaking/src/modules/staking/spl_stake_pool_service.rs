@@ -195,7 +195,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// * (3) pool_token_program
     /// * (4) withdraw_authority
     /// * (5) manager_fee_account(writable)
-    /// * (6) validator_list_account
+    /// * (6) validator_list_account(writable)
     /// * (7) sysvar clock
     /// * (8) stake_program
     #[inline(never)]
@@ -209,7 +209,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             .chain([
                 Self::find_withdraw_authority_account_meta(pool_account),
                 (pool_account_data.manager_fee_account, true),
-                (pool_account_data.validator_list, false),
+                (pool_account_data.validator_list, true),
                 (solana_program::sysvar::clock::ID, false),
                 (solana_program::stake::program::ID, false),
             ]);
