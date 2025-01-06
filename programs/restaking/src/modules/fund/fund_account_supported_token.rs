@@ -44,7 +44,8 @@ impl SupportedToken {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {}
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
+            | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {}
             _ => {
                 err!(ErrorCode::FundNotSupportedTokenError)?;
             }

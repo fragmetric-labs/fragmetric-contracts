@@ -204,6 +204,10 @@ filename = "./tests/mocks/local/fragsol_address_lookup_table.json"
 address = "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL"
 filename = "./tests/mocks/mainnet/jto_mint.json"
 
+[[test.validator.account]]
+address = "2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ"
+filename = "./tests/mocks/mainnet/jto_liquidity_pool_account.json"
+
 # clone empty Jito restaking vault of fragJTO
 [[test.validator.account]]
 address = "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
