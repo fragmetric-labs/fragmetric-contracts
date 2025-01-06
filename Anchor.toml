@@ -76,22 +76,22 @@ filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_reserve_stake_account.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
 [[test.validator.account]]
-address = "DHhF2z2E2eiMeWxBEKrmivHnV8hrVwRoevTQF81Vt5b6"
+address = "DLw7mA9kwh32Q7LBYxr8FdxjVmdn2dEvXU2ReZY3SphC"
 filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_1.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
 [[test.validator.account]]
-address = "9QCSiqVuYy7QTvCu3g3jxpovt4JxkaPkGjqhu7hb4d1D"
+address = "9NRjFJaUvnoX5iaBjQfGXWKyC6arzoW4aJodoNEymwKg"
 filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_2.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
 [[test.validator.account]]
-address = "E32hnC2LdJdPaeqRiHhUDx3wjkNTi45ZMhqYEr1R7W9t"
+address = "BaeZZtQqh7vZS3wwV6nKiwaJwBgnHYFsxup685g3Unht"
 filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_3.json"
 
 # clone mainnet jitoSOL stake pool's validator stake account which has lots of lamports to localnet
 [[test.validator.account]]
-address = "EusU4msAfQWBq2ME6Aip9AyokFJWuPm3VfdAnjEZyjwx"
+address = "39iQiYerZhoxTtqyWZXd14nNWASvMyfUGeG8fpcmdY7V"
 filename = "./tests/mocks/mainnet/jitoSOL_stake_pool_validator_stake_account_4.json"
 
 # clone mainnet jitoSOL stake pool manager fee account to localnet
