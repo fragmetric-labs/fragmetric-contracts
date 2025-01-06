@@ -197,3 +197,19 @@ filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
 [[test.validator.account]]
 address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
 filename = "./tests/mocks/local/fragsol_address_lookup_table.json"
+
+# *JTO
+# clone mainnet JTO mint to localnet
+[[test.validator.account]]
+address = "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL"
+filename = "./tests/mocks/mainnet/jto_mint.json"
+
+# clone empty Jito restaking vault of fragJTO
+[[test.validator.account]]
+address = "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
+filename = "./tests/mocks/local/fragjto_jito_vault.json"
+
+# clone empty mint for Jito restaking vault of fragJTO
+[[test.validator.account]]
+address = "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
+filename = "./tests/mocks/local/fragjto_jito_vrt_mint.json"
