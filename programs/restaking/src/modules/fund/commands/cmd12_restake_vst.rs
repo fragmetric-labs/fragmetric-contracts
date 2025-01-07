@@ -141,7 +141,10 @@ impl SelfExecutable for RestakeVSTCommand {
                     for (index, strategy_participant) in
                         strategy.get_participants_iter().enumerate()
                     {
-                        let allocated_token_amount = strategy_participant.get_last_put_amount()?;
+                        let allocated_token_amount = pricing_service.get_sol_amount_as_token(
+                            &token_mint,
+                            strategy_participant.get_last_put_amount()?,
+                        )?;
                         if allocated_token_amount > 0 {
                             let restaking_vault = restakable_vaults.get(index).unwrap();
                             match items
