@@ -3,6 +3,7 @@
   "workspaces": [
     "sdk",
     "sdk-example-nodejs",
-    "sdk-example-react"
+    "sdk-example-react",
+    "sdk-example-html"
   ]
 }

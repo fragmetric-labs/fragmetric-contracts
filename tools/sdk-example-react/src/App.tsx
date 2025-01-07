@@ -1,23 +1,17 @@
-import { RestakingProgram, BN } from '@fragmetric-labs/sdk';
+import * as fragmetricSDK from '@fragmetric-labs/sdk';
 import * as web3 from '@solana/web3.js';
 
-import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
+import { ConnectionProvider, WalletProvider, useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { UnsafeBurnerWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider, WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
-import { useState } from 'react';
-
-const fragSOL = new RestakingProgram({
-    cluster: 'devnet',
-    connection: undefined, // default RPC
-    idl: undefined, // default IDL
-    receiptTokenMint: RestakingProgram.receiptTokenMint.fragSOL,
-});
+import {useCallback, useMemo, useState} from 'react';
 
 export default function App() {
     return (
-        <ConnectionProvider endpoint={fragSOL.connection.rpcEndpoint}>
+        <ConnectionProvider endpoint={web3.clusterApiUrl(WalletAdapterNetwork.Devnet)}>
             <WalletProvider wallets={[new UnsafeBurnerWalletAdapter()]} autoConnect>
                 <WalletModalProvider>
                     <div>
@@ -31,72 +25,78 @@ export default function App() {
 
 function Main() {
     const [transactionStatus, setTransactionStatus] = useState<string>('');
-    const { publicKey: walletAddress } = useWallet();
+    const { publicKey: walletAddress, signTransaction, sendTransaction } = useWallet();
+    const { connection } = useConnection();
 
-    const donateSOL1 = async () => {
+    const fragSOLProgram = useMemo(() => {
+        return new fragmetricSDK.RestakingProgram({
+            cluster: 'devnet',
+            connection, // use wallet adappter connection
+            receiptTokenMint: fragmetricSDK.RestakingProgram.receiptTokenMint.fragSOL,
+        });
+    }, [connection]);
+
+    const donateSOL1 = useCallback(async () => {
         try {
             setTransactionStatus('Sending donation...');
-            const msg = await fragSOL.operator.donateSOLToFund({ operator: walletAddress!, amount: new BN(100), offsetReceivable: false });
-            const { blockhash } = await fragSOL.connection.getLatestBlockhash();
+            const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+            const { context: { slot: minContextSlot }, value: { blockhash, lastValidBlockHeight } } = await connection.getLatestBlockhashAndContext();
             msg.recentBlockhash = blockhash;
             const tx = new web3.VersionedTransaction(msg.compileToV0Message());
-            const res = await window.solana.signAndSendTransaction(tx);
-            console.log('using wallet send', res);
-            setTransactionStatus(`Donation sent: ${res.signature}`);
+            const signature = await sendTransaction(tx, connection, { minContextSlot });
+            console.log('tx sent using wallet', { tx, signature });
+            setTransactionStatus(`Donation sent: ${signature}`);
+
+            await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+            console.log('tx confirmed using wallet', signature);
+            setTransactionStatus(`Donation confirmed: ${signature}`);
         } catch (err) {
             setTransactionStatus(`Donation failed: ${err}`);
             console.error(err);
         }
-    };
+    }, [fragSOLProgram, walletAddress]);
 
-    const donateSOL2 = async () => {
+    const donateSOL2 = useCallback(async () => {
         try {
             setTransactionStatus('Sending donation...');
-            const msg = await fragSOL.operator.donateSOLToFund({ operator: walletAddress!, amount: new BN(100), offsetReceivable: false });
+            const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
             const res = await msg.send({
-                signer: async (name, publicKey, tx) => {
+                commitment: 'confirmed',
+                onSign: async (tx, publicKey, _name) => {
                     if (publicKey.equals(walletAddress!)) {
-                        const res = await window.solana.signTransaction(tx);
-                        return {
-                            signature: res.signatures[0],
-                            publicKey,
-                        };
+                        return signTransaction!(tx);
                     }
-                    throw `unhandled singer: ${name} (${publicKey})`;
+                    return null;
                 },
-                sendOptions: {
-                    skipPreflight: true,
-                },
-                onBeforeConfirm: async (confirmStrategy, commitment) => {
-                    console.log(confirmStrategy, commitment);
+                onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
+                    console.log('tx sent using sdk method', { tx, confirmStrategy, commitment });
+                    setTransactionStatus(`Donation sent: ${confirmStrategy.signature}`);
                 },
             });
-            console.log('using builtin send', res);
-            setTransactionStatus(`Donation sent: ${res.signature}`);
+            console.log('tx confirmed using sdk method', res);
+            setTransactionStatus(`Donation confirmed: ${res.signature}`);
         } catch (err) {
             setTransactionStatus(`Donation failed: ${err}`);
             console.error(err);
         }
-    };
+    }, [fragSOLProgram, walletAddress]);
 
     return (
         <div style={{textAlign: 'center', marginTop: '50px'}}>
-            <h1>Fragmetric SDK Example</h1>
+            <h1>Fragmetric SDK Example React</h1>
             {walletAddress ? (
                 <div>
+                    <center><WalletDisconnectButton/></center>
                     <p>Connected Wallet Address: {walletAddress.toString()}</p>
                     <div style={{marginBottom: 10}}>
-                        <button onClick={donateSOL1}>Donate 100 SOL (method1: builtin send)</button>
+                        <button onClick={donateSOL1}>Donate 100 SOL (1: using wallet)</button>
                     </div>
                     <div>
-                        <button onClick={donateSOL2}>Donate 100 SOL (method2: wallet send)</button>
-                    </div>
-                    <div>
-                        <WalletDisconnectButton/>
+                        <button onClick={donateSOL2}>Donate 100 SOL (2: using sdk method)</button>
                     </div>
                 </div>
             ) : (
-                <WalletMultiButton/>
+                <center><WalletMultiButton/></center>
             )}
             {transactionStatus && <p>{transactionStatus}</p>}
         </div>

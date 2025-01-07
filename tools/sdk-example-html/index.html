@@ -1,0 +1,69 @@
+<html>
+<head>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <!--script src="https://unpkg.com/@fragmetric-labs/sdk@latest/dist/index.browser.umd.js"></script-->
+    <script src="node_modules/@fragmetric-labs/sdk/dist/index.browser.umd.js"></script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 50px">
+    <h1>Fragmetric SDK Example HTML</h1>
+    <div style="text-align: center; margin: 10px 0">
+        <button id="connect-wallet">Connect Wallet</button>
+        <button id="donate">Donate 100 SOL</button>
+    </div>
+    <div id="output">Connect Phantom Wallet First</div>
+    <script>
+        const fragSOLProgram = new fragmetricSDK.RestakingProgram({
+            cluster: 'devnet',
+            connection: undefined, // use default connection for devnet
+            receiptTokenMint: fragmetricSDK.RestakingProgram.receiptTokenMint.fragSOL,
+        });
+
+
+        const output = document.getElementById('output');
+
+        document.getElementById('connect-wallet').onclick = async () => {
+            try {
+                if (!window.solana) {
+                    alert('Phantom Wallet not found. This example is based on Phantom Wallet.');
+                    return;
+                }
+                const res = await window.solana.connect();
+                output.innerText = `Connected Wallet Address: ${res.publicKey.toString()}`;
+            } catch (err) {
+                console.error('Wallet connection failed:', err);
+            }
+        };
+
+        document.getElementById('donate').onclick = async () => {
+            try {
+                if (!window.solana || !window.solana.isConnected) {
+                    alert('Please connect your wallet first.');
+                    return;
+                }
+                const walletAddress = new solanaWeb3.PublicKey(window.solana.publicKey);
+
+                const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+                const res = await msg.send({
+                    commitment: 'confirmed',
+                    onSign: async (tx, publicKey, _name) => {
+                        if (publicKey.equals(walletAddress)) {
+                            return window.solana.signTransaction(tx);
+                        }
+                        return null;
+                    },
+                    onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
+                        console.log('tx sent using sdk method', { tx, confirmStrategy, commitment });
+                        output.innerText = `Donation sent: ${confirmStrategy.signature}`;
+                    },
+                });
+                console.log('tx confirmed using sdk method', res);
+                output.innerText = `Donation confirmed: ${res.signature}`;
+            } catch (err) {
+                output.innerText = `Donation failed: ${err}`;
+                console.error(err);
+            }
+        };
+    </script>
+</body>
+</html>

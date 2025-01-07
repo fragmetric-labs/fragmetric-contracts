@@ -1,5 +1,5 @@
 import * as web3 from "@solana/web3.js";
-import {ProgramTransactionSigner} from "./program_transaction";
+import {ProgramTransactionOnSign} from "./program_transaction";
 import {Program} from "./program";
 
 export class ProgramAddressBook<NAME extends string> {
@@ -24,11 +24,11 @@ export class ProgramAddressBook<NAME extends string> {
         return this.entries.get(name) ?? null;
     }
 
-    public async sendLookupTableSyncTransactions({ lookupTableAddress = null, payer, authority, signer = this.program.transactionHandler?.signer ?? null }: {
+    public async sendLookupTableSyncTransactions({ lookupTableAddress = null, payer, authority, onSign = this.program.transactionHandler?.onSign ?? null }: {
         lookupTableAddress: web3.PublicKey|null,
         payer: web3.PublicKey,
         authority: web3.PublicKey,
-        signer?: ProgramTransactionSigner<'payer'|'authority'> | null,
+        onSign?: ProgramTransactionOnSign<'payer'|'authority'> | null,
     }) {
         const exists = lookupTableAddress ? await this.program.connection.getAccountInfo(lookupTableAddress).then(() => true).catch(() => false) : false;
         if (!exists) {
@@ -43,7 +43,7 @@ export class ProgramAddressBook<NAME extends string> {
                 instructions: [createIx],
                 signers: { payer, authority },
             })
-                .send({ signer });
+                .send({ onSign });
             lookupTableAddress = newLookupTableAddress;
         }
 
@@ -77,7 +77,7 @@ export class ProgramAddressBook<NAME extends string> {
                     ],
                     signers: { payer, authority },
                 })
-                    .send({ signer });
+                    .send({ onSign });
                 size += addresses.length;
             }
 

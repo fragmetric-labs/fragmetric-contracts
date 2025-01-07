@@ -10,20 +10,20 @@ async function example() {
         idl: undefined, // default IDL
         receiptTokenMint: RestakingProgram.receiptTokenMint.fragSOL,
         transactionHandler: {
-            onBeforeSend: async (msg) =>{
-                console.log(`[sending] description: ${msg.descriptions.join(', ')}`);
+            onSign: async (tx, publicKey, name) => {
+                if (publicKey == wallet.publicKey) {
+                    return wallet;
+                }
+                return null;
             },
-            onBeforeConfirm: async (confirmStrategy, commitment) => {
+            onBeforeSend: async (txMessage) =>{
+                console.log(`[sending] description: ${txMessage.descriptions.join(', ')}`);
+            },
+            onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
                 console.log(`[confirming] commitment: ${commitment}`, confirmStrategy);
             },
             onConfirm: async (result) => {
                 console.log(`[confirmed] signature: ${result.signature}`, result.events);
-            },
-            signer: async (name, publicKey, tx) => {
-                if (publicKey == wallet.publicKey) {
-                    return wallet;
-                }
-                throw "unknown signer";
             },
         },
     });

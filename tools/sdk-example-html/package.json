@@ -1,0 +1,15 @@
+{
+  "name": "@fragmetric-labs/sdk-example-html",
+  "license": "MIT",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "yarn link @fragmetric-labs/sdk; serve ."
+  },
+  "dependencies": {
+    "@fragmetric-labs/sdk": "*"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
