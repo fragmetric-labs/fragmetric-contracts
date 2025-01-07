@@ -10,7 +10,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[derive(Accounts)]
 pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
-    pub admin: Signer<'info>,
+    pub fund_manager: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 

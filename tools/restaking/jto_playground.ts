@@ -1331,6 +1331,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         .instruction(),
                     ];
                 }),
+                this.program.methods.fundManagerAddRestakingVaultCompoundingRewardToken(
+                    config.restakingVaults[0].vault,
+                    new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                ).accountsPartial({
+                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                })
+                .instruction(),
             ],
             signerNames: ["FUND_MANAGER"],
             events: ["fundManagerUpdatedFund"],

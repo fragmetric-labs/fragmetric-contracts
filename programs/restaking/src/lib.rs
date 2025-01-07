@@ -292,6 +292,23 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_add_restaking_vault_compounding_reward_token(
+        ctx: Context<FundManagerFundContext>,
+        vault: Pubkey,
+        compounding_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_vault_compounding_reward_token(
+            &vault,
+            &compounding_reward_token_mint,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // FundManagerFundNormalizedTokenInitialContext
     ////////////////////////////////////////////

@@ -426,6 +426,20 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         self.create_fund_manager_updated_fund_event()
     }
 
+    pub fn process_add_restaking_vault_compounding_reward_token(
+        &mut self,
+        vault: &Pubkey,
+        compounding_reward_token_mint: &Pubkey,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        {
+            let mut fund_account = self.fund_account.load_mut()?;
+            let vault = fund_account.get_restaking_vault_mut(vault)?;
+            vault.add_compounding_reward_token(compounding_reward_token_mint)?;
+        }
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
     fn create_fund_manager_updated_fund_event(&self) -> Result<events::FundManagerUpdatedFund> {
         Ok(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),
