@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build",
+    "test": "echo \"noop\"",
+    "dev": "vite"
   },
   "dependencies": {
     "@fragmetric-labs/sdk": "*",

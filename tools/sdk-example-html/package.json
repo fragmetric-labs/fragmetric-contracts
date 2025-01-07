@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "yarn link @fragmetric-labs/sdk; serve ."
+    "build": "echo \"noop\"",
+    "test": "echo \"noop\"",
+    "dev": "yarn link @fragmetric-labs/sdk; serve ."
   },
   "dependencies": {
     "@fragmetric-labs/sdk": "*"

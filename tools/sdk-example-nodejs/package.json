@@ -4,7 +4,9 @@
   "main": "index.ts",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node --transpile-only ./index.ts"
+    "build": "echo \"noop\"",
+    "test": "yarn dev",
+    "dev": "ts-node --transpile-only ./index.ts"
   },
   "dependencies": {
     "@fragmetric-labs/sdk": "*",
