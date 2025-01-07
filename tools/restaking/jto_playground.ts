@@ -506,10 +506,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     };
                 }
 
-                // TODO
                 const orcaDEXLiquidityPoolAddress: web3.PublicKey | null = token.pricingSource["orcaDexLiquidityPool"]?.address ?? null;
                 if (orcaDEXLiquidityPoolAddress) {
-                    
+                    return {
+                        instructions: [
+                            spl.createMintToInstruction(
+                                token.mint,
+                                ata.address,
+                                this.keychain.getPublicKey('ALL_MINT_AUTHORITY'),
+                                lamports.toNumber(),
+                                [],
+                                token.program,
+                            ),
+                        ],
+                        signers: [
+                            this.keychain.getKeypair('ALL_MINT_AUTHORITY')
+                        ]
+                    };
                 }
 
                 return {instructions: [], signers: []};
