@@ -117,7 +117,20 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                                 Some(command.with_required_accounts(required_accounts)),
                             ));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     };
                 }
                 ClaimUnrestakedVSTCommandState::ReadVaultState => {
@@ -223,7 +236,20 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             //     Some(command.with_required_accounts(required_accounts)),
                             // ));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     };
                 }
                 ClaimUnrestakedVSTCommandState::Claim(withdrawal_status) => {
@@ -365,7 +391,20 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             //     }
                             // }
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
                 ClaimUnrestakedVSTCommandState::SetupDenormalize(

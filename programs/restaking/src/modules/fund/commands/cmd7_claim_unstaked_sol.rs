@@ -75,7 +75,19 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 Some(command.with_required_accounts([(address, false)])),
                             ));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
                 ClaimUnstakedSOLCommandState::ReadPoolState => {
@@ -99,7 +111,19 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
                             SanctumSingleValidatorSPLStakePoolService::find_accounts_to_claim_sol()
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     };
                     required_accounts.extend([(fund_account.get_reserve_account_address()?, true)]);
                     required_accounts.extend(
@@ -187,7 +211,19 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
                                 }
                             }
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
             }

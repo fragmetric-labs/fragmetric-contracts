@@ -100,6 +100,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
                     for remaining_account in remaining_accounts {
@@ -109,7 +110,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     }
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
-                _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError),
+                Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -201,7 +208,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                     | TokenPricingSource::MarinadeStakePool { .. }
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                         ..
-                                    } => {
+                                    }
+                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
                                         let asset =
                                             fund_account.get_asset_state_mut(Some(*token_mint))?;
                                         let asset_value_as_receipt_token_amount = pricing_service

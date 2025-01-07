@@ -225,7 +225,20 @@ impl SelfExecutable for RestakeVSTCommand {
                                 ),
                             ));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
             }
@@ -333,7 +346,20 @@ impl SelfExecutable for RestakeVSTCommand {
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
             }
@@ -349,10 +375,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         .load()?
                         .get_restaking_vault(&remaining_items.first().unwrap().vault)?
                         .receipt_token_pricing_source
-                        .try_deserialize()?
-                        .ok_or_else(|| {
-                            error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
-                        })?;
+                        .try_deserialize()?;
 
                     RestakeVSTCommand {
                         state: RestakeVSTCommandState::Prepare {
@@ -360,10 +383,23 @@ impl SelfExecutable for RestakeVSTCommand {
                         },
                     }
                     .with_required_accounts(match pricing_source {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             JitoRestakingVaultService::find_accounts_to_new(address)?
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     })
                 }
                 _ => HarvestRewardCommand::default().without_required_accounts(),

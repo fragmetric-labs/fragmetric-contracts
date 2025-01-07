@@ -94,7 +94,16 @@ impl SelfExecutable for StakeSOLCommand {
                                 ));
                                 strategy_supported_tokens.push(&supported_token)
                             }
-                            _ => err!(
+                            // otherwise fails
+                            Some(TokenPricingSource::JitoRestakingVault { .. })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             )?,
                         };
@@ -167,7 +176,16 @@ impl SelfExecutable for StakeSOLCommand {
 
                                 SanctumSingleValidatorSPLStakePoolService::find_accounts_to_deposit_sol(pool_account)?
                             }
-                            _ => err!(
+                            // otherwise fails
+                            Some(TokenPricingSource::JitoRestakingVault { .. })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             )?,
                         },
@@ -323,7 +341,18 @@ impl SelfExecutable for StakeSOLCommand {
                                 deposit_fee,
                             ))
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     } {
                         let expected_minted_pool_token_amount =
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -375,10 +404,7 @@ impl SelfExecutable for StakeSOLCommand {
                         .load()?
                         .get_supported_token(&remaining_items.first().unwrap().token_mint)?
                         .pricing_source
-                        .try_deserialize()?
-                        .ok_or_else(|| {
-                            error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
-                        })?;
+                        .try_deserialize()?;
 
                     StakeSOLCommand {
                         state: StakeSOLCommandState::Prepare {
@@ -386,12 +412,25 @@ impl SelfExecutable for StakeSOLCommand {
                         },
                     }
                     .with_required_accounts(match pricing_source {
-                        TokenPricingSource::SPLStakePool { address }
-                        | TokenPricingSource::MarinadeStakePool { address }
-                        | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
+                        Some(TokenPricingSource::SPLStakePool { address })
+                        | Some(TokenPricingSource::MarinadeStakePool { address })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                            address,
+                        }) => {
                             vec![(address, false)]
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     })
                 }
                 _ => NormalizeSTCommand::default().without_required_accounts(),

@@ -162,7 +162,16 @@ impl UnstakeLSTCommand {
                     Some(command.with_required_accounts([(address, false)])),
                 ));
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 
@@ -206,7 +215,16 @@ impl UnstakeLSTCommand {
                 command.state = UnstakeLSTCommandState::GetAvailableUnstakeAccount;
                 SanctumSingleValidatorSPLStakePoolService::find_accounts_to_get_available_unstake_account(pool_account_info)?
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         };
 
         return Ok((
@@ -237,7 +255,19 @@ impl UnstakeLSTCommand {
                 ),
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => self
                 .get_available_unstake_account_from_spl_stake_pool::<SanctumSingleValidatorSPLStakePool>(ctx, accounts, item, address),
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException),
+            // otherwise fails
+            Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 
@@ -381,7 +411,17 @@ impl UnstakeLSTCommand {
                     ctx, accounts, item, address,
                 )
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 
@@ -484,7 +524,16 @@ impl UnstakeLSTCommand {
                     address,
                 )
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 
