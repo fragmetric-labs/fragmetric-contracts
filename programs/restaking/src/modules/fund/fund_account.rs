@@ -100,17 +100,20 @@ impl FundAccount {
         sol_operation_reserved_amount: u64,
     ) {
         if self.data_version == 0 {
+            self.receipt_token_mint = receipt_token_mint;
+            self.receipt_token_program = token_2022::ID;
+            self.receipt_token_decimals = receipt_token_decimals;
+            self.receipt_token_supply_amount = receipt_token_supply;
+            self.sol.initialize(None, sol_operation_reserved_amount);
+
+            // Must calculate bump at last
             self.bump = bump;
             self.reserve_account_bump =
                 Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
             self.treasury_account_bump =
                 Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
                     .1;
-            self.receipt_token_mint = receipt_token_mint;
-            self.receipt_token_program = token_2022::ID;
-            self.receipt_token_decimals = receipt_token_decimals;
-            self.receipt_token_supply_amount = receipt_token_supply;
-            self.sol.initialize(None, sol_operation_reserved_amount);
+
             self.data_version = 15;
         }
     }

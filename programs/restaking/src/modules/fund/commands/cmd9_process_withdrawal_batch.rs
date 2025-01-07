@@ -337,7 +337,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     };
                     // numerator/denominator > vrt_max_cycle_fee_numerator/vrt_max_cycle_fee_denominator
                     if denominator != 0
-                        || numerator * vrt_max_cycle_fee_denominator
+                        && numerator * vrt_max_cycle_fee_denominator
                             > vrt_max_cycle_fee_numerator * denominator
                     {
                         vrt_max_cycle_fee_numerator = numerator;
