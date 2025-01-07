@@ -20,6 +20,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
 
     public static readonly receiptTokenMint = {
         fragSOL: new web3.PublicKey('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
+        fragJTO: new web3.PublicKey('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
     };
     public readonly receiptTokenMint: web3.PublicKey;
 
@@ -46,9 +47,11 @@ export class RestakingProgram extends Program<RestakingIDL> {
                 return this.state._addressLookupTables;
             }
             let address = null;
+            // TODO: register ALT address to the fund account
             if (this.receiptTokenMint.equals(RestakingProgram.receiptTokenMint.fragSOL)) {
-                // TODO: register ALT address to the fund account
-                address = this.idl.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
+                if (this.cluster == 'devnet') {
+                    address = new web3.PublicKey('5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU');
+                }
             }
             if (address) {
                 const table = await this.connection

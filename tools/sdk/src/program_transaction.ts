@@ -1,14 +1,22 @@
-import * as web3 from "@solana/web3.js";
-import * as anchor from "@coral-xyz/anchor";
-import {Program, ProgramEvent} from "./program";
+import * as web3 from '@solana/web3.js';
+import * as anchor from '@coral-xyz/anchor';
+import { Buffer } from 'buffer';
 
-export type ProgramTransactionSigner<SIGNER extends string> = (name: 'payer' | SIGNER, publicKey: web3.PublicKey, buffer: Buffer) => Promise<web3.SignaturePubkeyPair | web3.Signer> | web3.SignaturePubkeyPair | web3.Signer;
-export type ProgramTransactionBeforeHook<IDL extends anchor.Idl> = (tx: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>, program: Program<IDL>) => Promise<void>;
-export type ProgramTransactionAfterHook<IDL extends anchor.Idl> = (result: Awaited<ReturnType<typeof ProgramTransactionMessage.prototype.send>>, program: Program<IDL>) => Promise<void>;
+if (typeof globalThis !== 'undefined') {
+    globalThis.Buffer = Buffer; // ensure Buffer is globally available for browser builds
+}
+
+import { Program, ProgramEvent } from './program';
+
+export type ProgramTransactionSigner<SIGNER extends string> = (name: 'payer' | SIGNER, publicKey: web3.PublicKey, tx: web3.VersionedTransaction) => Promise<web3.SignaturePubkeyPair | web3.Signer> | web3.SignaturePubkeyPair | web3.Signer;
+export type ProgramTransactionOnBeforeSend<IDL extends anchor.Idl> = (tx: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>, program: Program<IDL>) => Promise<void>;
+export type ProgramTransactionOnBeforeConfirm<IDL extends anchor.Idl> = (confirmStrategy: web3.TransactionConfirmationStrategy, commitment: web3.Finality, program: Program<IDL>) => Promise<void>;
+export type ProgramTransactionOnConfirm<IDL extends anchor.Idl> = (result: Awaited<ReturnType<typeof ProgramTransactionMessage.prototype.send>>, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionHandler<IDL extends anchor.Idl> = {
     signer: ProgramTransactionSigner<'payer'|string>,
-    before: ProgramTransactionBeforeHook<IDL>,
-    after: ProgramTransactionAfterHook<IDL>,
+    onBeforeSend: ProgramTransactionOnBeforeSend<IDL>,
+    onBeforeConfirm: ProgramTransactionOnBeforeConfirm<IDL>,
+    onConfirm: ProgramTransactionOnConfirm<IDL>,
 };
 
 export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>> extends web3.TransactionMessage {
@@ -50,40 +58,44 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         return super.compileToLegacyMessage();
     }
 
-    public async send({ signer = this.program.transactionHandler?.signer ?? null, sendOptions, confirmOptions, commitment = 'confirmed' } : {
+    public async send({ signer = this.program.transactionHandler?.signer ?? null, onBeforeConfirm = this.program.transactionHandler?.onBeforeConfirm ?? null, sendOptions, confirmStrategy, commitment = 'confirmed' } : {
         signer?: ProgramTransactionSigner<SIGNER> | null,
+        onBeforeConfirm?: ProgramTransactionOnBeforeConfirm<IDL> | null,
         sendOptions?: web3.SendOptions,
-        confirmOptions?: web3.TransactionConfirmationStrategy,
+        confirmStrategy?: web3.TransactionConfirmationStrategy,
         commitment?: web3.Finality,
     } = {}) {
-        if (this.program.transactionHandler?.before) {
-            await this.program.transactionHandler.before(this as any, this.program);
+        if (this.program.transactionHandler?.onBeforeSend) {
+            await this.program.transactionHandler.onBeforeSend(this as any, this.program);
         }
 
         if (!this.recentBlockhash) {
-            const { blockhash, lastValidBlockHeight } = await this.program.connection.getLatestBlockhash(commitment);
+            const { blockhash, lastValidBlockHeight } = await this.program.connection.getLatestBlockhash('finalized');
             this.recentBlockhash = blockhash;
-            confirmOptions = {
-                abortSignal: undefined,
-                ...(confirmOptions ?? {}),
-                blockhash,
-                lastValidBlockHeight,
-                signature: '',
+            if (!confirmStrategy) {
+                confirmStrategy = {
+                    abortSignal: undefined,
+                    ...(confirmStrategy ?? {}),
+                    blockhash,
+                    lastValidBlockHeight,
+                    signature: '',
+                }
             }
         }
 
-        const tx = new web3.VersionedTransaction(this.compileToV0Message());
-        let message: Buffer | null = null;
+        if (!confirmStrategy) {
+            throw new Error(`confirmStrategy with empty signature should be provided when recentBlockhash is manually set`);
+        }
+
+        const msg = this.compileToV0Message();
+        const tx = new web3.VersionedTransaction(msg);
         const signersWithSecretKey: web3.Signer[] = [];
         for (const [name, key] of Object.entries(this.signers)) {
             if ((key as web3.Signer).secretKey) {
                 signersWithSecretKey.push(key as web3.Signer);
             } else {
                 const publicKey = key as web3.PublicKey;
-                if (!message) {
-                    message = Buffer.from(tx.message.serialize());
-                }
-                const sigPair = signer ? await signer(name as SIGNER, publicKey, message) : null;
+                const sigPair = signer ? await signer(name as SIGNER, publicKey, tx) : null;
                 if (!sigPair) {
                     throw new Error(`unhandled signer key: ${key} (${name})`);
                 } else if (!sigPair.publicKey.equals(publicKey)) {
@@ -99,10 +111,12 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         tx.sign(signersWithSecretKey);
 
         const signature: web3.TransactionSignature = await this.program.connection.sendTransaction(tx, sendOptions);
-        const res = await this.program.connection.confirmTransaction({
-            ...(confirmOptions as web3.TransactionConfirmationStrategy),
-            signature,
-        }, commitment);
+        (confirmStrategy as any).signature = signature;
+        if (onBeforeConfirm) {
+            await onBeforeConfirm(confirmStrategy, commitment, this.program);
+        }
+
+        const res = await this.program.connection.confirmTransaction(confirmStrategy, commitment);
         if (res.value.err) {
             throw res.value.err;
         }
@@ -113,7 +127,7 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         });
 
         if (!txResult) {
-            throw new Error("no transaction result found");
+            throw new Error('no transaction result found');
         }
 
         if (txResult.meta?.err) {
@@ -137,13 +151,13 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
 
             for (const expectedEvent of this.expectedEvents) {
                 if (!result.events[expectedEvent]?.length) {
-                    console.warn(`Warning: missing expected event: ${expectedEvent}`);
+                    console.warn(`Warning: missing expected event: ${expectedEvent.toString()}`);
                 }
             }
         }
 
-        if (this.program.transactionHandler?.after) {
-            await this.program.transactionHandler.after(result as any, this.program);
+        if (this.program.transactionHandler?.onConfirm) {
+            await this.program.transactionHandler.onConfirm(result as any, this.program);
         }
 
         return result;

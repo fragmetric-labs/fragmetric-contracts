@@ -2,6 +2,8 @@ import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
 import {ProgramTransactionHandler, ProgramTransactionMessage, ProgramTransactionSigner} from "./program_transaction";
 
+export { BN } from 'bn.js';
+
 export class Program<IDL extends anchor.Idl> {
     public programID: web3.PublicKey;
     public readonly connection: web3.Connection;

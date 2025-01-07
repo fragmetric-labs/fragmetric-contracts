@@ -4,12 +4,13 @@
   "main": "index.ts",
   "license": "MIT",
   "dependencies": {
-    "@fragmetric-labs/sdk": "*"
+    "@fragmetric-labs/sdk": "*",
+    "@solana/web3.js": "^1.98.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2"
   },
   "scripts": {
-    "start": "ts-node --transpile-only ."
+    "start": "ts-node --transpile-only ./index.ts"
   }
 }
