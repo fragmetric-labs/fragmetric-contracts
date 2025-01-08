@@ -73,7 +73,7 @@ function Main() {
             const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
             const res = await msg.send({
                 commitment: 'confirmed',
-                onSign: async (tx, publicKey, _name) => {
+                onSign: async (tx, publicKey, name) => {
                     if (publicKey.equals(walletAddress!)) {
                         return signTransaction!(tx);
                     }

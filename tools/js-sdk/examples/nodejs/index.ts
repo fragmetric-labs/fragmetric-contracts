@@ -19,7 +19,7 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
                     const ledger = await LedgerSigner.connect({
                         handler: {
                             onBeforeConnect: (bip32Path) => console.log(`[ledger] connecting: ${bip32Path}`),
-                            onConnect: (publicKey, solanaAppVersion) => console.log(`[ledger] connected: ${publicKey} (solana app version: ${firmwareVersion})`),
+                            onConnect: (publicKey, solanaAppVersion) => console.log(`[ledger] connected: ${publicKey} (solana app version: ${solanaAppVersion})`),
                             onError: (err) => {
                                 console.error(err);
                                 return true; // always retry
@@ -33,7 +33,7 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
                 return null;
             },
             onBeforeSend: async (txMessage) =>{
-                console.log(`[sending] description: ${txMessage.descriptions.join(', ')}`);
+                console.log(`[sending] description: ${txMessage.descriptions?.join(', ')}`);
             },
             onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
                 console.log(`[confirming] commitment: ${commitment}`, confirmStrategy);

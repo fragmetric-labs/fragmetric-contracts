@@ -5,9 +5,14 @@
     }
   },
   "compilerOptions": {
-    "esModuleInterop": true,
-    "module": "esnext",
+    "skipLibCheck": true,
     "moduleResolution": "node",
-    "skipLibCheck": true
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
   }
 }
