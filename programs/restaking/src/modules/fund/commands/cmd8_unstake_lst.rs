@@ -461,8 +461,8 @@ impl UnstakeLSTCommand {
                 stake_program,
                 fund_supported_token_reserve_account,
                 fund_reserve_account,
-                ctx.fund_account.as_account_info(),
-                &fund_account.get_seeds(),
+                fund_reserve_account,
+                &fund_account.get_reserve_account_seeds(),
                 item.token_amount,
             )?
         };
@@ -596,8 +596,8 @@ impl UnstakeLSTCommand {
                 stake_program,
                 fund_supported_token_reserve_account,
                 fund_stake_account,
-                ctx.fund_account.as_account_info(),
-                &fund_account.get_seeds(),
+                fund_reserve_account,
+                &fund_account.get_reserve_account_seeds(),
                 fund_reserve_account,
                 withdraw_stake_item.token_amount,
             )?;

@@ -75,7 +75,7 @@ pub struct OperatorFundSupportedTokenDonationContext<'info> {
     #[account(
         mut,
         associated_token::mint = supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = supported_token_program,
     )]
     pub fund_supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -83,8 +83,8 @@ pub struct OperatorFundSupportedTokenDonationContext<'info> {
     #[account(
         mut,
         token::mint = supported_token_mint,
+        token::authority = operator,
         token::token_program = supported_token_program,
-        token::authority = operator.key(),
     )]
     pub operator_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -96,4 +96,10 @@ pub struct OperatorFundSupportedTokenDonationContext<'info> {
         constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
 }

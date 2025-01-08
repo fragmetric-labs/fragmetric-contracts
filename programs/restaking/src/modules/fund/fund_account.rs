@@ -210,7 +210,7 @@ impl FundAccount {
         let supported_token = self.get_supported_token(token)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &supported_token.mint,
                 &supported_token.program,
             ),
@@ -237,7 +237,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNormalizedTokenNotSetError))?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &normalized_token.mint,
                 &normalized_token.program,
             ),
@@ -251,7 +251,7 @@ impl FundAccount {
         let restaking_vault = self.get_restaking_vault(vault)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &restaking_vault.receipt_token_mint,
                 &restaking_vault.receipt_token_program,
             ),

@@ -381,7 +381,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_add_supported_token(
-            &ctx.accounts.supported_token_account,
+            &ctx.accounts.supported_token_reserve_account,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
             pricing_source,
@@ -919,6 +919,7 @@ pub mod restaking {
             &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &mut ctx.accounts.fund_withdrawal_batch_account,
+            &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,
         )?);

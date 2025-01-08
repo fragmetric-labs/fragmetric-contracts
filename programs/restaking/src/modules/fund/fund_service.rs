@@ -952,9 +952,9 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                         .unwrap()
                                         .to_account_info(),
                                     mint: supported_token_mint.to_account_info(),
-                                    authority: self.fund_account.to_account_info(),
+                                    authority: fund_reserve_account.to_account_info(),
                                 },
-                                &[&fund_account.get_seeds()],
+                                &[&fund_account.get_reserve_account_seeds()],
                             ),
                             asset_fee_amount_processing,
                             supported_token_mint.decimals,

@@ -23,6 +23,12 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: just need to validate vault state is owned by the vault program
@@ -44,14 +50,14 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
 
     #[account(
         associated_token::mint = vault_receipt_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = vault_receipt_token_program,
     )]
     pub fund_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         associated_token::mint = vault_supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = vault_supported_token_program,
     )]
     pub fund_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,

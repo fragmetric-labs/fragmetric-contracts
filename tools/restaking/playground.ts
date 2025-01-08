@@ -201,7 +201,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_2022_PROGRAM_ID,
         );
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
-            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFund, true, this.supportedTokenMetadata[symbol].program);
+            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFundReserveAccount, true, this.supportedTokenMetadata[symbol].program);
         const fragSOLSupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
             [`fragSOLFundReservedSupportedTokenAccount_${symbol}`]: fragSOLSupportedTokenAccount(symbol as any),
             ...obj,
@@ -209,14 +209,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const fragSOLFundNSOLAccount = spl.getAssociatedTokenAddressSync(
             nSOLTokenMint,
-            fragSOLFund,
+            fragSOLFundReserveAccount,
             true,
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
         const fragSOLFundJitoVRTAccount = spl.getAssociatedTokenAddressSync(
             fragSOLJitoVRTMint,
-            fragSOLFund,
+            fragSOLFundReserveAccount,
             true,
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1115,7 +1115,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLFundNSOLAccount,
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
                     this.knownAddress.nSOLTokenMint,
                 ),
                 this.program.methods.fundManagerInitializeFundNormalizedToken()
@@ -1155,7 +1155,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLFundJitoVRTAccount,
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
                 spl.createAssociatedTokenAccountIdempotentInstruction(
@@ -1238,7 +1238,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         this.wallet.publicKey,
                         this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
-                        this.knownAddress.fragSOLFund,
+                        this.knownAddress.fragSOLFundReserveAccount,
                         v.mint,
                         v.program,
                     ),
@@ -1384,7 +1384,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
+                    token.mint,
+                    token.program,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLFundTreasurySupportedTokenAccount(symbol as any),
+                    this.knownAddress.fragSOLFundTreasuryAccount,
                     token.mint,
                     token.program,
                 ),

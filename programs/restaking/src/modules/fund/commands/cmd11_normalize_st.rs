@@ -258,6 +258,8 @@ impl NormalizeSTCommand {
                         .find_supported_token_reserve_account_address(&supported_token.mint)?,
                     true,
                 ),
+                // authority of token accounts
+                (fund_account.get_reserve_account_address()?, false),
             ]);
 
         let command = Self {
@@ -284,7 +286,7 @@ impl NormalizeSTCommand {
         let item = items[0];
         items = &items[1..];
 
-        let &[normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, ..] =
+        let &[normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, fund_reserve_account, ..] =
             accounts
         else {
             err!(ErrorCode::AccountNotEnoughKeys)?
@@ -327,8 +329,8 @@ impl NormalizeSTCommand {
                 &supported_token_reserve_account,
                 &mut to_normalized_token_account,
                 &from_supported_token_account,
-                &ctx.fund_account.to_account_info(),
-                &[ctx.fund_account.load()?.get_seeds().as_ref()],
+                fund_reserve_account,
+                &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
                 item.allocated_token_amount,
                 &mut pricing_service,
             )?;

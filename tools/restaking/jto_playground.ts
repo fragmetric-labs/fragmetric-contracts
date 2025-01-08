@@ -201,7 +201,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_2022_PROGRAM_ID,
         );
         const fragJTOSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
-            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragJTOFund, true, this.supportedTokenMetadata[symbol].program);
+            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragJTOFundReserveAccount, true, this.supportedTokenMetadata[symbol].program);
         const fragJTOSupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
             [`fragJTOFundReservedSupportedTokenAccount_${symbol}`]: fragJTOSupportedTokenAccount(symbol as any),
             ...obj,
@@ -209,14 +209,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         // const fragJTOFundNSOLAccount = spl.getAssociatedTokenAddressSync(
         //     nSOLTokenMint,
-        //     fragJTOFund,
+        //     fragJTOFundReserveAccount,
         //     true,
         //     spl.TOKEN_PROGRAM_ID,
         //     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         // );
         const fragJTOFundJitoVRTAccount = spl.getAssociatedTokenAddressSync(
             fragJTOJitoVRTMint,
-            fragJTOFund,
+            fragJTOFundReserveAccount,
             true,
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -1028,7 +1028,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     //             spl.createAssociatedTokenAccountIdempotentInstruction(
     //                 this.wallet.publicKey,
     //                 this.knownAddress.fragJTOFundNSOLAccount,
-    //                 this.knownAddress.fragJTOFund,
+    //                 this.knownAddress.fragJTOFundReserveAccount,
     //                 this.knownAddress.nSOLTokenMint,
     //             ),
     //             this.program.methods.fundManagerInitializeFundNormalizedToken()
@@ -1068,7 +1068,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragJTOFundJitoVRTAccount,
-                    this.knownAddress.fragJTOFund,
+                    this.knownAddress.fragJTOFundReserveAccount,
                     this.knownAddress.fragJTOJitoVRTMint,
                 ),
                 spl.createAssociatedTokenAccountIdempotentInstruction(
@@ -1151,7 +1151,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         this.wallet.publicKey,
                         this.knownAddress.fragJTOSupportedTokenAccount(symbol as any),
-                        this.knownAddress.fragJTOFund,
+                        this.knownAddress.fragJTOFundReserveAccount,
                         v.mint,
                         v.program,
                     ),
@@ -1258,7 +1258,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragJTOSupportedTokenAccount(symbol as any),
-                    this.knownAddress.fragJTOFund,
+                    this.knownAddress.fragJTOFundReserveAccount,
+                    token.mint,
+                    token.program,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragJTOFundTreasurySupportedTokenAccount(symbol as any),
+                    this.knownAddress.fragJTOFundTreasuryAccount,
                     token.mint,
                     token.program,
                 ),

@@ -214,6 +214,8 @@ impl SelfExecutable for RestakeVSTCommand {
                                     )?,
                                     true,
                                 ),
+                                // Jito requires signer to be writable lol
+                                (fund_account.get_reserve_account_address()?, true),
                             ]);
 
                             return Ok((
@@ -255,7 +257,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, _remaining_accounts @ ..] =
+                            let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, fund_reserve_account, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -267,17 +269,6 @@ impl SelfExecutable for RestakeVSTCommand {
                                 vault_config,
                                 vault_account,
                             )?;
-
-                            // here 'signer' needs to be writable, well, fund data might be vulnerable...
-                            // anyway, to drop fund_account borrowing..
-                            let fund_account_seeds: Vec<Vec<u8>> = fund_account
-                                .get_seeds()
-                                .into_iter()
-                                .map(|slice| slice.to_vec())
-                                .collect();
-                            let fund_account_seeds: Vec<&[u8]> =
-                                fund_account_seeds.iter().map(|vec| &vec[..]).collect();
-                            drop(fund_account);
 
                             let (
                                 to_vault_receipt_token_account_amount,
@@ -292,10 +283,12 @@ impl SelfExecutable for RestakeVSTCommand {
                                 // variant
                                 from_vault_supported_token_account,
                                 to_vault_receipt_token_account,
-                                &ctx.fund_account.to_account_info(),
-                                &[fund_account_seeds.as_ref()],
+                                fund_reserve_account,
+                                &[&fund_account.get_reserve_account_seeds()],
                                 item.allocated_token_amount,
                             )?;
+
+                            drop(fund_account);
 
                             let pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?

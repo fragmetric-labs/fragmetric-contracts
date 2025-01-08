@@ -578,6 +578,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         &pool_supported_token_account_parsed,
                         &normalized_token_account_parsed,
                         &supported_token_account_parsed,
+                        // TODO v0.4/operation: signer is fund_reserve_account.
                         &ctx.fund_account.as_ref(),
                         &[ctx.fund_account.load()?.get_seeds().as_ref()],
                         reserved_restake_token.operation_reserved_amount,

@@ -104,18 +104,18 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_add_supported_token(
         &mut self,
-        fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
+        supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
-            fund_supported_token_reserve_account.owner,
-            self.fund_account.key()
+            supported_token_reserve_account.owner,
+            self.fund_account.load()?.get_reserve_account_address()?,
         );
         require_keys_eq!(
-            fund_supported_token_reserve_account.mint,
+            supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
         require_keys_eq!(
@@ -128,7 +128,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
-            fund_supported_token_reserve_account.amount,
+            supported_token_reserve_account.amount,
         )?;
 
         // validate pricing source
@@ -146,7 +146,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         normalized_token_pool: &mut Account<'info, NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(fund_normalized_token_account.owner, self.fund_account.key());
+        require_keys_eq!(
+            fund_normalized_token_account.owner,
+            self.fund_account.load()?.get_reserve_account_address()?
+        );
         require_keys_eq!(
             fund_normalized_token_account.mint,
             normalized_token_mint.key()
@@ -196,7 +199,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
             fund_vault_supported_token_account.owner,
-            self.fund_account.key()
+            self.fund_account.load()?.get_reserve_account_address()?,
         );
         require_keys_eq!(
             fund_vault_supported_token_account.mint,
@@ -209,7 +212,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
         require_keys_eq!(
             fund_vault_receipt_token_account.owner,
-            self.fund_account.key()
+            self.fund_account.load()?.get_reserve_account_address()?,
         );
         require_keys_eq!(
             fund_vault_receipt_token_account.mint,

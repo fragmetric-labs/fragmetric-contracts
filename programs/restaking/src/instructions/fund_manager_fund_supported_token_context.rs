@@ -23,14 +23,33 @@ pub struct FundManagerFundSupportedTokenContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
+        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_treasury_account: SystemAccount<'info>,
+
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
     #[account(
         associated_token::mint = supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = supported_token_program,
     )]
-    pub supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        associated_token::mint = supported_token_mint,
+        associated_token::authority = fund_treasury_account,
+        associated_token::token_program = supported_token_program,
+    )]
+    pub supported_token_treasury_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }

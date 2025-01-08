@@ -453,7 +453,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         user_supported_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
         // for SOL
-        fund_reserve_account: Option<&SystemAccount<'info>>,
+        fund_reserve_account: &SystemAccount<'info>,
 
         fund_treasury_account: &SystemAccount<'info>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
@@ -496,9 +496,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                                     .to_account_info(),
                                 to: user_supported_token_account.unwrap().to_account_info(),
                                 mint: supported_token_mint.to_account_info(),
-                                authority: self.fund_account.to_account_info(),
+                                authority: fund_reserve_account.to_account_info(),
                             },
-                            &[self.fund_account.load()?.get_seeds().as_ref()],
+                            &[&self.fund_account.load()?.get_reserve_account_seeds()],
                         ),
                         asset_user_amount,
                         supported_token_mint.decimals,
@@ -509,7 +509,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                         CpiContext::new_with_signer(
                             system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
-                                from: fund_reserve_account.unwrap().to_account_info(),
+                                from: fund_reserve_account.to_account_info(),
                                 to: self.user.to_account_info(),
                             },
                             &[&fund_account.get_reserve_account_seeds()],
@@ -572,7 +572,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             None,
             None,
             None,
-            Some(fund_reserve_account),
+            fund_reserve_account,
             fund_treasury_account,
             fund_withdrawal_batch_account,
             request_id,
@@ -587,6 +587,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
+        fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
@@ -596,7 +597,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             Some(supported_token_mint),
             Some(fund_supported_token_reserve_account),
             Some(user_supported_token_account),
-            None,
+            fund_reserve_account,
             fund_treasury_account,
             fund_withdrawal_batch_account,
             request_id,
