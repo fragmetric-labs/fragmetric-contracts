@@ -900,7 +900,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
-        const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
+        // const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
 
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragJTOFund)
@@ -924,10 +924,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
-            this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
-                payer: this.wallet.publicKey,
-                receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-            }).instruction(),
+            // this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
+            //     payer: this.wallet.publicKey,
+            //     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+            // }).instruction(),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {
@@ -1838,12 +1838,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runUserCancelWithdrawalRequest(user: web3.Keypair, requestId: BN) {
+    public async runUserCancelWithdrawalRequest(
+        user: web3.Keypair,
+        requestId: BN,
+        tokenMint: web3.PublicKey | null = null,
+    ) {
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragJTOFundAndRewardAccounts(user)),
                 this.program.methods
-                    .userCancelWithdrawalRequest(requestId)
+                    .userCancelWithdrawalRequest(requestId, tokenMint)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,

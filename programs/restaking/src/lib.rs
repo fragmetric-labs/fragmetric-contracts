@@ -849,6 +849,7 @@ pub mod restaking {
     pub fn user_cancel_withdrawal_request<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         request_id: u64,
+        supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -863,7 +864,8 @@ pub mod restaking {
         .process_cancel_withdrawal_request(
             &mut ctx.accounts.receipt_token_lock_account,
             ctx.remaining_accounts,
-            request_id
+            request_id,
+            supported_token_mint,
         )?);
 
         Ok(())

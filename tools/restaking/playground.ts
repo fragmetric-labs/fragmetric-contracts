@@ -1993,12 +1993,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runUserCancelWithdrawalRequest(user: web3.Keypair, requestId: BN) {
+    public async runUserCancelWithdrawalRequest(
+        user: web3.Keypair,
+        requestId: BN,
+        tokenMint: web3.PublicKey | null = null,
+    ) {
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
-                    .userCancelWithdrawalRequest(requestId)
+                    .userCancelWithdrawalRequest(requestId, tokenMint)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,

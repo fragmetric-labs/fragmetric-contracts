@@ -136,11 +136,21 @@ impl UserFundAccount {
         Ok(())
     }
 
-    pub(super) fn pop_withdrawal_request(&mut self, request_id: u64) -> Result<WithdrawalRequest> {
+    pub(super) fn pop_withdrawal_request(
+        &mut self,
+        request_id: u64,
+        supported_token_mint: Option<Pubkey>,
+    ) -> Result<WithdrawalRequest> {
         let index = self
             .withdrawal_requests
-            .binary_search_by_key(&request_id, |req| req.request_id)
-            .map_err(|_| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
+            .iter()
+            .enumerate()
+            .find_map(|(index, request)| {
+                (request.request_id == request_id
+                    && request.supported_token_mint == supported_token_mint)
+                    .then_some(index)
+            })
+            .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
     }
 }

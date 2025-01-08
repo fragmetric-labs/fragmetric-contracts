@@ -366,9 +366,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
         request_id: u64,
+        supported_token_mint: Option<Pubkey>,
     ) -> Result<events::UserCanceledWithdrawalRequestFromFund> {
         // clear pending amount from both user fund account and global fund account
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let withdrawal_request = self
+            .user_fund_account
+            .pop_withdrawal_request(request_id, supported_token_mint)?;
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
@@ -460,20 +463,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
         // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
-
         let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
-        match supported_token_mint_key {
-            Some(supported_token_mint_key) => {
-                require_keys_eq!(
-                    withdrawal_request.supported_token_mint.unwrap(),
-                    supported_token_mint_key
-                )
-            }
-            None => {
-                require_eq!(withdrawal_request.supported_token_mint.is_none(), true)
-            }
-        };
+        let withdrawal_request = self
+            .user_fund_account
+            .pop_withdrawal_request(request_id, supported_token_mint_key)?;
 
         let (asset_user_amount, asset_fee_amount, receipt_token_amount) =
             fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;

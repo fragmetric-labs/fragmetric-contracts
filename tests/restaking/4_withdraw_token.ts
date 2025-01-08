@@ -92,14 +92,16 @@ describe("withdraw token", async () => {
 
     step("user5 cancels token withdrawal request", async () => {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
+        const tokenMint = fragSOLFund0.supportedTokens[0].mint;
         expect(fragSOLFund0.supportedTokens[0].token.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize);
 
-        await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(10))).rejectedWith("FundWithdrawalRequestNotFoundError");
+        await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(10), tokenMint)).rejectedWith("FundWithdrawalRequestNotFoundError");
+        await expect(restaking.runUserCancelWithdrawalRequest(user5, new BN(1))).rejectedWith("FundWithdrawalRequestNotFoundError");
 
-        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(1));
+        const res1 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(1), tokenMint);
         expect(res1.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 1, '1');
 
-        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(3));
+        const res2 = await restaking.runUserCancelWithdrawalRequest(user5, new BN(3), tokenMint);
         expect(res2.fragSOLUserFund.withdrawalRequests.length).eq(withdrawalRequestedSize - 2, '2');
         expect(res2.fragSOLFund.supportedTokens[0].token.withdrawalPendingBatch.numRequests.toNumber()).eq(withdrawalRequestedSize - 2);
 
@@ -110,7 +112,7 @@ describe("withdraw token", async () => {
         const account2 = await restaking.getUserFragSOLAccount(user5.publicKey);
         expect(account2.amount.toString()).eq(res2.fragSOLUserFund.receiptTokenAmount.toString(), '5');
 
-        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(2))).rejectedWith("FundWithdrawalRequestNotFoundError");
+        await expect(restaking.runUserCancelWithdrawalRequest(user6, new BN(2), tokenMint)).rejectedWith("FundWithdrawalRequestNotFoundError");
     });
 
 
