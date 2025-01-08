@@ -16,7 +16,7 @@ $ yarn workspace @fragmetric-labs/sdk test
 # dev/build/test examples
 $ yarn workspace @fragmetric-labs/sdk-example-react dev
 $ yarn workspace @fragmetric-labs/sdk-example-html dev
-$ yarn workspace @fragmetric-labs/sdk-example-nodejs dev
+$ yarn workspace @fragmetric-labs/sdk-example-node dev
 
 # build all including examples
 $ yarn workspaces run build
@@ -45,7 +45,7 @@ $ yarn workspace @fragmetric-labs/sdk publish
 - other all operation methods
 - playground(? .. = REPL + wrapper functions (?) for testing and operation? or just into sdk?)
 - fragSOL, fragJTO playgrounds...
-- snapshot feature for some stuffs.. for fixture based testin
+- snapshot feature for some stuffs.. for fixture based testing
 - testing/playground migration...
 - update keychain stuff.. and aws secret.. readme..
 - migrate `restaking`, `lib`, `../keypairs`, `../idls`, `../cpis`

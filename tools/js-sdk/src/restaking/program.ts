@@ -2,11 +2,11 @@ import * as web3 from '@solana/web3.js';
 import BN from "bn.js";
 
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
-import idlFile from './program.idl.v0.4.0.json';
-import type {Restaking} from './program.idl.v0.4.0';
+import restakingIDL from './program.idl.json';
+import type {Restaking as RestakingIDL} from './program.idl';
 import {dedupe} from "../cache";
 
-export type RestakingIDL = Restaking;
+export type { RestakingIDL };
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
 export type RestakingProgramEvent = ProgramEvent<RestakingIDL>;
 export type RestakingProgramType = ProgramType<RestakingIDL>;
@@ -25,11 +25,12 @@ export class RestakingProgram extends Program<RestakingIDL> {
     };
     public readonly receiptTokenMint: web3.PublicKey;
 
-    constructor({ receiptTokenMint, cluster = 'mainnet', idl = <RestakingIDL>idlFile, ...args }: Partial<ConstructorParameters<typeof Program<RestakingIDL>>[0]> & {
+    constructor({ receiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'idl'|'programID'>> & {
         receiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['receiptTokenMint'],
     }) {
+        const idl = <RestakingIDL>restakingIDL;
         const programID = RestakingProgram.programID[cluster] ?? new web3.PublicKey(idl.address);
-        super({ cluster, programID, idl, ...args });
+        super({ ...args, cluster, idl, programID });
         this.receiptTokenMint = RestakingProgram.receiptTokenMint[receiptTokenMint.toString() as keyof typeof RestakingProgram['receiptTokenMint']] ?? receiptTokenMint;
     }
 

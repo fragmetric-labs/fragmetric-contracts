@@ -1,5 +1,5 @@
 {
-  "name": "@fragmetric-labs/sdk-example-nodejs",
+  "name": "@fragmetric-labs/sdk-example-node",
   "version": "1.0.0",
   "main": "index.ts",
   "license": "MIT",

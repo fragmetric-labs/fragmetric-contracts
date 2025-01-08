@@ -9,8 +9,7 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
     const program = new RestakingProgram({
         cluster: 'devnet',
         connection: undefined, // default RPC
-        idl: undefined, // default IDL
-        receiptTokenMint: RestakingProgram.receiptTokenMint.fragSOL,
+        receiptTokenMint: 'fragSOL',
         transactionHandler: {
             onBeforeSign: async (txMessage) => {
                 console.log(`[signing] description: ${txMessage.descriptions?.join(', ')}`);

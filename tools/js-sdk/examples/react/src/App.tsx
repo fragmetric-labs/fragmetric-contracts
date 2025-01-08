@@ -31,7 +31,7 @@ function Main() {
         return new fragmetricSDK.RestakingProgram({
             cluster: 'devnet',
             connection, // use wallet adappter connection
-            receiptTokenMint: fragmetricSDK.RestakingProgram.receiptTokenMint.fragSOL,
+            receiptTokenMint: 'fragSOL',
         });
     }, [connection]);
 

@@ -6,7 +6,8 @@ import {InMemoryCache, ICache} from './cache';
 export { BN } from 'bn.js';
 
 export class Program<IDL extends anchor.Idl> {
-    public programID: web3.PublicKey;
+    public readonly programID: web3.PublicKey;
+    public readonly programVersion: string;
     public readonly connection: web3.Connection;
     private readonly anchorProgram: anchor.Program<IDL>;
     private readonly anchorEventParser: anchor.EventParser;
@@ -33,6 +34,7 @@ export class Program<IDL extends anchor.Idl> {
     }) {
         this.cluster = cluster;
         this.programID = programID;
+        this.programVersion = idl.metadata.version;
 
         // create a default connection
         this.connection = connection ?? new web3.Connection(Program.defaultClusterURL[cluster] ?? Program.defaultClusterURL.local, {
