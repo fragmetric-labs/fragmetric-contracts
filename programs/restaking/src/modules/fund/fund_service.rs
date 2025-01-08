@@ -231,7 +231,13 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                         total_withdrawal_requested_receipt_token_amount +=
                                             withdrawal_requested_receipt_token_amount;
                                     }
-                                    _ => {}
+                                    TokenPricingSource::JitoRestakingVault { .. }
+                                    | TokenPricingSource::FragmetricNormalizedTokenPool {
+                                        ..
+                                    }
+                                    | TokenPricingSource::FragmetricRestakingFund { .. } => {}
+                                    #[cfg(all(test, not(feature = "idl-build")))]
+                                    TokenPricingSource::Mock { .. } => {}
                                 }
                             }
                         }
