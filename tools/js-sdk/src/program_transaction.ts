@@ -8,14 +8,14 @@ if (typeof globalThis !== 'undefined') { // for browser bundle
 
 import { Program, ProgramEvent } from './program';
 
-export type ProgramTransactionOnBeforeSend<IDL extends anchor.Idl> = (txMessage: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionSignature = web3.SignaturePubkeyPair | web3.Signer | Buffer | Uint8Array | web3.VersionedTransaction | null;
+export type ProgramTransactionOnBeforeSign<IDL extends anchor.Idl> = (txMessage: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionOnSign<SIGNER extends string> = (tx: web3.VersionedTransaction, publicKey: web3.PublicKey, name: 'payer' | SIGNER) => Promise<ProgramTransactionSignature> | ProgramTransactionSignature;
 export type ProgramTransactionOnBeforeConfirm<IDL extends anchor.Idl> = (tx: web3.VersionedTransaction, confirmStrategy: web3.TransactionConfirmationStrategy, commitment: web3.Finality, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionOnConfirm<IDL extends anchor.Idl> = (result: Awaited<ReturnType<typeof ProgramTransactionMessage.prototype.send>>, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionHandler<IDL extends anchor.Idl> = {
+    onBeforeSign: ProgramTransactionOnBeforeSign<IDL>,
     onSign: ProgramTransactionOnSign<'payer'|string>,
-    onBeforeSend: ProgramTransactionOnBeforeSend<IDL>,
     onBeforeConfirm: ProgramTransactionOnBeforeConfirm<IDL>,
     onConfirm: ProgramTransactionOnConfirm<IDL>,
 };
@@ -66,8 +66,8 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         confirmStrategy?: web3.TransactionConfirmationStrategy,
         commitment?: web3.Finality,
     } = {}) {
-        if (this.program.transactionHandler?.onBeforeSend) {
-            await this.program.transactionHandler.onBeforeSend(this as any, this.program);
+        if (this.program.transactionHandler?.onBeforeSign) {
+            await this.program.transactionHandler.onBeforeSign(this as any, this.program);
         }
 
         let minContextSlot: number | undefined = undefined;

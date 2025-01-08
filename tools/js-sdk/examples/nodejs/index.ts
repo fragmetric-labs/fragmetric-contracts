@@ -12,8 +12,13 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
         idl: undefined, // default IDL
         receiptTokenMint: RestakingProgram.receiptTokenMint.fragSOL,
         transactionHandler: {
+            onBeforeSign: async (txMessage) => {
+                console.log(`[signing] description: ${txMessage.descriptions?.join(', ')}`);
+            },
             onSign: async (tx, publicKey, name) => {
                 if (publicKey.equals(walletKeyPair.publicKey)) {
+
+                    console.log(`[signed] by keypair: ${publicKey}`);
                     return walletKeyPair;
                 } else if (publicKey.equals(ledgerPublicKey)) {
                     const ledger = await LedgerSigner.connect({
@@ -28,12 +33,12 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
                     });
 
                     console.log(`[ledger] signing: ${publicKey}`);
-                    return ledger.signTransaction(tx);
+                    const res = await ledger.signTransaction(tx);
+
+                    console.log(`[signed] by ledger: ${publicKey}`);
+                    return res;
                 }
                 return null;
-            },
-            onBeforeSend: async (txMessage) =>{
-                console.log(`[sending] description: ${txMessage.descriptions?.join(', ')}`);
             },
             onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
                 console.log(`[confirming] commitment: ${commitment}`, confirmStrategy);
