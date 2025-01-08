@@ -1,6 +1,6 @@
 [package]
 name = "restaking"
-version = "0.3.3"
+version = "0.4.0"
 description = "Fragmetric Liquid Restaking Token Program"
 edition = "2021"
 
