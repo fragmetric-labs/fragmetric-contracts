@@ -14,7 +14,7 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v15: migrate to new layout including new fields using bytemuck. (150312 ~= 147KB)
+/// * v15: migrate to new layout including new fields using bytemuck. (150584 ~= 148KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 15;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
@@ -28,8 +28,11 @@ pub struct FundAccount {
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 10],
+    _padding: [u8; 9],
     pub(super) transfer_enabled: u8,
+
+    is_address_lookup_table_valid: u8,
+    address_lookup_table: Pubkey,
 
     /// receipt token information
     pub receipt_token_mint: Pubkey,
@@ -342,6 +345,11 @@ impl FundAccount {
         self.get_supported_tokens_iter_mut()
             .find(|supported_token| supported_token.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
+    }
+
+    pub(super) fn set_address_lookup_table_address(&mut self, address_lookup_table: &Pubkey) {
+        self.is_address_lookup_table_valid = 1;
+        self.address_lookup_table = *address_lookup_table;
     }
 
     #[inline(always)]

@@ -91,6 +91,17 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         Ok(())
     }
 
+    pub fn process_set_address_lookup_table_address(
+        &mut self,
+        address_lookup_table: &Pubkey,
+    ) -> Result<()> {
+        self.fund_account
+            .load_mut()?
+            .set_address_lookup_table_address(address_lookup_table);
+
+        Ok(())
+    }
+
     pub fn process_add_supported_token(
         &mut self,
         fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,

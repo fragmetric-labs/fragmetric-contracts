@@ -900,6 +900,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
+        const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
+
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragJTOFund)
             .then((a) => a.data.readInt16LE(8))
@@ -922,6 +924,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
+            this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
+                payer: this.wallet.publicKey,
+                receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+            }).instruction(),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {

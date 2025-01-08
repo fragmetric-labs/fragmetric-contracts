@@ -76,6 +76,17 @@ pub mod restaking {
         )
     }
 
+    pub fn admin_set_address_lookup_table_address(
+        ctx: Context<AdminFundAccountUpdateContext>,
+        address_lookup_table: Pubkey,
+    ) -> Result<()> {
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_set_address_lookup_table_address(&address_lookup_table)
+    }
+
     ////////////////////////////////////////////
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
