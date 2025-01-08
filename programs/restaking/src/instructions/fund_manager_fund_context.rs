@@ -80,7 +80,8 @@ pub struct FundManagerChangeFundTokenAccountContext<'info> {
         seeds = [FundAccount::SEED, FRAGSOL_MINT_ADDRESS.as_ref()],
         bump,
     )]
-    pub fund_account: AccountLoader<'info, FundAccount>,
+    /// CHECK: should not deserialize
+    pub fund_account: UncheckedAccount<'info>,
 
     #[account(
         seeds = [FundAccount::RESERVE_SEED, FRAGSOL_MINT_ADDRESS.as_ref()],

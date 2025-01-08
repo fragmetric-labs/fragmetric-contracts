@@ -1078,6 +1078,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         tokenMint: web3.PublicKey,
         tokenProgram: web3.PublicKey,
     ) {
+        const oldTokenAccount = spl.getAssociatedTokenAddressSync(
+            tokenMint,
+            this.knownAddress.fragSOLFund,
+            true,
+            tokenProgram,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
         const newTokenAccount = spl.getAssociatedTokenAddressSync(
             tokenMint,
             this.knownAddress.fragSOLFundReserveAccount,
@@ -1096,10 +1103,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
                 ),
                 this.program.methods.fundManagerChangeFundTokenAccount()
-                    .accounts({
+                    .accountsPartial({
                         payer: this.wallet.publicKey,
                         tokenMint: tokenMint,
                         tokenProgram: tokenProgram,
+                        oldTokenAccount,
+                        newTokenAccount,
                     })
                     .instruction(),
             ],

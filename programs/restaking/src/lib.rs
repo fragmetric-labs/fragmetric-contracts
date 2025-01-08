@@ -41,8 +41,11 @@ pub mod restaking {
     pub fn fund_manager_change_fund_token_account(
         ctx: Context<FundManagerChangeFundTokenAccountContext>,
     ) -> Result<()> {
-        use crate::utils::PDASeeds;
-
+        let bump = Pubkey::find_program_address(
+            &[b"fund", crate::constants::FRAGSOL_MINT_ADDRESS.as_ref()],
+            &crate::ID,
+        )
+        .1;
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -52,7 +55,11 @@ pub mod restaking {
                     to: ctx.accounts.new_token_account.to_account_info(),
                     authority: ctx.accounts.fund_account.to_account_info(),
                 },
-                &[&ctx.accounts.fund_account.load()?.get_seeds()],
+                &[&[
+                    b"fund",
+                    crate::constants::FRAGSOL_MINT_ADDRESS.as_ref(),
+                    &[bump],
+                ]],
             ),
             ctx.accounts.old_token_account.amount,
             ctx.accounts.token_mint.decimals,
@@ -65,7 +72,11 @@ pub mod restaking {
                 destination: ctx.accounts.payer.to_account_info(),
                 authority: ctx.accounts.fund_account.to_account_info(),
             },
-            &[&ctx.accounts.fund_account.load()?.get_seeds()],
+            &[&[
+                b"fund",
+                crate::constants::FRAGSOL_MINT_ADDRESS.as_ref(),
+                &[bump],
+            ]],
         ))
     }
 
