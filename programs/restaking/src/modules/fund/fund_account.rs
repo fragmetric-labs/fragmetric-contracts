@@ -34,6 +34,10 @@ pub struct FundAccount {
     is_address_lookup_table_valid: u8,
     address_lookup_table: Pubkey,
 
+    // informative
+    reserve_account: Pubkey,
+    treasury_account: Pubkey,
+
     /// receipt token information
     pub receipt_token_mint: Pubkey,
     pub(super) receipt_token_program: Pubkey,
@@ -109,13 +113,12 @@ impl FundAccount {
             self.receipt_token_supply_amount = receipt_token_supply;
             self.sol.initialize(None, sol_operation_reserved_amount);
 
-            // Must calculate bump at last
+            // Must calculate addresses at last
             self.bump = bump;
-            self.reserve_account_bump =
-                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
-            self.treasury_account_bump =
-                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
-                    .1;
+            (self.reserve_account, self.reserve_account_bump) =
+                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID);
+            (self.treasury_account, self.treasury_account_bump) =
+                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID);
 
             self.data_version = 15;
         }
