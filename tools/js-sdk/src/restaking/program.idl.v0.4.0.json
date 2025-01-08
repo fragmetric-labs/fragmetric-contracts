@@ -579,7 +579,7 @@
       ],
       "args": [
         {
-          "name": "address_lookup_table_address",
+          "name": "address_lookup_table_account",
           "type": {
             "option": "pubkey"
           }
@@ -8905,11 +8905,11 @@
             "type": "u8"
           },
           {
-            "name": "is_address_lookup_table_valid",
+            "name": "address_lookup_table_enabled",
             "type": "u8"
           },
           {
-            "name": "address_lookup_table_address",
+            "name": "address_lookup_table_account",
             "type": "pubkey"
           },
           {

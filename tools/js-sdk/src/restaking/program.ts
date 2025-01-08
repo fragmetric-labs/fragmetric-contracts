@@ -4,6 +4,7 @@ import BN from "bn.js";
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
 import idlFile from './program.idl.v0.4.0.json';
 import type {Restaking} from './program.idl.v0.4.0';
+import {dedupe} from "../cache";
 
 export type RestakingIDL = Restaking;
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
@@ -28,49 +29,43 @@ export class RestakingProgram extends Program<RestakingIDL> {
         receiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['receiptTokenMint'],
     }) {
         const programID = RestakingProgram.programID[cluster] ?? new web3.PublicKey(idl.address);
-        receiptTokenMint = RestakingProgram.receiptTokenMint[receiptTokenMint.toString() as keyof typeof RestakingProgram['receiptTokenMint']] ?? receiptTokenMint;
-        const cacheKeyPrefix = [programID.toString().slice(0, 8), receiptTokenMint.toString().slice(0, 8)].join(':');
-        super({
-            cluster,
-            programID,
-            idl,
-            cacheKeyPrefix,
-            ...args,
-        });
-        this.receiptTokenMint = receiptTokenMint;
+        super({ cluster, programID, idl, ...args });
+        this.receiptTokenMint = RestakingProgram.receiptTokenMint[receiptTokenMint.toString() as keyof typeof RestakingProgram['receiptTokenMint']] ?? receiptTokenMint;
     }
 
     public readonly state = {
-        fund: async (refetch = false): Promise<RestakingProgramAccount['fundAccount'] | null> => {
-            if (!refetch && this.cache.has('fund')) {
-                return this.cache.get('fund');
+        fund: dedupe(async (refresh = false): Promise<RestakingProgramAccount['fundAccount'] | null> => {
+            const k = 'fund';
+            if (!refresh && this.cache.has(k)) {
+                return this.cache.get(k);
             }
             const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.receiptTokenMint.toBuffer()], this.programID)[0];
-            // TODO: RW LOCK FOR FETCH NULLABLE?
-            return this.cache.set('fund', await this.programAccounts.fundAccount.fetchNullable(address));
-        },
-        addressLookupTables: async (refetch = false): Promise<web3.AddressLookupTableAccount[]> => {
-            if (!refetch && this.cache.has('addressLookupTables') && refetch) {
-                return this.cache.get('addressLookupTables');
+            return this.cache.set(k, await this.programAccounts.fundAccount.fetchNullable(address));
+        }),
+        addressLookupTables: dedupe(async (refresh = false): Promise<web3.AddressLookupTableAccount[]> => {
+            const k = 'addressLookupTables';
+            if (!refresh && this.cache.has(k) && refresh) {
+                return this.cache.get(k);
             }
-            const fundAccount = await this.state.fund(refetch);
-            if (fundAccount?.addressLookupTableAccount) {
+            const fundAccount = await this.state.fund(refresh);
+            if (fundAccount?.addressLookupTableEnabled) {
                 const addressLookupTable = await this.connection
                     .getAddressLookupTable(fundAccount.addressLookupTableAccount, { commitment: 'confirmed' })
                     .then(res => res.value);
                 if (addressLookupTable) {
-                    return this.cache.set('addressLookupTables', [addressLookupTable]);
+                    return this.cache.set(k, [addressLookupTable]);
                 }
             }
             return [];
-        },
-        pricingSourcesAccountMeta: async (refetch = false): Promise<web3.AccountMeta[]> => {
-            if (!refetch && this.cache.has('pricingSourcesAccountMeta')) {
-                return this.cache.get('pricingSourcesAccountMeta');
+        }),
+        pricingSourcesAccountMeta: dedupe(async (refresh = false): Promise<web3.AccountMeta[]> => {
+            const k = 'pricingSourcesAccountMeta';
+            if (!refresh && this.cache.has(k)) {
+                return this.cache.get(k);
             }
 
             const addresses: web3.PublicKey[] = [];
-            const fundAccount = await this.state.fund(refetch);
+            const fundAccount = await this.state.fund(refresh);
             if (fundAccount) {
                 for (const supportedToken of fundAccount.supportedTokens.slice(0, fundAccount.numSupportedTokens)) {
                     addresses.push(supportedToken.pricingSource.address);
@@ -84,8 +79,8 @@ export class RestakingProgram extends Program<RestakingIDL> {
                     addresses.push(restakingVault.receiptTokenPricingSource.address);
                 }
             }
-            return this.cache.set('pricingSourcesAccountMeta', addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false })));
-        }
+            return this.cache.set(k, addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false })));
+        }),
     };
 
     public readonly operator = {

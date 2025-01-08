@@ -6,8 +6,7 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { UnsafeBurnerWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider, WalletDisconnectButton, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
-
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useMemo, useState, useEffect} from 'react';
 
 export default function App() {
     return (
@@ -35,6 +34,18 @@ function Main() {
             receiptTokenMint: fragmetricSDK.RestakingProgram.receiptTokenMint.fragSOL,
         });
     }, [connection]);
+
+    // useEffect(() => {
+    //     Promise.all([
+    //         fragSOLProgram.state.fund(),
+    //         fragSOLProgram.state.fund(),
+    //         fragSOLProgram.state.fund(),
+    //         fragSOLProgram.state.fund(),
+    //         fragSOLProgram.state.addressLookupTables(),
+    //         fragSOLProgram.state.addressLookupTables(),
+    //         fragSOLProgram.state.addressLookupTables(),
+    //     ]).then(console.log);
+    // }, [fragSOLProgram]);
 
     const donateSOL1 = useCallback(async () => {
         try {

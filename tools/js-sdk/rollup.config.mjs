@@ -61,10 +61,6 @@ const generateConfig = (format, browser = false, generateTypes = !generatedOnce)
                             find: './ledger_signer_impl',
                             replacement: './ledger_signer_impl.browser',
                         },
-                        {
-                            find: './cache_impl',
-                            replacement: './cache_impl.browser',
-                        },
                     ],
                 }),
             ] : []),

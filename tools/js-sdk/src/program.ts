@@ -1,7 +1,7 @@
 import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
 import {ProgramTransactionHandler, ProgramTransactionMessage} from "./program_transaction";
-import {Cache, ICache, ICacheFactory} from './cache';
+import {InMemoryCache, ICache} from './cache';
 
 export { BN } from 'bn.js';
 
@@ -23,13 +23,12 @@ export class Program<IDL extends anchor.Idl> {
 
     public readonly cluster: keyof typeof Program['defaultClusterURL'];
 
-    constructor({cluster, programID, idl, connection, transactionHandler, cacheKeyPrefix, cacheTTLSeconds }: {
+    constructor({cluster, programID, idl, connection, transactionHandler, cacheTTLSeconds }: {
         cluster: keyof typeof Program['defaultClusterURL'],
         programID: web3.PublicKey,
         idl: IDL,
         connection?: web3.Connection,
         transactionHandler?: ProgramTransactionHandler<IDL> | null,
-        cacheKeyPrefix?: string,
         cacheTTLSeconds?: number,
     }) {
         this.cluster = cluster;
@@ -56,7 +55,7 @@ export class Program<IDL extends anchor.Idl> {
         this.anchorErrorMap = anchor.parseIdlErrors(this.anchorProgram.idl);
 
         // cache for program state management
-        this.cache = Cache.create({ keyPrefix: cacheKeyPrefix, ttlSeconds: cacheTTLSeconds });
+        this.cache = InMemoryCache.create({ ttlSeconds: cacheTTLSeconds });
     }
 
     public readonly cache: ICache;

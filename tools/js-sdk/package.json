@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
+    "async-cache-dedupe": "^2.2.0",
     "bn.js": "^5.2.1",
     "lru-cache": "^11.0.2"
   },

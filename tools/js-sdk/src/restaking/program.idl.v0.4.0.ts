@@ -9027,7 +9027,7 @@ export type Restaking = {
             "type": "u8"
           },
           {
-            "name": "isAddressLookupTableValid",
+            "name": "addressLookupTableEnabled",
             "type": "u8"
           },
           {
