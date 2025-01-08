@@ -37,6 +37,38 @@ pub mod restaking {
             )
     }
 
+    // TODO: migration v0.4.0
+    pub fn fund_manager_change_fund_token_account(
+        ctx: Context<FundManagerChangeFundTokenAccountContext>,
+    ) -> Result<()> {
+        use crate::utils::PDASeeds;
+
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: ctx.accounts.old_token_account.to_account_info(),
+                    mint: ctx.accounts.token_mint.to_account_info(),
+                    to: ctx.accounts.new_token_account.to_account_info(),
+                    authority: ctx.accounts.fund_account.to_account_info(),
+                },
+                &[&ctx.accounts.fund_account.load()?.get_seeds()],
+            ),
+            ctx.accounts.old_token_account.amount,
+            ctx.accounts.token_mint.decimals,
+        )?;
+
+        anchor_spl::token_interface::close_account(CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            anchor_spl::token_interface::CloseAccount {
+                account: ctx.accounts.old_token_account.to_account_info(),
+                destination: ctx.accounts.payer.to_account_info(),
+                authority: ctx.accounts.fund_account.to_account_info(),
+            },
+            &[&ctx.accounts.fund_account.load()?.get_seeds()],
+        ))
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////

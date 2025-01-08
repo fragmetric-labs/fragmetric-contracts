@@ -1073,6 +1073,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {userFundAccount};
     }
 
+    // TODO: migration v0.4.0
+    public async runFundManagerChangeFundTokenAccount(
+        tokenMint: web3.PublicKey,
+        tokenProgram: web3.PublicKey,
+    ) {
+        const newTokenAccount = spl.getAssociatedTokenAddressSync(
+            tokenMint,
+            this.knownAddress.fragSOLFundReserveAccount,
+            true,
+            tokenProgram,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    newTokenAccount,
+                    this.knownAddress.fragSOLFundReserveAccount,
+                    tokenMint,
+                    tokenProgram,
+                    spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+                ),
+                this.program.methods.fundManagerChangeFundTokenAccount()
+                    .accounts({
+                        payer: this.wallet.publicKey,
+                        tokenMint: tokenMint,
+                        tokenProgram: tokenProgram,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ['FUND_MANAGER'],
+        });
+
+        logger.notice("Changed fund token ata".padEnd(LOG_PAD_LARGE), newTokenAccount);
+    }
+
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
