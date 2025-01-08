@@ -2,12 +2,11 @@ import * as web3 from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
 import { Buffer } from 'buffer';
 
-if (typeof globalThis !== 'undefined') {
-    globalThis.Buffer = Buffer; // ensure Buffer is globally available for browser builds
+if (typeof globalThis !== 'undefined') { // for browser bundle
+    globalThis.Buffer = Buffer;
 }
 
 import { Program, ProgramEvent } from './program';
-import {PublicKey} from "@solana/web3.js";
 
 export type ProgramTransactionOnBeforeSend<IDL extends anchor.Idl> = (txMessage: ProgramTransactionMessage<IDL, any, keyof ProgramEvent<IDL>>, program: Program<IDL>) => Promise<void>;
 export type ProgramTransactionSignature = web3.SignaturePubkeyPair | web3.Signer | Buffer | Uint8Array | web3.VersionedTransaction | null;

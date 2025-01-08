@@ -1,9 +1,10 @@
 {
   "private": true,
   "workspaces": [
-    "sdk",
-    "sdk-example-nodejs",
-    "sdk-example-react",
-    "sdk-example-html"
-  ]
+    "js-sdk",
+    "js-sdk/examples/*"
+  ],
+  "scripts": {
+    "test": "echo blabla"
+  }
 }

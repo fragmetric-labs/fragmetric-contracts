@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@fragmetric-labs/sdk": "*",
-    "@solana/web3.js": "^1.98.0"
+    "@solana/web3.js": "^1.98.0",
+    "@ledgerhq/hw-app-solana": "^7.2.4",
+    "@ledgerhq/hw-transport": "^6.31.4",
+    "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5"
   },
   "devDependencies": {
     "ts-node": "^10.9.2"

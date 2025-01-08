@@ -6,7 +6,7 @@
   "scripts": {
     "build": "echo \"noop\"",
     "test": "echo \"noop\"",
-    "dev": "yarn link @fragmetric-labs/sdk; serve ."
+    "dev": "yarn workspace @fragmetric-labs/sdk link; yarn link @fragmetric-labs/sdk; serve ."
   },
   "dependencies": {
     "@fragmetric-labs/sdk": "*"

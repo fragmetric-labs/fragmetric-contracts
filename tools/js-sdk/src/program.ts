@@ -1,6 +1,6 @@
 import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
-import {ProgramTransactionHandler, ProgramTransactionMessage, ProgramTransactionOnSign} from "./program_transaction";
+import {ProgramTransactionHandler, ProgramTransactionMessage} from "./program_transaction";
 
 export { BN } from 'bn.js';
 
