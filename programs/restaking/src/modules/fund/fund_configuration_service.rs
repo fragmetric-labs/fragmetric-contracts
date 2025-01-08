@@ -93,29 +93,29 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_set_address_lookup_table_address(
         &mut self,
-        address_lookup_table: &Pubkey,
+        address_lookup_table_address: &Option<Pubkey>,
     ) -> Result<()> {
         self.fund_account
             .load_mut()?
-            .set_address_lookup_table_address(address_lookup_table);
+            .set_address_lookup_table_address(address_lookup_table_address);
 
         Ok(())
     }
 
     pub fn process_add_supported_token(
         &mut self,
-        supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
+        fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
         supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
-            supported_token_reserve_account.owner,
+            fund_supported_token_reserve_account.owner,
             self.fund_account.load()?.get_reserve_account_address()?,
         );
         require_keys_eq!(
-            supported_token_reserve_account.mint,
+            fund_supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
         require_keys_eq!(
@@ -128,7 +128,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_program.key(),
             supported_token_mint.decimals,
             pricing_source,
-            supported_token_reserve_account.amount,
+            fund_supported_token_reserve_account.amount,
         )?;
 
         // validate pricing source
@@ -140,18 +140,18 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
 
     pub fn process_set_normalized_token(
         &mut self,
-        fund_normalized_token_account: &InterfaceAccount<TokenAccount>,
+        fund_normalized_token_reserve_account: &InterfaceAccount<TokenAccount>,
         normalized_token_mint: &mut InterfaceAccount<'info, Mint>,
         normalized_token_program: &Program<'info, Token>,
         normalized_token_pool: &mut Account<'info, NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
-            fund_normalized_token_account.owner,
+            fund_normalized_token_reserve_account.owner,
             self.fund_account.load()?.get_reserve_account_address()?
         );
         require_keys_eq!(
-            fund_normalized_token_account.mint,
+            fund_normalized_token_reserve_account.mint,
             normalized_token_mint.key()
         );
         require_keys_eq!(
@@ -172,7 +172,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             normalized_token_program.key(),
             normalized_token_mint.decimals,
             normalized_token_pool.key(),
-            fund_normalized_token_account.amount,
+            fund_normalized_token_reserve_account.amount,
         )?;
 
         // do pricing as a validation

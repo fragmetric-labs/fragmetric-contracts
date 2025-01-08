@@ -110,13 +110,13 @@ pub mod restaking {
 
     pub fn admin_set_address_lookup_table_address(
         ctx: Context<AdminFundAccountUpdateContext>,
-        address_lookup_table: Pubkey,
+        address_lookup_table_address: Option<Pubkey>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_set_address_lookup_table_address(&address_lookup_table)
+        .process_set_address_lookup_table_address(&address_lookup_table_address)
     }
 
     ////////////////////////////////////////////
@@ -364,7 +364,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_set_normalized_token(
-            &ctx.accounts.fund_normalized_token_account,
+            &ctx.accounts.fund_normalized_token_reserve_account,
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
             &mut ctx.accounts.normalized_token_pool_account,

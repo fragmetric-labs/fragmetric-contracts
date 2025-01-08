@@ -42,7 +42,7 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
         associated_token::authority = fund_reserve_account,
         associated_token::token_program = normalized_token_program,
     )]
-    pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_normalized_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
