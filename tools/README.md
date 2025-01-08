@@ -6,20 +6,26 @@
 ```
 # dev/build/test SDK
 $ yarn workspace @fragmetric-labs/sdk dev
-$ yarn workspace @fragmetric-labs/sdk dev:node
+$ yarn workspace @fragmetric-labs/sdk dev:node # build only node:cjs, node:esm
+$ yarn workspace @fragmetric-labs/sdk dev:node:cjs # fastest for nodejs playground testing
+$ yarn workspace @fragmetric-labs/sdk dev:browser # build only web:cjs, web:esm, web:umd
+$ yarn workspace @fragmetric-labs/sdk dev:browser:esm # fastest for browser sdk testing
 $ yarn workspace @fragmetric-labs/sdk build
 $ yarn workspace @fragmetric-labs/sdk test
 
 # dev/build/test examples
-$ yarn workspace @fragmetric-labs/sdk-example-react run dev
-$ yarn workspace @fragmetric-labs/sdk-example-html run dev
-$ yarn workspace @fragmetric-labs/sdk-example-nodejs run dev
+$ yarn workspace @fragmetric-labs/sdk-example-react dev
+$ yarn workspace @fragmetric-labs/sdk-example-html dev
+$ yarn workspace @fragmetric-labs/sdk-example-nodejs dev
 
 # build all including examples
 $ yarn workspaces run build
 
 # test all including examples
 $ yarn workspaces run test
+
+# publish sdk
+$ yarn workspace @fragmetric-labs/sdk publish
 ```
 
 ## 2. Node.js Playground
@@ -32,8 +38,6 @@ $ yarn workspaces run test
 
 
 # TODO
-- ledger adapter for node
-- state cache for browser,node
 - deposit methods
 - pricing methods
 - update examples

@@ -3,8 +3,9 @@ import {ProgramTransactionSignature} from "./program_transaction";
 
 export type LedgerSignerConnectionHandler = {
     onBeforeConnect: (bip32Path: string) => void;
-    onConnect: (publicKey: web3.PublicKey, firmwareVersion: string) => void;
-    onError: (err: Error) => void;
+    onConnect: (publicKey: web3.PublicKey, solanaAppVersion: string) => void;
+    // return true to retry
+    onError: (err: Error) => boolean;
 };
 
 export interface ILedgerSigner {
@@ -17,6 +18,7 @@ export interface ILedgerSignerConnector {
     connect(params?: {
         handler?: LedgerSignerConnectionHandler;
         bip32Path?: string;
+        retryDelaySeconds?: number;
     }): Promise<ILedgerSigner>;
 }
 

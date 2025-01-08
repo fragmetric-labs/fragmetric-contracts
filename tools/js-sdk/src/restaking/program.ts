@@ -2,8 +2,8 @@ import * as web3 from '@solana/web3.js';
 import BN from "bn.js";
 
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
-import idlFile from './program.idl.v0.3.3.json';
-import type {Restaking} from './program.idl.v0.3.3';
+import idlFile from './program.idl.v0.4.0.json';
+import type {Restaking} from './program.idl.v0.4.0';
 
 export type RestakingIDL = Restaking;
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
@@ -28,46 +28,47 @@ export class RestakingProgram extends Program<RestakingIDL> {
         receiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['receiptTokenMint'],
     }) {
         const programID = RestakingProgram.programID[cluster] ?? new web3.PublicKey(idl.address);
-        super({ cluster, programID, idl, ...args });
-        this.receiptTokenMint = RestakingProgram.receiptTokenMint[receiptTokenMint.toString() as keyof typeof RestakingProgram['receiptTokenMint']] ?? receiptTokenMint;
+        receiptTokenMint = RestakingProgram.receiptTokenMint[receiptTokenMint.toString() as keyof typeof RestakingProgram['receiptTokenMint']] ?? receiptTokenMint;
+        const cacheKeyPrefix = [programID.toString().slice(0, 8), receiptTokenMint.toString().slice(0, 8)].join(':');
+        super({
+            cluster,
+            programID,
+            idl,
+            cacheKeyPrefix,
+            ...args,
+        });
+        this.receiptTokenMint = receiptTokenMint;
     }
 
     public readonly state = {
-        _fund: null as any,
         fund: async (refetch = false): Promise<RestakingProgramAccount['fundAccount'] | null> => {
-            if (!refetch && this.state._fund) {
-                return this.state._fund;
+            if (!refetch && this.cache.has('fund')) {
+                return this.cache.get('fund');
             }
             const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.receiptTokenMint.toBuffer()], this.programID)[0];
-            return this.state._fund = await this.programAccounts.fundAccount.fetchNullable(address);
+            // TODO: RW LOCK FOR FETCH NULLABLE?
+            return this.cache.set('fund', await this.programAccounts.fundAccount.fetchNullable(address));
         },
-        _addressLookupTables: null as any,
         addressLookupTables: async (refetch = false): Promise<web3.AddressLookupTableAccount[]> => {
-            if (!refetch && this.state._addressLookupTables) {
-                return this.state._addressLookupTables;
+            if (!refetch && this.cache.has('addressLookupTables') && refetch) {
+                return this.cache.get('addressLookupTables');
             }
-            let address = null;
-            // TODO: register ALT address to the fund account
-            if (this.receiptTokenMint.equals(RestakingProgram.receiptTokenMint.fragSOL)) {
-                if (this.cluster == 'devnet') {
-                    address = new web3.PublicKey('5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU');
-                }
-            }
-            if (address) {
-                const table = await this.connection
-                    .getAddressLookupTable(address, { commitment: 'confirmed' })
+            const fundAccount = await this.state.fund(refetch);
+            if (fundAccount?.addressLookupTableAccount) {
+                const addressLookupTable = await this.connection
+                    .getAddressLookupTable(fundAccount.addressLookupTableAccount, { commitment: 'confirmed' })
                     .then(res => res.value);
-                if (table) {
-                    return this.state._addressLookupTables = [table];
+                if (addressLookupTable) {
+                    return this.cache.set('addressLookupTables', [addressLookupTable]);
                 }
             }
             return [];
         },
-        _pricingSourcesAccountMeta: null as any,
         pricingSourcesAccountMeta: async (refetch = false): Promise<web3.AccountMeta[]> => {
-            if (!refetch && this.state._pricingSourcesAccountMeta) {
-                return this.state._pricingSourcesAccountMeta;
+            if (!refetch && this.cache.has('pricingSourcesAccountMeta')) {
+                return this.cache.get('pricingSourcesAccountMeta');
             }
+
             const addresses: web3.PublicKey[] = [];
             const fundAccount = await this.state.fund(refetch);
             if (fundAccount) {
@@ -83,7 +84,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
                     addresses.push(restakingVault.receiptTokenPricingSource.address);
                 }
             }
-            return this.state._pricingSourcesAccountMeta = addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false }));
+            return this.cache.set('pricingSourcesAccountMeta', addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false })));
         }
     };
 

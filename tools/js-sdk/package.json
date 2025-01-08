@@ -23,14 +23,20 @@
   ],
   "scripts": {
     "build": "rollup --config",
-    "build:node": "BUILD_NODE_ONLY=1 rollup --config",
     "test": "echo \"noop\"",
     "dev": "rollup --config --watch",
-    "dev:node": "BUILD_NODE_ONLY=1 rollup --config --watch"
+    "dev:node": "ROLLUP_FILTER=node:* rollup --config --watch",
+    "dev:node:cjs": "ROLLUP_FILTER=node:cjs rollup --config --watch",
+    "dev:node:esm": "ROLLUP_FILTER=node:esm rollup --config --watch",
+    "dev:browser": "ROLLUP_FILTER=browser:* rollup --config --watch",
+    "dev:browser:cjs": "ROLLUP_FILTER=browser:cjs rollup --config --watch",
+    "dev:browser:esm": "ROLLUP_FILTER=browser:esm rollup --config --watch",
+    "dev:browser:umd": "ROLLUP_FILTER=browser:umd rollup --config --watch"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
-    "bn.js": "^5.2.1"
+    "bn.js": "^5.2.1",
+    "lru-cache": "^11.0.2"
   },
   "peerDependencies": {
     "@ledgerhq/hw-app-solana": "^7.2.4",

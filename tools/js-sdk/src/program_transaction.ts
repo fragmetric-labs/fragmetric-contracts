@@ -100,24 +100,24 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         const msg = this.compileToV0Message();
         let tx = new web3.VersionedTransaction(msg);
         const signersWithSecretKey: web3.Signer[] = [];
-        for (const [name, key] of Object.entries(this.signers)) {
-            if ((key as web3.Signer).secretKey) {
-                signersWithSecretKey.push(key as web3.Signer);
+        for (const [name, publicKeyOrSigner] of Object.entries(this.signers)) {
+            if ((publicKeyOrSigner as web3.Signer).secretKey) {
+                signersWithSecretKey.push(publicKeyOrSigner as web3.Signer);
             } else {
-                const publicKey = key as web3.PublicKey;
-                const signed = onSign ? await onSign(tx, publicKey, name as SIGNER) : null;
-                if (signed) {
-                    if (typeof (signed as web3.VersionedTransaction).version !== 'undefined') { // some wallets mutates the original tx message.
-                        tx = signed as web3.VersionedTransaction;
-                    } else if (typeof (signed as web3.Signer).secretKey !== 'undefined') {
-                        signersWithSecretKey.push(signed as web3.Signer);
-                    } else if (typeof (signed as web3.SignaturePubkeyPair).signature !== 'undefined') {
-                        tx.addSignature((signed as web3.SignaturePubkeyPair).publicKey, (signed as web3.SignaturePubkeyPair).signature!);
+                const publicKey = publicKeyOrSigner as web3.PublicKey;
+                const sig = onSign ? await onSign(tx, publicKey, name as SIGNER) : null;
+                if (sig) {
+                    if (typeof (sig as web3.VersionedTransaction).version !== 'undefined') { // some wallets mutates the original tx message.
+                        tx = sig as web3.VersionedTransaction;
+                    } else if (typeof (sig as web3.Signer).secretKey !== 'undefined') {
+                        signersWithSecretKey.push(sig as web3.Signer);
+                    } else if (typeof (sig as web3.SignaturePubkeyPair).signature !== 'undefined') {
+                        tx.addSignature((sig as web3.SignaturePubkeyPair).publicKey, (sig as web3.SignaturePubkeyPair).signature!);
                     } else {
-                        tx.addSignature(publicKey, signed as Buffer | Uint8Array);
+                        tx.addSignature(publicKey, sig as Buffer | Uint8Array);
                     }
                 } else {
-                    throw new Error(`unhandled signer key: ${publicKey} (${name}) ... ${JSON.stringify(signed)}`);
+                    throw new Error(`unhandled signer key: ${publicKey} (${name}) ... ${JSON.stringify(sig)}`);
                 }
             }
         }
