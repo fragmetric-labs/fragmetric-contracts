@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "idl-build", allow(unexpected_cfgs))]
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program};
 
 mod constants;
 mod errors;
@@ -15,6 +15,7 @@ use instructions::*;
 #[program]
 pub mod restaking {
     use super::*;
+    use crate::utils::{AccountInfoExt, PDASeeds, SystemProgramExt};
 
     // TODO: migration v0.3.2
     pub fn fund_manager_close_fund_account(
@@ -758,10 +759,80 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserFundAccountInitOrUpdateContext
+    ////////////////////////////////////////////
+    pub fn user_create_fund_account_idempotent(
+        ctx: Context<UserFundAccountInitOrUpdateContext>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        let event = if !ctx.accounts.user_fund_account.is_initialized() {
+            ctx.accounts.system_program.initialize_account(
+                &ctx.accounts.user_fund_account,
+                &ctx.accounts.user,
+                &[&[
+                    modules::fund::UserFundAccount::SEED,
+                    ctx.accounts.receipt_token_mint.key().as_ref(),
+                    ctx.accounts.user.key().as_ref(),
+                    std::slice::from_ref(&ctx.bumps.user_fund_account),
+                ]],
+                modules::fund::UserFundAccount::INIT_SPACE,
+                None,
+                &crate::ID,
+            )?;
+
+            let mut user_fund_account =
+                Account::<modules::fund::UserFundAccount>::try_from_unchecked(
+                    ctx.accounts.user_fund_account.as_narrowed_ref(),
+                )?;
+
+            let event = modules::fund::UserFundConfigurationService::new(
+                &mut ctx.accounts.receipt_token_mint,
+                &ctx.accounts.user,
+                &mut user_fund_account,
+            )?
+            .process_initialize_user_fund_account(
+                ctx.bumps.user_fund_account,
+                &ctx.accounts.user_receipt_token_account,
+            )?;
+
+            event
+        } else {
+            ctx.accounts.system_program.expand_account_size_if_needed(
+                &ctx.accounts.user_fund_account,
+                &ctx.accounts.user,
+                &[],
+                modules::fund::UserFundAccount::INIT_SPACE,
+            )?;
+
+            let mut user_fund_account =
+                Account::<modules::fund::UserFundAccount>::try_from_unchecked(
+                    ctx.accounts.user_fund_account.as_narrowed_ref(),
+                )?;
+
+            let event = modules::fund::UserFundConfigurationService::new(
+                &mut ctx.accounts.receipt_token_mint,
+                &ctx.accounts.user,
+                &mut user_fund_account,
+            )?
+            .process_update_user_fund_account_if_needed(&ctx.accounts.user_receipt_token_account)?;
+
+            event
+        };
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserFundAccountInitialContext
     ////////////////////////////////////////////
-
-    pub fn user_initialize_fund_account(ctx: Context<UserFundAccountInitialContext>) -> Result<()> {
+    // TODO: v0.4.1 deprecating
+    pub fn user_initialize_fund_account(
+        ctx: Context<DeprecatingUserFundAccountInitialContext>,
+    ) -> Result<()> {
         let event = modules::fund::UserFundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
@@ -782,9 +853,9 @@ pub mod restaking {
     ////////////////////////////////////////////
     // UserFundAccountUpdateContext
     ////////////////////////////////////////////
-
+    // TODO: v0.4.1 deprecating
     pub fn user_update_fund_account_if_needed(
-        ctx: Context<UserFundAccountUpdateContext>,
+        ctx: Context<DeprecatingUserFundAccountUpdateContext>,
     ) -> Result<()> {
         let event = modules::fund::UserFundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -973,11 +1044,82 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserRewardAccountInitOrUpdateContext
+    ////////////////////////////////////////////
+    pub fn user_create_reward_account_idempotent(
+        ctx: Context<UserRewardAccountInitOrUpdateContext>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        let event = if !ctx.accounts.user_reward_account.is_initialized() {
+            ctx.accounts.system_program.initialize_account(
+                &ctx.accounts.user_reward_account,
+                &ctx.accounts.user,
+                &[&[
+                    modules::reward::UserRewardAccount::SEED,
+                    ctx.accounts.receipt_token_mint.key().as_ref(),
+                    ctx.accounts.user.key().as_ref(),
+                    std::slice::from_ref(&ctx.bumps.user_reward_account),
+                ]],
+                std::cmp::min(
+                    solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
+                    8 + std::mem::size_of::<modules::reward::UserRewardAccount>(),
+                ),
+                None,
+                &crate::ID,
+            )?;
+
+            let mut user_reward_account =
+                AccountLoader::<modules::reward::UserRewardAccount>::try_from_unchecked(
+                    &crate::ID,
+                    ctx.accounts.user_reward_account.as_narrowed_ref(),
+                )?;
+
+            let event = modules::reward::UserRewardConfigurationService::new(
+                &ctx.accounts.receipt_token_mint,
+                &ctx.accounts.user,
+                &mut ctx.accounts.reward_account,
+                &mut user_reward_account,
+            )?
+            .process_initialize_user_reward_account(
+                &ctx.accounts.user_receipt_token_account,
+                ctx.bumps.user_reward_account,
+            )?;
+
+            event
+        } else {
+            let mut user_reward_account =
+                AccountLoader::<modules::reward::UserRewardAccount>::try_from(
+                    ctx.accounts.user_reward_account.as_narrowed_ref(),
+                )?;
+
+            let event = modules::reward::UserRewardConfigurationService::new(
+                &ctx.accounts.receipt_token_mint,
+                &ctx.accounts.user,
+                &mut ctx.accounts.reward_account,
+                &mut user_reward_account,
+            )?
+            .process_update_user_reward_account_if_needed(
+                &ctx.accounts.user_receipt_token_account,
+                &ctx.accounts.system_program,
+                desired_account_size,
+            )?;
+
+            event
+        };
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserRewardAccountInitialContext
     ////////////////////////////////////////////
-
+    // TODO: v0.4.1 deprecating
     pub fn user_initialize_reward_account(
-        ctx: Context<UserRewardAccountInitialContext>,
+        ctx: Context<DeprecatingUserRewardAccountInitialContext>,
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1000,9 +1142,9 @@ pub mod restaking {
     ////////////////////////////////////////////
     // UserRewardAccountUpdateContext
     ////////////////////////////////////////////
-
+    // TODO: v0.4.1 deprecating
     pub fn user_update_reward_account_if_needed(
-        ctx: Context<UserRewardAccountUpdateContext>,
+        ctx: Context<DeprecatingUserRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(

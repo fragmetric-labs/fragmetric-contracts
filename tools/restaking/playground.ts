@@ -1780,18 +1780,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     private async getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user: web3.Keypair) {
-        const fragSOLUserRewardAddress = this.knownAddress.fragSOLUserReward(user.publicKey);
-        const fragSOLUserFundAddress = this.knownAddress.fragSOLUserFund(user.publicKey);
-        const currentRewardVersion = await this.account.userRewardAccount
-            .fetch(fragSOLUserRewardAddress)
-            .then((a) => a.dataVersion)
-            .catch((err) => 0);
-        const currentFundVersion = await this.account.userFundAccount
-            .fetch(fragSOLUserFundAddress)
-            .then((a) => a.dataVersion)
-            .catch((err) => 0);
-
-        const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
+        // const fragSOLUserRewardAddress = this.knownAddress.fragSOLUserReward(user.publicKey);
+        // const fragSOLUserFundAddress = this.knownAddress.fragSOLUserFund(user.publicKey);
+        // const currentRewardVersion = await this.account.userRewardAccount
+        //     .fetch(fragSOLUserRewardAddress)
+        //     .then((a) => a.dataVersion)
+        //     .catch((err) => 0);
+        // const currentFundVersion = await this.account.userFundAccount
+        //     .fetch(fragSOLUserFundAddress)
+        //     .then((a) => a.dataVersion)
+        //     .catch((err) => 0);
+        //
+        // const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
         return [
             spl.createAssociatedTokenAccountIdempotentInstruction(
                 user.publicKey,
@@ -1800,42 +1800,54 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.knownAddress.fragSOLTokenMint,
                 spl.TOKEN_2022_PROGRAM_ID,
             ),
-            ...(currentFundVersion == 0
-                ? [
-                    this.program.methods.userInitializeFundAccount()
-                        .accounts({
-                            user: user.publicKey,
-                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        })
-                        .instruction(),
-                ]
-                : [
-                    this.program.methods.userUpdateFundAccountIfNeeded()
-                        .accountsPartial({
-                            user: user.publicKey,
-                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        })
-                        .instruction(),
-                ]),
-            ...(currentRewardVersion == 0 ? [
-                this.program.methods.userInitializeRewardAccount()
-                    .accountsPartial({
-                        user: user.publicKey,
-                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                    })
-                    .instruction(),
-                ]
-                : [
-                    ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-                        this.program.methods
-                            .userUpdateRewardAccountIfNeeded(null)
-                            .accountsPartial({
-                                user: user.publicKey,
-                                receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                            })
-                            .instruction(),
-                    ),
-                ]),
+            this.program.methods.userCreateFundAccountIdempotent(null)
+                .accountsPartial({
+                    user: user.publicKey,
+                    receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                })
+                .instruction(),
+            this.program.methods.userCreateRewardAccountIdempotent(null)
+                .accountsPartial({
+                    user: user.publicKey,
+                    receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                })
+                .instruction(),
+            // ...(currentFundVersion == 0
+            //     ? [
+            //         this.program.methods.userInitializeFundAccount()
+            //             .accounts({
+            //                 user: user.publicKey,
+            //                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+            //             })
+            //             .instruction(),
+            //     ]
+            //     : [
+            //         this.program.methods.userUpdateFundAccountIfNeeded()
+            //             .accountsPartial({
+            //                 user: user.publicKey,
+            //                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+            //             })
+            //             .instruction(),
+            //     ]),
+            // ...(currentRewardVersion == 0 ? [
+            //     this.program.methods.userInitializeRewardAccount()
+            //         .accountsPartial({
+            //             user: user.publicKey,
+            //             receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+            //         })
+            //         .instruction(),
+            //     ]
+            //     : [
+            //         ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
+            //             this.program.methods
+            //                 .userUpdateRewardAccountIfNeeded(null)
+            //                 .accountsPartial({
+            //                     user: user.publicKey,
+            //                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+            //                 })
+            //                 .instruction(),
+            //         ),
+            //     ]),
         ];
     }
 
