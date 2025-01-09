@@ -31,8 +31,8 @@ pub struct FundAccount {
     _padding: [u8; 9],
     pub(super) transfer_enabled: u8,
 
-    is_address_lookup_table_valid: u8,
-    address_lookup_table_address: Pubkey,
+    address_lookup_table_enabled: u8,
+    address_lookup_table_account: Pubkey,
 
     // informative
     reserve_account: Pubkey,
@@ -350,16 +350,16 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
     }
 
-    pub(super) fn set_address_lookup_table_address(
+    pub(super) fn set_address_lookup_table_account(
         &mut self,
-        address_lookup_table_address: &Option<Pubkey>,
+        address_lookup_table_account: &Option<Pubkey>,
     ) {
-        if let Some(address) = address_lookup_table_address {
-            self.is_address_lookup_table_valid = 1;
-            self.address_lookup_table_address = *address;
+        if let Some(address) = address_lookup_table_account {
+            self.address_lookup_table_enabled = 1;
+            self.address_lookup_table_account = *address;
         } else {
-            self.is_address_lookup_table_valid = 0;
-            self.address_lookup_table_address = Pubkey::default();
+            self.address_lookup_table_enabled = 0;
+            self.address_lookup_table_account = Pubkey::default();
         }
     }
 

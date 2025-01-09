@@ -119,15 +119,15 @@ pub mod restaking {
         )
     }
 
-    pub fn admin_set_address_lookup_table_address(
+    pub fn admin_set_address_lookup_table_account(
         ctx: Context<AdminFundAccountUpdateContext>,
-        address_lookup_table_address: Option<Pubkey>,
+        address_lookup_table_account: Option<Pubkey>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_set_address_lookup_table_address(&address_lookup_table_address)
+        .process_set_address_lookup_table_account(&address_lookup_table_account)
     }
 
     ////////////////////////////////////////////

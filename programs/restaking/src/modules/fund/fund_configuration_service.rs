@@ -91,13 +91,13 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_set_address_lookup_table_address(
+    pub fn process_set_address_lookup_table_account(
         &mut self,
-        address_lookup_table_address: &Option<Pubkey>,
+        address_lookup_table_account: &Option<Pubkey>,
     ) -> Result<()> {
         self.fund_account
             .load_mut()?
-            .set_address_lookup_table_address(address_lookup_table_address);
+            .set_address_lookup_table_account(address_lookup_table_account);
 
         Ok(())
     }
