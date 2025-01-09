@@ -2,7 +2,8 @@
   "private": true,
   "workspaces": [
     "js/sdk",
-    "js/sdk/examples/*"
+    "js/sdk/examples/*",
+    "js/playground"
   ],
   "scripts": {
     "test": "echo blabla"
