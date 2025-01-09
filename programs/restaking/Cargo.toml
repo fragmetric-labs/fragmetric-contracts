@@ -44,8 +44,8 @@ jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", vers
 spl-tlv-account-resolution = "0.6.5"
 spl-transfer-hook-interface = "0.6.5"
 spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
-marinade-cpi = { path = "../../cpis/marinade-cpi" }
-whirlpool-cpi = { path = "../../cpis/whirlpool-cpi" }
+marinade-cpi = { path = "../../clients/rust/marinade-cpi" }
+whirlpool-cpi = { path = "../../clients/rust/whirlpool-cpi" }
 
 [dev-dependencies]
 proptest = "1.6.0"
