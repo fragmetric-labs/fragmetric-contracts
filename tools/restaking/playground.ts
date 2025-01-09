@@ -1193,6 +1193,93 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultNSOLAccount, fragSOLFundJitoFeeVRTAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
+    public async runFundManagerCreateJitoVault(vstMint: web3.PublicKey, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("FUND_MANAGER")) {
+        const InitializeVaultInstructionDataSize = {
+            discriminator: 1, // u8
+            depositFeeBps: 2, // u16
+            withdrawalFeeBps: 2, // u16
+            rewardFeeBps: 2, /// u16
+            decimals: 1, // u8
+        };
+
+        const base = web3.Keypair.generate();
+        const vaultPublicKey = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault"), base.publicKey.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        const vrtMint = web3.Keypair.generate();
+
+        const discriminator = 1;
+        const data = Buffer.alloc(
+            InitializeVaultInstructionDataSize.discriminator +
+            InitializeVaultInstructionDataSize.depositFeeBps +
+            InitializeVaultInstructionDataSize.withdrawalFeeBps +
+            InitializeVaultInstructionDataSize.rewardFeeBps +
+            InitializeVaultInstructionDataSize.decimals
+        );
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset);
+        data.writeUInt16LE(depositFeeBps, offset += InitializeVaultInstructionDataSize.discriminator);
+        data.writeUInt16LE(withdrawalFeeBps, offset += InitializeVaultInstructionDataSize.depositFeeBps);
+        data.writeUint16LE(rewardFeeBps, offset += InitializeVaultInstructionDataSize.withdrawalFeeBps);
+        data.writeUInt8(vstDecimals, offset += InitializeVaultInstructionDataSize.rewardFeeBps);
+
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoVaultProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoVaultConfig,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: vaultPublicKey[0],
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: vrtMint.publicKey,
+                        isSigner: true,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: vstMint,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: authority.publicKey,
+                        isSigner: true,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: base.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: web3.SystemProgram.programId,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: spl.TOKEN_PROGRAM_ID,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [authority, vrtMint, base],
+        });
+    }
+
     public async runAdminInitializeFragSOLExtraAccountMetaList() {
         await this.run({
             instructions: [
