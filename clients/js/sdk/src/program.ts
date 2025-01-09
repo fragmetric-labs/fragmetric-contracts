@@ -1,9 +1,8 @@
 import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
+import { BN } from 'bn.js';
 import {ProgramTransactionHandler, ProgramTransactionMessage} from "./program_transaction";
 import {InMemoryCache, ICache} from './cache';
-
-export { BN } from 'bn.js';
 
 export class Program<IDL extends anchor.Idl> {
     public readonly programID: web3.PublicKey;
@@ -134,3 +133,11 @@ export type ProgramConstantName<IDL extends anchor.Idl> = IDL['constants'] exten
             : never
         : never
     : never;
+
+if (typeof (BN.prototype as any).doNotOverrideToJSON === 'undefined') {
+    BN.prototype.toJSON = function() {
+        return this.toString();
+    };
+}
+
+export { BN };

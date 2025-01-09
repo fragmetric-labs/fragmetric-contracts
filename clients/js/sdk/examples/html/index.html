@@ -9,11 +9,11 @@
     <h1>Fragmetric SDK Example HTML</h1>
     <div style="text-align: center; margin: 10px 0">
         <button id="connect-wallet">Connect Wallet</button>
-        <button id="donate">Donate 100 SOL</button>
+        <button id="donate">Donate 100 lamports</button>
     </div>
     <div id="output">Connect Phantom Wallet First</div>
     <script>
-        const fragSOLProgram = new fragmetricSDK.RestakingProgram({
+        const fragSOL = new fragmetricSDK.RestakingProgram({
             cluster: 'devnet',
             connection: undefined, // use default connection for devnet
             receiptTokenMint: 'fragSOL',
@@ -42,7 +42,7 @@
                 }
                 const walletAddress = new solanaWeb3.PublicKey(window.solana.publicKey);
 
-                const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+                const msg = await fragSOL.operator.donateSOLToFund({ operator: walletAddress, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
                 const res = await msg.send({
                     commitment: 'confirmed',
                     onSign: async (tx, publicKey, _name) => {

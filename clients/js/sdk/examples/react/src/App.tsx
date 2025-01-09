@@ -26,77 +26,92 @@ function Main() {
     const [transactionStatus, setTransactionStatus] = useState<string>('');
     const { publicKey: walletAddress, signTransaction, sendTransaction } = useWallet();
     const { connection } = useConnection();
+    const [selectTokenMint, setSelectTokenMint] = useState<string>('SOL');
+    const [fragSOLState, setFragSOLState] = useState<{
+        loading: boolean;
+        data: {
+            supportedAssets: fragmetricSDK.RestakingFundSupportedAsset[],
+            normalizedToken: fragmetricSDK.RestakingFundNormalizedToken | null,
+            receiptToken: fragmetricSDK.RestakingFundReceiptToken,
+        } | null;
+    }>({ loading: true, data: null });
 
-    const fragSOLProgram = useMemo(() => {
+    const fragSOL = useMemo(() => {
         return new fragmetricSDK.RestakingProgram({
             cluster: 'devnet',
-            connection, // use wallet adappter connection
-            receiptTokenMint: 'fragSOL',
+            connection, // use wallet adapter connection
+            fundReceiptTokenMint: 'fragSOL',
         });
     }, [connection]);
 
     useEffect(() => {
         Promise.all([
-            fragSOLProgram.state.supportedAssets(),
-            fragSOLProgram.state._fund(),
-            fragSOLProgram.state._fund(),
-            fragSOLProgram.state._fund(),
-            fragSOLProgram.state._addressLookupTables(),
-            fragSOLProgram.state._addressLookupTables(),
-            fragSOLProgram.state._addressLookupTables(),
-        ]).then(console.log);
-    }, [fragSOLProgram]);
+            fragSOL.state.supportedAssets(),
+            fragSOL.state.normalizedToken(),
+            fragSOL.state.receiptToken(),
+        ]).then(([supportedAssets, normalizedToken, receiptToken]) => {
+            setFragSOLState({
+                loading: false,
+                data: { supportedAssets, normalizedToken, receiptToken },
+            });
+        });
+    }, [fragSOL]);
 
-    const donateSOL1 = useCallback(async () => {
+    // example1: just using web3.js and wallet adapter hooks
+    const deposit1 = useCallback(async () => {
         try {
-            setTransactionStatus('Sending donation...');
-            const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+            setTransactionStatus('sending tx...');
+            const msg = await fragSOL.operator
+                .donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+
             const { context: { slot: minContextSlot }, value: { blockhash, lastValidBlockHeight } } = await connection.getLatestBlockhashAndContext();
             msg.recentBlockhash = blockhash;
             const tx = new web3.VersionedTransaction(msg.compileToV0Message());
             const signature = await sendTransaction(tx, connection, { minContextSlot });
             console.log('tx sent using wallet', { tx, signature });
-            setTransactionStatus(`Donation sent: ${signature}`);
+            setTransactionStatus(`tx sent: ${signature}`);
 
             const res = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
             if (res.value.err) {
                 throw res.value.err;
             }
             console.log('tx confirmed using wallet', signature);
-            setTransactionStatus(`Donation confirmed: ${signature}`);
+            setTransactionStatus(`tx confirmed: ${signature}`);
         } catch (err) {
-            setTransactionStatus(`Donation failed: ${err}`);
+            setTransactionStatus(`tx confirmation failed: ${err}`);
             console.error(err);
         }
-    }, [fragSOLProgram, walletAddress]);
+    }, [fragSOL, walletAddress, selectTokenMint]);
 
-    const donateSOL2 = useCallback(async () => {
+    // example2: simply using SDK builtin `send` method and wallet adapter's `signTransaction`
+    const deposit2 = useCallback(async () => {
         try {
-            setTransactionStatus('Sending donation...');
-            const msg = await fragSOLProgram.operator.donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
-            const res = await msg.send({
-                commitment: 'confirmed',
-                onSign: async (tx, publicKey, name) => {
-                    if (publicKey.equals(walletAddress!)) {
-                        return signTransaction!(tx);
-                    }
-                    return null;
-                },
-                onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
-                    console.log('tx sent using sdk method', { tx, confirmStrategy, commitment });
-                    setTransactionStatus(`Donation sent: ${confirmStrategy.signature}`);
-                },
-            });
+            setTransactionStatus('sending tx...');
+            const res = await fragSOL.operator
+                .donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false })
+                .then(msg => msg.send({
+                    commitment: 'confirmed',
+                    onSign: async (tx, publicKey, name) => {
+                        if (publicKey.equals(walletAddress!)) {
+                            return signTransaction!(tx);
+                        }
+                        return null;
+                    },
+                    onBeforeConfirm: async (tx, confirmStrategy, commitment) => {
+                        console.log('tx sent using sdk method', { tx, confirmStrategy, commitment });
+                        setTransactionStatus(`tx sent: ${confirmStrategy.signature}`);
+                    },
+                }));
             if (res.error) {
                 throw res.error;
             }
             console.log('tx confirmed using sdk method', res);
-            setTransactionStatus(`Donation confirmed: ${res.signature}`);
+            setTransactionStatus(`tx confirmed: ${res.signature}`);
         } catch (err) {
-            setTransactionStatus(`Donation failed: ${err}`);
+            setTransactionStatus(`tx confirmation failed: ${err}`);
             console.error(err);
         }
-    }, [fragSOLProgram, walletAddress]);
+    }, [fragSOL, walletAddress, selectTokenMint]);
 
     return (
         <div style={{textAlign: 'center', marginTop: '50px'}}>
@@ -105,17 +120,29 @@ function Main() {
                 <div>
                     <center><WalletDisconnectButton/></center>
                     <p>Connected Wallet Address: {walletAddress.toString()}</p>
+                    <p>Select an Asset to Deposit</p>
+                    <select style={{marginBottom: 10, width: 350}} size={5}>
+                        {(fragSOLState.data?.supportedAssets ?? []).filter(a => a.depositable).map((a) => {
+                            const mint = a.isNativeSOL ? 'SOL' : a.mint?.toString();
+                           return (<option selected={selectTokenMint == mint}>
+                               {mint}
+                           </option>)
+                        })}
+                    </select>
                     <div style={{marginBottom: 10}}>
-                        <button onClick={donateSOL1}>Donate 100 SOL (1: using wallet)</button>
+                        <button onClick={deposit1}>Deposit 100 lamports/token (1: using wallet)</button>
                     </div>
                     <div>
-                        <button onClick={donateSOL2}>Donate 100 SOL (2: using sdk method)</button>
+                        <button onClick={deposit2}>Deposit 100 lamports/token (2: using sdk method)</button>
                     </div>
                 </div>
             ) : (
                 <center><WalletMultiButton/></center>
             )}
             {transactionStatus && <p>{transactionStatus}</p>}
+            <pre style={{textAlign: "left", margin: "10px 50px", padding: "10px", background: "#eee"}}>
+                {JSON.stringify(fragSOLState, null, 2)}
+            </pre>
         </div>
     )
 }

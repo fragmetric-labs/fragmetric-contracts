@@ -6,10 +6,10 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
     const walletKeyPair = web3.Keypair.fromSecretKey(Uint8Array.from([18,99,108,102,2,206,6,7,168,174,190,163,59,172,204,141,105,14,181,146,108,161,134,128,169,57,152,205,238,237,220,216,150,75,239,172,33,80,166,64,55,49,182,185,30,49,104,33,14,163,68,64,59,209,64,244,34,15,83,110,17,139,78,4]));
     const ledgerPublicKey = new web3.PublicKey("79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84");
 
-    const program = new RestakingProgram({
+    const fragSOL = new RestakingProgram({
         cluster: 'devnet',
         connection: undefined, // default RPC
-        receiptTokenMint: 'fragSOL',
+        fundReceiptTokenMint: 'fragSOL',
         transactionHandler: {
             onBeforeSign: async (txMessage) => {
                 console.log(`[signing] description: ${txMessage.descriptions?.join(', ')}`);
@@ -48,13 +48,13 @@ import { RestakingProgram, LedgerSigner } from '@fragmetric-labs/sdk';
         },
     });
 
-    const res1 = await program
+    const res1 = await fragSOL
         .operator
         .updateFundPrices({ operator: walletKeyPair.publicKey })
         .then(txMessage => txMessage.send());
     console.log(res1);
 
-    const res2 = await program
+    const res2 = await fragSOL
         .operator
         .updateFundPrices({ operator: ledgerPublicKey })
         .then(txMessage => txMessage.send());
