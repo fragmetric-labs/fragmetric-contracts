@@ -3365,7 +3365,7 @@ dependencies = [
 
 [[package]]
 name = "restaking"
-version = "0.3.3"
+version = "0.4.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",

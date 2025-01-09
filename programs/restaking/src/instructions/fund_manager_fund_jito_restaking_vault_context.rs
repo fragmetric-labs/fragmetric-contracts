@@ -10,7 +10,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[derive(Accounts)]
 pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
-    pub admin: Signer<'info>,
+    pub fund_manager: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 
@@ -22,6 +22,12 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
         constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -44,14 +50,14 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
 
     #[account(
         associated_token::mint = vault_receipt_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = vault_receipt_token_program,
     )]
     pub fund_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         associated_token::mint = vault_supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = vault_supported_token_program,
     )]
     pub fund_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,

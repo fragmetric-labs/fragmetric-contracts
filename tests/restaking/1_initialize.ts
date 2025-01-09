@@ -135,7 +135,7 @@ describe("initialize", async () => {
     step("initialize fund jito restaking vault", async () => {
         const {fragSOLFundJitoVRTAccount, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
         expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
-        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFundReserveAccount.toString());
         expect(fragSOLFundAccount.numRestakingVaults).eq(1);
         expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoVaultAccount.toString());
     });

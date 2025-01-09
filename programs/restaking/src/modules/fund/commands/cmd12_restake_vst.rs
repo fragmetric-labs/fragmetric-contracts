@@ -141,7 +141,10 @@ impl SelfExecutable for RestakeVSTCommand {
                     for (index, strategy_participant) in
                         strategy.get_participants_iter().enumerate()
                     {
-                        let allocated_token_amount = strategy_participant.get_last_put_amount()?;
+                        let allocated_token_amount = pricing_service.get_sol_amount_as_token(
+                            &token_mint,
+                            strategy_participant.get_last_put_amount()?,
+                        )?;
                         if allocated_token_amount > 0 {
                             let restaking_vault = restakable_vaults.get(index).unwrap();
                             match items
@@ -211,6 +214,8 @@ impl SelfExecutable for RestakeVSTCommand {
                                     )?,
                                     true,
                                 ),
+                                // Jito requires signer to be writable lol
+                                (fund_account.get_reserve_account_address()?, true),
                             ]);
 
                             return Ok((
@@ -225,7 +230,20 @@ impl SelfExecutable for RestakeVSTCommand {
                                 ),
                             ));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
             }
@@ -239,7 +257,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, _remaining_accounts @ ..] =
+                            let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, fund_reserve_account, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -251,17 +269,6 @@ impl SelfExecutable for RestakeVSTCommand {
                                 vault_config,
                                 vault_account,
                             )?;
-
-                            // here 'signer' needs to be writable, well, fund data might be vulnerable...
-                            // anyway, to drop fund_account borrowing..
-                            let fund_account_seeds: Vec<Vec<u8>> = fund_account
-                                .get_seeds()
-                                .into_iter()
-                                .map(|slice| slice.to_vec())
-                                .collect();
-                            let fund_account_seeds: Vec<&[u8]> =
-                                fund_account_seeds.iter().map(|vec| &vec[..]).collect();
-                            drop(fund_account);
 
                             let (
                                 to_vault_receipt_token_account_amount,
@@ -276,10 +283,12 @@ impl SelfExecutable for RestakeVSTCommand {
                                 // variant
                                 from_vault_supported_token_account,
                                 to_vault_receipt_token_account,
-                                &ctx.fund_account.to_account_info(),
-                                &[fund_account_seeds.as_ref()],
+                                fund_reserve_account,
+                                &[&fund_account.get_reserve_account_seeds()],
                                 item.allocated_token_amount,
                             )?;
+
+                            drop(fund_account);
 
                             let pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -333,7 +342,20 @@ impl SelfExecutable for RestakeVSTCommand {
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
             }
@@ -349,10 +371,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         .load()?
                         .get_restaking_vault(&remaining_items.first().unwrap().vault)?
                         .receipt_token_pricing_source
-                        .try_deserialize()?
-                        .ok_or_else(|| {
-                            error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
-                        })?;
+                        .try_deserialize()?;
 
                     RestakeVSTCommand {
                         state: RestakeVSTCommandState::Prepare {
@@ -360,10 +379,23 @@ impl SelfExecutable for RestakeVSTCommand {
                         },
                     }
                     .with_required_accounts(match pricing_source {
-                        TokenPricingSource::JitoRestakingVault { address } => {
+                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             JitoRestakingVaultService::find_accounts_to_new(address)?
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     })
                 }
                 _ => HarvestRewardCommand::default().without_required_accounts(),

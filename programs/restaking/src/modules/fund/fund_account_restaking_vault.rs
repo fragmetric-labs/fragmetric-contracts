@@ -38,6 +38,8 @@ pub(super) struct RestakingVault {
     delegations: [RestakingVaultDelegation; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS],
 
     /// auto-compounding
+    _padding3: [u8; 7],
+    num_compounding_reward_tokens: u8,
     compounding_reward_token_mints:
         [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],
 
@@ -93,6 +95,32 @@ impl RestakingVault {
     ) -> Result<()> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
+
+        Ok(())
+    }
+
+    pub(super) fn add_compounding_reward_token(
+        &mut self,
+        compounding_reward_token_mint: &Pubkey,
+    ) -> Result<()> {
+        if self
+            .compounding_reward_token_mints
+            .iter()
+            .take(self.num_compounding_reward_tokens as usize)
+            .any(|reward_token| reward_token == compounding_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
+        }
+
+        require_gt!(
+            FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS,
+            self.num_compounding_reward_tokens as usize,
+            ErrorCode::FundExceededMaxRestakingVaultCompoundingRewardTokensError
+        );
+
+        self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
+            *compounding_reward_token_mint;
+        self.num_compounding_reward_tokens += 1;
 
         Ok(())
     }

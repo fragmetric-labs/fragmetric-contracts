@@ -50,8 +50,8 @@ pub struct UserFundAccountUpdateContext<'info> {
 
     #[account(
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
+        associated_token::token_program = receipt_token_program,
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -89,8 +89,8 @@ pub struct UserFundContext<'info> {
     #[account(
         mut,
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
+        associated_token::token_program = receipt_token_program,
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -158,8 +158,8 @@ pub struct UserFundWithdrawContext<'info> {
 
     #[account(
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
+        associated_token::token_program = receipt_token_program,
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

@@ -201,7 +201,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_2022_PROGRAM_ID,
         );
         const fragSOLSupportedTokenAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
-            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFund, true, this.supportedTokenMetadata[symbol].program);
+            spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, fragSOLFundReserveAccount, true, this.supportedTokenMetadata[symbol].program);
         const fragSOLSupportedTokenAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
             [`fragSOLFundReservedSupportedTokenAccount_${symbol}`]: fragSOLSupportedTokenAccount(symbol as any),
             ...obj,
@@ -209,14 +209,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const fragSOLFundNSOLAccount = spl.getAssociatedTokenAddressSync(
             nSOLTokenMint,
-            fragSOLFund,
+            fragSOLFundReserveAccount,
             true,
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
         const fragSOLFundJitoVRTAccount = spl.getAssociatedTokenAddressSync(
             fragSOLJitoVRTMint,
-            fragSOLFund,
+            fragSOLFundReserveAccount,
             true,
             spl.TOKEN_PROGRAM_ID,
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -986,6 +986,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
+        const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
+
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragSOLFund)
             .then((a) => a.data.readInt16LE(8))
@@ -1008,6 +1010,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
             }).instruction()),
+            this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
+                payer: this.wallet.publicKey,
+                receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+            }).instruction(),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {
@@ -1067,6 +1073,51 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {userFundAccount};
     }
 
+    // TODO: migration v0.4.0
+    public async runFundManagerChangeFundTokenAccount(
+        tokenMint: web3.PublicKey,
+        tokenProgram: web3.PublicKey,
+    ) {
+        const oldTokenAccount = spl.getAssociatedTokenAddressSync(
+            tokenMint,
+            this.knownAddress.fragSOLFund,
+            true,
+            tokenProgram,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        const newTokenAccount = spl.getAssociatedTokenAddressSync(
+            tokenMint,
+            this.knownAddress.fragSOLFundReserveAccount,
+            true,
+            tokenProgram,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    newTokenAccount,
+                    this.knownAddress.fragSOLFundReserveAccount,
+                    tokenMint,
+                    tokenProgram,
+                    spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+                ),
+                this.program.methods.fundManagerChangeFundTokenAccount()
+                    .accountsPartial({
+                        payer: this.wallet.publicKey,
+                        tokenMint: tokenMint,
+                        tokenProgram: tokenProgram,
+                        oldTokenAccount,
+                        newTokenAccount,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ['FUND_MANAGER'],
+        });
+
+        logger.notice("Changed fund token ata".padEnd(LOG_PAD_LARGE), newTokenAccount);
+    }
+
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
@@ -1109,7 +1160,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLFundNSOLAccount,
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
                     this.knownAddress.nSOLTokenMint,
                 ),
                 this.program.methods.fundManagerInitializeFundNormalizedToken()
@@ -1149,7 +1200,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLFundJitoVRTAccount,
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
                     this.knownAddress.fragSOLJitoVRTMint,
                 ),
                 spl.createAssociatedTokenAccountIdempotentInstruction(
@@ -1319,7 +1370,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         this.wallet.publicKey,
                         this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
-                        this.knownAddress.fragSOLFund,
+                        this.knownAddress.fragSOLFundReserveAccount,
                         v.mint,
                         v.program,
                     ),
@@ -1465,7 +1516,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     this.knownAddress.fragSOLSupportedTokenAccount(symbol as any),
-                    this.knownAddress.fragSOLFund,
+                    this.knownAddress.fragSOLFundReserveAccount,
+                    token.mint,
+                    token.program,
+                ),
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLFundTreasurySupportedTokenAccount(symbol as any),
+                    this.knownAddress.fragSOLFundTreasuryAccount,
                     token.mint,
                     token.program,
                 ),
@@ -2031,12 +2089,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runUserCancelWithdrawalRequest(user: web3.Keypair, requestId: BN) {
+    public async runUserCancelWithdrawalRequest(
+        user: web3.Keypair,
+        requestId: BN,
+        tokenMint: web3.PublicKey | null = null,
+    ) {
         const {event, error} = await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
                 this.program.methods
-                    .userCancelWithdrawalRequest(requestId)
+                    .userCancelWithdrawalRequest(requestId, tokenMint)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,

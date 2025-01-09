@@ -18,7 +18,12 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
 
         let whirlpool = Account::<Whirlpool>::try_from(pricing_source_accounts[0])?;
 
-        require_keys_eq!(whirlpool.token_mint_a, *token_mint);
+        let (is_inverse, base_token_mint) = if whirlpool.token_mint_a == *token_mint {
+            (false, whirlpool.token_mint_b)
+        } else {
+            require_keys_eq!(whirlpool.token_mint_b, *token_mint);
+            (true, whirlpool.token_mint_a)
+        };
 
         // First, calculate price from pool account.
         //
@@ -35,10 +40,10 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
 
         // fit both numerator and denominator into 64-bit integer
         // by reducing the number of  significant digits.
-        let (numerator, denominator) = self.fit_price_into_u64(price);
+        let (numerator, denominator) = self.fit_price_into_u64(price, is_inverse);
 
         // Check base mint
-        let asset = match whirlpool.token_mint_b {
+        let asset = match base_token_mint {
             spl_token::native_mint::ID => Asset::SOL(numerator),
             mint => Asset::Token(mint, None, numerator),
         };
@@ -142,7 +147,7 @@ impl OrcaDEXLiquidityPoolValueProvider {
     /// Otherwise, if N already fits to 64-bit integer,
     /// instead of shift, we can replace M(= 2^64) into 2^64-1,
     /// allowing very small, ignorable error.
-    fn fit_price_into_u64(&self, price: [u64; 3]) -> (u64, u64) {
+    fn fit_price_into_u64(&self, price: [u64; 3], is_inverse: bool) -> (u64, u64) {
         let mut n = ((price[2] as u128) << 64) | price[1] as u128;
         let mut m = 1u128 << 64;
 
@@ -162,7 +167,11 @@ impl OrcaDEXLiquidityPoolValueProvider {
             m = 0xFFFF_FFFF_FFFF_FFFF;
         }
 
-        (n as u64, m as u64)
+        if is_inverse {
+            (m as u64, n as u64)
+        } else {
+            (n as u64, m as u64)
+        }
     }
 }
 

@@ -120,7 +120,20 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        Some(TokenPricingSource::OrcaDEXLiquidityPool { address }) => {
+                            required_accounts.push((*address, false));
+                        }
+                        // otherwise fails
+                        Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
 
@@ -133,7 +146,20 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     }
                 }
 
@@ -172,8 +198,19 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
-                            }) => Ok(count + 1),
-                            _ => err!(
+                            })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
+                                Ok(count + 1)
+                            }
+                            // otherwise fails
+                            Some(TokenPricingSource::JitoRestakingVault { .. })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            ),
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
                         }
@@ -186,7 +223,20 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .try_deserialize()?
                         {
                             Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(count + 1),
-                            _ => err!(
+                            // otherwise fails
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            ),
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
                         }
@@ -233,12 +283,23 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => (0, 0),
+                        // otherwise fails
+                        Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     };
 
                     // numerator/denominator > lst_max_cycle_fee_numerator/lst_max_cycle_fee_denominator
                     if denominator != 0
-                        || numerator * lst_max_cycle_fee_denominator
+                        && numerator * lst_max_cycle_fee_denominator
                             > lst_max_cycle_fee_numerator * denominator
                     {
                         lst_max_cycle_fee_numerator = numerator;
@@ -259,11 +320,24 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
-                        _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | None => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
                     };
                     // numerator/denominator > vrt_max_cycle_fee_numerator/vrt_max_cycle_fee_denominator
                     if denominator != 0
-                        || numerator * vrt_max_cycle_fee_denominator
+                        && numerator * vrt_max_cycle_fee_denominator
                             > vrt_max_cycle_fee_numerator * denominator
                     {
                         vrt_max_cycle_fee_numerator = numerator;

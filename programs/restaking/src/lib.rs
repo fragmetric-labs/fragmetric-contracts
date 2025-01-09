@@ -37,6 +37,49 @@ pub mod restaking {
             )
     }
 
+    // TODO: migration v0.4.0
+    pub fn fund_manager_change_fund_token_account(
+        ctx: Context<FundManagerChangeFundTokenAccountContext>,
+    ) -> Result<()> {
+        let bump = Pubkey::find_program_address(
+            &[b"fund", crate::constants::FRAGSOL_MINT_ADDRESS.as_ref()],
+            &crate::ID,
+        )
+        .1;
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: ctx.accounts.old_token_account.to_account_info(),
+                    mint: ctx.accounts.token_mint.to_account_info(),
+                    to: ctx.accounts.new_token_account.to_account_info(),
+                    authority: ctx.accounts.fund_account.to_account_info(),
+                },
+                &[&[
+                    b"fund",
+                    crate::constants::FRAGSOL_MINT_ADDRESS.as_ref(),
+                    &[bump],
+                ]],
+            ),
+            ctx.accounts.old_token_account.amount,
+            ctx.accounts.token_mint.decimals,
+        )?;
+
+        anchor_spl::token_interface::close_account(CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            anchor_spl::token_interface::CloseAccount {
+                account: ctx.accounts.old_token_account.to_account_info(),
+                destination: ctx.accounts.payer.to_account_info(),
+                authority: ctx.accounts.fund_account.to_account_info(),
+            },
+            &[&[
+                b"fund",
+                crate::constants::FRAGSOL_MINT_ADDRESS.as_ref(),
+                &[bump],
+            ]],
+        ))
+    }
+
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
@@ -74,6 +117,17 @@ pub mod restaking {
             &ctx.accounts.fund_reserve_account,
             desired_account_size,
         )
+    }
+
+    pub fn admin_set_address_lookup_table_account(
+        ctx: Context<AdminFundAccountUpdateContext>,
+        address_lookup_table_account: Option<Pubkey>,
+    ) -> Result<()> {
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_set_address_lookup_table_account(&address_lookup_table_account)
     }
 
     ////////////////////////////////////////////
@@ -292,6 +346,23 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_add_restaking_vault_compounding_reward_token(
+        ctx: Context<FundManagerFundContext>,
+        vault: Pubkey,
+        compounding_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_vault_compounding_reward_token(
+            &vault,
+            &compounding_reward_token_mint,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // FundManagerFundNormalizedTokenInitialContext
     ////////////////////////////////////////////
@@ -304,7 +375,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_set_normalized_token(
-            &ctx.accounts.fund_normalized_token_account,
+            &ctx.accounts.fund_normalized_token_reserve_account,
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
             &mut ctx.accounts.normalized_token_pool_account,
@@ -353,7 +424,7 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_add_supported_token(
-            &ctx.accounts.supported_token_account,
+            &ctx.accounts.supported_token_reserve_account,
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
             pricing_source,
@@ -789,6 +860,7 @@ pub mod restaking {
     pub fn user_cancel_withdrawal_request<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
         request_id: u64,
+        supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -803,7 +875,8 @@ pub mod restaking {
         .process_cancel_withdrawal_request(
             &mut ctx.accounts.receipt_token_lock_account,
             ctx.remaining_accounts,
-            request_id
+            request_id,
+            supported_token_mint,
         )?);
 
         Ok(())
@@ -891,6 +964,7 @@ pub mod restaking {
             &ctx.accounts.fund_supported_token_reserve_account,
             &ctx.accounts.user_supported_token_account,
             &mut ctx.accounts.fund_withdrawal_batch_account,
+            &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,
         )?);

@@ -104,7 +104,22 @@ impl SelfExecutable for InitializeCommand {
                                             .collect::<Vec<_>>(),
                                     }
                                 }
-                                _ => err!(
+                                // otherwise fails
+                                Some(TokenPricingSource::SPLStakePool { .. })
+                                | Some(TokenPricingSource::MarinadeStakePool { .. })
+                                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                    ..
+                                })
+                                | Some(TokenPricingSource::FragmetricNormalizedTokenPool {
+                                    ..
+                                })
+                                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                                | None => err!(
+                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
+                                )?,
+                                #[cfg(all(test, not(feature = "idl-build")))]
+                                Some(TokenPricingSource::Mock { .. }) => err!(
                                     errors::ErrorCode::FundOperationCommandExecutionFailedException
                                 )?,
                             },
@@ -181,7 +196,20 @@ impl SelfExecutable for InitializeCommand {
 
                                 required_accounts
                             }
-                            _ => err!(
+                            // otherwise fails
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             )?,
                         };
@@ -356,7 +384,20 @@ impl SelfExecutable for InitializeCommand {
 
                                 restaking_vault_update_items = Some(remaining_items);
                             }
-                            _ => err!(
+                            // otherwise fails
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             )?,
                         };
@@ -369,39 +410,65 @@ impl SelfExecutable for InitializeCommand {
         // transition to next command
         Ok((
             result,
-            Some({
-                if let Some(items) = restaking_vault_update_items {
-                    match items.first() {
-                        Some(item) => {
+            Some(
+                {
+                    if let Some(items) = restaking_vault_update_items {
+                        match items.first() {
+                            Some(item) => {
+                                let fund_account = ctx.fund_account.load()?;
+                                let restaking_vault =
+                                    fund_account.get_restaking_vault(&item.vault)?;
+                                let required_accounts = match restaking_vault
+                                    .receipt_token_pricing_source
+                                    .try_deserialize()?
+                                {
+                                    Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                                        JitoRestakingVaultService::find_accounts_to_new(item.vault)?
+                                    }
+                                    // otherwise fails
+                                    Some(TokenPricingSource::SPLStakePool { .. })
+                                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                                    | Some(
+                                        TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                            ..
+                                        },
+                                    )
+                                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool {
+                                        ..
+                                    })
+                                    | Some(TokenPricingSource::FragmetricRestakingFund {
+                                        ..
+                                    })
+                                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                                    | None => err!(
+                                        errors::ErrorCode::FundOperationCommandExecutionFailedException
+                                    )?,
+                                    #[cfg(all(test, not(feature = "idl-build")))]
+                                    Some(TokenPricingSource::Mock { .. }) => err!(
+                                        errors::ErrorCode::FundOperationCommandExecutionFailedException
+                                    )?,
+                                };
 
-                            let fund_account = ctx.fund_account.load()?;
-                            let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-                            let required_accounts = match restaking_vault
-                                .receipt_token_pricing_source
-                                .try_deserialize()?
-                            {
-                                Some(TokenPricingSource::JitoRestakingVault { .. }) => {
-                                    JitoRestakingVaultService::find_accounts_to_new(item.vault)?
-                                }
-                                _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-                            };
-
-                            Some(
-                                InitializeCommand {
-                                    state:
-                                    InitializeCommandState::PrepareRestakingVaultUpdate {
-                                        items,
-                                    },
-                                }
+                                Some(
+                                    InitializeCommand {
+                                        state:
+                                            InitializeCommandState::PrepareRestakingVaultUpdate {
+                                                items,
+                                            },
+                                    }
                                     .with_required_accounts(required_accounts),
-                            )
+                                )
+                            }
+                            None => None,
                         }
-                        None => None
+                    } else {
+                        None
                     }
-                } else {
-                    None
                 }
-            }.unwrap_or_else(|| EnqueueWithdrawalBatchCommand::default().without_required_accounts())),
+                .unwrap_or_else(|| {
+                    EnqueueWithdrawalBatchCommand::default().without_required_accounts()
+                }),
+            ),
         ))
     }
 }

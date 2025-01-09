@@ -467,7 +467,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 vault_receipt_token_fee_wallet_account.to_account_info(),
                 token_program.to_account_info(),
             ],
-            signer_seeds,
+            &[],
         )?;
 
         // do mint

@@ -188,6 +188,12 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max restaking vault delegations")]
     FundExceededMaxRestakingVaultDelegationsError,
 
+    #[msg("fund: restaking vault compounding reward token already registered")]
+    FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError,
+
+    #[msg("fund: exceeded max restaking vault compounding reward tokens")]
+    FundExceededMaxRestakingVaultCompoundingRewardTokensError,
+
     #[msg("fund: unauhorized operation command")]
     FundOperationUnauthorizedCommandError,
 

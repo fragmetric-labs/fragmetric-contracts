@@ -25,6 +25,12 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -33,10 +39,10 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
 
     #[account(
         associated_token::mint = normalized_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = normalized_token_program,
     )]
-    pub fund_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub fund_normalized_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,

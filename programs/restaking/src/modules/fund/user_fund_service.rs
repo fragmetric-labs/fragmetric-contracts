@@ -366,9 +366,12 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
         request_id: u64,
+        supported_token_mint: Option<Pubkey>,
     ) -> Result<events::UserCanceledWithdrawalRequestFromFund> {
         // clear pending amount from both user fund account and global fund account
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
+        let withdrawal_request = self
+            .user_fund_account
+            .pop_withdrawal_request(request_id, supported_token_mint)?;
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
@@ -453,27 +456,17 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         user_supported_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
         // for SOL
-        fund_reserve_account: Option<&SystemAccount<'info>>,
+        fund_reserve_account: &SystemAccount<'info>,
 
         fund_treasury_account: &SystemAccount<'info>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
         // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
-        let withdrawal_request = self.user_fund_account.pop_withdrawal_request(request_id)?;
-
         let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
-        match supported_token_mint_key {
-            Some(supported_token_mint_key) => {
-                require_keys_eq!(
-                    withdrawal_request.supported_token_mint.unwrap(),
-                    supported_token_mint_key
-                )
-            }
-            None => {
-                require_eq!(withdrawal_request.supported_token_mint.is_none(), true)
-            }
-        };
+        let withdrawal_request = self
+            .user_fund_account
+            .pop_withdrawal_request(request_id, supported_token_mint_key)?;
 
         let (asset_user_amount, asset_fee_amount, receipt_token_amount) =
             fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;
@@ -496,9 +489,9 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                                     .to_account_info(),
                                 to: user_supported_token_account.unwrap().to_account_info(),
                                 mint: supported_token_mint.to_account_info(),
-                                authority: self.fund_account.to_account_info(),
+                                authority: fund_reserve_account.to_account_info(),
                             },
-                            &[self.fund_account.load()?.get_seeds().as_ref()],
+                            &[&self.fund_account.load()?.get_reserve_account_seeds()],
                         ),
                         asset_user_amount,
                         supported_token_mint.decimals,
@@ -509,7 +502,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                         CpiContext::new_with_signer(
                             system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
-                                from: fund_reserve_account.unwrap().to_account_info(),
+                                from: fund_reserve_account.to_account_info(),
                                 to: self.user.to_account_info(),
                             },
                             &[&fund_account.get_reserve_account_seeds()],
@@ -572,7 +565,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             None,
             None,
             None,
-            Some(fund_reserve_account),
+            fund_reserve_account,
             fund_treasury_account,
             fund_withdrawal_batch_account,
             request_id,
@@ -587,6 +580,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
         fund_supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
+        fund_reserve_account: &SystemAccount<'info>,
         fund_treasury_account: &SystemAccount<'info>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
@@ -596,7 +590,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             Some(supported_token_mint),
             Some(fund_supported_token_reserve_account),
             Some(user_supported_token_account),
-            None,
+            fund_reserve_account,
             fund_treasury_account,
             fund_withdrawal_batch_account,
             request_id,

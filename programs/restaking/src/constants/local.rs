@@ -54,3 +54,22 @@ pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey =
 #[constant]
 pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM");
+
+////////////////////////////////////////////
+// receipt token: fragJTO
+////////////////////////////////////////////
+
+#[constant]
+pub const FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
+    pubkey!("88tsbXd2yfx9wY8DhyrauZkwvaQnT4Fg9TQPNm3UKmuX"); // TODO
+
+#[constant]
+pub const FRAGJTO_MINT_ADDRESS: Pubkey = pubkey!("bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v");
+
+#[constant]
+pub const FRAGJTO_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey =
+    pubkey!("C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2");
+
+#[constant]
+pub const FRAGJTO_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
+    pubkey!("C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr");

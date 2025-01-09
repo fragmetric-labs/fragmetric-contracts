@@ -30,9 +30,15 @@ pub struct UserFundSupportedTokenContext<'info> {
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
         mut,
         associated_token::mint = supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = supported_token_program,
     )]
     pub fund_supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
@@ -40,8 +46,8 @@ pub struct UserFundSupportedTokenContext<'info> {
     #[account(
         mut,
         token::mint = supported_token_mint,
+        token::authority = user,
         token::token_program = supported_token_program,
-        token::authority = user.key(),
     )]
     pub user_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -116,8 +122,8 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     #[account(
         mut,
         token::mint = supported_token_mint,
+        token::authority = user,
         token::token_program = supported_token_program,
-        token::authority = user.key(),
     )]
     pub user_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -129,6 +135,12 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
         constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
 
     /// Users can derive proper account address with target batch id for each withdrawal requests.
     /// And the batch id can be read from a user fund account which the withdrawal requests belong to.
@@ -143,7 +155,7 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     #[account(
         mut,
         associated_token::mint = supported_token_mint,
-        associated_token::authority = fund_account,
+        associated_token::authority = fund_reserve_account,
         associated_token::token_program = supported_token_program,
     )]
     pub fund_supported_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,

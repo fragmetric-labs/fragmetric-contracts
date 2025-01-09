@@ -44,10 +44,16 @@ impl SupportedToken {
         match pricing_source {
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {}
-            _ => {
-                err!(ErrorCode::FundNotSupportedTokenError)?;
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
+            | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {}
+            // otherwise fails
+            TokenPricingSource::JitoRestakingVault { .. }
+            | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. } => {
+                err!(ErrorCode::FundNotSupportedTokenError)?
             }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => err!(ErrorCode::FundNotSupportedTokenError)?,
         }
 
         self.mint = mint;

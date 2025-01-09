@@ -14,7 +14,7 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v15: migrate to new layout including new fields using bytemuck. (150312 ~= 147KB)
+/// * v15: migrate to new layout including new fields using bytemuck. (150584 ~= 148KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 15;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
@@ -28,8 +28,15 @@ pub struct FundAccount {
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 10],
+    _padding: [u8; 9],
     pub(super) transfer_enabled: u8,
+
+    address_lookup_table_enabled: u8,
+    address_lookup_table_account: Pubkey,
+
+    // informative
+    reserve_account: Pubkey,
+    treasury_account: Pubkey,
 
     /// receipt token information
     pub receipt_token_mint: Pubkey,
@@ -100,17 +107,19 @@ impl FundAccount {
         sol_operation_reserved_amount: u64,
     ) {
         if self.data_version == 0 {
-            self.bump = bump;
-            self.reserve_account_bump =
-                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID).1;
-            self.treasury_account_bump =
-                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID)
-                    .1;
             self.receipt_token_mint = receipt_token_mint;
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
             self.receipt_token_supply_amount = receipt_token_supply;
             self.sol.initialize(None, sol_operation_reserved_amount);
+
+            // Must calculate addresses at last
+            self.bump = bump;
+            (self.reserve_account, self.reserve_account_bump) =
+                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID);
+            (self.treasury_account, self.treasury_account_bump) =
+                Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID);
+
             self.data_version = 15;
         }
     }
@@ -201,7 +210,7 @@ impl FundAccount {
         let supported_token = self.get_supported_token(token)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &supported_token.mint,
                 &supported_token.program,
             ),
@@ -228,7 +237,7 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundNormalizedTokenNotSetError))?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &normalized_token.mint,
                 &normalized_token.program,
             ),
@@ -242,7 +251,7 @@ impl FundAccount {
         let restaking_vault = self.get_restaking_vault(vault)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
-                &self.find_account_address()?,
+                &self.get_reserve_account_address()?,
                 &restaking_vault.receipt_token_mint,
                 &restaking_vault.receipt_token_program,
             ),
@@ -339,6 +348,19 @@ impl FundAccount {
         self.get_supported_tokens_iter_mut()
             .find(|supported_token| supported_token.mint == *token_mint)
             .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))
+    }
+
+    pub(super) fn set_address_lookup_table_account(
+        &mut self,
+        address_lookup_table_account: &Option<Pubkey>,
+    ) {
+        if let Some(address) = address_lookup_table_account {
+            self.address_lookup_table_enabled = 1;
+            self.address_lookup_table_account = *address;
+        } else {
+            self.address_lookup_table_enabled = 0;
+            self.address_lookup_table_account = Pubkey::default();
+        }
     }
 
     #[inline(always)]

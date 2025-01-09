@@ -3,9 +3,11 @@ import {Keychain, KeychainConfig} from '../lib';
 const keypairs = {
     'PROGRAM': './keypairs/restaking/shared_local_program_4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5.json',
     'FRAGSOL_MINT': './keypairs/restaking/shared_local_fragsol_mint_Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD.json',
+    'FRAGJTO_MINT': './keypairs/restaking/shared_local_fragjto_mint_bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v.json',
     'FRAGSOL_NORMALIZED_TOKEN_MINT': './keypairs/restaking/shared_local_nsol_mint_4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX.json',
     'ADMIN': './keypairs/restaking/shared_local_admin_9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL.json',
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
+    'ALL_MINT_AUTHORITY': './tests/mocks/all_mint_authority.json',
 
     // fixtures for local test
     'MOCK_USER1': './tests/mocks/user1.json',
