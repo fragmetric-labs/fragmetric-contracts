@@ -1010,7 +1010,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
             }).instruction()),
-            this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
+            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
             }).instruction(),

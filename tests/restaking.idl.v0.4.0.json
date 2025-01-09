@@ -466,16 +466,16 @@
       "args": []
     },
     {
-      "name": "admin_set_address_lookup_table_address",
+      "name": "admin_set_address_lookup_table_account",
       "discriminator": [
-        57,
-        176,
-        95,
-        146,
+        169,
+        151,
+        1,
+        89,
+        5,
         207,
-        3,
-        215,
-        92
+        119,
+        136
       ],
       "accounts": [
         {
@@ -579,7 +579,7 @@
       ],
       "args": [
         {
-          "name": "address_lookup_table_address",
+          "name": "address_lookup_table_account",
           "type": {
             "option": "pubkey"
           }
@@ -9021,11 +9021,11 @@
             "type": "u8"
           },
           {
-            "name": "is_address_lookup_table_valid",
+            "name": "address_lookup_table_enabled",
             "type": "u8"
           },
           {
-            "name": "address_lookup_table_address",
+            "name": "address_lookup_table_account",
             "type": "pubkey"
           },
           {
@@ -12665,12 +12665,12 @@
     {
       "name": "DEVNET_JTO_LIQUIDITY_POOL_ADDRESS",
       "type": "pubkey",
-      "value": "11111111111111111111111111111111"
+      "value": "BQQVo6sz9pTjD1P88C7WgCo4ABLxr8PM6Ycu4fzDZmBQ"
     },
     {
       "name": "DEVNET_JTO_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "11111111111111111111111111111111"
+      "value": "FAkEjwHSbxkojmdiMurSXR11dU5jbfoqVhtjFCXbM1hh"
     },
     {
       "name": "DEVNET_MSOL_MINT_ADDRESS",
@@ -12691,6 +12691,26 @@
       "name": "DEVNET_PROGRAM_ID",
       "type": "pubkey",
       "value": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ"
+    },
+    {
+      "name": "FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
+      "type": "pubkey",
+      "value": "6VHmiiuZAW2PVoY5N16oqs8wYVkXnfmZBcM7Vkbb76jH"
+    },
+    {
+      "name": "FRAGJTO_JITO_VAULT_ACCOUNT_ADDRESS",
+      "type": "pubkey",
+      "value": "7dCQpU5w6Xz3aAnpFrXByBg9LxLdz33deUCrWJAVcNaE"
+    },
+    {
+      "name": "FRAGJTO_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "6VSjoP9hyHKKNZfcDzrAKRKWKSnyKhzLgBR9dtewPN9z"
+    },
+    {
+      "name": "FRAGJTO_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos"
     },
     {
       "name": "FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
