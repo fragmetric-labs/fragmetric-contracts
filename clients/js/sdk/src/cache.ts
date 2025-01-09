@@ -60,7 +60,7 @@ class InMemoryCacheImpl<T extends {} = any> implements ICache<T> {
 const promiseCache = asyncCache.createCache({
     ttl: 0,
     stale: 0,
-    onDedupe: (key) => console.log('deduped', key),
+    // onDedupe: (key) => console.log('deduped', key),
 });
 
 let promiseCacheIndex = 0;

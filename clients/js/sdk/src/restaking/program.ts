@@ -1,15 +1,18 @@
 import * as web3 from '@solana/web3.js';
-import BN from "bn.js";
+import BN from 'bn.js';
 
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
 import restakingIDL from './program.idl.json';
 import type {Restaking as RestakingIDL} from './program.idl';
 import {dedupe} from "../cache";
+import {RestakingFundSupportedAsset} from "./state";
 
 export type { RestakingIDL };
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
 export type RestakingProgramEvent = ProgramEvent<RestakingIDL>;
 export type RestakingProgramType = ProgramType<RestakingIDL>;
+
+export const BN_U64_MAX = new BN("18446744073709551615");
 
 export class RestakingProgram extends Program<RestakingIDL> {
     public static readonly programID = {
@@ -35,20 +38,19 @@ export class RestakingProgram extends Program<RestakingIDL> {
     }
 
     public readonly state = {
-        fund: dedupe(async (refresh = false): Promise<RestakingProgramAccount['fundAccount'] | null> => {
-            const k = 'fund';
-            if (!refresh && this.cache.has(k)) {
-                return this.cache.get(k);
-            }
+        /* internal states */
+        _fund: dedupe(async (refresh: boolean = false): Promise<RestakingProgramAccount['fundAccount'] | null> => {
+            const k = '_fund';
+            if (!refresh && this.cache.has(k)) return this.cache.get(k);
+
             const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.receiptTokenMint.toBuffer()], this.programID)[0];
             return this.cache.set(k, await this.programAccounts.fundAccount.fetchNullable(address));
         }),
-        addressLookupTables: dedupe(async (refresh = false): Promise<web3.AddressLookupTableAccount[]> => {
-            const k = 'addressLookupTables';
-            if (!refresh && this.cache.has(k) && refresh) {
-                return this.cache.get(k);
-            }
-            const fundAccount = await this.state.fund(refresh);
+        _addressLookupTables: dedupe(async (refresh: boolean = false): Promise<web3.AddressLookupTableAccount[]> => {
+            const k = '_addressLookupTables';
+            if (!refresh && this.cache.has(k)) return this.cache.get(k);
+
+            const fundAccount = await this.state._fund(refresh);
             if (fundAccount?.addressLookupTableEnabled) {
                 const addressLookupTable = await this.connection
                     .getAddressLookupTable(fundAccount.addressLookupTableAccount, { commitment: 'confirmed' })
@@ -59,14 +61,12 @@ export class RestakingProgram extends Program<RestakingIDL> {
             }
             return [];
         }),
-        pricingSourcesAccountMeta: dedupe(async (refresh = false): Promise<web3.AccountMeta[]> => {
-            const k = 'pricingSourcesAccountMeta';
-            if (!refresh && this.cache.has(k)) {
-                return this.cache.get(k);
-            }
+        _pricingSourcesAccountMeta: dedupe(async (refresh: boolean = false): Promise<web3.AccountMeta[]> => {
+            const k = '_pricingSourcesAccountMeta';
+            if (!refresh && this.cache.has(k)) return this.cache.get(k);
 
             const addresses: web3.PublicKey[] = [];
-            const fundAccount = await this.state.fund(refresh);
+            const fundAccount = await this.state._fund(refresh);
             if (fundAccount) {
                 for (const supportedToken of fundAccount.supportedTokens.slice(0, fundAccount.numSupportedTokens)) {
                     addresses.push(supportedToken.pricingSource.address);
@@ -82,12 +82,41 @@ export class RestakingProgram extends Program<RestakingIDL> {
             }
             return this.cache.set(k, addresses.map(address => ({ pubkey: address, isSigner: false, isWritable: false })));
         }),
+
+        /* user facing states */
+        supportedAssets: dedupe(async (refresh: boolean = false): Promise<RestakingFundSupportedAsset[]> => {
+            const k = 'supportedAssets';
+            if (!refresh && this.cache.has(k)) return this.cache.get(k);
+
+            const fundAccount = await this.state._fund(refresh);
+            const supportedAssets: RestakingFundSupportedAsset[] = fundAccount ? [
+                { assetState: fundAccount.sol, supportedToken: null },
+                ...fundAccount.supportedTokens
+                    .slice(0, fundAccount.numSupportedTokens)
+                    .map(supportedToken => ({ assetState: supportedToken.token, supportedToken }))
+            ].map(({assetState, supportedToken}) => {
+                const oneTokenAsSOL = supportedToken?.oneTokenAsSol ?? new BN(web3.LAMPORTS_PER_SOL);
+                return {
+                    isNativeSOL: !supportedToken,
+                    tokenMint: supportedToken ? assetState.tokenMint : null,
+                    tokenProgram: supportedToken ? assetState.tokenProgram : null,
+                    decimals: supportedToken?.decimals ?? 9,
+                    oneTokenAsSOL,
+                    oneTokenAsReceiptToken: oneTokenAsSOL.div(fundAccount.oneReceiptTokenAsSol),
+                    depositable: assetState.depositable == 1,
+                    withdrawable: assetState.withdrawable == 1,
+                    accumulatedDepositCapacityAmount: assetState.accumulatedDepositCapacityAmount.eq(BN_U64_MAX) ? null : assetState.accumulatedDepositCapacityAmount,
+                    accumulatedDepositAmount: assetState.accumulatedDepositAmount,
+                };
+            }) : [];
+            return this.cache.set(k, supportedAssets);
+        }),
     };
 
     public readonly operator = {
         updateFundPrices: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
             return this.createTransactionMessage({
-                descriptions: ['update prices of the fund'],
+                descriptions: ['Update prices of the fund assets.'],
                 events: ['operatorUpdatedFundPrices'],
                 instructions: await Promise.all([
                     this.programMethods
@@ -96,23 +125,23 @@ export class RestakingProgram extends Program<RestakingIDL> {
                             operator: (operator as web3.Keypair).publicKey ?? operator,
                             receiptTokenMint: this.receiptTokenMint,
                         })
-                        .remainingAccounts(await this.state.pricingSourcesAccountMeta())
+                        .remainingAccounts(await this.state._pricingSourcesAccountMeta())
                         .instruction(),
                 ]),
                 signers: {
                     payer: operator,
                 },
-                addressLookupTables: await this.state.addressLookupTables(),
+                addressLookupTables: await this.state._addressLookupTables(),
             });
         },
         updateNormalizedTokenPoolPrices: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
-            const fundAccount = await this.state.fund();
+            const fundAccount = await this.state._fund();
             const normalizedToken = fundAccount?.normalizedToken.enabled == 1 ? fundAccount.normalizedToken : null;
             if (!normalizedToken) {
                 throw new Error(`normalized token is not enabled for the fund`);
             }
             return this.createTransactionMessage({
-                descriptions: ['update prices of the normalized token pool'],
+                descriptions: ['Update prices of the normalized token pool assets.'],
                 events: ['operatorUpdatedNormalizedTokenPoolPrices'],
                 instructions: await Promise.all([
                     this.programMethods
@@ -122,18 +151,18 @@ export class RestakingProgram extends Program<RestakingIDL> {
                             normalizedTokenMint: normalizedToken.mint,
                             normalizedTokenProgram: normalizedToken.program,
                         })
-                        .remainingAccounts(await this.state.pricingSourcesAccountMeta())
+                        .remainingAccounts(await this.state._pricingSourcesAccountMeta())
                         .instruction(),
                 ]),
                 signers: {
                     payer: operator,
                 },
-                addressLookupTables: await this.state.addressLookupTables(),
+                addressLookupTables: await this.state._addressLookupTables(),
             });
         },
         updateRewardPools: async ({ operator }: { operator: web3.PublicKey | web3.Keypair }) => {
             return this.createTransactionMessage({
-                descriptions: ['update reward pools of the fund'],
+                descriptions: ['Update the reward pools.'],
                 events: ['operatorUpdatedRewardPools'],
                 instructions: await Promise.all([
                     this.programMethods
@@ -147,12 +176,12 @@ export class RestakingProgram extends Program<RestakingIDL> {
                 signers: {
                     payer: operator,
                 },
-                addressLookupTables: await this.state.addressLookupTables(),
+                addressLookupTables: await this.state._addressLookupTables(),
             });
         },
         donateSOLToFund: async ({ operator, amount, offsetReceivable }: { operator: web3.PublicKey | web3.Keypair, amount: BN, offsetReceivable: boolean }) => {
             return this.createTransactionMessage({
-                descriptions: [`donate SOL to the fund`, { amount, offsetReceivable }],
+                descriptions: [`WARNING: Donate SOL to the fund for testing.`, { amount, offsetReceivable }],
                 events: ['operatorDonatedToFund'],
                 instructions: await Promise.all([
                     this.programMethods
@@ -161,13 +190,13 @@ export class RestakingProgram extends Program<RestakingIDL> {
                             operator: (operator as web3.Keypair).publicKey ?? operator,
                             receiptTokenMint: this.receiptTokenMint,
                         })
-                        .remainingAccounts(await this.state.pricingSourcesAccountMeta())
+                        .remainingAccounts(await this.state._pricingSourcesAccountMeta())
                         .instruction(),
                 ]),
                 signers: {
                     payer: operator,
                 },
-                addressLookupTables: await this.state.addressLookupTables(),
+                addressLookupTables: await this.state._addressLookupTables(),
             });
         },
     };

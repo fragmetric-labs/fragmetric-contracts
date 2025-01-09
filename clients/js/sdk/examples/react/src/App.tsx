@@ -35,17 +35,17 @@ function Main() {
         });
     }, [connection]);
 
-    // useEffect(() => {
-    //     Promise.all([
-    //         fragSOLProgram.state.fund(),
-    //         fragSOLProgram.state.fund(),
-    //         fragSOLProgram.state.fund(),
-    //         fragSOLProgram.state.fund(),
-    //         fragSOLProgram.state.addressLookupTables(),
-    //         fragSOLProgram.state.addressLookupTables(),
-    //         fragSOLProgram.state.addressLookupTables(),
-    //     ]).then(console.log);
-    // }, [fragSOLProgram]);
+    useEffect(() => {
+        Promise.all([
+            fragSOLProgram.state.supportedAssets(),
+            fragSOLProgram.state._fund(),
+            fragSOLProgram.state._fund(),
+            fragSOLProgram.state._fund(),
+            fragSOLProgram.state._addressLookupTables(),
+            fragSOLProgram.state._addressLookupTables(),
+            fragSOLProgram.state._addressLookupTables(),
+        ]).then(console.log);
+    }, [fragSOLProgram]);
 
     const donateSOL1 = useCallback(async () => {
         try {
