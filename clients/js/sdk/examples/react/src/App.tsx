@@ -58,7 +58,10 @@ function Main() {
             console.log('tx sent using wallet', { tx, signature });
             setTransactionStatus(`Donation sent: ${signature}`);
 
-            await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+            const res = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+            if (res.value.err) {
+                throw res.value.err;
+            }
             console.log('tx confirmed using wallet', signature);
             setTransactionStatus(`Donation confirmed: ${signature}`);
         } catch (err) {
@@ -84,6 +87,9 @@ function Main() {
                     setTransactionStatus(`Donation sent: ${confirmStrategy.signature}`);
                 },
             });
+            if (res.error) {
+                throw res.error;
+            }
             console.log('tx confirmed using sdk method', res);
             setTransactionStatus(`Donation confirmed: ${res.signature}`);
         } catch (err) {

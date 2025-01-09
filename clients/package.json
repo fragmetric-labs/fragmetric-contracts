@@ -1,8 +1,8 @@
 {
   "private": true,
   "workspaces": [
-    "js-sdk",
-    "js-sdk/examples/*"
+    "js/sdk",
+    "js/sdk/examples/*"
   ],
   "scripts": {
     "test": "echo blabla"

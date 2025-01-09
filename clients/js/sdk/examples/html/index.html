@@ -56,6 +56,9 @@
                         output.innerText = `Donation sent: ${confirmStrategy.signature}`;
                     },
                 });
+                if (res.error) {
+                    throw res.error;
+                }
                 console.log('tx confirmed using sdk method', res);
                 output.innerText = `Donation confirmed: ${res.signature}`;
             } catch (err) {
