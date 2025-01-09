@@ -66,11 +66,12 @@ pub const DEVNET_NSOL_MINT_ADDRESS: Pubkey = MAINNET_NSOL_MINT_ADDRESS;
 pub const MAINNET_JTO_MINT_ADDRESS: Pubkey = pubkey!("jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL");
 
 #[constant]
-pub const DEVNET_JTO_MINT_ADDRESS: Pubkey = pubkey!("11111111111111111111111111111111");
+pub const DEVNET_JTO_MINT_ADDRESS: Pubkey = pubkey!("FAkEjwHSbxkojmdiMurSXR11dU5jbfoqVhtjFCXbM1hh");
 
 #[constant]
 pub const MAINNET_JTO_LIQUIDITY_POOL_ADDRESS: Pubkey =
     pubkey!("2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ");
 
 #[constant]
-pub const DEVNET_JTO_LIQUIDITY_POOL_ADDRESS: Pubkey = pubkey!("11111111111111111111111111111111");
+pub const DEVNET_JTO_LIQUIDITY_POOL_ADDRESS: Pubkey =
+    pubkey!("BQQVo6sz9pTjD1P88C7WgCo4ABLxr8PM6Ycu4fzDZmBQ");

@@ -7,9 +7,9 @@ const keypairs = {
     'FRAGSOL_NORMALIZED_TOKEN_MINT': './keypairs/restaking/shared_local_nsol_mint_4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX.json',
     'ADMIN': './keypairs/restaking/shared_local_admin_9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL.json',
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
-    'ALL_MINT_AUTHORITY': './tests/mocks/all_mint_authority.json',
 
     // fixtures for local test
+    'ALL_MINT_AUTHORITY': './tests/mocks/all_mint_authority.json',
     'MOCK_USER1': './tests/mocks/user1.json',
     'MOCK_USER2': './tests/mocks/user2.json',
     'MOCK_USER3': './tests/mocks/user3.json',
@@ -38,6 +38,7 @@ const devnet: KeychainConfig<keyof (typeof keypairs)> = {
         ...keypairs,
         'PROGRAM': './keypairs/restaking/devnet_program_frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ.json',
         'FRAGSOL_MINT': './keypairs/restaking/fragsol_mint_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json',
+        'FRAGJTO_MINT': './keypairs/restaking/fragjto_mint_FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos.json',
         'FRAGSOL_NORMALIZED_TOKEN_MINT': './keypairs/restaking/nsol_mint_nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e.json',
         'ADMIN': './keypairs/restaking/devnet_admin_fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP.json',
         'FUND_MANAGER': `ledger://44'/501'/0'`,
@@ -52,6 +53,7 @@ const mainnet: KeychainConfig<keyof (typeof keypairs)> = {
         ...keypairs,
         'PROGRAM': './keypairs/restaking/mainnet_program_fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3.json',
         'FRAGSOL_MINT': './keypairs/restaking/fragsol_mint_FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo.json',
+        'FRAGJTO_MINT': './keypairs/restaking/fragjto_mint_FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos.json',
         'FRAGSOL_NORMALIZED_TOKEN_MINT': './keypairs/restaking/nsol_mint_nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e.json',
         'ADMIN': './keypairs/restaking/mainnet_admin_fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby.json',
         'FUND_MANAGER': `ledger://44'/501'/0'`,

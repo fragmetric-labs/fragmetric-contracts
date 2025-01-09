@@ -690,7 +690,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             mint: this.keychain.getPublicKey("FRAGJTO_MINT"),
             name: "Fragmetric Staked JTO",
             symbol: "fragJTO",
-            uri: "https://quicknode.quicknode-ipfs.com/ipfs/Qmc6UWCMKwXrH6C6JEUNM2NnGQMWFBSpQSisjY3AwRtHFZ",
+            uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmQyCKdba9f6dpxc43pGwQ66DvjpPFbE6S8rPrKDh1Sz72",
             additionalMetadata: [["description", `fragJTO is the staked Jito governance token that provides optimized restaking rewards.`]],
             updateAuthority: this.keychain.getPublicKey("ADMIN"),
         };
@@ -699,7 +699,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 name: metadata.name,
                 symbol: metadata.symbol,
                 description: metadata.additionalMetadata[0][1],
-                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragJTO.png",
+                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragjto.png",
                 // attributes: [],
             },
             null,
@@ -833,7 +833,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 name: tokenMetadata.name,
                 symbol: tokenMetadata.symbol,
                 description: tokenMetadata.additionalMetadata[0][1],
-                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragJTO.png",
+                image: "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragjto.png",
                 // attributes: [],
             },
             null,
@@ -841,7 +841,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         logger.debug(`fragJTO metadata file:\n> ${updatedFileForMetadataURI}`);
 
-        const updatedMetadataUri = "https://quicknode.quicknode-ipfs.com/ipfs/Qmc6UWCMKwXrH6C6JEUNM2NnGQMWFBSpQSisjY3AwRtHFZ";
+        const updatedMetadataUri = "https://quicknode.quicknode-ipfs.com/ipfs/QmQyCKdba9f6dpxc43pGwQ66DvjpPFbE6S8rPrKDh1Sz72";
         const updatedMetadata = spl.updateTokenMetadata(tokenMetadata, splTokenMetadata.Field.Uri, updatedMetadataUri);
         logger.debug(`will update token metadata:\n> ${JSON.stringify(updatedMetadata, null, 0)}`);
 
@@ -900,7 +900,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
-        // const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
+        const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
 
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragJTOFund)
@@ -924,10 +924,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
-            // this.methods.adminSetAddressLookupTableAddress(knownAddressLookupTableAddress).accounts({
-            //     payer: this.wallet.publicKey,
-            //     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-            // }).instruction(),
+            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
+                payer: this.wallet.publicKey,
+                receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+            }).instruction(),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {

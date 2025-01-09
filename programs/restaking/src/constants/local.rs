@@ -61,7 +61,7 @@ pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
 
 #[constant]
 pub const FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
-    pubkey!("88tsbXd2yfx9wY8DhyrauZkwvaQnT4Fg9TQPNm3UKmuX"); // TODO
+    pubkey!("FQ3yeuugxQ6ZhdcoTrFdm8h42uEMpjCnor1kEuvVEsdw");
 
 #[constant]
 pub const FRAGJTO_MINT_ADDRESS: Pubkey = pubkey!("bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v");
