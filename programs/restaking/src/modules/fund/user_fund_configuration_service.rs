@@ -18,14 +18,14 @@ impl Drop for UserFundConfigurationService<'_, '_> {
     }
 }
 
-impl<'info> UserFundConfigurationService<'info, '_> {
+impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
     pub fn process_create_user_fund_account_idempotent(
-        system_program: &Program<'info, System>,
-        receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+        system_program: &'a Program<'info, System>,
+        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
 
-        user: &Signer<'info>,
+        user: &'a Signer<'info>,
         user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
-        user_fund_account: &mut UncheckedAccount<'info>,
+        user_fund_account: &'a mut UncheckedAccount<'info>,
         user_fund_account_bump: u8,
 
         _desired_account_size: Option<u32>, // reserved
@@ -75,9 +75,7 @@ impl<'info> UserFundConfigurationService<'info, '_> {
             Ok(event)
         }
     }
-}
 
-impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         user: &'a Signer<'info>,
