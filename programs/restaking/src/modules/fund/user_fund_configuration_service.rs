@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::*;
 
-use crate::events;
+use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds, SystemProgramExt};
+use crate::{events, modules};
 
 use super::*;
 
@@ -14,6 +15,65 @@ pub struct UserFundConfigurationService<'info: 'a, 'a> {
 impl Drop for UserFundConfigurationService<'_, '_> {
     fn drop(&mut self) {
         self.user_fund_account.exit(&crate::ID).unwrap();
+    }
+}
+
+impl<'info> UserFundConfigurationService<'info, '_> {
+    pub fn process_create_user_fund_account_idempotent(
+        system_program: &Program<'info, System>,
+        receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+
+        user: &Signer<'info>,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        user_fund_account: &mut UncheckedAccount<'info>,
+        user_fund_account_bump: u8,
+
+        _desired_account_size: Option<u32>, // reserved
+    ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
+        if !user_fund_account.is_initialized() {
+            system_program.initialize_account(
+                &user_fund_account,
+                user,
+                &[&[
+                    UserFundAccount::SEED,
+                    receipt_token_mint.key().as_ref(),
+                    user.key().as_ref(),
+                    &[user_fund_account_bump],
+                ]],
+                8 + UserFundAccount::INIT_SPACE,
+                None,
+                &crate::ID,
+            )?;
+
+            let mut user_fund_account_parsed = Account::<UserFundAccount>::try_from_unchecked(
+                user_fund_account.as_account_info(),
+            )?;
+
+            let event = Self::new(receipt_token_mint, &user, &mut user_fund_account_parsed)?
+                .process_initialize_user_fund_account(
+                    user_fund_account_bump,
+                    user_receipt_token_account,
+                )?;
+
+            Ok(event)
+        } else {
+            system_program.expand_account_size_if_needed(
+                user_fund_account,
+                user,
+                &[],
+                8 + UserFundAccount::INIT_SPACE,
+            )?;
+
+            let mut user_fund_account_parsed =
+                Account::<UserFundAccount>::try_from(user_fund_account.as_account_info())?;
+
+            require_eq!(user_fund_account_bump, user_fund_account_parsed.get_bump());
+
+            let event = Self::new(receipt_token_mint, user, &mut user_fund_account_parsed)?
+                .process_update_user_fund_account_if_needed(user_receipt_token_account)?;
+
+            Ok(event)
+        }
     }
 }
 

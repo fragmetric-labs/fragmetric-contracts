@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "idl-build", allow(unexpected_cfgs))]
-use anchor_lang::{prelude::*, solana_program};
+use anchor_lang::prelude::*;
 
 mod constants;
 mod errors;
@@ -15,7 +15,6 @@ use instructions::*;
 #[program]
 pub mod restaking {
     use super::*;
-    use crate::utils::{AccountInfoExt, PDASeeds, SystemProgramExt};
 
     // TODO: migration v0.3.2
     pub fn fund_manager_close_fund_account(
@@ -765,61 +764,17 @@ pub mod restaking {
         ctx: Context<UserFundAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let event = if !ctx.accounts.user_fund_account.is_initialized() {
-            ctx.accounts.system_program.initialize_account(
-                &ctx.accounts.user_fund_account,
-                &ctx.accounts.user,
-                &[&[
-                    modules::fund::UserFundAccount::SEED,
-                    ctx.accounts.receipt_token_mint.key().as_ref(),
-                    ctx.accounts.user.key().as_ref(),
-                    std::slice::from_ref(&ctx.bumps.user_fund_account),
-                ]],
-                modules::fund::UserFundAccount::INIT_SPACE,
-                None,
-                &crate::ID,
-            )?;
+        let event = modules::fund::UserFundConfigurationService::process_create_user_fund_account_idempotent(
+            &ctx.accounts.system_program,
+            &mut ctx.accounts.receipt_token_mint,
 
-            let mut user_fund_account =
-                Account::<modules::fund::UserFundAccount>::try_from_unchecked(
-                    ctx.accounts.user_fund_account.as_narrowed_ref(),
-                )?;
+            &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
+            ctx.bumps.user_fund_account,
 
-            let event = modules::fund::UserFundConfigurationService::new(
-                &mut ctx.accounts.receipt_token_mint,
-                &ctx.accounts.user,
-                &mut user_fund_account,
-            )?
-            .process_initialize_user_fund_account(
-                ctx.bumps.user_fund_account,
-                &ctx.accounts.user_receipt_token_account,
-            )?;
-
-            event
-        } else {
-            ctx.accounts.system_program.expand_account_size_if_needed(
-                &ctx.accounts.user_fund_account,
-                &ctx.accounts.user,
-                &[],
-                modules::fund::UserFundAccount::INIT_SPACE,
-            )?;
-
-            let mut user_fund_account =
-                Account::<modules::fund::UserFundAccount>::try_from(
-                    ctx.accounts.user_fund_account.as_narrowed_ref(),
-                )?;
-
-            require_eq!(ctx.bumps.user_fund_account, user_fund_account.get_bump());
-
-            let event = modules::fund::UserFundConfigurationService::new(
-                &mut ctx.accounts.receipt_token_mint,
-                &ctx.accounts.user,
-                &mut user_fund_account,
-            )?
-            .process_update_user_fund_account_if_needed(&ctx.accounts.user_receipt_token_account)?;
-
-            event
-        };
+            desired_account_size,
+        )?;
 
         if let Some(event) = event {
             emit_cpi!(event);
@@ -1052,64 +1007,18 @@ pub mod restaking {
         ctx: Context<UserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let event = if !ctx.accounts.user_reward_account.is_initialized() {
-            ctx.accounts.system_program.initialize_account(
-                &ctx.accounts.user_reward_account,
-                &ctx.accounts.user,
-                &[&[
-                    modules::reward::UserRewardAccount::SEED,
-                    ctx.accounts.receipt_token_mint.key().as_ref(),
-                    ctx.accounts.user.key().as_ref(),
-                    std::slice::from_ref(&ctx.bumps.user_reward_account),
-                ]],
-                std::cmp::min(
-                    solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
-                    8 + std::mem::size_of::<modules::reward::UserRewardAccount>(),
-                ),
-                None,
-                &crate::ID,
-            )?;
+        let event = modules::reward::UserRewardConfigurationService::process_create_user_reward_account_idempotent(
+            &ctx.accounts.system_program,
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.reward_account,
 
-            let mut user_reward_account =
-                AccountLoader::<modules::reward::UserRewardAccount>::try_from_unchecked(
-                    &crate::ID,
-                    ctx.accounts.user_reward_account.as_narrowed_ref(),
-                )?;
+            &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_reward_account,
+            ctx.bumps.user_reward_account,
 
-            let event = modules::reward::UserRewardConfigurationService::new(
-                &ctx.accounts.receipt_token_mint,
-                &ctx.accounts.user,
-                &mut ctx.accounts.reward_account,
-                &mut user_reward_account,
-            )?
-            .process_initialize_user_reward_account(
-                &ctx.accounts.user_receipt_token_account,
-                ctx.bumps.user_reward_account,
-            )?;
-
-            event
-        } else {
-            let mut user_reward_account =
-                AccountLoader::<modules::reward::UserRewardAccount>::try_from(
-                    ctx.accounts.user_reward_account.as_narrowed_ref(),
-                )?;
-
-            require_eq!(ctx.bumps.user_reward_account, user_reward_account.load()?.get_bump());
-
-            let event = modules::reward::UserRewardConfigurationService::new(
-                &ctx.accounts.receipt_token_mint,
-                &ctx.accounts.user,
-                &mut ctx.accounts.reward_account,
-                &mut user_reward_account,
-            )?
-            .process_update_user_reward_account_if_needed(
-                &ctx.accounts.user_receipt_token_account,
-                &ctx.accounts.system_program,
-                desired_account_size,
-            )?;
-
-            event
-        };
+            desired_account_size,
+        )?;
 
         if let Some(event) = event {
             emit_cpi!(event);

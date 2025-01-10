@@ -1,25 +1,96 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::events;
-use crate::utils::AccountLoaderExt;
+use crate::utils::{AccountInfoExt, AccountLoaderExt, AsAccountInfo, PDASeeds, SystemProgramExt};
 
 use super::*;
 
-pub struct UserRewardConfigurationService<'info: 'a, 'a> {
+pub struct UserRewardConfigurationService<'info: 'a, 'a: 'b, 'b> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     user: &'a Signer<'info>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-    user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+    user_reward_account: &'b mut AccountLoader<'info, UserRewardAccount>,
     _current_slot: u64,
 }
 
-impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
+impl<'info: 'a, 'a: 'b, 'b> UserRewardConfigurationService<'info, 'a, 'b> {
+    pub fn process_create_user_reward_account_idempotent(
+        system_program: &'a Program<'info, System>,
+        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+
+        user: &'a Signer<'info>,
+        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
+        user_reward_account: &'a mut UncheckedAccount<'info>,
+        user_reward_account_bump: u8,
+
+        desired_account_size: Option<u32>,
+    ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
+        if !user_reward_account.is_initialized() {
+            system_program.initialize_account(
+                user_reward_account,
+                user,
+                &[&[
+                    UserRewardAccount::SEED,
+                    receipt_token_mint.key().as_ref(),
+                    user.key().as_ref(),
+                    &[user_reward_account_bump],
+                ]],
+                std::cmp::min(
+                    solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
+                    8 + std::mem::size_of::<UserRewardAccount>(),
+                ),
+                None,
+                &crate::ID,
+            )?;
+
+            let mut user_reward_account_parsed =
+                AccountLoader::<UserRewardAccount>::try_from_unchecked(
+                    &crate::ID,
+                    user_reward_account.as_account_info(),
+                )?;
+
+            Self::new(
+                receipt_token_mint,
+                user,
+                reward_account,
+                &mut user_reward_account_parsed,
+            )?
+                .process_initialize_user_reward_account(
+                    user_receipt_token_account,
+                    user_reward_account_bump,
+                )
+        } else {
+            let mut user_reward_account_parsed = AccountLoader::<UserRewardAccount>::try_from(
+                user_reward_account.as_account_info(),
+            )?;
+
+            require_eq!(
+                user_reward_account_bump,
+                user_reward_account_parsed.load()?.get_bump()
+            );
+
+            Self::new(
+                receipt_token_mint,
+                user,
+                reward_account,
+                &mut user_reward_account_parsed,
+            )?
+                .process_update_user_reward_account_if_needed(
+                    user_receipt_token_account,
+                    system_program,
+                    desired_account_size,
+                )
+        }
+    }
+
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         user: &'a Signer<'info>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+        user_reward_account: &'b mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
         Ok(Self {
             receipt_token_mint,

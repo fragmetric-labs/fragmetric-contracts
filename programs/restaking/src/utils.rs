@@ -133,10 +133,6 @@ pub trait AccountInfoExt<'info> {
 
     /// Treats system program account as `None`.
     fn to_option(&self) -> Option<&Self>;
-
-    fn as_narrowed_ref<'a>(&self) -> &'a AccountInfo<'a>
-    where
-        'info: 'a;
 }
 
 impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
@@ -186,14 +182,6 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
     fn to_option(&self) -> Option<&Self> {
         (self.key != &system_program::ID).then_some(self)
     }
-
-    /// ref: https://github.com/coral-xyz/anchor/pull/2770
-    fn as_narrowed_ref<'a>(&self) -> &'a AccountInfo<'a>
-    where
-        'info: 'a,
-    {
-        unsafe { core::mem::transmute::<_, &'a AccountInfo<'a>>(self.as_ref()) }
-    }
 }
 
 pub trait AsAccountInfo<'info> {
@@ -219,6 +207,7 @@ pub trait AsAccountInfo<'info> {
     ///     }
     /// }
     /// ```
+    /// ref: https://github.com/coral-xyz/anchor/pull/2770
     fn as_account_info(&self) -> &'info AccountInfo<'info>;
 }
 
@@ -256,6 +245,12 @@ impl<'info, T> AsAccountInfo<'info> for Program<'info, T> {
 }
 
 impl<'info, T> AsAccountInfo<'info> for Interface<'info, T> {
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
+
+impl<'info> AsAccountInfo<'info> for UncheckedAccount<'info> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
         unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
