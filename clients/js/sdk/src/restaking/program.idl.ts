@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/restaking.json`.
  */
 export type Restaking = {
-  "address": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ",
+  "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
   "metadata": {
     "name": "restaking",
     "version": "0.4.0",
@@ -34,7 +34,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -135,7 +135,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -310,7 +310,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -404,7 +404,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -474,14 +474,14 @@ export type Restaking = {
     {
       "name": "adminSetAddressLookupTableAccount",
       "discriminator": [
-        57,
-        176,
-        95,
-        146,
+        169,
+        151,
+        1,
+        89,
+        5,
         207,
-        3,
-        215,
-        92
+        119,
+        136
       ],
       "accounts": [
         {
@@ -492,7 +492,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -612,7 +612,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "receiptTokenMint"
@@ -709,7 +709,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -830,7 +830,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -926,7 +926,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
         },
         {
           "name": "systemProgram",
@@ -1016,7 +1016,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "normalizedTokenMint",
@@ -1174,7 +1174,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -1263,7 +1263,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -1370,7 +1370,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -1467,7 +1467,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -1564,7 +1564,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -1833,7 +1833,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "fundAccount",
@@ -1851,38 +1851,38 @@ export type Restaking = {
               {
                 "kind": "const",
                 "value": [
+                  176,
+                  64,
+                  228,
+                  130,
                   214,
-                  52,
-                  8,
-                  155,
-                  182,
-                  149,
-                  115,
-                  57,
-                  20,
-                  131,
-                  125,
-                  232,
-                  82,
-                  251,
-                  210,
+                  123,
+                  80,
                   76,
-                  255,
-                  40,
-                  78,
-                  39,
-                  34,
+                  100,
+                  178,
+                  192,
+                  192,
+                  179,
+                  126,
+                  147,
+                  60,
+                  234,
+                  167,
+                  167,
+                  116,
+                  119,
+                  133,
+                  49,
+                  140,
+                  60,
+                  54,
+                  168,
                   166,
-                  52,
-                  128,
-                  105,
-                  118,
-                  67,
-                  202,
-                  117,
-                  247,
-                  108,
-                  146
+                  57,
+                  242,
+                  137,
+                  226
                 ]
               }
             ]
@@ -1912,38 +1912,38 @@ export type Restaking = {
               {
                 "kind": "const",
                 "value": [
+                  176,
+                  64,
+                  228,
+                  130,
                   214,
-                  52,
-                  8,
-                  155,
-                  182,
-                  149,
-                  115,
-                  57,
-                  20,
-                  131,
-                  125,
-                  232,
-                  82,
-                  251,
-                  210,
+                  123,
+                  80,
                   76,
-                  255,
-                  40,
-                  78,
-                  39,
-                  34,
+                  100,
+                  178,
+                  192,
+                  192,
+                  179,
+                  126,
+                  147,
+                  60,
+                  234,
+                  167,
+                  167,
+                  116,
+                  119,
+                  133,
+                  49,
+                  140,
+                  60,
+                  54,
+                  168,
                   166,
-                  52,
-                  128,
-                  105,
-                  118,
-                  67,
-                  202,
-                  117,
-                  247,
-                  108,
-                  146
+                  57,
+                  242,
+                  137,
+                  226
                 ]
               }
             ]
@@ -2088,7 +2088,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "fundAccount",
@@ -2106,38 +2106,38 @@ export type Restaking = {
               {
                 "kind": "const",
                 "value": [
+                  176,
+                  64,
+                  228,
+                  130,
                   214,
-                  52,
-                  8,
-                  155,
-                  182,
-                  149,
-                  115,
-                  57,
-                  20,
-                  131,
-                  125,
-                  232,
-                  82,
-                  251,
-                  210,
+                  123,
+                  80,
                   76,
-                  255,
-                  40,
-                  78,
-                  39,
-                  34,
+                  100,
+                  178,
+                  192,
+                  192,
+                  179,
+                  126,
+                  147,
+                  60,
+                  234,
+                  167,
+                  167,
+                  116,
+                  119,
+                  133,
+                  49,
+                  140,
+                  60,
+                  54,
+                  168,
                   166,
-                  52,
-                  128,
-                  105,
-                  118,
-                  67,
-                  202,
-                  117,
-                  247,
-                  108,
-                  146
+                  57,
+                  242,
+                  137,
+                  226
                 ]
               }
             ]
@@ -2165,38 +2165,38 @@ export type Restaking = {
               {
                 "kind": "const",
                 "value": [
+                  176,
+                  64,
+                  228,
+                  130,
                   214,
-                  52,
-                  8,
-                  155,
-                  182,
-                  149,
-                  115,
-                  57,
-                  20,
-                  131,
-                  125,
-                  232,
-                  82,
-                  251,
-                  210,
+                  123,
+                  80,
                   76,
-                  255,
-                  40,
-                  78,
-                  39,
-                  34,
+                  100,
+                  178,
+                  192,
+                  192,
+                  179,
+                  126,
+                  147,
+                  60,
+                  234,
+                  167,
+                  167,
+                  116,
+                  119,
+                  133,
+                  49,
+                  140,
+                  60,
+                  54,
+                  168,
                   166,
-                  52,
-                  128,
-                  105,
-                  118,
-                  67,
-                  202,
-                  117,
-                  247,
-                  108,
-                  146
+                  57,
+                  242,
+                  137,
+                  226
                 ]
               },
               {
@@ -2239,7 +2239,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "fundAccount",
@@ -2258,38 +2258,38 @@ export type Restaking = {
               {
                 "kind": "const",
                 "value": [
+                  176,
+                  64,
+                  228,
+                  130,
                   214,
-                  52,
-                  8,
-                  155,
-                  182,
-                  149,
-                  115,
-                  57,
-                  20,
-                  131,
-                  125,
-                  232,
-                  82,
-                  251,
-                  210,
+                  123,
+                  80,
                   76,
-                  255,
-                  40,
-                  78,
-                  39,
-                  34,
+                  100,
+                  178,
+                  192,
+                  192,
+                  179,
+                  126,
+                  147,
+                  60,
+                  234,
+                  167,
+                  167,
+                  116,
+                  119,
+                  133,
+                  49,
+                  140,
+                  60,
+                  54,
+                  168,
                   166,
-                  52,
-                  128,
-                  105,
-                  118,
-                  67,
-                  202,
-                  117,
-                  247,
-                  108,
-                  146
+                  57,
+                  242,
+                  137,
+                  226
                 ]
               }
             ]
@@ -2314,7 +2314,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -2401,7 +2401,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "systemProgram",
@@ -2702,7 +2702,7 @@ export type Restaking = {
         {
           "name": "admin",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "systemProgram",
@@ -2904,7 +2904,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -3007,7 +3007,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -3104,7 +3104,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -3207,7 +3207,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -3300,7 +3300,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -3407,7 +3407,7 @@ export type Restaking = {
         {
           "name": "fundManager",
           "signer": true,
-          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
         },
         {
           "name": "receiptTokenMint",
@@ -5150,6 +5150,348 @@ export type Restaking = {
         {
           "name": "rewardId",
           "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "userCreateFundAccountIdempotent",
+      "discriminator": [
+        18,
+        13,
+        182,
+        219,
+        153,
+        232,
+        60,
+        152
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "receiptTokenMint"
+        },
+        {
+          "name": "receiptTokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "userReceiptTokenAccount",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "userFundAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "desiredAccountSize",
+          "type": {
+            "option": "u32"
+          }
+        }
+      ]
+    },
+    {
+      "name": "userCreateRewardAccountIdempotent",
+      "discriminator": [
+        143,
+        244,
+        109,
+        23,
+        228,
+        116,
+        145,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "receiptTokenMint",
+          "relations": [
+            "rewardAccount"
+          ]
+        },
+        {
+          "name": "receiptTokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "userReceiptTokenAccount",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "rewardAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userRewardAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receiptTokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "eventAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "desiredAccountSize",
+          "type": {
+            "option": "u32"
+          }
         }
       ]
     },
@@ -12656,7 +12998,7 @@ export type Restaking = {
     {
       "name": "adminPubkey",
       "type": "pubkey",
-      "value": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
+      "value": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
     },
     {
       "name": "devnetBsolMintAddress",
@@ -12671,12 +13013,12 @@ export type Restaking = {
     {
       "name": "devnetJtoLiquidityPoolAddress",
       "type": "pubkey",
-      "value": "11111111111111111111111111111111"
+      "value": "BQQVo6sz9pTjD1P88C7WgCo4ABLxr8PM6Ycu4fzDZmBQ"
     },
     {
       "name": "devnetJtoMintAddress",
       "type": "pubkey",
-      "value": "11111111111111111111111111111111"
+      "value": "FAkEjwHSbxkojmdiMurSXR11dU5jbfoqVhtjFCXbM1hh"
     },
     {
       "name": "devnetMsolMintAddress",
@@ -12699,29 +13041,49 @@ export type Restaking = {
       "value": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ"
     },
     {
+      "name": "fragjtoAddressLookupTableAddress",
+      "type": "pubkey",
+      "value": "FQ3yeuugxQ6ZhdcoTrFdm8h42uEMpjCnor1kEuvVEsdw"
+    },
+    {
+      "name": "fragjtoJitoVaultAccountAddress",
+      "type": "pubkey",
+      "value": "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
+    },
+    {
+      "name": "fragjtoJitoVaultReceiptTokenMintAddress",
+      "type": "pubkey",
+      "value": "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
+    },
+    {
+      "name": "fragjtoMintAddress",
+      "type": "pubkey",
+      "value": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v"
+    },
+    {
       "name": "fragsolAddressLookupTableAddress",
       "type": "pubkey",
-      "value": "5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU"
+      "value": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
     },
     {
       "name": "fragsolJitoVaultAccountAddress",
       "type": "pubkey",
-      "value": "BxhsigZDYjWTzXGgem9W3DsvJgFpEK5pM2RANP22bxBE"
+      "value": "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
     },
     {
       "name": "fragsolJitoVaultReceiptTokenMintAddress",
       "type": "pubkey",
-      "value": "7jff6VT8twUX3513HuhN7EF18DtUzBj2N1goWroZ29t"
+      "value": "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
     },
     {
       "name": "fragsolMintAddress",
       "type": "pubkey",
-      "value": "FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo"
+      "value": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"
     },
     {
       "name": "fragsolNormalizedTokenMintAddress",
       "type": "pubkey",
-      "value": "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e"
+      "value": "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX"
     },
     {
       "name": "fundAccountCurrentVersion",
@@ -12740,7 +13102,7 @@ export type Restaking = {
     {
       "name": "fundManagerPubkey",
       "type": "pubkey",
-      "value": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+      "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
     },
     {
       "name": "jitoVaultConfigAddress",
@@ -12750,7 +13112,7 @@ export type Restaking = {
     {
       "name": "jitoVaultProgramFeeWallet",
       "type": "pubkey",
-      "value": "9eZbWiHsPRsxLSiHxzg2pkXsAuQMwAjQrda7C7e21Fw6"
+      "value": "5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF"
     },
     {
       "name": "jitoVaultProgramId",
@@ -12852,7 +13214,7 @@ export type Restaking = {
     {
       "name": "programRevenueAddress",
       "type": "pubkey",
-      "value": "SRCMj3B7cYjvwTtqJxUSptgJPWkL8bHLrQme6q4zHn7"
+      "value": "GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA"
     },
     {
       "name": "rewardAccountCurrentVersion",
@@ -12866,7 +13228,7 @@ export type Restaking = {
     {
       "name": "target",
       "type": "string",
-      "value": "\"devnet\""
+      "value": "\"local\""
     },
     {
       "name": "userRewardAccountCurrentVersion",

@@ -26,7 +26,7 @@ function Main() {
     const [transactionStatus, setTransactionStatus] = useState<string>('');
     const { publicKey: walletAddress, signTransaction, sendTransaction } = useWallet();
     const { connection } = useConnection();
-    const [selectTokenMint, setSelectTokenMint] = useState<string>('SOL');
+    const [selectedAssetTokenMint, setSelectedAssetTokenMint] = useState<string|null>(null);
     const [fragSOLState, setFragSOLState] = useState<{
         loading: boolean;
         data: {
@@ -61,8 +61,12 @@ function Main() {
     const deposit1 = useCallback(async () => {
         try {
             setTransactionStatus('sending tx...');
-            const msg = await fragSOL.operator
-                .donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false });
+            const msg = await fragSOL.user
+                .deposit({
+                    user: walletAddress!,
+                    supportedTokenMint: selectedAssetTokenMint ? new web3.PublicKey(selectedAssetTokenMint) : null,
+                    amount: new fragmetricSDK.BN(100),
+                });
 
             const { context: { slot: minContextSlot }, value: { blockhash, lastValidBlockHeight } } = await connection.getLatestBlockhashAndContext();
             msg.recentBlockhash = blockhash;
@@ -81,14 +85,18 @@ function Main() {
             setTransactionStatus(`tx confirmation failed: ${err}`);
             console.error(err);
         }
-    }, [fragSOL, walletAddress, selectTokenMint]);
+    }, [fragSOL, walletAddress, selectedAssetTokenMint]);
 
     // example2: simply using SDK builtin `send` method and wallet adapter's `signTransaction`
     const deposit2 = useCallback(async () => {
         try {
             setTransactionStatus('sending tx...');
-            const res = await fragSOL.operator
-                .donateSOLToFund({ operator: walletAddress!, amount: new fragmetricSDK.BN(100), offsetReceivable: false })
+            const res = await fragSOL.user
+                .deposit({
+                    user: walletAddress!,
+                    supportedTokenMint: selectedAssetTokenMint ? new web3.PublicKey(selectedAssetTokenMint) : null,
+                    amount: new fragmetricSDK.BN(100),
+                })
                 .then(msg => msg.send({
                     commitment: 'confirmed',
                     onSign: async (tx, publicKey, name) => {
@@ -111,7 +119,7 @@ function Main() {
             setTransactionStatus(`tx confirmation failed: ${err}`);
             console.error(err);
         }
-    }, [fragSOL, walletAddress, selectTokenMint]);
+    }, [fragSOL, walletAddress, selectedAssetTokenMint]);
 
     return (
         <div style={{textAlign: 'center', marginTop: '50px'}}>
@@ -121,12 +129,10 @@ function Main() {
                     <center><WalletDisconnectButton/></center>
                     <p>Connected Wallet Address: {walletAddress.toString()}</p>
                     <p>Select an Asset to Deposit</p>
-                    <select style={{marginBottom: 10, width: 350}} size={5}>
-                        {(fragSOLState.data?.supportedAssets ?? []).filter(a => a.depositable).map((a) => {
-                            const mint = a.isNativeSOL ? 'SOL' : a.mint?.toString();
-                           return (<option selected={selectTokenMint == mint}>
-                               {mint}
-                           </option>)
+                    <select style={{marginBottom: 10, width: 350}} size={5} value={selectedAssetTokenMint ?? 'SOL'} onChange={(e) => setSelectedAssetTokenMint(e.target.value || null)}>
+                        {(fragSOLState.data?.supportedAssets ?? []).filter((a) => a.depositable).map((a, i) => {
+                           const value = a.mint?.toString() ?? '';
+                           return (<option key={i} value={value}>{value || 'SOL'}</option>)
                         })}
                     </select>
                     <div style={{marginBottom: 10}}>

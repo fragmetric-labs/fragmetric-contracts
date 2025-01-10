@@ -6,7 +6,7 @@ import restakingIDL from './program.idl.json';
 import type {Restaking as RestakingIDL} from './program.idl';
 import {dedupe} from "../cache";
 import {RestakingFundSupportedAsset, RestakingFundNormalizedToken, RestakingFundReceiptToken} from "./state";
-import * as spl from "@solana/spl-token-3.x";
+import * as spl from "@solana/spl-token";
 
 export type { RestakingIDL };
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
@@ -28,6 +28,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
         fragJTO: new web3.PublicKey('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
     };
     public readonly fundReceiptTokenMint: web3.PublicKey;
+    public readonly fundReceiptTokenProgram: web3.PublicKey = spl.TOKEN_2022_PROGRAM_ID;
 
     constructor({ fundReceiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'idl'|'programID'>> & {
         fundReceiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['funds'],
@@ -142,86 +143,71 @@ export class RestakingProgram extends Program<RestakingIDL> {
         }),
     };
 
+    public readonly address = {
+        fundReceiptTokenAccount: (owner: web3.PublicKey, isPDA: boolean = false): web3.PublicKey=> {
+            return spl.getAssociatedTokenAddressSync(this.fundReceiptTokenMint, owner, isPDA, this.fundReceiptTokenProgram);
+        },
+    };
+
     public readonly user = {
-        deposit: async ({ user }: { user: web3.PublicKey | web3.Keypair }) => {
-            // const fundAccount = await this.state._fund(false);
-            // const userPublicKey = (user as web3.Keypair)?.publicKey ?? user;
-            //
-            // const fragSOLUserRewardAddress = this.knownAddress.fragSOLUserReward(user.publicKey);
-            // const fragSOLUserFundAddress = this.knownAddress.fragSOLUserFund(user.publicKey);
-            // const currentRewardVersion = await this.account.userRewardAccount
-            //     .fetch(fragSOLUserRewardAddress)
-            //     .then((a) => a.dataVersion)
-            //     .catch(() => 0);
-            // const currentFundVersion = await this.account.userFundAccount
-            //     .fetch(fragSOLUserFundAddress)
-            //     .then((a) => a.dataVersion)
-            //     .catch(() => 0);
-            //
-            // const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
-            // return [
-            //     spl.createAssociatedTokenAccountIdempotentInstruction(
-            //         userPublicKey,
-            //         this.knownAddress.fragSOLUserTokenAccount(user.publicKey),
-            //         userPublicKey,
-            //         this.knownAddress.fragSOLTokenMint,
-            //         spl.TOKEN_2022_PROGRAM_ID,
-            //     ),
-            //     ...(currentFundVersion == 0
-            //         ? [
-            //             this.program.methods.userInitializeFundAccount()
-            //                 .accounts({
-            //                     user: user.publicKey,
-            //                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-            //                 })
-            //                 .instruction(),
-            //         ]
-            //         : [
-            //             this.program.methods.userUpdateFundAccountIfNeeded()
-            //                 .accountsPartial({
-            //                     user: user.publicKey,
-            //                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-            //                 })
-            //                 .instruction(),
-            //         ]),
-            //     ...(currentRewardVersion == 0 ? [
-            //             this.program.methods.userInitializeRewardAccount()
-            //                 .accountsPartial({
-            //                     user: user.publicKey,
-            //                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-            //                 })
-            //                 .instruction(),
-            //         ]
-            //         : [
-            //             ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-            //                 this.program.methods
-            //                     .userUpdateRewardAccountIfNeeded(null)
-            //                     .accountsPartial({
-            //                         user: user.publicKey,
-            //                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-            //                     })
-            //                     .instruction(),
-            //             ),
-            //         ]),
-            // ];
+        deposit: async ({ user, supportedTokenMint, amount }: { user: web3.PublicKey | web3.Keypair, supportedTokenMint: web3.PublicKey | null, amount: BN }) => {
+            const [pricingSourcesAccountMeta, addressLookupTables, supportedAssets] = await Promise.all([
+                this.state._pricingSourcesAccountMeta(),
+                this.state._addressLookupTables(),
+                this.state.supportedAssets(),
+            ]);
+            const userPublicKey = (user as web3.Keypair)?.publicKey ?? user;
+            const supportedAsset = supportedAssets.find(a => supportedTokenMint ? a.mint?.equals(supportedTokenMint) : a.isNativeSOL);
+            const depositMetadata = null;
 
             return this.createTransactionMessage({
-                descriptions: ['Deposit native SOL or support token to the fund.'],
+                descriptions: [`Deposit native SOL or support token to the fund.`, { supportedTokenMint, amount }],
                 events: ['operatorUpdatedFundPrices'],
-                instructions: await Promise.all([
-                    this.programMethods
-                        .operatorUpdateFundPrices()
-                        .accountsPartial({
-                            operator: (operator as web3.Keypair).publicKey ?? operator,
-                            receiptTokenMint: this.fundReceiptTokenMint,
-                        })
-                        .remainingAccounts(await this.state._pricingSourcesAccountMeta())
-                        .instruction(),
-                ]),
+                instructions: [
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        userPublicKey,
+                        this.address.fundReceiptTokenAccount(userPublicKey),
+                        userPublicKey,
+                        this.fundReceiptTokenMint,
+                        this.fundReceiptTokenProgram,
+                    ),
+                    ...await Promise.all([
+                        this.programMethods.userCreateFundAccountIdempotent(null)
+                            .accountsPartial({
+                                user: userPublicKey,
+                                receiptTokenMint: this.fundReceiptTokenMint,
+                            })
+                            .instruction(),
+                        this.programMethods.userCreateRewardAccountIdempotent(null)
+                            .accountsPartial({
+                                user: userPublicKey,
+                                receiptTokenMint: this.fundReceiptTokenMint,
+                            })
+                            .instruction(),
+                        // TODO: deposit metadata
+                        (supportedTokenMint
+                            ? this.programMethods.userDepositSupportedToken(amount, depositMetadata)
+                                .accountsPartial({
+                                    user: userPublicKey,
+                                    receiptTokenMint: this.fundReceiptTokenMint,
+                                    supportedTokenMint: supportedAsset!.mint!,
+                                    supportedTokenProgram: supportedAsset!.program!,
+                                    userSupportedTokenAccount: spl.getAssociatedTokenAddressSync(supportedAsset!.mint!, userPublicKey, false, supportedAsset!.program!),
+                                })
+                            : this.programMethods.userDepositSol(amount, depositMetadata)
+                                .accountsPartial({
+                                    user: userPublicKey,
+                                    receiptTokenMint: this.fundReceiptTokenMint,
+                                })
+                        )
+                            .remainingAccounts(pricingSourcesAccountMeta)
+                            .instruction()
+                    ]),
+                ],
                 signers: {
-                    payer: operator,
+                    payer: user,
                 },
-                addressLookupTables: await this.state._addressLookupTables(),
+                addressLookupTables,
             });
         },
     };
