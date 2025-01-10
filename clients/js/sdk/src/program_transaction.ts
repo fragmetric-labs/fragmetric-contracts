@@ -23,13 +23,15 @@ export type ProgramTransactionHandler<IDL extends anchor.Idl> = {
 export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>> extends web3.TransactionMessage {
     public readonly descriptions: any[] | null;
     public readonly expectedEvents: EVENT[];
+    public readonly optionallyExpectedEvents: EVENT[];
     public readonly signers: { [k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer };
     public readonly addressLookupTables: web3.AddressLookupTableAccount[] = [];
     private readonly program: Program<IDL>;
 
-    constructor({ descriptions = [], instructions, events = [], signers, recentBlockhash = null, addressLookupTables = [], program }: {
+    constructor({ descriptions = [], instructions, events = [], optionalEvents = [], signers, recentBlockhash = null, addressLookupTables = [], program }: {
         descriptions?: any[] | null,
         events?: EVENT[],
+        optionalEvents?: EVENT[],
         instructions: web3.TransactionInstruction[],
         signers: {[k in 'payer' | SIGNER]: web3.PublicKey | web3.Signer},
         recentBlockhash?: web3.Blockhash | null,
@@ -43,6 +45,7 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
         });
         this.descriptions = descriptions;
         this.expectedEvents = events;
+        this.optionallyExpectedEvents = optionalEvents;
         this.signers = signers;
         this.addressLookupTables = addressLookupTables;
         this.program = program;
@@ -157,7 +160,7 @@ export class ProgramTransactionMessage<IDL extends anchor.Idl, SIGNER extends st
 
         if (!result.error) {
             for (const event of Object.keys(result.events)) {
-                if (!this.expectedEvents.includes(event as EVENT)) {
+                if (!this.expectedEvents.includes(event as EVENT) && !this.optionallyExpectedEvents.includes(event as EVENT)) {
                     console.warn(`Warning: unexpected event: ${event}`);
                 }
             }

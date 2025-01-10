@@ -12,11 +12,7 @@ This library requires `@solana/web3.js` as peer dependency for both web browser 
 $ yarn add @fragmetric-labs/sdk @solana/web3.js
 ```
 
-And to use SDK with Ledger hardware wallet in Node.js environment, install below libraries.
-
-```
-$ yarn add @fragmetric-labs/sdk @solana/web3.js @ledgerhq/hw-app-solana @ledgerhq/hw-transport @ledgerhq/hw-transport-node-hid-singleton
-```
+And to use SDK with Ledger hardware wallet in Node.js environment, it needs to install devDependencies as well.
 
 ### Examples
 - [./examples/react](./examples/react): For web browser application with bundlers like rollup, webpack and more (ESM, CJS).
