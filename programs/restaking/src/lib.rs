@@ -767,12 +767,10 @@ pub mod restaking {
         let event = modules::fund::UserFundConfigurationService::process_create_user_fund_account_idempotent(
             &ctx.accounts.system_program,
             &mut ctx.accounts.receipt_token_mint,
-
             &ctx.accounts.user,
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
             ctx.bumps.user_fund_account,
-
             desired_account_size,
         )?;
 
@@ -1011,12 +1009,10 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
-
             &ctx.accounts.user,
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_reward_account,
             ctx.bumps.user_reward_account,
-
             desired_account_size,
         )?;
 

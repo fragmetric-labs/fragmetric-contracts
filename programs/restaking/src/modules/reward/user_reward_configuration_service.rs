@@ -16,14 +16,14 @@ pub struct UserRewardConfigurationService<'info: 'a, 'a> {
 }
 
 impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
-    pub fn process_create_user_reward_account_idempotent(
-        system_program: &'a Program<'info, System>,
-        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+    pub fn process_create_user_reward_account_idempotent<'b>(
+        system_program: &'b Program<'info, System>,
+        receipt_token_mint: &'b mut InterfaceAccount<'info, Mint>,
+        reward_account: &'b mut AccountLoader<'info, RewardAccount>,
 
-        user: &'a Signer<'info>,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
-        user_reward_account: &'a mut UncheckedAccount<'info>,
+        user: &'b Signer<'info>,
+        user_receipt_token_account: &'b InterfaceAccount<'info, TokenAccount>,
+        user_reward_account: &'b mut UncheckedAccount<'info>,
         user_reward_account_bump: u8,
 
         desired_account_size: Option<u32>,
@@ -52,7 +52,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                     user_reward_account.as_account_info(),
                 )?;
 
-            Self::new(
+            UserRewardConfigurationService::new(
                 receipt_token_mint,
                 user,
                 reward_account,
@@ -72,7 +72,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                 user_reward_account_parsed.load()?.get_bump()
             );
 
-            Self::new(
+            UserRewardConfigurationService::new(
                 receipt_token_mint,
                 user,
                 reward_account,

@@ -19,13 +19,13 @@ impl Drop for UserFundConfigurationService<'_, '_> {
 }
 
 impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
-    pub fn process_create_user_fund_account_idempotent(
-        system_program: &'a Program<'info, System>,
-        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+    pub fn process_create_user_fund_account_idempotent<'c>(
+        system_program: &'c Program<'info, System>,
+        receipt_token_mint: &'c mut InterfaceAccount<'info, Mint>,
 
-        user: &'a Signer<'info>,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
-        user_fund_account: &'a mut UncheckedAccount<'info>,
+        user: &'c Signer<'info>,
+        user_receipt_token_account: &'c InterfaceAccount<'info, TokenAccount>,
+        user_fund_account: &'c mut UncheckedAccount<'info>,
         user_fund_account_bump: u8,
 
         _desired_account_size: Option<u32>, // reserved
@@ -49,11 +49,15 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
                 user_fund_account.as_account_info(),
             )?;
 
-            let event = Self::new(receipt_token_mint, &user, &mut user_fund_account_parsed)?
-                .process_initialize_user_fund_account(
-                    user_fund_account_bump,
-                    user_receipt_token_account,
-                )?;
+            let event = UserFundConfigurationService::new(
+                receipt_token_mint,
+                &user,
+                &mut user_fund_account_parsed,
+            )?
+            .process_initialize_user_fund_account(
+                user_fund_account_bump,
+                user_receipt_token_account,
+            )?;
 
             Ok(event)
         } else {
@@ -69,8 +73,12 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
 
             require_eq!(user_fund_account_bump, user_fund_account_parsed.get_bump());
 
-            let event = Self::new(receipt_token_mint, user, &mut user_fund_account_parsed)?
-                .process_update_user_fund_account_if_needed(user_receipt_token_account)?;
+            let event = UserFundConfigurationService::new(
+                receipt_token_mint,
+                user,
+                &mut user_fund_account_parsed,
+            )?
+            .process_update_user_fund_account_if_needed(user_receipt_token_account)?;
 
             Ok(event)
         }
