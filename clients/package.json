@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "workspaces": [
+    "js/sdk",
+    "js/sdk/examples/*",
+    "js/playground"
+  ],
+  "scripts": {
+  }
+}
