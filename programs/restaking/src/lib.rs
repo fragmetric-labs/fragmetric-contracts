@@ -805,9 +805,11 @@ pub mod restaking {
             )?;
 
             let mut user_fund_account =
-                Account::<modules::fund::UserFundAccount>::try_from_unchecked(
+                Account::<modules::fund::UserFundAccount>::try_from(
                     ctx.accounts.user_fund_account.as_narrowed_ref(),
                 )?;
+
+            require_eq!(ctx.bumps.user_fund_account, user_fund_account.get_bump());
 
             let event = modules::fund::UserFundConfigurationService::new(
                 &mut ctx.accounts.receipt_token_mint,
@@ -1091,6 +1093,8 @@ pub mod restaking {
                 AccountLoader::<modules::reward::UserRewardAccount>::try_from(
                     ctx.accounts.user_reward_account.as_narrowed_ref(),
                 )?;
+
+            require_eq!(ctx.bumps.user_reward_account, user_reward_account.load()?.get_bump());
 
             let event = modules::reward::UserRewardConfigurationService::new(
                 &ctx.accounts.receipt_token_mint,
