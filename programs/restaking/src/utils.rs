@@ -88,54 +88,12 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         desired_account_size: Option<u32>,
     ) -> Result<()> {
         let account_info = self.as_ref();
-
-        let current_account_size = account_info.data_len();
         let min_account_size = 8 + std::mem::size_of::<T>();
         let target_account_size = desired_account_size
             .map(|size| std::cmp::max(size as usize, min_account_size))
             .unwrap_or(min_account_size);
-        let required_realloc_size = target_account_size.saturating_sub(current_account_size);
 
-        msg!(
-            "realloc account size: current={}, target={}, required={}",
-            current_account_size,
-            target_account_size,
-            required_realloc_size
-        );
-
-        if required_realloc_size > 0 {
-            let rent = Rent::get()?;
-            let current_lamports = account_info.lamports();
-            let minimum_lamports = rent.minimum_balance(target_account_size);
-            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
-            if required_lamports > 0 {
-                let cpi_context = CpiContext::new(
-                    system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: payer.to_account_info(),
-                        to: account_info.clone(),
-                    },
-                );
-                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
-                msg!("realloc account lamports: added={}", required_lamports);
-            }
-
-            let increase = std::cmp::min(
-                required_realloc_size,
-                entrypoint::MAX_PERMITTED_DATA_INCREASE,
-            );
-            let new_account_size = current_account_size + increase;
-
-            account_info.realloc(new_account_size, false)?;
-            msg!(
-                "account reallocated: current={}, target={}, required={}",
-                new_account_size,
-                target_account_size,
-                target_account_size - new_account_size
-            );
-        }
-
-        Ok(())
+        system_program.expand_account_size_if_needed(account_info, payer, &[], target_account_size)
     }
 }
 
@@ -249,6 +207,7 @@ pub trait AsAccountInfo<'info> {
     ///     }
     /// }
     /// ```
+    /// ref: https://github.com/coral-xyz/anchor/pull/2770
     fn as_account_info(&self) -> &'info AccountInfo<'info>;
 }
 
@@ -291,6 +250,12 @@ impl<'info, T> AsAccountInfo<'info> for Interface<'info, T> {
     }
 }
 
+impl<'info> AsAccountInfo<'info> for UncheckedAccount<'info> {
+    fn as_account_info(&self) -> &'info AccountInfo<'info> {
+        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+    }
+}
+
 pub trait SystemProgramExt<'info> {
     /// Need signer seeds of every PDAs.
     fn initialize_account(
@@ -301,6 +266,14 @@ pub trait SystemProgramExt<'info> {
         space: usize,
         desired_lamports: Option<u64>,
         owner: &Pubkey,
+    ) -> Result<()>;
+
+    fn expand_account_size_if_needed(
+        &self,
+        account_to_realloc: &AccountInfo<'info>,
+        payer: &Signer<'info>,
+        signer_seeds: &[&[&[u8]]],
+        target_space: usize,
     ) -> Result<()>;
 }
 
@@ -380,6 +353,59 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
 
         Ok(())
     }
+
+    fn expand_account_size_if_needed(
+        &self,
+        account_to_realloc: &AccountInfo<'info>,
+        payer: &Signer<'info>,
+        signer_seeds: &[&[&[u8]]],
+        target_space: usize,
+    ) -> Result<()> {
+        let current_account_size = account_to_realloc.data_len();
+        let required_realloc_size = target_space.saturating_sub(current_account_size);
+
+        msg!(
+            "realloc account size: current={}, target={}, required={}",
+            current_account_size,
+            target_space,
+            required_realloc_size
+        );
+
+        if required_realloc_size > 0 {
+            let rent = Rent::get()?;
+            let current_lamports = account_to_realloc.lamports();
+            let minimum_lamports = rent.minimum_balance(target_space);
+            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
+            if required_lamports > 0 {
+                let cpi_context = CpiContext::new_with_signer(
+                    self.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: payer.to_account_info(),
+                        to: account_to_realloc.clone(),
+                    },
+                    signer_seeds,
+                );
+                anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
+                msg!("realloc account lamports: added={}", required_lamports);
+            }
+
+            let increase = std::cmp::min(
+                required_realloc_size,
+                entrypoint::MAX_PERMITTED_DATA_INCREASE,
+            );
+            let new_account_size = current_account_size + increase;
+
+            account_to_realloc.realloc(new_account_size, false)?;
+            msg!(
+                "account reallocated: current={}, target={}, required={}",
+                new_account_size,
+                target_space,
+                target_space - new_account_size
+            );
+        }
+
+        Ok(())
+    }
 }
 
 #[allow(unused)]
@@ -437,7 +463,7 @@ pub mod tests {
     ///     state.try_serialize(&mut data).unwrap();
     ///     let lamports = 1000000;
     ///     let owner = crate::ID;
-    ///     
+    ///
     ///     let mut accounts = MockAccountsDb::default();
     ///     accounts.add_or_update_accounts(
     ///         key,

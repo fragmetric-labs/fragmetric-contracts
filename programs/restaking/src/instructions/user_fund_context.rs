@@ -9,7 +9,35 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundAccountInitialContext<'info> {
+pub struct UserFundAccountInitOrUpdateContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(
+        associated_token::mint = receipt_token_mint,
+        associated_token::token_program = receipt_token_program,
+        associated_token::authority = user,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    /// CHECK: This account is treated as UncheckedAccount to determine whether to init or update.
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump,
+    )]
+    pub user_fund_account: UncheckedAccount<'info>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct DeprecatingUserFundAccountInitialContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -38,7 +66,7 @@ pub struct UserFundAccountInitialContext<'info> {
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundAccountUpdateContext<'info> {
+pub struct DeprecatingUserFundAccountUpdateContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
