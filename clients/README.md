@@ -7,13 +7,10 @@
 ...
 
 ## 3. Rust Crates
-...
+...vv vvv
 
 
 # TODO
-- deposit methods
-- pricing methods
-- update examples
 - publish & version up test and readme
 - other all operation methods
 - playground(? .. = REPL + wrapper functions (?) for testing and operation? or just into sdk?)

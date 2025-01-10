@@ -58,20 +58,20 @@ const generateConfig = (format, browser = false, generateTypes = !generatedOnce)
                 alias({
                     entries: [
                         {
-                            find: './ledger_signer_impl',
-                            replacement: './ledger_signer_impl.browser',
+                            find: './ledger_signer.node',
+                            replacement: './ledger_signer.browser',
                         },
                     ],
                 }),
             ] : []),
-            commonjs({
-                esmExternals: true,
-                transformMixedEsModules: true,
-            }),
             json(), // handle JSON imports
             nodeResolve({
                 browser,
                 preferBuiltins: !browser,
+            }),
+            commonjs({
+                esmExternals: true,
+                transformMixedEsModules: true,
             }),
             typescript({
                 tsconfig: 'tsconfig.json',
@@ -86,6 +86,7 @@ const generateConfig = (format, browser = false, generateTypes = !generatedOnce)
         ],
         external: [
             ...Object.keys(packageJson.peerDependencies || {}),
+            ...Object.keys(packageJson.devDependencies || {}),
             ...(browser ? [] : Object.keys(packageJson.dependencies || {}))
         ],
     };

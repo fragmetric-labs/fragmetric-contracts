@@ -1,4 +1,4 @@
-import {ILedgerSigner, ILedgerSignerConnector, LedgerSignerConnectionHandler} from "./ledger_signer";
+import {ILedgerSignerConnector} from "./ledger_signer";
 
 export const LedgerSigner: ILedgerSignerConnector = {
     connect() {

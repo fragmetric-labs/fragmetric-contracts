@@ -22,5 +22,5 @@ export interface ILedgerSignerConnector {
     }): Promise<ILedgerSigner>;
 }
 
-// will be aliased to './ledger_signer_impl.browser' in browser bundle
-export { LedgerSigner } from './ledger_signer_impl';
+// will be aliased to './ledger_signer.browser' in browser bundle
+export { LedgerSigner } from './ledger_signer.node';

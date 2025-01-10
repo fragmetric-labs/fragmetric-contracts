@@ -1,21 +1,19 @@
 import * as web3 from '@solana/web3.js';
-import BN from 'bn.js';
+import * as spl from "@solana/spl-token";
 
 import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
 import restakingIDL from './program.idl.json';
 import type {Restaking as RestakingIDL} from './program.idl';
 import {dedupe} from "../cache";
 import {RestakingFundSupportedAsset, RestakingFundNormalizedToken, RestakingFundReceiptToken} from "./state";
-import * as spl from "@solana/spl-token";
+import { BN, BN_U64_MAX } from '../utils';
 
 export type { RestakingIDL };
 export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
 export type RestakingProgramEvent = ProgramEvent<RestakingIDL>;
 export type RestakingProgramType = ProgramType<RestakingIDL>;
 
-export const BN_U64_MAX = new BN("18446744073709551615");
-
-export class RestakingProgram extends Program<RestakingIDL> {
+export class RestakingClient extends Program<RestakingIDL> {
     public static readonly programID = {
         mainnet: new web3.PublicKey('fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3'),
         devnet: new web3.PublicKey('frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ'),
@@ -23,20 +21,46 @@ export class RestakingProgram extends Program<RestakingIDL> {
         local: null,
     };
 
-    public static readonly funds = {
+    public static readonly receiptTokenMints = {
         fragSOL: new web3.PublicKey('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
         fragJTO: new web3.PublicKey('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
     };
-    public readonly fundReceiptTokenMint: web3.PublicKey;
-    public readonly fundReceiptTokenProgram: web3.PublicKey = spl.TOKEN_2022_PROGRAM_ID;
 
-    constructor({ fundReceiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'idl'|'programID'>> & {
-        fundReceiptTokenMint: web3.PublicKey | keyof typeof RestakingProgram['funds'],
+    public static async createAll(args: Omit<ConstructorParameters<typeof RestakingClient>[0], 'receiptTokenMint'>): Promise<RestakingClient[]> {
+        const program = new RestakingClient({ ...args, receiptTokenMint: RestakingClient.receiptTokenMints.fragSOL });
+        const fundAccounts = (await program.programAccounts.fundAccount.all()).map(res => res.account);
+        return fundAccounts.map(fundAccount => {
+            const thisProgram = fundAccount.receiptTokenMint.equals(program.receiptTokenMint)
+                ? program : new RestakingClient({ ...args, receiptTokenMint: fundAccount.receiptTokenMint });
+            thisProgram.cache.set('_fund', fundAccount);
+            return thisProgram;
+        });
+    }
+
+    public static async createWithVault({ restakingVault, ...args }: Omit<ConstructorParameters<typeof RestakingClient>[0], 'receiptTokenMint'> & { restakingVault: web3.PublicKey }): Promise<RestakingClient> {
+        const funds = await RestakingClient.createAll(args);
+        const fundAccounts = await Promise.all(funds.map(fund => fund.state._fund()));
+        const fundAccountForVault = fundAccounts.find(fundAccount => {
+                return fundAccount.restakingVaults
+                    .slice(0, fundAccount.numRestakingVaults)
+                    .some(fundRestakingVault => fundRestakingVault.vault.equals(restakingVault));
+            });
+        if (!fundAccountForVault) {
+            throw new Error('failed to find a fund account related to the given restaking vault');
+        }
+        return funds.find(fund => fund.receiptTokenMint.equals(fundAccountForVault.receiptTokenMint))!;
+    }
+
+    public readonly receiptTokenMint: web3.PublicKey;
+    public readonly receiptTokenProgram: web3.PublicKey = spl.TOKEN_2022_PROGRAM_ID;
+
+    constructor({ receiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'idl'|'programID'>> & {
+        receiptTokenMint: web3.PublicKey | keyof typeof RestakingClient['receiptTokenMints'],
     }) {
         const idl = <RestakingIDL>restakingIDL;
-        const programID = RestakingProgram.programID[cluster] ?? new web3.PublicKey(idl.address);
+        const programID = RestakingClient.programID[cluster] ?? new web3.PublicKey(idl.address);
         super({ ...args, cluster, idl, programID });
-        this.fundReceiptTokenMint = RestakingProgram.funds[fundReceiptTokenMint.toString() as keyof typeof RestakingProgram['funds']] ?? fundReceiptTokenMint;
+        this.receiptTokenMint = RestakingClient.receiptTokenMints[receiptTokenMint.toString() as keyof typeof RestakingClient['receiptTokenMints']] ?? receiptTokenMint;
     }
 
     public readonly state = {
@@ -45,7 +69,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
             const k = '_fund';
             if (!refresh && this.cache.has(k)) return this.cache.get(k);
 
-            const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.fundReceiptTokenMint.toBuffer()], this.programID)[0];
+            const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.receiptTokenMint.toBuffer()], this.programID)[0];
             return this.cache.set(k, await this.programAccounts.fundAccount.fetch(address));
         }),
         _addressLookupTables: dedupe(async (refresh: boolean = false): Promise<web3.AddressLookupTableAccount[]> => {
@@ -144,13 +168,18 @@ export class RestakingProgram extends Program<RestakingIDL> {
     };
 
     public readonly address = {
-        fundReceiptTokenAccount: (owner: web3.PublicKey, isPDA: boolean = false): web3.PublicKey=> {
-            return spl.getAssociatedTokenAddressSync(this.fundReceiptTokenMint, owner, isPDA, this.fundReceiptTokenProgram);
+        receiptTokenAccount: (owner: web3.PublicKey, isPDA: boolean = false): web3.PublicKey=> {
+            return spl.getAssociatedTokenAddressSync(this.receiptTokenMint, owner, isPDA, this.receiptTokenProgram);
         },
     };
 
     public readonly user = {
-        deposit: async ({ user, supportedTokenMint, amount }: { user: web3.PublicKey | web3.Keypair, supportedTokenMint: web3.PublicKey | null, amount: BN }) => {
+        deposit: async ({user, supportedTokenMint, amount, depositMetadata = null }: {
+            user: web3.PublicKey | web3.Keypair,
+            supportedTokenMint: web3.PublicKey | null,
+            amount: BN,
+            depositMetadata?: RestakingProgramType["depositMetadata"] & {signer: web3.Keypair} | null,
+        }) => {
             const [pricingSourcesAccountMeta, addressLookupTables, supportedAssets] = await Promise.all([
                 this.state._pricingSourcesAccountMeta(),
                 this.state._addressLookupTables(),
@@ -158,52 +187,55 @@ export class RestakingProgram extends Program<RestakingIDL> {
             ]);
             const userPublicKey = (user as web3.Keypair)?.publicKey ?? user;
             const supportedAsset = supportedAssets.find(a => supportedTokenMint ? a.mint?.equals(supportedTokenMint) : a.isNativeSOL);
-            const depositMetadata = null;
 
             return this.createTransactionMessage({
                 descriptions: [`Deposit native SOL or support token to the fund.`, { supportedTokenMint, amount }],
-                events: ['operatorUpdatedFundPrices'],
-                instructions: [
+                events: ['userDepositedToFund'],
+                optionalEvents: ['userCreatedOrUpdatedFundAccount'],
+                instructions: await Promise.all([
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         userPublicKey,
-                        this.address.fundReceiptTokenAccount(userPublicKey),
+                        this.address.receiptTokenAccount(userPublicKey),
                         userPublicKey,
-                        this.fundReceiptTokenMint,
-                        this.fundReceiptTokenProgram,
+                        this.receiptTokenMint,
+                        this.receiptTokenProgram,
                     ),
-                    ...await Promise.all([
-                        this.programMethods.userCreateFundAccountIdempotent(null)
+                    this.programMethods.userCreateFundAccountIdempotent(null)
+                        .accountsPartial({
+                            user: userPublicKey,
+                            receiptTokenMint: this.receiptTokenMint,
+                        })
+                        .instruction(),
+                    this.programMethods.userCreateRewardAccountIdempotent(null)
+                        .accountsPartial({
+                            user: userPublicKey,
+                            receiptTokenMint: this.receiptTokenMint,
+                        })
+                        .instruction(),
+                    ...(depositMetadata ? [
+                        web3.Ed25519Program.createInstructionWithPrivateKey({
+                            privateKey: depositMetadata.signer?.secretKey ?? new Uint8Array(64),
+                            message: this.programCoder.types.encode('depositMetadata', depositMetadata),
+                        })
+                    ] : []),
+                    (supportedTokenMint
+                        ? this.programMethods.userDepositSupportedToken(amount, depositMetadata)
                             .accountsPartial({
                                 user: userPublicKey,
-                                receiptTokenMint: this.fundReceiptTokenMint,
+                                receiptTokenMint: this.receiptTokenMint,
+                                supportedTokenMint: supportedAsset!.mint!,
+                                supportedTokenProgram: supportedAsset!.program!,
+                                userSupportedTokenAccount: spl.getAssociatedTokenAddressSync(supportedAsset!.mint!, userPublicKey, false, supportedAsset!.program!),
                             })
-                            .instruction(),
-                        this.programMethods.userCreateRewardAccountIdempotent(null)
+                        : this.programMethods.userDepositSol(amount, depositMetadata)
                             .accountsPartial({
                                 user: userPublicKey,
-                                receiptTokenMint: this.fundReceiptTokenMint,
+                                receiptTokenMint: this.receiptTokenMint,
                             })
-                            .instruction(),
-                        // TODO: deposit metadata
-                        (supportedTokenMint
-                            ? this.programMethods.userDepositSupportedToken(amount, depositMetadata)
-                                .accountsPartial({
-                                    user: userPublicKey,
-                                    receiptTokenMint: this.fundReceiptTokenMint,
-                                    supportedTokenMint: supportedAsset!.mint!,
-                                    supportedTokenProgram: supportedAsset!.program!,
-                                    userSupportedTokenAccount: spl.getAssociatedTokenAddressSync(supportedAsset!.mint!, userPublicKey, false, supportedAsset!.program!),
-                                })
-                            : this.programMethods.userDepositSol(amount, depositMetadata)
-                                .accountsPartial({
-                                    user: userPublicKey,
-                                    receiptTokenMint: this.fundReceiptTokenMint,
-                                })
-                        )
-                            .remainingAccounts(pricingSourcesAccountMeta)
-                            .instruction()
-                    ]),
-                ],
+                    )
+                        .remainingAccounts(pricingSourcesAccountMeta)
+                        .instruction()
+                ]),
                 signers: {
                     payer: user,
                 },
@@ -222,7 +254,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
                         .operatorUpdateFundPrices()
                         .accountsPartial({
                             operator: (operator as web3.Keypair).publicKey ?? operator,
-                            receiptTokenMint: this.fundReceiptTokenMint,
+                            receiptTokenMint: this.receiptTokenMint,
                         })
                         .remainingAccounts(await this.state._pricingSourcesAccountMeta())
                         .instruction(),
@@ -268,7 +300,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
                         .operatorUpdateRewardPools()
                         .accountsPartial({
                             operator: (operator as web3.Keypair).publicKey ?? operator,
-                            receiptTokenMint: this.fundReceiptTokenMint,
+                            receiptTokenMint: this.receiptTokenMint,
                         })
                         .instruction(),
                 ]),
@@ -287,7 +319,7 @@ export class RestakingProgram extends Program<RestakingIDL> {
                         .operatorDonateSolToFund(amount, offsetReceivable)
                         .accountsPartial({
                             operator: (operator as web3.Keypair).publicKey ?? operator,
-                            receiptTokenMint: this.fundReceiptTokenMint,
+                            receiptTokenMint: this.receiptTokenMint,
                         })
                         .remainingAccounts(await this.state._pricingSourcesAccountMeta())
                         .instruction(),

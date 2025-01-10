@@ -1,6 +1,5 @@
 import * as anchor from '@coral-xyz/anchor';
 import * as web3 from '@solana/web3.js';
-import { BN } from 'bn.js';
 import {ProgramTransactionHandler, ProgramTransactionMessage} from "./program_transaction";
 import {InMemoryCache, ICache} from './cache';
 
@@ -21,6 +20,13 @@ export class Program<IDL extends anchor.Idl> {
         local: 'http://0.0.0.0:8899',
     };
 
+    public static getDefaultConnection(cluster: keyof typeof Program['defaultClusterURL']) {
+        return new web3.Connection(Program.defaultClusterURL[cluster] ?? Program.defaultClusterURL.local, {
+            commitment: 'confirmed',
+            disableRetryOnRateLimit: true,
+        });
+    }
+
     public readonly cluster: keyof typeof Program['defaultClusterURL'];
 
     constructor({cluster, programID, idl, connection, transactionHandler, cacheTTLSeconds }: {
@@ -36,10 +42,7 @@ export class Program<IDL extends anchor.Idl> {
         this.programVersion = idl.metadata.version;
 
         // create a default connection
-        this.connection = connection ?? new web3.Connection(Program.defaultClusterURL[cluster] ?? Program.defaultClusterURL.local, {
-            commitment: 'confirmed',
-            disableRetryOnRateLimit: true,
-        });
+        this.connection = connection ?? Program.getDefaultConnection(cluster);
 
         // check invalid rpc configuration
         const usingDefaultClusterURL = Object.entries(Program.defaultClusterURL).find(([_, url]) => url == this.connection.rpcEndpoint);
@@ -77,7 +80,7 @@ export class Program<IDL extends anchor.Idl> {
                 const event = eventsFromEmitMacro.next().value;
                 if (!event) break;
                 const name = event.name as EVENT;
-                (events[name] = events[name] ?? []).push(event as any);
+                (events[name] = events[name] ?? []).push(event.data as any);
             }
 
             // parse event data from emit_cpi! macro
@@ -91,7 +94,7 @@ export class Program<IDL extends anchor.Idl> {
                             const event = this.anchorProgram.coder.events.decode(eventData);
                             if (event) {
                                 const name = event.name as EVENT;
-                                (events[name] = events[name] ?? []).push(event as any);
+                                (events[name] = events[name] ?? []).push(event.data as any);
                             }
                         }
                     }
@@ -115,6 +118,10 @@ export class Program<IDL extends anchor.Idl> {
         return this.anchorProgram.account;
     }
 
+    public get programCoder() {
+        return this.anchorProgram.coder;
+    }
+
     public createTransactionMessage<SIGNER extends string, EVENT extends keyof ProgramEvent<IDL>>(args: Omit<ConstructorParameters<typeof ProgramTransactionMessage<IDL, SIGNER, EVENT>>[0], 'program'>) {
         return new ProgramTransactionMessage<IDL, SIGNER, EVENT>({
             ...args,
@@ -133,11 +140,3 @@ export type ProgramConstantName<IDL extends anchor.Idl> = IDL['constants'] exten
             : never
         : never
     : never;
-
-if (typeof (BN.prototype as any).doNotOverrideToJSON === 'undefined') {
-    BN.prototype.toJSON = function() {
-        return this.toString();
-    };
-}
-
-export { BN };
