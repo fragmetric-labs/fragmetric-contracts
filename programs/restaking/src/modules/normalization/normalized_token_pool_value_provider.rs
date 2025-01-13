@@ -26,7 +26,7 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
         result.numerator.clear();
         result
             .numerator
-            .reserve_exact(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE);
+            .reserve_exact(NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE);
 
         result
             .numerator

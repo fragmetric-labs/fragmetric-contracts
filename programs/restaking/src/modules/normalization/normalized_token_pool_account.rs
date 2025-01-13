@@ -12,7 +12,7 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-pub(super) const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 30;
+const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 30;
 
 #[account]
 #[derive(InitSpace)]
@@ -50,6 +50,9 @@ impl PDASeeds<3> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
+    pub(super) const MAX_SUPPORTED_TOKENS_SIZE: usize =
+        NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE;
+
     fn migrate(
         &mut self,
         bump: u8,

@@ -3,12 +3,15 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
-use super::NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE;
+use super::NormalizedTokenPoolAccount;
 
 #[constant]
 /// ## Version History
 /// * v1: Initial Version
 pub const NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION: u16 = 1;
+
+const NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_MAX_CLAIMABLE_TOKENS_SIZE: usize =
+    NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE;
 
 #[account]
 #[derive(InitSpace)]
@@ -19,7 +22,7 @@ pub struct NormalizedTokenWithdrawalAccount {
     pub normalized_token_mint: Pubkey,
     pub(super) normalized_token_pool: Pubkey,
     pub(super) normalized_token_amount: u64,
-    #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
+    #[max_len(NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_MAX_CLAIMABLE_TOKENS_SIZE)]
     pub(super) claimable_tokens: Vec<NormalizedClaimableToken>,
     pub(super) created_at: i64,
     _reserved: [u8; 32],
