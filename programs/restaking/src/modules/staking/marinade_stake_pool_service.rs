@@ -3,7 +3,8 @@ use anchor_spl::{
     token::Token,
     token_interface::{Mint, TokenAccount},
 };
-use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
+use marinade_cpi::marinade::accounts::{State, TicketAccountData};
+use marinade_cpi::marinade::program::MarinadeFinance;
 
 use crate::constants::{DEVNET_MSOL_MINT_ADDRESS, MAINNET_MSOL_MINT_ADDRESS};
 use crate::utils::AccountInfoExt;
@@ -50,13 +51,17 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_account: &AccountInfo,
         seed: &'static [u8],
     ) -> Pubkey {
-        Pubkey::find_program_address(&[pool_account.key.as_ref(), seed], &marinade_cpi::ID).0
+        Pubkey::find_program_address(
+            &[pool_account.key.as_ref(), seed],
+            &marinade_cpi::marinade::ID,
+        )
+        .0
     }
 
     /// returns (pubkey, writable) of [pool_program, pool_account, pool_token_mint, pool_token_program, system_program]
     fn find_accounts_to_new(pool_account: &Account<State>) -> Vec<(Pubkey, bool)> {
         vec![
-            (marinade_cpi::ID, false),
+            (marinade_cpi::marinade::ID, false),
             (pool_account.key(), true),
             (pool_account.msol_mint, true),
             (Token::id(), false),
@@ -126,10 +131,10 @@ impl<'info> MarinadeStakePoolService<'info> {
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
 
-        marinade_cpi::cpi::deposit(
+        marinade_cpi::marinade::cpi::deposit(
             CpiContext::new_with_signer(
                 self.marinade_stake_pool_program.to_account_info(),
-                marinade_cpi::cpi::accounts::Deposit {
+                marinade_cpi::marinade::cpi::accounts::Deposit {
                     state: self.pool_account.to_account_info(),
                     msol_mint: self.pool_token_mint.to_account_info(),
                     liq_pool_sol_leg_pda: liq_pool_sol_leg.clone(),
@@ -207,10 +212,10 @@ impl<'info> MarinadeStakePoolService<'info> {
             new_ticket_account_seeds,
         )?;
 
-        marinade_cpi::cpi::order_unstake(
+        marinade_cpi::marinade::cpi::order_unstake(
             CpiContext::new_with_signer(
                 self.marinade_stake_pool_program.to_account_info(),
-                marinade_cpi::cpi::accounts::OrderUnstake {
+                marinade_cpi::marinade::cpi::accounts::OrderUnstake {
                     state: self.pool_account.to_account_info(),
                     msol_mint: self.pool_token_mint.to_account_info(),
                     burn_msol_from: from_pool_token_account.to_account_info(),
@@ -297,9 +302,9 @@ impl<'info> MarinadeStakePoolService<'info> {
         let ticket_account_rent = ticket_account.get_lamports();
         let unstaked_sol_amount = ticket_account.lamports_amount;
 
-        marinade_cpi::cpi::claim(CpiContext::new(
+        marinade_cpi::marinade::cpi::claim(CpiContext::new(
             self.marinade_stake_pool_program.to_account_info(),
-            marinade_cpi::cpi::accounts::Claim {
+            marinade_cpi::marinade::cpi::accounts::Claim {
                 state: self.pool_account.to_account_info(),
                 reserve_pda: pool_reserve_account.clone(),
                 ticket_account: ticket_account.to_account_info(),
