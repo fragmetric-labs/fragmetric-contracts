@@ -1,17 +1,14 @@
 import * as web3 from '@solana/web3.js';
 import * as spl from "@solana/spl-token";
 
-import {Program, ProgramEvent, ProgramType, ProgramAccount} from "../program";
-import restakingIDL from './program.idl.json';
-import type {Restaking as RestakingIDL} from './program.idl';
+import {Program, ProgramType} from "../program";
+import restakingIDL from './program.idl.active.json';
+import type {Restaking as RestakingIDL} from './program.idl.active';
 import {dedupe} from "../cache";
 import {RestakingFundSupportedAsset, RestakingFundNormalizedToken, RestakingFundReceiptToken} from "./state";
 import { BN, BN_U64_MAX } from '../utils';
 
 export type { RestakingIDL };
-export type RestakingProgramAccount = ProgramAccount<RestakingIDL>;
-export type RestakingProgramEvent = ProgramEvent<RestakingIDL>;
-export type RestakingProgramType = ProgramType<RestakingIDL>;
 
 export class RestakingClient extends Program<RestakingIDL> {
     public static readonly programID = {
@@ -28,7 +25,8 @@ export class RestakingClient extends Program<RestakingIDL> {
 
     public static async createAll(args: Omit<ConstructorParameters<typeof RestakingClient>[0], 'receiptTokenMint'>): Promise<RestakingClient[]> {
         const program = new RestakingClient({ ...args, receiptTokenMint: RestakingClient.receiptTokenMints.fragSOL });
-        const fundAccounts = (await program.programAccounts.fundAccount.all()).map(res => res.account);
+        const fundAccountResults = await program.programAccounts.fundAccount.all();
+        const fundAccounts = fundAccountResults.map(res => res.account);
         return fundAccounts.map(fundAccount => {
             const thisProgram = fundAccount.receiptTokenMint.equals(program.receiptTokenMint)
                 ? program : new RestakingClient({ ...args, receiptTokenMint: fundAccount.receiptTokenMint });
@@ -54,7 +52,7 @@ export class RestakingClient extends Program<RestakingIDL> {
     public readonly receiptTokenMint: web3.PublicKey;
     public readonly receiptTokenProgram: web3.PublicKey = spl.TOKEN_2022_PROGRAM_ID;
 
-    constructor({ receiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'idl'|'programID'>> & {
+    constructor({ receiptTokenMint, cluster = 'mainnet', ...args }: Partial<Omit<ConstructorParameters<typeof Program<RestakingIDL>>[0], 'programID'|'idl'>> & {
         receiptTokenMint: web3.PublicKey | keyof typeof RestakingClient['receiptTokenMints'],
     }) {
         const idl = <RestakingIDL>restakingIDL;
@@ -65,7 +63,7 @@ export class RestakingClient extends Program<RestakingIDL> {
 
     public readonly state = {
         /* internal states */
-        _fund: dedupe(async (refresh: boolean = false): Promise<RestakingProgramAccount['fundAccount']> => {
+        _fund: dedupe(async (refresh: boolean = false): ReturnType<typeof this.programAccounts.fundAccount.fetch> => {
             const k = '_fund';
             if (!refresh && this.cache.has(k)) return this.cache.get(k);
 
@@ -178,7 +176,7 @@ export class RestakingClient extends Program<RestakingIDL> {
             user: web3.PublicKey | web3.Keypair,
             supportedTokenMint: web3.PublicKey | null,
             amount: BN,
-            depositMetadata?: RestakingProgramType["depositMetadata"] & {signer: web3.Keypair} | null,
+            depositMetadata?: ProgramType<RestakingIDL>["depositMetadata"] & {signer: web3.Keypair} | null,
         }) => {
             const [pricingSourcesAccountMeta, addressLookupTables, supportedAssets] = await Promise.all([
                 this.state._pricingSourcesAccountMeta(),

@@ -24,14 +24,17 @@
   "scripts": {
     "build": "rollup --config",
     "test": "echo \"noop\"",
-    "dev": "rollup --config --watch",
-    "dev:node": "ROLLUP_FILTER=node:* rollup --config --watch",
-    "dev:node:cjs": "ROLLUP_FILTER=node:cjs rollup --config --watch",
-    "dev:node:esm": "ROLLUP_FILTER=node:esm rollup --config --watch",
-    "dev:browser": "ROLLUP_FILTER=browser:* rollup --config --watch",
-    "dev:browser:cjs": "ROLLUP_FILTER=browser:cjs rollup --config --watch",
-    "dev:browser:esm": "ROLLUP_FILTER=browser:esm rollup --config --watch",
-    "dev:browser:umd": "ROLLUP_FILTER=browser:umd rollup --config --watch"
+    "activate-stable-idl": "ln -sf ./program.idl.stable.ts ./src/restaking/program.idl.active.ts && ln -sf ./program.idl.stable.json ./src/restaking/program.idl.active.json",
+    "dev": "yarn activate-stable-idl && rollup --config --watch",
+    "dev:node": "ROLLUP_FILTER=node:* yarn dev",
+    "dev:node:cjs": "ROLLUP_FILTER=node:cjs yarn dev",
+    "dev:node:esm": "ROLLUP_FILTER=node:esm yarn dev",
+    "dev:browser": "ROLLUP_FILTER=browser:* yarn dev",
+    "dev:browser:cjs": "ROLLUP_FILTER=browser:cjs yarn dev",
+    "dev:browser:esm": "ROLLUP_FILTER=browser:esm yarn dev",
+    "dev:browser:umd": "ROLLUP_FILTER=browser:umd yarn dev",
+    "activate-local-idl": "ln -sf ../../../../../target/types/restaking.ts ./src/restaking/program.idl.active.ts && ln -sf ../../../../../target/idl/restaking.json ./src/restaking/program.idl.active.json",
+    "dev:local": "yarn activate-local-idl && ROLLUP_FILTER=node:cjs rollup --preserveSymlinks --config --watch"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",

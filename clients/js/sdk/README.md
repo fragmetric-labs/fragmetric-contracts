@@ -8,7 +8,7 @@ It is designed for compatibility with web browsers and Node.js environments, off
 ### Installation
 This library requires `@solana/web3.js` as peer dependency for both web browser and Node.js environment.
 
-```
+```sh
 $ yarn add @fragmetric-labs/sdk @solana/web3.js
 ```
 
@@ -21,7 +21,7 @@ And to use SDK with Ledger hardware wallet in Node.js environment, it needs to i
 
 ## 2. How to Contribute?
 
-```
+```sh
 # Do dev/build/test for SDK
 $ yarn workspace @fragmetric-labs/sdk dev
 $ yarn workspace @fragmetric-labs/sdk dev:node # build only node:cjs, node:esm
