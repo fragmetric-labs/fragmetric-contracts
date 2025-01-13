@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
-use crate::modules::staking::MarinadeStakePoolService;
+
+use super::MarinadeStakePoolService;
 
 pub struct MarinadeStakePoolValueProvider;
 

@@ -166,7 +166,7 @@ impl SelfExecutable for StakeSOLCommand {
 
                                 MarinadeStakePoolService::find_accounts_to_deposit_sol(
                                     pool_account,
-                                )?
+                                )?.collect()
                             }
                             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                                 let [pool_account, _remaining_accounts @ ..] = accounts else {
@@ -256,49 +256,45 @@ impl SelfExecutable for StakeSOLCommand {
                             ))
                         }
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, _system_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, _remaining_accounts @ ..] =
+                            let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve, pool_token_mint_authority, _remaining_accounts @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, pool_account.key());
 
+                            let mut marinade_stake_pool_service = MarinadeStakePoolService::new(
+                                pool_program,
+                                pool_account,
+                                pool_token_mint,
+                                pool_token_program,
+                            )?;
+
                             if item.allocated_sol_amount
-                                < MarinadeStakePoolService::get_min_deposit_sol_amount(
-                                    pool_account,
-                                )?
+                                < marinade_stake_pool_service.get_min_deposit_sol_amount()
                             {
                                 None
                             } else {
                                 let fund_account = ctx.fund_account.load()?;
-                                let (
-                                    to_pool_token_account_amount,
-                                    minted_pool_token_amount,
-                                    deducted_sol_fee_amount,
-                                ) = MarinadeStakePoolService::new(
-                                    pool_program,
-                                    pool_account,
-                                    pool_token_mint,
-                                    pool_token_program,
-                                )?
-                                .deposit_sol(
-                                    ctx.system_program,
-                                    liq_pool_sol_leg,
-                                    liq_pool_token_leg,
-                                    liq_pool_token_leg_authority,
-                                    pool_reserve,
-                                    pool_token_mint_authority,
-                                    fund_reserve_account,
-                                    fund_supported_token_reserve_account,
-                                    &fund_account.get_reserve_account_seeds(),
-                                    item.allocated_sol_amount,
-                                )?;
+                                let (to_pool_token_account_amount, minted_pool_token_amount) =
+                                    marinade_stake_pool_service.deposit_sol(
+                                        ctx.system_program,
+                                        liq_pool_sol_leg,
+                                        liq_pool_token_leg,
+                                        liq_pool_token_leg_authority,
+                                        pool_reserve,
+                                        pool_token_mint_authority,
+                                        fund_supported_token_reserve_account,
+                                        fund_reserve_account,
+                                        &fund_account.get_reserve_account_seeds(),
+                                        item.allocated_sol_amount,
+                                    )?;
 
                                 Some((
                                     pool_token_mint,
                                     to_pool_token_account_amount,
                                     minted_pool_token_amount,
-                                    deducted_sol_fee_amount,
+                                    0,
                                 ))
                             }
                         }
