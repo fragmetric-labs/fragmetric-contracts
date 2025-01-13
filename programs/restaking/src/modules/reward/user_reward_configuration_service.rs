@@ -144,15 +144,20 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
-        self.user_reward_account.expand_account_size_if_needed(
+        let min_account_size = 8 + std::mem::size_of::<UserRewardAccount>();
+        let target_account_size = desired_account_size
+            .map(|size| std::cmp::max(size as usize, min_account_size))
+            .unwrap_or(min_account_size);
+
+        let new_account_size = system_program.expand_account_size_if_needed(
+            self.user_reward_account.as_ref(),
             self.user,
-            system_program,
-            desired_account_size,
+            &[],
+            target_account_size,
+            None,
         )?;
 
-        if self.user_reward_account.as_ref().data_len()
-            >= 8 + std::mem::size_of::<UserRewardAccount>()
-        {
+        if new_account_size >= min_account_size {
             let (initializing, updated) = {
                 let mut user_reward_account = self.user_reward_account.load_mut()?;
                 let initializing = user_reward_account.is_initializing();

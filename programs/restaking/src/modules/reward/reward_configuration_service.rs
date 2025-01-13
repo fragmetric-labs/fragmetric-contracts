@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::utils::AccountLoaderExt;
+use crate::utils::{AccountLoaderExt, SystemProgramExt};
 
 use super::*;
 
@@ -45,13 +45,20 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        self.reward_account.expand_account_size_if_needed(
+        let min_account_size = 8 + std::mem::size_of::<RewardAccount>();
+        let target_account_size = desired_account_size
+            .map(|size| std::cmp::max(size as usize, min_account_size))
+            .unwrap_or(min_account_size);
+
+        let new_account_size = system_program.expand_account_size_if_needed(
+            self.reward_account.as_ref(),
             payer,
-            system_program,
-            desired_account_size,
+            &[],
+            target_account_size,
+            None,
         )?;
 
-        if self.reward_account.as_ref().data_len() >= 8 + std::mem::size_of::<RewardAccount>() {
+        if new_account_size >= min_account_size {
             self.reward_account
                 .load_mut()?
                 .update_if_needed(self.receipt_token_mint.key());

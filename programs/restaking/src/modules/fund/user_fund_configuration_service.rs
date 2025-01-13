@@ -66,6 +66,7 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
                 user,
                 &[],
                 8 + UserFundAccount::INIT_SPACE,
+                None,
             )?;
 
             let mut user_fund_account_parsed =
