@@ -11,9 +11,9 @@ pub use self::mock::*;
 pub trait TokenValueProvider {
     fn resolve_underlying_assets<'info>(
         self,
-        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
+        result: &mut TokenValue,
     ) -> Result<()>;
 }
 
@@ -43,6 +43,8 @@ impl std::fmt::Display for TokenValue {
 }
 
 impl TokenValue {
+    pub const MAX_NUMERATOR_SIZE: usize = TOKEN_VALUE_MAX_NUMERATORS_SIZE;
+
     /// indicates whether the token is not a kind of basket such as normalized token,
     /// so the value of the token can be resolved by one self without other token information.
     pub fn is_atomic(&self) -> bool {
@@ -255,18 +257,16 @@ mod mock {
     impl TokenValueProvider for MockPricingSourceValueProvider<'_> {
         fn resolve_underlying_assets<'info>(
             self,
-            token_value_to_update: &mut TokenValue,
             _token_mint: &Pubkey,
             pricing_source_accounts: &[&'info AccountInfo<'info>],
+            result: &mut TokenValue,
         ) -> Result<()> {
             require_eq!(pricing_source_accounts.len(), 0);
 
-            token_value_to_update.numerator.clear();
-            token_value_to_update
-                .numerator
-                .reserve_exact(self.numerator.len());
+            result.numerator.clear();
+            result.numerator.reserve_exact(self.numerator.len());
 
-            token_value_to_update
+            result
                 .numerator
                 .extend(self.numerator.iter().map(|&asset| match asset {
                     MockAsset::SOL(sol_amount) => Asset::SOL(sol_amount),
@@ -274,7 +274,7 @@ mod mock {
                         Asset::Token(token_mint, None, token_amount)
                     }
                 }));
-            token_value_to_update.denominator = *self.denominator;
+            result.denominator = *self.denominator;
 
             Ok(())
         }
