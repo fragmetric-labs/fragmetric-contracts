@@ -32,8 +32,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use bytemuck::Zeroable;
 
-use crate::modules::fund;
-
 use super::*;
 
 // propagate common accounts and values to all commands

@@ -50,7 +50,7 @@ impl PDASeeds<3> for NormalizedTokenPoolAccount {
 }
 
 impl NormalizedTokenPoolAccount {
-    pub(super) const MAX_SUPPORTED_TOKENS_SIZE: usize =
+    pub const MAX_SUPPORTED_TOKENS_SIZE: usize =
         NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE;
 
     fn migrate(
