@@ -50,6 +50,7 @@ pub enum UnstakeLSTCommandState {
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
         unstake_command_items: Vec<UnstakeLSTCommandItem>,
+        withdraw_sol: bool,
         #[max_len(5)]
         withdraw_stake_items: Vec<WithdrawStakeItem>,
     },
@@ -129,10 +130,15 @@ impl SelfExecutable for UnstakeLSTCommand {
             }
             UnstakeLSTCommandState::Execute {
                 unstake_command_items,
+                withdraw_sol,
                 withdraw_stake_items,
-            } => {
-                self.execute_execute(ctx, accounts, unstake_command_items, withdraw_stake_items)?
-            }
+            } => self.execute_execute(
+                ctx,
+                accounts,
+                unstake_command_items,
+                *withdraw_sol,
+                withdraw_stake_items,
+            )?,
         };
 
         // TODO v0.4/operation: next step ... process withdrawal batch
@@ -151,6 +157,7 @@ impl UnstakeLSTCommand {
     /// An initial state of `UnstakeLST` command.
     /// In this state, operator iterates the fund and
     /// decides which token and how much to unstake each.
+    #[inline(never)]
     fn execute_new<'info>(
         &self,
         _ctx: &mut OperationCommandContext<'info, '_>,
@@ -239,8 +246,10 @@ impl UnstakeLSTCommand {
                 .chain(withdrawal_ticket_accounts);
 
                 Self {
+                    // Neither withdraw sol nor stake... will order unstake!
                     state: UnstakeLSTCommandState::Execute {
                         unstake_command_items: items,
+                        withdraw_sol: false,
                         withdraw_stake_items: vec![],
                     },
                 }
@@ -387,9 +396,9 @@ impl UnstakeLSTCommand {
             .collect::<Vec<_>>();
 
         // Maximum number of validators = # of available(uninitialized) fund stake accounts
-        let num_validators = available_fund_stake_accounts_indices.len();
+        let max_num_validators = available_fund_stake_accounts_indices.len();
         let validator_stake_accounts = spl_stake_pool_service
-            .get_validator_stake_accounts(validator_list_account, num_validators)?;
+            .get_validator_stake_accounts(validator_list_account, max_num_validators)?;
         // Update to actual # of validators
         let num_validators = validator_stake_accounts.len();
 
@@ -432,6 +441,7 @@ impl UnstakeLSTCommand {
         Ok(Self {
             state: UnstakeLSTCommandState::Execute {
                 unstake_command_items: items.to_vec(),
+                withdraw_sol: true,
                 withdraw_stake_items,
             },
         }
@@ -444,6 +454,7 @@ impl UnstakeLSTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         unstake_command_items: &[UnstakeLSTCommandItem],
+        withdraw_sol: bool,
         withdraw_stake_items: &[WithdrawStakeItem],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -461,27 +472,35 @@ impl UnstakeLSTCommand {
             .pricing_source
             .try_deserialize()?;
 
+        // Execute command might be paused...
+        // mostly due to memory limit.
+        let mut resume_execution_command = None;
         let result = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address }) => self
                 .spl_stake_pool_withdraw_sol_or_stake::<SPLStakePool>(
                     ctx,
                     accounts,
-                    item,
+                    unstake_command_items,
+                    withdraw_sol,
                     withdraw_stake_items,
                     address,
+                    &mut resume_execution_command,
                 )?,
             Some(TokenPricingSource::MarinadeStakePool { address }) => {
                 require_eq!(withdraw_stake_items.len(), 0);
 
+                // Marinade stake pool neither withdraw sol nor stake... just order unstake at once!
                 self.marinade_stake_pool_order_unstake(ctx, accounts, item, address)?
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_withdraw_sol_or_stake::<SanctumSingleValidatorSPLStakePool>(
                     ctx,
                     accounts,
-                    item,
+                    unstake_command_items,
+                    withdraw_sol,
                     withdraw_stake_items,
                     address,
+                    &mut resume_execution_command,
                 )?
             }
             // fail when supported token is not unstakable
@@ -534,6 +553,10 @@ impl UnstakeLSTCommand {
         )
         .transpose()?;
 
+        if resume_execution_command.is_some() {
+            return Ok((result, resume_execution_command));
+        }
+
         // prepare state does not require additional accounts,
         // so we can execute directly.
         self.execute_prepare(ctx, accounts, unstake_command_items[1..].to_vec(), result)
@@ -544,10 +567,13 @@ impl UnstakeLSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        unstake_command_item: &UnstakeLSTCommandItem,
+        unstake_command_items: &[UnstakeLSTCommandItem],
+        withdraw_sol: bool,
         withdraw_stake_items: &[WithdrawStakeItem],
         pool_account_address: Pubkey,
+        resume_withdraw_stake_command: &mut Option<OperationCommandEntry>,
     ) -> Result<Option<(u64, u64, u64, u64, u64)>> {
+        let unstake_command_item = &unstake_command_items[0];
         let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
         else {
@@ -600,27 +626,43 @@ impl UnstakeLSTCommand {
         let mut total_deducted_pool_token_fee_amount = 0;
 
         // Withdraw SOL first
-        // To test withdraw stake, comment out this block
-        let (burnt_pool_token_amount, unstaked_sol_amount, deducted_pool_token_fee_amount) =
-            spl_stake_pool_service.withdraw_sol(
-                withdraw_authority,
-                reserve_stake_account,
-                manager_fee_account,
-                clock,
-                stake_history,
-                stake_program,
-                fund_reserve_account,
-                fund_supported_token_reserve_account,
-                fund_reserve_account,
-                &[&fund_account.get_reserve_account_seeds()],
-                total_token_amount_to_burn,
-            )?;
-        total_token_amount_to_burn -= burnt_pool_token_amount;
-        total_unstaked_sol_amount += unstaked_sol_amount;
-        total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
+        // To test withdraw stake, comment out this block or adjust `pool_token_amount` parameter
+        if withdraw_sol {
+            let (burnt_pool_token_amount, unstaked_sol_amount, deducted_pool_token_fee_amount) =
+                spl_stake_pool_service.withdraw_sol(
+                    withdraw_authority,
+                    reserve_stake_account,
+                    manager_fee_account,
+                    clock,
+                    stake_history,
+                    stake_program,
+                    fund_reserve_account,
+                    fund_supported_token_reserve_account,
+                    fund_reserve_account,
+                    &[&fund_account.get_reserve_account_seeds()],
+                    total_token_amount_to_burn,
+                )?;
+            total_token_amount_to_burn -= burnt_pool_token_amount;
+            total_unstaked_sol_amount += unstaked_sol_amount;
+            total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
+        }
+
+        // Withdraw stake limit
+        const WITHDRAW_STAKE_LIMIT: usize = 2;
+        let mut withdraw_stake_count = 0;
+        let mut withdraw_stake_paused = false;
+        let mut withdraw_stake_resuming_index = 0;
 
         for index in 0..num_items {
+            // No more tokens to burn... terminate withdraw stake
             if total_token_amount_to_burn == 0 {
+                break;
+            }
+
+            // Reached withdraw stake limit... pause withdraw stake
+            if withdraw_stake_count == WITHDRAW_STAKE_LIMIT {
+                withdraw_stake_paused = true;
+                withdraw_stake_resuming_index = index;
                 break;
             }
 
@@ -651,10 +693,51 @@ impl UnstakeLSTCommand {
             total_token_amount_to_burn -= burnt_pool_token_amount;
             total_unstaking_sol_amount += unstaking_sol_amount;
             total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
+
+            if burnt_pool_token_amount > 0 {
+                withdraw_stake_count += 1;
+            }
         }
 
+        // Neither withdraw sol nor stake was impossible
         if total_token_amount_to_burn == unstake_command_item.allocated_token_amount {
             return Ok(None);
+        }
+
+        // When withdraw stake has paused, we will continue execution on next transaction
+        if withdraw_stake_paused {
+            let withdraw_stake_items =
+                withdraw_stake_items[withdraw_stake_resuming_index..].to_vec();
+            let mut unstake_command_items = unstake_command_items.to_vec();
+            unstake_command_items[0].allocated_token_amount = total_token_amount_to_burn;
+
+            let command = Self {
+                state: UnstakeLSTCommandState::Execute {
+                    unstake_command_items,
+                    withdraw_sol: false,
+                    withdraw_stake_items,
+                },
+            };
+
+            // fund_reserve_account .. stake_program (13 accounts)
+            let accounts_to_execute = (0..13)
+                .into_iter()
+                .map(|i| (accounts[i].key(), accounts[i].is_writable));
+            let fund_stake_accounts = fund_stake_accounts[withdraw_stake_resuming_index..]
+                .iter()
+                .map(|account| (account.key(), account.is_writable));
+            let validator_stake_accounts = validator_stake_accounts
+                [withdraw_stake_resuming_index..]
+                .iter()
+                .map(|account| (account.key(), account.is_writable));
+
+            let required_accounts = accounts_to_execute
+                .chain(fund_stake_accounts)
+                .chain(validator_stake_accounts);
+
+            // create command entry
+            *resume_withdraw_stake_command =
+                Some(command.with_required_accounts(required_accounts));
         }
 
         drop(fund_account);
@@ -672,7 +755,7 @@ impl UnstakeLSTCommand {
                 total_unstaking_sol_amount + total_unstaked_sol_amount,
             )?);
         require_gte!(
-            1 + num_items as u64,
+            1 + withdraw_stake_count as u64,
             expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
         );
 

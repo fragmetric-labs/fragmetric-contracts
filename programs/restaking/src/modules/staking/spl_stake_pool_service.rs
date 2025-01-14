@@ -296,14 +296,14 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         Ok((fee_rate_bps as u64, 10_000))
     }
 
-    /// Find possible active stake accounts, up to `num_validators`.
+    /// Find possible active stake accounts, up to `max_num_validators`.
     #[inline(never)]
     pub fn get_validator_stake_accounts(
         &self,
         // fixed
         validator_list_account: &AccountInfo,
 
-        num_validators: usize,
+        max_num_validators: usize,
     ) -> Result<Vec<Pubkey>> {
         let mut validator_list_account_data = validator_list_account.try_borrow_mut_data()?;
         let (_, validator_list) =
@@ -312,7 +312,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let validator_stake_infos =
             validator_list.deserialize_slice::<ValidatorStakeInfo>(0, num_validator_stake_infos)?;
 
-        let num_validators = num_validators.min(num_validator_stake_infos);
+        let num_validators = max_num_validators.min(num_validator_stake_infos);
         let mut validator_stake_accounts = Vec::with_capacity(num_validators);
 
         // To maximize available lamports to withdraw from active stake account,
