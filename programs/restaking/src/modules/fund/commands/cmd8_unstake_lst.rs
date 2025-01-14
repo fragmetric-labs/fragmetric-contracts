@@ -519,7 +519,7 @@ impl UnstakeLSTCommand {
 
                 Ok(UnstakeLSTCommandResult {
                     token_mint: item.token_mint,
-                    burnt_token_amount: item.allocated_token_amount,
+                    burnt_token_amount,
                     deducted_sol_fee_amount,
                     unstaked_sol_amount,
                     unstaking_sol_amount,
