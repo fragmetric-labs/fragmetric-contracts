@@ -1,0 +1,2491 @@
+{
+  "version": "0.0.3",
+  "name": "jito_vault",
+  "instructions": [
+    {
+      "name": "InitializeConfig",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "restakingProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programFeeWallet",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "programFeeBps",
+          "type": "u16"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "InitializeVault",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vrtMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "stMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "adminStTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "burnVault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "burnVaultVrtTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "base",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "depositFeeBps",
+          "type": "u16"
+        },
+        {
+          "name": "withdrawalFeeBps",
+          "type": "u16"
+        },
+        {
+          "name": "rewardFeeBps",
+          "type": "u16"
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "name": "initializeTokenAmount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "InitializeVaultWithMint",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "InitializeVaultOperatorDelegation",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operatorVaultTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultOperatorDelegation",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "InitializeVaultNcnTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnVaultTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
+      "name": "InitializeVaultNcnSlasherOperatorTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "slasher",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnSlasherTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnSlasherOperatorTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
+    },
+    {
+      "name": "InitializeVaultNcnSlasherTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "slasher",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncnSlasherTicket",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSlasherTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
+      }
+    },
+    {
+      "name": "WarmupVaultNcnTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
+    },
+    {
+      "name": "CooldownVaultNcnTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 8
+      }
+    },
+    {
+      "name": "WarmupVaultNcnSlasherTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "slasher",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultSlasherTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
+    },
+    {
+      "name": "CooldownVaultNcnSlasherTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ncn",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "slasher",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultNcnSlasherTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
+    },
+    {
+      "name": "MintTo",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vrtMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "depositor",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "depositorTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "depositorVrtTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultFeeTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "mintSigner",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true,
+          "docs": [
+            "Signer for minting"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "minAmountOut",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
+    },
+    {
+      "name": "EnqueueWithdrawal",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStakerWithdrawalTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStakerWithdrawalTicketTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "staker",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "stakerVrtTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "base",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "burnSigner",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true,
+          "docs": [
+            "Signer for burning"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
+    },
+    {
+      "name": "ChangeWithdrawalTicketOwner",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStakerWithdrawalTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "oldOwner",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "newOwner",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
+    },
+    {
+      "name": "BurnWithdrawalTicket",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vrtMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "staker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakerTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStakerWithdrawalTicket",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultStakerWithdrawalTicketTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultFeeTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "programFeeTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "burnSigner",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true,
+          "docs": [
+            "Signer for burning"
+          ]
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
+      }
+    },
+    {
+      "name": "SetDepositCapacity",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 15
+      }
+    },
+    {
+      "name": "SetFees",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "depositFeeBps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "withdrawalFeeBps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "rewardFeeBps",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 16
+      }
+    },
+    {
+      "name": "SetProgramFee",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newFeeBps",
+          "type": "u16"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 17
+      }
+    },
+    {
+      "name": "SetProgramFeeWallet",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "programFeeAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "newFeeWallet",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 18
+      }
+    },
+    {
+      "name": "SetIsPaused",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "isPaused",
+          "type": "bool"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 19
+      }
+    },
+    {
+      "name": "DelegateTokenAccount",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "delegateAssetAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "tokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "delegate",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 20
+      }
+    },
+    {
+      "name": "SetAdmin",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "oldAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "newAdmin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 21
+      }
+    },
+    {
+      "name": "SetSecondaryAdmin",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "newAdmin",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "vaultAdminRole",
+          "type": {
+            "defined": "VaultAdminRole"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 22
+      }
+    },
+    {
+      "name": "AddDelegation",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultOperatorDelegation",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 23
+      }
+    },
+    {
+      "name": "CooldownDelegation",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultOperatorDelegation",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 24
+      }
+    },
+    {
+      "name": "UpdateVaultBalance",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultTokenAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vrtMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultFeeTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 25
+      }
+    },
+    {
+      "name": "InitializeVaultUpdateStateTracker",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultUpdateStateTracker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "withdrawalAllocationMethod",
+          "type": {
+            "defined": "WithdrawalAllocationMethod"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 26
+      }
+    },
+    {
+      "name": "CrankVaultUpdateStateTracker",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "operator",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vaultOperatorDelegation",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultUpdateStateTracker",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 27
+      }
+    },
+    {
+      "name": "CloseVaultUpdateStateTracker",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vaultUpdateStateTracker",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "ncnEpoch",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 28
+      }
+    },
+    {
+      "name": "CreateTokenMetadata",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "vrtMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mplTokenMetadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 29
+      }
+    },
+    {
+      "name": "UpdateTokenMetadata",
+      "accounts": [
+        {
+          "name": "vault",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "vrtMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mplTokenMetadataProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 30
+      }
+    },
+    {
+      "name": "SetConfigAdmin",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "oldAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "newAdmin",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 31
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "publicKey"
+          },
+          {
+            "name": "restakingProgram",
+            "type": "publicKey"
+          },
+          {
+            "name": "epochLength",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "numVaults",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "depositWithdrawalFeeCapBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "feeRateOfChangeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "feeBumpBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "programFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "programFeeWallet",
+            "type": "publicKey"
+          },
+          {
+            "name": "feeAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                229
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "base",
+            "type": "publicKey"
+          },
+          {
+            "name": "vrtMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "supportedMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "vrtSupply",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "tokensDeposited",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "depositCapacity",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "delegationState",
+            "type": {
+              "defined": "DelegationState"
+            }
+          },
+          {
+            "name": "additionalAssetsNeedUnstaking",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vrtEnqueuedForCooldownAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vrtCoolingDownAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "vrtReadyToClaimAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "admin",
+            "type": "publicKey"
+          },
+          {
+            "name": "delegationAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "operatorAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "slasherAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "capacityAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "feeAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "delegateAssetAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "feeWallet",
+            "type": "publicKey"
+          },
+          {
+            "name": "mintBurnAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "metadataAdmin",
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "ncnCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "operatorCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slasherCount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "lastFeeChangeSlot",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "lastFullStateUpdateSlot",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "depositFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "withdrawalFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "nextWithdrawalFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "rewardFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "programFeeBps",
+            "type": {
+              "defined": "PodU16"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "isPaused",
+            "type": {
+              "defined": "PodBool"
+            }
+          },
+          {
+            "name": "lastStartStateUpdateSlot",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                251
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultNcnSlasherOperatorTicket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "slasher",
+            "type": "publicKey"
+          },
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "epoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slashed",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultNcnSlasherTicket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "slasher",
+            "type": "publicKey"
+          },
+          {
+            "name": "maxSlashablePerEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "index",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": "SlotToggle"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultNcnTicket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncn",
+            "type": "publicKey"
+          },
+          {
+            "name": "index",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "defined": "SlotToggle"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultOperatorDelegation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "operator",
+            "type": "publicKey"
+          },
+          {
+            "name": "delegationState",
+            "type": {
+              "defined": "DelegationState"
+            }
+          },
+          {
+            "name": "lastUpdateSlot",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "index",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultStakerWithdrawalTicket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "staker",
+            "type": "publicKey"
+          },
+          {
+            "name": "base",
+            "type": "publicKey"
+          },
+          {
+            "name": "vrtAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotUnstaked",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultUpdateStateTracker",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "publicKey"
+          },
+          {
+            "name": "ncnEpoch",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "lastUpdatedIndex",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "delegationState",
+            "type": {
+              "defined": "DelegationState"
+            }
+          },
+          {
+            "name": "withdrawalAllocationMethod",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                263
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "SlotToggle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "slotAdded",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "slotRemoved",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateMetadataAccountArgsV3",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "defined": "DataV2"
+            }
+          },
+          {
+            "name": "isMutable",
+            "type": "bool"
+          },
+          {
+            "name": "collectionDetails",
+            "type": {
+              "option": "u8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateMetadataAccountArgsV2",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "option": {
+                "defined": "DataV2"
+              }
+            }
+          },
+          {
+            "name": "updateAuthority",
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
+            "name": "primarySaleHappened",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "isMutable",
+            "type": {
+              "option": "bool"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DataV2",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "sellerFeeBasisPoints",
+            "type": "u16"
+          },
+          {
+            "name": "creators",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "collection",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "uses",
+            "type": {
+              "option": "u8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultAdminRole",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "DelegationAdmin"
+          },
+          {
+            "name": "OperatorAdmin"
+          },
+          {
+            "name": "NcnAdmin"
+          },
+          {
+            "name": "SlasherAdmin"
+          },
+          {
+            "name": "CapacityAdmin"
+          },
+          {
+            "name": "FeeWallet"
+          },
+          {
+            "name": "MintBurnAdmin"
+          },
+          {
+            "name": "DelegateAssetAdmin"
+          },
+          {
+            "name": "FeeAdmin"
+          },
+          {
+            "name": "MetadataAdmin"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalAllocationMethod",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Greedy"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegationState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stakedAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "enqueuedForCooldownAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "coolingDownAmount",
+            "type": {
+              "defined": "PodU64"
+            }
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                256
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 0,
+      "name": "BadEpochLength",
+      "msg": "Bad epoch length"
+    },
+    {
+      "code": 1000,
+      "name": "VaultSlashUnderflow",
+      "msg": "VaultSlashUnderflow"
+    },
+    {
+      "code": 1001,
+      "name": "VaultInitialAmountFailed",
+      "msg": "VaultInitialAmountFailed"
+    },
+    {
+      "code": 1002,
+      "name": "VaultInsufficientFunds",
+      "msg": "VaultInsufficientFunds"
+    },
+    {
+      "code": 1003,
+      "name": "VaultOverflow",
+      "msg": "VaultOverflow"
+    },
+    {
+      "code": 1004,
+      "name": "VaultOperatorAdminInvalid",
+      "msg": "VaultOperatorAdminInvalid"
+    },
+    {
+      "code": 1005,
+      "name": "VaultAdminInvalid",
+      "msg": "VaultAdminInvalid"
+    },
+    {
+      "code": 1006,
+      "name": "VaultCapacityAdminInvalid",
+      "msg": "VaultCapacityAdminInvalid"
+    },
+    {
+      "code": 1007,
+      "name": "VaultMintBurnAdminInvalid",
+      "msg": "VaultMintBurnAdminInvalid"
+    },
+    {
+      "code": 1008,
+      "name": "VaultDelegationAdminInvalid",
+      "msg": "VaultDelegationAdminInvalid"
+    },
+    {
+      "code": 1009,
+      "name": "VaultDelegateAssetAdminInvalid",
+      "msg": "VaultDelegateAssetAdminInvalid"
+    },
+    {
+      "code": 1010,
+      "name": "VaultCapacityExceeded",
+      "msg": "VaultCapacityExceeded"
+    },
+    {
+      "code": 1011,
+      "name": "VaultSlasherAdminInvalid",
+      "msg": "VaultSlasherAdminInvalid"
+    },
+    {
+      "code": 1012,
+      "name": "VaultNcnAdminInvalid",
+      "msg": "VaultNcnAdminInvalid"
+    },
+    {
+      "code": 1013,
+      "name": "VaultFeeAdminInvalid",
+      "msg": "VaultFeeAdminInvalid"
+    },
+    {
+      "code": 1014,
+      "name": "ConfigAdminInvalid",
+      "msg": "ConfigAdminInvalid"
+    },
+    {
+      "code": 1015,
+      "name": "ConfigFeeAdminInvalid",
+      "msg": "ConfigFeeAdminInvalid"
+    },
+    {
+      "code": 1016,
+      "name": "VaultFeeCapExceeded",
+      "msg": "VaultFeeCapExceeded"
+    },
+    {
+      "code": 1017,
+      "name": "VaultFeeChangeTooSoon",
+      "msg": "VaultFeeChangeTooSoon"
+    },
+    {
+      "code": 1018,
+      "name": "VaultFeeBumpTooLarge",
+      "msg": "VaultFeeBumpTooLarge"
+    },
+    {
+      "code": 1019,
+      "name": "VaultUnderflow",
+      "msg": "VaultUnderflow"
+    },
+    {
+      "code": 1020,
+      "name": "VaultUpdateNeeded",
+      "msg": "VaultUpdateNeeded"
+    },
+    {
+      "code": 1021,
+      "name": "VaultIsUpdated",
+      "msg": "VaultIsUpdated"
+    },
+    {
+      "code": 1022,
+      "name": "VaultOperatorDelegationUpdateNeeded",
+      "msg": "VaultOperatorDelegationUpdateNeeded"
+    },
+    {
+      "code": 1023,
+      "name": "VaultOperatorDelegationIsUpdated",
+      "msg": "VaultOperatorDelegationIsUpdated"
+    },
+    {
+      "code": 1024,
+      "name": "VaultUpdateIncorrectIndex",
+      "msg": "VaultUpdateIncorrectIndex"
+    },
+    {
+      "code": 1025,
+      "name": "VaultUpdateStateNotFinishedUpdating",
+      "msg": "VaultUpdateStateNotFinishedUpdating"
+    },
+    {
+      "code": 1026,
+      "name": "VaultSecurityOverflow",
+      "msg": "VaultSecurityOverflow"
+    },
+    {
+      "code": 1027,
+      "name": "VaultSlashIncomplete",
+      "msg": "VaultSlashIncomplete"
+    },
+    {
+      "code": 1028,
+      "name": "VaultSecurityUnderflow",
+      "msg": "VaultSecurityUnderflow"
+    },
+    {
+      "code": 1029,
+      "name": "SlippageError",
+      "msg": "SlippageError"
+    },
+    {
+      "code": 1030,
+      "name": "VaultStakerWithdrawalTicketNotWithdrawable",
+      "msg": "VaultStakerWithdrawalTicketNotWithdrawable"
+    },
+    {
+      "code": 1031,
+      "name": "VaultNcnSlasherTicketFailedCooldown",
+      "msg": "VaultNcnSlasherTicketFailedCooldown"
+    },
+    {
+      "code": 1032,
+      "name": "VaultNcnSlasherTicketFailedWarmup",
+      "msg": "VaultNcnSlasherTicketFailedWarmup"
+    },
+    {
+      "code": 1033,
+      "name": "VaultNcnTicketFailedCooldown",
+      "msg": "VaultNcnTicketFailedCooldown"
+    },
+    {
+      "code": 1034,
+      "name": "VaultNcnTicketFailedWarmup",
+      "msg": "VaultNcnTicketFailedWarmup"
+    },
+    {
+      "code": 1035,
+      "name": "VaultNcnTicketUnslashable",
+      "msg": "VaultNcnTicketUnslashable"
+    },
+    {
+      "code": 1036,
+      "name": "OperatorVaultTicketUnslashable",
+      "msg": "OperatorVaultTicketUnslashable"
+    },
+    {
+      "code": 1037,
+      "name": "NcnOperatorStateUnslashable",
+      "msg": "NcnOperatorStateUnslashable"
+    },
+    {
+      "code": 1038,
+      "name": "VaultNcnSlasherTicketUnslashable",
+      "msg": "VaultNcnSlasherTicketUnslashable"
+    },
+    {
+      "code": 1039,
+      "name": "NcnVaultTicketUnslashable",
+      "msg": "NcnVaultTicketUnslashable"
+    },
+    {
+      "code": 1040,
+      "name": "NcnVaultSlasherTicketUnslashable",
+      "msg": "NcnVaultSlasherTicketUnslashable"
+    },
+    {
+      "code": 1041,
+      "name": "VaultMaxSlashedPerOperatorExceeded",
+      "msg": "VaultMaxSlashedPerOperatorExceeded"
+    },
+    {
+      "code": 1042,
+      "name": "VaultStakerWithdrawalTicketInvalidStaker",
+      "msg": "VaultStakerWithdrawalTicketInvalidStaker"
+    },
+    {
+      "code": 1043,
+      "name": "SlasherOverflow",
+      "msg": "SlasherOverflow"
+    },
+    {
+      "code": 1044,
+      "name": "NcnOverflow",
+      "msg": "NcnOverflow"
+    },
+    {
+      "code": 1045,
+      "name": "OperatorOverflow",
+      "msg": "OperatorOverflow"
+    },
+    {
+      "code": 1046,
+      "name": "VaultDelegationZero",
+      "msg": "VaultDelegationZero"
+    },
+    {
+      "code": 1047,
+      "name": "VaultCooldownZero",
+      "msg": "VaultCooldownZero"
+    },
+    {
+      "code": 1048,
+      "name": "VaultBurnZero",
+      "msg": "VaultBurnZero"
+    },
+    {
+      "code": 1049,
+      "name": "VaultEnqueueWithdrawalAmountZero",
+      "msg": "VaultEnqueueWithdrawalAmountZero"
+    },
+    {
+      "code": 1050,
+      "name": "VaultMintZero",
+      "msg": "VaultMintZero"
+    },
+    {
+      "code": 1051,
+      "name": "VaultIsPaused",
+      "msg": "VaultIsPaused"
+    },
+    {
+      "code": 1052,
+      "name": "InvalidDepositor",
+      "msg": "InvalidDepositor"
+    },
+    {
+      "code": 1053,
+      "name": "InvalidDepositTokenAccount",
+      "msg": "InvalidDepositTokenAccount"
+    },
+    {
+      "code": 1054,
+      "name": "NoSupportedMintBalanceChange",
+      "msg": "NoSupportedMintBalanceChange"
+    },
+    {
+      "code": 1055,
+      "name": "InvalidEpochLength",
+      "msg": "InvalidEpochLength"
+    },
+    {
+      "code": 1056,
+      "name": "VaultRewardFeeDeltaTooLarge",
+      "msg": "VaultRewardFeeDeltaTooLarge"
+    },
+    {
+      "code": 1057,
+      "name": "VaultRewardFeeIsZero",
+      "msg": "VaultRewardFeeIsZero"
+    },
+    {
+      "code": 1058,
+      "name": "VrtOutCannotBeZero",
+      "msg": "VrtOutCannotBeZero"
+    },
+    {
+      "code": 1059,
+      "name": "NonZeroAdditionalAssetsNeededForWithdrawalAtEndOfUpdate",
+      "msg": "NonZeroAdditionalAssetsNeededForWithdrawalAtEndOfUpdate"
+    },
+    {
+      "code": 3000,
+      "name": "ArithmeticOverflow",
+      "msg": "ArithmeticOverflow"
+    },
+    {
+      "code": 3001,
+      "name": "ArithmeticUnderflow",
+      "msg": "ArithmeticUnderflow"
+    },
+    {
+      "code": 3002,
+      "name": "DivisionByZero",
+      "msg": "DivisionByZero"
+    }
+  ],
+  "metadata": {
+    "origin": "shank",
+    "address": "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
+  }
+}

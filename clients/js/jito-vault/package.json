@@ -1,0 +1,12 @@
+{
+  "name": "@jito-foundation/vault-client",
+  "version": "0.0.1",
+  "private": true,
+  "module": "src/index.ts",
+  "peerDependencies": {
+    "@solana/web3.js": "^2.0.0"
+  },
+  "devDependencies": {
+    "@solana/web3.js": "^2.0.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@fragmetric-labs/codegen",
+  "version": "0.0.1",
+  "main": "index.ts",
+  "private": true,
+  "scripts": {
+    "build": "ts-node --transpile-only ./index.ts",
+    "build:all": "ALL=1 yarn build",
+    "build:local": "WATCH=1 LOCAL=1 yarn build"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "^1.1.0",
+    "@codama/renderers": "^1.0.5",
+    "chalk": "^4.1.2",
+    "chokidar": "^4.0.3",
+    "codama": "^1.2.0",
+    "ts-node": "^10.9.2"
+  }
+}

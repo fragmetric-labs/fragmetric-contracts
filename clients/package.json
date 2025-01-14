@@ -1,9 +1,11 @@
 {
   "private": true,
   "workspaces": [
+    "codegen",
     "js/sdk",
     "js/sdk/examples/*",
-    "js/playground"
+    "js/playground",
+    "js/*"
   ],
   "scripts": {
   }
