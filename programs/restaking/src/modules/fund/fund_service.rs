@@ -321,11 +321,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         })
     }
 
-    #[inline(never)]
-    fn clone_operation_state(&self) -> Result<Box<OperationState>> {
-        Ok(Box::new(self.fund_account.load()?.operation.clone()))
-    }
-
     pub fn process_run_command(
         &mut self,
         operator: &Signer<'info>,
@@ -334,15 +329,18 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<events::OperatorRanFundCommand> {
         let pricing_source_accounts = self.get_pricing_source_infos(remaining_accounts)?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        let operation_sequence = fund_account.operation.next_sequence;
 
-        let mut operation_state = self.clone_operation_state()?;
-        operation_state.initialize_command_if_needed(
+        // First reset command
+        fund_account.operation.initialize_command_if_needed(
             reset_command,
             self.current_slot,
             self.current_timestamp,
         )?;
 
-        let (command, required_account_metas) = &operation_state
+        let (command, required_account_metas) = fund_account
+            .operation
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
@@ -359,7 +357,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             } else {
                 msg!(
                     "COMMAND#{}: {:?} failed due to missing required account {}",
-                    operation_state.next_sequence,
+                    operation_sequence,
                     command,
                     required_account_meta.pubkey,
                 );
@@ -369,51 +367,39 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         operation_command_accounts.extend(pricing_source_accounts);
 
         // execute the command
+        drop(fund_account);
         let mut ctx = OperationCommandContext {
             operator,
             receipt_token_mint: self.receipt_token_mint,
             fund_account: self.fund_account,
             system_program,
         };
-        let result = match command.execute(&mut ctx, &operation_command_accounts) {
+        let (result, next_command) = match command.execute(&mut ctx, &operation_command_accounts) {
             Ok((result, next_command)) => {
-                msg!(
-                    "COMMAND#{}: {:?} passed",
-                    operation_state.next_sequence,
-                    command
-                );
-                operation_state.set_command(
-                    next_command,
-                    self.current_slot,
-                    self.current_timestamp,
-                )?;
-                Ok(result)
+                msg!("COMMAND#{}: {:?} passed", operation_sequence, command);
+                (result, next_command)
             }
-            Err(error) => {
-                msg!(
-                    "COMMAND#{}: {:?} failed",
-                    operation_state.next_sequence,
-                    command
-                );
-                Err(error)
+            Err(err) => {
+                msg!("COMMAND#{}: {:?} failed", operation_sequence, command);
+                Err(err)?
             }
-        }?;
+        };
 
-        let next_sequence = operation_state.next_sequence;
-        let num_operated = operation_state.num_operated;
-
-        // write back operation state
-        std::mem::swap(
-            &mut self.fund_account.load_mut()?.operation,
-            operation_state.as_mut(),
-        );
+        let mut fund_account = ctx.fund_account.load_mut()?;
+        fund_account.operation.set_command(
+            next_command,
+            self.current_slot,
+            self.current_timestamp,
+        )?;
+        let next_sequence = fund_account.operation.next_sequence;
+        let num_operated = fund_account.operation.num_operated;
 
         Ok(events::OperatorRanFundCommand {
-            receipt_token_mint: self.receipt_token_mint.key(),
-            fund_account: self.fund_account.key(),
+            receipt_token_mint: ctx.receipt_token_mint.key(),
+            fund_account: ctx.fund_account.key(),
             next_sequence,
             num_operated,
-            command: command.clone(),
+            command,
             result,
         })
     }
