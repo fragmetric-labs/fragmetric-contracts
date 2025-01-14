@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 use crate::modules::ed25519;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct DepositMetadata {
     user: Pubkey,
     wallet_provider: String,

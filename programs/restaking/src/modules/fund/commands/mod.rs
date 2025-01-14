@@ -43,7 +43,7 @@ pub struct OperationCommandContext<'info, 'a> {
 }
 
 // enum to hold all command variants
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub enum OperationCommand {
     Initialize(InitializeCommand),
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommand),
@@ -61,7 +61,28 @@ pub enum OperationCommand {
     HarvestReward(HarvestRewardCommand),
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+impl std::fmt::Debug for OperationCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OperationCommand::Initialize(command) => command.fmt(f),
+            OperationCommand::EnqueueWithdrawalBatch(command) => command.fmt(f),
+            OperationCommand::ClaimUnrestakedVST(command) => command.fmt(f),
+            OperationCommand::DenormalizeNT(command) => command.fmt(f),
+            OperationCommand::UndelegateVST(command) => command.fmt(f),
+            OperationCommand::UnrestakeVRT(command) => command.fmt(f),
+            OperationCommand::ClaimUnstakedSOL(command) => command.fmt(f),
+            OperationCommand::UnstakeLST(command) => command.fmt(f),
+            OperationCommand::ProcessWithdrawalBatch(command) => command.fmt(f),
+            OperationCommand::StakeSOL(command) => command.fmt(f),
+            OperationCommand::NormalizeST(command) => command.fmt(f),
+            OperationCommand::RestakeVST(command) => command.fmt(f),
+            OperationCommand::DelegateVST(command) => command.fmt(f),
+            OperationCommand::HarvestReward(command) => command.fmt(f),
+        }
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub enum OperationCommandResult {
     Initialize(InitializeCommandResult),
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommandResult),
@@ -292,7 +313,6 @@ impl OperationCommand {
 const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2535;
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandPod {
     discriminant: u8,
@@ -321,10 +341,20 @@ impl OperationCommandPod {
     }
 }
 
-#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct OperationCommandAccountMeta {
     pub(super) pubkey: Pubkey,
     pub(super) is_writable: bool,
+}
+
+impl std::fmt::Debug for OperationCommandAccountMeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.pubkey.fmt(f)?;
+        if self.is_writable {
+            f.write_str("(W)")?;
+        }
+        Ok(())
+    }
 }
 
 impl OperationCommandAccountMeta {
@@ -335,7 +365,6 @@ impl OperationCommandAccountMeta {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
@@ -387,7 +416,6 @@ impl OperationCommandEntry {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,

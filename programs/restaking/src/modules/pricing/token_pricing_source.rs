@@ -3,7 +3,8 @@ use anchor_lang::prelude::*;
 #[cfg(all(test, not(feature = "idl-build")))]
 use super::MockAsset;
 
-#[derive(Clone, Debug, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq)]
+#[cfg_attr(test, derive(Debug))]
 #[non_exhaustive]
 pub enum TokenPricingSource {
     SPLStakePool {
@@ -100,7 +101,6 @@ impl TokenPricingSource {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
     discriminant: u8,
