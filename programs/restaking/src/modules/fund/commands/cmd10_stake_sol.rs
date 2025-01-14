@@ -332,7 +332,7 @@ impl StakeSOLCommand {
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
     ) -> Result<(u64, u64, u64)> {
-        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, ..] =
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -363,7 +363,7 @@ impl StakeSOLCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().cloned())?;
 
         // // validation (expects diff <= 1)
         // let expected_pool_token_fee_amount = pricing_service
@@ -393,7 +393,7 @@ impl StakeSOLCommand {
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
     ) -> Result<Option<(u64, u64, u64)>> {
-        let &[fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve_account, pool_token_mint_authority, ..] =
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, liq_pool_sol_leg, liq_pool_token_leg, liq_pool_token_leg_authority, pool_reserve_account, pool_token_mint_authority, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -430,7 +430,7 @@ impl StakeSOLCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().cloned())?;
 
         // validation (expects diff <= 1)
         let expected_minted_pool_token_amount = pricing_service

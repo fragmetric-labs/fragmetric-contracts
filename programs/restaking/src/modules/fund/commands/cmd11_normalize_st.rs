@@ -280,23 +280,23 @@ impl NormalizeSTCommand {
         }
         let item = items[0];
 
-        let &[normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, fund_reserve_account, ..] =
+        let [normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, fund_reserve_account, pricing_sources @ ..] =
             accounts
         else {
             err!(ErrorCode::AccountNotEnoughKeys)?
         };
 
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().cloned())?;
 
         let normalized_token_mint_address = normalized_token_mint.key();
         let mut normalized_token_pool_account =
             Account::<NormalizedTokenPoolAccount>::try_from(normalized_token_pool_account)?;
         let mut normalized_token_mint = InterfaceAccount::<Mint>::try_from(normalized_token_mint)?;
-        let normalized_token_program = Program::<Token>::try_from(normalized_token_program)?;
+        let normalized_token_program = Program::<Token>::try_from(*normalized_token_program)?;
         let supported_token_mint = InterfaceAccount::<Mint>::try_from(supported_token_mint)?;
         let supported_token_program =
-            Interface::<TokenInterface>::try_from(supported_token_program)?;
+            Interface::<TokenInterface>::try_from(*supported_token_program)?;
         let supported_token_reserve_account =
             InterfaceAccount::<TokenAccount>::try_from(supported_token_reserve_account)?;
         let mut to_normalized_token_account =

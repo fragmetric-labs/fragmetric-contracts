@@ -333,7 +333,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         remaining_accounts: &'info [AccountInfo<'info>],
         reset_command: Option<OperationCommandEntry>,
     ) -> Result<events::OperatorRanFundCommand> {
-        let pricing_source_infos = self.get_pricing_source_infos(remaining_accounts)?;
+        let pricing_source_accounts = self.get_pricing_source_infos(remaining_accounts)?;
 
         let mut operation_state = self.clone_operation_state()?;
         operation_state.initialize_command_if_needed(
@@ -342,58 +342,31 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             self.current_timestamp,
         )?;
 
-        let (command, required_accounts) = &operation_state
+        let (command, required_account_metas) = &operation_state
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
-        let mut required_account_infos =
-            Vec::with_capacity(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE);
-        let mut remaining_accounts_used: [bool; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE] =
-            [false; FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE];
-
-        for required_account in required_accounts {
-            // append required accounts in exact order
-            let mut found = false;
-            for (i, remaining_account) in remaining_accounts
+        // accounts = [...required_accounts, ...pricing_sources]
+        let mut operation_command_accounts = Vec::with_capacity(
+            FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE + pricing_source_accounts.len(),
+        );
+        for required_account_meta in required_account_metas {
+            if let Some(remaining_account) = remaining_accounts
                 .iter()
-                .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
-                .enumerate()
+                .find(|remaining_account| required_account_meta.pubkey == *remaining_account.key)
             {
-                if required_account.pubkey == *remaining_account.key {
-                    required_account_infos.push(remaining_account);
-                    remaining_accounts_used[i] = true;
-                    found = true;
-                    break;
-                }
-            }
-
-            if !found {
-                // error if it is the first command in this tx
+                operation_command_accounts.push(remaining_account);
+            } else {
                 msg!(
-                    "COMMAND#{}: {:?} failed due to missing required account",
+                    "COMMAND#{}: {:?} failed due to missing required account {}",
                     operation_state.next_sequence,
-                    command
+                    command,
+                    required_account_meta.pubkey,
                 );
                 return err!(ErrorCode::FundOperationCommandAccountComputationException);
             }
         }
-
-        // append all unused accounts & pricing sources
-        for (i, used) in remaining_accounts_used
-            .into_iter()
-            .take(remaining_accounts.len())
-            .enumerate()
-        {
-            if !used {
-                required_account_infos.push(&remaining_accounts[i]);
-            }
-        }
-        for pricing_source in &pricing_source_infos {
-            if required_account_infos.len() == 32 {
-                break;
-            }
-            required_account_infos.push(*pricing_source);
-        }
+        operation_command_accounts.extend(pricing_source_accounts);
 
         // execute the command
         let mut ctx = OperationCommandContext {
@@ -402,7 +375,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             fund_account: self.fund_account,
             system_program,
         };
-        let result = match command.execute(&mut ctx, required_account_infos.as_slice()) {
+        let result = match command.execute(&mut ctx, &operation_command_accounts) {
             Ok((result, next_command)) => {
                 msg!(
                     "COMMAND#{}: {:?} passed",

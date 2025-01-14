@@ -2432,7 +2432,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         let nextOperationCommand = resetCommand ?? fragSOLFund.operation.nextCommand;
         let nextOperationSequence = resetCommand ? 0 : fragSOLFund.operation.nextSequence;
         if (nextOperationCommand) {
-            for (const accountMeta of nextOperationCommand.requiredAccounts) {
+            for (let i = 0; i < nextOperationCommand.numRequiredAccounts; i++) {
+                const accountMeta = nextOperationCommand.requiredAccounts[i];
                 if (requiredAccounts.has(accountMeta.pubkey)) {
                     if (accountMeta.isWritable != 0) {
                         requiredAccounts.get(accountMeta.pubkey).isWritable = true;
