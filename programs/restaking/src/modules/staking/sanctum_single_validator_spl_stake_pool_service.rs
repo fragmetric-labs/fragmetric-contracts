@@ -14,6 +14,8 @@ impl anchor_lang::Id for SanctumSingleValidatorSPLStakePool {
     }
 }
 
+impl SPLStakePoolInterface for SanctumSingleValidatorSPLStakePool {}
+
 /// For now, sanctum single validator SPL stake pool is
 /// identical to SPL stake pool.
 ///

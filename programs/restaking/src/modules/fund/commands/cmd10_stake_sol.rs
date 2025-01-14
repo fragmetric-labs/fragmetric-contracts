@@ -15,13 +15,19 @@ pub struct StakeSOLCommand {
     state: StakeSOLCommandState,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Copy)]
 pub struct StakeSOLCommandItem {
     token_mint: Pubkey,
     allocated_sol_amount: u64,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+impl std::fmt::Debug for StakeSOLCommandItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})", self.token_mint, self.allocated_sol_amount)
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub enum StakeSOLCommandState {
     /// Initializes a command with items based on the fund state and strategy.
     #[default]
@@ -39,7 +45,29 @@ pub enum StakeSOLCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+impl std::fmt::Debug for StakeSOLCommandState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => f.write_str("New"),
+            Self::Prepare { items } => {
+                if items.is_empty() {
+                    f.write_str("Prepare")
+                } else {
+                    f.debug_struct("Prepare").field("item", &items[0]).finish()
+                }
+            }
+            Self::Execute { items } => {
+                if items.is_empty() {
+                    f.write_str("Execute")
+                } else {
+                    f.debug_struct("Execute").field("item", &items[0]).finish()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct StakeSOLCommandResult {
     pub token_mint: Pubkey,
     pub staked_sol_amount: u64,
@@ -297,7 +325,6 @@ impl StakeSOLCommand {
                 let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
                 supported_token.token.operation_reserved_amount += minted_pool_token_amount;
 
-                // Validation
                 require_gte!(
                     to_pool_token_account_amount,
                     supported_token.token.get_total_reserved_amount(),
@@ -355,9 +382,9 @@ impl StakeSOLCommand {
             withdraw_authority,
             reserve_stake_account,
             manager_fee_account,
-            fund_reserve_account,
             fund_supported_token_reserve_account,
-            &ctx.fund_account.load()?.get_reserve_account_seeds(),
+            fund_reserve_account,
+            &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
             item.allocated_sol_amount,
         )?;
 
@@ -365,14 +392,14 @@ impl StakeSOLCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(pricing_sources.iter().cloned())?;
 
-        // // validation (expects diff <= 1)
-        // let expected_pool_token_fee_amount = pricing_service
-        //     .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
-        //     .saturating_sub(minted_pool_token_amount);
-        // require_gte!(
-        //     1,
-        //     expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
-        // );
+        // validation (expects diff <= 1)
+        let expected_pool_token_fee_amount = pricing_service
+            .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
+            .saturating_sub(minted_pool_token_amount);
+        require_gte!(
+            1,
+            expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
+        );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
         let deducted_sol_fee_amount = pricing_service

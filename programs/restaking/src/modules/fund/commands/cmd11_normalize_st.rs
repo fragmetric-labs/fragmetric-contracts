@@ -16,13 +16,23 @@ pub struct NormalizeSTCommand {
     state: NormalizeSTCommandState,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Copy)]
 pub struct NormalizeSTCommandItem {
     supported_token_mint: Pubkey,
     allocated_token_amount: u64,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+impl std::fmt::Debug for NormalizeSTCommandItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            self.supported_token_mint, self.allocated_token_amount
+        )
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub enum NormalizeSTCommandState {
     /// Initializes a command with items based on the fund state and strategy.
     #[default]
@@ -40,7 +50,29 @@ pub enum NormalizeSTCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+impl std::fmt::Debug for NormalizeSTCommandState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => f.write_str("New"),
+            Self::Prepare { items } => {
+                if items.is_empty() {
+                    f.write_str("Prepare")
+                } else {
+                    f.debug_struct("Prepare").field("item", &items[0]).finish()
+                }
+            }
+            Self::Execute { items } => {
+                if items.is_empty() {
+                    f.write_str("Execute")
+                } else {
+                    f.debug_struct("Execute").field("item", &items[0]).finish()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct NormalizeSTCommandResult {
     pub supported_token_mint: Pubkey,
     pub normalized_supported_token_amount: u64,
@@ -343,7 +375,6 @@ impl NormalizeSTCommand {
         let normalized_token = fund_account.get_normalized_token_mut().unwrap();
         normalized_token.operation_reserved_amount += minted_normalized_token_amount;
 
-        // validation
         require_gte!(
             to_normalized_token_account_amount,
             normalized_token.get_total_reserved_amount()

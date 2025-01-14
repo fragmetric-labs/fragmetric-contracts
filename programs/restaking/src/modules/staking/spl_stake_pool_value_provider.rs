@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::{
-    pricing::{Asset, TokenValue, TokenValueProvider},
-    staking::SPLStakePool,
-};
+use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
 use super::SPLStakePoolService;
 

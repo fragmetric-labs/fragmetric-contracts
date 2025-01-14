@@ -1,68 +1,114 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
 
-use crate::errors;
-use crate::modules::fund::FundService;
+use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::staking::{
-    AvailableWithdrawals, SPLStakePool, SPLStakePoolInterface, SPLStakePoolService,
-    SanctumSingleValidatorSPLStakePool, SanctumSingleValidatorSPLStakePoolService,
-};
-use crate::utils::{AsAccountInfo, PDASeeds};
+use crate::modules::staking::*;
+use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
+    EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommandContext,
+    OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnstakeLSTCommand {
-    #[max_len(10)]
-    items: Vec<UnstakeLSTCommandItem>,
     state: UnstakeLSTCommandState,
 }
 
-impl UnstakeLSTCommand {
-    pub(super) fn new_init(items: Vec<UnstakeLSTCommandItem>) -> Self {
-        Self {
-            items,
-            state: UnstakeLSTCommandState::Init,
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Copy)]
+pub struct UnstakeLSTCommandItem {
+    token_mint: Pubkey,
+    allocated_token_amount: u64,
+}
+
+impl std::fmt::Debug for UnstakeLSTCommandItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})", self.token_mint, self.allocated_token_amount)
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+pub enum UnstakeLSTCommandState {
+    /// Initializes a command with items based on the fund state and strategy.
+    #[default]
+    New,
+    /// Prepares to execute unstaking for the first item in the list.
+    Prepare {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        items: Vec<UnstakeLSTCommandItem>,
+    },
+    /// Before execute unstaking, finds extra withdraw stake items
+    /// to handle when withdrawable sol is not enough.
+    GetWithdrawStakeItems {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        items: Vec<UnstakeLSTCommandItem>,
+    },
+    /// Executes unstaking for the first item with withdraw stake items if needed,
+    /// and transitions to the next command, either preparing the next item or
+    /// performing a staking operation.
+    Execute {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        unstake_command_items: Vec<UnstakeLSTCommandItem>,
+        #[max_len(5)]
+        withdraw_stake_items: Vec<WithdrawStakeItem>,
+    },
+}
+
+impl std::fmt::Debug for UnstakeLSTCommandState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => f.write_str("New"),
+            Self::Prepare { items } => {
+                if items.is_empty() {
+                    f.write_str("Prepare")
+                } else {
+                    f.debug_struct("Prepare").field("item", &items[0]).finish()
+                }
+            }
+            Self::GetWithdrawStakeItems { items } => {
+                if items.is_empty() {
+                    f.write_str("GetWithdrawStakeItems")
+                } else {
+                    f.debug_struct("GetWithdrawStakeItems")
+                        .field("item", &items[0])
+                        .finish()
+                }
+            }
+            Self::Execute {
+                unstake_command_items,
+                ..
+            } => {
+                if unstake_command_items.is_empty() {
+                    f.write_str("Execute")
+                } else {
+                    f.debug_struct("Execute")
+                        .field("item", &unstake_command_items[0])
+                        .finish()
+                }
+            }
         }
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
-pub struct UnstakeLSTCommandItem {
-    mint: Pubkey,
-    token_amount: u64,
-}
-
-impl UnstakeLSTCommandItem {
-    pub(super) fn new(mint: Pubkey, token_amount: u64) -> Self {
-        Self { mint, token_amount }
-    }
-}
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub enum UnstakeLSTCommandState {
-    Init,
-    ReadPoolState,
-    GetAvailableUnstakeAccount,
-    Unstake,
-    RequestUnstake(#[max_len(5)] Vec<WithdrawStakeItem>),
-}
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct WithdrawStakeItem {
     validator_stake_account: Pubkey,
-    fund_stake_account: Pubkey, // pda
-    #[max_len(4, 32)] // there would be total 3 seeds, max bytes would be 32 bytes per seed
-    fund_stake_account_signer_seeds: Vec<Vec<u8>>,
-    token_amount: u64,
+    fund_stake_account: Pubkey,
+    fund_stake_account_index: u8,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct UnstakeLSTCommandResult {}
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+pub struct UnstakeLSTCommandResult {
+    pub token_mint: Pubkey,
+    pub burnt_token_amount: u64,
+    pub deducted_sol_fee_amount: u64,
+    pub unstaked_sol_amount: u64,
+    pub unstaking_sol_amount: u64,
+    pub operation_reserved_sol_amount: u64,
+    pub operation_receivable_sol_amount: u64,
+    pub operation_reserved_token_amount: u64,
+}
 
 impl SelfExecutable for UnstakeLSTCommand {
     fn execute<'a, 'info: 'a>(
@@ -73,560 +119,665 @@ impl SelfExecutable for UnstakeLSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // there are remaining tokens to handle
-        if let Some(item) = self.items.first() {
-            match &self.state {
-                UnstakeLSTCommandState::Init if item.token_amount > 0 => {
-                    return self.execute_init(ctx, item);
-                }
-                UnstakeLSTCommandState::ReadPoolState => {
-                    return self.execute_read_pool_state(ctx, accounts, item);
-                }
-                UnstakeLSTCommandState::GetAvailableUnstakeAccount => {
-                    return self.execute_get_available_unstake_account(ctx, accounts, item);
-                }
-                UnstakeLSTCommandState::Unstake => {
-                    self.execute_unstake(ctx, accounts, item)?;
-                }
-                UnstakeLSTCommandState::RequestUnstake(withdraw_stake_items) => {
-                    self.execute_request_unstake(ctx, accounts, item, withdraw_stake_items)?;
-
-                    if withdraw_stake_items.len() > 1 {
-                        let mut command = self.clone();
-                        command.state = UnstakeLSTCommandState::RequestUnstake(
-                            withdraw_stake_items[1..].to_vec(),
-                        );
-
-                        return Ok((
-                            None,
-                            Some(
-                                command.with_required_accounts(
-                                    accounts
-                                        .iter()
-                                        .map(|account| (*account.key, account.is_writable)),
-                                ),
-                            ),
-                        ));
-                    }
-                }
-                _ => (), // state = INIT but amount == 0
+        let (result, entry) = match &self.state {
+            UnstakeLSTCommandState::New => self.execute_new(ctx, accounts)?,
+            UnstakeLSTCommandState::Prepare { items } => {
+                self.execute_prepare(ctx, accounts, items.clone(), None)?
             }
-
-            // proceed to next token
-            if self.items.len() > 1 {
-                return Ok((
-                    None,
-                    Some(
-                        UnstakeLSTCommand::new_init(self.items[1..].to_vec())
-                            .without_required_accounts(),
-                    ),
-                ));
+            UnstakeLSTCommandState::GetWithdrawStakeItems { items } => {
+                self.execute_get_withdraw_stake_items(ctx, accounts, items)?
             }
-        }
+            UnstakeLSTCommandState::Execute {
+                unstake_command_items,
+                withdraw_stake_items,
+            } => {
+                self.execute_execute(ctx, accounts, unstake_command_items, withdraw_stake_items)?
+            }
+        };
 
-        // TODO v0.3/operation: next step ... stake sol
+        // TODO v0.4/operation: next step ... process withdrawal batch
         Ok((
-            None,
-            Some(
-                OperationCommand::EnqueueWithdrawalBatch(Default::default())
-                    .without_required_accounts(),
-            ),
+            result,
+            entry.or_else(|| {
+                Some(EnqueueWithdrawalBatchCommand::default().without_required_accounts())
+            }),
         ))
     }
 }
 
+// These are implementations of each command state.
+#[deny(clippy::wildcard_enum_match_arm)]
 impl UnstakeLSTCommand {
-    fn execute_init<'a, 'info: 'a>(
+    /// An initial state of `UnstakeLST` command.
+    /// In this state, operator iterates the fund and
+    /// decides which token and how much to unstake each.
+    fn execute_new<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        item: &UnstakeLSTCommandItem,
+        _ctx: &mut OperationCommandContext<'info, '_>,
+        _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let mut command = self.clone();
-        command.state = UnstakeLSTCommandState::ReadPoolState;
+        // TODO v0.4/operation: implement strategy...
+        Ok((None, None))
+    }
 
-        match ctx
-            .fund_account
-            .load()?
-            .get_supported_token(&item.mint)?
-            .pricing_source
-            .try_deserialize()?
-        {
-            Some(TokenPricingSource::SPLStakePool { address })
-            | Some(TokenPricingSource::MarinadeStakePool { address })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
-                return Ok((
-                    None,
-                    Some(command.with_required_accounts([(address, false)])),
-                ));
-            }
-            // otherwise fails
-            Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
+    #[inline(never)]
+    fn execute_prepare<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        items: Vec<UnstakeLSTCommandItem>,
+        previous_execution_result: Option<OperationCommandResult>,
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if items.is_empty() {
+            return Ok((previous_execution_result, None));
         }
-    }
+        let item = &items[0];
 
-    fn execute_read_pool_state<'a, 'info: 'a>(
-        &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
-        let [pool_account_info, ..] = accounts else {
-            err!(ErrorCode::AccountNotEnoughKeys)?
-        };
-
-        let mut command = self.clone();
-        let required_accounts = match ctx
+        let token_pricing_source = ctx
             .fund_account
             .load()?
-            .get_supported_token(&item.mint)?
-            .pricing_source
-            .try_deserialize()?
-        {
-            Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                require_keys_eq!(address, *pool_account_info.key);
-
-                todo!() // TODO: support marinade..
-            }
-            Some(TokenPricingSource::SPLStakePool { address }) => {
-                require_keys_eq!(address, *pool_account_info.key);
-
-                command.state = UnstakeLSTCommandState::GetAvailableUnstakeAccount;
-                <SPLStakePoolService>::find_accounts_to_get_available_unstake_account(
-                    pool_account_info,
-                )?
-            }
-            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
-                require_keys_eq!(address, *pool_account_info.key);
-
-                command.state = UnstakeLSTCommandState::GetAvailableUnstakeAccount;
-                SanctumSingleValidatorSPLStakePoolService::find_accounts_to_get_available_unstake_account(pool_account_info)?
-            }
-            // otherwise fails
-            Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
-        };
-
-        return Ok((
-            None,
-            Some(command.with_required_accounts(required_accounts)),
-        ));
-    }
-
-    fn execute_get_available_unstake_account<'a, 'info: 'a>(
-        &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
-        let supported_token_pricing_source = ctx
-            .fund_account
-            .load()?
-            .get_supported_token(&item.mint)?
+            .get_supported_token(&item.token_mint)?
             .pricing_source
             .try_deserialize()?;
-        match supported_token_pricing_source {
+        let pool_account = match token_pricing_source {
+            Some(TokenPricingSource::SPLStakePool { address })
+            | Some(TokenPricingSource::MarinadeStakePool { address })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => *accounts
+                .iter()
+                .find(|account| account.key() == address)
+                .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?,
+            // fail when supported token is not unstakable
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
+
+        let entry = match token_pricing_source {
+            Some(TokenPricingSource::SPLStakePool { .. }) => {
+                self
+                .spl_stake_pool_prepare_get_withdraw_stake_items::<SPLStakePool>(
+                    ctx,
+                    pool_account,
+                    Self { state: UnstakeLSTCommandState::GetWithdrawStakeItems { items }},
+                )?},
+            Some(TokenPricingSource::MarinadeStakePool { .. }) => {
+                let fund_account = ctx.fund_account.load()?;
+                let fund_reserve_account = fund_account.get_reserve_account_address()?;
+                let fund_supported_token_reserve_account = fund_account
+                    .find_supported_token_reserve_account_address(&item.token_mint)?;
+                let accounts_to_order_unstake =
+                    MarinadeStakePoolService::find_accounts_to_order_unstake(pool_account)?;
+                let withdrawal_ticket_accounts = {
+                    (0..5).map(|index| {
+                        let address = *FundAccount::find_unstaking_ticket_account_address(
+                            &ctx.fund_account.key(),
+                            pool_account.key,
+                            index,
+                        );
+                        (address, true)
+                    })
+                };
+
+                let required_accounts = [
+                    (fund_reserve_account, false),
+                    (fund_supported_token_reserve_account, true)
+                ]
+                .into_iter()
+                .chain(accounts_to_order_unstake)
+                .chain(withdrawal_ticket_accounts);
+
+                Self {
+                    state: UnstakeLSTCommandState::Execute {
+                        unstake_command_items: items,
+                        withdraw_stake_items: vec![],
+                    },
+                }
+                .with_required_accounts(required_accounts)
+            }
+            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                self.spl_stake_pool_prepare_get_withdraw_stake_items::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    pool_account,
+                    Self { state: UnstakeLSTCommandState::GetWithdrawStakeItems { items }},
+                )?
+            }
+            // fail when supported token is not unstakable
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
+
+        Ok((previous_execution_result, Some(entry)))
+    }
+
+    fn spl_stake_pool_prepare_get_withdraw_stake_items<'info, T: SPLStakePoolInterface>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        pool_account: &'info AccountInfo<'info>,
+        next_command: Self,
+    ) -> Result<OperationCommandEntry> {
+        let accounts_to_get_validator_stake_accounts =
+            SPLStakePoolService::<T>::find_accounts_to_get_validator_stake_accounts(pool_account)?;
+        let fund_stake_accounts = {
+            (0..5).map(|index| {
+                let address = *FundAccount::find_stake_account_address(
+                    &ctx.fund_account.key(),
+                    pool_account.key,
+                    index,
+                );
+                (address, false)
+            })
+        };
+
+        let required_accounts = accounts_to_get_validator_stake_accounts.chain(fund_stake_accounts);
+
+        Ok(next_command.with_required_accounts(required_accounts))
+    }
+
+    #[inline(never)]
+    fn execute_get_withdraw_stake_items<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        items: &[UnstakeLSTCommandItem],
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if items.is_empty() {
+            return Ok((None, None));
+        }
+        let item = &items[0];
+
+        let token_pricing_source = ctx
+            .fund_account
+            .load()?
+            .get_supported_token(&item.token_mint)?
+            .pricing_source
+            .try_deserialize()?;
+
+        let entry = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address }) => self
-                .get_available_unstake_account_from_spl_stake_pool::<SPLStakePool>(
-                    ctx, accounts, item, address
+                .spl_stake_pool_get_withdraw_stake_items::<SPLStakePool>(
+                    ctx, accounts, items, item, address,
                 ),
-            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => self
-                .get_available_unstake_account_from_spl_stake_pool::<SanctumSingleValidatorSPLStakePool>(ctx, accounts, item, address),
+            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_get_withdraw_stake_items::<SanctumSingleValidatorSPLStakePool>(
+                    ctx, accounts, items, item, address,
+                )
+            }
             // otherwise fails
             Some(TokenPricingSource::MarinadeStakePool { .. })
             | Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
-        }
+        }?;
+
+        Ok((None, Some(entry)))
     }
 
-    fn get_available_unstake_account_from_spl_stake_pool<'a, 'info, T>(
+    fn spl_stake_pool_get_withdraw_stake_items<'info, T: SPLStakePoolInterface>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
+        items: &[UnstakeLSTCommandItem],
+        current_item: &UnstakeLSTCommandItem,
         pool_account_address: Pubkey,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )>
-    where
-        'info: 'a,
-        T: SPLStakePoolInterface,
-    {
-        let mut command = self.clone();
-
-        // stake_program is not used directly, but it needs when running transaction
-        let [pool_program, pool_account, pool_token_mint, pool_token_program, reserve_stake_account, validator_list_account, stake_program, ..] =
+    ) -> Result<OperationCommandEntry> {
+        let [pool_program, pool_account, pool_token_mint, pool_token_program, validator_list_account, remaining_accounts @ ..] =
             accounts
         else {
-            err!(ErrorCode::AccountNotEnoughKeys)?
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+        let fund_stake_accounts = {
+            if remaining_accounts.len() < 5 {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?;
+            }
+            &remaining_accounts[..5]
         };
 
         require_keys_eq!(pool_account_address, pool_account.key());
+        require_keys_eq!(current_item.token_mint, pool_token_mint.key());
+        for (index, fund_stake_account) in fund_stake_accounts.iter().enumerate() {
+            let fund_stake_account_address = *FundAccount::find_stake_account_address(
+                &ctx.fund_account.key(),
+                pool_account.key,
+                index as u8,
+            );
+            require_keys_eq!(fund_stake_account_address, fund_stake_account.key());
+        }
+
+        let spl_stake_pool_service = SPLStakePoolService::<T>::new(
+            pool_program,
+            pool_account,
+            pool_token_mint,
+            pool_token_program,
+        )?;
+
+        let available_fund_stake_accounts_indices = fund_stake_accounts
+            .iter()
+            .enumerate()
+            .filter_map(|(index, fund_stake_account)| {
+                (!fund_stake_account.is_initialized()).then_some(index)
+            })
+            .collect::<Vec<_>>();
+
+        // Maximum number of validators = # of available(uninitialized) fund stake accounts
+        let num_validators = available_fund_stake_accounts_indices.len();
+        let validator_stake_accounts = spl_stake_pool_service
+            .get_validator_stake_accounts(validator_list_account, num_validators)?;
+        // Update to actual # of validators
+        let num_validators = validator_stake_accounts.len();
+
+        let withdraw_stake_items = available_fund_stake_accounts_indices
+            .iter()
+            .zip(&validator_stake_accounts)
+            .map(
+                |(&fund_stake_account_index, &validator_stake_account)| WithdrawStakeItem {
+                    validator_stake_account,
+                    fund_stake_account: fund_stake_accounts[fund_stake_account_index].key(),
+                    fund_stake_account_index: fund_stake_account_index as u8,
+                },
+            )
+            .collect();
 
         let fund_account = ctx.fund_account.load()?;
-        let mut required_accounts = vec![
-            (pool_program.key(), pool_program.is_writable),
-            (pool_account.key(), pool_account.is_writable),
-            (pool_token_mint.key(), pool_token_mint.is_writable),
-            (pool_token_program.key(), pool_token_program.is_writable),
-            (
-                reserve_stake_account.key(),
-                reserve_stake_account.is_writable,
-            ),
-            (
-                validator_list_account.key(),
-                validator_list_account.is_writable,
-            ),
-            (stake_program.key(), stake_program.is_writable),
-            (fund_account.get_reserve_account_address()?, true),
-            (
-                fund_account.find_supported_token_reserve_account_address(&item.mint)?,
-                true,
-            ),
-        ];
+        let fund_reserve_account = fund_account.get_reserve_account_address()?;
+        let fund_supported_token_reserve_account =
+            fund_account.find_supported_token_reserve_account_address(pool_token_mint.key)?;
 
-        let available_withdrawals_from_reserve_or_validator =
-            SPLStakePoolService::<T>::get_withdrawal_available_from_reserve_or_validator(
-                pool_program,
-                pool_account,
-                reserve_stake_account,
-                validator_list_account,
-                item.token_amount,
-            )?;
+        let accounts_to_withdraw =
+            SPLStakePoolService::<T>::find_accounts_to_withdraw(pool_account)?;
+        let fund_stake_accounts = available_fund_stake_accounts_indices
+            .into_iter()
+            .take(num_validators)
+            .map(|index| (fund_stake_accounts[index].key(), true));
+        let validator_stake_accounts = validator_stake_accounts
+            .into_iter()
+            .map(|address| (address, true));
 
-        let required_withdraw_sol_or_stake_accounts =
-            SPLStakePoolService::<T>::find_accounts_to_withdraw_sol_or_stake(pool_account)?;
-        required_accounts.extend(required_withdraw_sol_or_stake_accounts);
+        let required_accounts = [
+            (fund_reserve_account, true),
+            (fund_supported_token_reserve_account, true),
+        ]
+        .into_iter()
+        .chain(accounts_to_withdraw)
+        .chain(fund_stake_accounts)
+        .chain(validator_stake_accounts);
 
-        if let AvailableWithdrawals::Validators(available_withdrawals_from_reserve_or_validator) =
-            available_withdrawals_from_reserve_or_validator
-        {
-            require_neq!(
-                available_withdrawals_from_reserve_or_validator[0].0,
-                Pubkey::default(),
-                errors::ErrorCode::StakingSPLActiveStakeNotAvailableException
-            );
-
-            let fund_stake_accounts = available_withdrawals_from_reserve_or_validator
-                .iter()
-                .enumerate()
-                .map(|(account_index, _)| {
-                    SPLStakePoolService::<T>::find_fund_stake_accounts_for_withdraw_stake(&[
-                        ctx.fund_account.key().as_ref(),
-                        pool_account.key.as_ref(),
-                        &[account_index as u8],
-                    ])
-                })
-                .collect::<Vec<_>>();
-
-            let withdraw_stake_items = available_withdrawals_from_reserve_or_validator
-                .into_iter()
-                .enumerate()
-                .map(
-                    |(index, (validator_stake_account, token_amount))| WithdrawStakeItem {
-                        validator_stake_account,
-                        fund_stake_account: fund_stake_accounts[index].0,
-                        fund_stake_account_signer_seeds: vec![
-                            ctx.fund_account.key().as_ref().to_vec(),
-                            pool_account.key.as_ref().to_vec(),
-                            vec![index as u8],
-                            vec![fund_stake_accounts[index].2],
-                        ],
-                        token_amount,
-                    },
-                )
-                .collect::<Vec<_>>();
-            required_accounts.extend(
-                withdraw_stake_items
-                    .iter()
-                    .map(|item| (item.validator_stake_account, true)),
-            );
-            required_accounts.extend(
-                fund_stake_accounts
-                    .iter()
-                    .map(|fund_stake_account| (fund_stake_account.0, fund_stake_account.1)),
-            );
-            command.state = UnstakeLSTCommandState::RequestUnstake(withdraw_stake_items);
-        } else {
-            command.state = UnstakeLSTCommandState::Unstake;
+        Ok(Self {
+            state: UnstakeLSTCommandState::Execute {
+                unstake_command_items: items.to_vec(),
+                withdraw_stake_items,
+            },
         }
-
-        return Ok((
-            None,
-            Some(command.with_required_accounts(required_accounts)),
-        ));
+        .with_required_accounts(required_accounts))
     }
 
-    fn execute_unstake<'a, 'info: 'a>(
+    #[inline(never)]
+    fn execute_execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
-    ) -> Result<()> {
-        let supported_token_pricing_source = ctx
+        unstake_command_items: &[UnstakeLSTCommandItem],
+        withdraw_stake_items: &[WithdrawStakeItem],
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if unstake_command_items.is_empty() {
+            return Ok((None, None));
+        }
+        let item = &unstake_command_items[0];
+
+        let token_pricing_source = ctx
             .fund_account
             .load()?
-            .get_supported_token(&item.mint)?
+            .get_supported_token(&item.token_mint)?
             .pricing_source
             .try_deserialize()?;
-        match supported_token_pricing_source {
-            Some(TokenPricingSource::SPLStakePool { address }) => {
-                self.unstake_from_spl_stake_pool::<SPLStakePool>(ctx, accounts, item, address)
-            }
-            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
-                self.unstake_from_spl_stake_pool::<SanctumSingleValidatorSPLStakePool>(
-                    ctx, accounts, item, address,
-                )
-            }
-            // otherwise fails
-            Some(TokenPricingSource::MarinadeStakePool { .. })
-            | Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
-        }
-    }
 
-    fn unstake_from_spl_stake_pool<'a, 'info, T>(
-        &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
-        pool_account_address: Pubkey,
-    ) -> Result<()>
-    where
-        'info: 'a,
-        T: SPLStakePoolInterface,
-    {
-        let [pool_program, pool_account, pool_token_mint, pool_token_program, reserve_stake_account, _validator_list_account, stake_program, fund_reserve_account, fund_supported_token_reserve_account, withdraw_authority, manager_fee_account, sysvar_clock_program, sysvar_stake_history_program, ..] =
-            accounts
-        else {
-            err!(ErrorCode::AccountNotEnoughKeys)?
-        };
-
-        require_keys_eq!(pool_account_address, *pool_account.key);
-
-        let (to_sol_account_amount, returned_sol_amount) = {
-            let fund_account = ctx.fund_account.load()?;
-            SPLStakePoolService::<T>::new(
-                pool_program,
-                pool_account,
-                pool_token_mint,
-                pool_token_program,
-            )?
-            .withdraw_sol(
-                withdraw_authority,
-                reserve_stake_account,
-                manager_fee_account,
-                sysvar_clock_program,
-                sysvar_stake_history_program,
-                stake_program,
-                fund_supported_token_reserve_account,
-                fund_reserve_account,
-                fund_reserve_account,
-                &fund_account.get_reserve_account_seeds(),
-                item.token_amount,
-            )?
-        };
-
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        fund_account.sol.operation_reserved_amount =
-            fund_account.sol.operation_reserved_amount + returned_sol_amount;
-
-        let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-        supported_token.token.operation_reserved_amount =
-            supported_token.token.operation_reserved_amount - item.token_amount;
-
-        msg!(
-            "unstaked {} tokens to get {} sol",
-            item.token_amount,
-            returned_sol_amount
-        );
-
-        require_gte!(returned_sol_amount, item.token_amount);
-        require_eq!(
-            fund_account.sol.operation_reserved_amount,
-            to_sol_account_amount
-        );
-
-        Ok(())
-    }
-
-    fn execute_request_unstake<'a, 'info: 'a>(
-        &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
-        accounts: &[&'info AccountInfo<'info>],
-        item: &UnstakeLSTCommandItem,
-        withdraw_stake_items: &Vec<WithdrawStakeItem>,
-    ) -> Result<()> {
-        let supported_token_pricing_source = ctx
-            .fund_account
-            .load()?
-            .get_supported_token(&item.mint)?
-            .pricing_source
-            .try_deserialize()?;
-        match supported_token_pricing_source {
+        let result = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address }) => self
-                .request_unstake_from_spl_stake_pool::<SPLStakePool>(
+                .spl_stake_pool_withdraw_sol_or_stake::<SPLStakePool>(
                     ctx,
                     accounts,
+                    item,
                     withdraw_stake_items,
                     address,
-                ),
-            Some(TokenPricingSource::MarinadeStakePool { .. }) => {
-                // require_keys_eq!(address, pool_account.key());
+                )?,
+            Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                require_eq!(withdraw_stake_items.len(), 0);
 
-                todo!() // TODO: support marinade..
+                self.marinade_stake_pool_order_unstake(ctx, accounts, item, address)?
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
-                self.request_unstake_from_spl_stake_pool::<SanctumSingleValidatorSPLStakePool>(
+                self.spl_stake_pool_withdraw_sol_or_stake::<SanctumSingleValidatorSPLStakePool>(
                     ctx,
                     accounts,
+                    item,
                     withdraw_stake_items,
                     address,
-                )
+                )?
             }
-            // otherwise fails
+            // fail when supported token is not unstakable
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
         }
+        .map(
+            |(
+                to_sol_account_amount,
+                burnt_token_amount,
+                unstaked_sol_amount,
+                unstaking_sol_amount,
+                deducted_sol_fee_amount,
+            )| {
+                // Update fund account
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                fund_account.sol.operation_reserved_amount += unstaked_sol_amount;
+                fund_account.sol.operation_receivable_amount +=
+                    unstaking_sol_amount + deducted_sol_fee_amount;
+
+                require_gte!(
+                    to_sol_account_amount,
+                    fund_account.sol.get_total_reserved_amount(),
+                );
+
+                let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
+                supported_token.token.operation_reserved_amount -= burnt_token_amount;
+
+                Ok(UnstakeLSTCommandResult {
+                    token_mint: item.token_mint,
+                    burnt_token_amount: item.allocated_token_amount,
+                    deducted_sol_fee_amount,
+                    unstaked_sol_amount,
+                    unstaking_sol_amount,
+                    operation_reserved_token_amount: supported_token
+                        .token
+                        .operation_reserved_amount,
+                    operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
+                    operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
+                }
+                .into())
+            },
+        )
+        .transpose()?;
+
+        // prepare state does not require additional accounts,
+        // so we can execute directly.
+        self.execute_prepare(ctx, accounts, unstake_command_items[1..].to_vec(), result)
     }
 
-    fn request_unstake_from_spl_stake_pool<'a, 'info, T>(
+    /// returns [to_sol_account_amount, burnt_token_amount, unstaked_sol_amount, unstaking_sol_amount, deducted_sol_fee_amount]
+    fn spl_stake_pool_withdraw_sol_or_stake<'info, T: SPLStakePoolInterface>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        withdraw_stake_items: &Vec<WithdrawStakeItem>,
+        unstake_command_item: &UnstakeLSTCommandItem,
+        withdraw_stake_items: &[WithdrawStakeItem],
         pool_account_address: Pubkey,
-    ) -> Result<()>
-    where
-        'info: 'a,
-        T: SPLStakePoolInterface,
-    {
-        let [pool_program, pool_account, pool_token_mint, pool_token_program, _reserve_stake_account, validator_list_account, stake_program, fund_reserve_account, fund_supported_token_reserve_account, withdraw_authority, manager_fee_account, sysvar_clock_program, _sysvar_stake_history_program, stake_accounts_with_remainings @ ..] =
+    ) -> Result<Option<(u64, u64, u64, u64, u64)>> {
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
         else {
-            err!(ErrorCode::AccountNotEnoughKeys)?
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
         };
 
-        require_keys_eq!(pool_account_address, *pool_account.key);
-
-        if let Some(withdraw_stake_item) = withdraw_stake_items.first() {
-            let fund_account = ctx.fund_account.load()?;
-            let validator_stake_account =
-                SPLStakePoolService::<T>::find_stake_account_info_by_address(
-                    stake_accounts_with_remainings,
-                    &withdraw_stake_item.validator_stake_account,
-                )?;
-            let fund_stake_account = SPLStakePoolService::<T>::find_stake_account_info_by_address(
-                stake_accounts_with_remainings,
-                &withdraw_stake_item.fund_stake_account,
-            )?;
-
-            // should create stake account and pass it the cpi call
-            SPLStakePoolService::<T>::create_stake_account_if_needed(
-                fund_reserve_account,
-                fund_stake_account,
-                &fund_account.get_reserve_account_seeds(),
-                &withdraw_stake_item
-                    .fund_stake_account_signer_seeds
-                    .iter()
-                    .map(|seed| seed.as_slice())
-                    .collect::<Vec<&[u8]>>()[..],
-                ctx.system_program,
-            )?;
-
-            let returned_sol_amount = SPLStakePoolService::<T>::new(
-                pool_program,
-                pool_account,
-                pool_token_mint,
-                pool_token_program,
-            )?
-            .withdraw_stake(
-                withdraw_authority,
-                validator_list_account,
-                validator_stake_account,
-                manager_fee_account,
-                sysvar_clock_program,
-                stake_program,
-                fund_supported_token_reserve_account,
-                fund_stake_account,
-                fund_reserve_account,
-                &fund_account.get_reserve_account_seeds(),
-                fund_reserve_account,
-                withdraw_stake_item.token_amount,
-            )?;
-            msg!("returned_sol_amount {}", returned_sol_amount);
-
-            // deactivate fund_stake_account
-            SPLStakePoolService::<T>::deactivate_stake_account(
-                sysvar_clock_program,
-                fund_stake_account,
-                fund_reserve_account,
-                &fund_account.get_reserve_account_seeds(),
-            )?;
-            drop(fund_account);
-
-            // returned_sol_amount + pool_token_fee as sol
-            let receivable_sol_amount = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                .new_pricing_service(
-                    [&stake_accounts_with_remainings[..], &[pool_account]] // TODO stake_accounts includes remaining_accounts, should be redefined..
-                        .concat()
-                        .into_iter(),
-                )?
-                .get_token_amount_as_sol(pool_token_mint.key, withdraw_stake_item.token_amount)?;
-
-            let mut fund_account = ctx.fund_account.load_mut()?;
-            let supported_token = fund_account.get_supported_token_mut(pool_token_mint.key)?;
-            supported_token.token.operation_reserved_amount -= withdraw_stake_item.token_amount;
-            fund_account.sol.operation_receivable_amount += receivable_sol_amount;
+        let num_items = withdraw_stake_items.len();
+        if remaining_accounts.len() < 2 * num_items {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?;
         }
 
-        Ok(())
+        let (fund_stake_accounts, remaining_accounts) = remaining_accounts.split_at(num_items);
+        let (validator_stake_accounts, pricing_sources) = remaining_accounts.split_at(num_items);
+
+        require_keys_eq!(pool_account_address, pool_account.key());
+        require_keys_eq!(unstake_command_item.token_mint, pool_token_mint.key());
+        for index in 0..num_items {
+            require_keys_eq!(
+                withdraw_stake_items[index].fund_stake_account,
+                fund_stake_accounts[index].key()
+            );
+            require_keys_eq!(
+                withdraw_stake_items[index].validator_stake_account,
+                validator_stake_accounts[index].key(),
+            );
+        }
+
+        let spl_stake_pool_service = SPLStakePoolService::<T>::new(
+            pool_program,
+            pool_account,
+            pool_token_mint,
+            pool_token_program,
+        )?;
+
+        // first update stake pool balance
+        spl_stake_pool_service.update_stake_pool_balance_if_needed(
+            withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            validator_list_account,
+            clock,
+        )?;
+
+        let fund_account = ctx.fund_account.load()?;
+
+        // Statistics
+        let mut total_token_amount_to_burn = unstake_command_item.allocated_token_amount;
+        let mut total_unstaked_sol_amount = 0;
+        let mut total_unstaking_sol_amount = 0;
+        let mut total_deducted_pool_token_fee_amount = 0;
+
+        // Withdraw SOL first
+        // To test withdraw stake, comment out this block
+        let (burnt_pool_token_amount, unstaked_sol_amount, deducted_pool_token_fee_amount) =
+            spl_stake_pool_service.withdraw_sol(
+                withdraw_authority,
+                reserve_stake_account,
+                manager_fee_account,
+                clock,
+                stake_history,
+                stake_program,
+                fund_reserve_account,
+                fund_supported_token_reserve_account,
+                fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
+                total_token_amount_to_burn,
+            )?;
+        total_token_amount_to_burn -= burnt_pool_token_amount;
+        total_unstaked_sol_amount += unstaked_sol_amount;
+        total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
+
+        for index in 0..num_items {
+            if total_token_amount_to_burn == 0 {
+                break;
+            }
+
+            let (burnt_pool_token_amount, unstaking_sol_amount, deducted_pool_token_fee_amount) =
+                spl_stake_pool_service.withdraw_stake(
+                    ctx.system_program,
+                    withdraw_authority,
+                    manager_fee_account,
+                    validator_list_account,
+                    clock,
+                    stake_program,
+                    validator_stake_accounts[index],
+                    fund_stake_accounts[index],
+                    &[&FundAccount::find_stake_account_address(
+                        &ctx.fund_account.key(),
+                        pool_account.key,
+                        withdraw_stake_items[index].fund_stake_account_index,
+                    )
+                    .get_seeds()],
+                    ctx.operator,
+                    ctx.fund_account.as_account_info(),
+                    &[&fund_account.get_seeds()],
+                    fund_supported_token_reserve_account,
+                    fund_reserve_account,
+                    &[&fund_account.get_reserve_account_seeds()],
+                    total_token_amount_to_burn,
+                )?;
+            total_token_amount_to_burn -= burnt_pool_token_amount;
+            total_unstaking_sol_amount += unstaking_sol_amount;
+            total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
+        }
+
+        if total_token_amount_to_burn == unstake_command_item.allocated_token_amount {
+            return Ok(None);
+        }
+
+        drop(fund_account);
+
+        // pricing service with updated token values
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().cloned())?;
+
+        // validation (expects diff <= withdraw_stake_count)
+        let total_burnt_token_amount =
+            unstake_command_item.allocated_token_amount - total_token_amount_to_burn;
+        let expected_pool_token_fee_amount =
+            total_burnt_token_amount.saturating_sub(pricing_service.get_sol_amount_as_token(
+                pool_token_mint.key,
+                total_unstaking_sol_amount + total_unstaked_sol_amount,
+            )?);
+        require_gte!(
+            1 + num_items as u64,
+            expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
+        );
+
+        // calculate deducted fee as SOL (will be added to SOL receivable)
+        let total_deducted_sol_fee_amount = pricing_service
+            .get_token_amount_as_sol(pool_token_mint.key, total_deducted_pool_token_fee_amount)?;
+
+        Ok(Some((
+            fund_reserve_account.lamports(),
+            total_burnt_token_amount,
+            total_unstaked_sol_amount,
+            total_unstaking_sol_amount,
+            total_deducted_sol_fee_amount,
+        )))
+    }
+
+    /// returns [to_sol_account_amount, burnt_token_amount, unstaked_sol_amount, unstaking_sol_amount, deducted_sol_fee_amount]
+    fn marinade_stake_pool_order_unstake<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        item: &UnstakeLSTCommandItem,
+        pool_account_address: Pubkey,
+    ) -> Result<Option<(u64, u64, u64, u64, u64)>> {
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, clock, rent, remaining_accounts @ ..] =
+            accounts
+        else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+
+        if remaining_accounts.len() < 5 {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?;
+        }
+
+        let (withdrawal_ticket_accounts, pricing_sources) = remaining_accounts.split_at(5);
+
+        require_keys_eq!(pool_account_address, pool_account.key());
+        require_keys_eq!(item.token_mint, pool_token_mint.key());
+        for (index, withdrawal_ticket_account) in withdrawal_ticket_accounts.iter().enumerate() {
+            let withdrawal_ticket_account_address =
+                *FundAccount::find_unstaking_ticket_account_address(
+                    &ctx.fund_account.key(),
+                    pool_account.key,
+                    index as u8,
+                );
+            require_keys_eq!(
+                withdrawal_ticket_account_address,
+                withdrawal_ticket_account.key()
+            );
+        }
+
+        let Some((withdrawal_ticket_account_index, withdrawal_ticket_account)) =
+            withdrawal_ticket_accounts
+                .iter()
+                .enumerate()
+                .find(|(_, account)| !account.is_initialized())
+        else {
+            // there is no available(uninitialized) withdrawal ticket account
+            return Ok(None);
+        };
+
+        let marinade_stake_pool_service = MarinadeStakePoolService::new(
+            pool_program,
+            pool_account,
+            pool_token_mint,
+            pool_token_program,
+        )?;
+
+        let (unstaking_sol_amount, deducted_sol_fee_amount) = {
+            let fund_account = ctx.fund_account.load()?;
+            marinade_stake_pool_service.order_unstake(
+                ctx.system_program,
+                clock,
+                rent,
+                withdrawal_ticket_account,
+                &[&FundAccount::find_unstaking_ticket_account_address(
+                    &ctx.fund_account.key(),
+                    pool_account.key,
+                    withdrawal_ticket_account_index as u8,
+                )
+                .get_seeds()],
+                ctx.operator, // here, operator pays rent
+                fund_supported_token_reserve_account,
+                fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
+                item.allocated_token_amount,
+            )?
+        };
+
+        // pricing service with updated token values
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().cloned())?;
+
+        // validation (expects diff <= 1)
+        let expected_sol_fee_amount = pricing_service
+            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
+            .saturating_sub(unstaking_sol_amount);
+        require_gte!(1, expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount));
+
+        Ok(Some((
+            fund_reserve_account.lamports(),
+            item.allocated_token_amount,
+            0, // unstaked_sol_amount
+            unstaking_sol_amount,
+            deducted_sol_fee_amount,
+        )))
     }
 }
