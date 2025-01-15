@@ -171,6 +171,7 @@ impl ClaimUnstakedSOLCommand {
                     ctx,
                     pool_account,
                     fund_reserve_account,
+                    fund_treasury_account,
                     command,
                 )?,
             Some(TokenPricingSource::MarinadeStakePool { .. }) => {
@@ -198,6 +199,7 @@ impl ClaimUnstakedSOLCommand {
                     ctx,
                     pool_account,
                     fund_reserve_account,
+                    fund_treasury_account,
                     command,
                 )?
             }
@@ -221,6 +223,7 @@ impl ClaimUnstakedSOLCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         pool_account: &'info AccountInfo<'info>,
         fund_reserve_account: Pubkey,
+        fund_treasury_account: Pubkey,
         next_command: Self,
     ) -> Result<OperationCommandEntry> {
         let accounts_to_claim_sol = SPLStakePoolService::<T>::find_accounts_to_claim_sol()?;
@@ -233,7 +236,7 @@ impl ClaimUnstakedSOLCommand {
             (address, true)
         });
 
-        let required_accounts = [(fund_reserve_account, true)]
+        let required_accounts = [(fund_reserve_account, true), (fund_treasury_account, true)]
             .into_iter()
             .chain(accounts_to_claim_sol)
             .chain(fund_stake_accounts);
@@ -324,7 +327,7 @@ impl ClaimUnstakedSOLCommand {
         self.execute_prepare(ctx, accounts, pool_token_mints[1..].to_vec(), result)
     }
 
-    /// return [claimed_sol_amount]
+    /// return [to_sol_account_amount, claimed_sol_amount]
     fn spl_stake_pool_claim_sol<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -332,7 +335,7 @@ impl ClaimUnstakedSOLCommand {
         pool_token_mint_address: &Pubkey, // just informative
         pool_account_address: Pubkey,
     ) -> Result<(u64, u64)> {
-        let [fund_reserve_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
+        let [fund_reserve_account, fund_treasury_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -364,11 +367,14 @@ impl ClaimUnstakedSOLCommand {
 
             let claimed_sol_amount = SPLStakePoolService::<T>::claim_sol(
                 pool_token_mint_address,
+                ctx.system_program,
                 clock,
                 stake_history,
                 stake_program,
                 fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
                 fund_stake_account,
+                fund_treasury_account,
                 ctx.fund_account.as_account_info(),
                 &[&fund_account.get_seeds()],
             )?;
@@ -387,7 +393,7 @@ impl ClaimUnstakedSOLCommand {
         Ok((to_sol_account_amount, total_claimed_sol_amount))
     }
 
-    /// return [claimed_sol_amount]
+    /// return [to_sol_account_amount, claimed_sol_amount]
     fn marinade_stake_pool_claim_sol<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,

@@ -692,31 +692,40 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         pool_token_mint: &Pubkey,
 
         // fixed
+        system_program: &Program<'info, System>,
         clock: &AccountInfo<'info>,
         stake_history: &AccountInfo<'info>,
         stake_program: &AccountInfo<'info>,
 
         // variant
         to_sol_account: &AccountInfo<'info>,
+        to_sol_account_seeds: &[&[&[u8]]],
         from_stake_account: &AccountInfo<'info>,
+        from_stake_account_rent_refund_account: &AccountInfo<'info>,
         from_stake_account_withdraw_authority: &AccountInfo<'info>,
         from_stake_account_withdraw_authority_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
+        let stake_account_data = &Self::deserialize_stake_account(from_stake_account)?;
+
         // Stake account is not withdrawable yet
-        if !Self::is_stake_account_withdrawable(&Self::deserialize_stake_account(
-            from_stake_account,
-        )?) {
+        if !Self::is_stake_account_withdrawable(
+            stake_account_data,
+            &Clock::from_account_info(clock)?,
+            &StakeHistory::from_account_info(stake_history)?,
+        )? {
             return Ok(0);
         }
 
         let to_sol_account_amount_before = to_sol_account.lamports();
-        let unstaked_sol_amount = from_stake_account.lamports();
+        // SAFE unwrap: withdrawable stake account always have meta
+        let from_stake_account_rent = stake_account_data.meta().unwrap().rent_exempt_reserve;
+        let unstaked_sol_amount = from_stake_account.lamports() - from_stake_account_rent;
 
         let withdraw_ix = solana_program::stake::instruction::withdraw(
             from_stake_account.key,
             from_stake_account_withdraw_authority.key,
             to_sol_account.key,
-            unstaked_sol_amount,
+            from_stake_account.lamports(),
             None,
         );
 
@@ -725,11 +734,24 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             &[
                 from_stake_account.to_account_info(),
                 from_stake_account_withdraw_authority.to_account_info(),
+                to_sol_account.to_account_info(),
                 clock.to_account_info(),
                 stake_history.to_account_info(),
                 stake_program.to_account_info(),
             ],
             from_stake_account_withdraw_authority_seeds,
+        )?;
+
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: to_sol_account.to_account_info(),
+                    to: from_stake_account_rent_refund_account.to_account_info(),
+                },
+                to_sol_account_seeds,
+            ),
+            from_stake_account_rent,
         )?;
 
         let to_sol_account_amount = to_sol_account.lamports();
@@ -747,9 +769,33 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         Ok(claimed_sol_amount)
     }
 
-    fn is_stake_account_withdrawable(stake_account_data: &StakeStateV2) -> bool {
-        // TODO stake_account_data.lockup().is_in_force()
-        // TODO v0.4/operation
-        true
+    /// ref: https://github.com/anza-xyz/agave/blob/master/programs/stake/src/stake_state.rs#L822
+    fn is_stake_account_withdrawable(
+        stake_account_data: &StakeStateV2,
+        clock: &Clock,
+        stake_history: &StakeHistory,
+    ) -> Result<bool> {
+        let StakeStateV2::Stake(_, stake, _) = stake_account_data else {
+            return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
+        };
+
+        // Runtime feature GwtDQBghCTBgmX2cpEGNPxTEBUTQRaDMGTr5qychdGMj has been activated since
+        // epoch 565 (mainnet), epoch 584 (devnet), and 0 (local).
+        // Since we know that this feature is activated in every cluster,
+        // we just use epoch 0 as activated epoch.
+        let new_rate_activation_epoch = Some(0);
+        // if we have a deactivation epoch and we're in cooldown
+        let staked = if clock.epoch >= stake.delegation.deactivation_epoch {
+            stake
+                .delegation
+                .stake(clock.epoch, stake_history, new_rate_activation_epoch)
+        } else {
+            // Assume full stake if the stake account hasn't been
+            //  de-activated, because in the future the exposed stake
+            //  might be higher than stake.stake() due to warmup
+            stake.delegation.stake
+        };
+
+        Ok(staked == 0)
     }
 }

@@ -70,7 +70,7 @@ describe("operator_spl_stake_pool", async () => {
                                     },
                                     {
                                         tokenMint: restaking.supportedTokenMetadata["mSOL"].mint,
-                                        allocatedTokenAmount: mSolSupportedTokenBalance0,
+                                        allocatedTokenAmount: mSolSupportedTokenBalance0.divn(2), // not enough balance in pool reserve pda
                                     },
                                     {
                                         tokenMint: restaking.supportedTokenMetadata["bbSOL"].mint,
@@ -115,29 +115,36 @@ describe("operator_spl_stake_pool", async () => {
         //     .eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 
-    // step("claim sol", async function () {
-    //     // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
-    //     await restaking.runOperatorFundCommands({
-    //         command: {
-    //             claimUnstakedSol: {
-    //                 0: {
-    //                     items: [
-    //                         {
-    //                             mint: restaking.supportedTokenMetadata["jitoSOL"].mint,
-    //                             fundStakeAccounts: restaking.fundStakeAccounts["jitoSOL"],
-    //                         },
-    //                         {
-    //                             mint: restaking.supportedTokenMetadata["bbSOL"].mint,
-    //                             fundStakeAccounts: restaking.fundStakeAccounts["bbSOL"],
-    //                         },
-    //                     ],
-    //                     state: {
-    //                         init: {},
-    //                     },
-    //                 }
-    //             },
-    //         },
-    //         requiredAccounts: [],
-    //     });
-    // });
+    step("claim sol and then will wait 2 epoch", async function () {
+        await restaking.runOperatorFundCommands({
+            command: {
+                claimUnstakedSol: {
+                    0: {
+                        state: {
+                            new: {},
+                        },
+                    }
+                },
+            },
+            requiredAccounts: [],
+        });
+    });
+
+    step("claim sol after 2 epoch wait", async () => {
+        const slotsPerEpoch = await restaking.connection.getEpochSchedule().then(e => e.slotsPerEpoch);
+        await restaking.sleepUntil(3 * slotsPerEpoch);
+
+        await restaking.runOperatorFundCommands({
+            command: {
+                claimUnstakedSol: {
+                    0: {
+                        state: {
+                            new: {},
+                        },
+                    }
+                },
+            },
+            requiredAccounts: [],
+        });
+    })
 });
