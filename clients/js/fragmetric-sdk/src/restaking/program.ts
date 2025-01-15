@@ -171,6 +171,10 @@ export class RestakingClient extends Program<RestakingIDL> {
         },
     };
 
+    private _log_referer() {
+      return typeof location !== 'undefined' ? [this.programMethods.operatorLogMessage(`referer: ${location.hostname}`.substring(0, 32)).instruction()] : [];
+    }
+
     public readonly user = {
         deposit: async ({user, supportedTokenMint, amount, depositMetadata = null }: {
             user: web3.PublicKey | web3.Keypair,
@@ -191,6 +195,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 events: ['userDepositedToFund'],
                 optionalEvents: ['userCreatedOrUpdatedFundAccount'],
                 instructions: await Promise.all([
+                    ...this._log_referer(),
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         userPublicKey,
                         this.address.receiptTokenAccount(userPublicKey),
@@ -248,6 +253,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 descriptions: ['Update prices of the fund assets.'],
                 events: ['operatorUpdatedFundPrices'],
                 instructions: await Promise.all([
+                    ...this._log_referer(),
                     this.programMethods
                         .operatorUpdateFundPrices()
                         .accountsPartial({
@@ -273,6 +279,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 descriptions: ['Update prices of the normalized token pool assets.'],
                 events: ['operatorUpdatedNormalizedTokenPoolPrices'],
                 instructions: await Promise.all([
+                    ...this._log_referer(),
                     this.programMethods
                         .operatorUpdateNormalizedTokenPoolPrices()
                         .accountsPartial({
@@ -294,6 +301,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 descriptions: ['Update the reward pools.'],
                 events: ['operatorUpdatedRewardPools'],
                 instructions: await Promise.all([
+                    ...this._log_referer(),
                     this.programMethods
                         .operatorUpdateRewardPools()
                         .accountsPartial({
@@ -313,6 +321,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 descriptions: [`WARNING: Donate SOL to the fund for testing.`, { amount, offsetReceivable }],
                 events: ['operatorDonatedToFund'],
                 instructions: await Promise.all([
+                    ...this._log_referer(),
                     this.programMethods
                         .operatorDonateSolToFund(amount, offsetReceivable)
                         .accountsPartial({

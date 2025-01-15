@@ -4,7 +4,6 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount},
 };
 use marinade_cpi::{program::MarinadeFinance, LiqPool, State, TicketAccountData};
-use marinade_client;
 
 use crate::constants::{DEVNET_MSOL_MINT_ADDRESS, MAINNET_MSOL_MINT_ADDRESS};
 use crate::utils::AccountInfoExt;

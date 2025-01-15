@@ -1,11 +1,5 @@
 import * as web3 from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
-import { Buffer } from 'buffer';
-
-if (typeof globalThis !== 'undefined') { // for browser bundle
-    globalThis.Buffer = Buffer;
-}
-
 import { Program, ProgramEvent } from './program';
 
 export type ProgramTransactionSignature = web3.SignaturePubkeyPair | web3.Signer | Buffer | Uint8Array | web3.VersionedTransaction | null;

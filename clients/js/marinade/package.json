@@ -4,9 +4,9 @@
   "private": true,
   "module": "src/index.ts",
   "peerDependencies": {
-    "@solana/web3.js": "^2.0.0"
+    "@solana/web3.js-2": "npm:@solana/web3.js@^2.0.0"
   },
   "devDependencies": {
-    "@solana/web3.js": "^2.0.0"
+    "@solana/web3.js-2": "npm:@solana/web3.js@^2.0.0"
   }
 }

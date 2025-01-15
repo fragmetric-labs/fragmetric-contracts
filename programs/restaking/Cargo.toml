@@ -39,10 +39,10 @@ jito-bytemuck = { workspace = true }
 spl-tlv-account-resolution = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 spl-stake-pool = { workspace = true }
-marinade-cpi = { workspace = true } # TODO: deprecate
-whirlpool-cpi = { workspace = true } # TODO: deprecate
-marinade-client = { workspace = true }
-whirlpool-client = { workspace = true }
+marinade-cpi = { workspace = true }
+whirlpool-cpi = { workspace = true }
+# marinade-client = { workspace = true }
+# whirlpool-client = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
