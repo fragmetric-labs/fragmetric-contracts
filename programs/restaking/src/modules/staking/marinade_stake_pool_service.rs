@@ -320,7 +320,6 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         // variant
         withdrawal_ticket_account: &'info AccountInfo<'info>,
-        withdrawal_ticket_account_rent_refund_account: &AccountInfo<'info>, // receive rent of ticket account
         withdrawal_ticket_account_beneficiary: &AccountInfo<'info>,
         withdrawal_ticket_account_beneficiary_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
@@ -358,7 +357,7 @@ impl<'info> MarinadeStakePoolService<'info> {
                 system_program.to_account_info(),
                 anchor_lang::system_program::Transfer {
                     from: withdrawal_ticket_account_beneficiary.to_account_info(),
-                    to: withdrawal_ticket_account_rent_refund_account.to_account_info(),
+                    to: withdrawal_ticket_account.to_account_info(),
                 },
                 withdrawal_ticket_account_beneficiary_seeds,
             ),

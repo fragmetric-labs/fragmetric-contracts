@@ -186,11 +186,10 @@ impl ClaimUnstakedSOLCommand {
                     (address, true)
                 });
 
-                let required_accounts =
-                    [(fund_reserve_account, true), (fund_treasury_account, true)]
-                        .into_iter()
-                        .chain(accounts_to_claim_sol)
-                        .chain(withdrawal_ticket_accounts);
+                let required_accounts = [(fund_reserve_account, true)]
+                    .into_iter()
+                    .chain(accounts_to_claim_sol)
+                    .chain(withdrawal_ticket_accounts);
 
                 command.with_required_accounts(required_accounts)
             }
@@ -401,7 +400,7 @@ impl ClaimUnstakedSOLCommand {
         pool_token_mint_address: &Pubkey,
         pool_account_address: Pubkey,
     ) -> Result<(u64, u64)> {
-        let [fund_reserve_account, fund_treasury_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
+        let [fund_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -450,7 +449,6 @@ impl ClaimUnstakedSOLCommand {
                 pool_reserve_account,
                 clock,
                 withdrawal_ticket_account,
-                fund_treasury_account,
                 fund_reserve_account,
                 &[&fund_account.get_reserve_account_seeds()],
             )?;
