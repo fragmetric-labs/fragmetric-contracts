@@ -1,9 +1,9 @@
 {
   "private": true,
   "workspaces": [
-    "js/sdk",
-    "js/sdk/examples/*",
-    "js/playground"
+    "codegen",
+    "js/fragmetric-sdk/examples/*",
+    "js/*"
   ],
   "scripts": {
   }

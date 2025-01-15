@@ -2,11 +2,15 @@
 name = "restaking"
 version = "0.4.0"
 description = "Fragmetric Liquid Restaking Token Program"
-edition = "2021"
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+edition = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "restaking"
 
 [features]
 default = []
@@ -25,29 +29,22 @@ idl-build = [
 devnet = []
 mainnet = []
 
-[dependencies.anchor-lang]
-version = "0.30.1"
-features = ["interface-instructions", "event-cpi"]
-git = "https://github.com/fragmetric-labs/anchor.git"
-branch = "v0.30.1"
-
-[dependencies.anchor-spl]
-version = "0.30.1"
-git = "https://github.com/fragmetric-labs/anchor.git"
-branch = "v0.30.1"
-
 [dependencies]
-bytemuck = { version = "1.17.1", features = ["derive"] }
-jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", version = "0.0.3", tag = "v0.0.3" }
-jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", version = "0.0.3", tag = "v0.0.3" }
-jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", version = "0.0.3", tag = "v0.0.3" }
-spl-tlv-account-resolution = "0.6.5"
-spl-transfer-hook-interface = "0.6.5"
-spl-stake-pool = { version = "1.0.0", features = ["no-entrypoint"] }
-marinade-cpi = { path = "../../clients/rust/marinade-cpi" }
-whirlpool-cpi = { path = "../../clients/rust/whirlpool-cpi" }
+anchor-lang = { workspace = true }
+anchor-spl = { workspace = true }
+bytemuck = { workspace = true }
+jito-vault-sdk = { workspace = true }
+jito-vault-core = { workspace = true }
+jito-bytemuck = { workspace = true }
+spl-tlv-account-resolution = { workspace = true }
+spl-transfer-hook-interface = { workspace = true }
+spl-stake-pool = { workspace = true }
+marinade-cpi = { workspace = true }
+whirlpool-cpi = { workspace = true }
+# marinade-client = { workspace = true }
+# whirlpool-client = { workspace = true }
 
 [dev-dependencies]
-proptest = "1.6.0"
-solana-program-test = "1.18.15"
-solana-sdk = "1.18.15"
+proptest = { workspace = true }
+# solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }

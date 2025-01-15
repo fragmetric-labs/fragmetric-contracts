@@ -1,0 +1,6 @@
+node_modules
+lib
+
+# ignore the symlinked IDL files
+src/restaking/program.idl.active.json
+src/restaking/program.idl.active.ts

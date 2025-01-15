@@ -3,7 +3,5 @@ name = "marinade-cpi"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies.anchor-lang]
-version = "0.30.1"
-git = "https://github.com/fragmetric-labs/anchor.git"
-branch = "v0.30.1"
+[dependencies]
+anchor-lang = { workspace = true }
