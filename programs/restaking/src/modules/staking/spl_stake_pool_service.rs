@@ -10,9 +10,9 @@ use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
 use crate::errors::ErrorCode;
 use crate::utils::SystemProgramExt;
 
-pub trait SPLStakePoolInterface: anchor_lang::Id {}
+pub(in crate::modules) trait SPLStakePoolInterface: anchor_lang::Id {}
 
-pub struct SPLStakePool;
+pub(in crate::modules) struct SPLStakePool;
 
 impl anchor_lang::Id for SPLStakePool {
     fn id() -> Pubkey {
@@ -22,7 +22,7 @@ impl anchor_lang::Id for SPLStakePool {
 
 impl SPLStakePoolInterface for SPLStakePool {}
 
-pub struct SPLStakePoolService<'info, T = SPLStakePool>
+pub(in crate::modules) struct SPLStakePoolService<'info, T = SPLStakePool>
 where
     T: SPLStakePoolInterface,
 {
@@ -644,7 +644,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let stake_minimum_delegation = solana_program::stake::tools::get_minimum_delegation()?;
         // minimum staked sol amount = minimum delegation + rent exempt fee
         let minimum_staked_sol_amount =
-            spl_stake_pool::minimum_stake_lamports(&meta, stake_minimum_delegation);
+            spl_stake_pool::minimum_stake_lamports(meta, stake_minimum_delegation);
         let tolerance = pool_account_data
             .get_lamports_per_pool_token()
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;

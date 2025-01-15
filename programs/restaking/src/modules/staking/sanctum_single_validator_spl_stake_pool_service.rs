@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use super::{SPLStakePoolInterface, SPLStakePoolService};
 
-pub struct SanctumSingleValidatorSPLStakePool;
+pub(in crate::modules) struct SanctumSingleValidatorSPLStakePool;
 
 impl SanctumSingleValidatorSPLStakePool {
     const ID: Pubkey = pubkey!("SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY");
@@ -21,5 +21,5 @@ impl SPLStakePoolInterface for SanctumSingleValidatorSPLStakePool {}
 ///
 /// In the future when there is change,
 /// we can implement this service type.
-pub type SanctumSingleValidatorSPLStakePoolService<'info> =
+pub(in crate::modules) type SanctumSingleValidatorSPLStakePoolService<'info> =
     SPLStakePoolService<'info, SanctumSingleValidatorSPLStakePool>;

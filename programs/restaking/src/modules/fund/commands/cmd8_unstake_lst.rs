@@ -111,6 +111,14 @@ pub struct UnstakeLSTCommandResult {
     pub operation_reserved_token_amount: u64,
 }
 
+struct UnstakeResult {
+    to_sol_account_amount: u64,
+    burnt_token_amount: u64,
+    unstaked_sol_amount: u64,
+    unstaking_sol_amount: u64,
+    deducted_sol_fee_amount: u64,
+}
+
 impl SelfExecutable for UnstakeLSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
@@ -515,13 +523,13 @@ impl UnstakeLSTCommand {
             }
         }
         .map(
-            |(
-                to_sol_account_amount,
-                burnt_token_amount,
-                unstaked_sol_amount,
-                unstaking_sol_amount,
-                deducted_sol_fee_amount,
-            )| {
+            |UnstakeResult {
+                 to_sol_account_amount,
+                 burnt_token_amount,
+                 unstaked_sol_amount,
+                 unstaking_sol_amount,
+                 deducted_sol_fee_amount,
+             }| {
                 // Update fund account
                 let mut fund_account = ctx.fund_account.load_mut()?;
                 fund_account.sol.operation_reserved_amount += unstaked_sol_amount;
@@ -562,7 +570,6 @@ impl UnstakeLSTCommand {
         self.execute_prepare(ctx, accounts, unstake_command_items[1..].to_vec(), result)
     }
 
-    /// returns [to_sol_account_amount, burnt_token_amount, unstaked_sol_amount, unstaking_sol_amount, deducted_sol_fee_amount]
     fn spl_stake_pool_withdraw_sol_or_stake<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -572,7 +579,7 @@ impl UnstakeLSTCommand {
         withdraw_stake_items: &[WithdrawStakeItem],
         pool_account_address: Pubkey,
         resume_withdraw_stake_command: &mut Option<OperationCommandEntry>,
-    ) -> Result<Option<(u64, u64, u64, u64, u64)>> {
+    ) -> Result<Option<UnstakeResult>> {
         let unstake_command_item = &unstake_command_items[0];
         let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
@@ -720,9 +727,7 @@ impl UnstakeLSTCommand {
             };
 
             // fund_reserve_account .. stake_program (13 accounts)
-            let accounts_to_execute = (0..13)
-                .into_iter()
-                .map(|i| (accounts[i].key(), accounts[i].is_writable));
+            let accounts_to_execute = (0..13).map(|i| (accounts[i].key(), accounts[i].is_writable));
             let fund_stake_accounts = fund_stake_accounts[withdraw_stake_resuming_index..]
                 .iter()
                 .map(|account| (account.key(), account.is_writable));
@@ -763,23 +768,22 @@ impl UnstakeLSTCommand {
         let total_deducted_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, total_deducted_pool_token_fee_amount)?;
 
-        Ok(Some((
-            fund_reserve_account.lamports(),
-            total_burnt_token_amount,
-            total_unstaked_sol_amount,
-            total_unstaking_sol_amount,
-            total_deducted_sol_fee_amount,
-        )))
+        Ok(Some(UnstakeResult {
+            to_sol_account_amount: fund_reserve_account.lamports(),
+            burnt_token_amount: total_burnt_token_amount,
+            unstaked_sol_amount: total_unstaked_sol_amount,
+            unstaking_sol_amount: total_unstaking_sol_amount,
+            deducted_sol_fee_amount: total_deducted_sol_fee_amount,
+        }))
     }
 
-    /// returns [to_sol_account_amount, burnt_token_amount, unstaked_sol_amount, unstaking_sol_amount, deducted_sol_fee_amount]
     fn marinade_stake_pool_order_unstake<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         item: &UnstakeLSTCommandItem,
         pool_account_address: Pubkey,
-    ) -> Result<Option<(u64, u64, u64, u64, u64)>> {
+    ) -> Result<Option<UnstakeResult>> {
         let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, clock, rent, remaining_accounts @ ..] =
             accounts
         else {
@@ -855,12 +859,12 @@ impl UnstakeLSTCommand {
             .saturating_sub(unstaking_sol_amount);
         require_gte!(1, expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount));
 
-        Ok(Some((
-            fund_reserve_account.lamports(),
-            item.allocated_token_amount,
-            0, // unstaked_sol_amount
+        Ok(Some(UnstakeResult {
+            to_sol_account_amount: fund_reserve_account.lamports(),
+            burnt_token_amount: item.allocated_token_amount,
+            unstaked_sol_amount: 0,
             unstaking_sol_amount,
             deducted_sol_fee_amount,
-        )))
+        }))
     }
 }
