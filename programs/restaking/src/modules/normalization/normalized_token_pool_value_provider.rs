@@ -10,9 +10,9 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
-        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
+        result: &mut TokenValue,
     ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
@@ -23,25 +23,26 @@ impl TokenValueProvider for NormalizedTokenPoolValueProvider {
             *token_mint
         );
 
-        token_value_to_update.numerator.clear();
-        token_value_to_update
+        result.numerator.clear();
+        result
             .numerator
-            .reserve_exact(normalized_token_pool_account.supported_tokens.len());
+            .reserve_exact(NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE);
 
-        token_value_to_update.numerator.extend(
-            normalized_token_pool_account
-                .supported_tokens
-                .iter()
-                .map(|supported_token| {
-                    Asset::Token(
-                        supported_token.mint,
-                        Some(supported_token.pricing_source.clone()),
-                        supported_token.locked_amount,
-                    )
-                }),
-        );
-        token_value_to_update.denominator =
-            normalized_token_pool_account.normalized_token_supply_amount;
+        result
+            .numerator
+            .extend(
+                normalized_token_pool_account
+                    .supported_tokens
+                    .iter()
+                    .map(|supported_token| {
+                        Asset::Token(
+                            supported_token.mint,
+                            Some(supported_token.pricing_source.clone()),
+                            supported_token.locked_amount,
+                        )
+                    }),
+            );
+        result.denominator = normalized_token_pool_account.normalized_token_supply_amount;
 
         Ok(())
     }

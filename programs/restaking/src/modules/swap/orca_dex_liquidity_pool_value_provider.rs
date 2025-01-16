@@ -10,9 +10,9 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
-        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
+        result: &mut TokenValue,
     ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
@@ -48,11 +48,11 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
             mint => Asset::Token(mint, None, numerator),
         };
 
-        token_value_to_update.numerator.clear();
-        token_value_to_update.numerator.reserve_exact(1);
+        result.numerator.clear();
+        result.numerator.reserve_exact(1);
 
-        token_value_to_update.numerator.extend([asset]);
-        token_value_to_update.denominator = denominator;
+        result.numerator.extend([asset]);
+        result.denominator = denominator;
 
         Ok(())
     }
@@ -192,11 +192,11 @@ mod tests {
         fn test_resolve_token_pricing_source(
             sqrt_price in MIN_SQRT_PRICE_X64..MAX_SQRT_PRICE_X64,
         ) {
-            run_test_with_params(sqrt_price);
+            resolve_token_pricing_source(sqrt_price);
         }
     }
 
-    fn run_test_with_params(sqrt_price: u128) {
+    fn resolve_token_pricing_source(sqrt_price: u128) {
         let buffer = [0u8; 653];
         let mut whirlpool = Whirlpool::try_deserialize_unchecked(&mut buffer.as_slice()).unwrap();
         whirlpool.sqrt_price = sqrt_price;
@@ -219,9 +219,9 @@ mod tests {
                 let mut token_value = TokenValue::default();
                 OrcaDEXLiquidityPoolValueProvider
                     .resolve_underlying_assets(
-                        &mut token_value,
                         &whirlpool.token_mint_a,
                         &[&pricing_source_accounts[0]],
+                        &mut token_value,
                     )
                     .expect("Failed to resolve underlying asset");
 

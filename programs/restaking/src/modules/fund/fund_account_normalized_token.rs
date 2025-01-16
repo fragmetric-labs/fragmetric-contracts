@@ -4,7 +4,6 @@ use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 use crate::modules::reward::RewardType::Token;
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub(super) struct NormalizedToken {
     pub mint: Pubkey,

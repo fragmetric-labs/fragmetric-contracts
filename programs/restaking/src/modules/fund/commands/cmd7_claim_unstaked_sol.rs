@@ -1,46 +1,70 @@
 use anchor_lang::prelude::*;
 
-use crate::errors;
+use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::staking::{SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService};
+use crate::modules::staking::*;
+use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
+    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ClaimUnstakedSOLCommand {
-    #[max_len(10)]
-    items: Vec<ClaimUnstakedSOLCommandItem>,
     state: ClaimUnstakedSOLCommandState,
 }
 
-impl ClaimUnstakedSOLCommand {
-    pub(super) fn new_init(items: Vec<ClaimUnstakedSOLCommandItem>) -> Self {
-        Self {
-            items,
-            state: ClaimUnstakedSOLCommandState::Init,
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+pub enum ClaimUnstakedSOLCommandState {
+    /// Initializes a command with items based on the fund state and strategy.
+    #[default]
+    New,
+    /// Prepares to execute claim for the first token mint in the list.
+    Prepare {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        pool_token_mints: Vec<Pubkey>,
+    },
+    /// Executes claim for the first item and
+    Execute {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        pool_token_mints: Vec<Pubkey>,
+    },
+}
+
+impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => f.write_str("New"),
+            Self::Prepare { pool_token_mints } => {
+                if pool_token_mints.is_empty() {
+                    f.write_str("Prepare")
+                } else {
+                    f.debug_struct("Prepare")
+                        .field("pool_token_mint", &pool_token_mints[0])
+                        .finish()
+                }
+            }
+            Self::Execute { pool_token_mints } => {
+                if pool_token_mints.is_empty() {
+                    f.write_str("Execute")
+                } else {
+                    f.debug_struct("Execute")
+                        .field("pool_token_mint", &pool_token_mints[0])
+                        .finish()
+                }
+            }
         }
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct ClaimUnstakedSOLCommandItem {
-    mint: Pubkey,
-    #[max_len(5)]
-    fund_stake_accounts: Vec<Pubkey>,
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+pub struct ClaimUnstakedSOLCommandResult {
+    pub token_mint: Pubkey,
+    pub claimed_sol_amount: u64,
+    pub operation_reserved_sol_amount: u64,
+    pub operation_receivable_sol_amount: u64,
 }
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub enum ClaimUnstakedSOLCommandState {
-    Init,
-    ReadPoolState,
-    Claim,
-}
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct ClaimUnstakedSOLCommandResult {}
 
 impl SelfExecutable for ClaimUnstakedSOLCommand {
     fn execute<'a, 'info: 'a>(
@@ -51,195 +75,395 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if let Some(item) = self.items.first() {
-            let mut fund_account = ctx.fund_account.load_mut()?;
-            let token = fund_account.get_supported_token(&item.mint)?;
+        let (result, entry) = match &self.state {
+            ClaimUnstakedSOLCommandState::New => self.execute_new(ctx, accounts)?,
+            ClaimUnstakedSOLCommandState::Prepare {
+                pool_token_mints: token_mints,
+            } => self.execute_prepare(ctx, accounts, token_mints.clone(), None)?,
+            ClaimUnstakedSOLCommandState::Execute {
+                pool_token_mints: token_mints,
+            } => self.execute_execute(ctx, accounts, token_mints)?,
+        };
 
-            match &self.state {
-                ClaimUnstakedSOLCommandState::Init => {
-                    let mut command = self.clone();
-                    command.state = ClaimUnstakedSOLCommandState::ReadPoolState;
+        // TODO v0.4/operation: next step... unstake lst
+        Ok((result, entry))
+    }
+}
 
-                    match token.pricing_source.try_deserialize()? {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
-                            return Ok((
-                                None,
-                                Some(command.with_required_accounts([(address, false)])),
-                            ));
-                        }
-                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                            address,
-                        }) => {
-                            return Ok((
-                                None,
-                                Some(command.with_required_accounts([(address, false)])),
-                            ));
-                        }
-                        // otherwise fails
-                        Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::JitoRestakingVault { .. })
-                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | None => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        Some(TokenPricingSource::Mock { .. }) => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                    }
-                }
-                ClaimUnstakedSOLCommandState::ReadPoolState => {
-                    let mut command = self.clone();
-                    command.state = ClaimUnstakedSOLCommandState::Claim;
+// These are implementations of each command state.
+#[deny(clippy::wildcard_enum_match_arm)]
+impl ClaimUnstakedSOLCommand {
+    /// An initial state of `ClaimUnstakedLST` command.
+    /// In this state, operator iterates the fund and
+    /// finds token to claim.
+    #[inline(never)]
+    fn execute_new<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        let items = ctx
+            .fund_account
+            .load()?
+            .get_supported_tokens_iter()
+            .map(|supported_token| supported_token.mint)
+            .collect();
 
-                    let [pool_account_info, ..] = accounts else {
-                        err!(ErrorCode::AccountNotEnoughKeys)?
-                    };
+        // prepare state does not require additional accounts,
+        // so we can execute directly.
+        self.execute_prepare(ctx, accounts, items, None)
+    }
 
-                    let mut required_accounts = match token.pricing_source.try_deserialize()? {
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
-                            require_keys_eq!(address, *pool_account_info.key);
+    #[inline(never)]
+    fn execute_prepare<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mints: Vec<Pubkey>,
+        previous_execution_result: Option<OperationCommandResult>,
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if pool_token_mints.is_empty() {
+            return Ok((previous_execution_result, None));
+        }
+        let pool_token_mint = &pool_token_mints[0];
 
-                            <SPLStakePoolService>::find_accounts_to_claim_sol()
-                        }
-                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                            address,
-                        }) => {
-                            require_keys_eq!(address, *pool_account_info.key);
+        let fund_account = ctx.fund_account.load()?;
+        let pricing_source = fund_account
+            .get_supported_token(pool_token_mint)?
+            .pricing_source
+            .try_deserialize()?;
+        let pool_account = match pricing_source {
+            Some(TokenPricingSource::SPLStakePool { address })
+            | Some(TokenPricingSource::MarinadeStakePool { address })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => *accounts
+                .iter()
+                .find(|account| account.key() == address)
+                .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?,
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
 
-                            SanctumSingleValidatorSPLStakePoolService::find_accounts_to_claim_sol()
-                        }
-                        // otherwise fails
-                        Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::JitoRestakingVault { .. })
-                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | None => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        Some(TokenPricingSource::Mock { .. }) => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                    };
-                    required_accounts.extend([(fund_account.get_reserve_account_address()?, true)]);
-                    required_accounts.extend(
-                        item.fund_stake_accounts
-                            .iter()
-                            .map(|&account| (account, true)),
+        let fund_reserve_account = fund_account.get_reserve_account_address()?;
+        let fund_treasury_account = fund_account.get_treasury_account_address()?;
+
+        let command = Self {
+            state: ClaimUnstakedSOLCommandState::Execute { pool_token_mints },
+        };
+
+        drop(fund_account);
+        let entry = match pricing_source {
+            Some(TokenPricingSource::SPLStakePool { .. }) => self
+                .spl_stake_pool_prepare_claim_sol::<SPLStakePool>(
+                    ctx,
+                    pool_account,
+                    fund_reserve_account,
+                    fund_treasury_account,
+                    command,
+                )?,
+            Some(TokenPricingSource::MarinadeStakePool { .. }) => {
+                let accounts_to_claim_sol =
+                    MarinadeStakePoolService::find_accounts_to_claim_sol(pool_account)?;
+                let withdrawal_ticket_accounts = (0..5).map(|index| {
+                    let address = *FundAccount::find_unstaking_ticket_account_address(
+                        &ctx.fund_account.key(),
+                        pool_account.key,
+                        index,
                     );
+                    (address, true)
+                });
 
-                    return Ok((
-                        None,
-                        Some(command.with_required_accounts(required_accounts)),
-                    ));
-                }
-                ClaimUnstakedSOLCommandState::Claim => {
-                    let [sysvar_clock_program, sysvar_stake_history_program, stake_program, fund_reserve_account, fund_stake_accounts @ ..] =
-                        accounts
-                    else {
-                        err!(ErrorCode::AccountNotEnoughKeys)?
-                    };
+                let required_accounts = [(fund_reserve_account, true)]
+                    .into_iter()
+                    .chain(accounts_to_claim_sol)
+                    .chain(withdrawal_ticket_accounts);
 
-                    match token.pricing_source.try_deserialize()? {
-                        Some(TokenPricingSource::SPLStakePool { .. }) => {
-                            for (index, fund_stake_account) in fund_stake_accounts
-                                .iter()
-                                .take(item.fund_stake_accounts.len())
-                                .enumerate()
-                            {
-                                msg!(
-                                    "fund_stake_account {} key {}, lamports {}",
-                                    index,
-                                    fund_stake_account.key,
-                                    fund_stake_account.lamports()
-                                );
-                                if fund_stake_account.lamports() > 0 {
-                                    let received_sol_amount = fund_stake_account.lamports();
-                                    msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-                                    <SPLStakePoolService>::claim_sol(
-                                        sysvar_clock_program,
-                                        sysvar_stake_history_program,
-                                        stake_program,
-                                        fund_stake_account,
-                                        fund_reserve_account,
-                                        &fund_account.get_reserve_account_seeds(),
-                                    )?;
-
-                                    msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-
-                                    fund_account.sol.operation_receivable_amount -=
-                                        received_sol_amount;
-                                    fund_account.sol.operation_reserved_amount +=
-                                        received_sol_amount;
-                                }
-                            }
-                        }
-                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
-                            for (index, fund_stake_account) in fund_stake_accounts
-                                .iter()
-                                .take(item.fund_stake_accounts.len())
-                                .enumerate()
-                            {
-                                msg!(
-                                    "fund_stake_account {} key {}, lamports {}",
-                                    index,
-                                    fund_stake_account.key,
-                                    fund_stake_account.lamports()
-                                );
-                                if fund_stake_account.lamports() > 0 {
-                                    let received_sol_amount = fund_stake_account.lamports();
-                                    msg!("Before claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-                                    SanctumSingleValidatorSPLStakePoolService::claim_sol(
-                                        sysvar_clock_program,
-                                        sysvar_stake_history_program,
-                                        stake_program,
-                                        fund_stake_account,
-                                        fund_reserve_account,
-                                        &fund_account.get_reserve_account_seeds(),
-                                    )?;
-
-                                    msg!("After claim, fund_stake_account lamports {}, fund_reserve_account lamports {}", fund_stake_account.lamports(), fund_reserve_account.lamports());
-
-                                    fund_account.sol.operation_receivable_amount -=
-                                        received_sol_amount;
-                                    fund_account.sol.operation_reserved_amount +=
-                                        received_sol_amount;
-                                }
-                            }
-                        }
-                        // otherwise fails
-                        Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::JitoRestakingVault { .. })
-                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | None => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        Some(TokenPricingSource::Mock { .. }) => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                    }
-                }
+                command.with_required_accounts(required_accounts)
             }
-
-            // proceed to next token
-            if self.items.len() > 1 {
-                return Ok((
-                    None,
-                    Some(
-                        ClaimUnstakedSOLCommand::new_init(self.items[1..].to_vec())
-                            .without_required_accounts(),
-                    ),
-                ));
+            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                self.spl_stake_pool_prepare_claim_sol::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    pool_account,
+                    fund_reserve_account,
+                    fund_treasury_account,
+                    command,
+                )?
             }
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
+
+        Ok((previous_execution_result, Some(entry)))
+    }
+
+    fn spl_stake_pool_prepare_claim_sol<'info, T: SPLStakePoolInterface>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        pool_account: &'info AccountInfo<'info>,
+        fund_reserve_account: Pubkey,
+        fund_treasury_account: Pubkey,
+        next_command: Self,
+    ) -> Result<OperationCommandEntry> {
+        let accounts_to_claim_sol = SPLStakePoolService::<T>::find_accounts_to_claim_sol()?;
+        let fund_stake_accounts = (0..5).map(|index| {
+            let address = *FundAccount::find_stake_account_address(
+                &ctx.fund_account.key(),
+                pool_account.key,
+                index,
+            );
+            (address, true)
+        });
+
+        let required_accounts = [(fund_reserve_account, true), (fund_treasury_account, true)]
+            .into_iter()
+            .chain(accounts_to_claim_sol)
+            .chain(fund_stake_accounts);
+
+        Ok(next_command.with_required_accounts(required_accounts))
+    }
+
+    #[inline(never)]
+    fn execute_execute<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mints: &[Pubkey],
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if pool_token_mints.is_empty() {
+            return Ok((None, None));
+        }
+        let pool_token_mint = &pool_token_mints[0];
+
+        let token_pricing_source = ctx
+            .fund_account
+            .load()?
+            .get_supported_token(pool_token_mint)?
+            .pricing_source
+            .try_deserialize()?;
+
+        let (to_sol_account_amount, claimed_sol_amount) = match token_pricing_source {
+            Some(TokenPricingSource::SPLStakePool { address }) => self
+                .spl_stake_pool_claim_sol::<SPLStakePool>(
+                    ctx,
+                    accounts,
+                    pool_token_mint,
+                    address,
+                )?,
+            Some(TokenPricingSource::MarinadeStakePool { address }) => {
+                self.marinade_stake_pool_claim_sol(ctx, accounts, pool_token_mint, address)?
+            }
+            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_claim_sol::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    accounts,
+                    pool_token_mint,
+                    address,
+                )?
+            }
+            // otherwise fails
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
+
+        let result = if claimed_sol_amount == 0 {
+            // claim did not happen
+            None
+        } else {
+            // update fund account
+            let mut fund_account = ctx.fund_account.load_mut()?;
+            fund_account.sol.operation_reserved_amount += claimed_sol_amount;
+            fund_account.sol.operation_receivable_amount -= claimed_sol_amount;
+
+            require_gte!(
+                to_sol_account_amount,
+                fund_account.sol.get_total_reserved_amount(),
+            );
+
+            Some(
+                ClaimUnstakedSOLCommandResult {
+                    token_mint: *pool_token_mint,
+                    claimed_sol_amount,
+                    operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
+                    operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
+                }
+                .into(),
+            )
+        };
+
+        // prepare state does not require additional accounts,
+        // so we can execute directly.
+        self.execute_prepare(ctx, accounts, pool_token_mints[1..].to_vec(), result)
+    }
+
+    /// return [to_sol_account_amount, claimed_sol_amount]
+    fn spl_stake_pool_claim_sol<'info, T: SPLStakePoolInterface>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mint_address: &Pubkey, // just informative
+        pool_account_address: Pubkey,
+    ) -> Result<(u64, u64)> {
+        let [fund_reserve_account, fund_treasury_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
+            accounts
+        else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+
+        if remaining_accounts.len() < 5 {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
         }
 
-        Ok((None, None))
+        let (fund_stake_accounts, pricing_sources) = remaining_accounts.split_at(5);
+
+        let mut total_claimed_sol_amount = 0;
+
+        let fund_account = ctx.fund_account.load()?;
+
+        for (index, fund_stake_account) in fund_stake_accounts.iter().enumerate() {
+            let fund_stake_account_address = *FundAccount::find_stake_account_address(
+                &ctx.fund_account.key(),
+                &pool_account_address,
+                index as u8,
+            );
+
+            require_keys_eq!(fund_stake_account_address, fund_stake_account.key());
+
+            // Skip uninitialized stake account
+            if !fund_stake_account.is_initialized() {
+                continue;
+            }
+
+            let claimed_sol_amount = SPLStakePoolService::<T>::claim_sol(
+                pool_token_mint_address,
+                ctx.system_program,
+                clock,
+                stake_history,
+                stake_program,
+                fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
+                fund_stake_account,
+                fund_treasury_account,
+                ctx.fund_account.as_account_info(),
+                &[&fund_account.get_seeds()],
+            )?;
+
+            total_claimed_sol_amount += claimed_sol_amount;
+        }
+
+        drop(fund_account);
+
+        // pricing service with updated token values
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().cloned())?;
+
+        let to_sol_account_amount = fund_reserve_account.lamports();
+
+        Ok((to_sol_account_amount, total_claimed_sol_amount))
+    }
+
+    /// return [to_sol_account_amount, claimed_sol_amount]
+    fn marinade_stake_pool_claim_sol<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mint_address: &Pubkey,
+        pool_account_address: Pubkey,
+    ) -> Result<(u64, u64)> {
+        let [fund_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
+            accounts
+        else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+
+        if remaining_accounts.len() < 5 {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        }
+
+        let (withdrawal_ticket_accounts, pricing_sources) = remaining_accounts.split_at(5);
+
+        require_keys_eq!(pool_account_address, pool_account.key());
+        require_keys_eq!(*pool_token_mint_address, pool_token_mint.key());
+
+        let marinade_stake_pool_service = MarinadeStakePoolService::new(
+            pool_program,
+            pool_account,
+            pool_token_mint,
+            pool_token_program,
+        )?;
+
+        let mut total_claimed_sol_amount = 0;
+
+        let fund_account = ctx.fund_account.load()?;
+
+        for (index, withdrawal_ticket_account) in withdrawal_ticket_accounts.iter().enumerate() {
+            let withdrawal_ticket_account_address =
+                *FundAccount::find_unstaking_ticket_account_address(
+                    &ctx.fund_account.key(),
+                    pool_account.key,
+                    index as u8,
+                );
+
+            require_keys_eq!(
+                withdrawal_ticket_account_address,
+                withdrawal_ticket_account.key()
+            );
+
+            // Skip uninitialized stake account
+            if !withdrawal_ticket_account.is_initialized() {
+                continue;
+            }
+
+            let claimed_sol_amount = marinade_stake_pool_service.claim_sol(
+                ctx.system_program,
+                pool_reserve_account,
+                clock,
+                withdrawal_ticket_account,
+                fund_reserve_account,
+                &[&fund_account.get_reserve_account_seeds()],
+            )?;
+
+            total_claimed_sol_amount += claimed_sol_amount;
+        }
+
+        drop(fund_account);
+
+        // pricing service with updated token values
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().cloned())?;
+
+        let to_sol_account_amount = fund_reserve_account.lamports();
+
+        Ok((to_sol_account_amount, total_claimed_sol_amount))
     }
 }

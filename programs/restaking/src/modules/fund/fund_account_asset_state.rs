@@ -9,7 +9,6 @@ use crate::utils::get_proportional_amount;
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct AssetState {
     token_mint: Pubkey,
@@ -393,7 +392,6 @@ impl AssetState {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct WithdrawalBatch {
     pub batch_id: u64,

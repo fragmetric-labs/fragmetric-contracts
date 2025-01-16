@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
-use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
-use crate::modules::pricing::{Asset, TokenPricingSource, TokenValue, TokenValueProvider};
+use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
 pub struct FundReceiptTokenValueProvider;
 
@@ -11,9 +9,9 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
-        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
+        result: &mut TokenValue,
     ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
@@ -23,29 +21,20 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         require_keys_eq!(fund_account.receipt_token_mint, *token_mint);
 
-        // sol + supported tokens + restaking vaults
-        let mut desired_capacity = 1
-            + fund_account.get_supported_tokens_iter().count()
-            + fund_account.get_restaking_vaults_iter().count();
-        // normalized token
-        if fund_account.get_normalized_token().is_some() {
-            desired_capacity += 1;
-        }
-
-        token_value_to_update.numerator.clear();
-        token_value_to_update
+        result.numerator.clear();
+        result
             .numerator
-            .reserve_exact(desired_capacity);
+            .reserve_exact(TokenValue::MAX_NUMERATOR_SIZE);
 
         // sol_operation_reserved_amount + sol_operation_receivable_amount
-        token_value_to_update.numerator.push(Asset::SOL(
+        result.numerator.push(Asset::SOL(
             fund_account.sol.operation_reserved_amount
                 + fund_account.sol.operation_receivable_amount,
         ));
 
         // lst_operation_reserved_amount + operation_receivable_amount
         for supported_token in fund_account.get_supported_tokens_iter() {
-            token_value_to_update.numerator.push(Asset::Token(
+            result.numerator.push(Asset::Token(
                 supported_token.mint,
                 supported_token.pricing_source.try_deserialize()?,
                 supported_token.token.operation_reserved_amount
@@ -55,7 +44,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         // nt_operation_reserved_amount
         if let Some(normalized_token) = fund_account.get_normalized_token() {
-            token_value_to_update.numerator.push(Asset::Token(
+            result.numerator.push(Asset::Token(
                 normalized_token.mint,
                 normalized_token.pricing_source.try_deserialize()?,
                 normalized_token.operation_reserved_amount,
@@ -64,7 +53,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
 
         // vrt_operation_reserved + vrt_operation_receivable_amount
         for restaking_vault in fund_account.get_restaking_vaults_iter() {
-            token_value_to_update.numerator.push(Asset::Token(
+            result.numerator.push(Asset::Token(
                 restaking_vault.receipt_token_mint,
                 restaking_vault
                     .receipt_token_pricing_source
@@ -74,7 +63,7 @@ impl TokenValueProvider for FundReceiptTokenValueProvider {
             ));
         }
 
-        token_value_to_update.denominator = fund_account.receipt_token_supply_amount;
+        result.denominator = fund_account.receipt_token_supply_amount;
 
         Ok(())
     }

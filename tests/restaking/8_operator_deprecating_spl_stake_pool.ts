@@ -30,41 +30,54 @@ describe("operator_spl_stake_pool", async () => {
         });
     });
 
-    step("withdraw SOL from bbSOL stake pool", async function () {
+    step("withdraw SOL or stake", async function () {
         await restaking.sleep(1); // ...block hash not found?
 
+        // @ts-ignore
         const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");
+        const mSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount('mSOL');
+        // @ts-ignore
         const bbSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("bbSOL");
         const [
             fragSOLFundReserveAccountBalance0,
-            jitoSolSupportedTokenBalance0_,
-            bbSolSupportedTokenBalance0_,
+            jitoSolSupportedTokenBalance0,
+            mSolSupportedTokenBalance0,
+            bbSolSupportedTokenBalance0,
         ] = await Promise.all([
             restaking.getFragSOLFundReserveAccountBalance(),
-            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed"),
-            restaking.connection.getTokenAccountBalance(bbSolSupportedTokenAccount, "confirmed"),
+            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
+            restaking.connection.getTokenAccountBalance(mSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
+            restaking.connection.getTokenAccountBalance(bbSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
         ]);
-        const jitoSolSupportedTokenBalance0 = new BN(jitoSolSupportedTokenBalance0_.value.amount);
-        const bbSolSupportedTokenBalance0 = new BN(bbSolSupportedTokenBalance0_.value.amount);
-        logger.debug(`before withdraw-sol from jitoSOL stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance0}, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance0}`);
-        logger.debug(`before withdraw-sol from bbSOL stake pool: bbSolSupportedTokenBalance=${bbSolSupportedTokenBalance0}, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance0}`);
+        logger.debug(`before withdraw-sol, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance0}`);
+        logger.debug(`before withdraw-sol, jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance0}`);
+        logger.debug(`before withdraw-sol, mSolSupportedTokenBalance=${mSolSupportedTokenBalance0}`);
+        logger.debug(`before withdraw-sol, bbSolSupportedTokenBalance=${bbSolSupportedTokenBalance0}`);
 
         await restaking.runOperatorFundCommands({
             command: {
                 unstakeLst: {
                     0: {
-                        items: [
-                            {
-                                mint: restaking.supportedTokenMetadata["jitoSOL"].mint,
-                                tokenAmount: jitoSolSupportedTokenBalance0,
-                            },
-                            {
-                                mint: restaking.supportedTokenMetadata["bbSOL"].mint,
-                                tokenAmount: bbSolSupportedTokenBalance0,
-                            },
-                        ],
                         state: {
-                            init: {},
+                            prepare: {
+                                items: [
+                                    {
+                                        tokenMint: restaking.supportedTokenMetadata["jitoSOL"].mint,
+                                        allocatedTokenAmount: jitoSolSupportedTokenBalance0,
+                                    },
+                                    {
+                                        tokenMint: restaking.supportedTokenMetadata["mSOL"].mint,
+                                        allocatedTokenAmount: mSolSupportedTokenBalance0.divn(2), // not enough balance in pool reserve pda
+                                    },
+                                    {
+                                        tokenMint: restaking.supportedTokenMetadata["bbSOL"].mint,
+                                        allocatedTokenAmount: bbSolSupportedTokenBalance0,
+                                    },
+                                ],
+                            },
                         },
                     }
                 },
@@ -74,50 +87,41 @@ describe("operator_spl_stake_pool", async () => {
 
         const [
             fragSOLFundReserveAccountBalance1,
-            jitoSolSupportedTokenBalance1_,
-            jitoSolStakePoolInfo,
-            bbSolSupportedTokenBalance1_,
-            bbSolStakePoolInfo,
+            jitoSolSupportedTokenBalance1,
+            // jitoSolStakePoolInfo,
+            mSolSupportedTokenBalance1,
+            bbSolSupportedTokenBalance1,
+            // bbSolStakePoolInfo,
         ] = await Promise.all([
             restaking.getFragSOLFundReserveAccountBalance(),
-            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed"),
-            restaking.getSplStakePoolInfo(new web3.PublicKey(restaking.getConstant("mainnetJitosolStakePoolAddress"))),
-            restaking.connection.getTokenAccountBalance(bbSolSupportedTokenAccount, "confirmed"),
-            restaking.getSplStakePoolInfo(new web3.PublicKey(restaking.getConstant('mainnetBbsolStakePoolAddress'))),
+            restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
+            // restaking.getSplStakePoolInfo(new web3.PublicKey(restaking.getConstant("mainnetJitosolStakePoolAddress"))),
+            restaking.connection.getTokenAccountBalance(mSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
+            restaking.connection.getTokenAccountBalance(bbSolSupportedTokenAccount, "confirmed")
+                .then(v => new BN(v.value.amount)),
+            // restaking.getSplStakePoolInfo(new web3.PublicKey(restaking.getConstant('mainnetBbsolStakePoolAddress'))),
         ]);
-        const jitoSolSupportedTokenBalance1 = new BN(jitoSolSupportedTokenBalance1_.value.amount);
-        const jitoSolWithdrawFeeAmount = depositSolAmount.mul(jitoSolStakePoolInfo.solWithdrawalFee.numerator).div(jitoSolStakePoolInfo.solWithdrawalFee.denominator);
 
-        const bbSolSupportedTokenBalance1 = new BN(bbSolSupportedTokenBalance1_.value.amount);
-        const bbSolWithdrawFeeAmount = depositSolAmount.mul(bbSolStakePoolInfo.solWithdrawalFee.numerator).div(bbSolStakePoolInfo.solWithdrawalFee.denominator);
+        logger.debug(`after withdraw-sol, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance1}`);
+        logger.debug(`after withdraw-sol, jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance1}`);
+        logger.debug(`after withdraw-sol, mSolSupportedTokenBalance=${mSolSupportedTokenBalance1}`);
+        logger.debug(`after withdraw-sol, bbSolSupportedTokenBalance=${bbSolSupportedTokenBalance1}`);
 
-        logger.debug(`after withdraw-sol from jitoSOL stake pool: jitoSolSupportedTokenBalance=${jitoSolSupportedTokenBalance1}, jitoSolWithdrawFeeAmount=${jitoSolWithdrawFeeAmount}, fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance1}`);
-        logger.debug(`after withdraw-sol from bbSOL stake pool: bbSolSupportedTokenBalance=${bbSolSupportedTokenBalance1}, bbSolWithdrawFeeAmount=${bbSolWithdrawFeeAmount} fragSOLFundReserveAccountBalance=${fragSOLFundReserveAccountBalance1}`);
-
-        const actualReserveDiff = new BN(fragSOLFundReserveAccountBalance1).sub(new BN(fragSOLFundReserveAccountBalance0));
-        const expectedReserveDiff = depositSolAmount.sub(jitoSolWithdrawFeeAmount).sub(bbSolWithdrawFeeAmount);
+        // const actualReserveDiff = new BN(fragSOLFundReserveAccountBalance1).sub(new BN(fragSOLFundReserveAccountBalance0));
+        // const expectedReserveDiff = depositSolAmount.sub(jitoSolWithdrawFeeAmount).sub(bbSolWithdrawFeeAmount);
         // expect(actualReserveDiff.sub(expectedReserveDiff).abs().lte(new BN(1))) // 1 lamport diff?
         //     .eq(true, "withdrew sol amount should be equal to deposit sol amount except withdrawalSol fee");
     });
 
-    step("claim sol", async function () {
-        // console.log(`fundStakeAccounts:`, restaking.knownAddress.fundStakeAccounts);
+    step("claim sol and then will wait 2 epoch", async function () {
         await restaking.runOperatorFundCommands({
             command: {
                 claimUnstakedSol: {
                     0: {
-                        items: [
-                            {
-                                mint: restaking.supportedTokenMetadata["jitoSOL"].mint,
-                                fundStakeAccounts: restaking.fundStakeAccounts["jitoSOL"],
-                            },
-                            {
-                                mint: restaking.supportedTokenMetadata["bbSOL"].mint,
-                                fundStakeAccounts: restaking.fundStakeAccounts["bbSOL"],
-                            },
-                        ],
                         state: {
-                            init: {},
+                            new: {},
                         },
                     }
                 },
@@ -125,4 +129,22 @@ describe("operator_spl_stake_pool", async () => {
             requiredAccounts: [],
         });
     });
+
+    step("claim sol after 2 epoch wait", async () => {
+        const slotsPerEpoch = await restaking.connection.getEpochSchedule().then(e => e.slotsPerEpoch);
+        await restaking.sleepUntil(3 * slotsPerEpoch);
+
+        await restaking.runOperatorFundCommands({
+            command: {
+                claimUnstakedSol: {
+                    0: {
+                        state: {
+                            new: {},
+                        },
+                    }
+                },
+            },
+            requiredAccounts: [],
+        });
+    })
 });

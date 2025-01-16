@@ -3,8 +3,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors;
-use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
-use crate::utils::PDASeeds;
+use crate::modules::normalization::*;
 
 use super::{
     FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
@@ -17,13 +16,23 @@ pub struct NormalizeSTCommand {
     state: NormalizeSTCommandState,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Copy)]
 pub struct NormalizeSTCommandItem {
     supported_token_mint: Pubkey,
     allocated_token_amount: u64,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+impl std::fmt::Debug for NormalizeSTCommandItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            self.supported_token_mint, self.allocated_token_amount
+        )
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub enum NormalizeSTCommandState {
     /// Initializes a command with items based on the fund state and strategy.
     #[default]
@@ -41,7 +50,29 @@ pub enum NormalizeSTCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+impl std::fmt::Debug for NormalizeSTCommandState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => f.write_str("New"),
+            Self::Prepare { items } => {
+                if items.is_empty() {
+                    f.write_str("Prepare")
+                } else {
+                    f.debug_struct("Prepare").field("item", &items[0]).finish()
+                }
+            }
+            Self::Execute { items } => {
+                if items.is_empty() {
+                    f.write_str("Execute")
+                } else {
+                    f.debug_struct("Execute").field("item", &items[0]).finish()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct NormalizeSTCommandResult {
     pub supported_token_mint: Pubkey,
     pub normalized_supported_token_amount: u64,
@@ -121,8 +152,9 @@ impl NormalizeSTCommand {
         // here, we allocate with maximum capacity to ensure that
         // the program will not run out of memory even when more
         // supported tokens are added to fund in the future.
-        let mut items =
-            Vec::<NormalizeSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
+        let mut items = Vec::<NormalizeSTCommandItem>::with_capacity(
+            NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE,
+        );
 
         for supported_token in fund_account.get_supported_tokens_iter() {
             // if supported token is not normalizable then we cannot normalize.
@@ -200,11 +232,6 @@ impl NormalizeSTCommand {
             }
         }
 
-        // nothing to normalize even after calculation
-        if items.is_empty() {
-            return Ok((None, None));
-        }
-
         // prepare state does not require additional accounts,
         // so we can execute directly.
         drop(fund_account);
@@ -225,8 +252,8 @@ impl NormalizeSTCommand {
         if items.is_empty() {
             return Ok((previous_execution_result, None));
         }
-
         let item = &items[0];
+
         let fund_account = ctx.fund_account.load()?;
         let supported_token = fund_account.get_supported_token(&item.supported_token_mint)?;
         let normalized_token_pool_account_info = fund_account
@@ -241,26 +268,26 @@ impl NormalizeSTCommand {
                 error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
             })?;
 
-        let required_accounts =
+        // Prepare
+        let accounts_to_normalize_supported_token =
             NormalizedTokenPoolService::find_accounts_to_normalize_supported_token(
                 normalized_token_pool_account_info,
                 &supported_token.mint,
-            )?
-            .chain([
-                // to_normalized_token_account, which is fund's normalized_token_reserve_account
-                (
-                    fund_account.find_normalized_token_reserve_account_address()?,
-                    true,
-                ),
-                // from_supported_token_account, which is fund's supported_token_reserve_account
-                (
-                    fund_account
-                        .find_supported_token_reserve_account_address(&supported_token.mint)?,
-                    true,
-                ),
-                // authority of token accounts
-                (fund_account.get_reserve_account_address()?, false),
-            ]);
+            )?;
+        let fund_normalized_token_reserve_account =
+            fund_account.find_normalized_token_reserve_account_address()?;
+        let fund_supported_token_reserve_account =
+            fund_account.find_supported_token_reserve_account_address(&supported_token.mint)?;
+        let fund_reserve_account = fund_account.get_reserve_account_address()?;
+
+        let required_accounts = accounts_to_normalize_supported_token.chain([
+            // to_normalized_token_account
+            (fund_normalized_token_reserve_account, true),
+            // from_supported_token_account
+            (fund_supported_token_reserve_account, true),
+            // from_supported_token_account_signer
+            (fund_reserve_account, false),
+        ]);
 
         let command = Self {
             state: NormalizeSTCommandState::Execute { items },
@@ -275,7 +302,7 @@ impl NormalizeSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        mut items: &[NormalizeSTCommandItem],
+        items: &[NormalizeSTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -284,25 +311,24 @@ impl NormalizeSTCommand {
             return Ok((None, None));
         }
         let item = items[0];
-        items = &items[1..];
 
-        let &[normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, fund_reserve_account, ..] =
+        let [normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, to_normalized_token_account, from_supported_token_account, fund_reserve_account, pricing_sources @ ..] =
             accounts
         else {
             err!(ErrorCode::AccountNotEnoughKeys)?
         };
 
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().cloned())?;
 
         let normalized_token_mint_address = normalized_token_mint.key();
         let mut normalized_token_pool_account =
             Account::<NormalizedTokenPoolAccount>::try_from(normalized_token_pool_account)?;
         let mut normalized_token_mint = InterfaceAccount::<Mint>::try_from(normalized_token_mint)?;
-        let normalized_token_program = Program::<Token>::try_from(normalized_token_program)?;
+        let normalized_token_program = Program::<Token>::try_from(*normalized_token_program)?;
         let supported_token_mint = InterfaceAccount::<Mint>::try_from(supported_token_mint)?;
         let supported_token_program =
-            Interface::<TokenInterface>::try_from(supported_token_program)?;
+            Interface::<TokenInterface>::try_from(*supported_token_program)?;
         let supported_token_reserve_account =
             InterfaceAccount::<TokenAccount>::try_from(supported_token_reserve_account)?;
         let mut to_normalized_token_account =
@@ -314,12 +340,6 @@ impl NormalizeSTCommand {
             &mut normalized_token_pool_account,
             &mut normalized_token_mint,
             &normalized_token_program,
-        )?;
-
-        let expected_minted_normalized_token_amount = pricing_service.get_sol_amount_as_token(
-            &normalized_token_mint_address,
-            pricing_service
-                .get_token_amount_as_sol(&item.supported_token_mint, item.allocated_token_amount)?,
         )?;
 
         let (to_normalized_token_account_amount, minted_normalized_token_amount) =
@@ -335,6 +355,18 @@ impl NormalizeSTCommand {
                 &mut pricing_service,
             )?;
 
+        // validation (expected diff <= 1)
+        let expected_minted_normalized_token_amount = pricing_service.get_sol_amount_as_token(
+            &normalized_token_mint_address,
+            pricing_service
+                .get_token_amount_as_sol(&item.supported_token_mint, item.allocated_token_amount)?,
+        )?;
+        require_gte!(
+            1,
+            expected_minted_normalized_token_amount.abs_diff(minted_normalized_token_amount)
+        );
+
+        // update fund account
         let mut fund_account = ctx.fund_account.load_mut()?;
 
         let supported_token = fund_account.get_supported_token_mut(&item.supported_token_mint)?;
@@ -343,10 +375,6 @@ impl NormalizeSTCommand {
         let normalized_token = fund_account.get_normalized_token_mut().unwrap();
         normalized_token.operation_reserved_amount += minted_normalized_token_amount;
 
-        require_gte!(
-            minted_normalized_token_amount,
-            expected_minted_normalized_token_amount
-        );
         require_gte!(
             to_normalized_token_account_amount,
             normalized_token.get_total_reserved_amount()
@@ -362,13 +390,9 @@ impl NormalizeSTCommand {
             .into(),
         );
 
-        if items.is_empty() {
-            return Ok((result, None));
-        }
-
         // prepare state does not require additional accounts,
         // so we can execute directly.
         drop(fund_account);
-        self.execute_prepare(ctx, accounts, items.to_vec(), result)
+        self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
     }
 }

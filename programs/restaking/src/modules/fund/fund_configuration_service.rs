@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::accessor::amount;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
 
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
-use crate::utils::AccountLoaderExt;
+use crate::utils::{AccountLoaderExt, SystemProgramExt};
 use crate::{errors, events};
 
 use super::*;
@@ -76,13 +75,20 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         fund_reserve_account: &SystemAccount<'info>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        self.fund_account.expand_account_size_if_needed(
+        let min_account_size = 8 + std::mem::size_of::<FundAccount>();
+        let target_account_size = desired_account_size
+            .map(|size| std::cmp::max(size as usize, min_account_size))
+            .unwrap_or(min_account_size);
+
+        let new_account_size = system_program.expand_account_size_if_needed(
+            self.fund_account.as_ref(),
             payer,
-            system_program,
-            desired_account_size,
+            &[],
+            target_account_size,
+            None,
         )?;
 
-        if self.fund_account.as_ref().data_len() >= 8 + std::mem::size_of::<FundAccount>() {
+        if new_account_size >= min_account_size {
             self.fund_account
                 .load_mut()?
                 .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports());

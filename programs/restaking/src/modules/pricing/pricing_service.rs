@@ -119,63 +119,63 @@ impl<'info> PricingService<'info> {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 SPLStakePoolValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::MarinadeStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 MarinadeStakePoolValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::JitoRestakingVault { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 JitoRestakingVaultValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::FragmetricNormalizedTokenPool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 NormalizedTokenPoolValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::FragmetricRestakingFund { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 FundReceiptTokenValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::OrcaDEXLiquidityPool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 OrcaDEXLiquidityPoolValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 SPLStakePoolValueProvider.resolve_underlying_assets(
-                    &mut self.token_values[token_index],
                     token_mint,
                     &pricing_source_accounts,
+                    &mut self.token_values[token_index],
                 )?
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -183,7 +183,7 @@ impl<'info> PricingService<'info> {
                 numerator,
                 denominator,
             } => MockPricingSourceValueProvider::new(numerator, denominator)
-                .resolve_underlying_assets(&mut self.token_values[token_index], token_mint, &[])?,
+                .resolve_underlying_assets(token_mint, &[], &mut self.token_values[token_index])?,
         };
 
         // expand supported tokens recursively
@@ -233,46 +233,40 @@ impl<'info> PricingService<'info> {
         utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
     }
 
-    /// Updates the **summary** of token value.
-    /// Token value is **summarized** iff
+    /// **Flatten**s the token value of given token.
+    /// A token value is **flattened** if and only if:
     /// * there is no duplicated assets in token value.
-    /// * all assets are atomic tokens.
-    /// * all assets have positive amount.
-    pub fn update_token_value_summary(
-        &self,
-        token_mint: &Pubkey,
-        token_value_summary: &mut TokenValue,
-    ) -> Result<()> {
+    /// * all assets in token value are atomic tokens.
+    /// * all assets in token value have positive amount.
+    pub fn flatten_token_value(&self, token_mint: &Pubkey, result: &mut TokenValue) -> Result<()> {
         let token_value = self.get_token_value(token_mint)?;
 
-        token_value_summary.numerator.clear();
-        token_value_summary.denominator = token_value.denominator;
+        result.numerator.clear();
+        result.denominator = token_value.denominator;
 
         // If token value is atomic, then it is already summarized.
         if token_value.is_atomic() {
             let num_assets = token_value.numerator.len();
-            token_value_summary.numerator.reserve_exact(num_assets);
+            result.numerator.reserve_exact(num_assets);
 
-            token_value_summary
-                .numerator
-                .extend_from_slice(&token_value.numerator);
+            result.numerator.extend_from_slice(&token_value.numerator);
 
             return Ok(());
         }
 
-        token_value_summary.numerator.reserve_exact(1);
+        result.numerator.reserve_exact(1);
 
         for asset in &token_value.numerator {
             match asset {
                 Asset::SOL(sol_amount) => {
-                    self.summarize_token_value_of_sol(token_value_summary, *sol_amount);
+                    self.flatten_token_value_of_sol(*sol_amount, result);
                 }
                 Asset::Token(token_mint, token_pricing_source, token_amount) => {
-                    self.summarize_token_value_of_token(
-                        token_value_summary,
+                    self.flatten_token_value_of_token(
                         token_mint,
                         token_pricing_source.as_ref(),
                         *token_amount,
+                        result,
                     )?;
                 }
             }
@@ -282,19 +276,19 @@ impl<'info> PricingService<'info> {
     }
 
     #[inline(always)]
-    fn summarize_token_value_of_sol(&self, token_value_summary: &mut TokenValue, sol_amount: u64) {
+    fn flatten_token_value_of_sol(&self, sol_amount: u64, result: &mut TokenValue) {
         if sol_amount > 0 {
-            token_value_summary.add_sol(sol_amount);
+            result.add_sol(sol_amount);
         }
     }
 
-    /// Recursively traverse the token value of token and summarize into atomic assets.
-    fn summarize_token_value_of_token(
+    /// Recursively traverse the assets of token value of token and flattens into atomic assets.
+    fn flatten_token_value_of_token(
         &self,
-        token_value_summary: &mut TokenValue,
         token_mint: &Pubkey,
         token_pricing_source: Option<&TokenPricingSource>,
         token_amount: u64,
+        result: &mut TokenValue,
     ) -> Result<()> {
         if token_amount == 0 {
             return Ok(());
@@ -302,7 +296,7 @@ impl<'info> PricingService<'info> {
 
         let token_value = self.get_token_value(token_mint)?;
         if token_value.is_atomic() {
-            token_value_summary.add_token(
+            result.add_token(
                 token_mint,
                 token_pricing_source.or_else(|| self.get_token_pricing_source(token_mint)),
                 token_amount,
@@ -318,7 +312,7 @@ impl<'info> PricingService<'info> {
                         token_amount,
                         token_value.denominator,
                     )?;
-                    self.summarize_token_value_of_sol(token_value_summary, nested_sol_amount);
+                    self.flatten_token_value_of_sol(nested_sol_amount, result);
                 }
                 Asset::Token(
                     nested_token_mint,
@@ -330,11 +324,11 @@ impl<'info> PricingService<'info> {
                         token_amount,
                         token_value.denominator,
                     )?;
-                    self.summarize_token_value_of_token(
-                        token_value_summary,
+                    self.flatten_token_value_of_token(
                         nested_token_mint,
                         nested_token_pricing_source.as_ref(),
                         nested_token_amount,
+                        result,
                     )?;
                 }
             }
@@ -525,7 +519,7 @@ mod tests {
 
         let mut token_value_as_atomic = TokenValue::default();
         pricing_service
-            .update_token_value_summary(&basket_mint_49_10, &mut token_value_as_atomic)
+            .flatten_token_value(&basket_mint_49_10, &mut token_value_as_atomic)
             .unwrap();
         let token_value_as_sol = pricing_service
             .get_token_value_as_sol(&basket_mint_49_10)
@@ -574,7 +568,7 @@ mod tests {
 
         let mut token_value_as_atomic = TokenValue::default();
         pricing_service
-            .update_token_value_summary(&basket_mint_88_10, &mut token_value_as_atomic)
+            .flatten_token_value(&basket_mint_88_10, &mut token_value_as_atomic)
             .unwrap();
         let token_value_as_sol = pricing_service
             .get_token_value_as_sol(&basket_mint_88_10)

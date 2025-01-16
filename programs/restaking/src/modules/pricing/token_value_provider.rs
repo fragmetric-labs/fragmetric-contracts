@@ -11,38 +11,26 @@ pub use self::mock::*;
 pub trait TokenValueProvider {
     fn resolve_underlying_assets<'info>(
         self,
-        token_value_to_update: &mut TokenValue,
         token_mint: &Pubkey,
         pricing_source_accounts: &[&'info AccountInfo<'info>],
+        result: &mut TokenValue,
     ) -> Result<()>;
 }
 
 const TOKEN_VALUE_MAX_NUMERATORS_SIZE: usize = 33;
 
 /// a value representing total asset value of a pricing source.
-#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+#[cfg_attr(test, derive(Debug))]
 pub struct TokenValue {
     #[max_len(TOKEN_VALUE_MAX_NUMERATORS_SIZE)]
     pub numerator: Vec<Asset>,
     pub denominator: u64,
 }
 
-impl std::fmt::Display for TokenValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let numerator = self
-            .numerator
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>();
-        f.debug_struct("TokenValue")
-            .field("atomic", &self.is_atomic())
-            .field("numerator", &numerator)
-            .field("denominator", &self.denominator)
-            .finish()
-    }
-}
-
 impl TokenValue {
+    pub const MAX_NUMERATOR_SIZE: usize = TOKEN_VALUE_MAX_NUMERATORS_SIZE;
+
     /// indicates whether the token is not a kind of basket such as normalized token,
     /// so the value of the token can be resolved by one self without other token information.
     pub fn is_atomic(&self) -> bool {
@@ -110,7 +98,6 @@ impl TokenValue {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct TokenValuePod {
     numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
@@ -137,24 +124,13 @@ impl TokenValuePod {
     }
 }
 
-#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub enum Asset {
     // amount
     SOL(u64),
     // mint, known pricing source, amount
     Token(Pubkey, Option<TokenPricingSource>, u64),
-}
-
-impl std::fmt::Display for Asset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SOL(amount) => write!(f, "{} SOL", amount),
-            Self::Token(mint, Some(source), amount) => {
-                write!(f, "{} TOKEN({}, source={:?})", amount, mint, source)
-            }
-            Self::Token(mint, None, amount) => write!(f, "{} TOKEN({})", amount, mint),
-        }
-    }
 }
 
 impl Asset {
@@ -183,7 +159,6 @@ impl Asset {
 }
 
 #[zero_copy]
-#[derive(Debug)]
 #[repr(C)]
 pub struct AssetPod {
     discriminant: u8,
@@ -228,15 +203,6 @@ mod mock {
         Token(Pubkey, u64),
     }
 
-    impl std::fmt::Display for MockAsset {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                Self::SOL(amount) => write!(f, "{} SOL", amount),
-                Self::Token(mint, amount) => write!(f, "{} TOKEN({})", amount, mint),
-            }
-        }
-    }
-
     /// Example Mock Provider; Price: 1 denominated unit = 1.2 lamports
     pub struct MockPricingSourceValueProvider<'a> {
         numerator: &'a Vec<MockAsset>,
@@ -255,18 +221,16 @@ mod mock {
     impl TokenValueProvider for MockPricingSourceValueProvider<'_> {
         fn resolve_underlying_assets<'info>(
             self,
-            token_value_to_update: &mut TokenValue,
             _token_mint: &Pubkey,
             pricing_source_accounts: &[&'info AccountInfo<'info>],
+            result: &mut TokenValue,
         ) -> Result<()> {
             require_eq!(pricing_source_accounts.len(), 0);
 
-            token_value_to_update.numerator.clear();
-            token_value_to_update
-                .numerator
-                .reserve_exact(self.numerator.len());
+            result.numerator.clear();
+            result.numerator.reserve_exact(self.numerator.len());
 
-            token_value_to_update
+            result
                 .numerator
                 .extend(self.numerator.iter().map(|&asset| match asset {
                     MockAsset::SOL(sol_amount) => Asset::SOL(sol_amount),
@@ -274,7 +238,7 @@ mod mock {
                         Asset::Token(token_mint, None, token_amount)
                     }
                 }));
-            token_value_to_update.denominator = *self.denominator;
+            result.denominator = *self.denominator;
 
             Ok(())
         }

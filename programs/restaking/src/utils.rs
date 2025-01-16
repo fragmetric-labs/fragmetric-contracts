@@ -10,7 +10,7 @@ pub trait PDASeeds<const N: usize> {
     fn get_seeds(&self) -> [&[u8]; N];
 }
 
-/// Zero-copy account that has header (data-version, bump).
+/// Zero-copy account that has header (bump).
 pub trait ZeroCopyHeader: ZeroCopy {
     /// Offset of bump (8bit)
     fn get_bump_offset() -> usize;
@@ -29,17 +29,6 @@ pub trait AccountLoaderExt<'info> {
     /// Reads bump directly from data without
     /// borsh deserialization or bytemuck type casting.
     fn get_bump(&self) -> Result<u8>;
-
-    /// Realloc account to increase extra amount of data size.
-    /// It will add at most 10KB([`MAX_PERMITTED_DATA_INCREASE`]).
-    ///
-    /// [`MAX_PERMITTED_DATA_INCREASE`]: MAX_PERMITTED_DATA_INCREASE
-    fn expand_account_size_if_needed(
-        &self,
-        payer: &Signer<'info>,
-        system_program: &Program<'info, System>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()>;
 }
 
 impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader<'info, T> {
@@ -79,21 +68,6 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
         }
 
         Ok(data[offset])
-    }
-
-    fn expand_account_size_if_needed(
-        &self,
-        payer: &Signer<'info>,
-        system_program: &Program<'info, System>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()> {
-        let account_info = self.as_ref();
-        let min_account_size = 8 + std::mem::size_of::<T>();
-        let target_account_size = desired_account_size
-            .map(|size| std::cmp::max(size as usize, min_account_size))
-            .unwrap_or(min_account_size);
-
-        system_program.expand_account_size_if_needed(account_info, payer, &[], target_account_size)
     }
 }
 
@@ -258,23 +232,36 @@ impl<'info> AsAccountInfo<'info> for UncheckedAccount<'info> {
 
 pub trait SystemProgramExt<'info> {
     /// Need signer seeds of every PDAs.
+    ///
+    /// When `target_lamports` is not provided, it will fallback to rent-exempt lamports.
+    /// After initialization, account will have at least `target_lamports`.
     fn initialize_account(
         &self,
         account_to_initialize: &AccountInfo<'info>,
         payer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
         space: usize,
-        desired_lamports: Option<u64>,
+        target_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()>;
 
+    /// Realloc account to increase extra amount of data size.
+    /// It will add at most 10KB([`MAX_PERMITTED_DATA_INCREASE`]) but never decreases.
+    ///
+    /// If target lamports is not provided, it will be rent-exempt fee.
+    /// After re-allocation, account will have at least `target_lamports`.
+    ///
+    /// Returns account size after allocation.
+    ///
+    /// [`MAX_PERMITTED_DATA_INCREASE`]: entrypoint::MAX_PERMITTED_DATA_INCREASE
     fn expand_account_size_if_needed(
         &self,
         account_to_realloc: &AccountInfo<'info>,
-        payer: &Signer<'info>,
-        signer_seeds: &[&[&[u8]]],
+        payer: &AccountInfo<'info>,
+        payer_seeds: &[&[&[u8]]],
         target_space: usize,
-    ) -> Result<()>;
+        target_lamports: Option<u64>,
+    ) -> Result<usize>;
 }
 
 impl<'info> SystemProgramExt<'info> for Program<'info, System> {
@@ -284,14 +271,12 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
         payer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
         space: usize,
-        desired_lamports: Option<u64>,
+        target_lamports: Option<u64>,
         owner: &Pubkey,
     ) -> Result<()> {
         let rent = Rent::get()?;
         let minimum_lamports = rent.minimum_balance(space);
-        let target_lamports = desired_lamports
-            .unwrap_or(minimum_lamports)
-            .max(minimum_lamports);
+        let target_lamports = target_lamports.unwrap_or(minimum_lamports);
 
         let current_lamports = account_to_initialize.lamports();
         if current_lamports == 0 {
@@ -357,10 +342,11 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
     fn expand_account_size_if_needed(
         &self,
         account_to_realloc: &AccountInfo<'info>,
-        payer: &Signer<'info>,
-        signer_seeds: &[&[&[u8]]],
+        payer: &AccountInfo<'info>,
+        payer_seeds: &[&[&[u8]]],
         target_space: usize,
-    ) -> Result<()> {
+        target_lamports: Option<u64>,
+    ) -> Result<usize> {
         let current_account_size = account_to_realloc.data_len();
         let required_realloc_size = target_space.saturating_sub(current_account_size);
 
@@ -371,11 +357,13 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
             required_realloc_size
         );
 
-        if required_realloc_size > 0 {
+        let account_size = if required_realloc_size > 0 {
             let rent = Rent::get()?;
-            let current_lamports = account_to_realloc.lamports();
             let minimum_lamports = rent.minimum_balance(target_space);
-            let required_lamports = minimum_lamports.saturating_sub(current_lamports);
+            let target_lamports = target_lamports.unwrap_or(minimum_lamports);
+
+            let current_lamports = account_to_realloc.lamports();
+            let required_lamports = target_lamports.saturating_sub(current_lamports);
             if required_lamports > 0 {
                 let cpi_context = CpiContext::new_with_signer(
                     self.to_account_info(),
@@ -383,7 +371,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                         from: payer.to_account_info(),
                         to: account_to_realloc.clone(),
                     },
-                    signer_seeds,
+                    payer_seeds,
                 );
                 anchor_lang::system_program::transfer(cpi_context, required_lamports)?;
                 msg!("realloc account lamports: added={}", required_lamports);
@@ -402,9 +390,13 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 target_space,
                 target_space - new_account_size
             );
-        }
 
-        Ok(())
+            new_account_size
+        } else {
+            current_account_size
+        };
+
+        Ok(account_size)
     }
 }
 
@@ -506,7 +498,6 @@ pub mod tests {
             );
         }
 
-        #[allow(clippy::expect_fun_call)]
         pub fn run_with_accounts<'a, F, R>(
             &self,
             account_metas: impl IntoIterator<Item = &'a AccountMeta>,
@@ -521,7 +512,7 @@ pub mod tests {
                     let (key, account) = self
                         .0
                         .get_key_value(&meta.pubkey)
-                        .expect(&format!("Account {:?} not in DB", meta.pubkey));
+                        .unwrap_or_else(|| panic!("Account {:?} not in DB", meta.pubkey));
 
                     (key, account.borrow_mut(), meta)
                 })
