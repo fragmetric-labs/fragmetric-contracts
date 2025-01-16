@@ -12,6 +12,22 @@ A complete list will be provided to client via address lookup table later.
 **/
 
 #[constant]
+pub const MAINNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
+    pubkey!("HjNXH2HMfso5YU6U7McfhsbfoecGR5QTBAxTCSbFoYqy");
+
+#[constant]
+pub const DEVNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
+    pubkey!("5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU");
+
+#[constant]
+pub const MAINNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
+    pubkey!("AQtDes99nLUnSK6BQJgj9KJ6b3eDv8bUUxGCmnEJUkY5");
+
+#[constant]
+pub const DEVNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
+    pubkey!("6VHmiiuZAW2PVoY5N16oqs8wYVkXnfmZBcM7Vkbb76jH");
+
+#[constant]
 pub const MAINNET_BSOL_MINT_ADDRESS: Pubkey =
     pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
 
