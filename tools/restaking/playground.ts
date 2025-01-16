@@ -18,7 +18,7 @@ import * as ed25519 from "ed25519";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
-const MAX_CAPACITY = "18_000_000_000_000_000_000".replace(/_/g, '');
+const MAX_CAPACITY = "18,446,744,073,709,551,615".replace(/,/g, '');
 
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
     public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider">) {
@@ -1403,56 +1403,73 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragSOLFundConfiguration() {
         return {
-            depositEnabled: true,
+            depositEnabled: this.isMainnet ? true : true,
             withdrawalEnabled: this.isMainnet ? false : true,
-            WithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
-            withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
+            WithdrawalFeedRateBPS: this.isMainnet ? 20 : 20,
+            withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 86400 : 60), // seconds
 
-            solDepositable: true,
-            solAccumulatedDepositCapacity: (this.isMainnet ? new BN(44_196_940) : new BN(1_000_000_000)).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)),
-            // TODO: migration v0.3.2 save sol_accumulated_deposit_amount
-            solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
+            solDepositable: this.isMainnet ? true : true,
+            solAccumulatedDepositCapacity: this.isMainnet ? new BN(185_844_305_400_574) : new BN(web3.LAMPORTS_PER_SOL).muln(web3.LAMPORTS_PER_SOL),
+            // TODO v0.4.1: remove (set null) accumulated deposit amount
+            solAccumulatedDepositAmount:  this.isMainnet ? new BN(185_844_305_400_574) : null,
             solWithdrawalable: this.isMainnet ? true : true,
-            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
-            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
+            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
+            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
-                tokenDepositable: true,
+                tokenDepositable: this.isMainnet ? (() => {
+                    switch (symbol) {
+                        case "bSOL":
+                            return false;
+                        case "jitoSOL":
+                            return true;
+                        case "mSOL":
+                            return true;
+                        case "BNSOL":
+                            return true;
+                        case "bbSOL":
+                            return true;
+                        default:
+                            throw `invalid accumulated deposit cap for ${symbol}`;
+                    }
+                })() : true,
                 tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isMainnet ? 0 : 90_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 0 : 90_000_000_000);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? 22_680_370 : 80_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 90_941_492_854_023 : 80_000_000_000);
                         case "mSOL":
-                            return new BN(this.isMainnet ? 4_500_000 : 70_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 4_500_002_000_000 : 70_000_000_000);
                         case "BNSOL":
-                            return new BN(this.isMainnet ? 2_617_170 : 60_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(this.isMainnet ? 11_311_923_730_911 : 60_000_000_000);
                         case "bbSOL":
-                            return new BN(this.isMainnet ? 0 : 60_000).mul(new BN(10 ** (v.decimals - 3))); // TODO
+                            return new BN(this.isMainnet ? 0 : 60_000_000_000);
                         default:
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
                 })(),
-                // solAccumulatedDepositAmount:  (this.isMainnet ? new BN(44_196_940).mul(new BN(web3.LAMPORTS_PER_SOL/1_000)): null),
+                // TODO v0.4.1: remove (set null) accumulated deposit amount
                 tokenAccumulatedDepositAmount : this.isMainnet ? (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(0).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(0);
                         case "jitoSOL":
-                            return new BN(22_680_370).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(90_941_492_854_023);
                         case "mSOL":
-                            return new BN(4_500_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(4_500_002_000_000);
                         case "BNSOL":
-                            return new BN(2_617_170).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(11_311_923_730_911);
+                        case "bbSOL":
+                            return new BN(0);
                         default:
                             throw `invalid accumulated deposit amount for ${symbol}`;
                     }
                 })() : null,
-                withdrawable: this.isMainnet ? false : false,
-                withdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
-                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(10 ** v.decimals)),
+                withdrawable: this.isMainnet ? true : true,
+                withdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
+                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(10 ** v.decimals)),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {
                     switch (symbol) {
