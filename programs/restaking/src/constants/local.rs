@@ -65,11 +65,11 @@ pub const FRAGSOL_JITO_NSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
 
 #[constant]
 pub const FRAGSOL_JITO_JITOSOL_VAULT_ACCOUNT_ADDRESS: Pubkey =
-    pubkey!("9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY");
+    pubkey!("J1zZpdXAGMzV94hM2yoX9g2QoDP5S9NwzmuuDR6hedzG");
 
 #[constant]
 pub const FRAGSOL_JITO_JITOSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
-    pubkey!("J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM");
+    pubkey!("4XJojv43gUWZwDFWu3tSaM6GRMrDoKuP2B4FxzAeEPGh");
 
 ////////////////////////////////////////////
 // receipt token: fragJTO

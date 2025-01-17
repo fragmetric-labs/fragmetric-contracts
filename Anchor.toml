@@ -208,12 +208,12 @@ filename = "./tests/mocks/local/jito_restaking_operator_1.json"
 address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
 filename = "./tests/mocks/local/jito_restaking_ncn_1.json"
 
-# clone empty Jito restaking vault of fragsol
+# clone empty Jito restaking vault of fragsol nsol vault
 [[test.validator.account]]
 address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
 filename = "./tests/mocks/local/fragsol_jito_vault.json"
 
-# clone empty mint for Jito restaking vault of fragsol
+# clone empty vrt mint for Jito restaking vault of fragsol nsol vault
 [[test.validator.account]]
 address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
 filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
@@ -222,6 +222,16 @@ filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
 [[test.validator.account]]
 address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
 filename = "./tests/mocks/local/fragsol_address_lookup_table.json"
+
+# clone empty Jito restaking vault of fragsol jitosol vault
+[[test.validator.account]]
+address = "J1zZpdXAGMzV94hM2yoX9g2QoDP5S9NwzmuuDR6hedzG"
+filename = "./tests/mocks/local/fragsol_jito_jitosol_vault.json"
+
+# clone empty vrt mint for Jito restaking vault of fragsol jitosol vault
+[[test.validator.account]]
+address = "4XJojv43gUWZwDFWu3tSaM6GRMrDoKuP2B4FxzAeEPGh"
+filename = "./tests/mocks/local/fragsol_jito_jitosol_vrt_mint.json"
 
 # *JTO
 # clone mainnet JTO mint to localnet
