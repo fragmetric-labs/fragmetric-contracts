@@ -1404,12 +1404,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public get targetFragSOLFundConfiguration() {
         return {
             depositEnabled: this.isMainnet ? true : true,
+            donationEnabled: this.isMainnet ? false : true,
             withdrawalEnabled: this.isMainnet ? false : true,
             WithdrawalFeedRateBPS: this.isMainnet ? 20 : 20,
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 86400 : 60), // seconds
 
             solDepositable: this.isMainnet ? true : true,
-            solAccumulatedDepositCapacity: this.isMainnet ? new BN(185_844_305_400_574) : new BN(web3.LAMPORTS_PER_SOL).muln(web3.LAMPORTS_PER_SOL),
+            solAccumulatedDepositCapacity: this.isMainnet ? new BN(185_844_305_400_574) : new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL)),
             // TODO v0.4.1: remove (set null) accumulated deposit amount
             solAccumulatedDepositAmount:  this.isMainnet ? new BN(185_844_305_400_574) : null,
             solWithdrawalable: this.isMainnet ? true : true,
@@ -1570,6 +1571,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 this.program.methods.fundManagerUpdateFundStrategy(
                     config.depositEnabled,
+                    config.donationEnabled,
                     config.withdrawalEnabled,
                     config.WithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.withdrawalBatchThresholdSeconds,
