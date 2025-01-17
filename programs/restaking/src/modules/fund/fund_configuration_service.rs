@@ -251,7 +251,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_restaking_delegation(
+    pub fn process_add_restaking_vault_delegation(
         &mut self,
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,

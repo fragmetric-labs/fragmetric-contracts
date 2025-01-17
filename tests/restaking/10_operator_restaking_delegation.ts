@@ -22,9 +22,9 @@ describe("operator_restaking_delegation", async () => {
         await restaking.runAdminInitializeVaultOperatorDelegation(operator, operatorVaultTicket[0]);
     });
 
-    step("initialize vault operator at fund account", async function() {
+    step("initialize vault delegation at fund account", async function() {
         const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV");
-        await restaking.runFundManagerInitializeFundJitoRestakingVaultOperator(operator);
+        await restaking.runFundManagerInitializeFundJitoRestakingVaultDelegation(operator);
     });
 
     step("run command add_delegation", async function() {

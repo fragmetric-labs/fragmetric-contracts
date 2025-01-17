@@ -5,7 +5,6 @@ mod admin_reward_context;
 
 mod fund_manager_fund_context;
 mod fund_manager_fund_jito_restaking_vault_context;
-mod fund_manager_fund_jito_restaking_vault_operator_context;
 mod fund_manager_fund_normalized_token_context;
 mod fund_manager_fund_supported_token_context;
 mod fund_manager_normalized_token_pool_supported_token_context;
@@ -30,7 +29,6 @@ pub use admin_reward_context::*;
 
 pub use fund_manager_fund_context::*;
 pub use fund_manager_fund_jito_restaking_vault_context::*;
-pub use fund_manager_fund_jito_restaking_vault_operator_context::*;
 pub use fund_manager_fund_normalized_token_context::*;
 pub use fund_manager_fund_supported_token_context::*;
 pub use fund_manager_normalized_token_pool_supported_token_context::*;

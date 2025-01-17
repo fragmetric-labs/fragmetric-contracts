@@ -188,6 +188,26 @@ filename = "./tests/mocks/mainnet/jito_vault_config_epoch_length_256.json"
 address = "5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF"
 filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"
 
+# clone mainet Jito restaking protocol to localnet
+[[test.genesis]]
+address = "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
+program = "./tests/mocks/mainnet/jito_restaking_program.so"
+
+# clone mainnet Jito restaking protocol global config to localnet
+[[test.validator.account]]
+address = "4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn"
+filename = "./tests/mocks/mainnet/jito_restaking_config.json"
+
+# clone empty Jito restaking protocol operator for test
+[[test.validator.account]]
+address = "2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"
+filename = "./tests/mocks/local/jito_restaking_operator_1.json"
+
+# clone empty Jito restaking protocol ncn for test
+[[test.validator.account]]
+address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
+filename = "./tests/mocks/local/jito_restaking_ncn_1.json"
+
 # clone empty Jito restaking vault of fragsol
 [[test.validator.account]]
 address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
@@ -227,23 +247,3 @@ filename = "./tests/mocks/local/fragjto_jito_vault.json"
 [[test.validator.account]]
 address = "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
 filename = "./tests/mocks/local/fragjto_jito_vrt_mint.json"
-
-# clone mainet Jito restaking protocol to localnet
-[[test.genesis]]
-address = "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
-program = "./tests/mocks/mainnet/jito_restaking_program.so"
-
-# clone mainnet Jito restaking protocol global config to localnet
-[[test.validator.account]]
-address = "4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn"
-filename = "./tests/mocks/mainnet/jito_restaking_config.json"
-
-# clone empty Jito restaking protocol operator for test
-[[test.validator.account]]
-address = "2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"
-filename = "./tests/mocks/local/jito_restaking_operator_1.json"
-
-# clone empty Jito restaking protocol ncn for test
-[[test.validator.account]]
-address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
-filename = "./tests/mocks/local/jito_restaking_ncn_1.json"

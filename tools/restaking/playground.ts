@@ -1339,10 +1339,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation
-    public async runFundManagerInitializeFundJitoRestakingVaultOperator(operator: web3.PublicKey) {
+    public async runFundManagerInitializeFundJitoRestakingVaultDelegation(operator: web3.PublicKey) {
         await this.run({
             instructions: [
-                this.methods.fundManagerInitializeFundJitoRestakingVaultOperator()
+                this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         vaultAccount: this.knownAddress.fragSOLJitoVaultAccount,
@@ -1637,6 +1637,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     // need for operation - set vault_delegation_admin to fund_account
     public async runAdminSetSecondaryAdminForJitoVault(oldAuthority = this.keychain.getKeypair("ADMIN")) {
         const newAuthority = this.knownAddress.fragSOLFund;
+        logger.notice("old authority".padEnd(LOG_PAD_LARGE), oldAuthority.publicKey.toString());
+        logger.notice("new authority".padEnd(LOG_PAD_LARGE), newAuthority.toString());
 
         const SetSecondaryAdminInstructionDataSize = {
             discriminator: 1, // u8
