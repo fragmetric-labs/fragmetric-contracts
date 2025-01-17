@@ -135,10 +135,10 @@ describe("initialize", async () => {
     step("initialize fund jito restaking vault & set vault's secondary admin to fund account", async () => {
         const {fragSOLFundJitoVRTAccount, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
         await restaking.runAdminSetSecondaryAdminForJitoVault();
-        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoVRTMint.toString());
+        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoNSOLVRTMint.toString());
         expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFundReserveAccount.toString());
         expect(fragSOLFundAccount.numRestakingVaults).eq(1);
-        expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoVaultAccount.toString());
+        expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoNSOLVaultAccount.toString());
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {

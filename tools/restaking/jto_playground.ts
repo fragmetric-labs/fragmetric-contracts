@@ -181,7 +181,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         // const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
 
         // fragJTO jito VRT
-        const fragJTOJitoVRTMint = this.getConstantAsPublicKey('fragjtoJitoVaultReceiptTokenMintAddress');
+        const fragJTOJitoVRTMint = this.getConstantAsPublicKey('fragjtoJitoJtoVaultReceiptTokenMintAddress');
 
         // fragJTO fund & ATAs
         const [fragJTOFund] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund"), fragJTOTokenMintBuf], this.programId);
@@ -267,7 +267,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const jitoVaultConfig = this.getConstantAsPublicKey('jitoVaultConfigAddress');
 
         // fragJTO jito vault
-        const fragJTOJitoVaultAccount = this.getConstantAsPublicKey('fragjtoJitoVaultAccountAddress');
+        const fragJTOJitoVaultAccount = this.getConstantAsPublicKey('fragjtoJitoJtoVaultAccountAddress');
         const fragJTOJitoVaultUpdateStateTracker = (slot: anchor.BN, epoch_length: anchor.BN) => {
             let ncn_epoch = slot.div(epoch_length).toBuffer('le', 8);
             return web3.PublicKey.findProgramAddressSync([Buffer.from('vault_update_state_tracker'), fragJTOJitoVaultAccount.toBuffer(), ncn_epoch], jitoVaultProgram)[0];
@@ -424,7 +424,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (this.isDevnet) {
             return {
                 jito1: {
-                    vault: this.getConstantAsPublicKey("fragjtoJitoVaultAccountAddress"),
+                    vault: this.getConstantAsPublicKey("fragjtoJitoJtoVaultAccountAddress"),
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                 },
             };
@@ -432,7 +432,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             // for 'localnet', it would be cloned from mainnet
             return {
                 jito1: {
-                    vault: this.getConstantAsPublicKey("fragjtoJitoVaultAccountAddress"),
+                    vault: this.getConstantAsPublicKey("fragjtoJitoJtoVaultAccountAddress"),
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                 },
             };

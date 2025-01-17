@@ -34,10 +34,10 @@ describe("operator_spl_stake_pool", async () => {
         await restaking.sleep(1); // ...block hash not found?
 
         // @ts-ignore
-        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");
-        const mSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount('mSOL');
+        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("jitoSOL");
+        const mSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount('mSOL');
         // @ts-ignore
-        const bbSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("bbSOL");
+        const bbSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("bbSOL");
         const [
             fragSOLFundReserveAccountBalance0,
             jitoSolSupportedTokenBalance0,

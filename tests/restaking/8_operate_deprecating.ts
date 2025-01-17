@@ -20,7 +20,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const nSOLPool0 = await restaking.getNSOLTokenPoolAccount();
         const nSOLMint0 = await restaking.getNSOLTokenMint();
         const fragSOLFundNSOLBalance0 = await restaking.getFragSOLFundNSOLAccountBalance();
-        const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoVaultNSOLAccountBalance();
+        const jitoVaultNSOLBalance0 = await restaking.getFragSOLJitoNSOLVaultTokenAccountBalance();
         logger.info(`before: fundSupportedTokens=${fragSOLFund0.supportedTokens.map(v => v.token.operationReservedAmount.toString()).join(', ')}, `
             +`fundSolOperationReservedAmount=${fragSOLFund0.sol.operationReservedAmount}, fundReservedAmount=${fragSOLFundReserveAccountBalance0}, `
             +`nSOLSupportedTokens=${nSOLPool0.supportedTokens.map(v => v.lockedAmount.toString()).join(', ')}, nSOLOperationReservedAmount=?, nSOLSupply=${nSOLMint0.supply.toString()}, `
@@ -28,7 +28,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         );
 
         // TODO: currently staking sol to hard-coded LST, like localnet: jitoSOL
-        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLSupportedTokenAccount("jitoSOL");
+        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("jitoSOL");
         const jitoSolBalance0 = await restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed");
         expect(fragSOLFund0.supportedTokens.some(s => s.operationReservedAmount.toString() == jitoSolBalance0.value.amount.toString())).eq(true, 'supported ATA balance should be equal');
 
