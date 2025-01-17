@@ -132,13 +132,19 @@ describe("initialize", async () => {
         expect(fragSOLFundAccount.normalizedToken.mint.toString()).eq(restaking.knownAddress.nSOLTokenMint.toString());
     });
 
-    step("initialize fund jito restaking vault & set vault's secondary admin to fund account", async () => {
-        const {fragSOLFundJitoVRTAccount, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
+    step("initialize fund jito restaking vault", async () => {
         await restaking.runAdminSetSecondaryAdminForJitoVault();
-        expect(fragSOLFundJitoVRTAccount.mint.toString()).eq(restaking.knownAddress.fragSOLJitoNSOLVRTMint.toString());
-        expect(fragSOLFundJitoVRTAccount.owner.toString()).eq(restaking.knownAddress.fragSOLFundReserveAccount.toString());
-        expect(fragSOLFundAccount.numRestakingVaults).eq(1);
-        expect(fragSOLFundAccount.restakingVaults[0].vault.toString()).eq(restaking.knownAddress.fragSOLJitoNSOLVaultAccount.toString());
+        const {fragSOLFund} = await restaking.runFundManagerInitializeFundJitoRestakingVault();
+
+        expect(fragSOLFund.numRestakingVaults).eq(2);
+        let i = 0;
+        for (const [symbol, v] of Object.entries(restaking.restakingVaultMetadata)) {
+            const vault = fragSOLFund.restakingVaults[i++];
+            expect(vault.vault.toString()).eq(v.vault.toString());
+            expect(vault.program.toString()).eq(v.program.toString());
+            expect(vault.supportedTokenMint.toString()).eq(v.VSTMint.toString());
+            expect(vault.receiptTokenMint.toString()).eq(v.VRTMint.toString());
+        }
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
