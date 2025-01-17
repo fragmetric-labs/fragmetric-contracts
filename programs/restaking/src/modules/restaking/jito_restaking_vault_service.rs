@@ -974,4 +974,61 @@ impl<'info> JitoRestakingVaultService<'info> {
         // })
         Ok(())
     }
+
+    pub fn find_accounts_to_add_delegation(&self, operator: Pubkey) -> Result<Vec<(Pubkey, bool)>> {
+        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        accounts.extend(vec![
+            (operator, false),
+            (jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::find_program_address(self.vault_program.key, self.vault_account.key, &operator).0, true),
+            (vault.delegation_admin, false),
+        ]);
+        Ok(accounts)
+    }
+
+    pub fn add_delegation(
+        &self,
+        operator_account: &AccountInfo<'info>,
+        vault_operator_delegation_account: &AccountInfo<'info>,
+        vault_delegation_admin_account: &AccountInfo<'info>, // fund_account
+        vault_delegation_admin_signer_seeds: &[&[u8]],
+
+        delegation_amount: u64,
+    ) -> Result<()> {
+        let add_delegation_ix = jito_vault_sdk::sdk::add_delegation(
+            self.vault_program.key,
+            self.vault_config_account.key,
+            self.vault_account.key,
+            operator_account.key,
+            vault_operator_delegation_account.key,
+            vault_delegation_admin_account.key,
+            delegation_amount,
+        );
+
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        msg!(
+            "Before vault delegation_state staked_amount {}",
+            vault.delegation_state.staked_amount()
+        );
+
+        invoke_signed(
+            &add_delegation_ix,
+            &[
+                self.vault_config_account.clone(),
+                self.vault_account.clone(),
+                operator_account.clone(),
+                vault_operator_delegation_account.clone(),
+                vault_delegation_admin_account.clone(),
+            ],
+            &[vault_delegation_admin_signer_seeds],
+        )?;
+
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        msg!(
+            "After vault delegation_state staked_amount {}",
+            vault.delegation_state.staked_amount()
+        );
+
+        Ok(())
+    }
 }

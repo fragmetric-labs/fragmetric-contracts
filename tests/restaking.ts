@@ -37,6 +37,11 @@ if (process.env.JUST_WITHDRAW_TOKEN) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/4_withdraw_sol');
 
+} else if (process.env.JUST_DELEGATE) {
+    require('./restaking/2_deposit_sol')(1);
+    require('./restaking/3_deposit_token')(1);
+    require('./restaking/9_operator_restaking');
+    require('./restaking/10_operator_restaking_delegation');
 } else if (!process.env.JUST_INIT) {
     require('./restaking/2_deposit_sol')(1);
     require('./restaking/3_deposit_token')(1);

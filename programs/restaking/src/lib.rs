@@ -414,6 +414,27 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // FundManagerFundJitoRestakingVaultOperatorInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_fund_jito_restaking_vault_operator<'info>(
+        ctx: Context<FundManagerFundJitoRestakingVaultOperatorInitialContext>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_delegation(
+            &ctx.accounts.vault_account,
+            &ctx.accounts.vault_program,
+            &ctx.accounts.vault_operator,
+            &ctx.accounts.jito_restaking_program,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // FundManagerFundSupportedTokenContext
     ////////////////////////////////////////////
 

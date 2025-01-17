@@ -256,14 +256,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,
         vault_operator: &UncheckedAccount,
+        restaking_program: &UncheckedAccount,
     ) -> Result<events::FundManagerUpdatedFund> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
             let restaking_vault = fund_account.get_restaking_vault_mut(vault.key)?;
 
             require_keys_eq!(restaking_vault.program, vault_program.key());
+            require_keys_eq!(*vault_operator.owner, restaking_program.key());
 
-            // TODO: need some validation?
             restaking_vault.add_delegation(vault_operator.key)?;
         }
 
@@ -403,21 +404,6 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 sol_allocation_weight,
                 sol_allocation_capacity_amount,
             )?;
-        }
-
-        self.create_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_add_restaking_vault_operator(
-        &mut self,
-        vault: &Pubkey,
-        operator: &Pubkey,
-    ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            fund_account
-                .get_restaking_vault_mut(vault)?
-                .add_delegation(operator)?;
         }
 
         self.create_fund_manager_updated_fund_event()
