@@ -1185,6 +1185,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public get targetFragJTOFundConfiguration() {
         return {
             depositEnabled: true,
+            donationEnabled: false,
             withdrawalEnabled: this.isMainnet ? false : true,
             WithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
@@ -1295,6 +1296,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 this.program.methods.fundManagerUpdateFundStrategy(
                     config.depositEnabled,
+                    config.donationEnabled,
                     config.withdrawalEnabled,
                     config.WithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.withdrawalBatchThresholdSeconds,

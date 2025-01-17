@@ -53,7 +53,8 @@ pub struct FundAccount {
     pub(super) withdrawal_fee_rate_bps: u16,
     pub(super) withdrawal_enabled: u8,
     pub(super) deposit_enabled: u8,
-    _padding4: [u8; 4],
+    pub(super) donation_enabled: u8,
+    _padding4: [u8; 3],
 
     /// SOL deposit & withdrawal
     pub(super) sol: AssetState,
@@ -349,6 +350,11 @@ impl FundAccount {
     }
 
     #[inline(always)]
+    pub(super) fn set_donation_enabled(&mut self, enabled: bool) {
+        self.donation_enabled = if enabled { 1 } else { 0 };
+    }
+
+    #[inline(always)]
     pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) {
         self.withdrawal_enabled = if enabled { 1 } else { 0 };
     }
@@ -576,6 +582,8 @@ impl FundAccount {
     ) -> Result<(u64, u64)> {
         if self.deposit_enabled == 0 {
             err!(ErrorCode::FundDepositDisabledError)?
+        } else if self.donation_enabled == 0 {
+            err!(ErrorCode::FundDonationDisabledError)?
         }
         self.get_asset_state_mut(supported_token_mint)?
             .donate(asset_amount, offset_receivable)
@@ -919,6 +927,13 @@ mod tests {
         fund.deposit(None, 100_000).unwrap();
         assert_eq!(fund.sol.operation_reserved_amount, 100_000);
         assert_eq!(fund.sol.accumulated_deposit_amount, 100_000);
+
+        fund.donate(None, 100_000, false).unwrap_err();
+        fund.set_donation_enabled(true);
+        fund.sol
+            .set_accumulated_deposit_capacity_amount(200_000)
+            .unwrap();
+        fund.donate(None, 100_000, false).unwrap();
 
         fund.sol.deposit(100_000).unwrap_err();
     }

@@ -131,6 +131,7 @@ describe("withdraw SOL", async () => {
                     .fundManagerUpdateFundStrategy(
                         true,
                         false,
+                        false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )
@@ -150,6 +151,7 @@ describe("withdraw SOL", async () => {
                 restaking.methods
                     .fundManagerUpdateFundStrategy(
                         true,
+                        false,
                         true,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,

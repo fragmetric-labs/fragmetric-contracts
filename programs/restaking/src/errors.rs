@@ -238,4 +238,7 @@ pub enum ErrorCode {
 
     #[msg("restaking: withdrawal ticket is already initialized")]
     RestakingVaultWithdrawalTicketAlreadyInitializedError,
+
+    #[msg("fund: donation is currently disabled")]
+    FundDonationDisabledError,
 }

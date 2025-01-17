@@ -228,6 +228,7 @@ pub mod restaking {
     pub fn fund_manager_update_fund_strategy<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
         deposit_enabled: bool,
+        donation_enabled: bool,
         withdrawal_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
@@ -238,6 +239,7 @@ pub mod restaking {
         )?
         .process_update_fund_strategy(
             deposit_enabled,
+            donation_enabled,
             withdrawal_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
