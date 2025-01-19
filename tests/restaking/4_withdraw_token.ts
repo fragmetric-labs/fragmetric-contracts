@@ -37,6 +37,32 @@ describe("withdraw token", async () => {
     step("user5 cannot withdraw non-withdrawable token", async function () {
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
         let supportedToken = fragSOLFund0.supportedTokens[0];
+
+        // turn off withdrawable
+        await restaking.run({
+            instructions: [
+                restaking.methods
+                    .fundManagerUpdateSupportedTokenStrategy(
+                        supportedToken.mint,
+                        true,
+                        supportedToken.token.accumulatedDepositCapacityAmount,
+                        null, // Option<token_accumulated_deposit_amount>
+                        false, // withdrawable,
+                        supportedToken.token.normalReserveRateBps,
+                        supportedToken.token.normalReserveMaxAmount,
+                        supportedToken.rebalancingAmount,
+                        supportedToken.solAllocationWeight,
+                        supportedToken.solAllocationCapacityAmount,
+                    )
+                    .accountsPartial({
+                        receiptTokenMint: restaking.knownAddress.fragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ['FUND_MANAGER'],
+            events: ['fundManagerUpdatedFund'],
+        });
+
         expect(restaking.runUserRequestWithdrawal(user5, amountFragSOLWithdrawalEach, supportedToken.mint)).rejectedWith("FundWithdrawalNotSupportedAsset");
 
         // now turn on withdrawable

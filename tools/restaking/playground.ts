@@ -3012,6 +3012,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
         }
 
+        if (requiredAccounts.size > 30) {
+            console.log('FUCK: required accounts', Array.from(requiredAccounts));
+        }
+
         const tx = await this.run({
             instructions: [
                 this.program.methods
@@ -3037,6 +3041,51 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const commandName = Object.keys(executedCommand)[0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
         console.log(executedCommand[commandName][0], commandResult && commandResult[commandName][0]);
+
+        // ... track fund asset state
+        if (commandResult) {
+            await Promise.all([
+                this.getFragSOLFundAccount(),
+                this.getFragSOLFundReserveAccountBalance(),
+                this.getFragSOLFundNSOLAccountBalance(),
+                ...Object.keys(this.supportedTokenMetadata).map(symbol => this.getFragSOLSupportedTokenAccount(symbol).then(a => new BN(a.amount.toString())))
+            ]).then(([fund, sol, nSOL, ...tokens]) => {
+                console.log({
+                    oneReceiptTokenAsSol: fund.oneReceiptTokenAsSol,
+                    accounts: {
+                        sol,
+                        tokens: {
+                            [this.knownAddress.nSOLTokenMint]: nSOL,
+                            ...Object.fromEntries(tokens.map((balance, i) => [Object.values(this.supportedTokenMetadata)[i].mint, balance])),
+                        },
+                    },
+                    data: {
+                        sol: {
+                            reserved: fund.sol.operationReservedAmount,
+                            receivable: fund.sol.operationReceivableAmount,
+                            withdrawable: fund.sol.withdrawalUserReservedAmount,
+                            total: fund.sol.operationReservedAmount.add(fund.sol.operationReceivableAmount).add(fund.sol.withdrawalUserReservedAmount),
+                        },
+                        tokens: {
+                            [this.knownAddress.nSOLTokenMint]: {
+                                reserved: fund.normalizedToken.operationReservedAmount,
+                                receivable: fund.normalizedToken.operationReceivableAmount,
+                                total: fund.normalizedToken.operationReservedAmount.add(fund.normalizedToken.operationReceivableAmount),
+                            },
+                            ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {
+                                return [supported.mint, {
+                                    reserved: supported.token.operationReservedAmount,
+                                    receivable: supported.token.operationReceivableAmount,
+                                    withdrawable: supported.token.withdrawalUserReservedAmount,
+                                    total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
+                                }];
+                            }))
+                        },
+                    },
+                });
+            });
+        }
+
 
         return {
             event: tx.event,

@@ -15,7 +15,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
             restaking.tryAirdrop(user1.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(200)),
             restaking.tryAirdropSupportedTokens(user1.publicKey, new BN(web3.LAMPORTS_PER_SOL).muln(200)),
         ]);
-        await restaking.runUserDepositSOL(user1, new BN(web3.LAMPORTS_PER_SOL).muln(200));
+        await restaking.runUserDepositSOL(user1, new BN(web3.LAMPORTS_PER_SOL).muln(50));
         await restaking.runUserDepositSupportedToken(user1, 'bSOL', new BN(web3.LAMPORTS_PER_SOL).muln(50));
         const res0 = await restaking.runUserDepositSupportedToken(user1, 'mSOL', new BN(web3.LAMPORTS_PER_SOL).muln(50));
         const res1 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
