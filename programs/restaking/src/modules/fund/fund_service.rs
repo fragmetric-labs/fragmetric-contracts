@@ -844,10 +844,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             // pay with receivable of other assets if possible.
             if receivable_amount_processing_as_sol > 0 {
-                let fund_account = self.fund_account.load()?;
-                let asset = fund_account.get_asset_state(supported_token_mint_key)?;
-
                 let mut fund_account = self.fund_account.load_mut()?;
+                let asset_token_mint_and_program = fund_account
+                    .get_asset_state(supported_token_mint_key)?
+                    .get_token_mint_and_program();
+
                 for other_asset in fund_account.get_asset_states_iter_mut() {
                     if other_asset.operation_receivable_amount > 0 {
                         let other_asset_operation_receivable_amount_as_sol =
@@ -884,7 +885,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     }
                 }
                 let receivable_amount_processed = receivable_amount_processing
-                    - match asset.get_token_mint_and_program() {
+                    - match asset_token_mint_and_program {
                         Some((token_mint, _)) => pricing_service.get_sol_amount_as_token(
                             &token_mint,
                             receivable_amount_processing_as_sol,
@@ -892,7 +893,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         None => receivable_amount_processing_as_sol,
                     };
                 asset_fee_amount_processing -= receivable_amount_processed;
-                // receivable_amount_processing -= receivable_amount_processed;
+                receivable_amount_processing -= receivable_amount_processed;
             }
 
             // pay remaining debt with cash with current asset

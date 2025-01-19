@@ -305,12 +305,18 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         max_num_validators: usize,
     ) -> Result<Vec<Pubkey>> {
+        msg!("FUCK2-1");
         let mut validator_list_account_data = validator_list_account.try_borrow_mut_data()?;
         let (_, validator_list) =
             ValidatorListHeader::deserialize_vec(&mut validator_list_account_data)?;
         let num_validator_stake_infos = validator_list.len() as usize;
+        msg!(
+            "FUCK2-2 num_validator_stake_infos={}",
+            num_validator_stake_infos
+        );
         let validator_stake_infos =
             validator_list.deserialize_slice::<ValidatorStakeInfo>(0, num_validator_stake_infos)?;
+        msg!("FUCK2-3");
 
         let num_validators = max_num_validators.min(num_validator_stake_infos);
         let mut validator_stake_accounts = Vec::with_capacity(num_validators);

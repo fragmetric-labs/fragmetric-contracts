@@ -12,7 +12,7 @@ import {PartiallyDecodedInstruction} from "@solana/web3.js";
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
 anchor.BN.prototype.toJSON = function() {
-    return this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
+    return this.toString(); //.replace(/\B(?=(\d{3})+(?!\d))/g, "_");
 }
 anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
     return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));

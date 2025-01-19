@@ -7,7 +7,7 @@ use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
     FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    OperationCommandResult, SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -62,6 +62,7 @@ impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
 pub struct ClaimUnstakedSOLCommandResult {
     pub token_mint: Pubkey,
     pub claimed_sol_amount: u64,
+    pub offsetted_receivable_sol_amount: u64,
     pub operation_reserved_sol_amount: u64,
     pub operation_receivable_sol_amount: u64,
 }
@@ -85,8 +86,10 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
             } => self.execute_execute(ctx, accounts, token_mints)?,
         };
 
-        // TODO v0.4/operation: next step... unstake lst
-        Ok((result, entry))
+        Ok((
+            result,
+            entry.or_else(|| Some(UnstakeLSTCommand::default().without_required_accounts())),
+        ))
     }
 }
 
@@ -302,8 +305,11 @@ impl ClaimUnstakedSOLCommand {
         } else {
             // update fund account
             let mut fund_account = ctx.fund_account.load_mut()?;
-            fund_account.sol.operation_reserved_amount += claimed_sol_amount;
-            fund_account.sol.operation_receivable_amount -= claimed_sol_amount;
+            let offsetted_receivable_sol_amount =
+                claimed_sol_amount.min(fund_account.sol.operation_receivable_amount);
+            fund_account.sol.operation_receivable_amount -= offsetted_receivable_sol_amount;
+            fund_account.sol.operation_reserved_amount +=
+                claimed_sol_amount - offsetted_receivable_sol_amount;
 
             require_gte!(
                 to_sol_account_amount,
@@ -314,6 +320,7 @@ impl ClaimUnstakedSOLCommand {
                 ClaimUnstakedSOLCommandResult {
                     token_mint: *pool_token_mint,
                     claimed_sol_amount,
+                    offsetted_receivable_sol_amount,
                     operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
                     operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
                 }

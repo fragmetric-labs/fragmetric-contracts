@@ -15,7 +15,7 @@ const delay = (ms: number) => {
 
 const cloneMainnetAccounts = async (addresses: Array<string>) => {
     // parse Anchor.toml
-    let anchorToml = fs.readFileSync(path.join(__dirname, "../Anchor.toml"), {encoding: "utf-8"});
+    let anchorToml = fs.readFileSync(path.join(__dirname, "../../Anchor.toml"), {encoding: "utf-8"});
     let parsed = toml.parse(anchorToml);
 
     let tomlAccounts = parsed["test"]["validator"]["account"].concat(parsed["test"]["genesis"]);
