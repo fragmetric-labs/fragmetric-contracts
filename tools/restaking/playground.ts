@@ -421,6 +421,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             programRevenueAccount,
             programSupportedTokenRevenueAccount,
             ...programSupportedTokenRevenueAccounts,
+
+
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            token2022Program: spl.TOKEN_2022_PROGRAM_ID,
+            sysvarClock: new web3.PublicKey("SysvarC1ock11111111111111111111111111111111"),
+            sysvarStakeHistory: new web3.PublicKey("SysvarStakeHistory1111111111111111111111111"),
+            stakeProgram: new web3.PublicKey("Stake11111111111111111111111111111111111111"),
+            systemProgram: new web3.PublicKey("11111111111111111111111111111111"),
+            splStakePoolProgram: new web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
         };
     }
 
@@ -2957,36 +2966,36 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         // prepare accounts according to the current state of operation.
         // - can contain 57 accounts out of 64 with reserved 6 accounts and payer.
         // - order doesn't matter, no need to put duplicate.
-        const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
+        const requiredAccounts: Map<string, web3.AccountMeta> = new Map();
         this.pricingSourceAccounts.forEach(accoutMeta => {
-            requiredAccounts.set(accoutMeta.pubkey, accoutMeta);
+            requiredAccounts.set(accoutMeta.pubkey.toBase58(), accoutMeta);
         });
-        requiredAccounts.set(this.knownAddress.programEventAuthority, {
+        requiredAccounts.set(this.knownAddress.programEventAuthority.toBase58(), {
             pubkey: this.knownAddress.programEventAuthority,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(this.programId, {
+        requiredAccounts.set(this.programId.toBase58(), {
             pubkey: this.programId,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(operator.publicKey, {
+        requiredAccounts.set(operator.publicKey.toBase58(), {
             pubkey: operator.publicKey,
             isWritable: true,
             isSigner: true,
         });
-        requiredAccounts.set(web3.SystemProgram.programId, {
+        requiredAccounts.set(web3.SystemProgram.programId.toBase58(), {
             pubkey: web3.SystemProgram.programId,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(this.knownAddress.fragSOLTokenMint, {
+        requiredAccounts.set(this.knownAddress.fragSOLTokenMint.toBase58(), {
             pubkey: this.knownAddress.fragSOLTokenMint,
             isWritable: true,
             isSigner: false,
         });
-        requiredAccounts.set(this.knownAddress.fragSOLFund, {
+        requiredAccounts.set(this.knownAddress.fragSOLFund.toBase58(), {
             pubkey: this.knownAddress.fragSOLFund,
             isWritable: true,
             isSigner: false,
@@ -2998,12 +3007,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (nextOperationCommand) {
             for (let i = 0; i < nextOperationCommand.numRequiredAccounts; i++) {
                 const accountMeta = nextOperationCommand.requiredAccounts[i];
-                if (requiredAccounts.has(accountMeta.pubkey)) {
+                const pubkey = accountMeta.pubkey.toBase58();
+                if (requiredAccounts.has(pubkey)) {
                     if (accountMeta.isWritable != 0) {
-                        requiredAccounts.get(accountMeta.pubkey).isWritable = true;
+                        requiredAccounts.get(pubkey).isWritable = true;
                     }
                 } else {
-                    requiredAccounts.set(accountMeta.pubkey, {
+                    requiredAccounts.set(pubkey, {
                         pubkey: accountMeta.pubkey,
                         isWritable: (accountMeta.isWritable != 0),
                         isSigner: false,
@@ -3013,7 +3023,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
 
         if (requiredAccounts.size > 30) {
-            console.log('FUCK: required accounts', Array.from(requiredAccounts));
+            console.log('FUCK: required accounts', requiredAccounts.size);
+            for (const [k, _] of requiredAccounts.entries()) {
+                console.log(k);
+            }
         }
 
         const tx = await this.run({
