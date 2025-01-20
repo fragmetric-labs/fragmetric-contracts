@@ -173,20 +173,40 @@ address = "71t7QTJ5HsoCdP7gmz2eupSRYzAXFXBKzZwZjmyrWzjz"
 filename = "./tests/mocks/mainnet/bbSOL_stake_pool_validator_stake_account_1.json"
 
 # *jitoVRT
-# clone mainnet Jito restaking protocol to localnet
+# clone mainnet Jito restaking vault protocol to localnet
 [[test.genesis]]
 address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
 program = "./tests/mocks/mainnet/jito_restaking_vault.so"
 
-# clone mainnet Jito restaking protocol global config to localnet
+# clone mainnet Jito restaking vault protocol global config to localnet
 [[test.validator.account]]
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
 filename = "./tests/mocks/mainnet/jito_vault_config_epoch_length_256.json"
 
-# clone mainnet Jito restaking protocol program fee wallet to localnet
+# clone mainnet Jito restaking vault protocol program fee wallet to localnet
 [[test.validator.account]]
 address = "5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF"
 filename = "./tests/mocks/mainnet/jito_program_fee_wallet_vrt_account.json"
+
+# clone mainet Jito restaking protocol to localnet
+[[test.genesis]]
+address = "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
+program = "./tests/mocks/mainnet/jito_restaking_program.so"
+
+# clone mainnet Jito restaking protocol global config to localnet
+[[test.validator.account]]
+address = "4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn"
+filename = "./tests/mocks/mainnet/jito_restaking_config.json"
+
+# clone empty Jito restaking protocol operator for test
+[[test.validator.account]]
+address = "2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"
+filename = "./tests/mocks/local/jito_restaking_operator_1.json"
+
+# clone empty Jito restaking protocol ncn for test
+[[test.validator.account]]
+address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
+filename = "./tests/mocks/local/jito_restaking_ncn_1.json"
 
 # clone empty Jito restaking vault of fragsol
 [[test.validator.account]]
