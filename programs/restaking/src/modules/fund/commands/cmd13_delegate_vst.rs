@@ -1,18 +1,13 @@
 use anchor_lang::prelude::*;
 
-use crate::{
-    errors,
-    modules::{
-        fund::fund_account, pricing::TokenPricingSource, restaking::JitoRestakingVaultService,
-    },
-    utils::PDASeeds,
-};
+use crate::errors;
+use crate::modules::pricing::TokenPricingSource;
+use crate::modules::restaking::JitoRestakingVaultService;
+use crate::utils::PDASeeds;
 
 use super::{
-    FundService, HarvestRewardCommand, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
+    HarvestRewardCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -48,7 +43,6 @@ pub struct DelegateVSTCommandResult {
     pub total_delegated_token_amount: u64,
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl SelfExecutable for DelegateVSTCommand {
     fn execute<'a, 'info: 'a>(
         &self,
@@ -75,6 +69,7 @@ impl SelfExecutable for DelegateVSTCommand {
     }
 }
 
+#[deny(clippy::wildcard_enum_match_arm)]
 impl DelegateVSTCommand {
     fn execute_new<'info>(
         &self,
@@ -84,31 +79,29 @@ impl DelegateVSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let fund_account = ctx.fund_account.load()?;
-
-        let restaking_vaults = fund_account.get_restaking_vaults_iter().collect::<Vec<_>>();
-
         // TODO
         // - items size capacity should be changed for more acurate
         //   cf. unstake command
         let mut items =
             Vec::<DelegateVSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
 
-        restaking_vaults.iter().for_each(|restaking_vault| {
-            let vault_operators = restaking_vault
-                .get_delegations_iter()
-                .map(|delegation| delegation.operator)
-                .collect::<Vec<_>>();
-            vault_operators.iter().for_each(|operator| {
-                items.push(DelegateVSTCommandItem {
-                    vault: restaking_vault.vault,
-                    operator: *operator,
-                    delegation_amount: restaking_vault
-                        .receipt_token_operation_reserved_amount
-                        .saturating_div(vault_operators.len() as u64),
-                });
+        ctx.fund_account
+            .load()?
+            .get_restaking_vaults_iter()
+            .for_each(|restaking_vault| {
+                let num_operators = restaking_vault.get_delegations_iter().count();
+                restaking_vault
+                    .get_delegations_iter()
+                    .for_each(|delegation| {
+                        items.push(DelegateVSTCommandItem {
+                            vault: restaking_vault.vault,
+                            operator: delegation.operator,
+                            delegation_amount: restaking_vault
+                                .receipt_token_operation_reserved_amount
+                                .saturating_div(num_operators as u64),
+                        });
+                    });
             });
-        });
 
         // nothing to delegate
         if items.is_empty() {
@@ -189,7 +182,18 @@ impl DelegateVSTCommand {
 
                 Ok((previous_execution_result, Some(command)))
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 
@@ -197,7 +201,7 @@ impl DelegateVSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        mut items: &[DelegateVSTCommandItem],
+        items: &[DelegateVSTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -206,7 +210,6 @@ impl DelegateVSTCommand {
             return Ok((None, None));
         }
         let item = items[0];
-        items = &items[1..];
 
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
@@ -266,9 +269,20 @@ impl DelegateVSTCommand {
                 // prepare state does not require additional accounts,
                 // so we can execute directly.
                 drop(fund_account);
-                self.execute_prepare(ctx, accounts, items.to_vec(), result)
+                self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
             }
-            _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            // otherwise fails
+            Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         }
     }
 }

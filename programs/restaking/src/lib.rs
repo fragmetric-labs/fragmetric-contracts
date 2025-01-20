@@ -418,7 +418,13 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn fund_manager_initialize_fund_jito_restaking_vault_delegation<'info>(
-        ctx: Context<FundManagerFundJitoRestakingVaultDelegationInitialContext>,
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            FundManagerFundJitoRestakingVaultDelegationInitialContext<'info>,
+        >,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -426,9 +432,9 @@ pub mod restaking {
         )?
         .process_add_restaking_vault_delegation(
             &ctx.accounts.vault_account,
-            &ctx.accounts.jito_vault_program,
             &ctx.accounts.vault_operator,
             &ctx.accounts.jito_restaking_program,
+            ctx.remaining_accounts,
         )?);
 
         Ok(())

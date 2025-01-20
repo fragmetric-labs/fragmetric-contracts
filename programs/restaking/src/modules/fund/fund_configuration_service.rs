@@ -254,19 +254,24 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn process_add_restaking_vault_delegation(
         &mut self,
         vault: &UncheckedAccount,
-        vault_program: &UncheckedAccount,
         vault_operator: &UncheckedAccount,
         restaking_program: &UncheckedAccount,
+        pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         {
-            let mut fund_account = self.fund_account.load_mut()?;
-            let restaking_vault = fund_account.get_restaking_vault_mut(vault.key)?;
-
-            require_keys_eq!(restaking_vault.program, vault_program.key());
             require_keys_eq!(*vault_operator.owner, restaking_program.key());
 
-            restaking_vault.add_delegation(vault_operator.key)?;
+            // TODO add more operator validation
+
+            self.fund_account
+                .load_mut()?
+                .get_restaking_vault_mut(vault.key)?
+                .add_delegation(vault_operator.key)?;
         }
+
+        // validate pricing source
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources)?;
 
         self.create_fund_manager_updated_fund_event()
     }

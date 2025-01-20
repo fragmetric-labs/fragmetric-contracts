@@ -87,10 +87,6 @@ pub struct FundManagerFundJitoRestakingVaultDelegationInitialContext<'info> {
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// CHECK: just need to validate vault state is owned by the vault program
-    #[account(address = JITO_VAULT_PROGRAM_ID)]
-    pub jito_vault_program: UncheckedAccount<'info>,
-
     /// CHECK: will be validated by pricing service
     pub vault_account: UncheckedAccount<'info>,
 
