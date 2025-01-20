@@ -208,20 +208,30 @@ filename = "./tests/mocks/local/jito_restaking_operator_1.json"
 address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
 filename = "./tests/mocks/local/jito_restaking_ncn_1.json"
 
-# clone empty Jito restaking vault of fragsol
+# clone empty Jito restaking vault of fragsol nsol vault
 [[test.validator.account]]
 address = "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
-filename = "./tests/mocks/local/fragsol_jito_vault.json"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault.json"
 
-# clone empty mint for Jito restaking vault of fragsol
+# clone empty vrt mint for Jito restaking vault of fragsol nsol vault
 [[test.validator.account]]
 address = "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
-filename = "./tests/mocks/local/fragsol_jito_vrt_mint.json"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vrt_mint.json"
 
 # clone initial ALT of fragsol for faster bootstrap
 [[test.validator.account]]
 address = "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
 filename = "./tests/mocks/local/fragsol_address_lookup_table.json"
+
+# clone empty Jito restaking vault of fragsol jitosol vault
+[[test.validator.account]]
+address = "6m2a6ybV4rZ3T5s3oBVDsU2rUuv6ByyCs3KMtv316F4b"
+filename = "./tests/mocks/local/fragsol_jito_jitosol_vault.json"
+
+# clone empty vrt mint for Jito restaking vault of fragsol jitosol vault
+[[test.validator.account]]
+address = "7FViuSBAkJktHkN4jFxFRSmKat9hNenf3MDcbhVRSu24"
+filename = "./tests/mocks/local/fragsol_jito_jitosol_vrt_mint.json"
 
 # *JTO
 # clone mainnet JTO mint to localnet
@@ -241,9 +251,9 @@ filename = "./tests/mocks/mainnet/jto_liquidity_pool_account.json"
 # clone empty Jito restaking vault of fragJTO
 [[test.validator.account]]
 address = "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
-filename = "./tests/mocks/local/fragjto_jito_vault.json"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault.json"
 
 # clone empty mint for Jito restaking vault of fragJTO
 [[test.validator.account]]
 address = "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
-filename = "./tests/mocks/local/fragjto_jito_vrt_mint.json"
+filename = "./tests/mocks/local/fragjto_jito_jto_vrt_mint.json"

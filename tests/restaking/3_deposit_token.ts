@@ -150,7 +150,7 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
                 expect(asset.solAmount.toString()).eq(fragSOLFundReserveAccountBalance.toString(), 'correct fund reserved sol (wallet account)');
                 expect(asset.solAmount.toString()).eq(fragSOLFund.sol.operationReservedAmount.toString(), 'correct fund reserved sol (data account)');
             } else if (asset.discriminant == 2) { // Token
-                const supportedTokenAccount = await restaking.getFragSOLSupportedTokenAccountByMintAddress(asset.tokenMint);
+                const supportedTokenAccount = await restaking.getFragSOLSupportedTokenReserveAccountByMintAddress(asset.tokenMint);
                 const supportedTokenData = fragSOLFund.supportedTokens.find(s => s.mint.toString() == asset.tokenMint.toString());
                 const supportedTokenDataBalance = supportedTokenData.token.operationReservedAmount.add(supportedTokenData.token.operationReceivableAmount);
                 logger.debug(`${asset.tokenMint} balance:`, asset.tokenAmount.toString(), supportedTokenDataBalance.toString());

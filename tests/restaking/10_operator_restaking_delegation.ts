@@ -15,16 +15,17 @@ describe("operator_restaking_delegation", async () => {
     // you can call it on REPL
     // await restaking.runAdminSetSecondaryAdminForJitoVault();
 
-    step("initialize operator_vault_ticket & vault_operator_delegation", async function() {
-        const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV");
+    const vault = restaking.restakingVaultMetadata['jito1'].vault;
+    const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV");
 
-        const {operatorVaultTicket} = await restaking.runAdminInitializeOperatorVaultTicket(operator);
-        await restaking.runAdminInitializeVaultOperatorDelegation(operator, operatorVaultTicket[0]);
+    step("initialize operator_vault_ticket & vault_operator_delegation", async function() {
+
+        const {operatorVaultTicket} = await restaking.runAdminInitializeOperatorVaultTicket(vault, operator);
+        await restaking.runAdminInitializeVaultOperatorDelegation(vault, operator, operatorVaultTicket[0]);
     });
 
     step("initialize vault delegation at fund account", async function() {
-        const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV");
-        await restaking.runFundManagerInitializeFundJitoRestakingVaultDelegation(operator);
+        await restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault, operator);
     });
 
     step("run command add_delegation", async function() {

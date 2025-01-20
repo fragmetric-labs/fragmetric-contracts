@@ -49,12 +49,20 @@ pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 
 #[constant]
-pub const FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey =
+pub const FRAGSOL_JITO_NSOL_VAULT_ACCOUNT_ADDRESS: Pubkey =
     pubkey!("HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S");
 
 #[constant]
-pub const FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
+pub const FRAGSOL_JITO_NSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg");
+
+#[constant]
+pub const FRAGSOL_JITO_JITOSOL_VAULT_ACCOUNT_ADDRESS: Pubkey =
+    pubkey!("CyGwYsiNg1FEYNCVXmPAixCkn2ZqWQVQJVy9RBCPNF7t");
+
+#[constant]
+pub const FRAGSOL_JITO_JITOSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
+    pubkey!("FRj1uf9W7TsGfSoHc1gU6V2sKxs4wMhaXC5A8KjVYvA5");
 
 ////////////////////////////////////////////
 // receipt token: fragJTO
@@ -68,9 +76,9 @@ pub const FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
 pub const FRAGJTO_MINT_ADDRESS: Pubkey = pubkey!("FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos");
 
 #[constant]
-pub const FRAGJTO_JITO_VAULT_ACCOUNT_ADDRESS: Pubkey =
+pub const FRAGJTO_JITO_JTO_VAULT_ACCOUNT_ADDRESS: Pubkey =
     pubkey!("BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd");
 
 #[constant]
-pub const FRAGJTO_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
+pub const FRAGJTO_JITO_JTO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("FRJtoBLuU72X3qgkVeBU1wXtmgQpWQmWptYsAdyyu3qT");
