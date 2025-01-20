@@ -23,7 +23,7 @@ impl TokenAllocatedAmount {
         })
     }
 
-    fn add_new_record(&mut self, amount: u64, contribution_accrual_rate: u8) -> Result<()> {
+    fn add_new_record(&mut self, amount: u64, contribution_accrual_rate: u16) -> Result<()> {
         require_gt!(
             REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN,
             self.num_records as usize,
@@ -51,7 +51,7 @@ impl TokenAllocatedAmount {
 
     fn get_record_mut(
         &mut self,
-        contribution_accrual_rate: u8,
+        contribution_accrual_rate: u16,
     ) -> Option<&mut TokenAllocatedAmountRecord> {
         self.get_records_iter_mut()
             .find(|r| r.contribution_accrual_rate == contribution_accrual_rate)
@@ -168,12 +168,12 @@ struct TokenAllocatedAmountRecord {
     amount: u64,
     /// Contribution accrual rate per 1 lamports (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    contribution_accrual_rate: u8,
-    _padding: [u8; 7],
+    contribution_accrual_rate: u16,
+    _padding: [u8; 6],
 }
 
 impl TokenAllocatedAmountRecord {
-    fn initialize(&mut self, amount: u64, contribution_accrual_rate: u8) {
+    fn initialize(&mut self, amount: u64, contribution_accrual_rate: u16) {
         self.amount = amount;
         self.contribution_accrual_rate = contribution_accrual_rate;
     }
@@ -192,14 +192,14 @@ impl TokenAllocatedAmountRecord {
 pub(super) struct TokenAllocatedAmountDelta {
     /// Contribution accrual rate per 1 lamports (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    contribution_accrual_rate: Option<u8>,
+    contribution_accrual_rate: Option<u16>,
     is_positive: bool,
     /// Nonzero - zero values are allowed but will be ignored
     amount: u64,
 }
 
 impl TokenAllocatedAmountDelta {
-    pub(super) fn new_positive(contribution_accrual_rate: Option<u8>, amount: u64) -> Self {
+    pub(super) fn new_positive(contribution_accrual_rate: Option<u16>, amount: u64) -> Self {
         Self {
             contribution_accrual_rate,
             is_positive: true,
@@ -218,7 +218,7 @@ impl TokenAllocatedAmountDelta {
     fn assert_valid_addition(&self) -> Result<()> {
         let is_contribution_accrual_rate_invalid = || {
             self.contribution_accrual_rate
-                .is_some_and(|rate| !(100..200).contains(&rate))
+                .is_some_and(|rate| !(100..500).contains(&rate))
         };
         if !self.is_positive || is_contribution_accrual_rate_invalid() {
             err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
