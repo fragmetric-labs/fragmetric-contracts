@@ -655,7 +655,7 @@ pub mod restaking {
             &mut ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
         )?
-        .process_update_prices(ctx.remaining_accounts,)?);
+        .process_update_prices(ctx.remaining_accounts)?);
 
         Ok(())
     }
