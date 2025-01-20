@@ -3009,7 +3009,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     accounts: {
                         sol,
                         tokens: {
-                            [this.knownAddress.nSOLTokenMint]: nSOL,
+                            [this.knownAddress.nSOLTokenMint.toString()]: nSOL,
                             ...Object.fromEntries(tokens.map((balance, i) => [Object.values(this.supportedTokenMetadata)[i].mint, balance])),
                         },
                     },
@@ -3021,7 +3021,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             total: fund.sol.operationReservedAmount.add(fund.sol.operationReceivableAmount).add(fund.sol.withdrawalUserReservedAmount),
                         },
                         tokens: {
-                            [this.knownAddress.nSOLTokenMint]: {
+                            [this.knownAddress.nSOLTokenMint.toString()]: {
                                 reserved: fund.normalizedToken.operationReservedAmount,
                                 receivable: fund.normalizedToken.operationReceivableAmount,
                                 total: fund.normalizedToken.operationReservedAmount.add(fund.normalizedToken.operationReceivableAmount),

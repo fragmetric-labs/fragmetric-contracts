@@ -59,6 +59,16 @@ filename = "./tests/mocks/mainnet/bSOL_stake_pool_account.json"
 address = "1istpXjy8BM7Vd5vPfA485frrV7SRJhgq5vs3sskWmc"
 filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_list_account.json"
 
+# clone mainnet bSOL stake pool reserve stake account to localnet
+[[test.validator.account]]
+address = "rsrxDvYUXjH1RQj2Ke36LNZEVqGztATxFkqNukERqFT"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_reserve_stake_account.json"
+
+# clone mainnet bSOL stake pool manager fee account to localnet
+[[test.validator.account]]
+address = "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_manager_fee_account.json"
+
 # clone mainnet jitoSOL mint to localnet
 [[test.validator.account]]
 address = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"

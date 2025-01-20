@@ -223,13 +223,14 @@ impl UnstakeLSTCommand {
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
-                let sol_allocated_amount =
+                let allocated_sol_amount =
                     strategy.get_participant_last_cut_amount_by_index(index)?;
-                if sol_allocated_amount > 0 {
+                let allocated_token_amount = pricing_service
+                    .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
+                if allocated_token_amount > 0 {
                     items.push(UnstakeLSTCommandItem {
                         token_mint: supported_token.mint,
-                        allocated_token_amount: pricing_service
-                            .get_sol_amount_as_token(&supported_token.mint, sol_allocated_amount)?,
+                        allocated_token_amount,
                     });
                 }
             }

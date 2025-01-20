@@ -334,6 +334,18 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             );
 
             validator_stake_accounts.push(stake_account_address);
+
+            // // How to find and update mock validator stake accounts...
+            // // 1. Clone recent validator list account from mainnet
+            // // 2. Uncomment the log below. It'll show top 5 stake accounts that we need.
+            // // 3. Clone those stake accounts from mainnet
+
+            // msg!(
+            //     "Validator#{} {} active stake = {}",
+            //     i,
+            //     stake_account_address,
+            //     u64::from(validator_stake_info.active_stake_lamports),
+            // );
         }
 
         Ok(validator_stake_accounts)

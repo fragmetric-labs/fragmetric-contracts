@@ -96,7 +96,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 // These are implementations of each command state.
 #[deny(clippy::wildcard_enum_match_arm)]
 impl ClaimUnstakedSOLCommand {
-    /// An initial state of `ClaimUnstakedLST` command.
+    /// An initial state of `ClaimUnstakedSOL` command.
     /// In this state, operator iterates the fund and
     /// finds token to claim.
     #[inline(never)]
@@ -120,6 +120,9 @@ impl ClaimUnstakedSOLCommand {
         self.execute_prepare(ctx, accounts, items, None)
     }
 
+    /// A pre-execution state of `ClaimUnstakedSOL` command.
+    /// In this state, operator iterates unstaking ticket or stake accounts and
+    /// find claimable SOL.
     #[inline(never)]
     fn execute_prepare<'info>(
         &self,
@@ -305,11 +308,12 @@ impl ClaimUnstakedSOLCommand {
         } else {
             // update fund account
             let mut fund_account = ctx.fund_account.load_mut()?;
+            // NOTE: operation receivable amount might be less than claimed amount, in most case because of donation.
+            // In this case, total asset value of fund will increase.
             let offsetted_receivable_sol_amount =
                 claimed_sol_amount.min(fund_account.sol.operation_receivable_amount);
             fund_account.sol.operation_receivable_amount -= offsetted_receivable_sol_amount;
-            fund_account.sol.operation_reserved_amount +=
-                claimed_sol_amount - offsetted_receivable_sol_amount;
+            fund_account.sol.operation_reserved_amount += claimed_sol_amount;
 
             require_gte!(
                 to_sol_account_amount,
