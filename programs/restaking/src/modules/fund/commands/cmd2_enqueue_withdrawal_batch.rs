@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 use super::cmd9_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
 use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
+    ClaimUnstakedSOLCommand, FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -43,7 +43,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
                 .into(),
             ),
             // TODO/v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
-            Some(ProcessWithdrawalBatchCommand::default().without_required_accounts()),
+            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
         ))
     }
 }

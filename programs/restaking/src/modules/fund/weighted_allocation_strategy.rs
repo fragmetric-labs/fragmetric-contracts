@@ -200,8 +200,8 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
     }
 
     /// returns the required_amount remaining after deallocation.
-    /// this method is a greedy way to cut allocations  as much as possible in order of the lowest weighted participants.
-    fn cut_greedy(&mut self, amount: u64) -> Result<u64> {
+    /// this method is a greedy way to cut allocations as much as possible in order of the lowest weighted participants.
+    pub fn cut_greedy(&mut self, amount: u64) -> Result<u64> {
         let mut required_amount = amount;
 
         // remember original amount

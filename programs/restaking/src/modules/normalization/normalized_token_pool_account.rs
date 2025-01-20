@@ -186,11 +186,7 @@ impl NormalizedTokenPoolAccount {
         supported_token_reserve_account: Pubkey,
         supported_token_pricing_source: TokenPricingSource,
     ) -> Result<()> {
-        if self
-            .supported_tokens
-            .iter()
-            .any(|token| token.mint == supported_token_mint)
-        {
+        if self.has_supported_token(&supported_token_mint) {
             err!(ErrorCode::NormalizedTokenPoolAlreadySupportedTokenError)?
         }
 
@@ -232,7 +228,9 @@ impl NormalizedTokenPoolAccount {
     }
 
     pub fn has_supported_token(&self, supported_token_mint: &Pubkey) -> bool {
-        self.get_supported_token(supported_token_mint).is_ok()
+        self.supported_tokens
+            .iter()
+            .any(|token| token.mint == *supported_token_mint)
     }
 
     pub(super) fn reload_normalized_token_supply(

@@ -20,7 +20,7 @@ wallet = "./keypairs/shared_wallet_GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF.
 sync-keypairs = "tsx tools/restaking/keychain_sync_entrypoint.ts"
 download-keypairs = "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $value > $key; done"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-sync-test-accounts = "tsx tests/mock_mainnet_accounts.ts"
+sync-test-accounts = "tsx tests/mocks/mock_mainnet_accounts.ts"
 
 [test]
 startup_wait = 50000
@@ -53,6 +53,21 @@ filename = "./tests/mocks/mainnet/bSOL_mint.json"
 [[test.validator.account]]
 address = "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
 filename = "./tests/mocks/mainnet/bSOL_stake_pool_account.json"
+
+# clone mainnet bSOL stake pool's validator list account to localnet
+[[test.validator.account]]
+address = "1istpXjy8BM7Vd5vPfA485frrV7SRJhgq5vs3sskWmc"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_list_account.json"
+
+# clone mainnet bSOL stake pool reserve stake account to localnet
+[[test.validator.account]]
+address = "rsrxDvYUXjH1RQj2Ke36LNZEVqGztATxFkqNukERqFT"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_reserve_stake_account.json"
+
+# clone mainnet bSOL stake pool manager fee account to localnet
+[[test.validator.account]]
+address = "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_manager_fee_account.json"
 
 # clone mainnet jitoSOL mint to localnet
 [[test.validator.account]]

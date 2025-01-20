@@ -218,7 +218,7 @@ impl RewardAccount {
         &mut self,
         receipt_token_mint: Pubkey,
         amount: u64,
-        contribution_accrual_rate: Option<u8>,
+        contribution_accrual_rate: Option<u16>,
         from: Option<&mut UserRewardAccount>,
         to: Option<&mut UserRewardAccount>,
         current_slot: u64,

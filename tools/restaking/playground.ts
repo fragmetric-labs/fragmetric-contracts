@@ -76,7 +76,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerSettleReward({ poolName: "bonus", rewardName: "fPoint", amount: new BN(0) }), // 8
             () => this.runFundManagerInitializeFundSupportedTokens(), // 9
             () => this.runFundManagerInitializeFundNormalizedToken(), // 10
-            () => this.runFundManagerInitializeFundJitoRestakingVault(), // 11
+            () => this.runFundManagerInitializeFundJitoRestakingVaults(), // 11
             () => this.runFundManagerUpdateFundConfigurations(), // 12
             () => this.runOperatorUpdateFundPrices(), // 13
             () => this.runOperatorUpdateNormalizedTokenPoolPrices(), // 14
@@ -88,10 +88,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             return this._knownAddressLookupTableAddress;
         }
 
-        const existinglookupTableAddress = this.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
-        const existingLookupTable = await this.connection.getAccountInfo(existinglookupTableAddress).catch(() => null);
+        const existingLookupTableAddress = this.getConstantAsPublicKey('fragsolAddressLookupTableAddress');
+        const existingLookupTable = await this.connection.getAddressLookupTable(existingLookupTableAddress)
+            .then(res => res.value, () => null);
         if (existingLookupTable) {
-            this._knownAddressLookupTableAddress = existinglookupTableAddress;
+            this._knownAddressLookupTableAddress = existingLookupTableAddress;
         } else {
             const authority = this.keychain.getKeypair('ADMIN').publicKey;
             const payer = this.wallet.publicKey;
@@ -107,6 +108,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             });
             logger.notice('created a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), lookupTableAddress.toString());
             this._knownAddressLookupTableAddress = lookupTableAddress;
+            await this.sleep(2);
         }
 
         await this.updateKnownAddressLookupTable();
@@ -122,10 +124,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const existingAddresses = new Set(lookupTable.state.addresses.map(a => a.toString()));
         logger.info("current lookup table addresses", lookupTable.state.addresses);
 
-        // prepare update
-        const addresses = (Object.values(this.knownAddress)
-            .filter(address => typeof address != 'function').flat() as web3.PublicKey[])
+        // prepare update (knownAddress + pricing source)
+        const addresses = (() => {
+            const addresses = [
+                ...(Object.values(this.knownAddress)
+                    .filter(address => typeof address != 'function').flat() as web3.PublicKey[]),
+                ...this.pricingSourceAccounts.map(meta => meta.pubkey),
+            ]
             .filter(address => !existingAddresses.has(address.toString()));
+            return [...new Set(addresses)];
+        })();
 
         // do update
         const listOfAddressList = addresses.reduce((listOfAddressList, address) =>  {
@@ -156,6 +164,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (addresses.length > 0) {
             logger.notice('updated a lookup table for known addresses:'.padEnd(LOG_PAD_LARGE), this._knownAddressLookupTableAddress.toString());
         }
+    }
+
+    public get knownAddressLookupTableAddress() {
+        return this._knownAddressLookupTableAddress
     }
 
     private _knownAddressLookupTableAddress?: web3.PublicKey;
@@ -249,16 +261,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         // NTP
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
-        const nSOLSupportedTokenLockAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
+        const nSOLSupportedTokenReserveAccount = (symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, nSOLTokenPool, true, this.supportedTokenMetadata[symbol].program);
-        const nSOLSupportedTokenLockAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
-            [`nSOLSupportedTokenLockAccount_${symbol}`]: nSOLSupportedTokenLockAccount(symbol as any),
+        const nSOLSupportedTokenReserveAccounts = Object.keys(this.supportedTokenMetadata).reduce((obj, symbol) => ({
+            [`nSOLSupportedTokenReserveAccount_${symbol}`]: nSOLSupportedTokenReserveAccount(symbol as any),
             ...obj,
         }), {} as { string: web3.PublicKey });
 
-        // TODO: deprecate (client must not know this)
-        const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
-        const vaultBaseAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account2"), fragSOLTokenMintBuf], this.programId)[0];
+        // // TODO: deprecate (client must not know this)
+        // const vaultBaseAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account1"), fragSOLTokenMintBuf], this.programId)[0];
+        // const vaultBaseAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account2"), fragSOLTokenMintBuf], this.programId)[0];
         // const vaultBaseAccount3 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account3"), fragSOLTokenMintBuf], this.programId)[0];
         // const vaultBaseAccount4 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account4"), fragSOLTokenMintBuf], this.programId)[0];
         // const vaultBaseAccount5 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_base_account5"), fragSOLTokenMintBuf], this.programId)[0];
@@ -328,23 +340,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.ASSOCIATED_TOKEN_PROGRAM_ID,
         );
 
-        // TODO: deprecate (client must not know this)
-        const fragSOLJitoVaultWithdrawalTicketAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoNSOLVaultAccount.toBuffer(), vaultBaseAccount1.toBuffer()], jitoVaultProgram)[0];
-        const fragSOLJitoVaultWithdrawalTicketTokenAccount1 = spl.getAssociatedTokenAddressSync(
-            fragSOLJitoNSOLVRTMint,
-            fragSOLJitoVaultWithdrawalTicketAccount1,
-            true,
-            spl.TOKEN_PROGRAM_ID,
-            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-        )
-        const fragSOLJitoVaultWithdrawalTicketAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoNSOLVaultAccount.toBuffer(), vaultBaseAccount2.toBuffer()], jitoVaultProgram)[0];
-        const fragSOLJitoVaultWithdrawalTicketTokenAccount2 = spl.getAssociatedTokenAddressSync(
-            fragSOLJitoNSOLVRTMint,
-            fragSOLJitoVaultWithdrawalTicketAccount2,
-            true,
-            spl.TOKEN_PROGRAM_ID,
-            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-        );
+        // // TODO: deprecate (client must not know this)
+        // const fragSOLJitoVaultWithdrawalTicketAccount1 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoNSOLVaultAccount.toBuffer(), vaultBaseAccount1.toBuffer()], jitoVaultProgram)[0];
+        // const fragSOLJitoVaultWithdrawalTicketTokenAccount1 = spl.getAssociatedTokenAddressSync(
+        //     fragSOLJitoNSOLVRTMint,
+        //     fragSOLJitoVaultWithdrawalTicketAccount1,
+        //     true,
+        //     spl.TOKEN_PROGRAM_ID,
+        //     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        // )
+        // const fragSOLJitoVaultWithdrawalTicketAccount2 = web3.PublicKey.findProgramAddressSync([Buffer.from("vault_staker_withdrawal_ticket"), fragSOLJitoNSOLVaultAccount.toBuffer(), vaultBaseAccount2.toBuffer()], jitoVaultProgram)[0];
+        // const fragSOLJitoVaultWithdrawalTicketTokenAccount2 = spl.getAssociatedTokenAddressSync(
+        //     fragSOLJitoNSOLVRTMint,
+        //     fragSOLJitoVaultWithdrawalTicketAccount2,
+        //     true,
+        //     spl.TOKEN_PROGRAM_ID,
+        //     spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        // );
 
         // Revenue
         const programRevenueAccount = new web3.PublicKey(this.getConstant('programRevenueAddress'));
@@ -390,8 +402,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserReward,
             // NTP
             nSOLTokenPool,
-            nSOLSupportedTokenLockAccount,
-            ...nSOLSupportedTokenLockAccounts,
+            nSOLSupportedTokenReserveAccount,
+            ...nSOLSupportedTokenReserveAccounts,
             // jito
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
@@ -410,17 +422,26 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLJitoJitoSOLVaultTokenAccount,
             fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
             fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-            // TODO: deprecate (client must not know this)
-            fragSOLJitoVaultWithdrawalTicketAccount1,
-            fragSOLJitoVaultWithdrawalTicketTokenAccount1,
-            fragSOLJitoVaultWithdrawalTicketAccount2,
-            fragSOLJitoVaultWithdrawalTicketTokenAccount2,
-            vaultBaseAccount1,
-            vaultBaseAccount2,
             // program revenue
             programRevenueAccount,
             programSupportedTokenRevenueAccount,
             ...programSupportedTokenRevenueAccounts,
+
+            // // TODO: deprecate (client must not know this)
+            // fragSOLJitoVaultWithdrawalTicketAccount1,
+            // fragSOLJitoVaultWithdrawalTicketTokenAccount1,
+            // fragSOLJitoVaultWithdrawalTicketAccount2,
+            // fragSOLJitoVaultWithdrawalTicketTokenAccount2,
+            // vaultBaseAccount1,
+            // vaultBaseAccount2,
+
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            token2022Program: spl.TOKEN_2022_PROGRAM_ID,
+            sysvarClock: new web3.PublicKey("SysvarC1ock11111111111111111111111111111111"),
+            sysvarStakeHistory: new web3.PublicKey("SysvarStakeHistory1111111111111111111111111"),
+            stakeProgram: new web3.PublicKey("Stake11111111111111111111111111111111111111"),
+            systemProgram: new web3.PublicKey("11111111111111111111111111111111"),
+            splStakePoolProgram: new web3.PublicKey("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy"),
         };
     }
 
@@ -791,12 +812,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             .then(v => new BN(v));
     }
 
+    public getFragSOLFundTreasuryAccountBalance() {
+        return this.connection.getBalance(this.knownAddress.fragSOLFundTreasuryAccount, "confirmed")
+            .then(v => new BN(v));
+    }
+
     public getNSOLTokenPoolAccount() {
         return this.account.normalizedTokenPoolAccount.fetch(this.knownAddress.nSOLTokenPool, "confirmed");
     }
 
-    public getNSOLSupportedTokenLockAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
-        return this.connection.getTokenAccountBalance(this.knownAddress.nSOLSupportedTokenLockAccount(symbol), "confirmed")
+    public getNSOLSupportedTokenReserveAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
+        return this.connection.getTokenAccountBalance(this.knownAddress.nSOLSupportedTokenReserveAccount(symbol), "confirmed")
             .then(v => new BN(v.value.amount));
     }
 
@@ -1104,86 +1130,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLMint, fragSOLFundAccount};
     }
 
-    // TODO: migration v0.3.2
-    public async runFundManagerCloseFundAccount() {
-        await this.run({
-            instructions: [
-                // @ts-ignore
-                this.program.methods.fundManagerCloseFundAccount().instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-
-        logger.notice("fragSOL fund account closed".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund);
-    }
-
-    // TODO: migration v0.3.3
-    public async runFundManagerClearUserSOLWithdrawalRequests(
-        user: web3.PublicKey,
-        numExpectedRequestsLeft: number,
-    ) {
-        await this.run({
-            instructions: [
-                this.program.methods.fundManagerClearUserSolWithdrawalRequests(
-                    user,
-                    numExpectedRequestsLeft,
-                )
-                .instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-
-        const userFundAccount = await this.getUserFragSOLFundAccount(user);
-        logger.notice("old SOL withdrawal requests cleared".padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLUserFund(user));
-
-        return {userFundAccount};
-    }
-
-    // TODO: migration v0.4.0
-    public async runFundManagerChangeFundTokenAccount(
-        tokenMint: web3.PublicKey,
-        tokenProgram: web3.PublicKey,
-    ) {
-        const oldTokenAccount = spl.getAssociatedTokenAddressSync(
-            tokenMint,
-            this.knownAddress.fragSOLFund,
-            true,
-            tokenProgram,
-            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-        )
-        const newTokenAccount = spl.getAssociatedTokenAddressSync(
-            tokenMint,
-            this.knownAddress.fragSOLFundReserveAccount,
-            true,
-            tokenProgram,
-            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-        );
-        await this.run({
-            instructions: [
-                spl.createAssociatedTokenAccountIdempotentInstruction(
-                    this.wallet.publicKey,
-                    newTokenAccount,
-                    this.knownAddress.fragSOLFundReserveAccount,
-                    tokenMint,
-                    tokenProgram,
-                    spl.ASSOCIATED_TOKEN_PROGRAM_ID,
-                ),
-                this.program.methods.fundManagerChangeFundTokenAccount()
-                    .accountsPartial({
-                        payer: this.wallet.publicKey,
-                        tokenMint: tokenMint,
-                        tokenProgram: tokenProgram,
-                        oldTokenAccount,
-                        newTokenAccount,
-                    })
-                    .instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-
-        logger.notice("Changed fund token ata".padEnd(LOG_PAD_LARGE), newTokenAccount);
-    }
-
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
@@ -1247,7 +1193,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundAccount};
     }
 
-    public async runFundManagerInitializeFundJitoRestakingVault() {
+    public async runFundManagerInitializeFundJitoRestakingVaults() {
         const {event, error} = await this.run({
             instructions: Object.entries(this.restakingVaultMetadata).flatMap(([symbol, v]) => {
                 return [
@@ -1360,7 +1306,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultTokenAccount, fragSOLFundJitoFeeVRTAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
-    public async runFundManagerCreateJitoVault(vstMint: web3.PublicKey, vrtMint: web3.Keypair, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("FUND_MANAGER")) {
+    // need for operation
+    public async runAdminCreateJitoVault(vstMint: web3.PublicKey, vrtMint: web3.Keypair, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeVaultInstructionDataSize = {
             discriminator: 1, // u8
             depositFeeBps: 2, // u16
@@ -1449,7 +1396,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
-    // need for operation
     public async runFundManagerAddFundJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
         await this.run({
             instructions: [
@@ -2182,7 +2128,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 return [
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         this.wallet.publicKey,
-                        this.knownAddress.nSOLSupportedTokenLockAccount(symbol as any),
+                        this.knownAddress.nSOLSupportedTokenReserveAccount(symbol as any),
                         this.knownAddress.nSOLTokenPool,
                         v.mint,
                         v.program,
@@ -2214,7 +2160,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
-                    this.knownAddress.nSOLSupportedTokenLockAccount(symbol as any),
+                    this.knownAddress.nSOLSupportedTokenReserveAccount(symbol as any),
                     this.knownAddress.nSOLTokenPool,
                     token.mint,
                     token.program,
@@ -2957,36 +2903,36 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         // prepare accounts according to the current state of operation.
         // - can contain 57 accounts out of 64 with reserved 6 accounts and payer.
         // - order doesn't matter, no need to put duplicate.
-        const requiredAccounts: Map<web3.PublicKey, web3.AccountMeta> = new Map();
+        const requiredAccounts: Map<string, web3.AccountMeta> = new Map();
         this.pricingSourceAccounts.forEach(accoutMeta => {
-            requiredAccounts.set(accoutMeta.pubkey, accoutMeta);
+            requiredAccounts.set(accoutMeta.pubkey.toBase58(), accoutMeta);
         });
-        requiredAccounts.set(this.knownAddress.programEventAuthority, {
+        requiredAccounts.set(this.knownAddress.programEventAuthority.toBase58(), {
             pubkey: this.knownAddress.programEventAuthority,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(this.programId, {
+        requiredAccounts.set(this.programId.toBase58(), {
             pubkey: this.programId,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(operator.publicKey, {
+        requiredAccounts.set(operator.publicKey.toBase58(), {
             pubkey: operator.publicKey,
             isWritable: true,
             isSigner: true,
         });
-        requiredAccounts.set(web3.SystemProgram.programId, {
+        requiredAccounts.set(web3.SystemProgram.programId.toBase58(), {
             pubkey: web3.SystemProgram.programId,
             isWritable: false,
             isSigner: false,
         });
-        requiredAccounts.set(this.knownAddress.fragSOLTokenMint, {
+        requiredAccounts.set(this.knownAddress.fragSOLTokenMint.toBase58(), {
             pubkey: this.knownAddress.fragSOLTokenMint,
             isWritable: true,
             isSigner: false,
         });
-        requiredAccounts.set(this.knownAddress.fragSOLFund, {
+        requiredAccounts.set(this.knownAddress.fragSOLFund.toBase58(), {
             pubkey: this.knownAddress.fragSOLFund,
             isWritable: true,
             isSigner: false,
@@ -2998,17 +2944,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (nextOperationCommand) {
             for (let i = 0; i < nextOperationCommand.numRequiredAccounts; i++) {
                 const accountMeta = nextOperationCommand.requiredAccounts[i];
-                if (requiredAccounts.has(accountMeta.pubkey)) {
+                const pubkey = accountMeta.pubkey.toBase58();
+                if (requiredAccounts.has(pubkey)) {
                     if (accountMeta.isWritable != 0) {
-                        requiredAccounts.get(accountMeta.pubkey).isWritable = true;
+                        requiredAccounts.get(pubkey).isWritable = true;
                     }
                 } else {
-                    requiredAccounts.set(accountMeta.pubkey, {
+                    requiredAccounts.set(pubkey, {
                         pubkey: accountMeta.pubkey,
                         isWritable: (accountMeta.isWritable != 0),
                         isSigner: false,
                     });
                 }
+            }
+        }
+
+        if (requiredAccounts.size > 30) {
+            console.log('FUCK: required accounts', requiredAccounts.size);
+            for (const [k, _] of requiredAccounts.entries()) {
+                console.log(k);
             }
         }
 
@@ -3036,7 +2990,55 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const commandResult = tx.event.operatorRanFundCommand.result;
         const commandName = Object.keys(executedCommand)[0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
-        console.log(executedCommand[commandName][0], commandResult && commandResult[commandName][0]);
+        console.log('executed command:', executedCommand[commandName][0]);
+        console.log('executed result:', commandResult && commandResult[commandName][0]);
+
+        // ... track fund asset state
+        if (commandResult) {
+            await Promise.all([
+                this.getFragSOLFundAccount(),
+                this.getFragSOLFundReserveAccountBalance(),
+                this.getFragSOLFundNSOLAccountBalance(),
+                ...Object.keys(this.supportedTokenMetadata).map(
+                    symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
+                    .then(a => new BN(a.amount.toString()))
+                )
+            ]).then(([fund, sol, nSOL, ...tokens]) => {
+                console.log('fund asset state:', {
+                    oneReceiptTokenAsSol: fund.oneReceiptTokenAsSol,
+                    accounts: {
+                        sol,
+                        tokens: {
+                            [this.knownAddress.nSOLTokenMint.toString()]: nSOL,
+                            ...Object.fromEntries(tokens.map((balance, i) => [Object.values(this.supportedTokenMetadata)[i].mint, balance])),
+                        },
+                    },
+                    data: {
+                        sol: {
+                            reserved: fund.sol.operationReservedAmount,
+                            receivable: fund.sol.operationReceivableAmount,
+                            withdrawable: fund.sol.withdrawalUserReservedAmount,
+                            total: fund.sol.operationReservedAmount.add(fund.sol.operationReceivableAmount).add(fund.sol.withdrawalUserReservedAmount),
+                        },
+                        tokens: {
+                            [this.knownAddress.nSOLTokenMint.toString()]: {
+                                reserved: fund.normalizedToken.operationReservedAmount,
+                                receivable: fund.normalizedToken.operationReceivableAmount,
+                                total: fund.normalizedToken.operationReservedAmount.add(fund.normalizedToken.operationReceivableAmount),
+                            },
+                            ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {
+                                return [supported.mint, {
+                                    reserved: supported.token.operationReservedAmount,
+                                    receivable: supported.token.operationReceivableAmount,
+                                    withdrawable: supported.token.withdrawalUserReservedAmount,
+                                    total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
+                                }];
+                            }))
+                        },
+                    },
+                });
+            });
+        }
 
         return {
             event: tx.event,

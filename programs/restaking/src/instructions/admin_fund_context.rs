@@ -19,12 +19,10 @@ pub struct AdminFundAccountInitialContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(
-        mut,
-        // TODO v0.4: uncomment this constraints
-        // mint::authority = admin,
-        // constraint = receipt_token_mint.supply == 0,
-    )]
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
+    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,

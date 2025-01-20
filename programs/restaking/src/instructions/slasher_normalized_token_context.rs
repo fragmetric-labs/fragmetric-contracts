@@ -41,8 +41,8 @@ pub struct SlasherNormalizedTokenWithdrawalAccountInitialContext<'info> {
     #[account(
         mut,
         token::mint = normalized_token_mint,
-        token::token_program = normalized_token_program,
         token::authority = slasher.key(),
+        token::token_program = normalized_token_program,
     )]
     pub slasher_normalized_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -55,7 +55,6 @@ pub struct SlasherNormalizedTokenWithdrawContext<'info> {
     #[account(mut)]
     pub slasher: Signer<'info>,
 
-    #[account(mut)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

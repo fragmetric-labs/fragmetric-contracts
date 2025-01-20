@@ -12,7 +12,7 @@ import {PartiallyDecodedInstruction} from "@solana/web3.js";
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger('anchor');
 
 anchor.BN.prototype.toJSON = function() {
-    return this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_");
+    return this.toString(); //.replace(/\B(?=(\d{3})+(?!\d))/g, "_");
 }
 anchor.BN.prototype[Symbol.for("nodejs.util.inspect.custom")] = function() {
     return chalk.yellow(this.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "_"));
@@ -76,7 +76,6 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
         this.addressLookupTables = await Promise.all(
             addresses.map(address => this.connection.getAddressLookupTable(address, { commitment: 'confirmed' }).then(res => res.value)),
         );
-        await this.sleep(1);
         logger.notice('set address lookup tables for future transactions:'.padEnd(LOG_PAD_LARGE), addresses);
     }
 

@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
     EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    OperationCommandEntry, OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
     FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
@@ -49,7 +50,7 @@ pub enum UnstakeLSTCommandState {
     /// performing a staking operation.
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
-        unstake_command_items: Vec<UnstakeLSTCommandItem>,
+        items: Vec<UnstakeLSTCommandItem>,
         withdraw_sol: bool,
         #[max_len(5)]
         withdraw_stake_items: Vec<WithdrawStakeItem>,
@@ -77,7 +78,7 @@ impl std::fmt::Debug for UnstakeLSTCommandState {
                 }
             }
             Self::Execute {
-                unstake_command_items,
+                items: unstake_command_items,
                 ..
             } => {
                 if unstake_command_items.is_empty() {
@@ -137,7 +138,7 @@ impl SelfExecutable for UnstakeLSTCommand {
                 self.execute_get_withdraw_stake_items(ctx, accounts, items)?
             }
             UnstakeLSTCommandState::Execute {
-                unstake_command_items,
+                items: unstake_command_items,
                 withdraw_sol,
                 withdraw_stake_items,
             } => self.execute_execute(
@@ -149,11 +150,10 @@ impl SelfExecutable for UnstakeLSTCommand {
             )?,
         };
 
-        // TODO v0.4/operation: next step ... process withdrawal batch
         Ok((
             result,
             entry.or_else(|| {
-                Some(EnqueueWithdrawalBatchCommand::default().without_required_accounts())
+                Some(ProcessWithdrawalBatchCommand::default().without_required_accounts())
             }),
         ))
     }
@@ -168,14 +168,78 @@ impl UnstakeLSTCommand {
     #[inline(never)]
     fn execute_new<'info>(
         &self,
-        _ctx: &mut OperationCommandContext<'info, '_>,
-        _accounts: &[&'info AccountInfo<'info>],
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO v0.4/operation: implement strategy...
-        Ok((None, None))
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().cloned())?;
+        let fund_account = ctx.fund_account.load()?;
+
+        let sol_net_operation_reserved_amount =
+            fund_account.get_asset_net_operation_reserved_amount(None, &pricing_service)?;
+        if sol_net_operation_reserved_amount.is_negative() {
+            let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?;
+            let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+                fund_account
+                    .get_supported_tokens_iter()
+                    .map(|supported_token| {
+                        match supported_token.pricing_source.try_deserialize()? {
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            }) => Ok(WeightedAllocationParticipant::new(
+                                supported_token.sol_allocation_weight,
+                                u64::try_from(
+                                    fund_account
+                                        .get_asset_net_operation_reserved_amount(
+                                            Some(supported_token.mint),
+                                            &pricing_service,
+                                        )?
+                                        .max(0),
+                                )?,
+                                supported_token.sol_allocation_capacity_amount,
+                            )),
+                            // fail when supported token is not unstakable
+                            Some(TokenPricingSource::JitoRestakingVault { .. })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => {
+                                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                            }
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => {
+                                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                            }
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            );
+            strategy.cut_greedy(sol_unstaking_obligated_amount)?;
+
+            let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
+            for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
+                let allocated_sol_amount =
+                    strategy.get_participant_last_cut_amount_by_index(index)?;
+                let allocated_token_amount = pricing_service
+                    .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
+                if allocated_token_amount > 0 {
+                    items.push(UnstakeLSTCommandItem {
+                        token_mint: supported_token.mint,
+                        allocated_token_amount,
+                    });
+                }
+            }
+            drop(fund_account);
+
+            self.execute_prepare(ctx, accounts, items, None)
+        } else {
+            Ok((None, None))
+        }
     }
 
     #[inline(never)]
@@ -256,7 +320,7 @@ impl UnstakeLSTCommand {
                 Self {
                     // Neither withdraw sol nor stake... will order unstake!
                     state: UnstakeLSTCommandState::Execute {
-                        unstake_command_items: items,
+                        items: items,
                         withdraw_sol: false,
                         withdraw_stake_items: vec![],
                     },
@@ -448,7 +512,7 @@ impl UnstakeLSTCommand {
 
         Ok(Self {
             state: UnstakeLSTCommandState::Execute {
-                unstake_command_items: items.to_vec(),
+                items: items.to_vec(),
                 withdraw_sol: true,
                 withdraw_stake_items,
             },
@@ -720,7 +784,7 @@ impl UnstakeLSTCommand {
 
             let command = Self {
                 state: UnstakeLSTCommandState::Execute {
-                    unstake_command_items,
+                    items: unstake_command_items,
                     withdraw_sol: false,
                     withdraw_stake_items,
                 },

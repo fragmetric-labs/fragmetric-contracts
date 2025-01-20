@@ -41,32 +41,6 @@ impl PDASeeds<4> for UserFundAccount {
 }
 
 impl UserFundAccount {
-    // TODO: migration v0.3.3 - only dev
-    pub fn clear_sol_withdrawal_requests(
-        &mut self,
-        fund_account: &FundAccount,
-        num_expected_requests_left: u8,
-    ) -> Result<()> {
-        let current_pending_batch_id = fund_account.sol.withdrawal_pending_batch.batch_id;
-        let last_created_request_id = fund_account.sol.withdrawal_last_created_request_id;
-
-        self.withdrawal_requests = std::mem::take(&mut self.withdrawal_requests)
-            .into_iter()
-            .filter(|request| {
-                request.supported_token_mint.is_some()
-                    || request.batch_id <= current_pending_batch_id
-                        && request.request_id <= last_created_request_id
-            })
-            .collect();
-
-        require_eq!(
-            self.withdrawal_requests.len(),
-            num_expected_requests_left as usize
-        );
-
-        Ok(())
-    }
-
     fn migrate(
         &mut self,
         bump: u8,
