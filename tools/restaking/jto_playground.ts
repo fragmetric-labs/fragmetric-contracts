@@ -952,40 +952,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragJTOMint: fragJTOMint, fragJTOFundAccount: fragJTOFundAccount};
     }
 
-    // TODO: migration v0.3.2
-    public async runFundManagerCloseFundAccount() {
-        await this.run({
-            instructions: [
-                this.program.methods.fundManagerCloseFundAccount().instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-
-        logger.notice("fragJTO fund account closed".padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund);
-    }
-
-    // TODO: migration v0.3.3
-    public async runFundManagerClearUserSOLWithdrawalRequests(
-        user: web3.PublicKey,
-        numExpectedRequestsLeft: number,
-    ) {
-        await this.run({
-            instructions: [
-                this.program.methods.fundManagerClearUserSolWithdrawalRequests(
-                    user,
-                    numExpectedRequestsLeft,
-                )
-                .instruction(),
-            ],
-            signerNames: ['FUND_MANAGER'],
-        });
-
-        const userFundAccount = await this.getUserFragJTOFundAccount(user);
-        logger.notice("old SOL withdrawal requests cleared".padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOUserFund(user));
-
-        return {userFundAccount};
-    }
-
     // public async runAdminInitializeNormalizedTokenPoolAccounts() {
     //     await this.run({
     //         instructions: [
