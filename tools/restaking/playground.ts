@@ -1450,13 +1450,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation
-    public async runFundManagerInitializeFundJitoRestakingVaultDelegation(operator: web3.PublicKey) {
+    public async runFundManagerAddFundJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
         await this.run({
             instructions: [
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        vaultAccount: this.knownAddress.fragSOLJitoVaultAccount,
+                        vaultAccount: vault,
                         vaultOperator: operator,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
@@ -1597,13 +1597,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // for test - initialize operator_vault_ticket
-    public async runAdminInitializeOperatorVaultTicket(operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
+    public async runAdminInitializeOperatorVaultTicket(vault: web3.PublicKey, operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeOperatorVaultTicketInstructionDataSize = {
             discriminator: 1, // u8
         };
 
         const operatorVaultTicketPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("operator_vault_ticket"), operator.toBuffer(), this.knownAddress.fragSOLJitoVaultAccount.toBuffer()],
+            [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
             this.knownAddress.jitoRestakingProgram,
         );
         logger.notice(`operator_vault_ticket key`.padEnd(LOG_PAD_LARGE), operatorVaultTicketPublicKey.toString());
@@ -1631,7 +1631,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         isWritable: true,
                     },
                     {
-                        pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                        pubkey: vault,
                         isSigner: false,
                         isWritable: false,
                     },
@@ -1669,13 +1669,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation - initialize vault_operator_delegation
-    public async runAdminInitializeVaultOperatorDelegation(operator: web3.PublicKey, operatorVaultTicket: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
+    public async runAdminInitializeVaultOperatorDelegation(vault: web3.PublicKey, operator: web3.PublicKey, operatorVaultTicket: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeVaultOperatorDelegationInstructionDataSize = {
             discriminator: 1, // u8
         };
 
         const vaultOperatorDelegationPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("vault_operator_delegation"), this.knownAddress.fragSOLJitoVaultAccount.toBuffer(), operator.toBuffer()],
+            [Buffer.from("vault_operator_delegation"), vault.toBuffer(), operator.toBuffer()],
             this.knownAddress.jitoVaultProgram,
         );
         logger.notice(`vault_operator_delegation key`.padEnd(LOG_PAD_LARGE), vaultOperatorDelegationPublicKey.toString());
@@ -1698,7 +1698,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         isWritable: false,
                     },
                     {
-                        pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                        pubkey: vault,
                         isSigner: false,
                         isWritable: true,
                     },
@@ -1746,7 +1746,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation - set vault_delegation_admin to fund_account
-    public async runAdminSetSecondaryAdminForJitoVault(oldAuthority = this.keychain.getKeypair("ADMIN")) {
+    public async runAdminSetSecondaryAdminForJitoVault(vault: web3.PublicKey, oldAuthority = this.keychain.getKeypair("ADMIN")) {
         const newAuthority = this.knownAddress.fragSOLFund;
         logger.notice("old authority".padEnd(LOG_PAD_LARGE), oldAuthority.publicKey.toString());
         logger.notice("new authority".padEnd(LOG_PAD_LARGE), newAuthority.toString());
@@ -1777,7 +1777,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         isWritable: false,
                     },
                     {
-                        pubkey: this.knownAddress.fragSOLJitoVaultAccount,
+                        pubkey: vault,
                         isSigner: false,
                         isWritable: true,
                     },
@@ -2009,7 +2009,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             throw `invalid accumulated deposit amount for ${symbol}`;
                     }
                 })() : null,
-                withdrawable: this.isMainnet ? true : true,
+                withdrawable: this.isMainnet ? true : this.isDevnet ? true : false,
                 withdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
                 withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(10 ** v.decimals)),
                 tokenRebalancingAmount: null as BN | null,
