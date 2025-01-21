@@ -1964,13 +1964,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(this.isMainnet ? 0 : 0);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? 90 : 85); // TODO
+                            return new BN(this.isMainnet ? 100 : 100);
                         case "mSOL":
-                            return new BN(this.isMainnet ? 5 : 5);
+                            return new BN(this.isMainnet ? 0 : 0);
                         case "BNSOL":
-                            return new BN(this.isMainnet ? 5 : 5);
+                            return new BN(this.isMainnet ? 0 : 0);
                         case "bbSOL":
-                            return new BN(this.isMainnet ? 0 : 5); // TODO
+                            return new BN(this.isMainnet ? 0 : 0);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -2751,9 +2751,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
-    public async runUserWithdraw(user: web3.Keypair, requestId: BN) {
+    public async runUserWithdraw(user: web3.Keypair, supportedTokenMint: web3.PublicKey|null, requestId: BN) {
         const request = await this.getUserFragSOLFundAccount(user.publicKey)
-            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId)));
+            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId) && (supportedTokenMint ? supportedTokenMint.equals(req.supportedTokenMint) : !req.supportedTokenMint)));
+
         if (!request) {
             throw "request not found";
         }

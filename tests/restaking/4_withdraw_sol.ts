@@ -104,7 +104,7 @@ describe("withdraw SOL", async () => {
 
     step("user5 can withdraw SOL", async () => {
         const balance0 = await restaking.connection.getBalance(user5.publicKey);
-        const res1 = await restaking.runUserWithdraw(user5, new BN(2));
+        const res1 = await restaking.runUserWithdraw(user5, null, new BN(2));
         const balance1 = await restaking.connection.getBalance(user5.publicKey);
         expect(res1.event.userWithdrewFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
         expect(res1.event.userWithdrewFromFund.withdrawnAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
@@ -165,7 +165,7 @@ describe("withdraw SOL", async () => {
             events: ['fundManagerUpdatedFund'],
         });
 
-        const res2 = await restaking.runUserWithdraw(user5, new BN(4));
+        const res2 = await restaking.runUserWithdraw(user5, null, new BN(4));
         expect(res2.fragSOLFund.sol.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
     });
 });

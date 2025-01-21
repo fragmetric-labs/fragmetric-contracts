@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
-
-use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
-};
+use crate::modules::fund::commands::OperationCommand::UndelegateVST;
+use super::{OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable, UndelegateVSTCommand};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct DenormalizeNTCommand {
@@ -23,6 +20,6 @@ impl SelfExecutable for DenormalizeNTCommand {
         Option<OperationCommandEntry>,
     )> {
         // TODO: DenormalizeNTCommand.execute
-        Ok((None, None))
+        Ok((None, Some(UndelegateVSTCommand::default().without_required_accounts())))
     }
 }

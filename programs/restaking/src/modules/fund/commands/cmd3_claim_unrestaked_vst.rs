@@ -19,7 +19,7 @@ use super::{
     WeightedAllocationParticipant, WeightedAllocationStrategy,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ClaimUnrestakedVSTCommand {
     #[max_len(2)]
     items: Vec<ClaimUnrestakedVSTCommandItem>,
@@ -68,8 +68,9 @@ impl ClaimUnrestakedVSTCommandItem {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum ClaimUnrestakedVSTCommandState {
+    #[default]
     Init,
     Init2,
     ReadVaultState,

@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use super::{
-    ClaimUnstakedSOLCommand, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
+    FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, ClaimUnrestakedVSTCommand, SelfExecutable,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -45,8 +45,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
             } else {
                 None
             },
-            // TODO/v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
-            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+            Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
         ))
     }
 }

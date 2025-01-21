@@ -731,7 +731,7 @@ impl UnstakeLSTCommand {
             total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
         }
 
-        // Withdraw stake limit
+        // Withdraw stake limit at a single operation tx due to memory limit
         const WITHDRAW_STAKE_LIMIT: usize = 2;
         let mut withdraw_stake_count = 0;
         let mut withdraw_stake_paused = false;

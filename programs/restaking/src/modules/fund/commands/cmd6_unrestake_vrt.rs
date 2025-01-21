@@ -1,7 +1,4 @@
-use super::{
-    ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, OperationCommand,
-    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
-};
+use super::{ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, ClaimUnstakedSOLCommand, OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable};
 use crate::errors;
 use crate::modules::fund::FundService;
 use crate::modules::pricing::TokenPricingSource;
@@ -12,7 +9,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnrestakeVRTCommand {
     #[max_len(2)]
     items: Vec<UnrestakeVSTCommandItem>,
@@ -43,8 +40,9 @@ impl UnrestakeVSTCommandItem {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum UnrestakeVRTCommandState {
+    #[default]
     Init,
     ReadVaultState,
     Unstake(#[max_len(4, 32)] Vec<Vec<u8>>),
@@ -259,6 +257,6 @@ impl SelfExecutable for UnrestakeVRTCommand {
                 _ => (),
             }
         }
-        Ok((None, None))
+        Ok((None, Some(ClaimUnstakedSOLCommand::default().without_required_accounts())))
     }
 }
