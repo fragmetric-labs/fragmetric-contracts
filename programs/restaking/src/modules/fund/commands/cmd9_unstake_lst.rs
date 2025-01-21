@@ -107,6 +107,7 @@ pub struct UnstakeLSTCommandResult {
     pub deducted_sol_fee_amount: u64,
     pub unstaked_sol_amount: u64,
     pub unstaking_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
     pub operation_reserved_sol_amount: u64,
     pub operation_receivable_sol_amount: u64,
     pub operation_reserved_token_amount: u64,
@@ -179,7 +180,13 @@ impl UnstakeLSTCommand {
         let sol_net_operation_reserved_amount =
             fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
         if sol_net_operation_reserved_amount.is_negative() {
-            let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?;
+            let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?
+                .saturating_sub(
+                    fund_account
+                        .get_supported_tokens_iter()
+                        .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
+                        .sum(),
+                );
             let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
                 fund_account
                     .get_supported_tokens_iter()
@@ -609,6 +616,7 @@ impl UnstakeLSTCommand {
 
                 let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
                 supported_token.token.operation_reserved_amount -= burnt_token_amount;
+                supported_token.pending_unstaking_amount_as_sol += unstaking_sol_amount;
 
                 Ok(UnstakeLSTCommandResult {
                     token_mint: item.token_mint,
@@ -616,6 +624,7 @@ impl UnstakeLSTCommand {
                     deducted_sol_fee_amount,
                     unstaked_sol_amount,
                     unstaking_sol_amount,
+                    total_unstaking_sol_amount: supported_token.pending_unstaking_amount_as_sol,
                     operation_reserved_token_amount: supported_token
                         .token
                         .operation_reserved_amount,

@@ -63,6 +63,7 @@ impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
 pub struct ClaimUnstakedSOLCommandResult {
     pub token_mint: Pubkey,
     pub claimed_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
     pub transferred_sol_revenue_amount: u64,
     pub offsetted_sol_receivable_amount: u64,
     #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
@@ -346,16 +347,19 @@ impl ClaimUnstakedSOLCommand {
             )?;
             drop(fund_service);
 
-            let fund_account = ctx.fund_account.load()?;
+            let mut fund_account = ctx.fund_account.load_mut()?;
             require_gte!(
                 to_sol_account_amount,
                 fund_account.sol.get_total_reserved_amount(),
             );
+            let supported_token = fund_account.get_supported_token_mut(pool_token_mint)?;
+            supported_token.pending_unstaking_amount_as_sol -= claimed_sol_amount;
 
             Some(
                 ClaimUnstakedSOLCommandResult {
                     token_mint: *pool_token_mint,
                     claimed_sol_amount,
+                    total_unstaking_sol_amount: supported_token.pending_unstaking_amount_as_sol,
                     transferred_sol_revenue_amount,
                     offsetted_sol_receivable_amount,
                     offsetted_asset_receivables: offsetted_asset_receivables
