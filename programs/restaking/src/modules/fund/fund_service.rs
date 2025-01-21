@@ -6,6 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
 use std::cell::RefMut;
 use std::cmp::min;
+use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
@@ -15,7 +16,7 @@ use crate::utils::*;
 use crate::{events, utils};
 
 use super::commands::{
-    OperationCommandAccountMeta, OperationCommandContext, OperationCommandEntry, SelfExecutable,
+    OperationCommandContext, OperationCommandEntry, SelfExecutable,
     FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
 };
 use super::*;
@@ -489,7 +490,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok((num_withdrawal_batches, accounts))
     }
 
-    /// returns [processed_receipt_token_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
+    /// returns [processed_receipt_token_amount, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -510,10 +511,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         uninitialized_withdrawal_batch_accounts: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
-        _receipt_token_amount_to_return: u64, // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
+        _receipt_token_amount_to_return: u64, // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset due to slashing event
 
         pricing_service: &PricingService,
-    ) -> Result<(u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
+    ) -> Result<(u64, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
         let (
             supported_token_mint,
             supported_token_mint_key,
@@ -828,8 +829,22 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 + receipt_token_amount_processing,
             0
         );
+
+        let fund_account = self.fund_account.load()?;
+        let asset_amount_required = u64::try_from(
+            fund_account
+                .get_asset_net_operation_reserved_amount(
+                    supported_token_mint_key,
+                    false,
+                    pricing_service,
+                )?
+                .min(0)
+                .neg(),
+        )?;
+
         Ok((
             receipt_token_amount_processed,
+            asset_amount_required,
             asset_user_amount_reserved,
             asset_fee_amount_deducted,
             offsetted_asset_receivables,

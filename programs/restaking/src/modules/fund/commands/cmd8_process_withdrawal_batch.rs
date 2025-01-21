@@ -43,6 +43,7 @@ pub struct ProcessWithdrawalBatchCommandResult {
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
     pub asset_token_mint: Option<Pubkey>,
+    pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
     #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
@@ -370,6 +371,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // do process withdrawal
                 let (
                     processed_receipt_token_amount,
+                    required_asset_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
                     offsetted_asset_receivables,
@@ -384,6 +386,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                     let (
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables,
@@ -421,6 +424,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     fund_service.update_asset_values(&mut pricing_service)?;
                     (
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables,
@@ -434,6 +438,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         asset_token_mint,
                         requested_receipt_token_amount,
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables: offsetted_asset_receivables
@@ -454,49 +459,51 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         }
 
         // transition to next command
-        Ok((
-            result,
-            Some({
-                let current_asset_token_mint = match self.state {
-                    ProcessWithdrawalBatchCommandState::New => None,
-                    ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
-                    | ProcessWithdrawalBatchCommandState::Execute {
-                        asset_token_mint, ..
-                    } => Some(asset_token_mint),
-                };
+        Ok({
+            let current_asset_token_mint = match self.state {
+                ProcessWithdrawalBatchCommandState::New => None,
+                ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
+                | ProcessWithdrawalBatchCommandState::Execute {
+                    asset_token_mint, ..
+                } => Some(asset_token_mint),
+            };
 
-                let next_asset_token_mint = {
-                    let fund_account = ctx.fund_account.load()?;
-                    let mut target_asset_token_mints = fund_account
-                        .get_asset_states_iter()
-                        .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
-                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
-                        .peekable();
+            let next_asset_token_mint = {
+                let fund_account = ctx.fund_account.load()?;
+                let mut assets = fund_account.get_asset_states_iter();
 
-                    let mut next_asset_token_mint_candidate =
-                        target_asset_token_mints.peek().cloned();
-
-                    if let Some(current_asset_token_mint) = current_asset_token_mint {
-                        while let Some(asset_token_mint) = target_asset_token_mints.next() {
-                            if asset_token_mint == current_asset_token_mint {
-                                next_asset_token_mint_candidate = target_asset_token_mints.next();
-                                break;
-                            }
-                        }
-                    }
-
-                    next_asset_token_mint_candidate
-                };
-
-                match next_asset_token_mint {
-                    Some(asset_token_mint) => ProcessWithdrawalBatchCommand {
-                        state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
-                        forced: false,
-                    }
-                    .without_required_accounts(),
-                    None => UnstakeLSTCommand::default().without_required_accounts(),
+                match current_asset_token_mint {
+                    None => assets
+                        .find(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
+                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint)),
+                    Some(current) => assets
+                        .skip_while(|asset| {
+                            asset.get_token_mint_and_program().map(|(mint, _)| mint) != current
+                        })
+                        .skip(1)
+                        .find(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
+                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint)),
                 }
-            }),
-        ))
+            };
+
+            match next_asset_token_mint {
+                Some(asset_token_mint) => {
+                    // directly execute prepare commands
+                    (
+                        result,
+                        ProcessWithdrawalBatchCommand {
+                            state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
+                            forced: false,
+                        }
+                        .execute(ctx, accounts)?
+                        .1,
+                    )
+                }
+                None => (
+                    result,
+                    Some(UnstakeLSTCommand::default().without_required_accounts()),
+                ),
+            }
+        })
     }
 }
