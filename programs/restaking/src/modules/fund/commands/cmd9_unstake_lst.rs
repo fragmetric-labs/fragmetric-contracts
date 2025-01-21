@@ -9,7 +9,7 @@ use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 use super::{
     EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommandContext,
     OperationCommandEntry, OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    StakeSOLCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -152,9 +152,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
         Ok((
             result,
-            entry.or_else(|| {
-                Some(ProcessWithdrawalBatchCommand::default().without_required_accounts())
-            }),
+            entry.or_else(|| Some(StakeSOLCommand::default().without_required_accounts())),
         ))
     }
 }
@@ -179,7 +177,7 @@ impl UnstakeLSTCommand {
         let fund_account = ctx.fund_account.load()?;
 
         let sol_net_operation_reserved_amount =
-            fund_account.get_asset_net_operation_reserved_amount(None, &pricing_service)?;
+            fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
         if sol_net_operation_reserved_amount.is_negative() {
             let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?;
             let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
@@ -193,13 +191,17 @@ impl UnstakeLSTCommand {
                                 ..
                             }) => Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
-                                u64::try_from(
-                                    fund_account
-                                        .get_asset_net_operation_reserved_amount(
-                                            Some(supported_token.mint),
-                                            &pricing_service,
-                                        )?
-                                        .max(0),
+                                pricing_service.get_token_amount_as_sol(
+                                    &supported_token.mint,
+                                    u64::try_from(
+                                        fund_account
+                                            .get_asset_net_operation_reserved_amount(
+                                                Some(supported_token.mint),
+                                                false,
+                                                &pricing_service,
+                                            )?
+                                            .max(0),
+                                    )?,
                                 )?,
                                 supported_token.sol_allocation_capacity_amount,
                             )),

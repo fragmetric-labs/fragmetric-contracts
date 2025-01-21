@@ -46,9 +46,10 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
                 events: ['fundManagerUpdatedFund'],
             });
         }
-        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(2));
-        const res3 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(4), restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
-        const res4 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.divn(4), restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
+        let quarter = res1.receiptTokenAmount.divn(4);
+        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.sub(quarter).sub(quarter));
+        const res3 = await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
+        const res4 = await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
     });
 
     step("fund operation for a full cycle (ncn_epoch = 256 slot)", async () => {

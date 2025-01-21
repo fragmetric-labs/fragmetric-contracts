@@ -1901,8 +1901,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             // TODO v0.4.1: remove (set null) accumulated deposit amount
             solAccumulatedDepositAmount:  this.isMainnet ? new BN(185_844_305_400_574) : null,
             solWithdrawalable: this.isMainnet ? true : true,
-            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
-            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
+            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
+            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
@@ -1956,8 +1956,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     }
                 })() : null,
                 withdrawable: this.isMainnet ? true : this.isDevnet ? true : false,
-                withdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
-                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(10 ** v.decimals)),
+                withdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
+                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(10 ** v.decimals)),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {
                     switch (symbol) {
@@ -2959,13 +2959,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
         }
 
-        if (requiredAccounts.size > 30) {
-            console.log('FUCK: required accounts', requiredAccounts.size);
-            for (const [k, _] of requiredAccounts.entries()) {
-                console.log(k);
-            }
-        }
-
         const tx = await this.run({
             instructions: [
                 this.program.methods
@@ -2997,15 +2990,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (commandResult) {
             await Promise.all([
                 this.getFragSOLFundAccount(),
+                this.getFragSOLFundReceiptTokenLockAccount().then(a => new BN(a.amount.toString())),
                 this.getFragSOLFundReserveAccountBalance(),
                 this.getFragSOLFundNSOLAccountBalance(),
                 ...Object.keys(this.supportedTokenMetadata).map(
                     symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
                     .then(a => new BN(a.amount.toString()))
                 )
-            ]).then(([fund, sol, nSOL, ...tokens]) => {
+            ]).then(([fund, fragSOLLocked, sol, nSOL, ...tokens]) => {
                 console.log('fund asset state:', {
-                    oneReceiptTokenAsSol: fund.oneReceiptTokenAsSol,
+                    receiptToken: {
+                        oneTokenAsSOL: fund.oneReceiptTokenAsSol,
+                        supplyAmount: fund.receiptTokenSupplyAmount,
+                        lockedAmount: fragSOLLocked,
+                    },
                     accounts: {
                         sol,
                         tokens: {
@@ -3032,6 +3030,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                     receivable: supported.token.operationReceivableAmount,
                                     withdrawable: supported.token.withdrawalUserReservedAmount,
                                     total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
+                                }];
+                            })),
+                            ...Object.fromEntries(fund.restakingVaults.slice(0, fund.numRestakingVaults).map(vault => {
+                                return [vault.receiptTokenMint, {
+                                    reserved: vault.receiptTokenOperationReservedAmount,
+                                    receivable: vault.receiptTokenOperationReceivableAmount,
+                                    total: vault.receiptTokenOperationReservedAmount.add(vault.receiptTokenOperationReceivableAmount),
                                 }];
                             }))
                         },

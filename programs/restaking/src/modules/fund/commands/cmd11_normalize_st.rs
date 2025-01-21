@@ -165,6 +165,7 @@ impl NormalizeSTCommand {
             let supported_token_operation_reserved_amount = fund_account
                 .get_asset_net_operation_reserved_amount(
                     Some(supported_token.mint),
+                    true,
                     &pricing_service,
                 )?;
 
@@ -221,7 +222,7 @@ impl NormalizeSTCommand {
                 }
             }
 
-            if allocated_sol_amount_for_normalized_token_vaults > 0 {
+            if allocated_sol_amount_for_normalized_token_vaults > 1_000_000 {
                 items.push(NormalizeSTCommandItem {
                     supported_token_mint: supported_token.mint,
                     allocated_token_amount: pricing_service.get_sol_amount_as_token(

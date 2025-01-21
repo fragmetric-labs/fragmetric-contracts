@@ -476,11 +476,9 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
 
         // the values being written below are informative, only for event emission.
         self.normalized_token_pool_account
-            .one_normalized_token_as_sol = pricing_service.get_token_amount_as_sol(
+            .one_normalized_token_as_sol = pricing_service.get_one_token_amount_as_sol(
             normalized_token_mint_key,
-            10u64
-                .checked_pow(self.normalized_token_mint.decimals as u32)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            self.normalized_token_mint.decimals,
         )?;
 
         for supported_token in self
@@ -488,12 +486,8 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
             .supported_tokens
             .iter_mut()
         {
-            supported_token.one_token_as_sol = pricing_service.get_token_amount_as_sol(
-                &supported_token.mint,
-                10u64
-                    .checked_pow(supported_token.decimals as u32)
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-            )?;
+            supported_token.one_token_as_sol = pricing_service
+                .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
         }
 
         pricing_service.flatten_token_value(

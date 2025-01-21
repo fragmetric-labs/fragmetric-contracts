@@ -352,6 +352,7 @@ impl AssetState {
         receipt_token_mint: &Pubkey,
         receipt_token_value: &TokenValue,
         pricing_service: &PricingService,
+        with_normal_reserve: bool,
     ) -> Result<u64> {
         let asset_withdrawal_obligated_reserve_amount_as_sol = pricing_service
             .get_token_amount_as_sol(
@@ -367,12 +368,15 @@ impl AssetState {
         };
 
         Ok(asset_withdrawal_obligated_reserve_amount
-            + self
-                .get_withdrawal_normal_reserve_amount(receipt_token_value)?
-                .min(
-                    self.operation_reserved_amount
-                        .saturating_sub(asset_withdrawal_obligated_reserve_amount),
-                ))
+            + if with_normal_reserve {
+                self.get_withdrawal_normal_reserve_amount(receipt_token_value)?
+                    .min(
+                        self.operation_reserved_amount
+                            .saturating_sub(asset_withdrawal_obligated_reserve_amount),
+                    )
+            } else {
+                0
+            })
     }
 
     /// represents the surplus or shortage amount after fulfilling the withdrawal obligations for the given asset.
@@ -380,6 +384,7 @@ impl AssetState {
         &self,
         receipt_token_mint: &Pubkey,
         receipt_token_value: &TokenValue,
+        with_normal_reserve: bool,
         pricing_service: &PricingService,
     ) -> Result<i128> {
         Ok(self.operation_reserved_amount as i128
@@ -387,6 +392,7 @@ impl AssetState {
                 receipt_token_mint,
                 receipt_token_value,
                 pricing_service,
+                with_normal_reserve,
             )? as i128)
     }
 }

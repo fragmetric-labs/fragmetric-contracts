@@ -233,6 +233,23 @@ impl<'info> PricingService<'info> {
         utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
     }
 
+    pub fn get_one_token_amount_as_sol(
+        &self,
+        token_mint: &Pubkey,
+        token_decimals: u8,
+    ) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
+        let token_amount = 10u64
+            .checked_pow(token_decimals as u32)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        if denominator_as_token == 0 {
+            Ok(token_amount)
+        } else {
+            utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
+        }
+    }
+
     /// **Flatten**s the token value of given token.
     /// A token value is **flattened** if and only if:
     /// * there is no duplicated assets in token value.

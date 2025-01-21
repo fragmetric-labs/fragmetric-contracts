@@ -124,7 +124,7 @@ impl StakeSOLCommand {
         let fund_account = ctx.fund_account.load()?;
 
         let sol_net_operation_reserved_amount =
-            fund_account.get_asset_net_operation_reserved_amount(None, &pricing_service)?;
+            fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
 
         // does not have enough reserved SOL amount to operate
         if sol_net_operation_reserved_amount <= 0 {
@@ -169,7 +169,7 @@ impl StakeSOLCommand {
             Vec::<StakeSOLCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
         for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             let allocated_sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
-            if allocated_sol_amount > 0 {
+            if allocated_sol_amount > 1_000_000 {
                 items.push(StakeSOLCommandItem {
                     token_mint: supported_token.mint,
                     allocated_sol_amount,
