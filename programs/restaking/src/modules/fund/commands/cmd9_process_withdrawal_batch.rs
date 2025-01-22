@@ -501,7 +501,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
                 None => (
                     result,
-                    Some(UnstakeLSTCommand::default().without_required_accounts()),
+                    Some(StakeSOLCommand::default().without_required_accounts()),
                 ),
             }
         })

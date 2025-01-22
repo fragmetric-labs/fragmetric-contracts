@@ -10,8 +10,8 @@ mod cmd4_denormalize_nt;
 mod cmd5_undelegate_vst;
 mod cmd6_unrestake_vrt;
 mod cmd7_claim_unstaked_sol;
-mod cmd8_process_withdrawal_batch;
-mod cmd9_unstake_lst;
+mod cmd8_unstake_lst;
+mod cmd9_process_withdrawal_batch;
 
 pub use cmd10_stake_sol::*;
 pub use cmd11_normalize_st::*;
@@ -25,8 +25,8 @@ pub use cmd4_denormalize_nt::*;
 pub use cmd5_undelegate_vst::*;
 pub use cmd6_unrestake_vrt::*;
 pub use cmd7_claim_unstaked_sol::*;
-pub use cmd8_process_withdrawal_batch::*;
-pub use cmd9_unstake_lst::*;
+pub use cmd8_unstake_lst::*;
+pub use cmd9_process_withdrawal_batch::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
@@ -192,19 +192,6 @@ impl From<ClaimUnstakedSOLCommandResult> for OperationCommandResult {
 }
 
 // cmd8
-impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
-    fn from(command: ProcessWithdrawalBatchCommand) -> Self {
-        Self::ProcessWithdrawalBatch(command)
-    }
-}
-
-impl From<ProcessWithdrawalBatchCommandResult> for OperationCommandResult {
-    fn from(result: ProcessWithdrawalBatchCommandResult) -> Self {
-        Self::ProcessWithdrawalBatch(result)
-    }
-}
-
-// cmd9
 impl From<UnstakeLSTCommand> for OperationCommand {
     fn from(command: UnstakeLSTCommand) -> Self {
         Self::UnstakeLST(command)
@@ -214,6 +201,19 @@ impl From<UnstakeLSTCommand> for OperationCommand {
 impl From<UnstakeLSTCommandResult> for OperationCommandResult {
     fn from(result: UnstakeLSTCommandResult) -> Self {
         Self::UnstakeLST(result)
+    }
+}
+
+// cmd9
+impl From<ProcessWithdrawalBatchCommand> for OperationCommand {
+    fn from(command: ProcessWithdrawalBatchCommand) -> Self {
+        Self::ProcessWithdrawalBatch(command)
+    }
+}
+
+impl From<ProcessWithdrawalBatchCommandResult> for OperationCommandResult {
+    fn from(result: ProcessWithdrawalBatchCommandResult) -> Self {
+        Self::ProcessWithdrawalBatch(result)
     }
 }
 
@@ -292,8 +292,8 @@ impl OperationCommand {
             OperationCommand::UndelegateVST(_) => 5,
             OperationCommand::UnrestakeVRT(_) => 6,
             OperationCommand::ClaimUnstakedSOL(_) => 7,
-            OperationCommand::ProcessWithdrawalBatch(_) => 8,
-            OperationCommand::UnstakeLST(_) => 9,
+            OperationCommand::UnstakeLST(_) => 8,
+            OperationCommand::ProcessWithdrawalBatch(_) => 9,
             OperationCommand::StakeSOL(_) => 10,
             OperationCommand::NormalizeST(_) => 11,
             OperationCommand::RestakeVST(_) => 12,

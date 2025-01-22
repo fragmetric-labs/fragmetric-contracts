@@ -7,8 +7,7 @@ use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
     FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable, UnstakeLSTCommand,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    OperationCommandResult, SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -99,9 +98,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 
         Ok((
             result,
-            entry.or_else(|| {
-                Some(ProcessWithdrawalBatchCommand::default().without_required_accounts())
-            }),
+            entry.or_else(|| Some(UnstakeLSTCommand::default().without_required_accounts())),
         ))
     }
 }

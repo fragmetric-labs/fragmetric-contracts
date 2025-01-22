@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
 
-use super::cmd8_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
 use super::{
     ClaimUnstakedSOLCommand, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable,
+    OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
