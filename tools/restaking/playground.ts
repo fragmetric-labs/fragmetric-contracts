@@ -586,16 +586,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
                 },
-                jito2: {
-                    VSTMint: this.knownAddress.jitoSOLTokenMint,
-                    VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
-                    vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
-                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
-                    programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
-                    feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-                    vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
-                    fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
-                }
+                // jito2: {
+                //     VSTMint: this.knownAddress.jitoSOLTokenMint,
+                //     VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
+                //     vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
+                //     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                //     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
+                //     feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
+                //     vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
+                //     fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
+                // }
             };
         } else {
             // for 'localnet', it would be cloned from mainnet
@@ -610,16 +610,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
                 },
-                jito2: {
-                    VSTMint: this.knownAddress.jitoSOLTokenMint,
-                    VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
-                    vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
-                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
-                    programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
-                    feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-                    vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
-                    fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
-                }
+                // jito2: {
+                //     VSTMint: this.knownAddress.jitoSOLTokenMint,
+                //     VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
+                //     vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
+                //     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                //     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
+                //     feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
+                //     vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
+                //     fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
+                // }
             };
         }
     }
@@ -1890,27 +1890,30 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public get targetFragSOLFundConfiguration() {
-        return {
-            depositEnabled: this.isMainnet ? true : true,
-            donationEnabled: this.isMainnet ? false : true,
-            withdrawalEnabled: this.isMainnet ? false : true,
-            WithdrawalFeedRateBPS: this.isMainnet ? 20 : 20,
-            withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 86400 : 60), // seconds
 
-            solDepositable: this.isMainnet ? true : true,
-            solAccumulatedDepositCapacity: this.isMainnet ? new BN(185_844_305_400_574) : new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL)),
-            // TODO v0.4.1: remove (set null) accumulated deposit amount
-            solAccumulatedDepositAmount:  this.isMainnet ? new BN(185_844_305_400_574) : null,
-            solWithdrawalable: this.isMainnet ? true : true,
-            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
-            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
+        return {
+            depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            donationEnabled: this.isDevnet ? true : (this.isMainnet ? false : true),
+            withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
+            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
+
+            solDepositable: true,
+            solAccumulatedDepositCapacity: this.isDevnet
+                ? new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL)) : (
+                    this.isMainnet ? new BN(185_844_305_400_574) : new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL))
+                ),
+            solAccumulatedDepositAmount: null,
+            solWithdrawalable: true,
+            solWithdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+            solWithdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
-                tokenDepositable: this.isMainnet ? (() => {
+                tokenDepositable: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return false;
+                            return this.isDevnet ? true : (this.isMainnet ? false : true);
                         case "jitoSOL":
                             return true;
                         case "mSOL":
@@ -1919,59 +1922,43 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             return true;
                         case "bbSOL":
                             return true;
-                        default:
-                            throw `invalid accumulated deposit cap for ${symbol}`;
-                    }
-                })() : true,
-                tokenAccumulatedDepositCapacity: (() => {
-                    switch (symbol) {
-                        case "bSOL":
-                            return new BN(this.isMainnet ? 0 : 90_000_000_000);
-                        case "jitoSOL":
-                            return new BN(this.isMainnet ? 90_941_492_854_023 : 80_000_000_000);
-                        case "mSOL":
-                            return new BN(this.isMainnet ? 4_500_002_000_000 : 70_000_000_000);
-                        case "BNSOL":
-                            return new BN(this.isMainnet ? 11_311_923_730_911 : 60_000_000_000);
-                        case "bbSOL":
-                            return new BN(this.isMainnet ? 0 : 60_000_000_000);
                         default:
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
                 })(),
-                // TODO v0.4.1: remove (set null) accumulated deposit amount
-                tokenAccumulatedDepositAmount : this.isMainnet ? (() => {
+                tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(0);
+                            return new BN(this.isDevnet ? 90_000_000_000 : (this.isMainnet ? 0 : 90_000_000_000));
                         case "jitoSOL":
-                            return new BN(90_941_492_854_023);
+                            return new BN(this.isDevnet ? 80_000_000_000 : (this.isMainnet ? 90_941_492_854_023 : 80_000_000_000));
                         case "mSOL":
-                            return new BN(4_500_002_000_000);
+                            return new BN(this.isDevnet ? 70_000_000_000 : (this.isMainnet ? 4_500_002_000_000 : 70_000_000_000));
                         case "BNSOL":
-                            return new BN(11_311_923_730_911);
+                            return new BN(this.isDevnet ? 60_000_000_000 : (this.isMainnet ? 11_311_923_730_911 : 60_000_000_000));
                         case "bbSOL":
-                            return new BN(0);
+                            return new BN(this.isDevnet ? 60_000_000_000 : (this.isMainnet ? 0 : 60_000_000_000));
                         default:
-                            throw `invalid accumulated deposit amount for ${symbol}`;
+                            throw `invalid accumulated deposit cap for ${symbol}`;
                     }
-                })() : null,
-                withdrawable: this.isMainnet ? true : this.isDevnet ? true : false,
-                withdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
-                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(10 ** v.decimals)),
+                })(),
+                tokenAccumulatedDepositAmount : null,
+                withdrawable: false,
+                withdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+                withdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isMainnet ? 0 : 0);
+                            return new BN(1);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? 100 : 100);
+                            return new BN("9,223,372,036,854,775,808".replace(/,/g, '')); // 2^63
                         case "mSOL":
-                            return new BN(this.isMainnet ? 0 : 0);
+                            return new BN(1);
                         case "BNSOL":
-                            return new BN(this.isMainnet ? 0 : 0);
+                            return new BN(1);
                         case "bbSOL":
-                            return new BN(this.isMainnet ? 0 : 0);
+                            return new BN(1);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -1979,15 +1966,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "mSOL":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "BNSOL":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "bbSOL":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
@@ -1998,9 +1985,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationWeight: (() => {
                     switch (symbol) {
                         case "jito1":
-                            return new BN(this.isMainnet ? 1 : 1);
+                            return new BN(this.isDevnet ? 0 : 1);
                         case "jito2":
-                            return new BN(this.isMainnet ? 0 : 0);
+                            return new BN(this.isDevnet ? 1 : 2);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -2008,9 +1995,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "jito1":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         case "jito2":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;
                     }

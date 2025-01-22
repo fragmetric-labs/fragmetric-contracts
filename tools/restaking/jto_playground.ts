@@ -18,7 +18,7 @@ import * as ed25519 from "ed25519";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
-const MAX_CAPACITY = "18_000_000_000_000_000_000".replace(/_/g, '');
+const MAX_CAPACITY = "18,446,744,073,709,551,615".replace(/,/g, '');
 
 export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KEYS> {
     public static create(env: KEYCHAIN_ENV, args?: Pick<AnchorPlaygroundConfig<Restaking, any>, "provider">) {
@@ -1150,11 +1150,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragJTOFundConfiguration() {
         return {
-            depositEnabled: true,
+            depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             donationEnabled: false,
-            withdrawalEnabled: this.isMainnet ? false : true,
-            WithdrawalFeedRateBPS: this.isMainnet ? 10 : 10,
-            withdrawalBatchThresholdSeconds: new BN(this.isMainnet ? 60 : 60), // seconds
+            withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
+            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
 
             solDepositable: false,
             solAccumulatedDepositCapacity: new BN(0),
@@ -1169,15 +1169,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 tokenAccumulatedDepositCapacity: (() => {
                     switch (symbol) {
                         case "JTO":
-                            return new BN(this.isMainnet ? 0 : 100_000).mul(new BN(10 ** (v.decimals - 3)));
+                            return new BN(MAX_CAPACITY);
                         default:
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
                 })(),
                 tokenAccumulatedDepositAmount: null,
-                withdrawable: this.isMainnet ? false : true,
-                withdrawalNormalReserveRateBPS: this.isMainnet ? 100 : 0,
-                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 40_000 : 100).mul(new BN(10 ** v.decimals)),
+                withdrawable: this.isDevnet ? true : (this.isMainnet ? true : true),
+                withdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+                withdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
                 tokenRebalancingAmount: null,
                 solAllocationWeight: (() => {
                     switch (symbol) {
@@ -1312,13 +1312,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         .instruction(),
                     ];
                 }),
-                this.program.methods.fundManagerAddRestakingVaultCompoundingRewardToken(
-                    config.restakingVaults[0].vault,
-                    new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
-                ).accountsPartial({
-                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-                })
-                .instruction(),
+                // this.program.methods.fundManagerAddRestakingVaultCompoundingRewardToken(
+                //     config.restakingVaults[0].vault,
+                //     new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                // ).accountsPartial({
+                //     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                // })
+                // .instruction(),
             ],
             signerNames: ["FUND_MANAGER"],
             events: ["fundManagerUpdatedFund"],
@@ -1909,6 +1909,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     //     };
     // }
 
+    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+        const {event, error} = await this.runOperatorFundCommands({
+            command: {
+                enqueueWithdrawalBatch: {
+                    0: {
+                        forced: forced,
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
+
+        const [fragJTOFund, fragJTOFundReserveAccountBalance, fragJTOReward, fragJTOLockAccount] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragJTOFund),
+            this.getFragJTOFundReserveAccountBalance(),
+            this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward),
+            this.getFragJTOFundReceiptTokenLockAccount(),
+        ]);
+        logger.info(`operator enqueued withdrawal batches up to #${fragJTOFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {event, error, fragJTOFund, fragJTOFundReserveAccountBalance, fragJTOReward, fragJTOLockAccount};
+    }
+
     public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
@@ -2082,6 +2105,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [fragJTOReward] = await Promise.all([this.getFragJTORewardAccount()]);
 
         return {event, error, fragJTOReward};
+    }
+
+    public async runOperatorRunScheduled(i = 0) {
+        logger.notice(`operation ${i}`, new Date().toString());
+        await this.runOperatorFundCommands(null, this.keychain.getKeypair('ADMIN'), 100, undefined, 100_000);
+        await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 30));
+        this.runOperatorRunScheduled(i+1);
     }
 
     public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
