@@ -2714,6 +2714,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
+    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+        const {event, error} = await this.runOperatorFundCommands({
+            command: {
+                enqueueWithdrawalBatch: {
+                    0: {
+                        forced: forced,
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
+
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
+            this.getFragSOLFundReserveAccountBalance(),
+            this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
+            this.getFragSOLFundReceiptTokenLockAccount(),
+        ]);
+        logger.info(`operator enqueued withdrawal batches up to #${fragSOLFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
+    }
+
     public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
@@ -2748,7 +2771,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
         logger.info(`operator processed withdrawal batches up to #${fragSOLFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
-        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
+        return {event: event ?? _event, error: error ?? _error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
     public async runUserWithdraw(user: web3.Keypair, supportedTokenMint: web3.PublicKey|null, requestId: BN) {
