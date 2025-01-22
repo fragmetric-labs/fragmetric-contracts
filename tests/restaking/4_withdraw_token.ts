@@ -175,7 +175,7 @@ describe("withdraw token", async () => {
 
         const fragSOLFund0 = await restaking.getFragSOLFundAccount();
         const balance0 = await restaking.getUserSupportedTokenAccount(user5.publicKey, 'bSOL').then(a => a.amount);
-        const res1 = await restaking.runUserWithdraw(user5, new BN(2));
+        const res1 = await restaking.runUserWithdraw(user5, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(2));
         const balance1 = await restaking.getUserSupportedTokenAccount(user5.publicKey, 'bSOL').then(a => a.amount);
         expect(res1.event.userWithdrewFromFund.burntReceiptTokenAmount.toString()).eq(amountFragSOLWithdrawalEach.toString());
         expect(res1.event.userWithdrewFromFund.withdrawnAmount.toString(), 'event').eq((balance1 - balance0).toString(), 'balance diff');
@@ -241,7 +241,7 @@ describe("withdraw token", async () => {
             events: ['fundManagerUpdatedFund'],
         });
 
-        const res2 = await restaking.runUserWithdraw(user5, new BN(4));
+        const res2 = await restaking.runUserWithdraw(user5, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(4));
         expect(res2.fragSOLFund.supportedTokens[0].token.withdrawalPendingBatch.numRequests.toNumber()).eq(0);
     });
 });

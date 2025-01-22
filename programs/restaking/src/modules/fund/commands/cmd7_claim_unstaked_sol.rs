@@ -122,7 +122,13 @@ impl ClaimUnstakedSOLCommand {
             .fund_account
             .load()?
             .get_supported_tokens_iter()
-            .map(|supported_token| supported_token.mint)
+            .filter_map(|supported_token| {
+                if supported_token.pending_unstaking_amount_as_sol > 0 {
+                    Some(supported_token.mint)
+                } else {
+                    None
+                }
+            })
             .collect();
 
         // prepare state does not require additional accounts,

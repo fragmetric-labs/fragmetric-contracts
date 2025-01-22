@@ -1,9 +1,13 @@
 use super::{
-    ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, OperationCommand,
-    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, ClaimUnstakedSOLCommand,
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, UndelegateVSTCommand, UnstakeLSTCommandItem,
 };
 use crate::errors;
-use crate::modules::fund::FundService;
+use crate::modules::fund::{
+    FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
@@ -12,20 +16,11 @@ use anchor_spl::associated_token::spl_associated_token_account;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket;
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnrestakeVRTCommand {
     #[max_len(2)]
     items: Vec<UnrestakeVSTCommandItem>,
     state: UnrestakeVRTCommandState,
-}
-
-impl UnrestakeVRTCommand {
-    pub(super) fn new_init(items: Vec<UnrestakeVSTCommandItem>) -> Self {
-        Self {
-            items,
-            state: UnrestakeVRTCommandState::Init,
-        }
-    }
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
@@ -34,17 +29,10 @@ pub struct UnrestakeVSTCommandItem {
     sol_amount: u64,
 }
 
-impl UnrestakeVSTCommandItem {
-    pub(super) fn new(vault_address: Pubkey, sol_amount: u64) -> Self {
-        Self {
-            vault_address,
-            sol_amount,
-        }
-    }
-}
-
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum UnrestakeVRTCommandState {
+    #[default]
+    New,
     Init,
     ReadVaultState,
     Unstake(#[max_len(4, 32)] Vec<Vec<u8>>),
@@ -62,8 +50,17 @@ impl SelfExecutable for UnrestakeVRTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
+        // TODO v0.4.2: UnrestakeVRTCommand
+        return Ok((
+            None,
+            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+        ));
+        // 1. 일단 출금 가능한 토큰들 먼저.. 출금 자체에 unrestaking이 필요하니 모르니 일단 각각 별도 수량 계산.. 볼트끼리 전략 돌려서 cut 해버려 (nSOL 볼트 포함)
+        // 2. SOL 출금은? LST 쓰는 전체 볼트들 모아서 아까 컷한거 반영한 상태에 추가로 컷해버려..
+
         if let Some(item) = self.items.first() {
             match &self.state {
+                UnrestakeVRTCommandState::New => {}
                 UnrestakeVRTCommandState::Init if item.sol_amount > 0 => {
                     let mut command = self.clone();
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
@@ -259,6 +256,9 @@ impl SelfExecutable for UnrestakeVRTCommand {
                 _ => (),
             }
         }
-        Ok((None, None))
+        Ok((
+            None,
+            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+        ))
     }
 }

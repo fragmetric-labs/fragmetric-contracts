@@ -2,12 +2,12 @@ use anchor_lang::prelude::*;
 
 use super::{
     OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable,
+    SelfExecutable, UnrestakeVRTCommand,
 };
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UndelegateVSTCommand {
-    // TODO: UndelegateVSTCommand
+    // TODO v0.4.2: UndelegateVSTCommand
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
@@ -22,7 +22,9 @@ impl SelfExecutable for UndelegateVSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO: UndelegateVSTCommand.execute
-        Ok((None, None))
+        Ok((
+            None,
+            Some(UnrestakeVRTCommand::default().without_required_accounts()),
+        ))
     }
 }

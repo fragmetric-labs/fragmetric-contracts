@@ -3,6 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use bytemuck::Zeroable;
+use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{
@@ -697,6 +698,21 @@ impl FundAccount {
                 .get_sol_amount_as_token(&token_mint, total_operation_receivable_amount_as_sol)?,
             None => total_operation_receivable_amount_as_sol,
         })
+    }
+
+    pub(super) fn get_total_unstaking_obligated_amount_as_sol(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let sol_net_operation_reserved_amount =
+            self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
+        Ok(
+            u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?.saturating_sub(
+                self.get_supported_tokens_iter()
+                    .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
+                    .sum(),
+            ),
+        )
     }
 }
 

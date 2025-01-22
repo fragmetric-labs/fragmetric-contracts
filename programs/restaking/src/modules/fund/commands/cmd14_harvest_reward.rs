@@ -6,9 +6,7 @@ use super::{
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
-pub struct HarvestRewardCommand {
-    // TODO: HarvestRewardCommand
-}
+pub struct HarvestRewardCommand {}
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct HarvestRewardCommandResult {}
@@ -22,7 +20,7 @@ impl SelfExecutable for HarvestRewardCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO: HarvestRewardCommand.execute
+        // TODO v0.5.0: HarvestRewardCommand.execute
         Ok((None, None))
     }
 }

@@ -47,18 +47,23 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
             });
         }
         let quarter = res1.receiptTokenAmount.divn(4);
-        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount.sub(quarter).sub(quarter));
-        const res3 = await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
-        const res4 = await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
+        await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
+        await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
     });
 
     step("fund operation for a full cycle (ncn_epoch = 256 slot)", async () => {
         await restaking.runOperatorFundCommands();
+        await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(1));
+        await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'), new BN(1));
+        const res1 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
+        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount);
     });
 
     step("fund operation for the next cycle after an epoch shift", async () => {
         logger.info('waiting for an epoch shift...')
         await restaking.sleepUntil(254); // wait until just before the end of the current epoch (instead of 256) to make more complex scenario
         await restaking.runOperatorFundCommands();
+        // TODO: unrestaking should be done to complete this task
+        await restaking.runUserWithdraw(user1, null, new BN(1));
     });
 });
