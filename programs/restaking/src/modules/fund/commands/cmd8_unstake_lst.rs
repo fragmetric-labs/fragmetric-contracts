@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
@@ -107,6 +108,7 @@ pub struct UnstakeLSTCommandResult {
     pub deducted_sol_fee_amount: u64,
     pub unstaked_sol_amount: u64,
     pub unstaking_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
     pub operation_reserved_sol_amount: u64,
     pub operation_receivable_sol_amount: u64,
     pub operation_reserved_token_amount: u64,
@@ -177,11 +179,12 @@ impl UnstakeLSTCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().cloned())?;
         let fund_account = ctx.fund_account.load()?;
+        let unstaking_obligated_amount_as_sol =
+            fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
 
-        let sol_net_operation_reserved_amount =
-            fund_account.get_asset_net_operation_reserved_amount(None, &pricing_service)?;
-        if sol_net_operation_reserved_amount.is_negative() {
-            let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?;
+        if unstaking_obligated_amount_as_sol == 0 {
+            Ok((None, None))
+        } else {
             let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
                 fund_account
                     .get_supported_tokens_iter()
@@ -193,13 +196,17 @@ impl UnstakeLSTCommand {
                                 ..
                             }) => Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
-                                u64::try_from(
-                                    fund_account
-                                        .get_asset_net_operation_reserved_amount(
-                                            Some(supported_token.mint),
-                                            &pricing_service,
-                                        )?
-                                        .max(0),
+                                pricing_service.get_token_amount_as_sol(
+                                    &supported_token.mint,
+                                    u64::try_from(
+                                        fund_account
+                                            .get_asset_net_operation_reserved_amount(
+                                                Some(supported_token.mint),
+                                                false,
+                                                &pricing_service,
+                                            )?
+                                            .max(0),
+                                    )?,
                                 )?,
                                 supported_token.sol_allocation_capacity_amount,
                             )),
@@ -219,7 +226,7 @@ impl UnstakeLSTCommand {
                     })
                     .collect::<Result<Vec<_>>>()?,
             );
-            strategy.cut_greedy(sol_unstaking_obligated_amount)?;
+            strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
@@ -237,8 +244,6 @@ impl UnstakeLSTCommand {
             drop(fund_account);
 
             self.execute_prepare(ctx, accounts, items, None)
-        } else {
-            Ok((None, None))
         }
     }
 
@@ -607,6 +612,7 @@ impl UnstakeLSTCommand {
 
                 let supported_token = fund_account.get_supported_token_mut(&item.token_mint)?;
                 supported_token.token.operation_reserved_amount -= burnt_token_amount;
+                supported_token.pending_unstaking_amount_as_sol += unstaking_sol_amount;
 
                 Ok(UnstakeLSTCommandResult {
                     token_mint: item.token_mint,
@@ -614,6 +620,7 @@ impl UnstakeLSTCommand {
                     deducted_sol_fee_amount,
                     unstaked_sol_amount,
                     unstaking_sol_amount,
+                    total_unstaking_sol_amount: supported_token.pending_unstaking_amount_as_sol,
                     operation_reserved_token_amount: supported_token
                         .token
                         .operation_reserved_amount,
@@ -718,7 +725,7 @@ impl UnstakeLSTCommand {
             total_deducted_pool_token_fee_amount += deducted_pool_token_fee_amount;
         }
 
-        // Withdraw stake limit
+        // Withdraw stake limit at a single operation tx due to memory limit
         const WITHDRAW_STAKE_LIMIT: usize = 2;
         let mut withdraw_stake_count = 0;
         let mut withdraw_stake_paused = false;

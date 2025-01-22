@@ -62,9 +62,19 @@ impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
 pub struct ClaimUnstakedSOLCommandResult {
     pub token_mint: Pubkey,
     pub claimed_sol_amount: u64,
-    pub offsetted_receivable_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
+    pub transferred_sol_revenue_amount: u64,
+    pub offsetted_sol_receivable_amount: u64,
+    #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+    pub offsetted_asset_receivables: Vec<ClaimUnstakedSOLCommandResultAssetReceivable>,
     pub operation_reserved_sol_amount: u64,
     pub operation_receivable_sol_amount: u64,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+pub struct ClaimUnstakedSOLCommandResultAssetReceivable {
+    asset_token_mint: Option<Pubkey>,
+    asset_amount: u64,
 }
 
 impl SelfExecutable for ClaimUnstakedSOLCommand {
@@ -112,7 +122,13 @@ impl ClaimUnstakedSOLCommand {
             .fund_account
             .load()?
             .get_supported_tokens_iter()
-            .map(|supported_token| supported_token.mint)
+            .filter_map(|supported_token| {
+                if supported_token.pending_unstaking_amount_as_sol > 0 {
+                    Some(supported_token.mint)
+                } else {
+                    None
+                }
+            })
             .collect();
 
         // prepare state does not require additional accounts,
@@ -192,10 +208,11 @@ impl ClaimUnstakedSOLCommand {
                     (address, true)
                 });
 
-                let required_accounts = [(fund_reserve_account, true)]
-                    .into_iter()
-                    .chain(accounts_to_claim_sol)
-                    .chain(withdrawal_ticket_accounts);
+                let required_accounts =
+                    [(fund_reserve_account, true), (fund_treasury_account, true)]
+                        .into_iter()
+                        .chain(accounts_to_claim_sol)
+                        .chain(withdrawal_ticket_accounts);
 
                 command.with_required_accounts(required_accounts)
             }
@@ -306,25 +323,57 @@ impl ClaimUnstakedSOLCommand {
             // claim did not happen
             None
         } else {
-            // update fund account
-            let mut fund_account = ctx.fund_account.load_mut()?;
-            // NOTE: operation receivable amount might be less than claimed amount, in most case because of donation.
-            // In this case, total asset value of fund will increase.
-            let offsetted_receivable_sol_amount =
-                claimed_sol_amount.min(fund_account.sol.operation_receivable_amount);
-            fund_account.sol.operation_receivable_amount -= offsetted_receivable_sol_amount;
-            fund_account.sol.operation_reserved_amount += claimed_sol_amount;
+            // now update fund assets, the value of the fund and receipt token should remain as is.
+            let [fund_reserve_account, fund_treasury_account, remaining_accounts @ ..] = accounts
+            else {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            };
 
+            // while paying treasury debt, offsets available receivables and sends remaining to the treasury account.
+            let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+            let pricing_service =
+                fund_service.new_pricing_service(remaining_accounts.into_iter().cloned())?;
+            let (
+                transferred_sol_revenue_amount,
+                offsetted_sol_receivable_amount,
+                offsetted_asset_receivables,
+            ) = fund_service.offset_receivables(
+                ctx.system_program,
+                fund_reserve_account,
+                fund_treasury_account,
+                None,
+                None,
+                None,
+                None,
+                claimed_sol_amount,
+                &pricing_service,
+            )?;
+            drop(fund_service);
+
+            let mut fund_account = ctx.fund_account.load_mut()?;
             require_gte!(
                 to_sol_account_amount,
                 fund_account.sol.get_total_reserved_amount(),
             );
+            let supported_token = fund_account.get_supported_token_mut(pool_token_mint)?;
+            supported_token.pending_unstaking_amount_as_sol -= claimed_sol_amount;
 
             Some(
                 ClaimUnstakedSOLCommandResult {
                     token_mint: *pool_token_mint,
                     claimed_sol_amount,
-                    offsetted_receivable_sol_amount,
+                    total_unstaking_sol_amount: supported_token.pending_unstaking_amount_as_sol,
+                    transferred_sol_revenue_amount,
+                    offsetted_sol_receivable_amount,
+                    offsetted_asset_receivables: offsetted_asset_receivables
+                        .into_iter()
+                        .map(|(asset_token_mint, asset_amount)| {
+                            ClaimUnstakedSOLCommandResultAssetReceivable {
+                                asset_token_mint,
+                                asset_amount,
+                            }
+                        })
+                        .collect::<Vec<_>>(),
                     operation_reserved_sol_amount: fund_account.sol.operation_reserved_amount,
                     operation_receivable_sol_amount: fund_account.sol.operation_receivable_amount,
                 }
@@ -411,7 +460,7 @@ impl ClaimUnstakedSOLCommand {
         pool_token_mint_address: &Pubkey,
         pool_account_address: Pubkey,
     ) -> Result<(u64, u64)> {
-        let [fund_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
+        let [fund_reserve_account, _fund_treasury_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?

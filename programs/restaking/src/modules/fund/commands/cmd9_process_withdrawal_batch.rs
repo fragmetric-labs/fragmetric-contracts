@@ -12,8 +12,8 @@ use crate::utils::AccountInfoExt;
 
 use super::{
     FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, StakeSOLCommand, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    OperationCommandResult, SelfExecutable, StakeSOLCommand, UnstakeLSTCommand,
+    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -43,6 +43,7 @@ pub struct ProcessWithdrawalBatchCommandResult {
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
     pub asset_token_mint: Option<Pubkey>,
+    pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
     #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
@@ -370,6 +371,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // do process withdrawal
                 let (
                     processed_receipt_token_amount,
+                    required_asset_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
                     offsetted_asset_receivables,
@@ -384,6 +386,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                     let (
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables,
@@ -419,9 +422,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         )?;
 
                     fund_service.update_asset_values(&mut pricing_service)?;
-
                     (
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables,
@@ -430,74 +433,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     )
                 };
 
-                if processed_receipt_token_amount > 0 {
-                    // adjust accumulated deposit capacity configuration as much as the asset value withdrawn
-                    // the policy is: allocate half to SOL cap if it is currently depositable, then allocate rest to LST caps based on their weighted allocation strategy
-                    let receipt_token_amount_processed_as_sol = pricing_service
-                        .get_token_amount_as_sol(
-                            &ctx.receipt_token_mint.key(),
-                            processed_receipt_token_amount,
-                        )?;
-
-                    let mut fund_account = ctx.fund_account.load_mut()?;
-
-                    let mut strategy =
-                        WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
-                            fund_account
-                                .get_supported_tokens_iter()
-                                .map(|supported_token| {
-                                    Ok(WeightedAllocationParticipant::new(
-                                        supported_token.sol_allocation_weight,
-                                        fund_account.get_asset_total_amount_as_sol(
-                                            Some(supported_token.mint),
-                                            &pricing_service,
-                                        )?,
-                                        supported_token.sol_allocation_capacity_amount,
-                                    ))
-                                })
-                                .collect::<Result<Vec<_>>>()?,
-                        );
-
-                    let mut supported_token_increasing_capacity_as_sol =
-                        if fund_account.sol.depositable == 1 {
-                            receipt_token_amount_processed_as_sol.div_ceil(2)
-                        } else {
-                            receipt_token_amount_processed_as_sol
-                        };
-                    supported_token_increasing_capacity_as_sol -=
-                        strategy.put(receipt_token_amount_processed_as_sol)?;
-
-                    for (i, supported_token) in
-                        fund_account.get_supported_tokens_iter_mut().enumerate()
-                    {
-                        supported_token
-                            .token
-                            .set_accumulated_deposit_capacity_amount(
-                                supported_token
-                                    .token
-                                    .accumulated_deposit_capacity_amount
-                                    .saturating_add(pricing_service.get_sol_amount_as_token(
-                                        &supported_token.mint,
-                                        strategy.get_participant_last_put_amount_by_index(i)?,
-                                    )?),
-                            )?;
-                    }
-
-                    if fund_account.sol.depositable == 1 {
-                        let sol_increasing_capacity = receipt_token_amount_processed_as_sol
-                            - supported_token_increasing_capacity_as_sol;
-                        fund_account.sol.accumulated_deposit_capacity_amount = fund_account
-                            .sol
-                            .accumulated_deposit_capacity_amount
-                            .saturating_add(sol_increasing_capacity);
-                    }
-                }
-
                 result = Some(
                     ProcessWithdrawalBatchCommandResult {
                         asset_token_mint,
                         requested_receipt_token_amount,
                         processed_receipt_token_amount,
+                        required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables: offsetted_asset_receivables
@@ -518,49 +459,51 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         }
 
         // transition to next command
-        Ok((
-            result,
-            Some({
-                let current_asset_token_mint = match self.state {
-                    ProcessWithdrawalBatchCommandState::New => None,
-                    ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
-                    | ProcessWithdrawalBatchCommandState::Execute {
-                        asset_token_mint, ..
-                    } => Some(asset_token_mint),
-                };
+        Ok({
+            let current_asset_token_mint = match self.state {
+                ProcessWithdrawalBatchCommandState::New => None,
+                ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint }
+                | ProcessWithdrawalBatchCommandState::Execute {
+                    asset_token_mint, ..
+                } => Some(asset_token_mint),
+            };
 
-                let next_asset_token_mint = {
-                    let fund_account = ctx.fund_account.load()?;
-                    let mut target_asset_token_mints = fund_account
-                        .get_asset_states_iter()
-                        .filter(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
-                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint))
-                        .peekable();
+            let next_asset_token_mint = {
+                let fund_account = ctx.fund_account.load()?;
+                let mut assets = fund_account.get_asset_states_iter();
 
-                    let mut next_asset_token_mint_candidate =
-                        target_asset_token_mints.peek().cloned();
-
-                    if let Some(current_asset_token_mint) = current_asset_token_mint {
-                        while let Some(asset_token_mint) = target_asset_token_mints.next() {
-                            if asset_token_mint == current_asset_token_mint {
-                                next_asset_token_mint_candidate = target_asset_token_mints.next();
-                                break;
-                            }
-                        }
-                    }
-
-                    next_asset_token_mint_candidate
-                };
-
-                match next_asset_token_mint {
-                    Some(asset_token_mint) => ProcessWithdrawalBatchCommand {
-                        state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
-                        forced: false,
-                    }
-                    .without_required_accounts(),
-                    None => StakeSOLCommand::default().without_required_accounts(),
+                match current_asset_token_mint {
+                    None => assets
+                        .find(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
+                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint)),
+                    Some(current) => assets
+                        .skip_while(|asset| {
+                            asset.get_token_mint_and_program().map(|(mint, _)| mint) != current
+                        })
+                        .skip(1)
+                        .find(|asset| asset.get_receipt_token_withdrawal_obligated_amount() > 0)
+                        .map(|asset| asset.get_token_mint_and_program().map(|(mint, _)| mint)),
                 }
-            }),
-        ))
+            };
+
+            match next_asset_token_mint {
+                Some(asset_token_mint) => {
+                    // directly execute prepare commands
+                    (
+                        result,
+                        ProcessWithdrawalBatchCommand {
+                            state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
+                            forced: false,
+                        }
+                        .execute(ctx, accounts)?
+                        .1,
+                    )
+                }
+                None => (
+                    result,
+                    Some(StakeSOLCommand::default().without_required_accounts()),
+                ),
+            }
+        })
     }
 }

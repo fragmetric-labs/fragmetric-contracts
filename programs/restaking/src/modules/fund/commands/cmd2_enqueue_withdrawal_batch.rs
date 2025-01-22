@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 
-use super::cmd9_process_withdrawal_batch::ProcessWithdrawalBatchCommand;
 use super::{
-    ClaimUnstakedSOLCommand, FundService, OperationCommandContext, OperationCommandEntry,
+    ClaimUnrestakedVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
     OperationCommandResult, SelfExecutable,
 };
 
@@ -35,15 +34,18 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
             .get_total_receipt_token_withdrawal_obligated_amount();
 
         Ok((
-            Some(
-                EnqueueWithdrawalBatchCommandResult {
-                    enqueued_receipt_token_amount,
-                    total_queued_receipt_token_amount,
-                }
-                .into(),
-            ),
-            // TODO/v0.4: transition to Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
-            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+            if enqueued_receipt_token_amount > 0 {
+                Some(
+                    EnqueueWithdrawalBatchCommandResult {
+                        enqueued_receipt_token_amount,
+                        total_queued_receipt_token_amount,
+                    }
+                    .into(),
+                )
+            } else {
+                None
+            },
+            Some(ClaimUnrestakedVSTCommand::default().without_required_accounts()),
         ))
     }
 }

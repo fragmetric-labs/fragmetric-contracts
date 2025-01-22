@@ -83,6 +83,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         let supported_token_net_operation_reserved_amount = fund_account
                             .get_asset_net_operation_reserved_amount(
                                 Some(supported_token.mint),
+                                true,
                                 &pricing_service,
                             )?;
                         Ok((

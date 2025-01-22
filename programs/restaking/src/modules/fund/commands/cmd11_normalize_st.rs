@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use std::ops::Neg;
 
 use crate::errors;
 use crate::modules::normalization::*;
@@ -8,7 +9,7 @@ use crate::modules::normalization::*;
 use super::{
     FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     RestakeVSTCommand, SelfExecutable, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FUND_ACCOUNT_MAX_RESTAKING_VAULTS, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -156,25 +157,52 @@ impl NormalizeSTCommand {
             NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE,
         );
 
-        for supported_token in fund_account.get_supported_tokens_iter() {
+        // create a strategy to reflect unstaking obligated amount for lack of reserved SOL
+        let mut token_strategy =
+            WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+                fund_account
+                    .get_supported_tokens_iter()
+                    .map(|supported_token| {
+                        Ok(WeightedAllocationParticipant::new(
+                            supported_token.sol_allocation_weight,
+                            pricing_service.get_token_amount_as_sol(
+                                &supported_token.mint,
+                                u64::try_from(
+                                    fund_account
+                                        .get_asset_net_operation_reserved_amount(
+                                            Some(supported_token.mint),
+                                            true,
+                                            &pricing_service,
+                                        )?
+                                        .max(0),
+                                )?,
+                            )?,
+                            supported_token.sol_allocation_capacity_amount,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            );
+        let total_unstaking_required_amount_as_sol = u64::try_from(
+            fund_account
+                .get_asset_net_operation_reserved_amount(None, true, &pricing_service)?
+                .min(0)
+                .neg(),
+        )?;
+        token_strategy.cut_greedy(total_unstaking_required_amount_as_sol)?;
+
+        for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             // if supported token is not normalizable then we cannot normalize.
             if !normalized_token_pool_account.has_supported_token(&supported_token.mint) {
                 continue;
             }
 
-            let supported_token_operation_reserved_amount = fund_account
-                .get_asset_net_operation_reserved_amount(
-                    Some(supported_token.mint),
-                    &pricing_service,
-                )?;
-
             // if supported token does not have enough reserved amount then we cannot normalize.
-            if supported_token_operation_reserved_amount <= 0 {
+            let supported_token_restakable_amount_as_sol = token_strategy
+                .get_participant_by_index(index)?
+                .allocated_amount;
+            if supported_token_restakable_amount_as_sol == 0 {
                 continue;
             }
-
-            let supported_token_operation_reserved_amount =
-                u64::try_from(supported_token_operation_reserved_amount)?;
 
             // find vaults that supported token can be move into, either directly or indirectly(normalized).
             let restakable_vaults =
@@ -185,24 +213,22 @@ impl NormalizeSTCommand {
                             || restaking_vault.supported_token_mint == normalized_token.mint
                     });
 
-            let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
-                restakable_vaults
-                    .map(|restaking_vault| {
-                        Ok(WeightedAllocationParticipant::new(
-                            restaking_vault.sol_allocation_weight,
-                            pricing_service.get_token_amount_as_sol(
-                                &restaking_vault.receipt_token_mint,
-                                restaking_vault.receipt_token_operation_reserved_amount,
-                            )?,
-                            restaking_vault.sol_allocation_capacity_amount,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?,
-            );
-            strategy.put(pricing_service.get_token_amount_as_sol(
-                &supported_token.mint,
-                supported_token_operation_reserved_amount,
-            )?)?;
+            let mut vault_strategy =
+                WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_RESTAKING_VAULTS>::new(
+                    restakable_vaults
+                        .map(|restaking_vault| {
+                            Ok(WeightedAllocationParticipant::new(
+                                restaking_vault.sol_allocation_weight,
+                                pricing_service.get_token_amount_as_sol(
+                                    &restaking_vault.receipt_token_mint,
+                                    restaking_vault.receipt_token_operation_reserved_amount,
+                                )?,
+                                restaking_vault.sol_allocation_capacity_amount,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                );
+            vault_strategy.put(supported_token_restakable_amount_as_sol)?;
 
             let mut allocated_sol_amount_for_normalized_token_vaults = 0;
 
@@ -217,11 +243,11 @@ impl NormalizeSTCommand {
             for (index, restakable_vault) in restakable_vaults.enumerate() {
                 if restakable_vault.supported_token_mint == normalized_token.mint {
                     allocated_sol_amount_for_normalized_token_vaults +=
-                        strategy.get_participant_last_put_amount_by_index(index)?;
+                        vault_strategy.get_participant_last_put_amount_by_index(index)?;
                 }
             }
 
-            if allocated_sol_amount_for_normalized_token_vaults > 0 {
+            if allocated_sol_amount_for_normalized_token_vaults > 1_000_000 {
                 items.push(NormalizeSTCommandItem {
                     supported_token_mint: supported_token.mint,
                     allocated_token_amount: pricing_service.get_sol_amount_as_token(

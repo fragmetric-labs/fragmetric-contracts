@@ -3,6 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use bytemuck::Zeroable;
+use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{
@@ -637,15 +638,16 @@ impl FundAccount {
     pub(super) fn get_asset_net_operation_reserved_amount(
         &self,
         supported_token_mint: Option<Pubkey>,
+        with_normal_reserve: bool,
         pricing_service: &PricingService,
     ) -> Result<i128> {
-        Ok(self
-            .get_asset_state(supported_token_mint)?
+        self.get_asset_state(supported_token_mint)?
             .get_net_operation_reserved_amount(
                 &self.receipt_token_mint.key(),
                 &self.receipt_token_value.try_deserialize()?,
+                with_normal_reserve,
                 pricing_service,
-            )?)
+            )
     }
 
     /// get total asset amount, so it includes cash, receivable, normalized, restaked amount.
@@ -669,6 +671,48 @@ impl FundAccount {
             Some(mint) => pricing_service.get_token_amount_as_sol(&mint, asset_total_amount)?,
             None => asset_total_amount,
         })
+    }
+
+    /// get total receivable value of the fund, as converted in the given asset.
+    pub(super) fn get_total_operation_receivable_amount_as_asset(
+        &self,
+        supported_token_mint: Option<Pubkey>,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let total_operation_receivable_amount_as_sol = self
+            .get_asset_states_iter()
+            .map(|asset| {
+                Ok(match asset.get_token_mint_and_program() {
+                    Some((token_mint, _)) => pricing_service
+                        .get_token_amount_as_sol(&token_mint, asset.operation_receivable_amount)?,
+                    None => asset.operation_receivable_amount,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+            .iter()
+            .sum::<u64>();
+
+        let asset = self.get_asset_state(supported_token_mint)?;
+        Ok(match asset.get_token_mint_and_program() {
+            Some((token_mint, _)) => pricing_service
+                .get_sol_amount_as_token(&token_mint, total_operation_receivable_amount_as_sol)?,
+            None => total_operation_receivable_amount_as_sol,
+        })
+    }
+
+    pub(super) fn get_total_unstaking_obligated_amount_as_sol(
+        &self,
+        pricing_service: &PricingService,
+    ) -> Result<u64> {
+        let sol_net_operation_reserved_amount =
+            self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
+        Ok(
+            u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?.saturating_sub(
+                self.get_supported_tokens_iter()
+                    .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
+                    .sum(),
+            ),
+        )
     }
 }
 

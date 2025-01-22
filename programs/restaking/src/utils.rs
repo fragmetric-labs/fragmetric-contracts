@@ -74,7 +74,7 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns `amount`.
 pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
-    if numerator == denominator {
+    if numerator == denominator || denominator == 0 && amount == 0 {
         return Ok(amount);
     }
 

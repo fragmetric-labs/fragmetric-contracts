@@ -42,7 +42,11 @@ pub(super) struct RestakingVault {
     compounding_reward_token_mints:
         [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],
 
-    _reserved: [u8; 128],
+    /// informative
+    /// TODO: check how VaultStakerWithdrawalTicket handle the claimable amount ... upon sudden price change
+    pending_unrestaking_amount_as_receipt_token: u64,
+
+    _reserved: [u8; 120],
 }
 
 impl RestakingVault {

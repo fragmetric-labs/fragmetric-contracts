@@ -1901,8 +1901,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             // TODO v0.4.1: remove (set null) accumulated deposit amount
             solAccumulatedDepositAmount:  this.isMainnet ? new BN(185_844_305_400_574) : null,
             solWithdrawalable: this.isMainnet ? true : true,
-            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
-            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
+            solWithdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
+            solWithdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(web3.LAMPORTS_PER_SOL)),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
                 tokenMint: v.mint,
@@ -1956,21 +1956,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     }
                 })() : null,
                 withdrawable: this.isMainnet ? true : this.isDevnet ? true : false,
-                withdrawalNormalReserveRateBPS: this.isMainnet ? 0 : 0,
-                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 0 : 100).mul(new BN(10 ** v.decimals)),
+                withdrawalNormalReserveRateBPS: this.isMainnet ? 5 : 5,
+                withdrawalNormalReserveMaxAmount: new BN(this.isMainnet ? 100 : 100).mul(new BN(10 ** v.decimals)),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {
                     switch (symbol) {
                         case "bSOL":
                             return new BN(this.isMainnet ? 0 : 0);
                         case "jitoSOL":
-                            return new BN(this.isMainnet ? 90 : 85); // TODO
+                            return new BN(this.isMainnet ? 100 : 100);
                         case "mSOL":
-                            return new BN(this.isMainnet ? 5 : 5);
+                            return new BN(this.isMainnet ? 0 : 0);
                         case "BNSOL":
-                            return new BN(this.isMainnet ? 5 : 5);
+                            return new BN(this.isMainnet ? 0 : 0);
                         case "bbSOL":
-                            return new BN(this.isMainnet ? 0 : 5); // TODO
+                            return new BN(this.isMainnet ? 0 : 0);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -2714,6 +2714,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
+    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+        const {event, error} = await this.runOperatorFundCommands({
+            command: {
+                enqueueWithdrawalBatch: {
+                    0: {
+                        forced: forced,
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
+
+        const [fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount] = await Promise.all([
+            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
+            this.getFragSOLFundReserveAccountBalance(),
+            this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
+            this.getFragSOLFundReceiptTokenLockAccount(),
+        ]);
+        logger.info(`operator enqueued withdrawal batches up to #${fragSOLFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
+
+        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
+    }
+
     public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
@@ -2748,12 +2771,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ]);
         logger.info(`operator processed withdrawal batches up to #${fragSOLFund.sol.withdrawalLastProcessedBatchId.toString()}`.padEnd(LOG_PAD_LARGE), operator.publicKey.toString());
 
-        return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
+        return {event: event ?? _event, error: error ?? _error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
-    public async runUserWithdraw(user: web3.Keypair, requestId: BN) {
+    public async runUserWithdraw(user: web3.Keypair, supportedTokenMint: web3.PublicKey|null, requestId: BN) {
         const request = await this.getUserFragSOLFundAccount(user.publicKey)
-            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId)));
+            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId) && (supportedTokenMint ? supportedTokenMint.equals(req.supportedTokenMint) : !req.supportedTokenMint)));
+
         if (!request) {
             throw "request not found";
         }
@@ -2959,13 +2983,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }
         }
 
-        if (requiredAccounts.size > 30) {
-            console.log('FUCK: required accounts', requiredAccounts.size);
-            for (const [k, _] of requiredAccounts.entries()) {
-                console.log(k);
-            }
-        }
-
         const tx = await this.run({
             instructions: [
                 this.program.methods
@@ -2997,15 +3014,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         if (commandResult) {
             await Promise.all([
                 this.getFragSOLFundAccount(),
+                this.getFragSOLFundReceiptTokenLockAccount().then(a => new BN(a.amount.toString())),
                 this.getFragSOLFundReserveAccountBalance(),
                 this.getFragSOLFundNSOLAccountBalance(),
                 ...Object.keys(this.supportedTokenMetadata).map(
                     symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
                     .then(a => new BN(a.amount.toString()))
                 )
-            ]).then(([fund, sol, nSOL, ...tokens]) => {
+            ]).then(([fund, fragSOLLocked, sol, nSOL, ...tokens]) => {
                 console.log('fund asset state:', {
-                    oneReceiptTokenAsSol: fund.oneReceiptTokenAsSol,
+                    receiptToken: {
+                        oneTokenAsSOL: fund.oneReceiptTokenAsSol,
+                        supplyAmount: fund.receiptTokenSupplyAmount,
+                        lockedAmount: fragSOLLocked,
+                    },
                     accounts: {
                         sol,
                         tokens: {
@@ -3032,6 +3054,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                     receivable: supported.token.operationReceivableAmount,
                                     withdrawable: supported.token.withdrawalUserReservedAmount,
                                     total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
+                                }];
+                            })),
+                            ...Object.fromEntries(fund.restakingVaults.slice(0, fund.numRestakingVaults).map(vault => {
+                                return [vault.receiptTokenMint, {
+                                    reserved: vault.receiptTokenOperationReservedAmount,
+                                    receivable: vault.receiptTokenOperationReceivableAmount,
+                                    total: vault.receiptTokenOperationReservedAmount.add(vault.receiptTokenOperationReceivableAmount),
                                 }];
                             }))
                         },
