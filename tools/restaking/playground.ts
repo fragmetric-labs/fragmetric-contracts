@@ -1307,7 +1307,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation
-    public async runAdminCreateJitoVault(vstMint: web3.PublicKey, vrtMint: web3.Keypair, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("ADMIN")) {
+    public async runAdminCreateJitoVault(vstMint: web3.PublicKey, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("ADMIN")) {
+        const vrtMint = web3.Keypair.generate();
         const InitializeVaultInstructionDataSize = {
             discriminator: 1, // u8
             depositFeeBps: 2, // u16

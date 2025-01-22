@@ -900,7 +900,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runAdminInitializeOrUpdateFundAccount(batchSize = 35) {
-        const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
+        // const knownAddressLookupTableAddress = await this.getOrCreateKnownAddressLookupTable();
 
         const currentVersion = await this.connection
             .getAccountInfo(this.knownAddress.fragJTOFund)
@@ -924,10 +924,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
-            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
-                payer: this.wallet.publicKey,
-                receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-            }).instruction(),
+            // this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
+            //     payer: this.wallet.publicKey,
+            //     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+            // }).instruction(),
         ];
         if (instructions.length > 0) {
             for (let i = 0; i < instructions.length / batchSize; i++) {
@@ -1065,7 +1065,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragJTOFundAccount,
         ] = await Promise.all([
             spl.getAccount(this.connection, this.knownAddress.fragJTOJitoVaultFeeWalletTokenAccount, 'confirmed'),
-            spl.getAccount(this.connection, this.supportedTokenMetadata['JTO'].mint, 'confirmed'),
+            spl.getMint(this.connection, this.supportedTokenMetadata['JTO'].mint, 'confirmed'),
             spl.getAccount(this.connection, this.knownAddress.fragJTOFundJitoVRTAccount, 'confirmed'),
             spl.getAccount(this.connection, this.knownAddress.fragJTOJitoVaultProgramFeeWalletTokenAccount, 'confirmed'),
             this.getFragJTOFundAccount(),
@@ -1946,14 +1946,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragJTOFund, fragJTOFundReserveAccountBalance, fragJTOReward, fragJTOLockAccount};
     }
 
-    public async runUserWithdraw(user: web3.Keypair, requestId: BN) {
+    public async runUserWithdraw(user: web3.Keypair, supportedTokenMint: web3.PublicKey|null, requestId: BN) {
         const request = await this.getUserFragJTOFundAccount(user.publicKey)
-            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId)));
+            .then(userFundAccount => userFundAccount.withdrawalRequests.find(req => req.requestId.eq(requestId) && (supportedTokenMint ? supportedTokenMint.equals(req.supportedTokenMint) : !req.supportedTokenMint)));
+
         if (!request) {
             throw "request not found";
         }
         const userSupportedTokenAccount = request.supportedTokenMint ? spl.getAssociatedTokenAddressSync(request.supportedTokenMint, user.publicKey, true, request.supportedTokenProgram) : null;
-        // const fundWithdrawalBatchAccount = this.knownAddress.fragJTOFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
+        // const fundWithdrawalBatchAccount = this.knownAddress.fragSOLFundWithdrawalBatch(request.supportedTokenMint, request.batchId);
 
         const {event, error} = await this.run({
             instructions: [

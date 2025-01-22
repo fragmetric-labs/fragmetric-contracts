@@ -84,8 +84,8 @@ pub const FRAGJTO_MINT_ADDRESS: Pubkey = pubkey!("bxn2sjQkkoe1MevsZHWQdVeaY18uTN
 
 #[constant]
 pub const FRAGJTO_JITO_JTO_VAULT_ACCOUNT_ADDRESS: Pubkey =
-    pubkey!("C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2");
+    pubkey!("3MakQASjFk7H7ucyEcA5FUSg6sP2pMxXjVajBEcofn36");
 
 #[constant]
 pub const FRAGJTO_JITO_JTO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS: Pubkey =
-    pubkey!("C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr");
+    pubkey!("8VHeGZjPRswfDKqNuZfkrBEXH2uhYnuG4ejeKumeMWBu");

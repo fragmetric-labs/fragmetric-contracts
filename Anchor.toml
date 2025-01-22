@@ -265,10 +265,10 @@ filename = "./tests/mocks/mainnet/jto_liquidity_pool_account.json"
 
 # clone empty Jito restaking vault of fragJTO
 [[test.validator.account]]
-address = "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
+address = "3MakQASjFk7H7ucyEcA5FUSg6sP2pMxXjVajBEcofn36"
 filename = "./tests/mocks/local/fragjto_jito_jto_vault.json"
 
 # clone empty mint for Jito restaking vault of fragJTO
 [[test.validator.account]]
-address = "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
+address = "8VHeGZjPRswfDKqNuZfkrBEXH2uhYnuG4ejeKumeMWBu"
 filename = "./tests/mocks/local/fragjto_jito_jto_vrt_mint.json"
