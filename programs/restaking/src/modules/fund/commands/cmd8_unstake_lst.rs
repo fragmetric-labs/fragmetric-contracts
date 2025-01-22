@@ -1,3 +1,4 @@
+use std::ops::Neg;
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
@@ -178,17 +179,11 @@ impl UnstakeLSTCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().cloned())?;
         let fund_account = ctx.fund_account.load()?;
+        let unstaking_obligated_amount_as_sol = fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
 
-        let sol_net_operation_reserved_amount =
-            fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
-        if sol_net_operation_reserved_amount.is_negative() {
-            let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?
-                .saturating_sub(
-                    fund_account
-                        .get_supported_tokens_iter()
-                        .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
-                        .sum(),
-                );
+        if unstaking_obligated_amount_as_sol == 0 {
+            Ok((None, None))
+        } else {
             let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
                 fund_account
                     .get_supported_tokens_iter()
@@ -197,8 +192,8 @@ impl UnstakeLSTCommand {
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                                ..
-                            }) => Ok(WeightedAllocationParticipant::new(
+                                       ..
+                                   }) => Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 pricing_service.get_token_amount_as_sol(
                                     &supported_token.mint,
@@ -230,7 +225,7 @@ impl UnstakeLSTCommand {
                     })
                     .collect::<Result<Vec<_>>>()?,
             );
-            strategy.cut_greedy(sol_unstaking_obligated_amount)?;
+            strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
@@ -248,8 +243,6 @@ impl UnstakeLSTCommand {
             drop(fund_account);
 
             self.execute_prepare(ctx, accounts, items, None)
-        } else {
-            Ok((None, None))
         }
     }
 

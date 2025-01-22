@@ -1,3 +1,4 @@
+use std::ops::Neg;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
@@ -698,6 +699,35 @@ impl FundAccount {
             None => total_operation_receivable_amount_as_sol,
         })
     }
+
+    pub(super) fn get_total_unstaking_obligated_amount_as_sol(&self, pricing_service: &PricingService) -> Result<u64> {
+        let sol_net_operation_reserved_amount =
+            self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
+        Ok(
+            u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?
+                .saturating_sub(
+                    self
+                        .get_supported_tokens_iter()
+                        .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
+                        .sum(),
+                )
+        )
+    }
+
+    // TODO
+    // pub(super) fn get_asset_unrestaking_obligated_amount(&self, supported_token_mint: Pubkey, pricing_service: &PricingService) -> Result<u64> {
+    //     let asset_net_operation_reserved_amount =
+    //         self.get_asset_net_operation_reserved_amount(Some(supported_token_mint), true, &pricing_service)?;
+    //     Ok(
+    //         u64::try_from(asset_net_operation_reserved_amount.min(0).neg())?
+    //             .saturating_sub(
+    //                 self
+    //                     .get_supported_tokens_iter()
+    //                     .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
+    //                     .sum(),
+    //             )
+    //     )
+    // }
 }
 
 pub(super) struct FundStakeAccountAddress<'a> {
