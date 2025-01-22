@@ -14,9 +14,10 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
-    FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState, SelfExecutable,
-    WeightedAllocationParticipant, WeightedAllocationStrategy,
+    DenormalizeNTCommand, FundService, OperationCommand, OperationCommandContext,
+    OperationCommandEntry, OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState,
+    SelfExecutable, UndelegateVSTCommand, WeightedAllocationParticipant,
+    WeightedAllocationStrategy,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -91,6 +92,12 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
+        // TODO v0.4.2: ClaimUnrestakedVSTCommand
+        return Ok((
+            None,
+            Some(DenormalizeNTCommand::default().without_required_accounts()),
+        ));
+
         if let Some(item) = self.items.first() {
             match &self.state {
                 ClaimUnrestakedVSTCommandState::Init => {
@@ -361,7 +368,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             //     None => {
                             //         let fund_account = ctx.fund_account.load()?;
                             //         let normalized_token =
-                            //             fund_account.get_normalized_token().unwrap(); // TODO ... fix it
+                            //             fund_account.get_normalized_token().unwrap();
                             //
                             //         let normalized_token_pool_address =
                             //             NormalizedTokenPoolAccount::find_account_address_by_token_mint(
@@ -386,7 +393,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                             //                 (normalized_token_pool_address, true),
                             //                 (normalized_token.program, false),
                             //                 (normalized_token_account, true),
-                            //                 (anchor_spl::token::spl_token::native_mint::ID, false), // TODO: refactor flag to stop loop => now it always runs a single command in a tx
+                            //                 (anchor_spl::token::spl_token::native_mint::ID, false), //refactor flag to stop loop => now it always runs a single command in a tx
                             //             ])),
                             //         ));
                             //     }
@@ -579,7 +586,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         &pool_supported_token_account_parsed,
                         &normalized_token_account_parsed,
                         &supported_token_account_parsed,
-                        // TODO v0.4/operation: signer is fund_reserve_account.
+                        // signer is fund_reserve_account.
                         &ctx.fund_account.as_ref(),
                         &[ctx.fund_account.load()?.get_seeds().as_ref()],
                         reserved_restake_token.operation_reserved_amount,

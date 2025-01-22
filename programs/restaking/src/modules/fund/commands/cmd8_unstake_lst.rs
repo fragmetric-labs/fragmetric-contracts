@@ -1,5 +1,5 @@
-use std::ops::Neg;
 use anchor_lang::prelude::*;
+use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
@@ -179,7 +179,8 @@ impl UnstakeLSTCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().cloned())?;
         let fund_account = ctx.fund_account.load()?;
-        let unstaking_obligated_amount_as_sol = fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
+        let unstaking_obligated_amount_as_sol =
+            fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
 
         if unstaking_obligated_amount_as_sol == 0 {
             Ok((None, None))
@@ -192,8 +193,8 @@ impl UnstakeLSTCommand {
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                                       ..
-                                   }) => Ok(WeightedAllocationParticipant::new(
+                                ..
+                            }) => Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 pricing_service.get_token_amount_as_sol(
                                     &supported_token.mint,

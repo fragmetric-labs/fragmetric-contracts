@@ -197,10 +197,10 @@ impl NormalizeSTCommand {
             }
 
             // if supported token does not have enough reserved amount then we cannot normalize.
-            let supported_token_restakable_amount = token_strategy
+            let supported_token_restakable_amount_as_sol = token_strategy
                 .get_participant_by_index(index)?
                 .allocated_amount;
-            if supported_token_restakable_amount <= 0 {
+            if supported_token_restakable_amount_as_sol == 0 {
                 continue;
             }
 
@@ -228,10 +228,7 @@ impl NormalizeSTCommand {
                         })
                         .collect::<Result<Vec<_>>>()?,
                 );
-            vault_strategy.put(pricing_service.get_token_amount_as_sol(
-                &supported_token.mint,
-                supported_token_restakable_amount,
-            )?)?;
+            vault_strategy.put(supported_token_restakable_amount_as_sol)?;
 
             let mut allocated_sol_amount_for_normalized_token_vaults = 0;
 

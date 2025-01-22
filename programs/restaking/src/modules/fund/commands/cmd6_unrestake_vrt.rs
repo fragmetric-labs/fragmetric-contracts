@@ -1,6 +1,13 @@
-use super::{ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, ClaimUnstakedSOLCommand, OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable, UnstakeLSTCommandItem};
+use super::{
+    ClaimUnrestakedVSTCommand, ClaimUnrestakedVSTCommandState, ClaimUnstakedSOLCommand,
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, UndelegateVSTCommand, UnstakeLSTCommandItem,
+};
 use crate::errors;
-use crate::modules::fund::{FundService, WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS};
+use crate::modules::fund::{
+    FundService, WeightedAllocationParticipant, WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
@@ -43,111 +50,17 @@ impl SelfExecutable for UnrestakeVRTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        match &self.state {
-            UnrestakeVRTCommandState::New => {
-                let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.iter().cloned())?;
-                let fund_account = ctx.fund_account.load()?;
-                let unstaking_obligated_amount_as_sol = fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
-
-                // 1. 일단 출금 가능한 토큰들 먼저.. 출금 자체에 unrestaking이 필요하니 모르니 일단 각각 별도 수량 계산.. 볼트끼리 전략 돌려서 cut 해버려 (nSOL 볼트 포함)
-                // 2. SOL 출금은? LST 쓰는 전체 볼트들 모아서 아까 컷한거 반영한 상태에 추가로 컷해버려..
-
-
-                let sol_unstaking_obligated_amount = {
-                    let sol_net_operation_reserved_amount =
-                        fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
-                    if sol_net_operation_reserved_amount.is_negative() {
-                        u64::try_from(-sol_net_operation_reserved_amount)?
-                            .saturating_sub(
-                                fund_account
-                                    .get_supported_tokens_iter()
-                                    .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
-                                    .sum(),
-                            )?
-                    } else {
-                        0
-                    }
-                };
-                if sol_net_operation_reserved_amount.is_negative() {
-                    let sol_unstaking_obligated_amount = u64::try_from(-sol_net_operation_reserved_amount)?
-                        .saturating_sub(
-                            fund_account
-                                .get_supported_tokens_iter()
-                                .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
-                                .sum(),
-                        );
-                    let mut strategy = WeightedAllocationStrategy::<crate::modules::fund::fund_account::FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
-                        fund_account
-                            .get_supported_tokens_iter()
-                            .map(|supported_token| {
-                                match supported_token.pricing_source.try_deserialize()? {
-                                    Some(TokenPricingSource::SPLStakePool { .. })
-                                    | Some(TokenPricingSource::MarinadeStakePool { .. })
-                                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                                               ..
-                                           }) => Ok(WeightedAllocationParticipant::new(
-                                        supported_token.sol_allocation_weight,
-                                        pricing_service.get_token_amount_as_sol(
-                                            &supported_token.mint,
-                                            u64::try_from(
-                                                fund_account
-                                                    .get_asset_net_operation_reserved_amount(
-                                                        Some(supported_token.mint),
-                                                        false,
-                                                        &pricing_service,
-                                                    )?
-                                                    .max(0),
-                                            )?,
-                                        )?,
-                                        supported_token.sol_allocation_capacity_amount,
-                                    )),
-                                    // fail when supported token is not unstakable
-                                    Some(TokenPricingSource::JitoRestakingVault { .. })
-                                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                                    | None => {
-                                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                                    }
-                                    #[cfg(all(test, not(feature = "idl-build")))]
-                                    Some(TokenPricingSource::Mock { .. }) => {
-                                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                                    }
-                                }
-                            })
-                            .collect::<Result<Vec<_>>>()?,
-                    );
-                    strategy.cut_greedy(sol_unstaking_obligated_amount)?;
-
-                    let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
-                    for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
-                        let allocated_sol_amount =
-                            strategy.get_participant_last_cut_amount_by_index(index)?;
-                        let allocated_token_amount = pricing_service
-                            .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
-                        if allocated_token_amount > 0 {
-                            items.push(UnstakeLSTCommandItem {
-                                token_mint: supported_token.mint,
-                                allocated_token_amount,
-                            });
-                        }
-                    }
-                    drop(fund_account);
-
-                    self.execute_prepare(ctx, accounts, items, None)
-                } else {
-                    Ok((None, None))
-                }
-            }
-            _ => {},
-        };
+        // TODO v0.4.2: UnrestakeVRTCommand
+        return Ok((
+            None,
+            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+        ));
+        // 1. 일단 출금 가능한 토큰들 먼저.. 출금 자체에 unrestaking이 필요하니 모르니 일단 각각 별도 수량 계산.. 볼트끼리 전략 돌려서 cut 해버려 (nSOL 볼트 포함)
+        // 2. SOL 출금은? LST 쓰는 전체 볼트들 모아서 아까 컷한거 반영한 상태에 추가로 컷해버려..
 
         if let Some(item) = self.items.first() {
             match &self.state {
-                UnrestakeVRTCommandState::New => {
-
-                },
+                UnrestakeVRTCommandState::New => {}
                 UnrestakeVRTCommandState::Init if item.sol_amount > 0 => {
                     let mut command = self.clone();
                     command.state = UnrestakeVRTCommandState::ReadVaultState;
@@ -343,6 +256,9 @@ impl SelfExecutable for UnrestakeVRTCommand {
                 _ => (),
             }
         }
-        Ok((None, Some(ClaimUnstakedSOLCommand::default().without_required_accounts())))
+        Ok((
+            None,
+            Some(ClaimUnstakedSOLCommand::default().without_required_accounts()),
+        ))
     }
 }
