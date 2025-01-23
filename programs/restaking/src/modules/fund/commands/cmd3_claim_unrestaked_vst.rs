@@ -555,7 +555,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                     // let mut normalized_token_pool_account = normalized_token_pool_address
                     //     .parse_account_boxed::<NormalizedTokenPoolAccount>(
                     // )?;
-                    let normalized_token_account_parsed =
+                    let mut normalized_token_account_parsed =
                         InterfaceAccount::<TokenAccount>::try_from(normalized_token_account)?;
                     let supported_token_account_parsed =
                         InterfaceAccount::<TokenAccount>::try_from(supported_token_account)?;
@@ -584,7 +584,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
                         &supported_token_mint_parsed,
                         &supported_token_program_parsed,
                         &pool_supported_token_account_parsed,
-                        &normalized_token_account_parsed,
+                        &mut normalized_token_account_parsed,
                         &supported_token_account_parsed,
                         // signer is fund_reserve_account.
                         &ctx.fund_account.as_ref(),
