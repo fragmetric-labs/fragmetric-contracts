@@ -2109,8 +2109,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public async runOperatorRunScheduled(i = 0) {
         logger.notice(`operation ${i}`, new Date().toString());
-        await this.runOperatorFundCommands(null, this.keychain.getKeypair('ADMIN'), 100, undefined, 100_000);
-        await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 30));
+        try {
+            await this.runOperatorFundCommands(null, this.keychain.getKeypair('ADMIN'), 100, undefined, 100_000);
+            await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 30));
+        } catch (err) {
+            console.error(err);
+            await new Promise(resolve => setTimeout(resolve, 1000 * 60));
+        }
         this.runOperatorRunScheduled(i+1);
     }
 
