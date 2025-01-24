@@ -123,6 +123,7 @@ impl StakeSOLCommand {
             .new_pricing_service(accounts.iter().cloned())?;
         let fund_account = ctx.fund_account.load()?;
 
+        msg!("FUCK1");
         let sol_net_operation_reserved_amount =
             fund_account.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
 
@@ -132,6 +133,7 @@ impl StakeSOLCommand {
         }
         let sol_staking_reserved_amount = u64::try_from(sol_net_operation_reserved_amount)?;
 
+        msg!("FUCK2");
         let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
             fund_account
                 .get_supported_tokens_iter()
@@ -140,6 +142,7 @@ impl StakeSOLCommand {
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                            msg!("FUCK3");
                             Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 fund_account.get_asset_total_amount_as_sol(
@@ -163,13 +166,20 @@ impl StakeSOLCommand {
                 )
                 .collect::<Result<Vec<_>>>()?,
         );
+        msg!(
+            "FUCK4: {:?}, sol_staking_reserved_amount={}",
+            strategy.get_participants_iter().collect::<Vec<_>>(),
+            sol_staking_reserved_amount
+        );
         strategy.put(sol_staking_reserved_amount)?;
 
+        msg!("FUCK5");
         let mut items =
             Vec::<StakeSOLCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
         for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             let allocated_sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
             if allocated_sol_amount > 1_000_000 {
+                msg!("FUCK6");
                 items.push(StakeSOLCommandItem {
                     token_mint: supported_token.mint,
                     allocated_sol_amount,
@@ -394,8 +404,16 @@ impl StakeSOLCommand {
 
         // validation (expects diff <= 1)
         let expected_pool_token_fee_amount = pricing_service
-            .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
+            .get_sol_amount_as_token_debug(pool_token_mint.key, item.allocated_sol_amount)?
             .saturating_sub(minted_pool_token_amount);
+
+        msg!(
+            "Mint = {}, Fee = {}, Expected = {}",
+            minted_pool_token_amount,
+            deducted_pool_token_fee_amount,
+            expected_pool_token_fee_amount
+        );
+
         require_gte!(
             1,
             expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),

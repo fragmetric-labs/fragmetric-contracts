@@ -223,6 +223,26 @@ impl<'info> PricingService<'info> {
         Ok((total_sol_amount, token_value.denominator))
     }
 
+    fn get_token_value_as_sol_debug(&self, token_mint: &Pubkey) -> Result<(u64, u64)> {
+        let token_value = self.get_token_value(token_mint)?;
+        let mut total_sol_amount = 0u64;
+
+        for asset in &token_value.numerator {
+            match asset {
+                Asset::SOL(sol_amount) => {
+                    total_sol_amount += sol_amount;
+                }
+                Asset::Token(nested_token_mint, _, nested_token_amount) => {
+                    total_sol_amount +=
+                        self.get_token_amount_as_sol_debug(nested_token_mint, *nested_token_amount)?;
+                }
+            }
+        }
+
+        msg!("token: {}, numerator: {}, denominator: {}", token_mint, total_sol_amount, token_value.denominator);
+        Ok((total_sol_amount, token_value.denominator))
+    }
+
     /// returns (from_asset_amount, to_token_amount) for the given pair, e.g. returns (1, 1) on 1:1, returns (15, 10) on 1.5:1
     pub fn get_asset_exchange_ratio(
         &self,
@@ -355,6 +375,16 @@ impl<'info> PricingService<'info> {
         utils::get_proportional_amount(sol_amount, denominator_as_token, numerator_as_sol)
     }
 
+    pub fn get_sol_amount_as_token_debug(
+        &self,
+        to_token_mint: &Pubkey,
+        sol_amount: u64,
+    ) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) =
+            self.get_token_value_as_sol_debug(to_token_mint)?;
+        utils::get_proportional_amount(sol_amount, denominator_as_token, numerator_as_sol)
+    }
+
     pub fn get_token_amount_as_sol(
         &self,
         from_token_mint: &Pubkey,
@@ -362,6 +392,16 @@ impl<'info> PricingService<'info> {
     ) -> Result<u64> {
         let (numerator_as_sol, denominator_as_token) =
             self.get_token_value_as_sol(from_token_mint)?;
+        utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
+    }
+
+    pub fn get_token_amount_as_sol_debug(
+        &self,
+        from_token_mint: &Pubkey,
+        token_amount: u64,
+    ) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) =
+            self.get_token_value_as_sol_debug(from_token_mint)?;
         utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
     }
 

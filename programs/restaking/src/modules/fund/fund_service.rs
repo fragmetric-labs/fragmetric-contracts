@@ -148,7 +148,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 supported_token.one_token_as_sol = pricing_service
                     .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
                 supported_token.one_token_as_receipt_token = pricing_service
-                    .get_one_token_amount_as_token(&supported_token.mint, supported_token.decimals, &self.receipt_token_mint.key())?;
+                    .get_one_token_amount_as_token(
+                        &supported_token.mint,
+                        supported_token.decimals,
+                        &self.receipt_token_mint.key(),
+                    )?;
             }
 
             if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
