@@ -13,10 +13,11 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
-    FundService, HarvestRewardCommand, NormalizeSTCommandResult, OperationCommand,
-    OperationCommandContext, OperationCommandEntry, OperationCommandResult, RestakingVault,
-    SelfExecutable, SupportedToken, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULTS, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    DelegateVSTCommand, FundService, HarvestRewardCommand, NormalizeSTCommandResult,
+    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    RestakingVault, SelfExecutable, SupportedToken, WeightedAllocationParticipant,
+    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -399,7 +400,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                     })
                 }
-                _ => HarvestRewardCommand::default().without_required_accounts(),
+                _ => DelegateVSTCommand::default().without_required_accounts(),
             }),
         ))
     }
