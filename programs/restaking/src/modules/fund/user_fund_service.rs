@@ -112,13 +112,10 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             // receipt_token_mint_amount will be equal to asset_amount at the initial minting, so like either 1SOL = 1RECEIPT-TOKEN or 1SUPPORTED-TOKEN = 1RECEIPT-TOKEN.
             asset_amount
         } else {
-            pricing_service.get_sol_amount_as_token(
+            pricing_service.get_asset_amount_as_token(
+                supported_token_mint_key.as_ref(),
+                asset_amount,
                 &self.receipt_token_mint.key(),
-                match supported_token_mint_key {
-                    Some(supported_token_mint_key) => pricing_service
-                        .get_token_amount_as_sol(&supported_token_mint_key, asset_amount)?,
-                    None => asset_amount,
-                },
             )?
         };
 

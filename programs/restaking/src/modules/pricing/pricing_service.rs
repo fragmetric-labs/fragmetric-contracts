@@ -223,31 +223,173 @@ impl<'info> PricingService<'info> {
         Ok((total_sol_amount, token_value.denominator))
     }
 
-    pub fn get_sol_amount_as_token(&self, token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
-        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
+    /// returns (from_asset_amount, to_token_amount) for the given pair, e.g. returns (1, 1) on 1:1, returns (15, 10) on 1.5:1
+    pub fn get_asset_exchange_ratio(
+        &self,
+        from_asset_mint: Option<&Pubkey>,
+        to_token_mint: &Pubkey,
+    ) -> Result<Option<(u64, u64)>> {
+        match from_asset_mint {
+            Some(from_token_mint) => {
+                let mut from_token_value = TokenValue::default();
+                self.flatten_token_value(from_token_mint, &mut from_token_value)?;
+                if from_token_value.denominator == 0 {
+                    return Ok(None);
+                }
+                if from_token_value.numerator.len() == 1 {
+                    if let Asset::Token(from_nested_token_mint, _, from_nested_token_amount) =
+                        from_token_value.numerator[0]
+                    {
+                        if from_nested_token_mint == *to_token_mint {
+                            return Ok(if from_nested_token_amount == 0 {
+                                None
+                            } else {
+                                // asking fragJTO : JTO exchange rate,
+                                // if from_token_value is like 110JTO (numerator) / 100fragJTO (denominator)
+                                // returns (100, 110)
+                                Some((from_token_value.denominator, from_nested_token_amount))
+                            });
+                        }
+                    }
+                }
+
+                let mut to_token_value = TokenValue::default();
+                self.flatten_token_value(to_token_mint, &mut to_token_value)?;
+                if to_token_value.denominator == 0 {
+                    return Ok(None);
+                }
+                if to_token_value.numerator.len() == 1 {
+                    if let Asset::Token(to_nested_token_mint, _, to_nested_token_amount) =
+                        to_token_value.numerator[0]
+                    {
+                        if to_nested_token_mint == *from_token_mint {
+                            return Ok(if to_nested_token_amount == 0 {
+                                None
+                            } else {
+                                // asking JTO : fragJTO exchange rate,
+                                // if to_token_value is like 110JTO (numerator) / 100fragJTO (denominator)
+                                // returns (110, 100)
+                                Some((to_nested_token_amount, to_token_value.denominator))
+                            });
+                        }
+                    }
+                }
+
+                let base_amount = 10u64
+                    .checked_pow(9)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                let from_base_value =
+                    self.get_token_amount_as_sol(&from_token_mint, base_amount)?;
+                let to_base_value = self.get_token_amount_as_sol(&to_token_mint, base_amount)?;
+                Ok(if from_base_value == 0 || to_base_value == 0 {
+                    None
+                } else {
+                    Some((from_base_value, to_base_value))
+                })
+            }
+            None => {
+                let base_amount = 10u64
+                    .checked_pow(9)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                let to_base_value = self.get_token_amount_as_sol(&to_token_mint, base_amount)?;
+                Ok(if to_base_value == 0 {
+                    None
+                } else {
+                    Some((base_amount, to_base_value))
+                })
+            }
+        }
+    }
+
+    pub fn get_asset_amount_as_token(
+        &self,
+        from_asset_mint: Option<&Pubkey>,
+        from_asset_amount: u64,
+        to_token_mint: &Pubkey,
+    ) -> Result<u64> {
+        match from_asset_mint {
+            None => self.get_sol_amount_as_token(to_token_mint, from_asset_amount),
+            Some(from_token_mint) => {
+                if let Some((from, to)) =
+                    self.get_asset_exchange_ratio(from_asset_mint, to_token_mint)?
+                {
+                    if from == to {
+                        return Ok(from_asset_amount);
+                    }
+                }
+                self.get_sol_amount_as_token(
+                    to_token_mint,
+                    self.get_token_amount_as_sol(from_token_mint, from_asset_amount)?,
+                )
+            }
+        }
+    }
+
+    pub fn get_token_amount_as_asset(
+        &self,
+        from_token_mint: &Pubkey,
+        from_token_amount: u64,
+        to_asset_mint: Option<&Pubkey>,
+    ) -> Result<u64> {
+        match to_asset_mint {
+            None => self.get_token_amount_as_sol(from_token_mint, from_token_amount),
+            Some(to_token_mint) => {
+                if let Some((from, to)) =
+                    self.get_asset_exchange_ratio(Some(from_token_mint), to_token_mint)?
+                {
+                    if from == to {
+                        return Ok(from_token_amount);
+                    }
+                }
+                self.get_sol_amount_as_token(
+                    to_token_mint,
+                    self.get_token_amount_as_sol(from_token_mint, from_token_amount)?,
+                )
+            }
+        }
+    }
+
+    pub fn get_sol_amount_as_token(&self, to_token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) =
+            self.get_token_value_as_sol(to_token_mint)?;
         utils::get_proportional_amount(sol_amount, denominator_as_token, numerator_as_sol)
     }
 
-    pub fn get_token_amount_as_sol(&self, token_mint: &Pubkey, token_amount: u64) -> Result<u64> {
-        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
+    pub fn get_token_amount_as_sol(
+        &self,
+        from_token_mint: &Pubkey,
+        token_amount: u64,
+    ) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) =
+            self.get_token_value_as_sol(from_token_mint)?;
         utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
     }
 
     pub fn get_one_token_amount_as_sol(
         &self,
-        token_mint: &Pubkey,
-        token_decimals: u8,
+        from_token_mint: &Pubkey,
+        from_token_decimals: u8,
     ) -> Result<u64> {
-        let (numerator_as_sol, denominator_as_token) = self.get_token_value_as_sol(token_mint)?;
         let token_amount = 10u64
-            .checked_pow(token_decimals as u32)
+            .checked_pow(from_token_decimals as u32)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        if denominator_as_token == 0 {
-            Ok(token_amount)
-        } else {
-            utils::get_proportional_amount(token_amount, numerator_as_sol, denominator_as_token)
-        }
+        self.get_token_amount_as_asset(from_token_mint, token_amount, None)
+    }
+
+    pub fn get_one_token_amount_as_token(
+        &self,
+        from_token_mint: &Pubkey,
+        from_token_decimals: u8,
+        to_token_mint: &Pubkey,
+    ) -> Result<u64> {
+        let (numerator_as_sol, denominator_as_token) =
+            self.get_token_value_as_sol(from_token_mint)?;
+        let token_amount = 10u64
+            .checked_pow(from_token_decimals as u32)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+
+        self.get_token_amount_as_asset(from_token_mint, token_amount, Some(to_token_mint))
     }
 
     /// **Flatten**s the token value of given token.
@@ -366,6 +508,97 @@ mod tests {
         println!(
             "token pricing source init size: {}",
             TokenPricingSource::INIT_SPACE
+        );
+    }
+
+    #[test]
+    fn test_get_token_exchange_ratio() {
+        let mut pricing_service = PricingService::new(&[]).unwrap();
+        let token_mint = Pubkey::new_unique();
+        pricing_service
+            .resolve_token_pricing_source(
+                &token_mint,
+                &TokenPricingSource::Mock {
+                    numerator: vec![MockAsset::SOL(1_234_567_890 * 2)],
+                    denominator: 1_234_567_890,
+                },
+            )
+            .unwrap();
+
+        let stable_fund_mint = Pubkey::new_unique();
+        pricing_service
+            .resolve_token_pricing_source(
+                &stable_fund_mint,
+                &TokenPricingSource::Mock {
+                    numerator: vec![MockAsset::Token(token_mint, 2_234_567_890)],
+                    denominator: 2_234_567_890,
+                },
+            )
+            .unwrap();
+
+        let stable_exchange_rate = pricing_service
+            .get_asset_exchange_ratio(Some(&token_mint), &stable_fund_mint)
+            .unwrap();
+        let (from, to) = stable_exchange_rate.unwrap();
+        assert_eq!(from, to);
+        assert_eq!(from, 2_234_567_890);
+
+        let stable_exchange_rate_rev = pricing_service
+            .get_asset_exchange_ratio(Some(&stable_fund_mint), &token_mint)
+            .unwrap();
+        let (from, to) = stable_exchange_rate_rev.unwrap();
+        assert_eq!(from, to);
+        assert_eq!(from, 2_234_567_890);
+
+        let increased_fund_mint = Pubkey::new_unique();
+        pricing_service
+            .resolve_token_pricing_source(
+                &increased_fund_mint,
+                &TokenPricingSource::Mock {
+                    numerator: vec![MockAsset::Token(token_mint, 2_234_567_890 * 2)],
+                    denominator: 2_234_567_890,
+                },
+            )
+            .unwrap();
+
+        let increased_exchange_rate = pricing_service
+            .get_asset_exchange_ratio(Some(&token_mint), &increased_fund_mint)
+            .unwrap();
+        let (from, to) = increased_exchange_rate.unwrap();
+        assert!(from > to);
+        assert_eq!(from, 2_234_567_890 * 2);
+        assert_eq!(to, 2_234_567_890);
+        assert_eq!(
+            pricing_service
+                .get_asset_amount_as_token(Some(&token_mint), 1234, &stable_fund_mint)
+                .unwrap(),
+            1234
+        );
+        assert_eq!(
+            pricing_service
+                .get_asset_amount_as_token(None, 1234, &stable_fund_mint)
+                .unwrap(),
+            617
+        );
+
+        let increased_exchange_rate_rev = pricing_service
+            .get_asset_exchange_ratio(Some(&increased_fund_mint), &token_mint)
+            .unwrap();
+        let (from, to) = increased_exchange_rate_rev.unwrap();
+        assert!(from < to);
+        assert_eq!(from, 2_234_567_890);
+        assert_eq!(to, 2_234_567_890 * 2);
+        assert_eq!(
+            pricing_service
+                .get_asset_amount_as_token(Some(&token_mint), 1234, &increased_fund_mint)
+                .unwrap(),
+            617
+        );
+        assert_eq!(
+            pricing_service
+                .get_asset_amount_as_token(None, 1234, &increased_fund_mint)
+                .unwrap(),
+            308
         );
     }
 
