@@ -1950,7 +1950,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationWeight: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(1);
+                            return new BN(0);
                         case "jitoSOL":
                             return new BN("9,223,372,036,854,775,808".replace(/,/g, '')); // 2^63
                         case "mSOL":
