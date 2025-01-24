@@ -147,6 +147,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             for supported_token in fund_account.get_supported_tokens_iter_mut() {
                 supported_token.one_token_as_sol = pricing_service
                     .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
+                supported_token.one_token_as_receipt_token = pricing_service
+                    .get_one_token_amount_as_token(&supported_token.mint, supported_token.decimals, &self.receipt_token_mint.key())?;
             }
 
             if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
@@ -567,15 +569,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 break;
             }
 
-            let sol_amount = pricing_service.get_token_amount_as_sol(
+            let asset_amount = pricing_service.get_token_amount_as_asset(
                 &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
+                supported_token_mint_key.as_ref(),
             )?;
-            let mut asset_amount = if let Some(supported_token_mint) = &supported_token_mint_key {
-                pricing_service.get_sol_amount_as_token(supported_token_mint, sol_amount)?
-            } else {
-                sol_amount
-            };
             let asset_fee_amount = fund_account.get_withdrawal_fee_amount(asset_amount)?;
             let asset_user_amount = asset_amount - asset_fee_amount;
 
@@ -761,15 +759,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 );
 
                 // to reserve user_asset_amount of the batch account
-                let sol_amount = pricing_service.get_token_amount_as_sol(
+                let asset_amount = pricing_service.get_token_amount_as_asset(
                     &self.receipt_token_mint.key(),
                     batch.receipt_token_amount,
+                    supported_token_mint_key.as_ref(),
                 )?;
-                let asset_amount = if let Some(supported_token_mint) = &supported_token_mint_key {
-                    pricing_service.get_sol_amount_as_token(supported_token_mint, sol_amount)?
-                } else {
-                    sol_amount
-                };
                 let asset_fee_amount = self
                     .fund_account
                     .load()?

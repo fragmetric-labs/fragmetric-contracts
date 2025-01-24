@@ -28,10 +28,13 @@ pub struct SupportedToken {
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
 
-    /// informative
+    // third parties state tracking
     pub pending_unstaking_amount_as_sol: u64,
 
-    _reserved: [u8; 56],
+    /// informative
+    pub one_token_as_receipt_token: u64,
+
+    _reserved: [u8; 48],
 }
 
 impl SupportedToken {
