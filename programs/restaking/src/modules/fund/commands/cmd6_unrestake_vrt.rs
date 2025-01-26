@@ -97,7 +97,7 @@ impl UnrestakeVRTCommand {
         Option<OperationCommandEntry>,
     )> {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
 
         let normalized_token_pool_account = fund_account

@@ -177,7 +177,7 @@ impl UnstakeLSTCommand {
         Option<OperationCommandEntry>,
     )> {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
         let unstaking_obligated_amount_as_sol =
             fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
@@ -827,7 +827,7 @@ impl UnstakeLSTCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().copied())?;
 
         // validation (expects diff <= withdraw_stake_count)
         let total_burnt_token_amount =
@@ -929,7 +929,7 @@ impl UnstakeLSTCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().copied())?;
 
         // validation (expects diff <= 1)
         let expected_sol_fee_amount = pricing_service

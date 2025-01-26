@@ -382,7 +382,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
                     let mut pricing_service =
-                        fund_service.new_pricing_service(pricing_sources.into_iter().cloned())?;
+                        fund_service.new_pricing_service(pricing_sources.into_iter().copied())?;
 
                     let (
                         processed_receipt_token_amount,

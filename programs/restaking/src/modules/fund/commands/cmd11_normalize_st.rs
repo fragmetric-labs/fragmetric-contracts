@@ -122,7 +122,7 @@ impl NormalizeSTCommand {
         Option<OperationCommandEntry>,
     )> {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
 
         // If fund does not support normalization then nothing to normalize.
@@ -345,7 +345,7 @@ impl NormalizeSTCommand {
         };
 
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().copied())?;
 
         let normalized_token_mint_address = normalized_token_mint.key();
         let mut normalized_token_pool_account =

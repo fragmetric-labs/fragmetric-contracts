@@ -120,7 +120,7 @@ impl StakeSOLCommand {
         Option<OperationCommandEntry>,
     )> {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
 
         let sol_net_operation_reserved_amount =
@@ -396,7 +396,7 @@ impl StakeSOLCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().copied())?;
 
         // validation (expects diff <= 1)
         let expected_pool_token_fee_amount = pricing_service
@@ -463,7 +463,7 @@ impl StakeSOLCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
+            .new_pricing_service(pricing_sources.iter().copied())?;
 
         // validation (expects diff <= 1)
         let expected_minted_pool_token_amount = pricing_service
