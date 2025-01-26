@@ -405,7 +405,7 @@ impl ClaimUnstakedSOLCommand {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         }
 
-        let (fund_stake_accounts, pricing_sources) = remaining_accounts.split_at(5);
+        let (fund_stake_accounts, _pricing_sources) = remaining_accounts.split_at(5);
 
         let mut total_claimed_sol_amount = 0;
 
@@ -465,7 +465,7 @@ impl ClaimUnstakedSOLCommand {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         }
 
-        let (withdrawal_ticket_accounts, pricing_sources) = remaining_accounts.split_at(5);
+        let (withdrawal_ticket_accounts, _pricing_sources) = remaining_accounts.split_at(5);
 
         require_keys_eq!(pool_account_address, pool_account.key());
         require_keys_eq!(*pool_token_mint_address, pool_token_mint.key());

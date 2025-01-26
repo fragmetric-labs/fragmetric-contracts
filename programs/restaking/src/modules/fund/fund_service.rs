@@ -1037,7 +1037,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     None => receivable_amount_processing_as_sol,
                 };
             asset_debt_amount_processing -= receivable_amount_processed;
-            asset_receivable_amount_processing -= receivable_amount_processed;
+            // asset_receivable_amount_processing -= receivable_amount_processed;
         }
 
         // pay remaining debt with cash with current asset

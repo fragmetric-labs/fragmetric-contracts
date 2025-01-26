@@ -376,7 +376,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     deducted_asset_fee_amount,
                     offsetted_asset_receivables,
                     transferred_asset_revenue_amount,
-                    pricing_service,
                 ) = {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
@@ -429,7 +428,6 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         deducted_asset_fee_amount,
                         offsetted_asset_receivables,
                         transferred_asset_revenue_amount,
-                        pricing_service,
                     )
                 };
 

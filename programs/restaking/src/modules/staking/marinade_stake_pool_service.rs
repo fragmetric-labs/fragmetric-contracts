@@ -372,7 +372,7 @@ impl<'info> MarinadeStakePoolService<'info> {
         require_eq!(claimed_sol_amount, unstaked_sol_amount);
 
         msg!(
-            "CLAIM#marinade: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
+            "CLAIM_UNSTAKED#marinade: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
             self.pool_token_mint.key(),
             withdrawal_ticket_account_beneficiary_amount,
             claimed_sol_amount,

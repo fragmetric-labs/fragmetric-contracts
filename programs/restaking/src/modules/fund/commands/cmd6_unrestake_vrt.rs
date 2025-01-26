@@ -11,7 +11,6 @@ use std::ops::Neg;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::modules::staking::MarinadeStakePoolService;
 use crate::utils::{AccountInfoExt, PDASeeds};
 use crate::{errors, utils};
 
@@ -112,7 +111,7 @@ impl UnrestakeVRTCommand {
             .and_then(Account::<NormalizedTokenPoolAccount>::try_from)?;
 
         // calculate additionally required unstaking amount for each supported tokens
-        let unstaking_obligated_amount_as_sol =
+        let total_unstaking_obligated_amount_as_sol =
             fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
 
         let mut unstaking_strategy =
@@ -164,7 +163,7 @@ impl UnrestakeVRTCommand {
                     })
                     .collect::<Result<Vec<_>>>()?,
             );
-        let remaining = unstaking_strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
+        unstaking_strategy.cut_greedy(total_unstaking_obligated_amount_as_sol)?;
 
         // calculate required token amount for each supported tokens' withdrawal obligation
         let mut items = Vec::<UnrestakeVSTCommandItem>::with_capacity(
@@ -274,14 +273,14 @@ impl UnrestakeVRTCommand {
 
         Ok((
             None,
-            self.create_prepare_command_with_items(fund_account, &items)?,
+            self.create_prepare_command_with_items(fund_account, items)?,
         ))
     }
 
     fn create_prepare_command_with_items<'info>(
         &self,
         fund_account: Ref<FundAccount>,
-        items: &Vec<UnrestakeVSTCommandItem>,
+        items: Vec<UnrestakeVSTCommandItem>,
     ) -> Result<Option<OperationCommandEntry>> {
         Ok(if items.len() > 0 {
             let required_accounts = match fund_account
@@ -296,9 +295,7 @@ impl UnrestakeVRTCommand {
             };
             Some(
                 UnrestakeVRTCommand {
-                    state: UnrestakeVRTCommandState::Prepare {
-                        items: items.clone(),
-                    },
+                    state: UnrestakeVRTCommandState::Prepare { items },
                 }
                 .with_required_accounts(required_accounts),
             )
@@ -349,24 +346,24 @@ impl UnrestakeVRTCommand {
                 required_accounts.extend(
                     (0..5)
                         .map(|index| {
-                            let withdrawal_ticket_authority =
+                            let ticket_base_account =
                                 *FundAccount::find_unrestaking_ticket_account_address(
                                     &ctx.fund_account.key(),
                                     &item.vault,
                                     index,
                                 );
-                            let withdrawal_ticket = vault_service
-                                .find_withdrawal_ticket_account(&withdrawal_ticket_authority);
-                            let withdrawal_ticket_receipt_token_account =
+                            let ticket_account =
+                                vault_service.find_withdrawal_ticket_account(&ticket_base_account);
+                            let ticket_receipt_token_account =
                                 associated_token::get_associated_token_address_with_program_id(
-                                    &withdrawal_ticket,
+                                    &ticket_account,
                                     &item.receipt_token_mint,
                                     &anchor_spl::token::ID,
                                 );
                             [
-                                (withdrawal_ticket, true),
-                                (withdrawal_ticket_receipt_token_account, true),
-                                (withdrawal_ticket_authority, false),
+                                (ticket_account, true),
+                                (ticket_receipt_token_account, true),
+                                (ticket_base_account, false),
                             ]
                         })
                         .flatten(),
@@ -422,7 +419,7 @@ impl UnrestakeVRTCommand {
         {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 require_keys_eq!(address, item.vault);
-                let [vault_program, vault_config, vault_account, token_program, associated_token, system_program, vault_receipt_token_mint, vault_receipt_token_reserve_account, fund_vault_receipt_token_reserve_account, fund_reserve_account, remaining_accounts @ ..] =
+                let [vault_program, vault_config, vault_account, token_program, associated_token, system_program, vault_receipt_token_mint, fund_vault_receipt_token_reserve_account, fund_reserve_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -434,11 +431,17 @@ impl UnrestakeVRTCommand {
                     &remaining_accounts[..15]
                 };
                 let withdrawal_ticket_accounts = (0..5).find_map(|i| {
-                    let ticket = withdrawal_ticket_candidate_accounts[i * 3];
-                    let receipt_token_account = withdrawal_ticket_candidate_accounts[i * 3 + 1];
-                    let authority = withdrawal_ticket_candidate_accounts[i * 3 + 2];
-                    if !ticket.is_initialized() {
-                        Some((i, ticket, receipt_token_account, authority))
+                    let ticket_account = withdrawal_ticket_candidate_accounts[i * 3];
+                    let ticket_receipt_token_account =
+                        withdrawal_ticket_candidate_accounts[i * 3 + 1];
+                    let ticket_base_account = withdrawal_ticket_candidate_accounts[i * 3 + 2];
+                    if !ticket_account.is_initialized() {
+                        Some((
+                            i,
+                            ticket_account,
+                            ticket_receipt_token_account,
+                            ticket_base_account,
+                        ))
                     } else {
                         None
                     }
@@ -448,7 +451,7 @@ impl UnrestakeVRTCommand {
                     withdrawal_ticket_index,
                     withdrawal_ticket_account,
                     withdrawal_ticket_receipt_token_account,
-                    withdrawal_ticket_authority_account,
+                    withdrawal_ticket_base_account,
                 )) = withdrawal_ticket_accounts
                 {
                     let vault_service =
@@ -461,11 +464,10 @@ impl UnrestakeVRTCommand {
                         associated_token,
                         system_program,
                         vault_receipt_token_mint,
-                        vault_receipt_token_reserve_account,
                         fund_vault_receipt_token_reserve_account,
                         withdrawal_ticket_account,
                         withdrawal_ticket_receipt_token_account,
-                        withdrawal_ticket_authority_account,
+                        withdrawal_ticket_base_account,
                         ctx.operator,
                         &[],
                         fund_reserve_account,
@@ -532,7 +534,7 @@ impl UnrestakeVRTCommand {
         let fund_account = ctx.fund_account.load()?;
         Ok((
             result,
-            self.create_prepare_command_with_items(fund_account, &items)?,
+            self.create_prepare_command_with_items(fund_account, items)?,
         ))
     }
 }

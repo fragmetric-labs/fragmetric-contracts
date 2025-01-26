@@ -49,21 +49,17 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         let quarter = res1.receiptTokenAmount.divn(4);
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
-    });
-
-    step("fund operation for a full cycle (ncn_epoch = 256 slot)", async () => {
         await restaking.runOperatorFundCommands();
+
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(1));
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'), new BN(1));
-        const res1 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
-        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount);
-        await restaking.runOperatorFundCommands();
-    });
+        const res2 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
+        await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
+        await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
-    step("fund operation for the next cycle after an epoch shift", async () => {
-        logger.info('waiting for an epoch shift...')
-        await restaking.sleepUntil(254); // wait until just before the end of the current epoch (instead of 256) to make more complex scenario
-        await restaking.runOperatorFundCommands(); // unrestaking should be done after this operation cycle
+        logger.info('waiting for a full epoch shift...')
+        await restaking.sleep(50); // wait for more than one epoch (32 slots)
+        await restaking.runOperatorFundCommands(); // the unrestaking request should be claimable on this cycle
         await restaking.runUserWithdraw(user1, null, new BN(1));
     });
 });

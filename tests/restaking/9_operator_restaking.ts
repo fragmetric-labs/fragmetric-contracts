@@ -1,8 +1,5 @@
-import {BN, web3} from "@coral-xyz/anchor";
-import {expect} from "chai";
 import {step} from "mocha-steps";
 // @ts-ignore
-import * as spl from "@solana/spl-token-3.x";
 import {restakingPlayground} from "../restaking";
 import {getLogger} from '../../tools/lib';
 
@@ -29,7 +26,7 @@ describe("operator_restake_with_normalize", async () => {
     });
 
     step("restake LSTs to jito vault through normalizing", async function () {
-        let {event} = await restaking.runOperatorFundCommands({
+        await restaking.runOperatorFundCommands({
                 command: {
                     restakeVst: {
                         0: {
@@ -44,31 +41,23 @@ describe("operator_restake_with_normalize", async () => {
             },
             restaking.keychain.getKeypair('FUND_MANAGER'),
         );
-        console.log(`restaking command event:`, event);
     });
 
-    // step("request VRT from jito restaking pool", async function () {
-    //     const unrestakeSolAmount = new BN(4 * web3.LAMPORTS_PER_SOL);
-    //     await restaking.runOperatorFundCommands({
-    //             command: {
-    //                 unrestakeVrt: {
-    //                     0: {
-    //                         items: [
-    //                             {
-    //                                 vaultAddress: restaking.knownAddress.fragSOLJitoVaultAccount,
-    //                                 solAmount: unrestakeSolAmount,
-    //                             },
-    //                         ],
-    //                         state: {
-    //                             init: {},
-    //                         },
-    //                     }
-    //                 },
-    //             },
-    //             requiredAccounts: [],
+    step("request VRT from jito restaking pool", async function () {
+        await restaking.runOperatorFundCommands({
+                command: {
+                    unrestakeVrt: {
+                        0: {
+                            state: {
+                                new: {},
+                            },
+                        }
+                    },
+                },
+                requiredAccounts: [],
 
-    //         },
-    //         restaking.keychain.getKeypair('FUND_MANAGER'),
-    //     );
-    // });
+            },
+            restaking.keychain.getKeypair('FUND_MANAGER'),
+        );
+    });
 });

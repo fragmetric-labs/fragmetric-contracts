@@ -772,7 +772,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         require_eq!(claimed_sol_amount, unstaked_sol_amount);
 
         msg!(
-            "CLAIM#spl: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
+            "CLAIM_UNSTAKED#spl: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
             pool_token_mint,
             to_sol_account_amount,
             claimed_sol_amount
