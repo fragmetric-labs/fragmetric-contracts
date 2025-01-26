@@ -3055,7 +3055,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         tokens: {
                             [this.knownAddress.nSOLTokenMint.toString()]: {
                                 reserved: fund.normalizedToken.operationReservedAmount,
-                                receivable: fund.normalizedToken.operationReceivableAmount,
                                 total: fund.normalizedToken.operationReservedAmount,
                             },
                             ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {

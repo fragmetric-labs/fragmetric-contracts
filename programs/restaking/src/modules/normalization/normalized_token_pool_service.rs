@@ -476,10 +476,12 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
 
         // the values being written below are informative, only for event emission.
         self.normalized_token_pool_account
-            .one_normalized_token_as_sol = pricing_service.get_one_token_amount_as_sol(
-            normalized_token_mint_key,
-            self.normalized_token_mint.decimals,
-        )?;
+            .one_normalized_token_as_sol = pricing_service
+            .get_one_token_amount_as_sol(
+                normalized_token_mint_key,
+                self.normalized_token_mint.decimals,
+            )?
+            .unwrap_or_default();
 
         for supported_token in self
             .normalized_token_pool_account
@@ -487,7 +489,8 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
             .iter_mut()
         {
             supported_token.one_token_as_sol = pricing_service
-                .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
+                .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?
+                .unwrap_or_default();
         }
 
         pricing_service.flatten_token_value(
