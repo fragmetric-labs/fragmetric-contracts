@@ -135,12 +135,13 @@ impl StakeSOLCommand {
         let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
             fund_account
                 .get_supported_tokens_iter()
-                .map(
-                    |supported_token| match supported_token.pricing_source.try_deserialize()? {
+                .map(|supported_token| {
+                    Ok(match supported_token.pricing_source.try_deserialize()? {
+                        // stakable tokens
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
-                            Ok(WeightedAllocationParticipant::new(
+                            Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 fund_account.get_asset_total_amount_as_sol(
                                     Some(supported_token.mint),
@@ -149,19 +150,24 @@ impl StakeSOLCommand {
                                 supported_token.sol_allocation_capacity_amount,
                             ))
                         }
-                        // fail when supported token is not stakable
+
+                        // not stakable tokens
+                        Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => None,
+
+                        // invalid configuration
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                         | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
                         #[cfg(all(test, not(feature = "idl-build")))]
                         Some(TokenPricingSource::Mock { .. }) => {
                             err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
-                    },
-                )
-                .collect::<Result<Vec<_>>>()?,
+                    })
+                })
+                .collect::<Result<Vec<Option<_>>>>()?
+                .into_iter()
+                .flatten(),
         );
         strategy.put(sol_staking_reserved_amount)?;
 

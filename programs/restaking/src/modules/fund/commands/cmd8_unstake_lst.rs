@@ -185,16 +185,19 @@ impl UnstakeLSTCommand {
         if unstaking_obligated_amount_as_sol == 0 {
             Ok((None, None))
         } else {
-            let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+            let mut unstaking_strategy = WeightedAllocationStrategy::<
+                FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+            >::new(
                 fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
-                        match supported_token.pricing_source.try_deserialize()? {
+                        Ok(match supported_token.pricing_source.try_deserialize()? {
+                            // stakable tokens
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
-                            }) => Ok(WeightedAllocationParticipant::new(
+                            }) => Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 pricing_service.get_token_amount_as_sol(
                                     &supported_token.mint,
@@ -210,11 +213,14 @@ impl UnstakeLSTCommand {
                                 )?,
                                 supported_token.sol_allocation_capacity_amount,
                             )),
-                            // fail when supported token is not unstakable
+
+                            // not stakable tokens
+                            Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => None,
+
+                            // invalid configuration
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                             | None => {
                                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                             }
@@ -222,16 +228,18 @@ impl UnstakeLSTCommand {
                             Some(TokenPricingSource::Mock { .. }) => {
                                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                             }
-                        }
+                        })
                     })
-                    .collect::<Result<Vec<_>>>()?,
+                    .collect::<Result<Vec<Option<_>>>>()?
+                    .into_iter()
+                    .flatten(),
             );
-            strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
+            unstaking_strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
                 let allocated_sol_amount =
-                    strategy.get_participant_last_cut_amount_by_index(index)?;
+                    unstaking_strategy.get_participant_last_cut_amount_by_index(index)?;
                 let allocated_token_amount = pricing_service
                     .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
                 if allocated_token_amount > 0 {
@@ -325,7 +333,7 @@ impl UnstakeLSTCommand {
                 Self {
                     // Neither withdraw sol nor stake... will order unstake!
                     state: UnstakeLSTCommandState::Execute {
-                        items: items,
+                        items,
                         withdraw_sol: false,
                         withdraw_stake_items: vec![],
                     },
@@ -541,7 +549,6 @@ impl UnstakeLSTCommand {
             return Ok((None, None));
         }
         let item = &unstake_command_items[0];
-
         let token_pricing_source = ctx
             .fund_account
             .load()?
