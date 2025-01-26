@@ -302,7 +302,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             )?
         };
 
-        msg!("UNSTAKE#marinade: pool_token_mint={}, pool_token_amount={}, deducted_sol_fee_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_sol_fee_amount, unstaking_sol_amount);
+        msg!("UNSTAKE#marinade: pool_token_mint={}, burnt_pool_token_amount={}, deducted_sol_fee_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_sol_fee_amount, unstaking_sol_amount);
 
         Ok((unstaking_sol_amount, deducted_sol_fee_amount))
     }

@@ -19,13 +19,13 @@ const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 30;
 pub struct NormalizedTokenPoolAccount {
     data_version: u16,
     bump: u8,
-    pub normalized_token_mint: Pubkey,
-    pub(super) normalized_token_program: Pubkey,
+    pub(crate) normalized_token_mint: Pubkey,
+    pub(crate) normalized_token_program: Pubkey,
     #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
     pub(super) supported_tokens: Vec<NormalizedSupportedToken>,
 
     pub(super) normalized_token_decimals: u8,
-    pub(super) normalized_token_supply_amount: u64,
+    pub(crate) normalized_token_supply_amount: u64,
     pub(super) normalized_token_value: TokenValue,
     pub(super) normalized_token_value_updated_slot: u64,
     pub(super) one_normalized_token_as_sol: u64,
@@ -76,63 +76,6 @@ impl NormalizedTokenPoolAccount {
             };
             self.normalized_token_value_updated_slot = 0;
             self.one_normalized_token_as_sol = 0;
-            self.supported_tokens
-                .iter_mut()
-                .for_each(|supported_token| {
-                    supported_token.decimals = 9;
-                    supported_token.withdrawal_reserved_amount = 0;
-
-                    #[cfg(feature = "devnet")]
-                    {
-                        use crate::constants::*;
-
-                        supported_token.pricing_source = match supported_token.mint {
-                            DEVNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                                address: DEVNET_BSOL_STAKE_POOL_ADDRESS,
-                            },
-                            DEVNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
-                                address: DEVNET_MSOL_STAKE_POOL_ADDRESS,
-                            },
-                            _ => panic!("normalized token pool pricing source migration failed"),
-                        }
-                    }
-
-                    #[cfg(feature = "mainnet")]
-                    {
-                        use crate::constants::*;
-
-                        supported_token.pricing_source = match supported_token.mint {
-                            MAINNET_BSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                                address: MAINNET_BSOL_STAKE_POOL_ADDRESS,
-                            },
-                            MAINNET_MSOL_MINT_ADDRESS => TokenPricingSource::MarinadeStakePool {
-                                address: MAINNET_MSOL_STAKE_POOL_ADDRESS,
-                            },
-                            MAINNET_JITOSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                                address: MAINNET_JITOSOL_STAKE_POOL_ADDRESS,
-                            },
-                            MAINNET_BNSOL_MINT_ADDRESS => TokenPricingSource::SPLStakePool {
-                                address: MAINNET_BNSOL_STAKE_POOL_ADDRESS,
-                            },
-                            _ => panic!("normalized token pool pricing source migration failed"),
-                        }
-                    }
-                });
-
-            // Later we will remove bSOL(and ATA) - via remove supported token instruction
-            // // Mainnet BSOL is removed HERE
-            // #[cfg(feature = "mainnet")]
-            // {
-            //     self.supported_tokens = std::mem::take(&mut self.supported_tokens)
-            //         .into_iter()
-            //         .filter(|supported_token| {
-            //             supported_token.mint != MAINNET_BSOL_MINT_ADDRESS || {
-            //                 assert_eq!(supported_token.locked_amount, 0);
-            //                 false
-            //             }
-            //         })
-            //         .collect();
-            // }
 
             self.data_version = 2;
         }
@@ -207,7 +150,7 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
-    pub(super) fn get_supported_token(
+    pub(crate) fn get_supported_token(
         &self,
         supported_token_mint: &Pubkey,
     ) -> Result<&NormalizedSupportedToken> {
@@ -247,7 +190,7 @@ impl NormalizedTokenPoolAccount {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
-pub(super) struct NormalizedSupportedToken {
+pub(crate) struct NormalizedSupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub reserve_account: Pubkey,

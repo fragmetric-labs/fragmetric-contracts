@@ -260,6 +260,18 @@ impl FundAccount {
         )
     }
 
+    pub(super) fn find_vault_supported_token_reserve_account_address(
+        &self,
+        vault: &Pubkey,
+    ) -> Result<Pubkey> {
+        let restaking_vault = self.get_restaking_vault(vault)?;
+        if self.normalized_token.mint == restaking_vault.supported_token_mint {
+            self.find_normalized_token_reserve_account_address()
+        } else {
+            self.find_supported_token_reserve_account_address(&restaking_vault.supported_token_mint)
+        }
+    }
+
     pub(super) fn find_stake_account_address<'a>(
         fund_account: &'a Pubkey,
         pool_account: &'a Pubkey,
@@ -274,6 +286,14 @@ impl FundAccount {
         index: u8,
     ) -> FundUnstakingTicketAddress<'a> {
         FundUnstakingTicketAddress::new(fund_account, pool_account, index)
+    }
+
+    pub(super) fn find_unrestaking_ticket_account_address<'a>(
+        fund_account: &'a Pubkey,
+        vault_account: &'a Pubkey,
+        index: u8,
+    ) -> FundUnrestakingTicketAddress<'a> {
+        FundUnrestakingTicketAddress::new(fund_account, vault_account, index)
     }
 
     pub(super) fn find_receipt_token_lock_account_address(&self) -> Result<Pubkey> {
@@ -815,6 +835,61 @@ impl std::ops::Deref for FundUnstakingTicketAddress<'_> {
 impl AsRef<Pubkey> for FundUnstakingTicketAddress<'_> {
     fn as_ref(&self) -> &Pubkey {
         &self.unstaking_ticket_address
+    }
+}
+
+pub(super) struct FundUnrestakingTicketAddress<'a> {
+    unrestaking_ticket_address: Pubkey,
+    fund_account: &'a Pubkey,
+    vault_account: &'a Pubkey,
+    index: u8,
+    bump: u8,
+}
+
+impl<'a> FundUnrestakingTicketAddress<'a> {
+    pub const SEED: &'static [u8] = b"unrestaking_ticket";
+
+    fn new(fund_account: &'a Pubkey, vault_account: &'a Pubkey, index: u8) -> Self {
+        let (unrestaking_ticket_address, bump) = Pubkey::find_program_address(
+            &[
+                Self::SEED,
+                fund_account.as_ref(),
+                vault_account.as_ref(),
+                &[index],
+            ],
+            &crate::ID,
+        );
+        Self {
+            unrestaking_ticket_address,
+            fund_account,
+            vault_account,
+            index,
+            bump,
+        }
+    }
+
+    pub(super) fn get_seeds(&self) -> [&[u8]; 5] {
+        [
+            Self::SEED,
+            self.fund_account.as_ref(),
+            self.vault_account.as_ref(),
+            std::slice::from_ref(&self.index),
+            std::slice::from_ref(&self.bump),
+        ]
+    }
+}
+
+impl std::ops::Deref for FundUnrestakingTicketAddress<'_> {
+    type Target = Pubkey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.unrestaking_ticket_address
+    }
+}
+
+impl AsRef<Pubkey> for FundUnrestakingTicketAddress<'_> {
+    fn as_ref(&self) -> &Pubkey {
+        &self.unrestaking_ticket_address
     }
 }
 

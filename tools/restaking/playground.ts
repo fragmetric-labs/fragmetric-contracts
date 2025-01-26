@@ -767,6 +767,24 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public getFragSOLRestakingVaultReceiptTokenReserveAccount(symbol: keyof typeof this.restakingVaultMetadata) {
+        let vault = this.restakingVaultMetadata[symbol];
+        let account = spl.getAssociatedTokenAddressSync(
+            vault.VRTMint,
+            this.knownAddress.fragSOLFundReserveAccount,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        return spl.getAccount(
+            // @ts-ignore
+            this.connection,
+            account,
+            "confirmed",
+            spl.TOKEN_PROGRAM_ID,
+        );
+    }
+
     public getFragSOLSupportedTokenReserveAccountByMintAddress(mint: web3.PublicKey) {
         for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
             if (mint.toString() != token.mint.toString()) continue;
@@ -1952,13 +1970,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(0);
                         case "jitoSOL":
-                            return new BN("9,223,372,036,854,775,808".replace(/,/g, '')); // 2^63
+                            return new BN(1);
                         case "mSOL":
-                            return new BN(1);
+                            return new BN(0);
                         case "BNSOL":
-                            return new BN(1);
+                            return new BN(0);
                         case "bbSOL":
-                            return new BN(1);
+                            return new BN(0);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -3007,8 +3025,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.getFragSOLFundNSOLAccountBalance(),
                 ...Object.keys(this.supportedTokenMetadata).map(
                     symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
-                    .then(a => new BN(a.amount.toString()))
-                )
+                        .then(a => [a.mint, new BN(a.amount.toString())])
+                ),
+                ...Object.keys(this.restakingVaultMetadata).map(
+                    symbol => this.getFragSOLRestakingVaultReceiptTokenReserveAccount(symbol as keyof typeof this.restakingVaultMetadata)
+                        .then(a => [a.mint, new BN(a.amount.toString())])
+                ),
             ]).then(([fund, fragSOLLocked, sol, nSOL, ...tokens]) => {
                 console.log('fund asset state:', {
                     receiptToken: {
@@ -3020,7 +3042,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         sol,
                         tokens: {
                             [this.knownAddress.nSOLTokenMint.toString()]: nSOL,
-                            ...Object.fromEntries(tokens.map((balance, i) => [Object.values(this.supportedTokenMetadata)[i].mint, balance])),
+                            ...Object.fromEntries(tokens),
                         },
                     },
                     data: {
@@ -3034,7 +3056,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             [this.knownAddress.nSOLTokenMint.toString()]: {
                                 reserved: fund.normalizedToken.operationReservedAmount,
                                 receivable: fund.normalizedToken.operationReceivableAmount,
-                                total: fund.normalizedToken.operationReservedAmount.add(fund.normalizedToken.operationReceivableAmount),
+                                total: fund.normalizedToken.operationReservedAmount,
                             },
                             ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {
                                 return [supported.mint, {
