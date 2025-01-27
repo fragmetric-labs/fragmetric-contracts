@@ -98,6 +98,31 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         Ok(accounts)
     }
 
+    /// * (0) pool_account(writable)
+    /// * (1) pool_token_mint(writable)
+    /// * (2) pool_token_program
+    /// * (3) supported_token_mint
+    /// * (4) supported_token_program
+    /// * (5) supported_token_reserve_account(writable)
+    pub(in crate::modules) fn find_accounts_to_denormalize_supported_token(
+        pool_account_info: &'info AccountInfo<'info>,
+        supported_token_mint: &Pubkey,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let pool_account = &Self::deserialize_pool_account(pool_account_info)?;
+        let supported_token = pool_account.get_supported_token(supported_token_mint)?;
+
+        let accounts = Self::find_accounts_to_new(pool_account).into_iter().chain([
+            (supported_token.mint, false),
+            (supported_token.program, false),
+            (
+                supported_token.find_reserve_account_address(&pool_account.normalized_token_mint),
+                true,
+            ),
+        ]);
+
+        Ok(accounts)
+    }
+
     /// returns [to_normalized_token_account_amount, minted_normalized_token_amount]
     pub(in crate::modules) fn normalize_supported_token(
         &mut self,
@@ -194,7 +219,7 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         supported_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
 
         // variant
-        to_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
+        to_supported_token_account: &mut InterfaceAccount<'info, TokenAccount>,
         from_normalized_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_normalized_token_account_signer: &AccountInfo<'info>,
         from_normalized_token_account_signer_seeds: &[&[&[u8]]],
@@ -202,7 +227,7 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         normalized_token_amount: u64,
 
         pricing_service: &mut PricingService,
-    ) -> Result<()> {
+    ) -> Result<(u64, u64)> {
         require_keys_eq!(
             supported_token_reserve_account.key(),
             self.normalized_token_pool_account
@@ -214,6 +239,8 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
             from_normalized_token_account.amount,
             normalized_token_amount
         );
+
+        let to_supported_token_account_amount_before = to_supported_token_account.amount;
 
         let normalized_token_amount_as_sol = pricing_service
             .get_token_amount_as_sol(&self.normalized_token_mint.key(), normalized_token_amount)?;
@@ -254,7 +281,17 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
 
         self.sync_pool_account_data_and_pricing(pricing_service)?;
 
-        Ok(())
+        to_supported_token_account.reload()?;
+        let to_supported_token_account_amount = to_supported_token_account.amount;
+        let denormalized_supported_token_amount =
+            to_supported_token_account_amount - to_supported_token_account_amount_before;
+
+        msg!("DENORMALIZE#: pool_token_mint={}, supported_token_mint={}, burnt_normalized_token_amount={}, to_supported_token_account_amount={}, denormalized_supported_token_amount={}", self.normalized_token_mint.key(), supported_token_mint.key(), normalized_token_amount, to_supported_token_account_amount, denormalized_supported_token_amount);
+
+        Ok((
+            to_supported_token_account_amount,
+            denormalized_supported_token_amount,
+        ))
     }
 
     pub fn process_initialize_withdrawal_account(

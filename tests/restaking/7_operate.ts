@@ -50,6 +50,8 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
         await restaking.runOperatorFundCommands();
+        logger.info('waiting... (1 epoch = 64 slots)');
+        await restaking.sleepUntil(192);
 
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(1));
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'), new BN(1));
@@ -57,9 +59,14 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
         await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
-        logger.info('waiting for a full epoch shift...')
-        await restaking.sleep(50); // wait for more than one epoch (32 slots)
+        logger.info('waiting...');
+        await restaking.sleepUntil(320); // wait for more than one epoch
         await restaking.runOperatorFundCommands(); // the unrestaking request should be claimable on this cycle
+        await restaking.runOperatorFundCommands(); // one more cycle to denormalize and unstake tokens
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(440); // wait for more than one epoch
+        await restaking.runOperatorFundCommands(); // one more cycle to claim unstaked tokens and proceed the last withdrawal batch
         await restaking.runUserWithdraw(user1, null, new BN(1));
     });
 });

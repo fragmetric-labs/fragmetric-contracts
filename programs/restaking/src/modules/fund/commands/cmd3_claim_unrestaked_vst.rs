@@ -247,6 +247,8 @@ impl ClaimUnrestakedVSTCommand {
         }
 
         let item = &items[0];
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
 
@@ -355,23 +357,33 @@ impl ClaimUnrestakedVSTCommand {
                         restaking_vault.receipt_token_operation_reserved_amount
                     );
 
-                    result.operation_reserved_supported_token_amount =
-                        match fund_account.get_normalized_token_mut() {
-                            Some(normalized_token)
-                                if normalized_token.mint == item.supported_token_mint =>
+                    let deducted_fee_amount_as_sol = pricing_service.get_token_amount_as_sol(
+                        &vault_receipt_token_mint.key,
+                        result.deducted_receipt_token_fee_amount,
+                    )?;
+                    match fund_account.get_normalized_token() {
+                        Some(normalized_token) if normalized_token.mint == item.supported_token_mint =>
                             {
+                                fund_account.sol.operation_receivable_amount +=
+                                    deducted_fee_amount_as_sol;
+                                let normalized_token = fund_account.get_normalized_token_mut().unwrap();
                                 normalized_token.operation_reserved_amount +=
                                     result.claimed_supported_token_amount;
-                                normalized_token.operation_reserved_amount
+                                result.operation_reserved_supported_token_amount = normalized_token.operation_reserved_amount;
                             }
-                            _ => {
-                                let supported_token = fund_account
-                                    .get_supported_token_mut(&item.supported_token_mint)?;
-                                supported_token.token.operation_reserved_amount +=
-                                    result.claimed_supported_token_amount;
-                                supported_token.token.operation_reserved_amount
-                            }
-                        };
+                        _ => {
+                            let supported_token =
+                                fund_account.get_supported_token_mut(&item.supported_token_mint)?;
+                            supported_token.token.operation_receivable_amount += pricing_service
+                                .get_sol_amount_as_token(
+                                    &supported_token.mint,
+                                    deducted_fee_amount_as_sol,
+                                )?;
+                            supported_token.token.operation_reserved_amount +=
+                                result.claimed_supported_token_amount;
+                            result.operation_reserved_supported_token_amount = supported_token.token.operation_reserved_amount;
+                        }
+                    };
                     drop(fund_account);
 
                     Some(result.into())

@@ -580,6 +580,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.nSOLTokenMint,
                     VRTMint: this.knownAddress.fragSOLJitoNSOLVRTMint,
                     vault: this.getConstantAsPublicKey("fragsolJitoNsolVaultAccountAddress"),
+                    operators: [],
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultFeeWalletTokenAccount,
@@ -604,6 +605,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.nSOLTokenMint,
                     VRTMint: this.knownAddress.fragSOLJitoNSOLVRTMint,
                     vault: this.getConstantAsPublicKey("fragsolJitoNsolVaultAccountAddress"),
+                    operators: [
+                        // TODO v0.4.2: operator mock file is missing?!
+                        // new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"),
+                    ],
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultFeeWalletTokenAccount,
@@ -1835,6 +1840,157 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [ix],
             signers: [authority, this.wallet],
         });
+
+        return { ncnOperatorState: ncnOperatorStatePublicKey[0] };
+    }
+
+    // for test - initialize ncn_vault_ticket
+    public async runAdminJitoInitializeNcnVaultTicket(ncn: web3.PublicKey, vault: web3.PublicKey, authority: web3.Keypair = this.keychain.getKeypair("ADMIN")) {
+        const InitializeNcnVaultTicketInstructionDataSize = {
+            discriminator: 1, // u8
+        };
+
+        const ncnVaultTicketPublicKey = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("ncn_vault_ticket"), ncn.toBuffer(), vault.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+        logger.notice("ncn_vault_ticket key".padEnd(LOG_PAD_LARGE), ncnVaultTicketPublicKey[0].toString());
+
+        const discriminator = 4;
+        const data = Buffer.alloc(
+            InitializeNcnVaultTicketInstructionDataSize.discriminator
+        );
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset);
+
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoRestakingProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoRestakingConfig,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: ncn,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: vault,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: ncnVaultTicketPublicKey[0],
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: authority.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: this.wallet.publicKey,
+                        isSigner: true,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: web3.SystemProgram.programId,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [authority, this.wallet],
+        });
+
+        return { ncnVaultTicket: ncnVaultTicketPublicKey[0] };
+    }
+
+    // need for operation - initialize vault_ncn_ticket
+    public async runAdminJitoInitializeVaultNcnTicket(vault: web3.PublicKey, ncn: web3.PublicKey, ncnVaultTicket: web3.PublicKey, authority: web3.Keypair = this.keychain.getKeypair("ADMIN")) {
+        const InitializeVaultNcnTicketInstructionDataSize = {
+            discriminator: 1, // u8
+        };
+
+        const vaultNcnTicketPublicKey = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault_ncn_ticket"), vault.toBuffer(), ncn.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        logger.notice("vault_ncn_ticket key".padEnd(LOG_PAD_LARGE), vaultNcnTicketPublicKey[0].toString());
+
+        const discriminator = 4;
+        const data = Buffer.alloc(
+            InitializeVaultNcnTicketInstructionDataSize.discriminator
+        );
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset);
+
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoVaultProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoVaultConfig,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: vault,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: ncn,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: ncnVaultTicket,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: vaultNcnTicketPublicKey[0],
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: authority.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: this.wallet.publicKey,
+                        isSigner: true,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: web3.SystemProgram.programId,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [authority, this.wallet],
+        });
+
+        return { vaultNcnTicket: vaultNcnTicketPublicKey[0] };
     }
 
     public async runAdminInitializeFragSOLExtraAccountMetaList() {
@@ -2020,6 +2176,45 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
                 })(),
+                delegations: v.operators.map((publicKey, index) => ({
+                    operator: publicKey,
+                    supportedTokenAllocationWeight: (() => {
+                        switch (symbol) {
+                            case "jito1":
+                                if (index == 0) {
+                                    return new BN(this.isDevnet ? 0 : 1);
+                                } else if (index == 1) {
+                                    return new BN(this.isDevnet ? 0 : 2);
+                                }
+                            case "jito2":
+                                if (index == 0) {
+                                    return new BN(this.isDevnet ? 0 : 1);
+                                } else if (index == 1) {
+                                    return new BN(this.isDevnet ? 0 : 2);
+                                }
+                            default:
+                                throw `invalid supported token allocation weight for ${symbol}`;
+                        }
+                    })(),
+                    supportedTokenAllocationCapacityAmount: (() => {
+                        switch (symbol) {
+                            case "jito1":
+                                if (index == 0) {
+                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                } else if (index == 1) {
+                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                }
+                            case "jito2":
+                                if (index == 0) {
+                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                } else if (index == 1) {
+                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                }
+                            default:
+                                throw `invalid supported token allocation capacity amount for ${symbol}`;
+                        }
+                    })(),
+                })),
             })),
         };
     }
@@ -2116,6 +2311,22 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         })
                         .remainingAccounts(this.pricingSourceAccounts)
                         .instruction(),
+                        // vault's delegations
+                        ...v.delegations.flatMap(delegation => {
+                            return [
+                                this.methods.fundManagerUpdateRestakingVaultDelegationStrategy(
+                                    v.vault,
+                                    delegation.operator,
+                                    delegation.supportedTokenAllocationWeight,
+                                    delegation.supportedTokenAllocationCapacityAmount,
+                                    null,
+                                ).accountsPartial({
+                                    receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                                })
+                                .remainingAccounts(this.pricingSourceAccounts)
+                                .instruction(),
+                            ];
+                        }),
                     ];
                 }),
             ],
@@ -2743,6 +2954,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
+    public async runOperatorInitialize(operator: web3.Keypair = this.keychain.getKeypair("FUND_MANAGER")) {
+        await this.runOperatorFundCommands({
+            command: {
+                initialize: {
+                    0: {
+                        state: {
+                            new: {},
+                        }
+                    }
+                }
+            },
+            requiredAccounts: [],
+        }, operator);
+    }
+
     public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
@@ -3023,6 +3249,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.getFragSOLFundReceiptTokenLockAccount().then(a => new BN(a.amount.toString())),
                 this.getFragSOLFundReserveAccountBalance(),
                 this.getFragSOLFundNSOLAccountBalance(),
+                this.getNSOLTokenPoolAccount(),
                 ...Object.keys(this.supportedTokenMetadata).map(
                     symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
                         .then(a => [a.mint, new BN(a.amount.toString())])
@@ -3031,12 +3258,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     symbol => this.getFragSOLRestakingVaultReceiptTokenReserveAccount(symbol as keyof typeof this.restakingVaultMetadata)
                         .then(a => [a.mint, new BN(a.amount.toString())])
                 ),
-            ]).then(([fund, fragSOLLocked, sol, nSOL, ...tokens]) => {
+            ]).then(([fund, fragSOLLocked, sol, nSOL, ntp, ...tokens]) => {
                 console.log('fund asset state:', {
                     receiptToken: {
                         oneTokenAsSOL: fund.oneReceiptTokenAsSol,
-                        supplyAmount: fund.receiptTokenSupplyAmount,
-                        lockedAmount: fragSOLLocked,
+                        supply: fund.receiptTokenSupplyAmount,
+                        locked: fragSOLLocked,
                     },
                     accounts: {
                         sol,
@@ -3055,6 +3282,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         tokens: {
                             [this.knownAddress.nSOLTokenMint.toString()]: {
                                 reserved: fund.normalizedToken.operationReservedAmount,
+                                supply: ntp.normalizedTokenSupplyAmount,
+                                oneTokenAsSOL: ntp.oneNormalizedTokenAsSol,
                                 total: fund.normalizedToken.operationReservedAmount,
                             },
                             ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {
@@ -3062,6 +3291,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                     reserved: supported.token.operationReservedAmount,
                                     receivable: supported.token.operationReceivableAmount,
                                     withdrawable: supported.token.withdrawalUserReservedAmount,
+                                    normalized: ntp.supportedTokens.find(st => st.mint.equals(supported.mint))?.lockedAmount ?? 0,
                                     total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
                                 }];
                             })),

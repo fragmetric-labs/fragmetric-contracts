@@ -668,8 +668,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         let withdrawal_ticket_vault_receipt_token_account =
             InterfaceAccount::<TokenAccount>::try_from(withdrawal_ticket_receipt_token_account)?;
         require_eq!(
-            from_vault_receipt_token_account_amount_before,
-            withdrawal_ticket_vault_receipt_token_account.amount
+            withdrawal_ticket_vault_receipt_token_account.amount,
+            enqueued_vault_receipt_token_amount,
         );
 
         Ok((

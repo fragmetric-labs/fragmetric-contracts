@@ -16,12 +16,22 @@ describe("operator_restaking_delegation", async () => {
     // await restaking.runAdminSetSecondaryAdminForJitoVault();
 
     const vault = restaking.restakingVaultMetadata['jito1'].vault;
-    const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV");
+    const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"); // local
+    const ncn = new web3.PublicKey("FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"); // local
+
+    step("initialize ncn_operator_state", async function() {
+        await restaking.runAdminJitoInitializeNcnOperatorState(ncn, operator);
+    });
 
     step("initialize operator_vault_ticket & vault_operator_delegation", async function() {
 
         const {operatorVaultTicket} = await restaking.runAdminInitializeOperatorVaultTicket(vault, operator);
         await restaking.runAdminInitializeVaultOperatorDelegation(vault, operator, operatorVaultTicket[0]);
+    });
+
+    step("initialize ncn_vault_ticket & vault_ncn_ticket", async function() {
+        const {ncnVaultTicket} = await restaking.runAdminJitoInitializeNcnVaultTicket(ncn, vault);
+        await restaking.runAdminJitoInitializeVaultNcnTicket(vault, ncn, ncnVaultTicket);
     });
 
     step("initialize vault delegation at fund account", async function() {
