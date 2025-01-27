@@ -26,7 +26,7 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
             restaking.getFragSOLFundAccount(),
             restaking.getFragSOLFundReserveAccountBalance(),
         ]);
-        expect(fragSOLFund0.oneReceiptTokenAsSol.toNumber()).greaterThan(0, 'fragSOL price is not zero');
+        // expect(fragSOLFund0.oneReceiptTokenAsSol.toNumber()).greaterThan(0, 'fragSOL price is not zero');
         expect(fragSOLFund0.sol.operationReservedAmount.toString()).eq(fragSOLFundReserveAccountBalance0.toString(), 'fund records correct amount of SOL reserved');
         const [
             userFundAccount0,

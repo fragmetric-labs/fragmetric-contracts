@@ -148,11 +148,13 @@ describe("initialize", async () => {
     });
 
     step("initialize vault delegation at fund account", async function() {
-        Object.values(restaking.restakingVaultMetadata).map(vault => {
-            vault.operators.map(async operator => {
-                await restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault.vault, operator);
-            })
-        });
+        await Promise.all(
+            Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
+                return vault.operators.map(operator => {
+                    return restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault.vault, operator);
+                })
+            }),
+        );
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {

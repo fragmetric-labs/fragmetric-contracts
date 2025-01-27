@@ -146,20 +146,21 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             for supported_token in fund_account.get_supported_tokens_iter_mut() {
                 supported_token.one_token_as_sol = pricing_service
-                    .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
+                    .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?
+                    .unwrap_or_default();
                 supported_token.one_token_as_receipt_token = pricing_service
                     .get_one_token_amount_as_token(
                         &supported_token.mint,
                         supported_token.decimals,
                         &self.receipt_token_mint.key(),
-                    )?;
+                    )?
+                    .unwrap_or_default()
             }
 
             if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
-                normalized_token.one_token_as_sol = pricing_service.get_one_token_amount_as_sol(
-                    &normalized_token.mint,
-                    normalized_token.decimals,
-                )?;
+                normalized_token.one_token_as_sol = pricing_service
+                    .get_one_token_amount_as_sol(&normalized_token.mint, normalized_token.decimals)?
+                    .unwrap_or_default();
             }
 
             for restaking_vault in fund_account.get_restaking_vaults_iter_mut() {
@@ -167,14 +168,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .get_one_token_amount_as_sol(
                         &restaking_vault.receipt_token_mint,
                         restaking_vault.receipt_token_decimals,
-                    )?;
+                    )?
+                    .unwrap_or_default();
             }
 
             let receipt_token_mint_key = &self.receipt_token_mint.key();
-            fund_account.one_receipt_token_as_sol = pricing_service.get_one_token_amount_as_sol(
-                receipt_token_mint_key,
-                self.receipt_token_mint.decimals,
-            )?;
+            fund_account.one_receipt_token_as_sol = pricing_service
+                .get_one_token_amount_as_sol(
+                    receipt_token_mint_key,
+                    self.receipt_token_mint.decimals,
+                )?
+                .unwrap_or_default();
 
             let mut receipt_token_value = TokenValue::default();
             pricing_service
@@ -849,6 +853,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         ))
     }
 
+    /// at first, it adds given [asset_amount] to the operation reserved,
+    /// then offset receivables as much as possible, then transfer remaining assets to the program revenue account
     /// returns [transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables]
     pub(super) fn offset_receivables(
         &mut self,
@@ -898,6 +904,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 pricing_service,
             )?;
 
+        let mut fund_account = self.fund_account.load_mut()?;
+        let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
+        asset.operation_reserved_amount += asset_amount;
+        drop(fund_account);
+
         let (transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables) =
             self.pay_treasury_debt_with_receivables(
                 system_program,
@@ -913,10 +924,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 total_operation_receivable_amount_as_asset,
                 pricing_service,
             )?;
-
-        let mut fund_account = self.fund_account.load_mut()?;
-        let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
-        asset.operation_reserved_amount += offsetted_asset_amount;
 
         Ok((
             transferred_asset_revenue_amount,
@@ -1030,7 +1037,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     None => receivable_amount_processing_as_sol,
                 };
             asset_debt_amount_processing -= receivable_amount_processed;
-            asset_receivable_amount_processing -= receivable_amount_processed;
+            // asset_receivable_amount_processing -= receivable_amount_processed;
         }
 
         // pay remaining debt with cash with current asset

@@ -42,11 +42,7 @@ pub(super) struct RestakingVault {
     compounding_reward_token_mints:
         [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],
 
-    /// informative
-    /// TODO: check how VaultStakerWithdrawalTicket handle the claimable amount ... upon sudden price change
-    pending_unrestaking_amount_as_receipt_token: u64,
-
-    _reserved: [u8; 120],
+    _reserved: [u8; 128],
 }
 
 impl RestakingVault {
@@ -63,11 +59,10 @@ impl RestakingVault {
 
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
-        let receipt_token_pricing_source = match program {
-            JITO_VAULT_PROGRAM_ID => Ok(TokenPricingSource::JitoRestakingVault { address: vault }),
-            _ => {
-                err!(ErrorCode::FundRestakingNotSupportedVaultError)
-            }
+        let receipt_token_pricing_source = if program == JITO_VAULT_PROGRAM_ID {
+            Ok(TokenPricingSource::JitoRestakingVault { address: vault })
+        } else {
+            err!(ErrorCode::FundRestakingNotSupportedVaultError)
         }?;
 
         self.vault = vault;

@@ -74,7 +74,7 @@ impl SelfExecutable for RestakeVSTCommand {
         match &self.state {
             RestakeVSTCommandState::New => {
                 let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.into_iter().cloned())?;
+                    .new_pricing_service(accounts.into_iter().copied())?;
                 let fund_account = ctx.fund_account.load()?;
 
                 // find restakable tokens with their restakable amount among ST and NT
@@ -147,7 +147,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             &token_mint,
                             strategy_participant.get_last_put_amount()?,
                         )?;
-                        if allocated_token_amount > 0 {
+                        if allocated_token_amount > 1_000_000 {
                             let restaking_vault = restakable_vaults.get(index).unwrap();
                             match items
                                 .iter_mut()
@@ -294,7 +294,7 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(accounts.into_iter().cloned())?;
+                                    .new_pricing_service(accounts.into_iter().copied())?;
                             let mut fund_account = ctx.fund_account.load_mut()?;
                             match fund_account.get_normalized_token_mut() {
                                 Some(normalized_token)

@@ -369,12 +369,19 @@ impl<'info> PricingService<'info> {
         &self,
         from_token_mint: &Pubkey,
         from_token_decimals: u8,
-    ) -> Result<u64> {
-        let token_amount = 10u64
-            .checked_pow(from_token_decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+    ) -> Result<Option<u64>> {
+        let (_, denominator_as_token) = self.get_token_value_as_sol(from_token_mint)?;
+        Ok(if denominator_as_token == 0 {
+            None
+        } else {
+            Some({
+                let token_amount = 10u64
+                    .checked_pow(from_token_decimals as u32)
+                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        self.get_token_amount_as_asset(from_token_mint, token_amount, None)
+                self.get_token_amount_as_asset(from_token_mint, token_amount, None)?
+            })
+        })
     }
 
     pub fn get_one_token_amount_as_token(
@@ -382,14 +389,26 @@ impl<'info> PricingService<'info> {
         from_token_mint: &Pubkey,
         from_token_decimals: u8,
         to_token_mint: &Pubkey,
-    ) -> Result<u64> {
-        let (numerator_as_sol, denominator_as_token) =
-            self.get_token_value_as_sol(from_token_mint)?;
-        let token_amount = 10u64
-            .checked_pow(from_token_decimals as u32)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+    ) -> Result<Option<u64>> {
+        let (_, denominator_as_token1) = self.get_token_value_as_sol(from_token_mint)?;
+        let (_, denominator_as_token2) = self.get_token_value_as_sol(to_token_mint)?;
+        Ok(
+            if denominator_as_token1 == 0 || denominator_as_token2 == 0 {
+                None
+            } else {
+                Some({
+                    let token_amount = 10u64
+                        .checked_pow(from_token_decimals as u32)
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        self.get_token_amount_as_asset(from_token_mint, token_amount, Some(to_token_mint))
+                    self.get_token_amount_as_asset(
+                        from_token_mint,
+                        token_amount,
+                        Some(to_token_mint),
+                    )?
+                })
+            },
+        )
     }
 
     /// **Flatten**s the token value of given token.

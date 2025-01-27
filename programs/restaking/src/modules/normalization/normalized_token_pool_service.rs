@@ -72,16 +72,6 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         ]
     }
 
-    pub(in crate::modules) fn get_normalized_supported_token_locked_amount(
-        pool_account_info: &'info AccountInfo<'info>,
-        supported_token_mint: &Pubkey,
-    ) -> Result<u64> {
-        let pool_account = Self::deserialize_pool_account(pool_account_info)?;
-        let supported_token = pool_account.get_supported_token(supported_token_mint)?;
-
-        Ok(supported_token.locked_amount)
-    }
-
     /// * (0) pool_account(writable)
     /// * (1) pool_token_mint(writable)
     /// * (2) pool_token_program
@@ -296,7 +286,7 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         let denormalized_supported_token_amount =
             to_supported_token_account_amount - to_supported_token_account_amount_before;
 
-        msg!("DENORMALIZE#: pool_token_mint={}, supported_token_mint={}, burned_normalized_token_amount={}, to_supported_token_account_amount={}, denormalized_supported_token_amount={}", self.normalized_token_mint.key(), supported_token_mint.key(), normalized_token_amount, to_supported_token_account_amount, denormalized_supported_token_amount);
+        msg!("DENORMALIZE#: pool_token_mint={}, supported_token_mint={}, burnt_normalized_token_amount={}, to_supported_token_account_amount={}, denormalized_supported_token_amount={}", self.normalized_token_mint.key(), supported_token_mint.key(), normalized_token_amount, to_supported_token_account_amount, denormalized_supported_token_amount);
 
         Ok((
             to_supported_token_account_amount,
@@ -523,10 +513,12 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
 
         // the values being written below are informative, only for event emission.
         self.normalized_token_pool_account
-            .one_normalized_token_as_sol = pricing_service.get_one_token_amount_as_sol(
-            normalized_token_mint_key,
-            self.normalized_token_mint.decimals,
-        )?;
+            .one_normalized_token_as_sol = pricing_service
+            .get_one_token_amount_as_sol(
+                normalized_token_mint_key,
+                self.normalized_token_mint.decimals,
+            )?
+            .unwrap_or_default();
 
         for supported_token in self
             .normalized_token_pool_account
@@ -534,7 +526,8 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
             .iter_mut()
         {
             supported_token.one_token_as_sol = pricing_service
-                .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?;
+                .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?
+                .unwrap_or_default();
         }
 
         pricing_service.flatten_token_value(

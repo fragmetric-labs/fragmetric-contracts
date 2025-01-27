@@ -14,8 +14,7 @@ pub(super) struct NormalizedToken {
     pub pricing_source: TokenPricingSourcePod,
     pub one_token_as_sol: u64,
     pub operation_reserved_amount: u64,
-    pub operation_receivable_amount: u64,
-    _reserved: [u8; 56],
+    _reserved: [u8; 64],
 }
 
 impl NormalizedToken {

@@ -332,7 +332,8 @@ impl ClaimUnstakedSOLCommand {
             // while paying treasury debt, offsets available receivables and sends remaining to the treasury account.
             let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
             let pricing_service =
-                fund_service.new_pricing_service(remaining_accounts.into_iter().cloned())?;
+                fund_service.new_pricing_service(remaining_accounts.into_iter().copied())?;
+
             let (
                 transferred_sol_revenue_amount,
                 offsetted_sol_receivable_amount,
@@ -404,7 +405,7 @@ impl ClaimUnstakedSOLCommand {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         }
 
-        let (fund_stake_accounts, pricing_sources) = remaining_accounts.split_at(5);
+        let (fund_stake_accounts, _pricing_sources) = remaining_accounts.split_at(5);
 
         let mut total_claimed_sol_amount = 0;
 
@@ -441,12 +442,6 @@ impl ClaimUnstakedSOLCommand {
             total_claimed_sol_amount += claimed_sol_amount;
         }
 
-        drop(fund_account);
-
-        // pricing service with updated token values
-        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
-
         let to_sol_account_amount = fund_reserve_account.lamports();
 
         Ok((to_sol_account_amount, total_claimed_sol_amount))
@@ -470,7 +465,7 @@ impl ClaimUnstakedSOLCommand {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         }
 
-        let (withdrawal_ticket_accounts, pricing_sources) = remaining_accounts.split_at(5);
+        let (withdrawal_ticket_accounts, _pricing_sources) = remaining_accounts.split_at(5);
 
         require_keys_eq!(pool_account_address, pool_account.key());
         require_keys_eq!(*pool_token_mint_address, pool_token_mint.key());
@@ -515,12 +510,6 @@ impl ClaimUnstakedSOLCommand {
 
             total_claimed_sol_amount += claimed_sol_amount;
         }
-
-        drop(fund_account);
-
-        // pricing service with updated token values
-        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().cloned())?;
 
         let to_sol_account_amount = fund_reserve_account.lamports();
 

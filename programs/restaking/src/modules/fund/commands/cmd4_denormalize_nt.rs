@@ -1,22 +1,24 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use anchor_spl::{token::Token, token_interface::TokenInterface};
+use std::ops::Neg;
 
+use super::{
+    fund_account, FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, UndelegateVSTCommand,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+};
 use crate::modules::fund::commands::OperationCommand::UndelegateVST;
+use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::{
     errors,
     modules::{
         normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService},
         pricing::TokenPricingSource,
     },
+    utils,
 };
 use anchor_lang::prelude::*;
-
-use super::{
-    fund_account, FundService, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable, UndelegateVSTCommand,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct DenormalizeNTCommand {
@@ -26,7 +28,7 @@ pub struct DenormalizeNTCommand {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
 pub struct DenormalizeNTCommandItem {
     supported_token_mint: Pubkey,
-    denormalize_normalized_token_amount: u64,
+    allocated_normalized_token_amount: u64,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -46,9 +48,10 @@ pub enum DenormalizeNTCommandState {
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct DenormalizeNTCommandResult {
     pub supported_token_mint: Pubkey,
-    pub burned_normalized_token_amount: u64,
+    pub burnt_normalized_token_amount: u64,
+    pub operation_reserved_normalized_token_amount: u64,
     pub denormalized_supported_token_amount: u64,
-    pub operation_reserved_token_amount: u64,
+    pub operation_reserved_supported_token_amount: u64,
 }
 
 impl SelfExecutable for DenormalizeNTCommand {
@@ -86,12 +89,21 @@ impl DenormalizeNTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let mut items =
-            Vec::<DenormalizeNTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().copied())?;
+        let fund_account = ctx.fund_account.load()?;
 
-        let normalized_token_pool_account_info = ctx
-            .fund_account
-            .load()?
+        let normalized_token = fund_account.get_normalized_token();
+        if normalized_token.is_none() {
+            return Ok((None, None));
+        }
+        let normalized_token = normalized_token.unwrap();
+        let total_normalized_token_reserved_amount = normalized_token.operation_reserved_amount;
+        if total_normalized_token_reserved_amount == 0 {
+            return Ok((None, None));
+        }
+
+        let normalized_token_pool_account = fund_account
             .get_normalized_token_pool_address()
             .and_then(|address| {
                 accounts
@@ -99,66 +111,97 @@ impl DenormalizeNTCommand {
                     .find(|account| account.key() == address)
                     .copied()
             })
-            .ok_or_else(|| {
-                error!(errors::ErrorCode::FundOperationCommandExecutionFailedException)
-            })?;
+            .ok_or_else(|| error!(errors::ErrorCode::FundOperationCommandExecutionFailedException))
+            .and_then(Account::<NormalizedTokenPoolAccount>::try_from)?;
 
-        let total_normalized_token_reserved_amount = ctx
-            .fund_account
-            .load()?
-            .get_normalized_token()
-            .map(|nt| nt.operation_reserved_amount);
+        // allocate items with withdrawal obligated token amounts
+        let supported_tokens = fund_account
+            .get_supported_tokens_iter()
+            .filter(|supported_token| {
+                normalized_token_pool_account.has_supported_token(&supported_token.mint)
+            })
+            .collect::<Vec<_>>();
+        let mut items =
+            Vec::<DenormalizeNTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
 
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().cloned())?;
+        let mut remaining_normalized_token_reserved_amount = total_normalized_token_reserved_amount;
+        for supported_token in &supported_tokens {
+            let withdrawal_obligated_supported_token_amount = u64::try_from(
+                fund_account
+                    .get_asset_net_operation_reserved_amount(
+                        Some(supported_token.mint),
+                        false,
+                        &pricing_service,
+                    )?
+                    .min(0)
+                    .neg(),
+            )?;
 
-        let fund_account = ctx.fund_account.load()?;
+            let allocated_supported_token_amount = normalized_token_pool_account
+                .get_supported_token(&supported_token.mint)?
+                .locked_amount
+                .min(withdrawal_obligated_supported_token_amount);
 
-        if let Some(total_normalized_token_reserved_amount) = total_normalized_token_reserved_amount
-        {
-            // if there's no normalized_token_reserved_amount, then nothing to do
-            if total_normalized_token_reserved_amount == 0 {
-                return Ok((None, None));
-            }
-
-            let mut total_normalized_supported_token_locked_amount_as_sol = 0u64;
-
-            for supported_token in fund_account.get_supported_tokens_iter() {
-                let supported_token_normalized_locked_amount =
-                    NormalizedTokenPoolService::get_normalized_supported_token_locked_amount(
-                        normalized_token_pool_account_info,
+            let allocated_normalized_token_amount = if allocated_supported_token_amount > 0 {
+                pricing_service
+                    .get_token_amount_as_asset(
                         &supported_token.mint,
-                    )?;
-                if supported_token_normalized_locked_amount == 0 {
-                    continue;
-                }
+                        allocated_supported_token_amount,
+                        Some(&normalized_token_pool_account.normalized_token_mint),
+                    )?
+                    .min(remaining_normalized_token_reserved_amount)
+            } else {
+                0
+            };
 
-                let supported_token_normalized_locked_amount_as_sol = pricing_service
-                    .get_token_amount_as_sol(
-                        &supported_token.mint,
-                        supported_token_normalized_locked_amount,
-                    )?;
-                total_normalized_supported_token_locked_amount_as_sol +=
-                    supported_token_normalized_locked_amount_as_sol;
+            remaining_normalized_token_reserved_amount -= allocated_normalized_token_amount;
 
-                items.push(DenormalizeNTCommandItem {
-                    supported_token_mint: supported_token.mint,
-                    denormalize_normalized_token_amount:
-                        supported_token_normalized_locked_amount_as_sol,
-                });
-            }
-
-            items.iter_mut().for_each(|item| {
-                // fund's current total_normalized_token_operation_reserved_amount * (total supported_token_normalized_locked_amount_as_sol / total normalized_supported_token_locked_amount_as_sol)
-                item.denormalize_normalized_token_amount = (total_normalized_token_reserved_amount
-                    as u128
-                    * item.denormalize_normalized_token_amount as u128
-                    / total_normalized_supported_token_locked_amount_as_sol as u128)
-                    as u64
+            items.push(DenormalizeNTCommandItem {
+                supported_token_mint: supported_token.mint,
+                allocated_normalized_token_amount,
             });
-        } else {
-            // nothing to do
-        };
+        }
+
+        // allocate remaining amounts
+        if remaining_normalized_token_reserved_amount > 0 {
+            let mut remaining_strategy =
+                WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
+                    supported_tokens
+                        .clone()
+                        .into_iter()
+                        .enumerate()
+                        .map(|(index, supported_token)| {
+                            let normalized_supported_token = normalized_token_pool_account
+                                .get_supported_token(&supported_token.mint)?;
+
+                            // here, conversion from NT to SOL is not required as we just cut the remaining amount following the weights
+                            Ok(WeightedAllocationParticipant::new(
+                                supported_token.sol_allocation_weight,
+                                pricing_service.get_token_amount_as_asset(
+                                    &supported_token.mint,
+                                    normalized_supported_token.locked_amount,
+                                    Some(&normalized_token.mint),
+                                )? - items[index].allocated_normalized_token_amount,
+                                0,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                );
+            let remains =
+                remaining_strategy.cut_greedy(remaining_normalized_token_reserved_amount)?;
+            require_gte!(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS as u64, remains);
+
+            for (index, _) in supported_tokens.iter().enumerate() {
+                items[index].allocated_normalized_token_amount +=
+                    remaining_strategy.get_participant_last_cut_amount_by_index(index)?;
+            }
+        }
+
+        let items = items
+            .iter()
+            .filter(|item| item.allocated_normalized_token_amount > 0)
+            .copied()
+            .collect::<Vec<_>>();
 
         // nothing to denormalize
         if items.is_empty() {
@@ -295,7 +338,7 @@ impl DenormalizeNTCommand {
                         &fund_normalized_token_reserve_account,
                         fund_reserve_account,
                         &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
-                        item.denormalize_normalized_token_amount,
+                        item.allocated_normalized_token_amount,
                         &mut pricing_service,
                     )?;
 
@@ -305,7 +348,7 @@ impl DenormalizeNTCommand {
                         &supported_token_mint.key(),
                         pricing_service.get_token_amount_as_sol(
                             &normalized_token_mint.key(),
-                            item.denormalize_normalized_token_amount,
+                            item.allocated_normalized_token_amount,
                         )?,
                     )?;
                 require_gte!(
@@ -320,6 +363,8 @@ impl DenormalizeNTCommand {
                     fund_account.get_supported_token_mut(&item.supported_token_mint)?;
                 supported_token.token.operation_reserved_amount +=
                     denormalized_supported_token_amount;
+                let operation_reserved_supported_token_amount =
+                    supported_token.token.operation_reserved_amount;
 
                 require_gte!(
                     to_supported_token_account_amount,
@@ -328,14 +373,16 @@ impl DenormalizeNTCommand {
 
                 let normalized_token = fund_account.get_normalized_token_mut().unwrap();
                 normalized_token.operation_reserved_amount -=
-                    item.denormalize_normalized_token_amount;
+                    item.allocated_normalized_token_amount;
 
                 let result = Some(
                     DenormalizeNTCommandResult {
                         supported_token_mint: item.supported_token_mint,
-                        burned_normalized_token_amount: item.denormalize_normalized_token_amount,
+                        burnt_normalized_token_amount: item.allocated_normalized_token_amount,
+                        operation_reserved_normalized_token_amount: normalized_token
+                            .operation_reserved_amount,
                         denormalized_supported_token_amount,
-                        operation_reserved_token_amount: normalized_token.operation_reserved_amount,
+                        operation_reserved_supported_token_amount,
                     }
                     .into(),
                 );

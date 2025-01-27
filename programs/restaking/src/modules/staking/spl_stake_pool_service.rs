@@ -474,7 +474,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             .calc_pool_tokens_sol_withdrawal_fee(pool_token_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        msg!("UNSTAKE#spl: pool_token_mint={}, pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}, unstaking_sol_amount=0", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
+        msg!("UNSTAKE#spl: pool_token_mint={}, burnt_pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}, unstaking_sol_amount=0", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
 
         Ok((
             pool_token_amount,
@@ -772,7 +772,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         require_eq!(claimed_sol_amount, unstaked_sol_amount);
 
         msg!(
-            "CLAIM#spl: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
+            "CLAIM_UNSTAKED#spl: pool_token_mint={}, to_sol_account_amount={}, claimed_sol_amount={}",
             pool_token_mint,
             to_sol_account_amount,
             claimed_sol_amount

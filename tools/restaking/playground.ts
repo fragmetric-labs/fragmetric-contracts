@@ -606,7 +606,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VRTMint: this.knownAddress.fragSOLJitoNSOLVRTMint,
                     vault: this.getConstantAsPublicKey("fragsolJitoNsolVaultAccountAddress"),
                     operators: [
-                        new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"),
+                        // TODO v0.4.2: operator mock file is missing?!
+                        // new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"),
                     ],
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultProgramFeeWalletTokenAccount,
@@ -768,6 +769,24 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.knownAddress.fragSOLFundReserveSupportedTokenAccount(symbol),
             "confirmed",
             this.supportedTokenMetadata[symbol].program
+        );
+    }
+
+    public getFragSOLRestakingVaultReceiptTokenReserveAccount(symbol: keyof typeof this.restakingVaultMetadata) {
+        let vault = this.restakingVaultMetadata[symbol];
+        let account = spl.getAssociatedTokenAddressSync(
+            vault.VRTMint,
+            this.knownAddress.fragSOLFundReserveAccount,
+            true,
+            spl.TOKEN_PROGRAM_ID,
+            spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+        );
+        return spl.getAccount(
+            // @ts-ignore
+            this.connection,
+            account,
+            "confirmed",
+            spl.TOKEN_PROGRAM_ID,
         );
     }
 
@@ -1413,7 +1432,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
             ],
-            signerNames: ["ADMIN"],
+            signerNames: ["FUND_MANAGER"],
             events: ['fundManagerUpdatedFund'],
         });
 
@@ -2107,13 +2126,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(0);
                         case "jitoSOL":
-                            return new BN("9,223,372,036,854,775,808".replace(/,/g, '')); // 2^63
+                            return new BN(1);
                         case "mSOL":
-                            return new BN(1);
+                            return new BN(0);
                         case "BNSOL":
-                            return new BN(1);
+                            return new BN(0);
                         case "bbSOL":
-                            return new BN(1);
+                            return new BN(0);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -3230,22 +3249,27 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.getFragSOLFundReceiptTokenLockAccount().then(a => new BN(a.amount.toString())),
                 this.getFragSOLFundReserveAccountBalance(),
                 this.getFragSOLFundNSOLAccountBalance(),
+                this.getNSOLTokenPoolAccount(),
                 ...Object.keys(this.supportedTokenMetadata).map(
                     symbol => this.getFragSOLSupportedTokenReserveAccount(symbol as keyof typeof this.supportedTokenMetadata)
-                    .then(a => new BN(a.amount.toString()))
-                )
-            ]).then(([fund, fragSOLLocked, sol, nSOL, ...tokens]) => {
+                        .then(a => [a.mint, new BN(a.amount.toString())])
+                ),
+                ...Object.keys(this.restakingVaultMetadata).map(
+                    symbol => this.getFragSOLRestakingVaultReceiptTokenReserveAccount(symbol as keyof typeof this.restakingVaultMetadata)
+                        .then(a => [a.mint, new BN(a.amount.toString())])
+                ),
+            ]).then(([fund, fragSOLLocked, sol, nSOL, ntp, ...tokens]) => {
                 console.log('fund asset state:', {
                     receiptToken: {
                         oneTokenAsSOL: fund.oneReceiptTokenAsSol,
-                        supplyAmount: fund.receiptTokenSupplyAmount,
-                        lockedAmount: fragSOLLocked,
+                        supply: fund.receiptTokenSupplyAmount,
+                        locked: fragSOLLocked,
                     },
                     accounts: {
                         sol,
                         tokens: {
                             [this.knownAddress.nSOLTokenMint.toString()]: nSOL,
-                            ...Object.fromEntries(tokens.map((balance, i) => [Object.values(this.supportedTokenMetadata)[i].mint, balance])),
+                            ...Object.fromEntries(tokens),
                         },
                     },
                     data: {
@@ -3258,14 +3282,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         tokens: {
                             [this.knownAddress.nSOLTokenMint.toString()]: {
                                 reserved: fund.normalizedToken.operationReservedAmount,
-                                receivable: fund.normalizedToken.operationReceivableAmount,
-                                total: fund.normalizedToken.operationReservedAmount.add(fund.normalizedToken.operationReceivableAmount),
+                                supply: ntp.normalizedTokenSupplyAmount,
+                                oneTokenAsSOL: ntp.oneNormalizedTokenAsSol,
+                                total: fund.normalizedToken.operationReservedAmount,
                             },
                             ...Object.fromEntries(fund.supportedTokens.slice(0, fund.numSupportedTokens).map(supported => {
                                 return [supported.mint, {
                                     reserved: supported.token.operationReservedAmount,
                                     receivable: supported.token.operationReceivableAmount,
                                     withdrawable: supported.token.withdrawalUserReservedAmount,
+                                    normalized: ntp.supportedTokens.find(st => st.mint.equals(supported.mint))?.lockedAmount ?? 0,
                                     total: supported.token.operationReservedAmount.add(supported.token.operationReceivableAmount).add(supported.token.withdrawalUserReservedAmount),
                                 }];
                             })),

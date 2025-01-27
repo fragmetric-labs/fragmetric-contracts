@@ -49,21 +49,24 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         let quarter = res1.receiptTokenAmount.divn(4);
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
-    });
-
-    step("fund operation for a full cycle (ncn_epoch = 256 slot)", async () => {
         await restaking.runOperatorFundCommands();
+        logger.info('waiting... (1 epoch = 64 slots)');
+        await restaking.sleepUntil(192);
+
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(1));
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'), new BN(1));
-        const res1 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
-        const res2 = await restaking.runUserRequestWithdrawal(user1, res1.receiptTokenAmount);
-    });
+        const res2 = await restaking.getUserFragSOLFundAccount(user1.publicKey);
+        await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
+        await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
-    step("fund operation for the next cycle after an epoch shift", async () => {
-        logger.info('waiting for an epoch shift...')
-        await restaking.sleepUntil(254); // wait until just before the end of the current epoch (instead of 256) to make more complex scenario
-        await restaking.runOperatorFundCommands();
-        // TODO: unrestaking should be done to complete this task
+        logger.info('waiting...');
+        await restaking.sleepUntil(320); // wait for more than one epoch
+        await restaking.runOperatorFundCommands(); // the unrestaking request should be claimable on this cycle
+        await restaking.runOperatorFundCommands(); // one more cycle to denormalize and unstake tokens
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(440); // wait for more than one epoch
+        await restaking.runOperatorFundCommands(); // one more cycle to claim unstaked tokens and proceed the last withdrawal batch
         await restaking.runUserWithdraw(user1, null, new BN(1));
     });
 });

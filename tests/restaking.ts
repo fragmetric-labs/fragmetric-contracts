@@ -25,7 +25,7 @@ if (process.env.JUST_WITHDRAW_TOKEN_JTO) {
         require('./restaking/4_withdraw_token');
 
     } else if (process.env.JUST_OPERATE) {
-        require('./restaking/7_operate_todo')(1);
+        require('./restaking/7_operate')(1);
 
     } else if (process.env.JUST_STAKE) {
         require('./restaking/2_deposit_sol')(1);
