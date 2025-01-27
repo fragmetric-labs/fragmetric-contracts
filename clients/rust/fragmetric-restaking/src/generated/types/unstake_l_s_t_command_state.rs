@@ -5,6 +5,7 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+use crate::generated::types::UnstakeLSTCommandItem;
 use crate::generated::types::WithdrawStakeItem;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
@@ -12,9 +13,16 @@ use borsh::BorshSerialize;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UnstakeLSTCommandState {
-    Init,
-    ReadPoolState,
-    GetAvailableUnstakeAccount,
-    Unstake,
-    RequestUnstake(Vec<WithdrawStakeItem>),
+    New,
+    Prepare {
+        items: Vec<UnstakeLSTCommandItem>,
+    },
+    GetWithdrawStakeItems {
+        items: Vec<UnstakeLSTCommandItem>,
+    },
+    Execute {
+        items: Vec<UnstakeLSTCommandItem>,
+        withdraw_sol: bool,
+        withdraw_stake_items: Vec<WithdrawStakeItem>,
+    },
 }

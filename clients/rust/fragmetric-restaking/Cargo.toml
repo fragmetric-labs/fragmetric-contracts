@@ -1,10 +1,11 @@
 [package]
 name = "fragmetric-restaking-client"
 version = "0.1.0"
+description = "Fragmetric Liquid Restaking Program Client"
+license = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }
-license = { workspace = true }
 readme = { workspace = true }
 edition = { workspace = true }
 

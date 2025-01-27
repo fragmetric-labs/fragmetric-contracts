@@ -63,7 +63,8 @@ pub struct FundAccount {
     pub withdrawal_fee_rate_bps: u16,
     pub withdrawal_enabled: u8,
     pub deposit_enabled: u8,
-    pub padding4: [u8; 4],
+    pub donation_enabled: u8,
+    pub padding4: [u8; 3],
     /// SOL deposit & withdrawal
     pub sol: AssetState,
     /// underlying assets

@@ -36,6 +36,9 @@ pub struct SupportedToken {
     /// configuration: used for staking allocation strategy.
     pub sol_allocation_weight: u64,
     pub sol_allocation_capacity_amount: u64,
+    pub pending_unstaking_amount_as_sol: u64,
+    /// informative
+    pub one_token_as_receipt_token: u64,
     #[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::Bytes>"))]
-    pub reserved: [u8; 64],
+    pub reserved: [u8; 48],
 }

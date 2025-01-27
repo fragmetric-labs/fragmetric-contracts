@@ -5,18 +5,18 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
-use crate::generated::types::ClaimableUnrestakeWithdrawalStatus;
-use crate::generated::types::DenormalizeSupportedTokenAsset;
+use crate::generated::types::ClaimUnrestakedVSTCommandItem;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ClaimUnrestakedVSTCommandState {
-    Init,
-    Init2,
-    ReadVaultState,
-    Claim(ClaimableUnrestakeWithdrawalStatus),
-    SetupDenormalize(u64),
-    Denormalize(Vec<DenormalizeSupportedTokenAsset>),
+    New,
+    Prepare {
+        items: Vec<ClaimUnrestakedVSTCommandItem>,
+    },
+    Execute {
+        items: Vec<ClaimUnrestakedVSTCommandItem>,
+    },
 }

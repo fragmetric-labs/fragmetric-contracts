@@ -19,7 +19,7 @@ codegen-units = 1
 authors = ["Fragmetric Labs <contacts@fragmetric.xyz>"]
 repository = "https://github.com/fragmetric-labs/contracts"
 homepage = "https://fragmetric.xyz"
-license = "private"
+license = "MIT"
 readme = "README.md"
 edition = "2021"
 

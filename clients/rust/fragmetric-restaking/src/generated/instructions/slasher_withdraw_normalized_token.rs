@@ -49,7 +49,7 @@ impl SlasherWithdrawNormalizedToken {
             self.slasher,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.normalized_token_mint,
             false,
         ));
@@ -131,7 +131,7 @@ impl Default for SlasherWithdrawNormalizedTokenInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` slasher
-///   1. `[writable]` normalized_token_mint
+///   1. `[]` normalized_token_mint
 ///   2. `[writable]` normalized_token_pool_account
 ///   3. `[optional]` normalized_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
 ///   4. `[writable]` slasher_normalized_token_withdrawal_ticket_account
@@ -435,7 +435,7 @@ impl<'a, 'b> SlasherWithdrawNormalizedTokenCpi<'a, 'b> {
             *self.slasher.key,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.normalized_token_mint.key,
             false,
         ));
@@ -534,7 +534,7 @@ impl<'a, 'b> SlasherWithdrawNormalizedTokenCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` slasher
-///   1. `[writable]` normalized_token_mint
+///   1. `[]` normalized_token_mint
 ///   2. `[writable]` normalized_token_pool_account
 ///   3. `[]` normalized_token_program
 ///   4. `[writable]` slasher_normalized_token_withdrawal_ticket_account

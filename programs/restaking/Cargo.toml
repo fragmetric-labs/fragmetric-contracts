@@ -1,7 +1,7 @@
 [package]
 name = "restaking"
 version = "0.4.2"
-description = "Fragmetric Liquid Restaking Token Program"
+description = "Fragmetric Liquid Restaking Program"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = { workspace = true }

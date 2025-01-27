@@ -362,15 +362,17 @@ impl ClaimUnrestakedVSTCommand {
                         result.deducted_receipt_token_fee_amount,
                     )?;
                     match fund_account.get_normalized_token() {
-                        Some(normalized_token) if normalized_token.mint == item.supported_token_mint =>
-                            {
-                                fund_account.sol.operation_receivable_amount +=
-                                    deducted_fee_amount_as_sol;
-                                let normalized_token = fund_account.get_normalized_token_mut().unwrap();
-                                normalized_token.operation_reserved_amount +=
-                                    result.claimed_supported_token_amount;
-                                result.operation_reserved_supported_token_amount = normalized_token.operation_reserved_amount;
-                            }
+                        Some(normalized_token)
+                            if normalized_token.mint == item.supported_token_mint =>
+                        {
+                            fund_account.sol.operation_receivable_amount +=
+                                deducted_fee_amount_as_sol;
+                            let normalized_token = fund_account.get_normalized_token_mut().unwrap();
+                            normalized_token.operation_reserved_amount +=
+                                result.claimed_supported_token_amount;
+                            result.operation_reserved_supported_token_amount =
+                                normalized_token.operation_reserved_amount;
+                        }
                         _ => {
                             let supported_token =
                                 fund_account.get_supported_token_mut(&item.supported_token_mint)?;
@@ -381,7 +383,8 @@ impl ClaimUnrestakedVSTCommand {
                                 )?;
                             supported_token.token.operation_reserved_amount +=
                                 result.claimed_supported_token_amount;
-                            result.operation_reserved_supported_token_amount = supported_token.token.operation_reserved_amount;
+                            result.operation_reserved_supported_token_amount =
+                                supported_token.token.operation_reserved_amount;
                         }
                     };
                     drop(fund_account);

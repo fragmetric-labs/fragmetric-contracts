@@ -14,6 +14,6 @@ pub struct TokenAllocatedAmountRecord {
     pub amount: u64,
     /// Contribution accrual rate per 1 lamports (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    pub contribution_accrual_rate: u8,
-    pub padding: [u8; 7],
+    pub contribution_accrual_rate: u16,
+    pub padding: [u8; 6],
 }

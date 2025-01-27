@@ -22,6 +22,5 @@ pub struct WithdrawStakeItem {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub fund_stake_account: Pubkey,
-    pub fund_stake_account_signer_seeds: Vec<Vec<u8>>,
-    pub token_amount: u64,
+    pub fund_stake_account_index: u8,
 }

@@ -11,15 +11,7 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ClaimableUnrestakeWithdrawalTicket {
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub withdrawal_ticket_account: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub withdrawal_ticket_token_account: Pubkey,
+pub struct ClaimUnstakedSOLCommandResultAssetReceivable {
+    pub asset_token_mint: Option<Pubkey>,
+    pub asset_amount: u64,
 }

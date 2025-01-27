@@ -7,7 +7,29 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ClaimUnrestakedVSTCommandResult {}
+pub struct ClaimUnrestakedVSTCommandResult {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub vault: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub receipt_token_mint: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub supported_token_mint: Pubkey,
+    pub claimed_supported_token_amount: u64,
+    pub operation_reserved_supported_token_amount: u64,
+    pub burnt_receipt_token_amount: u64,
+    pub deducted_receipt_token_fee_amount: u64,
+    pub total_unrestaking_receipt_token_amount: u64,
+}

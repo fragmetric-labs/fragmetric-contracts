@@ -7,7 +7,16 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DelegateVSTCommandResult {}
+pub struct DelegateVSTCommandResult {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub vault_supported_token_mint: Pubkey,
+    pub delegated_token_amount: u64,
+    pub total_delegated_token_amount: u64,
+}

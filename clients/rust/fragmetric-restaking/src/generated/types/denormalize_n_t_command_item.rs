@@ -11,14 +11,11 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DenormalizeNTCommandResult {
+pub struct DenormalizeNTCommandItem {
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub supported_token_mint: Pubkey,
-    pub burnt_normalized_token_amount: u64,
-    pub operation_reserved_normalized_token_amount: u64,
-    pub denormalized_supported_token_amount: u64,
-    pub operation_reserved_supported_token_amount: u64,
+    pub allocated_normalized_token_amount: u64,
 }

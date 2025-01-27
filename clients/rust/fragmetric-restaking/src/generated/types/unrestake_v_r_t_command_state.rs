@@ -5,13 +5,14 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+use crate::generated::types::UnrestakeVSTCommandItem;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UnrestakeVRTCommandState {
-    Init,
-    ReadVaultState,
-    Unstake(Vec<Vec<u8>>),
+    New,
+    Prepare { items: Vec<UnrestakeVSTCommandItem> },
+    Execute { items: Vec<UnrestakeVSTCommandItem> },
 }

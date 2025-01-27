@@ -94,6 +94,7 @@ impl Default for FundManagerUpdateFundStrategyInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FundManagerUpdateFundStrategyInstructionArgs {
     pub deposit_enabled: bool,
+    pub donation_enabled: bool,
     pub withdrawal_enabled: bool,
     pub withdrawal_fee_rate_bps: u16,
     pub withdrawal_batch_threshold_seconds: i64,
@@ -116,6 +117,7 @@ pub struct FundManagerUpdateFundStrategyBuilder {
     event_authority: Option<solana_program::pubkey::Pubkey>,
     program: Option<solana_program::pubkey::Pubkey>,
     deposit_enabled: Option<bool>,
+    donation_enabled: Option<bool>,
     withdrawal_enabled: Option<bool>,
     withdrawal_fee_rate_bps: Option<u16>,
     withdrawal_batch_threshold_seconds: Option<i64>,
@@ -161,6 +163,11 @@ impl FundManagerUpdateFundStrategyBuilder {
     #[inline(always)]
     pub fn deposit_enabled(&mut self, deposit_enabled: bool) -> &mut Self {
         self.deposit_enabled = Some(deposit_enabled);
+        self
+    }
+    #[inline(always)]
+    pub fn donation_enabled(&mut self, donation_enabled: bool) -> &mut Self {
+        self.donation_enabled = Some(donation_enabled);
         self
     }
     #[inline(always)]
@@ -217,6 +224,10 @@ impl FundManagerUpdateFundStrategyBuilder {
                 .deposit_enabled
                 .clone()
                 .expect("deposit_enabled is not set"),
+            donation_enabled: self
+                .donation_enabled
+                .clone()
+                .expect("donation_enabled is not set"),
             withdrawal_enabled: self
                 .withdrawal_enabled
                 .clone()
@@ -397,6 +408,7 @@ impl<'a, 'b> FundManagerUpdateFundStrategyCpiBuilder<'a, 'b> {
             event_authority: None,
             program: None,
             deposit_enabled: None,
+            donation_enabled: None,
             withdrawal_enabled: None,
             withdrawal_fee_rate_bps: None,
             withdrawal_batch_threshold_seconds: None,
@@ -447,6 +459,11 @@ impl<'a, 'b> FundManagerUpdateFundStrategyCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn deposit_enabled(&mut self, deposit_enabled: bool) -> &mut Self {
         self.instruction.deposit_enabled = Some(deposit_enabled);
+        self
+    }
+    #[inline(always)]
+    pub fn donation_enabled(&mut self, donation_enabled: bool) -> &mut Self {
+        self.instruction.donation_enabled = Some(donation_enabled);
         self
     }
     #[inline(always)]
@@ -515,6 +532,11 @@ impl<'a, 'b> FundManagerUpdateFundStrategyCpiBuilder<'a, 'b> {
                 .deposit_enabled
                 .clone()
                 .expect("deposit_enabled is not set"),
+            donation_enabled: self
+                .instruction
+                .donation_enabled
+                .clone()
+                .expect("donation_enabled is not set"),
             withdrawal_enabled: self
                 .instruction
                 .withdrawal_enabled
@@ -573,6 +595,7 @@ struct FundManagerUpdateFundStrategyCpiBuilderInstruction<'a, 'b> {
     event_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     deposit_enabled: Option<bool>,
+    donation_enabled: Option<bool>,
     withdrawal_enabled: Option<bool>,
     withdrawal_fee_rate_bps: Option<u16>,
     withdrawal_batch_threshold_seconds: Option<i64>,

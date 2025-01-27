@@ -9,25 +9,25 @@ use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 /// Accounts.
-pub struct FundManagerChangeFundTokenAccount {
-    pub payer: solana_program::pubkey::Pubkey,
-
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegation {
     pub fund_manager: solana_program::pubkey::Pubkey,
 
     pub fund_account: solana_program::pubkey::Pubkey,
 
-    pub fund_reserve_account: solana_program::pubkey::Pubkey,
+    pub receipt_token_mint: solana_program::pubkey::Pubkey,
 
-    pub token_mint: solana_program::pubkey::Pubkey,
+    pub vault_account: solana_program::pubkey::Pubkey,
 
-    pub token_program: solana_program::pubkey::Pubkey,
+    pub jito_restaking_program: solana_program::pubkey::Pubkey,
 
-    pub old_token_account: solana_program::pubkey::Pubkey,
+    pub vault_operator: solana_program::pubkey::Pubkey,
 
-    pub new_token_account: solana_program::pubkey::Pubkey,
+    pub event_authority: solana_program::pubkey::Pubkey,
+
+    pub program: solana_program::pubkey::Pubkey,
 }
 
-impl FundManagerChangeFundTokenAccount {
+impl FundManagerInitializeFundJitoRestakingVaultDelegation {
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
         self.instruction_with_remaining_accounts(&[])
     }
@@ -37,39 +37,40 @@ impl FundManagerChangeFundTokenAccount {
         remaining_accounts: &[solana_program::instruction::AccountMeta],
     ) -> solana_program::instruction::Instruction {
         let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.payer, true,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.fund_manager,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             self.fund_account,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.fund_reserve_account,
+            self.receipt_token_mint,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.token_mint,
+            self.vault_account,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            self.token_program,
+            self.jito_restaking_program,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.old_token_account,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.vault_operator,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            self.new_token_account,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.event_authority,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            self.program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = FundManagerChangeFundTokenAccountInstructionData::new()
+        let data = FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -83,57 +84,52 @@ impl FundManagerChangeFundTokenAccount {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct FundManagerChangeFundTokenAccountInstructionData {
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData {
     discriminator: [u8; 8],
 }
 
-impl FundManagerChangeFundTokenAccountInstructionData {
+impl FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [143, 2, 134, 98, 240, 42, 22, 107],
+            discriminator: [163, 134, 58, 94, 165, 249, 166, 82],
         }
     }
 }
 
-impl Default for FundManagerChangeFundTokenAccountInstructionData {
+impl Default for FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Instruction builder for `FundManagerChangeFundTokenAccount`.
+/// Instruction builder for `FundManagerInitializeFundJitoRestakingVaultDelegation`.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable, signer]` payer
-///   1. `[signer, optional]` fund_manager (default to `5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx`)
-///   2. `[]` fund_account
-///   3. `[]` fund_reserve_account
-///   4. `[]` token_mint
-///   5. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   6. `[writable]` old_token_account
-///   7. `[writable]` new_token_account
+///   0. `[signer, optional]` fund_manager (default to `5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx`)
+///   1. `[writable]` fund_account
+///   2. `[]` receipt_token_mint
+///   3. `[]` vault_account
+///   4. `[optional]` jito_restaking_program (default to `RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q`)
+///   5. `[]` vault_operator
+///   6. `[]` event_authority
+///   7. `[]` program
 #[derive(Clone, Debug, Default)]
-pub struct FundManagerChangeFundTokenAccountBuilder {
-    payer: Option<solana_program::pubkey::Pubkey>,
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegationBuilder {
     fund_manager: Option<solana_program::pubkey::Pubkey>,
     fund_account: Option<solana_program::pubkey::Pubkey>,
-    fund_reserve_account: Option<solana_program::pubkey::Pubkey>,
-    token_mint: Option<solana_program::pubkey::Pubkey>,
-    token_program: Option<solana_program::pubkey::Pubkey>,
-    old_token_account: Option<solana_program::pubkey::Pubkey>,
-    new_token_account: Option<solana_program::pubkey::Pubkey>,
+    receipt_token_mint: Option<solana_program::pubkey::Pubkey>,
+    vault_account: Option<solana_program::pubkey::Pubkey>,
+    jito_restaking_program: Option<solana_program::pubkey::Pubkey>,
+    vault_operator: Option<solana_program::pubkey::Pubkey>,
+    event_authority: Option<solana_program::pubkey::Pubkey>,
+    program: Option<solana_program::pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_program::instruction::AccountMeta>,
 }
 
-impl FundManagerChangeFundTokenAccountBuilder {
+impl FundManagerInitializeFundJitoRestakingVaultDelegationBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline(always)]
-    pub fn payer(&mut self, payer: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
-        self
     }
     /// `[optional account, default to '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx']`
     #[inline(always)]
@@ -147,38 +143,43 @@ impl FundManagerChangeFundTokenAccountBuilder {
         self
     }
     #[inline(always)]
-    pub fn fund_reserve_account(
+    pub fn receipt_token_mint(
         &mut self,
-        fund_reserve_account: solana_program::pubkey::Pubkey,
+        receipt_token_mint: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.fund_reserve_account = Some(fund_reserve_account);
+        self.receipt_token_mint = Some(receipt_token_mint);
         self
     }
     #[inline(always)]
-    pub fn token_mint(&mut self, token_mint: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.token_mint = Some(token_mint);
+    pub fn vault_account(&mut self, vault_account: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_account = Some(vault_account);
         self
     }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
+    /// `[optional account, default to 'RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q']`
     #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_program::pubkey::Pubkey) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    #[inline(always)]
-    pub fn old_token_account(
+    pub fn jito_restaking_program(
         &mut self,
-        old_token_account: solana_program::pubkey::Pubkey,
+        jito_restaking_program: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.old_token_account = Some(old_token_account);
+        self.jito_restaking_program = Some(jito_restaking_program);
         self
     }
     #[inline(always)]
-    pub fn new_token_account(
+    pub fn vault_operator(&mut self, vault_operator: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.vault_operator = Some(vault_operator);
+        self
+    }
+    #[inline(always)]
+    pub fn event_authority(
         &mut self,
-        new_token_account: solana_program::pubkey::Pubkey,
+        event_authority: solana_program::pubkey::Pubkey,
     ) -> &mut Self {
-        self.new_token_account = Some(new_token_account);
+        self.event_authority = Some(event_authority);
+        self
+    }
+    #[inline(always)]
+    pub fn program(&mut self, program: solana_program::pubkey::Pubkey) -> &mut Self {
+        self.program = Some(program);
         self
     }
     /// Add an additional account to the instruction.
@@ -201,87 +202,84 @@ impl FundManagerChangeFundTokenAccountBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_program::instruction::Instruction {
-        let accounts = FundManagerChangeFundTokenAccount {
-            payer: self.payer.expect("payer is not set"),
-            fund_manager: self.fund_manager.unwrap_or(solana_program::pubkey!(
-                "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
-            )),
-            fund_account: self.fund_account.expect("fund_account is not set"),
-            fund_reserve_account: self
-                .fund_reserve_account
-                .expect("fund_reserve_account is not set"),
-            token_mint: self.token_mint.expect("token_mint is not set"),
-            token_program: self.token_program.unwrap_or(solana_program::pubkey!(
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-            )),
-            old_token_account: self
-                .old_token_account
-                .expect("old_token_account is not set"),
-            new_token_account: self
-                .new_token_account
-                .expect("new_token_account is not set"),
-        };
+        let accounts =
+            FundManagerInitializeFundJitoRestakingVaultDelegation {
+                fund_manager: self.fund_manager.unwrap_or(solana_program::pubkey!(
+                    "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+                )),
+                fund_account: self.fund_account.expect("fund_account is not set"),
+                receipt_token_mint: self
+                    .receipt_token_mint
+                    .expect("receipt_token_mint is not set"),
+                vault_account: self.vault_account.expect("vault_account is not set"),
+                jito_restaking_program: self.jito_restaking_program.unwrap_or(
+                    solana_program::pubkey!("RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"),
+                ),
+                vault_operator: self.vault_operator.expect("vault_operator is not set"),
+                event_authority: self.event_authority.expect("event_authority is not set"),
+                program: self.program.expect("program is not set"),
+            };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
     }
 }
 
-/// `fund_manager_change_fund_token_account` CPI accounts.
-pub struct FundManagerChangeFundTokenAccountCpiAccounts<'a, 'b> {
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
+/// `fund_manager_initialize_fund_jito_restaking_vault_delegation` CPI accounts.
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegationCpiAccounts<'a, 'b> {
     pub fund_manager: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub fund_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fund_reserve_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub receipt_token_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub token_mint: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub jito_restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub old_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub new_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub event_authority: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-/// `fund_manager_change_fund_token_account` CPI instruction.
-pub struct FundManagerChangeFundTokenAccountCpi<'a, 'b> {
+/// `fund_manager_initialize_fund_jito_restaking_vault_delegation` CPI instruction.
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegationCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_program::account_info::AccountInfo<'a>,
-
     pub fund_manager: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub fund_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub fund_reserve_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub receipt_token_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub token_mint: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_account: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_program::account_info::AccountInfo<'a>,
+    pub jito_restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub old_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub vault_operator: &'b solana_program::account_info::AccountInfo<'a>,
 
-    pub new_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+    pub event_authority: &'b solana_program::account_info::AccountInfo<'a>,
+
+    pub program: &'b solana_program::account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> FundManagerChangeFundTokenAccountCpi<'a, 'b> {
+impl<'a, 'b> FundManagerInitializeFundJitoRestakingVaultDelegationCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_program::account_info::AccountInfo<'a>,
-        accounts: FundManagerChangeFundTokenAccountCpiAccounts<'a, 'b>,
+        accounts: FundManagerInitializeFundJitoRestakingVaultDelegationCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
-            payer: accounts.payer,
             fund_manager: accounts.fund_manager,
             fund_account: accounts.fund_account,
-            fund_reserve_account: accounts.fund_reserve_account,
-            token_mint: accounts.token_mint,
-            token_program: accounts.token_program,
-            old_token_account: accounts.old_token_account,
-            new_token_account: accounts.new_token_account,
+            receipt_token_mint: accounts.receipt_token_mint,
+            vault_account: accounts.vault_account,
+            jito_restaking_program: accounts.jito_restaking_program,
+            vault_operator: accounts.vault_operator,
+            event_authority: accounts.event_authority,
+            program: accounts.program,
         }
     }
     #[inline(always)]
@@ -318,36 +316,36 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpi<'a, 'b> {
         )],
     ) -> solana_program::entrypoint::ProgramResult {
         let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.payer.key,
-            true,
-        ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.fund_manager.key,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+        accounts.push(solana_program::instruction::AccountMeta::new(
             *self.fund_account.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.fund_reserve_account.key,
+            *self.receipt_token_mint.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.token_mint.key,
+            *self.vault_account.key,
             false,
         ));
         accounts.push(solana_program::instruction::AccountMeta::new_readonly(
-            *self.token_program.key,
+            *self.jito_restaking_program.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.old_token_account.key,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.vault_operator.key,
             false,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
-            *self.new_token_account.key,
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.event_authority.key,
+            false,
+        ));
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
+            *self.program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -357,7 +355,7 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = FundManagerChangeFundTokenAccountInstructionData::new()
+        let data = FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -368,14 +366,14 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.payer.clone());
         account_infos.push(self.fund_manager.clone());
         account_infos.push(self.fund_account.clone());
-        account_infos.push(self.fund_reserve_account.clone());
-        account_infos.push(self.token_mint.clone());
-        account_infos.push(self.token_program.clone());
-        account_infos.push(self.old_token_account.clone());
-        account_infos.push(self.new_token_account.clone());
+        account_infos.push(self.receipt_token_mint.clone());
+        account_infos.push(self.vault_account.clone());
+        account_infos.push(self.jito_restaking_program.clone());
+        account_infos.push(self.vault_operator.clone());
+        account_infos.push(self.event_authority.clone());
+        account_infos.push(self.program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -388,43 +386,41 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `FundManagerChangeFundTokenAccount` via CPI.
+/// Instruction builder for `FundManagerInitializeFundJitoRestakingVaultDelegation` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable, signer]` payer
-///   1. `[signer]` fund_manager
-///   2. `[]` fund_account
-///   3. `[]` fund_reserve_account
-///   4. `[]` token_mint
-///   5. `[]` token_program
-///   6. `[writable]` old_token_account
-///   7. `[writable]` new_token_account
+///   0. `[signer]` fund_manager
+///   1. `[writable]` fund_account
+///   2. `[]` receipt_token_mint
+///   3. `[]` vault_account
+///   4. `[]` jito_restaking_program
+///   5. `[]` vault_operator
+///   6. `[]` event_authority
+///   7. `[]` program
 #[derive(Clone, Debug)]
-pub struct FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
-    instruction: Box<FundManagerChangeFundTokenAccountCpiBuilderInstruction<'a, 'b>>,
+pub struct FundManagerInitializeFundJitoRestakingVaultDelegationCpiBuilder<'a, 'b> {
+    instruction:
+        Box<FundManagerInitializeFundJitoRestakingVaultDelegationCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
+impl<'a, 'b> FundManagerInitializeFundJitoRestakingVaultDelegationCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_program::account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(FundManagerChangeFundTokenAccountCpiBuilderInstruction {
-            __program: program,
-            payer: None,
-            fund_manager: None,
-            fund_account: None,
-            fund_reserve_account: None,
-            token_mint: None,
-            token_program: None,
-            old_token_account: None,
-            new_token_account: None,
-            __remaining_accounts: Vec::new(),
-        });
+        let instruction = Box::new(
+            FundManagerInitializeFundJitoRestakingVaultDelegationCpiBuilderInstruction {
+                __program: program,
+                fund_manager: None,
+                fund_account: None,
+                receipt_token_mint: None,
+                vault_account: None,
+                jito_restaking_program: None,
+                vault_operator: None,
+                event_authority: None,
+                program: None,
+                __remaining_accounts: Vec::new(),
+            },
+        );
         Self { instruction }
-    }
-    #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_program::account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
-        self
     }
     #[inline(always)]
     pub fn fund_manager(
@@ -443,43 +439,51 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
         self
     }
     #[inline(always)]
-    pub fn fund_reserve_account(
+    pub fn receipt_token_mint(
         &mut self,
-        fund_reserve_account: &'b solana_program::account_info::AccountInfo<'a>,
+        receipt_token_mint: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.fund_reserve_account = Some(fund_reserve_account);
+        self.instruction.receipt_token_mint = Some(receipt_token_mint);
         self
     }
     #[inline(always)]
-    pub fn token_mint(
+    pub fn vault_account(
         &mut self,
-        token_mint: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_account: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.token_mint = Some(token_mint);
+        self.instruction.vault_account = Some(vault_account);
         self
     }
     #[inline(always)]
-    pub fn token_program(
+    pub fn jito_restaking_program(
         &mut self,
-        token_program: &'b solana_program::account_info::AccountInfo<'a>,
+        jito_restaking_program: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.token_program = Some(token_program);
+        self.instruction.jito_restaking_program = Some(jito_restaking_program);
         self
     }
     #[inline(always)]
-    pub fn old_token_account(
+    pub fn vault_operator(
         &mut self,
-        old_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+        vault_operator: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.old_token_account = Some(old_token_account);
+        self.instruction.vault_operator = Some(vault_operator);
         self
     }
     #[inline(always)]
-    pub fn new_token_account(
+    pub fn event_authority(
         &mut self,
-        new_token_account: &'b solana_program::account_info::AccountInfo<'a>,
+        event_authority: &'b solana_program::account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.new_token_account = Some(new_token_account);
+        self.instruction.event_authority = Some(event_authority);
+        self
+    }
+    #[inline(always)]
+    pub fn program(
+        &mut self,
+        program: &'b solana_program::account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.program = Some(program);
         self
     }
     /// Add an additional account to the instruction.
@@ -523,10 +527,8 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
         &self,
         signers_seeds: &[&[&[u8]]],
     ) -> solana_program::entrypoint::ProgramResult {
-        let instruction = FundManagerChangeFundTokenAccountCpi {
+        let instruction = FundManagerInitializeFundJitoRestakingVaultDelegationCpi {
             __program: self.instruction.__program,
-
-            payer: self.instruction.payer.expect("payer is not set"),
 
             fund_manager: self
                 .instruction
@@ -538,27 +540,32 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
                 .fund_account
                 .expect("fund_account is not set"),
 
-            fund_reserve_account: self
+            receipt_token_mint: self
                 .instruction
-                .fund_reserve_account
-                .expect("fund_reserve_account is not set"),
+                .receipt_token_mint
+                .expect("receipt_token_mint is not set"),
 
-            token_mint: self.instruction.token_mint.expect("token_mint is not set"),
-
-            token_program: self
+            vault_account: self
                 .instruction
-                .token_program
-                .expect("token_program is not set"),
+                .vault_account
+                .expect("vault_account is not set"),
 
-            old_token_account: self
+            jito_restaking_program: self
                 .instruction
-                .old_token_account
-                .expect("old_token_account is not set"),
+                .jito_restaking_program
+                .expect("jito_restaking_program is not set"),
 
-            new_token_account: self
+            vault_operator: self
                 .instruction
-                .new_token_account
-                .expect("new_token_account is not set"),
+                .vault_operator
+                .expect("vault_operator is not set"),
+
+            event_authority: self
+                .instruction
+                .event_authority
+                .expect("event_authority is not set"),
+
+            program: self.instruction.program.expect("program is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -568,16 +575,16 @@ impl<'a, 'b> FundManagerChangeFundTokenAccountCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct FundManagerChangeFundTokenAccountCpiBuilderInstruction<'a, 'b> {
+struct FundManagerInitializeFundJitoRestakingVaultDelegationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_program::account_info::AccountInfo<'a>,
-    payer: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     fund_manager: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     fund_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    fund_reserve_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    token_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    token_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    old_token_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
-    new_token_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    receipt_token_mint: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_account: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    jito_restaking_program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    vault_operator: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    event_authority: Option<&'b solana_program::account_info::AccountInfo<'a>>,
+    program: Option<&'b solana_program::account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(
         &'b solana_program::account_info::AccountInfo<'a>,

@@ -16,6 +16,7 @@ pub struct ProcessWithdrawalBatchCommandResult {
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
     pub asset_token_mint: Option<Pubkey>,
+    pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
     pub offsetted_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,

@@ -247,6 +247,9 @@ pub enum RestakingError {
     /// 6078 - restaking: withdrawal ticket is already initialized
     #[error("restaking: withdrawal ticket is already initialized")]
     RestakingVaultWithdrawalTicketAlreadyInitializedError = 0x17BE,
+    /// 6079 - fund: donation is currently disabled
+    #[error("fund: donation is currently disabled")]
+    FundDonationDisabledError = 0x17BF,
 }
 
 impl solana_program::program_error::PrintProgramError for RestakingError {

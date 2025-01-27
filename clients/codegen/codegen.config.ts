@@ -22,8 +22,8 @@ export const codegenConfig: {
   targets: {
     'fragmetric-restaking': {
       idlFilePath: typeof process.env.LOCAL !== 'undefined' ? '../../target/idl/restaking.json' : './idls/fragmetric-restaking.json',
-      // NOT USE THIS YET, STILL STICK TO @solana/web3.js@1
-      rust: false,
+      rust: true,
+      // JS SDK IS NOT USING THIS YET, STILL STICK TO @solana/web3.js@1
       javascript: false,
     },
     'jito-restaking': {

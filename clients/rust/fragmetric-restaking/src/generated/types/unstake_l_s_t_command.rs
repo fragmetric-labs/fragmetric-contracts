@@ -5,7 +5,6 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
-use crate::generated::types::UnstakeLSTCommandItem;
 use crate::generated::types::UnstakeLSTCommandState;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
@@ -13,6 +12,5 @@ use borsh::BorshSerialize;
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UnstakeLSTCommand {
-    pub items: Vec<UnstakeLSTCommandItem>,
     pub state: UnstakeLSTCommandState,
 }

@@ -16,6 +16,6 @@ pub struct UnstakeLSTCommandItem {
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub mint: Pubkey,
-    pub token_amount: u64,
+    pub token_mint: Pubkey,
+    pub allocated_token_amount: u64,
 }

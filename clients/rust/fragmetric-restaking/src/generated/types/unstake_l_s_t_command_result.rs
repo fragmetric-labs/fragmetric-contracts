@@ -7,7 +7,22 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UnstakeLSTCommandResult {}
+pub struct UnstakeLSTCommandResult {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub token_mint: Pubkey,
+    pub burnt_token_amount: u64,
+    pub deducted_sol_fee_amount: u64,
+    pub unstaked_sol_amount: u64,
+    pub unstaking_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
+    pub operation_reserved_sol_amount: u64,
+    pub operation_receivable_sol_amount: u64,
+    pub operation_reserved_token_amount: u64,
+}

@@ -18,6 +18,6 @@ pub struct DepositMetadata {
     )]
     pub user: Pubkey,
     pub wallet_provider: String,
-    pub contribution_accrual_rate: u8,
+    pub contribution_accrual_rate: u16,
     pub expired_at: i64,
 }

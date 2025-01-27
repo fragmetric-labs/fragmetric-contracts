@@ -15,7 +15,9 @@ pub struct AdminInitializeFundAccount {
     pub admin: solana_program::pubkey::Pubkey,
 
     pub system_program: solana_program::pubkey::Pubkey,
-
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
     pub receipt_token_mint: solana_program::pubkey::Pubkey,
 
     pub receipt_token_program: solana_program::pubkey::Pubkey,
@@ -162,6 +164,9 @@ impl AdminInitializeFundAccountBuilder {
         self.system_program = Some(system_program);
         self
     }
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
     #[inline(always)]
     pub fn receipt_token_mint(
         &mut self,
@@ -270,7 +275,9 @@ pub struct AdminInitializeFundAccountCpiAccounts<'a, 'b> {
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
     pub receipt_token_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub receipt_token_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -296,7 +303,9 @@ pub struct AdminInitializeFundAccountCpi<'a, 'b> {
     pub admin: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_program::account_info::AccountInfo<'a>,
-
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
     pub receipt_token_mint: &'b solana_program::account_info::AccountInfo<'a>,
 
     pub receipt_token_program: &'b solana_program::account_info::AccountInfo<'a>,
@@ -500,6 +509,9 @@ impl<'a, 'b> AdminInitializeFundAccountCpiBuilder<'a, 'b> {
         self.instruction.system_program = Some(system_program);
         self
     }
+    /// Mint authority must be admin or fund account,
+    /// otherwise `set_authority` CPI will fail.
+    /// Therefore, no extra constraint is needed.
     #[inline(always)]
     pub fn receipt_token_mint(
         &mut self,

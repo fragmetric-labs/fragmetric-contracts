@@ -5,9 +5,12 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+use crate::generated::types::DenormalizeNTCommandState;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DenormalizeNTCommand {}
+pub struct DenormalizeNTCommand {
+    pub state: DenormalizeNTCommandState,
+}

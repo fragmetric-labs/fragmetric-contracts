@@ -37,7 +37,7 @@ impl OperatorUpdateNormalizedTokenPoolPrices {
             self.operator,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             self.normalized_token_mint,
             false,
         ));
@@ -95,7 +95,7 @@ impl Default for OperatorUpdateNormalizedTokenPoolPricesInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[signer]` operator
-///   1. `[writable]` normalized_token_mint
+///   1. `[]` normalized_token_mint
 ///   2. `[writable]` normalized_token_pool_account
 ///   3. `[optional]` normalized_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
 ///   4. `[]` event_authority
@@ -283,7 +283,7 @@ impl<'a, 'b> OperatorUpdateNormalizedTokenPoolPricesCpi<'a, 'b> {
             *self.operator.key,
             true,
         ));
-        accounts.push(solana_program::instruction::AccountMeta::new(
+        accounts.push(solana_program::instruction::AccountMeta::new_readonly(
             *self.normalized_token_mint.key,
             false,
         ));
@@ -344,7 +344,7 @@ impl<'a, 'b> OperatorUpdateNormalizedTokenPoolPricesCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[signer]` operator
-///   1. `[writable]` normalized_token_mint
+///   1. `[]` normalized_token_mint
 ///   2. `[writable]` normalized_token_pool_account
 ///   3. `[]` normalized_token_program
 ///   4. `[]` event_authority

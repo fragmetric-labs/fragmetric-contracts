@@ -5,9 +5,24 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+use crate::generated::types::ClaimUnstakedSOLCommandResultAssetReceivable;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ClaimUnstakedSOLCommandResult {}
+pub struct ClaimUnstakedSOLCommandResult {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub token_mint: Pubkey,
+    pub claimed_sol_amount: u64,
+    pub total_unstaking_sol_amount: u64,
+    pub transferred_sol_revenue_amount: u64,
+    pub offsetted_sol_receivable_amount: u64,
+    pub offsetted_asset_receivables: Vec<ClaimUnstakedSOLCommandResultAssetReceivable>,
+    pub operation_reserved_sol_amount: u64,
+    pub operation_receivable_sol_amount: u64,
+}

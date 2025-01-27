@@ -16,6 +16,16 @@ pub struct UnrestakeVSTCommandItem {
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub vault_address: Pubkey,
-    pub sol_amount: u64,
+    pub vault: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub receipt_token_mint: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub supported_token_mint: Pubkey,
+    pub allocated_receipt_token_amount: u64,
 }

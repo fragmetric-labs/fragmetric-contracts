@@ -20,5 +20,7 @@ pub struct StakeSOLCommandResult {
     pub staked_sol_amount: u64,
     pub deducted_sol_fee_amount: u64,
     pub minted_token_amount: u64,
+    pub operation_reserved_sol_amount: u64,
+    pub operation_receivable_sol_amount: u64,
     pub operation_reserved_token_amount: u64,
 }

@@ -5,15 +5,22 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
-use crate::generated::types::ClaimableUnrestakeWithdrawalTicket;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
+use solana_program::pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ClaimableUnrestakeWithdrawalStatus {
-    pub withdrawal_tickets: Vec<ClaimableUnrestakeWithdrawalTicket>,
-    pub expected_ncn_epoch: u64,
-    pub delayed_ncn_epoch: u64,
-    pub unrestaked_vst_amount: u64,
+pub struct DelegateVSTCommandItem {
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub vault: Pubkey,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub operator: Pubkey,
+    pub delegation_amount: u64,
 }
