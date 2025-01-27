@@ -4,6 +4,7 @@ import {step} from "mocha-steps";
 import {getLogger} from "../../tools/lib";
 import {Restaking} from '../../target/types/restaking';
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 
 const {logger} = getLogger('reward');
@@ -20,7 +21,7 @@ function printUserRewardAccount(alias: string, account: IdlAccounts<Restaking>['
 }
 
 describe("reward", async function () {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const userA = restaking.keychain.getKeypair('MOCK_USER9');
     const userB = restaking.keychain.getKeypair('MOCK_USER10');
     const PRICING_DIFF_ERROR_MODIFIER = 1_000;

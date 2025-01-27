@@ -3,11 +3,12 @@ import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
 import {getLogger} from "../../tools/lib";
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 const {logger} = getLogger('reward');
 
 module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const user3 = restaking.keychain.getKeypair('MOCK_USER3');
     const user4 = restaking.keychain.getKeypair('MOCK_USER4');
 

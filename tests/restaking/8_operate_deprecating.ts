@@ -28,7 +28,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         );
 
         // TODO: currently staking sol to hard-coded LST, like localnet: jitoSOL
-        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("jitoSOL");
+        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundSupportedTokenReserveAccount("jitoSOL");
         const jitoSolBalance0 = await restaking.connection.getTokenAccountBalance(jitoSolSupportedTokenAccount, "confirmed");
         expect(fragSOLFund0.supportedTokens.some(s => s.operationReservedAmount.toString() == jitoSolBalance0.value.amount.toString())).eq(true, 'supported ATA balance should be equal');
 

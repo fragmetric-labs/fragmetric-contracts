@@ -5,11 +5,12 @@ import {step} from "mocha-steps";
 import * as spl from "@solana/spl-token-3.x";
 import {restakingPlayground} from "../restaking";
 import {getLogger} from '../../tools/lib';
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
 describe("operator_spl_stake_pool", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
 
     const depositSolAmount = new BN(100_000 * web3.LAMPORTS_PER_SOL);
     // const depositSolAmount = new BN(500 * web3.LAMPORTS_PER_SOL);
@@ -34,10 +35,10 @@ describe("operator_spl_stake_pool", async () => {
         await restaking.sleep(1); // ...block hash not found?
 
         // @ts-ignore
-        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("jitoSOL");
-        const mSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount('mSOL');
+        const jitoSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundSupportedTokenReserveAccount("jitoSOL");
+        const mSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundSupportedTokenReserveAccount('mSOL');
         // @ts-ignore
-        const bbSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundReserveSupportedTokenAccount("bbSOL");
+        const bbSolSupportedTokenAccount = restaking.knownAddress.fragSOLFundSupportedTokenReserveAccount("bbSOL");
         const [
             fragSOLFundReserveAccountBalance0,
             jitoSolSupportedTokenBalance0,

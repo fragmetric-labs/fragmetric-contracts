@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {RestakingPlayground} from "../tools/restaking/playground";
+import { RestakingPlayground as JTORestakingPlayground } from '../tools/restaking/jto_playground';
 import * as anchor from "@coral-xyz/anchor";
 
 chai.use(chaiAsPromised);
@@ -9,18 +10,25 @@ process.on('unhandledRejection', (err) => {
     process.exit(1);
 });
 
-export const restakingPlayground = RestakingPlayground.create('local', {
-    provider: anchor.AnchorProvider.env(),
-});
+export const restakingPlayground = (process.env.JTO)
+    ? JTORestakingPlayground.create('local', {
+        provider: anchor.AnchorProvider.env(),
+    }) : RestakingPlayground.create('local', {
+        provider: anchor.AnchorProvider.env(),
+    });
 
 
 /** define test suites here **/
-if (process.env.JUST_WITHDRAW_TOKEN_JTO) {
-    require('./restaking/4_withdraw_token_jto');
+if (process.env.JTO) {
+    require('./restaking/1_initialize_jto');
 
-} else if (process.env.JUST_OPERATE_JTO) {
-    require('./restaking/7_operate_jto')(1);
+    if (process.env.JUST_WITHDRAW) {
+        require('./restaking/4_withdraw_jto');
 
+    } else if (process.env.JUST_OPERATE) {
+        require('./restaking/7_operate_jto')(1);
+
+    }
 } else {
     require('./restaking/1_initialize');
 
@@ -66,10 +74,6 @@ if (process.env.JUST_WITHDRAW_TOKEN_JTO) {
         require('./restaking/4_withdraw_sol');
         require('./restaking/5_transfer_hook');
         require('./restaking/6_reward');
-        require('./restaking/8_operate_deprecating')(1);
-        require('./restaking/2_deposit_sol')(2);
-        require('./restaking/3_deposit_token')(2);
-        require('./restaking/8_operate_deprecating')(2);
 
     }
 }

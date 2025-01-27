@@ -6,6 +6,7 @@ import {step} from 'mocha-steps';
 import {restakingPlayground} from '../restaking';
 import { Restaking } from '../../target/types/restaking';
 import { getLogger } from '../../tools/lib';
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 const {logger} = getLogger('reward');
 
@@ -17,7 +18,7 @@ function printUserRewardAccount(alias: string, account: IdlAccounts<Restaking>['
 }
 
 describe("transfer_hook", async function () {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const user7 = restaking.keychain.getKeypair('MOCK_USER7');
     const user8 = restaking.keychain.getKeypair('MOCK_USER8');
 

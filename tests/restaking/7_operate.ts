@@ -3,11 +3,12 @@ import { expect } from "chai";
 import { step } from "mocha-steps";
 import { restakingPlayground } from "../restaking";
 import { getLogger } from '../../tools/lib';
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
 
 module.exports = (i: number) => describe(`operate#${i}`, async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const user1 = restaking.keychain.getKeypair('MOCK_USER1');
 
     const slotPerEpoch = 32;

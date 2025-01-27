@@ -2,18 +2,17 @@ import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 
 describe("initialize", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
 
     step("try airdrop SOL to authorized wallets", async function () {
         await Promise.all([
             restaking.tryAirdrop(restaking.keychain.getPublicKey('ADMIN'), new BN(web3.LAMPORTS_PER_SOL).muln(100)),
             restaking.tryAirdrop(restaking.keychain.getPublicKey('FUND_MANAGER'), new BN(web3.LAMPORTS_PER_SOL).muln(100)),
         ]);
-
-        await restaking.sleep(1); // ...block hash not found?
     });
 
     step("create known address lookup table", async function () {
@@ -136,7 +135,7 @@ describe("initialize", async () => {
         await Promise.all(Object.values(restaking.restakingVaultMetadata).map(v => restaking.runAdminSetSecondaryAdminForJitoVault(v.vault)));
         const {fragSOLFund} = await restaking.runFundManagerInitializeFundJitoRestakingVaults();
 
-        expect(fragSOLFund.numRestakingVaults).eq(1);
+        expect(fragSOLFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);
         let i = 0;
         for (const [symbol, v] of Object.entries(restaking.restakingVaultMetadata)) {
             const vault = fragSOLFund.restakingVaults[i++];
