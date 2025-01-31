@@ -7,11 +7,11 @@ mod cmd1_initialize;
 mod cmd2_enqueue_withdrawal_batch;
 mod cmd3_claim_unrestaked_vst;
 mod cmd4_denormalize_nt;
-mod cmd5_undelegate_vst;
-mod cmd6_unrestake_vrt;
-mod cmd7_claim_unstaked_sol;
-mod cmd8_unstake_lst;
-mod cmd9_process_withdrawal_batch;
+mod cmd5_claim_unstaked_sol;
+mod cmd6_unstake_lst;
+mod cmd7_process_withdrawal_batch;
+mod cmd8_unrestake_vrt;
+mod cmd9_undelegate_vst;
 
 pub use cmd10_stake_sol::*;
 pub use cmd11_normalize_st::*;
@@ -22,11 +22,11 @@ pub use cmd1_initialize::*;
 pub use cmd2_enqueue_withdrawal_batch::*;
 pub use cmd3_claim_unrestaked_vst::*;
 pub use cmd4_denormalize_nt::*;
-pub use cmd5_undelegate_vst::*;
-pub use cmd6_unrestake_vrt::*;
-pub use cmd7_claim_unstaked_sol::*;
-pub use cmd8_unstake_lst::*;
-pub use cmd9_process_withdrawal_batch::*;
+pub use cmd5_claim_unstaked_sol::*;
+pub use cmd6_unstake_lst::*;
+pub use cmd7_process_withdrawal_batch::*;
+pub use cmd8_unrestake_vrt::*;
+pub use cmd9_undelegate_vst::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
@@ -289,11 +289,11 @@ impl OperationCommand {
             OperationCommand::EnqueueWithdrawalBatch(_) => 2,
             OperationCommand::ClaimUnrestakedVST(_) => 3,
             OperationCommand::DenormalizeNT(_) => 4,
-            OperationCommand::UndelegateVST(_) => 5,
-            OperationCommand::UnrestakeVRT(_) => 6,
-            OperationCommand::ClaimUnstakedSOL(_) => 7,
-            OperationCommand::UnstakeLST(_) => 8,
-            OperationCommand::ProcessWithdrawalBatch(_) => 9,
+            OperationCommand::ClaimUnstakedSOL(_) => 5,
+            OperationCommand::UnstakeLST(_) => 6,
+            OperationCommand::ProcessWithdrawalBatch(_) => 7,
+            OperationCommand::UnrestakeVRT(_) => 8,
+            OperationCommand::UndelegateVST(_) => 9,
             OperationCommand::StakeSOL(_) => 10,
             OperationCommand::NormalizeST(_) => 11,
             OperationCommand::RestakeVST(_) => 12,

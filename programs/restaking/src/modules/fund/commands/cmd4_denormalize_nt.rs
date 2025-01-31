@@ -4,11 +4,11 @@ use anchor_spl::{token::Token, token_interface::TokenInterface};
 use std::ops::Neg;
 
 use super::{
-    fund_account, FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, UndelegateVSTCommand,
+    fund_account, ClaimUnstakedSOLCommand, FundService, OperationCommand, OperationCommandContext,
+    OperationCommandEntry, OperationCommandResult, SelfExecutable,
     FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
-use crate::modules::fund::commands::OperationCommand::UndelegateVST;
+use crate::modules::fund::commands::OperationCommand::{ClaimUnstakedSOL, UndelegateVST};
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
 use crate::{
     errors,
@@ -75,7 +75,7 @@ impl SelfExecutable for DenormalizeNTCommand {
 
         Ok((
             result,
-            entry.or_else(|| Some(UndelegateVSTCommand::default().without_required_accounts())),
+            entry.or_else(|| Some(ClaimUnstakedSOLCommand::default().without_required_accounts())),
         ))
     }
 }
