@@ -71,6 +71,15 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             .ok_or_else(|| error!(errors::ErrorCode::IndexOutOfBoundsException))
     }
 
+    pub fn get_participant_by_index_mut(
+        &mut self,
+        index: usize,
+    ) -> Result<&mut WeightedAllocationParticipant> {
+        self.participants[..self.num_participants]
+            .get_mut(index)
+            .ok_or_else(|| error!(errors::ErrorCode::IndexOutOfBoundsException))
+    }
+
     pub fn get_participant_last_put_amount_by_index(&self, index: usize) -> Result<u64> {
         self.get_participant_by_index(index)?.get_last_put_amount()
     }

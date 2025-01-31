@@ -2070,7 +2070,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             donationEnabled: this.isDevnet ? true : (this.isMainnet ? false : true),
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
-            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
+            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
             solDepositable: true,
             solAccumulatedDepositCapacity: this.isDevnet
@@ -2079,7 +2079,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ),
             solAccumulatedDepositAmount: null,
             solWithdrawalable: true,
-            solWithdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+            solWithdrawalNormalReserveRateBPS: 0,
             solWithdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
@@ -2118,7 +2118,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 })(),
                 tokenAccumulatedDepositAmount : null,
                 withdrawable: false,
-                withdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+                withdrawalNormalReserveRateBPS: 0,
                 withdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {
