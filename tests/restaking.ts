@@ -18,6 +18,9 @@ export const restakingPlayground = RestakingPlayground.create('local', {
 if (process.env.JUST_WITHDRAW_TOKEN_JTO) {
     require('./restaking/4_withdraw_token_jto');
 
+} else if (process.env.JUST_OPERATE_JTO) {
+    require('./restaking/7_operate_jto')(1);
+
 } else {
     require('./restaking/1_initialize');
 

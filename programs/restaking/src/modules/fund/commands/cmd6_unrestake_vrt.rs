@@ -107,8 +107,8 @@ impl UnrestakeVRTCommand {
                     .find(|account| account.key() == address)
                     .copied()
             })
-            .ok_or_else(|| error!(errors::ErrorCode::FundOperationCommandExecutionFailedException))
-            .and_then(Account::<NormalizedTokenPoolAccount>::try_from)?;
+            .map(Account::<NormalizedTokenPoolAccount>::try_from)
+            .transpose()?;
 
         // calculate additionally required unstaking amount for each supported tokens
         let total_unstaking_obligated_amount_as_sol =
@@ -138,8 +138,14 @@ impl UnrestakeVRTCommand {
                                             )?
                                             .max(0),
                                     )? + normalized_token_pool_account
-                                        .get_supported_token(&supported_token.mint)
-                                        .map(|t| t.locked_amount)
+                                        .as_ref()
+                                        .map(|account| {
+                                            account
+                                                .get_supported_token(&supported_token.mint)
+                                                .map(|t| t.locked_amount)
+                                        })
+                                        .transpose()
+                                        .unwrap_or_default()
                                         .unwrap_or_default(),
                                 )?,
                                 // not stakable tokens
@@ -218,9 +224,9 @@ impl UnrestakeVRTCommand {
                                     )?,
                                     restaking_vault.sol_allocation_capacity_amount,
                                 ))
-                            } else if normalized_token_pool_account
-                                .has_supported_token(&supported_token.mint)
-                            {
+                            } else if normalized_token_pool_account.as_ref().is_some_and(
+                                |account| account.has_supported_token(&supported_token.mint),
+                            ) {
                                 // it is a normalized token vault and this supported token belongs to the normalized token pool
                                 Some(WeightedAllocationParticipant::new(
                                     restaking_vault.sol_allocation_weight,
@@ -234,12 +240,19 @@ impl UnrestakeVRTCommand {
                                         pricing_service.get_token_amount_as_sol(
                                             &supported_token.mint,
                                             normalized_token_pool_account
+                                                .as_ref()
+                                                .unwrap()
                                                 .get_supported_token(&supported_token.mint)?
                                                 .locked_amount,
                                         )?,
                                         pricing_service.get_token_amount_as_sol(
-                                            &normalized_token_pool_account.normalized_token_mint,
+                                            &normalized_token_pool_account
+                                                .as_ref()
+                                                .unwrap()
+                                                .normalized_token_mint,
                                             normalized_token_pool_account
+                                                .as_ref()
+                                                .unwrap()
                                                 .normalized_token_supply_amount,
                                         )?,
                                     )?,

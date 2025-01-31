@@ -400,7 +400,8 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                     })
                 }
-                _ => DelegateVSTCommand::default().without_required_accounts(),
+                // TODO: DelegateVST...
+                _ => HarvestRewardCommand::default().without_required_accounts(),
             }),
         ))
     }
