@@ -275,6 +275,9 @@ impl UnrestakeVRTCommand {
                 let item = &mut items[index];
                 item.allocated_receipt_token_amount += pricing_service
                     .get_sol_amount_as_token(&item.receipt_token_mint, p.get_last_cut_amount()?)?;
+
+                // reflect already unrestaking amounts
+                item.allocated_receipt_token_amount = item.allocated_receipt_token_amount.saturating_sub(fund_account.get_restaking_vault(&item.vault).unwrap().receipt_token_operation_receivable_amount);
             }
         }
 
