@@ -288,7 +288,8 @@ impl ClaimUnstakedSOLCommand {
             .pricing_source
             .try_deserialize()?;
 
-        let (to_sol_account_amount, claimed_sol_amount) = match token_pricing_source {
+        let (to_sol_account_amount, claimed_sol_amount, should_resume) = match token_pricing_source
+        {
             Some(TokenPricingSource::SPLStakePool { address }) => self
                 .spl_stake_pool_claim_sol::<SPLStakePool>(
                     ctx,
@@ -384,17 +385,26 @@ impl ClaimUnstakedSOLCommand {
 
         // prepare state does not require additional accounts,
         // so we can execute directly.
-        self.execute_prepare(ctx, accounts, pool_token_mints[1..].to_vec(), result)
+        self.execute_prepare(
+            ctx,
+            accounts,
+            if should_resume {
+                pool_token_mints.to_vec()
+            } else {
+                pool_token_mints[1..].to_vec()
+            },
+            result,
+        )
     }
 
-    /// return [to_sol_account_amount, claimed_sol_amount]
+    /// return [to_sol_account_amount, claimed_sol_amount, should_resume]
     fn spl_stake_pool_claim_sol<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mint_address: &Pubkey, // just informative
         pool_account_address: Pubkey,
-    ) -> Result<(u64, u64)> {
+    ) -> Result<(u64, u64, bool)> {
         let [fund_reserve_account, fund_treasury_account, clock, stake_history, stake_program, remaining_accounts @ ..] =
             accounts
         else {
@@ -411,6 +421,8 @@ impl ClaimUnstakedSOLCommand {
 
         let fund_account = ctx.fund_account.load()?;
 
+        let mut processed = false;
+        let mut should_resume = false;
         for (index, fund_stake_account) in fund_stake_accounts.iter().enumerate() {
             let fund_stake_account_address = *FundAccount::find_stake_account_address(
                 &ctx.fund_account.key(),
@@ -423,6 +435,10 @@ impl ClaimUnstakedSOLCommand {
             // Skip uninitialized stake account
             if !fund_stake_account.is_initialized() {
                 continue;
+            }
+            if processed {
+                should_resume = true;
+                break;
             }
 
             let claimed_sol_amount = SPLStakePoolService::<T>::claim_sol(
@@ -440,21 +456,26 @@ impl ClaimUnstakedSOLCommand {
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
+            processed = true;
         }
 
         let to_sol_account_amount = fund_reserve_account.lamports();
 
-        Ok((to_sol_account_amount, total_claimed_sol_amount))
+        Ok((
+            to_sol_account_amount,
+            total_claimed_sol_amount,
+            should_resume,
+        ))
     }
 
-    /// return [to_sol_account_amount, claimed_sol_amount]
+    /// return [to_sol_account_amount, claimed_sol_amount, should_resume]
     fn marinade_stake_pool_claim_sol<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mint_address: &Pubkey,
         pool_account_address: Pubkey,
-    ) -> Result<(u64, u64)> {
+    ) -> Result<(u64, u64, bool)> {
         let [fund_reserve_account, _fund_treasury_account, pool_program, pool_account, pool_token_mint, pool_token_program, pool_reserve_account, clock, remaining_accounts @ ..] =
             accounts
         else {
@@ -481,6 +502,8 @@ impl ClaimUnstakedSOLCommand {
 
         let fund_account = ctx.fund_account.load()?;
 
+        let mut processed = false;
+        let mut should_resume = false;
         for (index, withdrawal_ticket_account) in withdrawal_ticket_accounts.iter().enumerate() {
             let withdrawal_ticket_account_address =
                 *FundAccount::find_unstaking_ticket_account_address(
@@ -498,6 +521,10 @@ impl ClaimUnstakedSOLCommand {
             if !withdrawal_ticket_account.is_initialized() {
                 continue;
             }
+            if processed {
+                should_resume = true;
+                break;
+            }
 
             let claimed_sol_amount = marinade_stake_pool_service.claim_sol(
                 ctx.system_program,
@@ -509,10 +536,15 @@ impl ClaimUnstakedSOLCommand {
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
+            processed = true;
         }
 
         let to_sol_account_amount = fund_reserve_account.lamports();
 
-        Ok((to_sol_account_amount, total_claimed_sol_amount))
+        Ok((
+            to_sol_account_amount,
+            total_claimed_sol_amount,
+            should_resume,
+        ))
     }
 }
