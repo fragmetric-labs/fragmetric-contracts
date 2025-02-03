@@ -247,7 +247,7 @@ impl NormalizeSTCommand {
                 }
             }
 
-            if allocated_sol_amount_for_normalized_token_vaults > 1_000_000 {
+            if allocated_sol_amount_for_normalized_token_vaults >= 1_000_000_000 {
                 items.push(NormalizeSTCommandItem {
                     supported_token_mint: supported_token.mint,
                     allocated_token_amount: pricing_service.get_sol_amount_as_token(

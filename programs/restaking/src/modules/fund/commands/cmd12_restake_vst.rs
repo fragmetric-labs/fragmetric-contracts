@@ -147,7 +147,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             &token_mint,
                             strategy_participant.get_last_put_amount()?,
                         )?;
-                        if allocated_token_amount > 1_000_000 {
+                        if allocated_token_amount >= 1_000_000_000 {
                             let restaking_vault = restakable_vaults.get(index).unwrap();
                             match items
                                 .iter_mut()

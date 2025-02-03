@@ -242,7 +242,8 @@ impl UnstakeLSTCommand {
                     unstaking_strategy.get_participant_last_cut_amount_by_index(index)?;
                 let allocated_token_amount = pricing_service
                     .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
-                if allocated_token_amount > 0 {
+                /// Due to
+                if allocated_token_amount >= 1_500_000_000 {
                     items.push(UnstakeLSTCommandItem {
                         token_mint: supported_token.mint,
                         allocated_token_amount,
@@ -725,7 +726,7 @@ impl UnstakeLSTCommand {
                     fund_supported_token_reserve_account,
                     fund_reserve_account,
                     &[&fund_account.get_reserve_account_seeds()],
-                    total_token_amount_to_burn,
+                    0, // total_token_amount_to_burn,
                 )?;
             total_token_amount_to_burn -= burnt_pool_token_amount;
             total_unstaked_sol_amount += unstaked_sol_amount;

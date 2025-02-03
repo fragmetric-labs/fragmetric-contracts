@@ -356,7 +356,7 @@ impl UnrestakeVRTCommand {
 
         items = items
             .iter()
-            .filter(|item| item.allocated_receipt_token_amount > 0)
+            .filter(|item| item.allocated_receipt_token_amount >= 1_000_000_000)
             .copied()
             .collect();
 

@@ -175,7 +175,7 @@ impl StakeSOLCommand {
             Vec::<StakeSOLCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
         for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             let allocated_sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
-            if allocated_sol_amount > 1_000_000 {
+            if allocated_sol_amount >= 1_000_000_000 {
                 items.push(StakeSOLCommandItem {
                     token_mint: supported_token.mint,
                     allocated_sol_amount,
