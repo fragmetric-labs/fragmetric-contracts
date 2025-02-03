@@ -12,9 +12,8 @@ use crate::modules::staking::{
 use crate::utils::AccountInfoExt;
 
 use super::{
-    FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, UnrestakeVRTCommand, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -500,7 +499,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
                 None => (
                     result,
-                    Some(UnrestakeVRTCommand::default().without_required_accounts()),
+                    Some(UnstakeLSTCommand::default().without_required_accounts()),
                 ),
             }
         })

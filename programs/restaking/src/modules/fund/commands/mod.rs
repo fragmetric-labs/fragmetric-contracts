@@ -8,8 +8,8 @@ mod cmd2_enqueue_withdrawal_batch;
 mod cmd3_claim_unrestaked_vst;
 mod cmd4_denormalize_nt;
 mod cmd5_claim_unstaked_sol;
-mod cmd6_unstake_lst;
-mod cmd7_process_withdrawal_batch;
+mod cmd6_process_withdrawal_batch;
+mod cmd7_unstake_lst;
 mod cmd8_unrestake_vrt;
 mod cmd9_undelegate_vst;
 
@@ -23,8 +23,8 @@ pub use cmd2_enqueue_withdrawal_batch::*;
 pub use cmd3_claim_unrestaked_vst::*;
 pub use cmd4_denormalize_nt::*;
 pub use cmd5_claim_unstaked_sol::*;
-pub use cmd6_unstake_lst::*;
-pub use cmd7_process_withdrawal_batch::*;
+pub use cmd6_process_withdrawal_batch::*;
+pub use cmd7_unstake_lst::*;
 pub use cmd8_unrestake_vrt::*;
 pub use cmd9_undelegate_vst::*;
 
