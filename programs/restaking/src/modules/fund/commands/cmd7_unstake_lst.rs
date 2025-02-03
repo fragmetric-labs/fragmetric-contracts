@@ -723,7 +723,7 @@ impl UnstakeLSTCommand {
                     fund_supported_token_reserve_account,
                     fund_reserve_account,
                     &[&fund_account.get_reserve_account_seeds()],
-                    0, // total_token_amount_to_burn,
+                    total_token_amount_to_burn,
                 )?;
             total_token_amount_to_burn -= burnt_pool_token_amount;
             total_unstaked_sol_amount += unstaked_sol_amount;

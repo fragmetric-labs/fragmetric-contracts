@@ -93,6 +93,14 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.sleepUntil(416);
         await restaking.runOperatorFundCommands();
 
+        logger.info('waiting...');
+        await restaking.sleepUntil(448);
+        await restaking.runOperatorFundCommands();
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(480);
+        await restaking.runOperatorFundCommands();
+
         await restaking.runUserWithdraw(user1, null, new BN(2));
     });
 });
