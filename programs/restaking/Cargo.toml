@@ -32,6 +32,7 @@ mainnet = []
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
+bincode = { workspace = true }
 bytemuck = { workspace = true }
 jito-vault-sdk = { workspace = true }
 jito-vault-core = { workspace = true }

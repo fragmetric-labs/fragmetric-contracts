@@ -65,7 +65,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
         logger.info('waiting...');
-        await restaking.sleepUntil(192); // wait for more than one epoch
+        await restaking.sleepUntil(224); // wait for more than one epoch
         await restaking.runOperatorFundCommands(); // the unrestaking request should be claimable on this cycle
         await restaking.runOperatorFundCommands(); // one more cycle to denormalize and unstake tokens
 
@@ -73,13 +73,9 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
 
         logger.info('waiting...');
-        await restaking.sleepUntil(256); // wait for more than one epoch
+        await restaking.sleepUntil(288); // wait for more than one epoch
         await restaking.runOperatorFundCommands(); // one more cycle to claim unstaked tokens and proceed the last withdrawal batch
         await restaking.runUserWithdraw(user1, null, new BN(1));
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(288);
-        await restaking.runOperatorFundCommands();
 
         logger.info('waiting...');
         await restaking.sleepUntil(320);
@@ -91,6 +87,10 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
 
         logger.info('waiting...');
         await restaking.sleepUntil(384);
+        await restaking.runOperatorFundCommands();
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(416);
         await restaking.runOperatorFundCommands();
 
         await restaking.runUserWithdraw(user1, null, new BN(2));
