@@ -110,6 +110,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// * (4) withdraw_authority
     /// * (5) reserve_stake_account(writable)
     /// * (6) manager_fee_account(writable)
+    /// * (7) validator_list_account(writable)
+    /// * (8) sysvar clock
     #[inline(never)]
     pub fn find_accounts_to_deposit_sol(
         pool_account: &AccountInfo,
@@ -122,6 +124,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 Self::find_withdraw_authority_account_meta(pool_account),
                 (pool_account_data.reserve_stake, true),
                 (pool_account_data.manager_fee_account, true),
+                (pool_account_data.validator_list, true),
+                (solana_program::sysvar::clock::ID, false),
             ]);
 
         Ok(accounts)
