@@ -508,7 +508,11 @@ impl ClaimUnstakedSOLCommand {
                 fund_account.sol.get_total_reserved_amount(),
             );
             let supported_token = fund_account.get_supported_token_mut(pool_token_mint)?;
-            supported_token.pending_unstaking_amount_as_sol -= claimed_sol_amount;
+
+            // Deactivating stake account is treated as active stake, so it receives epoch reward!
+            supported_token.pending_unstaking_amount_as_sol = supported_token
+                .pending_unstaking_amount_as_sol
+                .saturating_sub(claimed_sol_amount);
 
             Some(
                 ClaimUnstakedSOLCommandResult {
