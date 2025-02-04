@@ -89,25 +89,9 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runOperatorFundCommands();
 
         logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(11));
-        logger.info('epoch 11: operator claim unstaked - process withdrawal');
+        await restaking.sleepUntil(epochToSlot(12));
+        logger.info('epoch 12: operator claim unstaked - process withdrawal');
         await restaking.runOperatorFundCommands();
-
-        // logger.info('waiting...');
-        // await restaking.sleepUntil(384);
-        // await restaking.runOperatorFundCommands();
-
-        // logger.info('waiting...');
-        // await restaking.sleepUntil(416);
-        // await restaking.runOperatorFundCommands();
-
-        // logger.info('waiting...');
-        // await restaking.sleepUntil(448);
-        // await restaking.runOperatorFundCommands();
-
-        // logger.info('waiting...');
-        // await restaking.sleepUntil(480);
-        // await restaking.runOperatorFundCommands();
 
         await restaking.runUserWithdraw(user1, null, new BN(2));
     });
