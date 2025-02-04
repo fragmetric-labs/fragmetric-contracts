@@ -8,9 +8,8 @@ use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::{
-    EnqueueWithdrawalBatchCommand, FundAccount, FundService, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, UnrestakeVRTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -154,9 +153,7 @@ impl SelfExecutable for UnstakeLSTCommand {
 
         Ok((
             result,
-            entry.or_else(|| {
-                Some(ProcessWithdrawalBatchCommand::default().without_required_accounts())
-            }),
+            entry.or_else(|| Some(UnrestakeVRTCommand::default().without_required_accounts())),
         ))
     }
 }
@@ -242,7 +239,8 @@ impl UnstakeLSTCommand {
                     unstaking_strategy.get_participant_last_cut_amount_by_index(index)?;
                 let allocated_token_amount = pricing_service
                     .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
-                if allocated_token_amount > 0 {
+
+                if allocated_token_amount >= 1_500_000_000 {
                     items.push(UnstakeLSTCommandItem {
                         token_mint: supported_token.mint,
                         allocated_token_amount,

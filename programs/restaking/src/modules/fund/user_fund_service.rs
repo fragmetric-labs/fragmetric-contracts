@@ -472,6 +472,16 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             .get_asset_state_mut(supported_token_mint_key)?
             .withdrawal_user_reserved_amount -= asset_user_amount;
 
+        let should_transfer_rent_to_user =
+            supported_token_mint_key.is_none() && fund_withdrawal_batch_account.is_settled();
+        let transferring_asset_user_amount = if should_transfer_rent_to_user {
+            let minimum_balance = Rent::get()?
+                .minimum_balance(fund_withdrawal_batch_account.to_account_info().data_len());
+            asset_user_amount.saturating_sub(minimum_balance)
+        } else {
+            asset_user_amount
+        };
+
         // transfer either SOL or token to user account
         {
             let fund_account = self.fund_account.load()?;
@@ -490,7 +500,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                             },
                             &[&self.fund_account.load()?.get_reserve_account_seeds()],
                         ),
-                        asset_user_amount,
+                        transferring_asset_user_amount,
                         supported_token_mint.decimals,
                     )?;
                 }
@@ -504,7 +514,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
                             },
                             &[&fund_account.get_reserve_account_seeds()],
                         ),
-                        asset_user_amount,
+                        transferring_asset_user_amount,
                     )?;
                 }
             };
@@ -515,7 +525,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             // move small remains to operation reserved
             let remaining_asset_amount =
                 fund_withdrawal_batch_account.get_remaining_asset_amount_after_settled();
-            {
+            if remaining_asset_amount > 0 {
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset_state = fund_account.get_asset_state_mut(supported_token_mint_key)?;
                 asset_state.withdrawal_user_reserved_amount -= remaining_asset_amount;
@@ -523,7 +533,11 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             }
 
             // close the ticket to collect rent
-            fund_withdrawal_batch_account.close(fund_treasury_account.to_account_info())?;
+            fund_withdrawal_batch_account.close(if should_transfer_rent_to_user {
+                self.user.to_account_info()
+            } else {
+                fund_treasury_account.to_account_info()
+            })?;
         }
 
         let fund_account = self.fund_account.load()?;
@@ -542,7 +556,7 @@ impl<'info, 'a> UserFundService<'info, 'a> {
             batch_id: withdrawal_request.batch_id,
             request_id: withdrawal_request.request_id,
             burnt_receipt_token_amount: receipt_token_amount,
-            returned_receipt_token_amount: 0, // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
+            returned_receipt_token_amount: 0, // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
             withdrawn_amount: asset_user_amount,
             deducted_fee_amount: asset_fee_amount,
         })

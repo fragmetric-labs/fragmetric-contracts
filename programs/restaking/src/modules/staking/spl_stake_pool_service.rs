@@ -110,6 +110,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// * (4) withdraw_authority
     /// * (5) reserve_stake_account(writable)
     /// * (6) manager_fee_account(writable)
+    /// * (7) validator_list_account(writable)
+    /// * (8) sysvar clock
     #[inline(never)]
     pub fn find_accounts_to_deposit_sol(
         pool_account: &AccountInfo,
@@ -122,6 +124,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 Self::find_withdraw_authority_account_meta(pool_account),
                 (pool_account_data.reserve_stake, true),
                 (pool_account_data.manager_fee_account, true),
+                (pool_account_data.validator_list, true),
+                (solana_program::sysvar::clock::ID, false),
             ]);
 
         Ok(accounts)
@@ -723,7 +727,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         if !Self::is_stake_account_withdrawable(
             stake_account_data,
             &Clock::from_account_info(clock)?,
-            &StakeHistory::from_account_info(stake_history)?,
+            stake_history,
         )? {
             return Ok(0);
         }
@@ -785,7 +789,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     fn is_stake_account_withdrawable(
         stake_account_data: &StakeStateV2,
         clock: &Clock,
-        stake_history: &StakeHistory,
+        stake_history: &AccountInfo,
     ) -> Result<bool> {
         let StakeStateV2::Stake(_, stake, _) = stake_account_data else {
             return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
@@ -798,9 +802,59 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let new_rate_activation_epoch = Some(0);
         // if we have a deactivation epoch and we're in cooldown
         let staked = if clock.epoch >= stake.delegation.deactivation_epoch {
-            stake
-                .delegation
-                .stake(clock.epoch, stake_history, new_rate_activation_epoch)
+            let stake_history_data = stake_history.try_borrow_data()?;
+            const LEN_BYTES: usize = 8;
+            const EPOCH_BYTES: usize = 8;
+            const ENTRY_BYTES: usize = 32;
+
+            // Since stake history consumes too much heap, we will customize it.
+            // We only need [activation_epoch, target_epoch) entries of stake history.
+            let start_epoch = stake.delegation.activation_epoch;
+            let end_epoch = clock.epoch;
+            let mut custom_stake_history_data = Vec::with_capacity(
+                LEN_BYTES + end_epoch.saturating_sub(start_epoch) as usize * ENTRY_BYTES,
+            );
+
+            // According to bincode::Deserializer::deserialize_seq, first 8 byte is length of vector (little endian)
+            let mut buffer = [0; LEN_BYTES];
+            buffer.copy_from_slice(&stake_history_data[..LEN_BYTES]);
+            let len = u64::from_le_bytes(buffer);
+
+            // Current len = 0 (will be updated soon)
+            custom_stake_history_data.extend([0; LEN_BYTES]);
+
+            // Fill entries
+            let mut count = 0;
+            for i in 0..len as usize {
+                let entry_offset = LEN_BYTES + i * ENTRY_BYTES;
+
+                // check epoch
+                let mut buffer = [0; EPOCH_BYTES];
+                buffer
+                    .copy_from_slice(&stake_history_data[entry_offset..entry_offset + EPOCH_BYTES]);
+                let epoch = u64::from_le_bytes(buffer);
+
+                if (start_epoch..end_epoch).contains(&epoch) {
+                    custom_stake_history_data.extend_from_slice(
+                        &stake_history_data[entry_offset..entry_offset + ENTRY_BYTES],
+                    );
+                    count += 1;
+                }
+            }
+
+            // Write correct len
+            custom_stake_history_data[..LEN_BYTES].copy_from_slice(&(count as u64).to_le_bytes());
+
+            // Deserialize
+            let custom_stake_history: StakeHistory =
+                bincode::deserialize(&custom_stake_history_data)
+                    .map_err(|_| ProgramError::InvalidArgument)?;
+
+            stake.delegation.stake(
+                clock.epoch,
+                &custom_stake_history,
+                new_rate_activation_epoch,
+            )
         } else {
             // Assume full stake if the stake account hasn't been
             //  de-activated, because in the future the exposed stake

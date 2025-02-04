@@ -5,7 +5,7 @@ use crate::errors::ErrorCode;
 use super::*;
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Debug)]
 pub struct FundWithdrawalBatchAccount {
     data_version: u16,
     bump: u8,
@@ -26,7 +26,7 @@ pub struct FundWithdrawalBatchAccount {
     pub(super) asset_fee_amount: u64,
 
     processed_at: i64,
-    // TODO/v0.4: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
+    // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
     _reserved: [u8; 32],
 }
 

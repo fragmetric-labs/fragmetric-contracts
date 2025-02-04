@@ -176,7 +176,7 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         reward_id: u16,
         amount: u64,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        // TODO v0.4/reward: ensure substantial asset transfer for certain type of rewards
+        // TODO v0.5/reward: ensure substantial asset transfer for certain type of rewards
 
         self.reward_account.load_mut()?.settle_reward(
             reward_pool_id,

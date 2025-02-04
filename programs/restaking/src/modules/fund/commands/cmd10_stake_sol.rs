@@ -175,7 +175,7 @@ impl StakeSOLCommand {
             Vec::<StakeSOLCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
         for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             let allocated_sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
-            if allocated_sol_amount > 1_000_000 {
+            if allocated_sol_amount >= 1_000_000_000 {
                 items.push(StakeSOLCommandItem {
                     token_mint: supported_token.mint,
                     allocated_sol_amount,
@@ -365,7 +365,7 @@ impl StakeSOLCommand {
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
     ) -> Result<(u64, u64, u64)> {
-        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, pricing_sources @ ..] =
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -378,6 +378,15 @@ impl StakeSOLCommand {
             pool_account,
             pool_token_mint,
             pool_token_program,
+        )?;
+
+        // first update stake pool balance
+        spl_stake_pool_service.update_stake_pool_balance_if_needed(
+            withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            validator_list_account,
+            clock,
         )?;
 
         let (

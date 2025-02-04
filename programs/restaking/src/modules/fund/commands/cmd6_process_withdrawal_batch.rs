@@ -3,6 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
+use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{
@@ -11,9 +12,8 @@ use crate::modules::staking::{
 use crate::utils::AccountInfoExt;
 
 use super::{
-    FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, StakeSOLCommand, UnstakeLSTCommand,
-    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -499,7 +499,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
                 None => (
                     result,
-                    Some(StakeSOLCommand::default().without_required_accounts()),
+                    Some(UnstakeLSTCommand::default().without_required_accounts()),
                 ),
             }
         })

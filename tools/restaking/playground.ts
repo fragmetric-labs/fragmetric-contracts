@@ -1566,6 +1566,82 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    // for test - delegate jito vault token account
+    public async runAdminJitoVaultDelegateJitoSOLTokenAccount() {
+        const DelegateTokenAccountInstructionDataSize = {
+            discriminator: 1, // u8
+        };
+
+        const discriminator = 20;
+        const data = Buffer.alloc(
+            DelegateTokenAccountInstructionDataSize.discriminator
+        );
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset);
+
+        ///   0. `[]` config
+        ///   1. `[]` vault
+        ///   2. `[signer]` delegate_asset_admin
+        ///   3. `[]` token_mint
+        ///   4. `[writable]` token_account
+        ///   5. `[]` delegate
+        const admin = this.keychain.getKeypair("ADMIN");
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoVaultProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoVaultConfig,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: this.restakingVaultMetadata.jito1.vault,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: admin.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: this.supportedTokenMetadata.jitoSOL.mint,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: spl.getAssociatedTokenAddressSync(
+                            this.supportedTokenMetadata.jitoSOL.mint,
+                            this.restakingVaultMetadata.jito1.vault,
+                            true,
+                            this.supportedTokenMetadata.jitoSOL.program,
+                        ),
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: admin.publicKey,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: this.supportedTokenMetadata.jitoSOL.program,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [admin, this.wallet],
+        });
+    }
+
     // for test - initialize operator_vault_ticket
     public async runAdminInitializeOperatorVaultTicket(vault: web3.PublicKey, operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeOperatorVaultTicketInstructionDataSize = {
@@ -2070,7 +2146,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             donationEnabled: this.isDevnet ? true : (this.isMainnet ? false : true),
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
-            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
+            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
             solDepositable: true,
             solAccumulatedDepositCapacity: this.isDevnet
@@ -2079,7 +2155,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ),
             solAccumulatedDepositAmount: null,
             solWithdrawalable: true,
-            solWithdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+            solWithdrawalNormalReserveRateBPS: 0,
             solWithdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
 
             supportedTokens: Object.entries(this.supportedTokenMetadata).map(([symbol, v]) => ({
@@ -2118,7 +2194,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 })(),
                 tokenAccumulatedDepositAmount : null,
                 withdrawable: false,
-                withdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+                withdrawalNormalReserveRateBPS: 0,
                 withdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
                 tokenRebalancingAmount: null as BN | null,
                 solAllocationWeight: (() => {

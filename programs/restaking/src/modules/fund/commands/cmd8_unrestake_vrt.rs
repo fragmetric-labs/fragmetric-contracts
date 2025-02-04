@@ -15,10 +15,10 @@ use crate::utils::{AccountInfoExt, PDASeeds};
 use crate::{errors, utils};
 
 use super::{
-    ClaimUnstakedSOLCommand, FundAccount, FundService, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable, UndelegateVSTCommand,
-    UnstakeLSTCommandItem, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULTS, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundAccount, FundService, OperationCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, UndelegateVSTCommand, UnstakeLSTCommandItem,
+    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -79,7 +79,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
 
         Ok((
             result,
-            entry.or_else(|| Some(ClaimUnstakedSOLCommand::default().without_required_accounts())),
+            entry.or_else(|| Some(UndelegateVSTCommand::default().without_required_accounts())),
         ))
     }
 }
@@ -109,72 +109,143 @@ impl UnrestakeVRTCommand {
             })
             .map(Account::<NormalizedTokenPoolAccount>::try_from)
             .transpose()?;
+        let normalized_token_pool_account = normalized_token_pool_account.as_ref();
 
-        // calculate additionally required unstaking amount for each supported tokens
-        let total_unstaking_obligated_amount_as_sol =
-            fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
-
-        let mut unstaking_strategy =
+        // a strategy with supported tokens
+        let mut extra_unrestaking_strategy =
             WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
                 fund_account
                     .get_supported_tokens_iter()
                     .map(|supported_token| {
-                        Ok(WeightedAllocationParticipant::new(
+                        WeightedAllocationParticipant::new(
                             supported_token.sol_allocation_weight,
-                            match supported_token.pricing_source.try_deserialize()? {
-                                // stakable tokens
-                                Some(TokenPricingSource::SPLStakePool { .. })
-                                | Some(TokenPricingSource::MarinadeStakePool { .. })
-                                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                                    ..
-                                }) => pricing_service.get_token_amount_as_sol(
-                                    &supported_token.mint,
-                                    u64::try_from(
-                                        fund_account
-                                            .get_asset_net_operation_reserved_amount(
-                                                Some(supported_token.mint),
-                                                false,
-                                                &pricing_service,
-                                            )?
-                                            .max(0),
-                                    )? + normalized_token_pool_account
-                                        .as_ref()
-                                        .map(|account| {
-                                            account
-                                                .get_supported_token(&supported_token.mint)
-                                                .map(|t| t.locked_amount)
-                                        })
-                                        .transpose()
-                                        .unwrap_or_default()
-                                        .unwrap_or_default(),
-                                )?,
-                                // not stakable tokens
-                                Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => 0,
-                                // invalid configuration
-                                Some(TokenPricingSource::FragmetricNormalizedTokenPool {
-                                    ..
-                                })
-                                | Some(TokenPricingSource::JitoRestakingVault { .. })
-                                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                                | None => err!(
-                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
-                                )?,
-                                #[cfg(all(test, not(feature = "idl-build")))]
-                                Some(TokenPricingSource::Mock { .. }) => err!(
-                                    errors::ErrorCode::FundOperationCommandExecutionFailedException
-                                )?,
-                            },
+                            0,
                             supported_token.sol_allocation_capacity_amount,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?,
+                        )
+                    }),
             );
-        unstaking_strategy.cut_greedy(total_unstaking_obligated_amount_as_sol)?;
 
-        // calculate required token amount for each supported tokens' withdrawal obligation
-        let mut items = Vec::<UnrestakeVSTCommandItem>::with_capacity(
-            FUND_ACCOUNT_MAX_RESTAKING_VAULTS as usize,
-        );
+        // calculate additionally required unrestaking amount for each tokens to meet SOL withdrawal obligation
+        let mut extra_unrestaking_obligated_amount_as_sol =
+            fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
+
+        // and will calculate mandatory unrestaking amount for each tokens to meet token withdrawal obligation
+        let mut unrestaking_obligated_amounts_as_sol: [u64; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS] =
+            [0; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS];
+
+        // reflect ready to unstake amount of normalized token
+        if let Some(pool) = normalized_token_pool_account {
+            extra_unrestaking_obligated_amount_as_sol = extra_unrestaking_obligated_amount_as_sol
+                .saturating_sub(
+                    pricing_service.get_token_amount_as_sol(
+                        &pool.normalized_token_mint,
+                        fund_account
+                            .get_normalized_token()
+                            .unwrap()
+                            .operation_reserved_amount,
+                    )?,
+                );
+        }
+
+        for (supported_token_index, supported_token) in
+            fund_account.get_supported_tokens_iter().enumerate()
+        {
+            // reflect ready to unstake amount of this supported token
+            let unstaking_reserved_amount_as_sol = pricing_service.get_token_amount_as_sol(
+                &supported_token.mint,
+                u64::try_from(
+                    fund_account
+                        .get_asset_net_operation_reserved_amount(
+                            Some(supported_token.mint),
+                            false,
+                            &pricing_service,
+                        )?
+                        .max(0),
+                )?,
+            )?;
+            extra_unrestaking_obligated_amount_as_sol = extra_unrestaking_obligated_amount_as_sol
+                .saturating_sub(unstaking_reserved_amount_as_sol);
+
+            // the amount to unrestake for withdrawal obligation of this token itself
+            unrestaking_obligated_amounts_as_sol[supported_token_index] = pricing_service
+                .get_token_amount_as_sol(
+                    &supported_token.mint,
+                    u64::try_from(
+                        fund_account
+                            .get_asset_net_operation_reserved_amount(
+                                Some(supported_token.mint),
+                                true,
+                                &pricing_service,
+                            )?
+                            .min(0)
+                            .neg(),
+                    )?,
+                )?;
+
+            // iterator for (restaking_vault, is_normalized_token_vault)
+            let unrestakable_vaults_iter =
+                fund_account
+                    .get_restaking_vaults_iter()
+                    .filter_map(|restaking_vault| {
+                        if restaking_vault.supported_token_mint == supported_token.mint {
+                            Some((restaking_vault, false))
+                        } else if normalized_token_pool_account.is_some_and(|pool| {
+                            pool.normalized_token_mint == restaking_vault.supported_token_mint
+                                && pool.has_supported_token(&supported_token.mint)
+                        }) {
+                            Some((restaking_vault, true))
+                        } else {
+                            None
+                        }
+                    });
+
+            // sum remaining unrestakable amount of this supported token
+            let extra_unrestaking_strategy_participant =
+                extra_unrestaking_strategy.get_participant_by_index_mut(supported_token_index)?;
+            for (restaking_vault, is_normalized_token_vault) in unrestakable_vaults_iter {
+                extra_unrestaking_strategy_participant.allocated_amount += {
+                    if is_normalized_token_vault {
+                        // calculate supported token amount in normalized token pool proportionally
+                        let pool = normalized_token_pool_account.unwrap();
+                        pricing_service.get_token_amount_as_sol(
+                            &supported_token.mint,
+                            utils::get_proportional_amount(
+                                pool.get_supported_token(&supported_token.mint)
+                                    .map(|t| t.locked_amount)
+                                    .unwrap(),
+                                pricing_service.get_token_amount_as_sol(
+                                    &restaking_vault.receipt_token_mint,
+                                    restaking_vault.receipt_token_operation_reserved_amount
+                                        + restaking_vault.receipt_token_operation_receivable_amount,
+                                )?,
+                                pricing_service.get_token_amount_as_sol(
+                                    &pool.normalized_token_mint,
+                                    pool.normalized_token_supply_amount,
+                                )?,
+                            )?,
+                        )?
+                    } else {
+                        pricing_service.get_token_amount_as_sol(
+                            &restaking_vault.receipt_token_mint,
+                            restaking_vault.receipt_token_operation_reserved_amount
+                                + restaking_vault.receipt_token_operation_receivable_amount,
+                        )?
+                    }
+                };
+            }
+
+            extra_unrestaking_strategy_participant.allocated_amount =
+                extra_unrestaking_strategy_participant
+                    .allocated_amount
+                    .saturating_sub(unrestaking_obligated_amounts_as_sol[supported_token_index]);
+        }
+
+        // first, allocate extra unrestaking amount for each tokens
+        extra_unrestaking_strategy.cut_greedy(extra_unrestaking_obligated_amount_as_sol)?;
+
+        // now allocate extra unrestaking + own unrestaking amount to related restaking vaults for each tokens
+        let mut items =
+            Vec::<UnrestakeVSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
         for restaking_vault in fund_account.get_restaking_vaults_iter() {
             items.push(UnrestakeVSTCommandItem {
                 vault: restaking_vault.vault,
@@ -187,100 +258,105 @@ impl UnrestakeVRTCommand {
         for (supported_token_index, supported_token) in
             fund_account.get_supported_tokens_iter().enumerate()
         {
-            let unstaking_obligated_amount_as_sol = unstaking_strategy
-                .get_participant_by_index(supported_token_index)?
-                .get_last_cut_amount()?;
-            let unrestaking_obligated_amount_as_sol = pricing_service.get_token_amount_as_sol(
-                &supported_token.mint,
-                u64::try_from(
-                    fund_account
-                        .get_asset_net_operation_reserved_amount(
-                            Some(supported_token.mint),
-                            true,
-                            &pricing_service,
-                        )?
-                        .min(0)
-                        .neg(),
-                )?,
-            )? + unstaking_obligated_amount_as_sol;
+            let extra_unrestaking_obligated_amount_as_sol = extra_unrestaking_strategy
+                .get_participant_last_cut_amount_by_index(supported_token_index)?;
+            let unrestaking_obligated_amounts_as_sol =
+                unrestaking_obligated_amounts_as_sol[supported_token_index];
 
-            // it assumes there won't be no more than two duplicate vaults for a same token including normalized token.
+            // iterator for (restaking_vault_index, restaking_vault, is_normalized_token_vault)
+            let unrestakable_vaults_iter = fund_account
+                .get_restaking_vaults_iter()
+                .enumerate()
+                .filter_map(|(index, restaking_vault)| {
+                    if restaking_vault.supported_token_mint == supported_token.mint {
+                        Some((index, restaking_vault, false))
+                    } else if normalized_token_pool_account.is_some_and(|pool| {
+                        pool.normalized_token_mint == restaking_vault.supported_token_mint
+                            && pool.has_supported_token(&supported_token.mint)
+                    }) {
+                        Some((index, restaking_vault, true))
+                    } else {
+                        None
+                    }
+                });
+
+            // here, it allocates unrestaking amount for each vault (of same supported token)
+            // it assumes there won't be no more than two duplicate vaults using the same supported token.
+            let mut unrestaking_strategy_vault_indexes: [usize; 4] = [0; 4];
             let mut unrestaking_strategy = WeightedAllocationStrategy::<4>::new(
-                fund_account
-                    .get_restaking_vaults_iter()
+                unrestakable_vaults_iter
+                    .take(4)
                     .enumerate()
-                    .map(|(restaking_vault_index, restaking_vault)| {
-                        Ok(
-                            if restaking_vault.supported_token_mint == supported_token.mint {
-                                // it is a vault for this supported token
-                                Some(WeightedAllocationParticipant::new(
-                                    restaking_vault.sol_allocation_weight,
+                    .map(
+                        |(
+                            index,
+                            (restaking_vault_index, restaking_vault, is_normalized_token_vault),
+                        )| {
+                            // create strategy participant
+                            unrestaking_strategy_vault_indexes[index] = restaking_vault_index;
+                            Ok(WeightedAllocationParticipant::new(
+                                restaking_vault.sol_allocation_weight,
+                                if is_normalized_token_vault {
+                                    // calculate supported token amount in normalized token pool proportionally
+                                    let pool = normalized_token_pool_account.unwrap();
+                                    pricing_service.get_token_amount_as_sol(
+                                        &supported_token.mint,
+                                        utils::get_proportional_amount(
+                                            pool.get_supported_token(&supported_token.mint)
+                                                .map(|t| t.locked_amount)
+                                                .unwrap(),
+                                            pricing_service.get_token_amount_as_sol(
+                                                &restaking_vault.receipt_token_mint,
+                                                restaking_vault
+                                                    .receipt_token_operation_reserved_amount
+                                                    + restaking_vault
+                                                        .receipt_token_operation_receivable_amount,
+                                            )?,
+                                            pricing_service.get_token_amount_as_sol(
+                                                &pool.normalized_token_mint,
+                                                pool.normalized_token_supply_amount,
+                                            )?,
+                                        )?,
+                                    )?
+                                } else {
                                     pricing_service.get_token_amount_as_sol(
                                         &restaking_vault.receipt_token_mint,
-                                        // here accounts for previously allocated amount
                                         restaking_vault.receipt_token_operation_reserved_amount
-                                            - items[restaking_vault_index]
-                                                .allocated_receipt_token_amount,
-                                    )?,
-                                    restaking_vault.sol_allocation_capacity_amount,
-                                ))
-                            } else if normalized_token_pool_account.as_ref().is_some_and(
-                                |account| account.has_supported_token(&supported_token.mint),
-                            ) {
-                                // it is a normalized token vault and this supported token belongs to the normalized token pool
-                                Some(WeightedAllocationParticipant::new(
-                                    restaking_vault.sol_allocation_weight,
-                                    // those locked supported tokens in normalized token pool are mutually exclusive,
-                                    // so we can keep calculating without accounting for previously allocated amount
-                                    utils::get_proportional_amount(
-                                        pricing_service.get_token_amount_as_sol(
-                                            &restaking_vault.receipt_token_mint,
-                                            restaking_vault.receipt_token_operation_reserved_amount,
-                                        )?,
-                                        pricing_service.get_token_amount_as_sol(
-                                            &supported_token.mint,
-                                            normalized_token_pool_account
-                                                .as_ref()
-                                                .unwrap()
-                                                .get_supported_token(&supported_token.mint)?
-                                                .locked_amount,
-                                        )?,
-                                        pricing_service.get_token_amount_as_sol(
-                                            &normalized_token_pool_account
-                                                .as_ref()
-                                                .unwrap()
-                                                .normalized_token_mint,
-                                            normalized_token_pool_account
-                                                .as_ref()
-                                                .unwrap()
-                                                .normalized_token_supply_amount,
-                                        )?,
-                                    )?,
-                                    restaking_vault.sol_allocation_capacity_amount,
-                                ))
-                            } else {
-                                None
-                            },
-                        )
-                    })
-                    .collect::<Result<Vec<_>>>()?
-                    .iter()
-                    .flatten()
-                    .copied()
-                    .collect::<Vec<_>>(),
+                                            + restaking_vault
+                                                .receipt_token_operation_receivable_amount,
+                                    )?
+                                },
+                                restaking_vault.sol_allocation_capacity_amount,
+                            ))
+                        },
+                    )
+                    .collect::<Result<Vec<_>>>()?,
             );
 
-            unrestaking_strategy.cut_greedy(unrestaking_obligated_amount_as_sol)?;
-            for (index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
-                let item = &mut items[index];
+            unrestaking_strategy.cut_greedy(
+                extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol,
+            )?;
+
+            for (p_index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
+                let item = &mut items[unrestaking_strategy_vault_indexes[p_index]];
                 item.allocated_receipt_token_amount += pricing_service
                     .get_sol_amount_as_token(&item.receipt_token_mint, p.get_last_cut_amount()?)?;
             }
         }
 
+        // reflect already unrestaking amounts
+        for (restaking_vault_index, restaking_vault) in
+            fund_account.get_restaking_vaults_iter().enumerate()
+        {
+            let item = &mut items[restaking_vault_index];
+            item.allocated_receipt_token_amount = item
+                .allocated_receipt_token_amount
+                .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount);
+        }
+
         items = items
             .iter()
-            .filter(|item| item.allocated_receipt_token_amount > 0)
+            .filter(|item| item.allocated_receipt_token_amount >= 1_000_000_000)
             .copied()
             .collect();
 

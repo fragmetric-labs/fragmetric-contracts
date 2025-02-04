@@ -53,7 +53,7 @@ pub struct ClaimUnrestakedVSTCommandResult {
     pub supported_token_mint: Pubkey,
     pub claimed_supported_token_amount: u64,
     pub operation_reserved_supported_token_amount: u64,
-    pub burnt_receipt_token_amount: u64,
+    pub unrestaked_receipt_token_amount: u64,
     pub deducted_receipt_token_fee_amount: u64,
     pub total_unrestaking_receipt_token_amount: u64,
 }
@@ -297,7 +297,7 @@ impl ClaimUnrestakedVSTCommand {
                         supported_token_mint: item.supported_token_mint,
                         claimed_supported_token_amount: 0,
                         operation_reserved_supported_token_amount: 0,
-                        burnt_receipt_token_amount: 0,
+                        unrestaked_receipt_token_amount: 0,
                         deducted_receipt_token_fee_amount: 0,
                         total_unrestaking_receipt_token_amount: 0,
                     };
@@ -335,7 +335,7 @@ impl ClaimUnrestakedVSTCommand {
                             fund_account.sol.get_total_reserved_amount()
                         );
                         result.claimed_supported_token_amount += claimed_supported_token_amount;
-                        result.burnt_receipt_token_amount += unrestaked_receipt_token_amount;
+                        result.unrestaked_receipt_token_amount += unrestaked_receipt_token_amount;
                         result.deducted_receipt_token_fee_amount +=
                             deducted_program_fee_receipt_token_amount
                                 + deducted_vault_fee_receipt_token_amount;
@@ -349,13 +349,9 @@ impl ClaimUnrestakedVSTCommand {
 
                     let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
                     restaking_vault.receipt_token_operation_receivable_amount -=
-                        result.burnt_receipt_token_amount;
+                        result.unrestaked_receipt_token_amount;
                     result.total_unrestaking_receipt_token_amount =
                         restaking_vault.receipt_token_operation_receivable_amount;
-                    require_gte!(
-                        last_to_vault_supported_token_account_amount,
-                        restaking_vault.receipt_token_operation_reserved_amount
-                    );
 
                     let deducted_fee_amount_as_sol = pricing_service.get_token_amount_as_sol(
                         &vault_receipt_token_mint.key,
@@ -372,6 +368,11 @@ impl ClaimUnrestakedVSTCommand {
                                 result.claimed_supported_token_amount;
                             result.operation_reserved_supported_token_amount =
                                 normalized_token.operation_reserved_amount;
+
+                            require_gte!(
+                                last_to_vault_supported_token_account_amount,
+                                normalized_token.operation_reserved_amount
+                            );
                         }
                         _ => {
                             let supported_token =
@@ -385,6 +386,11 @@ impl ClaimUnrestakedVSTCommand {
                                 result.claimed_supported_token_amount;
                             result.operation_reserved_supported_token_amount =
                                 supported_token.token.operation_reserved_amount;
+
+                            require_gte!(
+                                last_to_vault_supported_token_account_amount,
+                                supported_token.token.operation_reserved_amount
+                            );
                         }
                     };
                     drop(fund_account);

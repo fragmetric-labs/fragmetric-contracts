@@ -79,7 +79,7 @@ impl DelegateVSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO v0.4.2: items size capacity should be changed for more acurate cf. unstake command
+        // TODO v0.4.3: items size capacity should be changed for more acurate cf. unstake command
         let mut items =
             Vec::<DelegateVSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
 
