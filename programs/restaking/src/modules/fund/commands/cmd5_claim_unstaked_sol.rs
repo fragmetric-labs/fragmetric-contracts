@@ -573,8 +573,6 @@ impl ClaimUnstakedSOLCommand {
 
         let fund_account = ctx.fund_account.load()?;
 
-        let mut processed = false;
-        let mut should_resume = false;
         for (&index, fund_stake_account) in claimable_stake_account_indices
             .iter()
             .zip(fund_stake_accounts)
@@ -590,10 +588,6 @@ impl ClaimUnstakedSOLCommand {
             // Skip uninitialized stake account
             if !fund_stake_account.is_initialized() {
                 continue;
-            }
-            if processed {
-                should_resume = true;
-                break;
             }
 
             let claimed_sol_amount = SPLStakePoolService::<T>::claim_sol(
@@ -611,16 +605,11 @@ impl ClaimUnstakedSOLCommand {
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
-            processed = true;
         }
 
         let to_sol_account_amount = fund_reserve_account.lamports();
 
-        Ok((
-            to_sol_account_amount,
-            total_claimed_sol_amount,
-            should_resume,
-        ))
+        Ok((to_sol_account_amount, total_claimed_sol_amount, false))
     }
 
     /// return [to_sol_account_amount, claimed_sol_amount, should_resume]
