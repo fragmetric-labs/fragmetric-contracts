@@ -183,6 +183,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
     /// * (0) sysvar clock
     /// * (1) sysvar stake_history
+    pub fn find_accounts_to_get_claimable_stake_accounts(
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        Ok([
+            (solana_program::sysvar::clock::ID, false),
+            (solana_program::sysvar::stake_history::ID, false),
+        ]
+        .into_iter())
+    }
+
+    /// * (0) sysvar clock
+    /// * (1) sysvar stake_history
     /// * (2) stake_program
     pub fn find_accounts_to_claim_sol() -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         Ok([
@@ -701,6 +712,34 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         )
     }
 
+    #[inline(never)]
+    pub fn get_claimable_stake_accounts(
+        // fixed
+        clock: &AccountInfo,
+        stake_history: &AccountInfo,
+
+        // variant
+        stake_accounts: impl Iterator<Item = &'info AccountInfo<'info>>,
+    ) -> Result<Vec<&'info Pubkey>> {
+        let clock = Clock::from_account_info(clock)?;
+        let stake_history = StakeHistory::from_account_info(stake_history)?;
+
+        stake_accounts
+            .map(move |stake_account| {
+                let stake_account_data = &Self::deserialize_stake_account(stake_account)?;
+                Ok(
+                    Self::is_stake_account_withdrawable(
+                        stake_account_data,
+                        &clock,
+                        &stake_history,
+                    )?
+                    .then_some(stake_account.key),
+                )
+            })
+            .filter_map(Result::transpose)
+            .collect()
+    }
+
     /// returns [claimed_sol_amount]
     #[inline(never)]
     pub fn claim_sol(
@@ -722,15 +761,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         from_stake_account_withdraw_authority_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
         let stake_account_data = &Self::deserialize_stake_account(from_stake_account)?;
-
-        // Stake account is not withdrawable yet
-        if !Self::is_stake_account_withdrawable(
-            stake_account_data,
-            &Clock::from_account_info(clock)?,
-            stake_history,
-        )? {
-            return Ok(0);
-        }
 
         let to_sol_account_amount_before = to_sol_account.lamports();
         // SAFE unwrap: withdrawable stake account always have meta
@@ -789,7 +819,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     fn is_stake_account_withdrawable(
         stake_account_data: &StakeStateV2,
         clock: &Clock,
-        stake_history: &AccountInfo,
+        stake_history: &StakeHistory,
     ) -> Result<bool> {
         let StakeStateV2::Stake(_, stake, _) = stake_account_data else {
             return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
@@ -802,59 +832,9 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let new_rate_activation_epoch = Some(0);
         // if we have a deactivation epoch and we're in cooldown
         let staked = if clock.epoch >= stake.delegation.deactivation_epoch {
-            let stake_history_data = stake_history.try_borrow_data()?;
-            const LEN_BYTES: usize = 8;
-            const EPOCH_BYTES: usize = 8;
-            const ENTRY_BYTES: usize = 32;
-
-            // Since stake history consumes too much heap, we will customize it.
-            // We only need [activation_epoch, target_epoch) entries of stake history.
-            let start_epoch = stake.delegation.activation_epoch;
-            let end_epoch = clock.epoch;
-            let mut custom_stake_history_data = Vec::with_capacity(
-                LEN_BYTES + end_epoch.saturating_sub(start_epoch) as usize * ENTRY_BYTES,
-            );
-
-            // According to bincode::Deserializer::deserialize_seq, first 8 byte is length of vector (little endian)
-            let mut buffer = [0; LEN_BYTES];
-            buffer.copy_from_slice(&stake_history_data[..LEN_BYTES]);
-            let len = u64::from_le_bytes(buffer);
-
-            // Current len = 0 (will be updated soon)
-            custom_stake_history_data.extend([0; LEN_BYTES]);
-
-            // Fill entries
-            let mut count = 0;
-            for i in 0..len as usize {
-                let entry_offset = LEN_BYTES + i * ENTRY_BYTES;
-
-                // check epoch
-                let mut buffer = [0; EPOCH_BYTES];
-                buffer
-                    .copy_from_slice(&stake_history_data[entry_offset..entry_offset + EPOCH_BYTES]);
-                let epoch = u64::from_le_bytes(buffer);
-
-                if (start_epoch..end_epoch).contains(&epoch) {
-                    custom_stake_history_data.extend_from_slice(
-                        &stake_history_data[entry_offset..entry_offset + ENTRY_BYTES],
-                    );
-                    count += 1;
-                }
-            }
-
-            // Write correct len
-            custom_stake_history_data[..LEN_BYTES].copy_from_slice(&(count as u64).to_le_bytes());
-
-            // Deserialize
-            let custom_stake_history: StakeHistory =
-                bincode::deserialize(&custom_stake_history_data)
-                    .map_err(|_| ProgramError::InvalidArgument)?;
-
-            stake.delegation.stake(
-                clock.epoch,
-                &custom_stake_history,
-                new_rate_activation_epoch,
-            )
+            stake
+                .delegation
+                .stake(clock.epoch, stake_history, new_rate_activation_epoch)
         } else {
             // Assume full stake if the stake account hasn't been
             //  de-activated, because in the future the exposed stake

@@ -26,18 +26,26 @@ pub enum ClaimUnstakedSOLCommandState {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
         pool_token_mints: Vec<Pubkey>,
     },
+    /// Before execute claim, find claimable stake accounts.
+    GetClaimableStakeAccounts {
+        #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+        pool_token_mints: Vec<Pubkey>,
+    },
     /// Executes claim for the first item and
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
         pool_token_mints: Vec<Pubkey>,
+        #[max_len(5)]
+        claimable_stake_account_indices: Vec<u8>,
     },
 }
+use ClaimUnstakedSOLCommandState::*;
 
 impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::New => f.write_str("New"),
-            Self::Prepare { pool_token_mints } => {
+            New => f.write_str("New"),
+            Prepare { pool_token_mints } => {
                 if pool_token_mints.is_empty() {
                     f.write_str("Prepare")
                 } else {
@@ -46,7 +54,18 @@ impl std::fmt::Debug for ClaimUnstakedSOLCommandState {
                         .finish()
                 }
             }
-            Self::Execute { pool_token_mints } => {
+            GetClaimableStakeAccounts { pool_token_mints } => {
+                if pool_token_mints.is_empty() {
+                    f.write_str("GetClaimableStakeAccounts")
+                } else {
+                    f.debug_struct("GetClaimableStakeAccounts")
+                        .field("pool_token_mint", &pool_token_mints[0])
+                        .finish()
+                }
+            }
+            Execute {
+                pool_token_mints, ..
+            } => {
                 if pool_token_mints.is_empty() {
                     f.write_str("Execute")
                 } else {
@@ -88,13 +107,22 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         Option<OperationCommandEntry>,
     )> {
         let (result, entry) = match &self.state {
-            ClaimUnstakedSOLCommandState::New => self.execute_new(ctx, accounts)?,
-            ClaimUnstakedSOLCommandState::Prepare {
-                pool_token_mints: token_mints,
-            } => self.execute_prepare(ctx, accounts, token_mints.clone(), None)?,
-            ClaimUnstakedSOLCommandState::Execute {
-                pool_token_mints: token_mints,
-            } => self.execute_execute(ctx, accounts, token_mints)?,
+            New => self.execute_new(ctx, accounts)?,
+            Prepare { pool_token_mints } => {
+                self.execute_prepare(ctx, accounts, pool_token_mints.clone(), None)?
+            }
+            GetClaimableStakeAccounts { pool_token_mints } => {
+                self.execute_get_claimable_stake_accounts(ctx, accounts, pool_token_mints)?
+            }
+            Execute {
+                pool_token_mints,
+                claimable_stake_account_indices,
+            } => self.execute_execute(
+                ctx,
+                accounts,
+                pool_token_mints,
+                claimable_stake_account_indices,
+            )?,
         };
 
         Ok((
@@ -158,8 +186,9 @@ impl ClaimUnstakedSOLCommand {
         }
         let pool_token_mint = &pool_token_mints[0];
 
-        let fund_account = ctx.fund_account.load()?;
-        let pricing_source = fund_account
+        let pricing_source = ctx
+            .fund_account
+            .load()?
             .get_supported_token(pool_token_mint)?
             .pricing_source
             .try_deserialize()?;
@@ -182,24 +211,17 @@ impl ClaimUnstakedSOLCommand {
             }
         };
 
-        let fund_reserve_account = fund_account.get_reserve_account_address()?;
-        let fund_treasury_account = fund_account.get_treasury_account_address()?;
-
-        let command = Self {
-            state: ClaimUnstakedSOLCommandState::Execute { pool_token_mints },
-        };
-
-        drop(fund_account);
         let entry = match pricing_source {
             Some(TokenPricingSource::SPLStakePool { .. }) => self
-                .spl_stake_pool_prepare_claim_sol::<SPLStakePool>(
+                .spl_stake_pool_prepare_get_claimable_stake_accounts::<SPLStakePool>(
                     ctx,
                     pool_account,
-                    fund_reserve_account,
-                    fund_treasury_account,
-                    command,
+                    pool_token_mints,
                 )?,
             Some(TokenPricingSource::MarinadeStakePool { .. }) => {
+                let fund_account = ctx.fund_account.load()?;
+                let fund_reserve_account = fund_account.get_reserve_account_address()?;
+                let fund_treasury_account = fund_account.get_treasury_account_address()?;
                 let accounts_to_claim_sol =
                     MarinadeStakePoolService::find_accounts_to_claim_sol(pool_account)?;
                 let withdrawal_ticket_accounts = (0..5).map(|index| {
@@ -217,15 +239,19 @@ impl ClaimUnstakedSOLCommand {
                         .chain(accounts_to_claim_sol)
                         .chain(withdrawal_ticket_accounts);
 
-                command.with_required_accounts(required_accounts)
+                Self {
+                    state: Execute {
+                        pool_token_mints,
+                        claimable_stake_account_indices: vec![],
+                    },
+                }
+                .with_required_accounts(required_accounts)
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
-                self.spl_stake_pool_prepare_claim_sol::<SanctumSingleValidatorSPLStakePool>(
+                self.spl_stake_pool_prepare_get_claimable_stake_accounts::<SanctumSingleValidatorSPLStakePool>(
                     ctx,
                     pool_account,
-                    fund_reserve_account,
-                    fund_treasury_account,
-                    command,
+                    pool_token_mints,
                 )?
             }
             // otherwise fails
@@ -243,30 +269,148 @@ impl ClaimUnstakedSOLCommand {
         Ok((previous_execution_result, Some(entry)))
     }
 
-    fn spl_stake_pool_prepare_claim_sol<'info, T: SPLStakePoolInterface>(
+    fn spl_stake_pool_prepare_get_claimable_stake_accounts<'info, T: SPLStakePoolInterface>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         pool_account: &'info AccountInfo<'info>,
-        fund_reserve_account: Pubkey,
-        fund_treasury_account: Pubkey,
-        next_command: Self,
+        pool_token_mints: Vec<Pubkey>,
     ) -> Result<OperationCommandEntry> {
-        let accounts_to_claim_sol = SPLStakePoolService::<T>::find_accounts_to_claim_sol()?;
+        let accounts_to_get_claimable_stake_accounts =
+            SPLStakePoolService::<T>::find_accounts_to_get_claimable_stake_accounts()?;
         let fund_stake_accounts = (0..5).map(|index| {
             let address = *FundAccount::find_stake_account_address(
                 &ctx.fund_account.key(),
                 pool_account.key,
                 index,
             );
-            (address, true)
+            (address, false)
         });
+
+        let required_accounts = accounts_to_get_claimable_stake_accounts.chain(fund_stake_accounts);
+
+        Ok(Self {
+            state: GetClaimableStakeAccounts { pool_token_mints },
+        }
+        .with_required_accounts(required_accounts))
+    }
+
+    #[inline(never)]
+    fn execute_get_claimable_stake_accounts<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mints: &[Pubkey],
+    ) -> Result<(
+        Option<OperationCommandResult>,
+        Option<OperationCommandEntry>,
+    )> {
+        if pool_token_mints.is_empty() {
+            return Ok((None, None));
+        }
+        let pool_token_mint = &pool_token_mints[0];
+
+        let token_pricing_source = ctx
+            .fund_account
+            .load()?
+            .get_supported_token(pool_token_mint)?
+            .pricing_source
+            .try_deserialize()?;
+
+        let entry = match token_pricing_source {
+            Some(TokenPricingSource::SPLStakePool { address }) => self
+                .spl_stake_pool_get_claimable_stake_accounts::<SPLStakePool>(
+                    ctx, accounts, pool_token_mints, address,
+                ),
+            Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_get_claimable_stake_accounts::<SanctumSingleValidatorSPLStakePool>(
+                    ctx, accounts, pool_token_mints, address,
+                )
+            }
+            // otherwise fails
+            Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        }?;
+
+        Ok((None, Some(entry)))
+    }
+
+    fn spl_stake_pool_get_claimable_stake_accounts<'info, T: SPLStakePoolInterface>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        pool_token_mints: &[Pubkey],
+        pool_account_address: Pubkey,
+    ) -> Result<OperationCommandEntry> {
+        let [clock, stake_history, remaining_accounts @ ..] = accounts else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+        let fund_stake_accounts = {
+            if remaining_accounts.len() < 5 {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            }
+            &remaining_accounts[..5]
+        };
+
+        for (index, fund_stake_account) in fund_stake_accounts.iter().enumerate() {
+            let fund_stake_account_address = *FundAccount::find_stake_account_address(
+                &ctx.fund_account.key(),
+                &pool_account_address,
+                index as u8,
+            );
+
+            require_keys_eq!(fund_stake_account_address, fund_stake_account.key());
+        }
+
+        let initialized_fund_stake_accounts = fund_stake_accounts
+            .iter()
+            .cloned()
+            .filter(|fund_stake_account| fund_stake_account.is_initialized());
+        let claimable_fund_stake_accounts = SPLStakePoolService::<T>::get_claimable_stake_accounts(
+            clock,
+            stake_history,
+            initialized_fund_stake_accounts,
+        )?;
+
+        let claimable_stake_account_indices = claimable_fund_stake_accounts
+            .iter()
+            .flat_map(|&address| {
+                fund_stake_accounts
+                    .iter()
+                    .enumerate()
+                    .find_map(|(index, fund_stake_account)| {
+                        (fund_stake_account.key == address).then_some(index as u8)
+                    })
+            })
+            .collect();
+
+        let fund_account = ctx.fund_account.load()?;
+        let fund_reserve_account = fund_account.get_reserve_account_address()?;
+        let fund_treasury_account = fund_account.get_treasury_account_address()?;
+        let accounts_to_claim_sol = SPLStakePoolService::<T>::find_accounts_to_claim_sol()?;
+        let claimable_fund_stake_accounts = claimable_fund_stake_accounts
+            .into_iter()
+            .map(|&address| (address, true));
 
         let required_accounts = [(fund_reserve_account, true), (fund_treasury_account, true)]
             .into_iter()
             .chain(accounts_to_claim_sol)
-            .chain(fund_stake_accounts);
+            .chain(claimable_fund_stake_accounts);
 
-        Ok(next_command.with_required_accounts(required_accounts))
+        Ok(Self {
+            state: Execute {
+                pool_token_mints: pool_token_mints.to_vec(),
+                claimable_stake_account_indices,
+            },
+        }
+        .with_required_accounts(required_accounts))
     }
 
     #[inline(never)]
@@ -275,6 +419,7 @@ impl ClaimUnstakedSOLCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mints: &[Pubkey],
+        claimable_stake_account_indices: &[u8],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -297,6 +442,7 @@ impl ClaimUnstakedSOLCommand {
                 .spl_stake_pool_claim_sol::<SPLStakePool>(
                     ctx,
                     accounts,
+                    claimable_stake_account_indices,
                     pool_token_mint,
                     address,
                 )?,
@@ -307,6 +453,7 @@ impl ClaimUnstakedSOLCommand {
                 self.spl_stake_pool_claim_sol::<SanctumSingleValidatorSPLStakePool>(
                     ctx,
                     accounts,
+                    claimable_stake_account_indices,
                     pool_token_mint,
                     address,
                 )?
@@ -405,6 +552,7 @@ impl ClaimUnstakedSOLCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
+        claimable_stake_account_indices: &[u8],
         pool_token_mint_address: &Pubkey, // just informative
         pool_account_address: Pubkey,
     ) -> Result<(u64, u64, bool)> {
@@ -413,20 +561,22 @@ impl ClaimUnstakedSOLCommand {
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         };
-
-        if remaining_accounts.len() < 5 {
-            err!(error::ErrorCode::AccountNotEnoughKeys)?
-        }
-
-        let (fund_stake_accounts, _pricing_sources) = remaining_accounts.split_at(5);
+        let fund_stake_accounts = {
+            let num_stake_accounts = claimable_stake_account_indices.len();
+            if remaining_accounts.len() < num_stake_accounts {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            }
+            &remaining_accounts[..num_stake_accounts]
+        };
 
         let mut total_claimed_sol_amount = 0;
 
         let fund_account = ctx.fund_account.load()?;
 
-        let mut processed = false;
-        let mut should_resume = false;
-        for (index, fund_stake_account) in fund_stake_accounts.iter().enumerate() {
+        for (&index, fund_stake_account) in claimable_stake_account_indices
+            .iter()
+            .zip(fund_stake_accounts)
+        {
             let fund_stake_account_address = *FundAccount::find_stake_account_address(
                 &ctx.fund_account.key(),
                 &pool_account_address,
@@ -438,10 +588,6 @@ impl ClaimUnstakedSOLCommand {
             // Skip uninitialized stake account
             if !fund_stake_account.is_initialized() {
                 continue;
-            }
-            if processed {
-                should_resume = true;
-                break;
             }
 
             let claimed_sol_amount = SPLStakePoolService::<T>::claim_sol(
@@ -459,16 +605,11 @@ impl ClaimUnstakedSOLCommand {
             )?;
 
             total_claimed_sol_amount += claimed_sol_amount;
-            processed = true;
         }
 
         let to_sol_account_amount = fund_reserve_account.lamports();
 
-        Ok((
-            to_sol_account_amount,
-            total_claimed_sol_amount,
-            should_resume,
-        ))
+        Ok((to_sol_account_amount, total_claimed_sol_amount, false))
     }
 
     /// return [to_sol_account_amount, claimed_sol_amount, should_resume]
@@ -484,12 +625,12 @@ impl ClaimUnstakedSOLCommand {
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
         };
-
-        if remaining_accounts.len() < 5 {
-            err!(error::ErrorCode::AccountNotEnoughKeys)?
-        }
-
-        let (withdrawal_ticket_accounts, _pricing_sources) = remaining_accounts.split_at(5);
+        let withdrawal_ticket_accounts = {
+            if remaining_accounts.len() < 5 {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            }
+            &remaining_accounts[..5]
+        };
 
         require_keys_eq!(pool_account_address, pool_account.key());
         require_keys_eq!(*pool_token_mint_address, pool_token_mint.key());

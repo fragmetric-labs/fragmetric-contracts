@@ -300,7 +300,7 @@ impl UnstakeLSTCommand {
                 .spl_stake_pool_prepare_get_withdraw_stake_items::<SPLStakePool>(
                     ctx,
                     pool_account,
-                    Self { state: UnstakeLSTCommandState::GetWithdrawStakeItems { items }},
+                    items,
                 )?},
             Some(TokenPricingSource::MarinadeStakePool { .. }) => {
                 let fund_account = ctx.fund_account.load()?;
@@ -342,7 +342,7 @@ impl UnstakeLSTCommand {
                 self.spl_stake_pool_prepare_get_withdraw_stake_items::<SanctumSingleValidatorSPLStakePool>(
                     ctx,
                     pool_account,
-                    Self { state: UnstakeLSTCommandState::GetWithdrawStakeItems { items }},
+                    items,
                 )?
             }
             // fail when supported token is not unstakable
@@ -364,7 +364,7 @@ impl UnstakeLSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         pool_account: &'info AccountInfo<'info>,
-        next_command: Self,
+        items: Vec<UnstakeLSTCommandItem>,
     ) -> Result<OperationCommandEntry> {
         let accounts_to_get_validator_stake_accounts =
             SPLStakePoolService::<T>::find_accounts_to_get_validator_stake_accounts(pool_account)?;
@@ -381,7 +381,10 @@ impl UnstakeLSTCommand {
 
         let required_accounts = accounts_to_get_validator_stake_accounts.chain(fund_stake_accounts);
 
-        Ok(next_command.with_required_accounts(required_accounts))
+        Ok(Self {
+            state: UnstakeLSTCommandState::GetWithdrawStakeItems { items },
+        }
+        .with_required_accounts(required_accounts))
     }
 
     #[inline(never)]

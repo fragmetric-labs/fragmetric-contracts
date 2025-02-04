@@ -1,14 +1,17 @@
-import {BN, web3} from "@coral-xyz/anchor";
-import {expect} from "chai";
-import {step} from "mocha-steps";
-import {restakingPlayground} from "../restaking";
-import {getLogger} from '../../tools/lib';
+import { BN, web3 } from "@coral-xyz/anchor";
+import { expect } from "chai";
+import { step } from "mocha-steps";
+import { restakingPlayground } from "../restaking";
+import { getLogger } from '../../tools/lib';
 
-const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
+const { logger, LOG_PAD_SMALL, LOG_PAD_LARGE } = getLogger("restaking");
 
 module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
     const restaking = await restakingPlayground;
     const user1 = restaking.keychain.getKeypair('MOCK_USER1');
+
+    const slotPerEpoch = 32;
+    const epochToSlot = (epoch: number) => epoch * slotPerEpoch;
 
     step("deposit sol and tokens & request withdraw for most of them", async () => {
         await Promise.all([
@@ -51,54 +54,43 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
 
         logger.info('waiting... (1 epoch = 32 slots)');
-        await restaking.sleepUntil(128);
+        await restaking.sleepUntil(epochToSlot(4));
+        logger.info('epoch 4: operator enqueue withdrawal - process withdrawal - stake - normalize - restake');
         await restaking.runOperatorFundCommands();
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(160);
 
         await Promise.all([
             restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'), new BN(1)),
             restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'), new BN(1)),
             restaking.runUserRequestWithdrawal(user1, quarter),
         ]);
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(epochToSlot(5));
+        logger.info('epoch 5: operator enqueue withdrawal - request unrestake');
         await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
         logger.info('waiting...');
-        await restaking.sleepUntil(224); // wait for more than one epoch
-        await restaking.runOperatorFundCommands(); // the unrestaking request should be claimable on this cycle
-        await restaking.runOperatorFundCommands(); // one more cycle to denormalize and unstake tokens
+        await restaking.sleepUntil(epochToSlot(7)); // wait for more than one epoch
+        logger.info('epoch 7: operator claim unrestaked - denormalize - request unstake');
+        await restaking.runOperatorFundCommands();
 
         const res2 = await restaking.getUserFragSOLFundAccount(user1.publicKey); // last withdrawal request
         await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
 
         logger.info('waiting...');
-        await restaking.sleepUntil(288); // wait for more than one epoch
-        await restaking.runOperatorFundCommands(); // one more cycle to claim unstaked tokens and proceed the last withdrawal batch
+        await restaking.sleepUntil(epochToSlot(8));
+        logger.info('epoch 8: operator enqueue withdrawal - claim unstaked - process withdrawal - request unrestake');
+        await restaking.runOperatorFundCommands();
         await restaking.runUserWithdraw(user1, null, new BN(1));
 
         logger.info('waiting...');
-        await restaking.sleepUntil(320);
+        await restaking.sleepUntil(epochToSlot(10)); // wait for more than one epoch
+        logger.info('epoch 10: operator claim unrestaked - denormalize - request unstake');
         await restaking.runOperatorFundCommands();
 
         logger.info('waiting...');
-        await restaking.sleepUntil(352);
-        await restaking.runOperatorFundCommands();
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(384);
-        await restaking.runOperatorFundCommands();
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(416);
-        await restaking.runOperatorFundCommands();
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(448);
-        await restaking.runOperatorFundCommands();
-
-        logger.info('waiting...');
-        await restaking.sleepUntil(480);
+        await restaking.sleepUntil(epochToSlot(12));
+        logger.info('epoch 12: operator claim unstaked - process withdrawal');
         await restaking.runOperatorFundCommands();
 
         await restaking.runUserWithdraw(user1, null, new BN(2));
