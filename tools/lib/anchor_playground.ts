@@ -168,7 +168,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
             };
 
         } catch (err) {
-            logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig ? (txSig.substring(0, 40) + ' ...') : null);
+            logger.error(`transaction failed`.padEnd(LOG_PAD_LARGE), txSig ? txSig : null);
             throw err;
         }
     }
