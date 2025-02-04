@@ -64,6 +64,31 @@ filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_list_account.json"
 address = "rsrxDvYUXjH1RQj2Ke36LNZEVqGztATxFkqNukERqFT"
 filename = "./tests/mocks/mainnet/bSOL_stake_pool_reserve_stake_account.json"
 
+# clone mainnet bSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "2WynXLkYCvFX59cJCeZPi43Pd4WYy9CrX9spAYS1WNhY"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_stake_account_1.json"
+
+# clone mainnet bSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "4EAn9WivVpcxcDMFcg8UJvVYd9PrNQJLCWfJLpgvXYyu"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_stake_account_2.json"
+
+# clone mainnet bSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "8Xdr77VSPnj5imgFB7btPpBT7nFs2oDyUM8UdV9M28fR"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_stake_account_3.json"
+
+# clone mainnet bSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "9uj696qdTY4M36G39ZwdM8TaQaFo1dicNSgaWi4QQ6Wd"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_stake_account_4.json"
+
+# clone mainnet bSOL stake pool's validator stake account which has lots of lamports to localnet
+[[test.validator.account]]
+address = "9RsiEbaXHJSiv8oN8AZvWJsKVSJ9MEQ3RNHJCqmRahhD"
+filename = "./tests/mocks/mainnet/bSOL_stake_pool_validator_stake_account_5.json"
+
 # clone mainnet bSOL stake pool manager fee account to localnet
 [[test.validator.account]]
 address = "Dpo148tVGewDPyh2FkGV18gouWctbdX2fHJopJGe9xv1"
