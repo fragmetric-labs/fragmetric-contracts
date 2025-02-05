@@ -266,7 +266,7 @@ describe("transfer_hook", async function () {
         // bonus pool 1.0 amount increased
         expect(fragSOLRewardAfter.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
             fragSOLRewardBefore.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountDepositedEach.toString());
-        // bonus pool 1.3 amount decreased
+        // bonus pool 1.1 amount decreased
         expect(fragSOLRewardBefore.rewardPools1[1].tokenAllocatedAmount.records[1].amount.sub(
             fragSOLRewardAfter.rewardPools1[1].tokenAllocatedAmount.records[1].amount).toString()).eq(amountDepositedEach.toString());
     });
