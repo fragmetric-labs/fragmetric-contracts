@@ -2,9 +2,10 @@ import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 describe("withdraw token", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const user5 = restaking.keychain.getKeypair('MOCK_USER5');
     const user6= restaking.keychain.getKeypair('MOCK_USER6');
 
@@ -208,6 +209,7 @@ describe("withdraw token", async () => {
                         true,
                         false,
                         false,
+                        false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )
@@ -229,6 +231,7 @@ describe("withdraw token", async () => {
                         true,
                         false,
                         true,
+                        false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )

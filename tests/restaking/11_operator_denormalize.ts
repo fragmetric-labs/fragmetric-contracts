@@ -2,9 +2,10 @@ import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 describe("operator_denormalize", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
 
     step("normalize", async function () {
         await restaking.runOperatorFundCommands({

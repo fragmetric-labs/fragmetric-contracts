@@ -2,11 +2,12 @@ import {step} from "mocha-steps";
 // @ts-ignore
 import {restakingPlayground} from "../restaking";
 import {getLogger} from '../../tools/lib';
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
 describe("operator_restake_with_normalize", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
 
     step("normalize before restake", async function () {
         await restaking.runOperatorFundCommands({

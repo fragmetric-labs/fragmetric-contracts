@@ -281,6 +281,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         deposit_enabled: bool,
         donation_enabled: bool,
         withdrawal_enabled: bool,
+        transfer_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -289,6 +290,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             fund_account.set_deposit_enabled(deposit_enabled);
             fund_account.set_donation_enabled(donation_enabled);
             fund_account.set_withdrawal_enabled(withdrawal_enabled);
+            fund_account.set_transfer_enabled(transfer_enabled);
             fund_account.set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
             fund_account
                 .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;

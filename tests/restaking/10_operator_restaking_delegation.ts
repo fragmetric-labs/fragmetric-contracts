@@ -2,9 +2,10 @@ import {BN, web3} from '@coral-xyz/anchor';
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from '../../tools/restaking/playground';
 
 describe("operator_restaking_delegation", async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
 
     // dev) run just once if there's no Jito restaking operator account file
     // step("initialize new operator", async function () {
@@ -15,7 +16,7 @@ describe("operator_restaking_delegation", async () => {
     // you can call it on REPL
     // await restaking.runAdminSetSecondaryAdminForJitoVault();
 
-    const vault = restaking.restakingVaultMetadata['jito1'].vault;
+    const vault = restaking.restakingVaultMetadata['jitoNSOLVault'].vault;
     const operator = new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"); // local
     const ncn = new web3.PublicKey("FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"); // local
 

@@ -380,6 +380,11 @@ impl FundAccount {
         self.withdrawal_enabled = if enabled { 1 } else { 0 };
     }
 
+    #[inline(always)]
+    pub(super) fn set_transfer_enabled(&mut self, enabled: bool) {
+        self.transfer_enabled = if enabled { 1 } else { 0 };
+    }
+
     pub(super) fn set_withdrawal_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
         require_gte!(interval_seconds, 0);
 

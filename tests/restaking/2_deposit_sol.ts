@@ -3,9 +3,10 @@ import {BN, web3} from "@coral-xyz/anchor";
 import {expect} from "chai";
 import {step} from "mocha-steps";
 import {restakingPlayground} from "../restaking";
+import { RestakingPlayground } from "../../tools/restaking/playground";
 
 module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
-    const restaking = await restakingPlayground;
+    const restaking = await restakingPlayground as RestakingPlayground;
     const user1 = restaking.keychain.getKeypair('MOCK_USER1');
     const user2 = restaking.keychain.getKeypair('MOCK_USER2');
 
