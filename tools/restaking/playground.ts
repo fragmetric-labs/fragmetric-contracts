@@ -738,6 +738,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public async getOrCreateUserFragSOLAccount(user: web3.PublicKey) {
+        return await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            this.wallet,
+            this.knownAddress.fragSOLTokenMint,
+            user,
+            false,
+            'confirmed',
+            {
+                commitment: 'confirmed',
+            },
+            spl.TOKEN_2022_PROGRAM_ID,
+        )
+    }
+
     public getFragSOLSupportedTokenTreasuryAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
         return spl.getAccount(
             // @ts-ignore
@@ -2656,7 +2671,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         ];
     }
 
-    public async runUserUpdateUserFragSOLFundAndRewardAccount(user: web3.Keypair) {
+    public async runUserCreateOrUpdateFragSOLFundAndRewardAccount(user: web3.Keypair) {
         await this.run({
             instructions: [
                 ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
@@ -2965,6 +2980,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runOperatorUpdateFundPrices(operator: web3.Keypair = this.wallet) {
         const {event, error} = await this.run({
             instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 300_000,
+                }),
                 this.program.methods
                     .operatorUpdateFundPrices()
                     .accountsPartial({
@@ -3164,19 +3182,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserTokenAccount,
             fragSOLLockAccount
         };
-    }
-
-    public async runGetOrCreateTokenAccount(source: web3.Keypair, mint: web3.PublicKey, tokenProgram: web3.PublicKey) {
-        return await spl.getOrCreateAssociatedTokenAccount(
-            this.connection,
-            source,
-            mint,
-            source.publicKey,
-            false,
-            undefined,
-            undefined,
-            tokenProgram,
-        );
     }
 
     public async runTransfer(source: web3.Keypair, destination: web3.PublicKey, amount: BN) {

@@ -6,7 +6,7 @@ import {getLogger} from '../../tools/lib';
 
 const {logger, LOG_PAD_SMALL, LOG_PAD_LARGE} = getLogger("restaking");
 
-module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
+module.exports = (i: number) => describe(`operate#${i}`, async () => {
     const restaking = await restakingPlayground;
     const user1 = restaking.keychain.getKeypair('MOCK_USER1');
 
