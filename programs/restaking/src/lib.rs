@@ -166,6 +166,7 @@ pub mod restaking {
         deposit_enabled: bool,
         donation_enabled: bool,
         withdrawal_enabled: bool,
+        transfer_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
     ) -> Result<()> {
@@ -177,6 +178,7 @@ pub mod restaking {
             deposit_enabled,
             donation_enabled,
             withdrawal_enabled,
+            transfer_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
         )?);
@@ -1077,6 +1079,8 @@ pub mod restaking {
         amount: u64,
     ) -> Result<()> {
         ctx.accounts.assert_is_transferring()?;
+
+        msg!("token_transfer_hook called automatically");
 
         let event = modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
