@@ -57,6 +57,9 @@ if (process.env.JUST_WITHDRAW_TOKEN_JTO) {
         require('./restaking/3_deposit_token')(1);
         require('./restaking/11_operator_denormalize');
 
+    } else if (process.env.JUST_TRANSFER) {
+        require('./restaking/5_transfer_hook');
+
     } else if (!process.env.JUST_INIT) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);

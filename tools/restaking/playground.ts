@@ -2145,6 +2145,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             donationEnabled: this.isDevnet ? true : (this.isMainnet ? false : true),
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            transferEnabled: this.isDevnet ? false : (this.isMainnet ? false : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
@@ -2341,6 +2342,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     config.depositEnabled,
                     config.donationEnabled,
                     config.withdrawalEnabled,
+                    config.transferEnabled,
                     config.WithdrawalFeedRateBPS, // 1 fee rate = 1bps = 0.01%
                     config.withdrawalBatchThresholdSeconds,
                 ).accountsPartial({
@@ -2652,6 +2654,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             //         ),
             //     ]),
         ];
+    }
+
+    public async runUserUpdateUserFragSOLFundAndRewardAccount(user: web3.Keypair) {
+        await this.run({
+            instructions: [
+                ...(await this.getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user)),
+            ],
+            signers: [user],
+        });
     }
 
     public async runUserDepositSOL(user: web3.Keypair, amount: BN, depositMetadata: IdlTypes<Restaking>["depositMetadata"]|null = null, depositMetadataSigningKeypair: web3.Keypair|null = null) {
@@ -3153,6 +3164,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserTokenAccount,
             fragSOLLockAccount
         };
+    }
+
+    public async runGetOrCreateTokenAccount(source: web3.Keypair, mint: web3.PublicKey, tokenProgram: web3.PublicKey) {
+        return await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            source,
+            mint,
+            source.publicKey,
+            false,
+            undefined,
+            undefined,
+            tokenProgram,
+        );
     }
 
     public async runTransfer(source: web3.Keypair, destination: web3.PublicKey, amount: BN) {
