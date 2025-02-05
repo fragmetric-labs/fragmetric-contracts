@@ -21,15 +21,18 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[derive(Accounts)]
 pub struct UserReceiptTokenTransferContext<'info> {
     #[account(
-        token::mint = receipt_token_mint,
-        token::authority = owner,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = source_receipt_token_account.owner,
+        associated_token::token_program = anchor_spl::token_2022::Token2022::id(),
     )]
     pub source_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        token::mint = receipt_token_mint,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = destination_receipt_token_account.owner,
+        associated_token::token_program = anchor_spl::token_2022::Token2022::id(),
     )]
     pub destination_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
