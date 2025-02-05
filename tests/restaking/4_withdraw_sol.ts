@@ -132,6 +132,7 @@ describe("withdraw SOL", async () => {
                         true,
                         false,
                         false,
+                        false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )
@@ -153,6 +154,7 @@ describe("withdraw SOL", async () => {
                         true,
                         false,
                         true,
+                        false,
                         fragSOLFundAccount.withdrawalFeeRateBps,
                         fragSOLFundAccount.withdrawalBatchThresholdIntervalSeconds,
                     )

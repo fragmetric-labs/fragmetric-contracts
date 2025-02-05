@@ -1080,8 +1080,6 @@ pub mod restaking {
     ) -> Result<()> {
         ctx.accounts.assert_is_transferring()?;
 
-        msg!("token_transfer_hook called automatically");
-
         let event = modules::fund::FundService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,

@@ -66,7 +66,7 @@ describe("transfer_hook", async function () {
         });
     });
 
-    step("user7 transfers to user8\n & global reward account's tokenAllocatedAmount should be updated to 0", async () => {
+    step("user7 transfers to user8 but user8 does not have reward account", async () => {
         let user7TokenAccount = await restaking.runGetOrCreateTokenAccount(user7, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user8TokenAccount = await restaking.runGetOrCreateTokenAccount(user8, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user7RewardAccount = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
@@ -102,7 +102,7 @@ describe("transfer_hook", async function () {
         expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.records[0].amount.toString()).eq("0");
     });
 
-    step("user8 transfers half back to user7\n & global reward account's tokenAllocatedAmount should be updated from 0 to transferred amount", async () => {
+    step("user8 transfers to user7 and user8 still does not have reward account", async () => {
         let user7TokenAccount = await restaking.runGetOrCreateTokenAccount(user7, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user8TokenAccount = await restaking.runGetOrCreateTokenAccount(user8, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user7RewardAccount = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
@@ -137,9 +137,34 @@ describe("transfer_hook", async function () {
         expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.divn(2).toString());
     });
 
-    step("now user8 creates own reward account and user7 transfers to user8 again\n & global reward account's tokenAllocatedAmount should be updated when user8's reward account has been initialized\n & it should not be updated after user7's transfer", async () => {
+    step("user8 creates own reward account", async () => {
         await restaking.runUserUpdateUserFragSOLFundAndRewardAccount(user8);
 
+        let user7TokenAccount = await restaking.runGetOrCreateTokenAccount(user7, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
+        let user8TokenAccount = await restaking.runGetOrCreateTokenAccount(user8, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
+        let user7RewardAccount = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
+        let user8RewardAccount = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user8.publicKey));
+        let fragSOLReward = await restaking.account.rewardAccount.fetch(restaking.knownAddress.fragSOLReward);
+
+        expect(user7TokenAccount.amount).eq(BigInt(amountDepositedEach.divn(2).toString()));
+        expect(user8TokenAccount.amount).eq(BigInt(amountDepositedEach.divn(2).toString()));
+
+        printUserRewardAccount("user7", user7RewardAccount);
+        printUserRewardAccount("user8", user8RewardAccount);
+
+        // user8 reward account has been created, so the global reward account's tokenAllocatedAmount and user8's reward account should be updated
+        expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "base").tokenAllocatedAmount.totalAmount.toString()).eq(amountDepositedEach.toString());
+        expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "base").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.toString());
+        expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.totalAmount.toString()).eq(amountDepositedEach.toString());
+        expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.toString());
+
+        expect(user8RewardAccount.userRewardPools1.find((r) => restaking.binToString(r.name) == "base").tokenAllocatedAmount.totalAmount.toString()).eq(amountDepositedEach.divn(2).toString());
+        expect(user8RewardAccount.userRewardPools1.find((r) => restaking.binToString(r.name) == "base").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.divn(2).toString());
+        expect(user8RewardAccount.userRewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.totalAmount.toString()).eq(amountDepositedEach.divn(2).toString());
+        expect(user8RewardAccount.userRewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.divn(2).toString());
+    });
+
+    step("user7 transfers to user8", async () => {
         let user7TokenAccount = await restaking.runGetOrCreateTokenAccount(user7, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user8TokenAccount = await restaking.runGetOrCreateTokenAccount(user8, restaking.knownAddress.fragSOLTokenMint, restaking.knownAddress.token2022Program);
         let user7RewardAccount = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
@@ -220,7 +245,7 @@ describe("transfer_hook", async function () {
         expect(fragSOLReward.rewardPools1.find((r) => restaking.binToString(r.name) == "bonus").tokenAllocatedAmount.records[0].amount.toString()).eq(amountDepositedEach.toString());
     });
 
-    step("user7 deposits with 1.3 contributionAccrualRate and transfers to user8\n & global reward account's bonus tokenAllocatedAmount.records should be updated that 130's amount -> 100's amount", async () => {
+    step("deposit amount with bonus rate will disappear on transfer", async () => {
         const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
         const depositMetadata = restaking.asType<'depositMetadata'>({
             user: user7.publicKey,
