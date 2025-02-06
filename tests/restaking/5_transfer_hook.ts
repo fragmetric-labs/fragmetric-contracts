@@ -21,6 +21,7 @@ describe("transfer_hook", async function () {
     const restaking = await restakingPlayground as RestakingPlayground;
     const user7 = restaking.keychain.getKeypair('MOCK_USER7');
     const user8 = restaking.keychain.getKeypair('MOCK_USER8');
+    const user9 = restaking.keychain.getKeypair('MOCK_USER9');
 
     step("try airdrop SOL to mock accounts", async function () {
         await Promise.all([
@@ -102,27 +103,55 @@ describe("transfer_hook", async function () {
             fragSOLRewardAfter.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountDepositedEach.toString());
     });
 
-    step("user8 transfers to user7 and user8 still does not have reward account", async () => {
-        const user7TokenBalanceBefore = await restaking.getOrCreateUserFragSOLAccount(user7.publicKey).then(a => a.amount);
+    step("user8 transfers to user9; user8 and user9 don't have reward account yet", async () => {
         const user8TokenBalanceBefore = await restaking.getOrCreateUserFragSOLAccount(user8.publicKey).then(a => a.amount);
+        const user9TokenBalanceBefore = await restaking.getOrCreateUserFragSOLAccount(user9.publicKey).then(a => a.amount); // creates user9's fragSOL token account
+        const fragSOLRewardBefore = await restaking.getFragSOLRewardAccount();
+
+        expect(user8TokenBalanceBefore.toString()).eq(amountDepositedEach.toString());
+        expect(user9TokenBalanceBefore).eq(BigInt(0));
+
+        // user8 -> user9
+        await restaking.runTransfer(user8, user9.publicKey, amountDepositedEach.divn(2));
+
+        const user8TokenBalanceAfter = await restaking.getOrCreateUserFragSOLAccount(user8.publicKey).then(a => a.amount);
+        const user9TokenBalanceAfter = await restaking.getOrCreateUserFragSOLAccount(user9.publicKey).then(a => a.amount);
+        const fragSOLRewardAfter = await restaking.getFragSOLRewardAccount();
+
+        expect(user8TokenBalanceAfter.toString()).eq(amountDepositedEach.divn(2).toString());
+        expect(user9TokenBalanceAfter.toString()).eq(amountDepositedEach.divn(2).toString());
+
+        expect(fragSOLRewardBefore.rewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(
+            fragSOLRewardAfter.rewardPools1[0].tokenAllocatedAmount.totalAmount.toString());
+        expect(fragSOLRewardBefore.rewardPools1[0].tokenAllocatedAmount.records[0].amount.toString()).eq(
+            fragSOLRewardAfter.rewardPools1[0].tokenAllocatedAmount.records[0].amount.toString());
+        expect(fragSOLRewardBefore.rewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(
+            fragSOLRewardAfter.rewardPools1[1].tokenAllocatedAmount.totalAmount.toString());
+        expect(fragSOLRewardBefore.rewardPools1[1].tokenAllocatedAmount.records[0].amount.toString()).eq(
+            fragSOLRewardAfter.rewardPools1[1].tokenAllocatedAmount.records[0].amount.toString());
+    });
+
+    step("user9 transfers to user7 and user9 still does not have reward account", async () => {
+        const user7TokenBalanceBefore = await restaking.getOrCreateUserFragSOLAccount(user7.publicKey).then(a => a.amount);
+        const user9TokenBalanceBefore = await restaking.getOrCreateUserFragSOLAccount(user9.publicKey).then(a => a.amount);
         const user7RewardAccountBefore = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
         const fragSOLRewardBefore = await restaking.getFragSOLRewardAccount();
 
         expect(user7TokenBalanceBefore).eq(BigInt(0));
-        expect(user8TokenBalanceBefore.toString()).eq(amountDepositedEach.toString());
+        expect(user9TokenBalanceBefore.toString()).eq(amountDepositedEach.divn(2).toString());
 
         printUserRewardAccount("bef user7", user7RewardAccountBefore);
 
-        // user8 -> user7
-        await restaking.runTransfer(user8, user7.publicKey, amountDepositedEach.divn(2));
+        // user9 -> user7
+        await restaking.runTransfer(user9, user7.publicKey, amountDepositedEach.divn(2));
 
         const user7TokenBalanceAfter = await restaking.getOrCreateUserFragSOLAccount(user7.publicKey).then(a => a.amount);
-        const user8TokenBalanceAfter = await restaking.getOrCreateUserFragSOLAccount(user8.publicKey).then(a => a.amount);
+        const user9TokenBalanceAfter = await restaking.getOrCreateUserFragSOLAccount(user9.publicKey).then(a => a.amount);
         const user7RewardAccountAfter = await restaking.account.userRewardAccount.fetch(restaking.knownAddress.fragSOLUserReward(user7.publicKey));
         const fragSOLRewardAfter = await restaking.getFragSOLRewardAccount();
 
         expect(user7TokenBalanceAfter.toString()).eq(amountDepositedEach.divn(2).toString());
-        expect(user8TokenBalanceAfter.toString()).eq(amountDepositedEach.divn(2).toString());
+        expect(user9TokenBalanceAfter).eq(BigInt(0));
 
         printUserRewardAccount("aft user7", user7RewardAccountAfter);
 
