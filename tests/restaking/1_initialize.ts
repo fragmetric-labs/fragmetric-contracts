@@ -163,13 +163,13 @@ describe("initialize", async () => {
     step("create wrapped token mint", async function () {
         const {wFragSOLMint} = await restaking.runAdminInitializeWFragSOLTokenMint();
         expect(wFragSOLMint.address.toString()).eq(restaking.knownAddress.wFragSOLTokenMint.toString());
-        expect(wFragSOLMint.mintAuthority.toString()).eq(restaking.keychain.getKeypair('ADMIN').publicKey.toString());
+        expect(wFragSOLMint.mintAuthority.toString()).eq(restaking.keychain.getPublicKey('ADMIN').toString());
         expect(wFragSOLMint.freezeAuthority).null;
     })
 
     step("initialize fund wrap account reward account", async () => {
         const {fragSOLFundWrapAccountRewardAccount} = await restaking.runAdminInitializeOrUpdateFundWrapAccountRewardAccount();
-        expect(fragSOLFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragSOLFundWrapAccount);
+        expect(fragSOLFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragSOLFundWrapAccount.toString());
         expect(fragSOLFundWrapAccountRewardAccount.dataVersion).gt(0);
     })
 

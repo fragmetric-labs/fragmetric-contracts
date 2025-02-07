@@ -422,8 +422,24 @@ macro_rules! debug_msg_heap_size {
     };
 }
 
+#[allow(unused)]
+#[macro_use]
+macro_rules! debug_msg_stack_size {
+    ($marker:expr) => {{
+        let ptr = 0u8;
+        msg!(
+            "STACK#{} SP at {:?}",
+            $marker,
+            &ptr as *const u8 as *const usize,
+        )
+    }};
+}
+
 #[allow(unused_imports)]
 pub(crate) use debug_msg_heap_size;
+
+#[allow(unused_imports)]
+pub(crate) use debug_msg_stack_size;
 
 /// Test utils.
 #[cfg(test)]

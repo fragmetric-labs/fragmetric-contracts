@@ -207,7 +207,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragJTOFundReceiptTokenWrapAccount = spl.getAssociatedTokenAddressSync(
             fragJTOTokenMint,
             fragJTOFundWrapAccount,
-            true
+            true,
+            spl.TOKEN_2022_PROGRAM_ID,
         );
 
         const fragJTOFundReceiptTokenLockAccount = spl.getAssociatedTokenAddressSync(
@@ -753,8 +754,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const mintSize = spl.getMintLen([]);
         const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
 
-        console.log(this.knownAddress.wFragJTOTokenMint);
-
         await this.run({
             instructions: [
                 web3.SystemProgram.createAccount({
@@ -951,7 +950,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 spl.createAssociatedTokenAccountIdempotentInstruction(
-                    fragJTOFundWrapAccountAddress,
+                    this.wallet.publicKey,
                     this.knownAddress.fragJTOFundReceiptTokenWrapAccount,
                     fragJTOFundWrapAccountAddress,
                     this.knownAddress.fragJTOTokenMint,

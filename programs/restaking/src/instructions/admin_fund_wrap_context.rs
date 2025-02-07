@@ -38,6 +38,7 @@ pub struct AdminFundWrapAccountRewardAccountInitialContext<'info> {
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
@@ -96,6 +97,7 @@ pub struct AdminFundWrapAccountRewardAccountUpdateContext<'info> {
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
