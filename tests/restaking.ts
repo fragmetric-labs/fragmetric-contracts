@@ -35,6 +35,9 @@ if (process.env.JTO) {
     if (process.env.JUST_WITHDRAW_TOKEN) {
         require('./restaking/4_withdraw_token');
 
+    } else if (process.env.JUST_DONATE) {
+        require('./restaking/2_donate_sol');
+        
     } else if (process.env.JUST_OPERATE) {
         require('./restaking/7_operate')(1);
 

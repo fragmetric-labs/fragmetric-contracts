@@ -35,7 +35,7 @@ pub struct OperatorFundDonationContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(mut)]
+    #[account(mint::token_program = receipt_token_program)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -67,7 +67,7 @@ pub struct OperatorFundSupportedTokenDonationContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut)]
+    #[account(mint::token_program = receipt_token_program)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,

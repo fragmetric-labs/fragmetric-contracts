@@ -2182,6 +2182,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const {event, error} = await this.run({
             instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 300_000,
+                }),
                 this.program.methods
                     .operatorDonateSupportedTokenToFund(amount, offsetReceivable)
                     .accountsPartial({
