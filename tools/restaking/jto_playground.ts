@@ -4,6 +4,9 @@ import {BN, web3} from "@coral-xyz/anchor";
 import * as splTokenMetadata from "@solana/spl-token-metadata";
 // @ts-ignore
 import * as spl from "@solana/spl-token-3.x";
+import * as mpl from "@metaplex-foundation/mpl-token-metadata";
+import * as umi from "@metaplex-foundation/umi";
+import * as umi2 from "@metaplex-foundation/umi-bundle-defaults";
 // @ts-ignore
 import {AnchorPlayground, AnchorPlaygroundConfig, getLogger} from "../lib";
 import {Restaking} from "../../target/types/restaking";
@@ -69,8 +72,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeFundSupportedTokens(), // 6
             () => this.runFundManagerInitializeFundJitoRestakingVaults(), // 7
             () => this.runFundManagerUpdateFundConfigurations(), // 8
-            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 9
-            () => this.runFundManagerInitializeFundWrappedToken(), // 10
+            () => this.runAdminInitializeWFragJTOTokenMint(), // 9
+            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 10
+            () => this.runFundManagerInitializeFundWrappedToken(), // 11
         ];
     }
 
@@ -175,7 +179,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragJTOExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragJTOTokenMint, this.programId);
 
         // wFragJTO
-        const wFragJTOTokenMint = this.getConstantAsPublicKey('wrappedFragjtoMintAddress');
+        const wFragJTOTokenMint = this.getConstantAsPublicKey('fragjtoWrappedTokenMintAddress');
 
         // JTO
         const jtoTokenMint = this.supportedTokenMetadata['JTO'].mint;
@@ -339,6 +343,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public readonly fragJTODecimals = 9;
+    public readonly wFragJTODecimals = 9;
     public readonly vrtDecimals = 9;
 
     public get supportedTokenMetadata() {
@@ -744,6 +749,68 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragJTOMint};
     }
 
+    public async runAdminInitializeWFragJTOTokenMint(createMetadata = false) {
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        console.log(this.knownAddress.wFragJTOTokenMint);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.wFragJTOTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.wFragJTOTokenMint,
+                    this.wFragJTODecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID
+                ),
+            ],
+            signerNames: ["FRAGJTO_WRAPPED_TOKEN_MINT"],
+        });
+
+        if (this.isLocalnet) {
+            const txSig = await this.connection.requestAirdrop(this.keychain.getKeypair("ADMIN").publicKey, 1_000_000_000)
+            await this.connection.confirmTransaction(txSig, 'confirmed');
+        }
+
+        if (createMetadata) {
+            const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+            const keypair = this.keychain.getKeypair('FRAGJTO_WRAPPED_TOKEN_MINT');
+            const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+            const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
+
+            const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+            const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+            umiInstance.use(umi.signerIdentity(authority));
+
+            // TODO
+            await mpl.createV1(umiInstance, {
+                mint,
+                authority,
+                name: "TODO",
+                symbol: "TODO",
+                decimals: this.wFragJTODecimals,
+                uri: "TODO",
+                sellerFeeBasisPoints: umi.percentAmount(0),
+                tokenStandard: mpl.TokenStandard.Fungible,
+            }).sendAndConfirm(umiInstance);
+
+            const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
+            logger.notice("wFragJTO token mint metadata created".padEnd(LOG_PAD_LARGE), assets);
+        }
+
+        const wFragJTOMint = await spl.getMint(this.connection, this.knownAddress.wFragJTOTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID);
+        logger.notice("wFragJTO token mint created".padEnd(LOG_PAD_LARGE), this.knownAddress.wFragJTOTokenMint.toString());
+        return {wFragJTOMint};
+    }
+
     public async runAdminUpdateTokenMetadata() {
         const fragJTOTokenMetadataAddress = this.knownAddress.fragJTOTokenMint;
 
@@ -933,10 +1000,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ['fundManagerUpdatedFund']
         });
 
-        const fragJTOFundAccount = await this.getFragJTOFundAccount();
+        const [wFragJTOMint, fragJTOFundAccount] = await Promise.all([
+            spl.getMint(this.connection, this.knownAddress.wFragJTOTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID),
+            this.getFragJTOFundAccount(),
+        ]);
         logger.notice('set fragJTO fund wrapped token'.padEnd(LOG_PAD_LARGE), this.knownAddress.wFragJTOTokenMint.toString());
 
-        return {fragJTOFundAccount};
+        return {wFragJTOMint, fragJTOFundAccount};
     }
 
     public async runFundManagerInitializeFundJitoRestakingVaults() {

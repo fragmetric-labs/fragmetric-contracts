@@ -78,8 +78,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeFundNormalizedToken(), // 10
             () => this.runFundManagerInitializeFundJitoRestakingVaults(), // 11
             () => this.runFundManagerUpdateFundConfigurations(), // 12
-            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 13
-            () => this.runFundManagerInitializeFundWrappedToken(), // 14
+            () => this.runAdminInitializeWFragSOLTokenMint(), // 13
+            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 14
+            () => this.runFundManagerInitializeFundWrappedToken(), // 15
         ];
     }
 
@@ -189,7 +190,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragSOLTokenMint, this.programId);
 
         // wFragSOL
-        const wFragSOLTokenMint = this.getConstantAsPublicKey("wrappedFragsolMintAddress");
+        const wFragSOLTokenMint = this.getConstantAsPublicKey("fragsolWrappedTokenMintAddress");
 
         // nSOL
         const nSOLTokenMint = this.getConstantAsPublicKey("fragsolNormalizedTokenMintAddress");
@@ -429,6 +430,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public readonly fragSOLDecimals = 9;
     public readonly nSOLDecimals = 9;
+    public readonly wFragSOLDecimals = 9;
     public readonly vrtDecimals = 9;
 
     public get supportedTokenMetadata() {
@@ -1031,6 +1033,68 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {nSOLMint};
     }
 
+    public async runAdminInitializeWFragSOLTokenMint(createMetadata = false) {
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        console.log(this.knownAddress.wFragSOLTokenMint);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.wFragSOLTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.wFragSOLTokenMint,
+                    this.wFragSOLDecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID
+                ),
+            ],
+            signerNames: ["FRAGSOL_WRAPPED_TOKEN_MINT"],
+        });
+
+        if (this.isLocalnet) {
+            const txSig = await this.connection.requestAirdrop(this.keychain.getKeypair("ADMIN").publicKey, 1_000_000_000)
+            await this.connection.confirmTransaction(txSig, 'confirmed');
+        }
+
+        if (createMetadata) {
+            const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+            const keypair = this.keychain.getKeypair('FRAGSOL_WRAPPED_TOKEN_MINT');
+            const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+            const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
+
+            const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+            const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+            umiInstance.use(umi.signerIdentity(authority));
+
+            // TODO
+            await mpl.createV1(umiInstance, {
+                mint,
+                authority,
+                name: "TODO",
+                symbol: "TODO",
+                decimals: this.wFragSOLDecimals,
+                uri: "TODO",
+                sellerFeeBasisPoints: umi.percentAmount(0),
+                tokenStandard: mpl.TokenStandard.Fungible,
+            }).sendAndConfirm(umiInstance);
+
+            const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
+            logger.notice("wFragSOL token mint metadata created".padEnd(LOG_PAD_LARGE), assets);
+        }
+
+        const wFragSOLMint = await spl.getMint(this.connection, this.knownAddress.wFragSOLTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID);
+        logger.notice("wFragSOL token mint created".padEnd(LOG_PAD_LARGE), this.knownAddress.wFragSOLTokenMint.toString());
+        return {wFragSOLMint};
+    }
+
     public async runAdminUpdateTokenMetadata() {
         const fragSOLTokenMetadataAddress = this.knownAddress.fragSOLTokenMint;
 
@@ -1283,10 +1347,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ['fundManagerUpdatedFund']
         });
 
-        const fragSOLFundAccount = await this.getFragSOLFundAccount();
+        const [wFragSOLMint, fragSOLFundAccount] = await Promise.all([
+            spl.getMint(this.connection, this.knownAddress.wFragSOLTokenMint, "confirmed"),
+            this.getFragSOLFundAccount(),
+        ]);
         logger.notice('set fragSOL fund wrapped token'.padEnd(LOG_PAD_LARGE), this.knownAddress.wFragSOLTokenMint.toString());
 
-        return {fragSOLFundAccount};
+        return {wFragSOLMint, fragSOLFundAccount};
     }
 
     public async runFundManagerInitializeFundJitoRestakingVaults() {

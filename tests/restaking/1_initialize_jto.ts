@@ -127,6 +127,13 @@ describe("initialize", async () => {
         await restaking.runFundManagerUpdateFundConfigurations();
     });
 
+    step("create wrapped token mint", async function () {
+        const {wFragJTOMint} = await restaking.runAdminInitializeWFragJTOTokenMint();
+        expect(wFragJTOMint.address.toString()).eq(restaking.knownAddress.wFragJTOTokenMint.toString());
+        expect(wFragJTOMint.mintAuthority.toString()).eq(restaking.keychain.getKeypair('ADMIN').publicKey.toString());
+        expect(wFragJTOMint.freezeAuthority).null;
+    })
+
     step("initialize fund wrap account reward account", async () => {
         const {fragJTOFundWrapAccountRewardAccount} = await restaking.runAdminInitializeOrUpdateFundWrapAccountRewardAccount();
         expect(fragJTOFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragJTOFundWrapAccount);
@@ -134,8 +141,9 @@ describe("initialize", async () => {
     })
 
     step("initialize fund wrapped token", async () => {
-        const {fragJTOFundAccount} = await restaking.runFundManagerInitializeFundWrappedToken();
+        const {wFragJTOMint, fragJTOFundAccount} = await restaking.runFundManagerInitializeFundWrappedToken();
         expect(fragJTOFundAccount.wrappedToken.enabled).eq(1);
         expect(fragJTOFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wFragJTOTokenMint.toString());
+        expect(wFragJTOMint.mintAuthority.toString()).eq(restaking.knownAddress.fragJTOFund.toString());
     })
 });
