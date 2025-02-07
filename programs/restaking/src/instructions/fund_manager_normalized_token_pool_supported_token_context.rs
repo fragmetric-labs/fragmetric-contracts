@@ -13,6 +13,7 @@ pub struct FundManagerNormalizedTokenPoolSupportedTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
+    #[account(mint::token_program = normalized_token_program)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

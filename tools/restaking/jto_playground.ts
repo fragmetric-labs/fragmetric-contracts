@@ -1685,7 +1685,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             donationEnabled: false,
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? false : (this.isMainnet ? false : false),
+            transferEnabled: this.isDevnet ? true : (this.isMainnet ? false : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
 

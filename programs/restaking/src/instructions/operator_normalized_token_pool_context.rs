@@ -11,6 +11,7 @@ use crate::utils::PDASeeds;
 pub struct OperatorNormalizedTokenPoolContext<'info> {
     pub operator: Signer<'info>,
 
+    #[account(mint::token_program = normalized_token_program)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
