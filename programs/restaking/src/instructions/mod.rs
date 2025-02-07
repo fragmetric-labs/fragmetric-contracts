@@ -1,4 +1,5 @@
 mod admin_fund_context;
+mod admin_fund_wrap_context;
 mod admin_normalized_token_pool_context;
 mod admin_receipt_token_mint_context;
 mod admin_reward_context;
@@ -7,6 +8,7 @@ mod fund_manager_fund_context;
 mod fund_manager_fund_jito_restaking_vault_context;
 mod fund_manager_fund_normalized_token_context;
 mod fund_manager_fund_supported_token_context;
+mod fund_manager_fund_wrapped_token_context;
 mod fund_manager_normalized_token_pool_supported_token_context;
 mod fund_manager_reward_context;
 
@@ -23,6 +25,7 @@ mod user_reward_context;
 mod slasher_normalized_token_context;
 
 pub use admin_fund_context::*;
+pub use admin_fund_wrap_context::*;
 pub use admin_normalized_token_pool_context::*;
 pub use admin_receipt_token_mint_context::*;
 pub use admin_reward_context::*;
@@ -31,6 +34,7 @@ pub use fund_manager_fund_context::*;
 pub use fund_manager_fund_jito_restaking_vault_context::*;
 pub use fund_manager_fund_normalized_token_context::*;
 pub use fund_manager_fund_supported_token_context::*;
+pub use fund_manager_fund_wrapped_token_context::*;
 pub use fund_manager_normalized_token_pool_supported_token_context::*;
 pub use fund_manager_reward_context::*;
 

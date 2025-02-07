@@ -159,4 +159,16 @@ describe("initialize", async () => {
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
         await restaking.runFundManagerUpdateFundConfigurations();
     });
+
+    step("initialize fund wrap account reward account", async () => {
+        const {fragSOLFundWrapAccountRewardAccount} = await restaking.runAdminInitializeOrUpdateFundWrapAccountRewardAccount();
+        expect(fragSOLFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragSOLFundWrapAccount);
+        expect(fragSOLFundWrapAccountRewardAccount.dataVersion).gt(0);
+    })
+
+    step("initialize fund wrapped token", async () => {
+        const {fragSOLFundAccount} = await restaking.runFundManagerInitializeFundWrappedToken();
+        expect(fragSOLFundAccount.wrappedToken.enabled).eq(1);
+        expect(fragSOLFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wFragSOLTokenMint.toString());
+    })
 });

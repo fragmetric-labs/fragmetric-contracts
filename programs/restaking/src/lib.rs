@@ -67,6 +67,50 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // AdminFundWrapAccountRewardAccountInitialContext
+    ////////////////////////////////////////////
+
+    pub fn admin_initialize_fund_wrap_account_reward_account(
+        ctx: Context<AdminFundWrapAccountRewardAccountInitialContext>,
+    ) -> Result<()> {
+        // modules::reward::UserRewardConfigurationService::new(
+        //     &ctx.accounts.receipt_token_mint,
+        //     &ctx.accounts.fund_wrap_account,
+        //     &mut ctx.accounts.reward_account,
+        //     &mut ctx.accounts.fund_wrap_account_reward_account,
+        // )?
+        // .process_initialize_user_reward_account(
+        //     &ctx.accounts.receipt_token_wrap_account,
+        //     ctx.bumps.fund_wrap_account_reward_account,
+        // )?;
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // AdminFundWrapAccountRewardAccountUpdateContext
+    ////////////////////////////////////////////
+
+    pub fn admin_update_fund_wrap_account_reward_account_if_needed(
+        ctx: Context<AdminFundWrapAccountRewardAccountUpdateContext>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        // modules::reward::UserRewardConfigurationService::new(
+        //     &ctx.accounts.receipt_token_mint,
+        //     &ctx.accounts.fund_wrap_account,
+        //     &mut ctx.accounts.reward_account,
+        //     &mut ctx.accounts.fund_wrap_account_reward_account,
+        // )?
+        // .process_update_user_reward_account_if_needed(
+        //     &ctx.accounts.receipt_token_wrap_account,
+        //     &ctx.accounts.system_program,
+        //     desired_account_size,
+        // )?;
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
 
@@ -321,6 +365,30 @@ pub mod restaking {
             &mut ctx.accounts.normalized_token_pool_account,
             ctx.remaining_accounts,
         )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerFundWrappedTokenInitialContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_initialize_fund_wrapped_token<'info>(
+        ctx: Context<FundManagerFundWrappedTokenInitialContext>,
+    ) -> Result<()> {
+        // emit_cpi!(modules::fund::FundConfigurationService::new(
+        //     &mut ctx.accounts.receipt_token_mint,
+        //     &mut ctx.accounts.fund_account,
+        // )?
+        // .process_set_wrapped_token(
+        //     &ctx.accounts.wrapped_token_mint,
+        //     &ctx.accounts.admin,
+        //     &ctx.accounts.wrapped_token_program,
+        //     &ctx.accounts.fund_wrap_account,
+        //     &ctx.accounts.receipt_token_wrap_account,
+        //     &mut ctx.accounts.reward_account,
+        //     &mut ctx.accounts.fund_wrap_account_reward_account,
+        // )?);
 
         Ok(())
     }

@@ -126,4 +126,16 @@ describe("initialize", async () => {
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
         await restaking.runFundManagerUpdateFundConfigurations();
     });
+
+    step("initialize fund wrap account reward account", async () => {
+        const {fragJTOFundWrapAccountRewardAccount} = await restaking.runAdminInitializeOrUpdateFundWrapAccountRewardAccount();
+        expect(fragJTOFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragJTOFundWrapAccount);
+        expect(fragJTOFundWrapAccountRewardAccount.dataVersion).gt(0);
+    })
+
+    step("initialize fund wrapped token", async () => {
+        const {fragJTOFundAccount} = await restaking.runFundManagerInitializeFundWrappedToken();
+        expect(fragJTOFundAccount.wrappedToken.enabled).eq(1);
+        expect(fragJTOFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wFragJTOTokenMint.toString());
+    })
 });
