@@ -10,8 +10,13 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundWrappedTokenContext<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
+
+    #[account(
+        seeds = [FundAccount::WRAP_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_wrap_account: SystemAccount<'info>,
 
     pub receipt_token_program: Program<'info, Token2022>,
 
@@ -34,18 +39,16 @@ pub struct UserFundWrappedTokenContext<'info> {
     #[account(
         mut,
         associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_wrap_account,
         associated_token::token_program = receipt_token_program,
-        // to reduce the number of required accounts, derive authority address from fund
-        associated_token::authority = fund_account.load()?.get_wrap_account_address()?,
     )]
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        token::mint = wrapped_token_mint,
-        // does this need to be user token account?
-        // an easier way to wrap then transfer: mint wrapped token to destination!
-        token::token_program = wrapped_token_program,
+        associated_token::mint = wrapped_token_mint,
+        associated_token::authority = user,
+        associated_token::token_program = wrapped_token_program,
     )]
     pub user_wrapped_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -85,10 +88,10 @@ pub struct UserFundWrappedTokenContext<'info> {
 
     #[account(
         mut,
-        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), fund_account.load()?.get_wrap_account_address()?.as_ref()],
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), fund_wrap_account.key().as_ref()],
         bump = fund_wrap_account_reward_account.get_bump()?,
         has_one = receipt_token_mint,
-        constraint = fund_wrap_account_reward_account.load()?.user == fund_account.load()?.get_wrap_account_address()? @ error::ErrorCode::ConstraintHasOne,
+        constraint = fund_wrap_account_reward_account.load()?.user == fund_wrap_account.key() @ error::ErrorCode::ConstraintHasOne,
         constraint = fund_wrap_account_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_wrap_account_reward_account: AccountLoader<'info, UserRewardAccount>,
