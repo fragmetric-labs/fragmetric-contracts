@@ -77,6 +77,7 @@ if (process.env.JTO) {
         require('./restaking/4_withdraw_sol');
         require('./restaking/5_transfer_hook');
         require('./restaking/6_reward');
+        require('./restaking/12_wrap');
 
     }
 }
