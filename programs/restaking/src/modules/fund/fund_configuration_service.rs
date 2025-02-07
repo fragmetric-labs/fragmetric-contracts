@@ -5,6 +5,7 @@ use anchor_spl::token_interface::*;
 
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
+use crate::modules::reward;
 use crate::utils::{AccountLoaderExt, SystemProgramExt};
 use crate::{errors, events};
 
@@ -97,6 +98,54 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         Ok(())
     }
 
+    pub fn process_initialize_fund_wrap_account_reward_account(
+        &self,
+        fund_wrap_account: &SystemAccount,
+        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
+        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
+        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
+        fund_wrap_account_reward_account_bump: u8,
+    ) -> Result<()> {
+        reward::UserRewardConfigurationService::new_with_user_seeds(
+            self.receipt_token_mint,
+            fund_wrap_account,
+            &self.fund_account.load()?.get_wrap_account_seeds(),
+            receipt_token_wrap_account,
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?
+        .process_initialize_user_reward_account(fund_wrap_account_reward_account_bump)?;
+
+        Ok(())
+    }
+
+    pub fn process_update_fund_wrap_account_reward_account_if_needed(
+        &self,
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        fund_wrap_account: &SystemAccount,
+        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
+        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
+        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        reward::UserRewardConfigurationService::new_with_user_seeds(
+            self.receipt_token_mint,
+            fund_wrap_account,
+            &self.fund_account.load()?.get_wrap_account_seeds(),
+            receipt_token_wrap_account,
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?
+        .process_update_user_reward_account_if_needed(
+            payer,
+            system_program,
+            desired_account_size,
+        )?;
+
+        Ok(())
+    }
+
     pub fn process_set_address_lookup_table_account(
         &mut self,
         address_lookup_table_account: &Option<Pubkey>,
@@ -184,6 +233,70 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         // do pricing as a validation
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_set_wrapped_token(
+        &mut self,
+        wrapped_token_mint: &InterfaceAccount<'info, Mint>,
+        wrapped_token_mint_current_authority: &Signer<'info>,
+        wrapped_token_program: &Program<'info, Token>,
+        fund_wrap_account: &SystemAccount<'info>,
+        receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
+        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
+        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(wrapped_token_mint).owner,
+            wrapped_token_program.key(),
+        );
+
+        require_keys_eq!(
+            receipt_token_wrap_account.mint,
+            self.receipt_token_mint.key(),
+        );
+        require_keys_eq!(receipt_token_wrap_account.owner, fund_wrap_account.key());
+
+        require_eq!(
+            wrapped_token_mint.decimals,
+            self.receipt_token_mint.decimals,
+        );
+
+        // Must be pegged 1 to 1
+        require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
+
+        // validate accounts
+        reward::UserRewardService::new_with_user_seeds(
+            self.receipt_token_mint,
+            fund_wrap_account,
+            &self.fund_account.load()?.get_wrap_account_seeds(),
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?;
+
+        // set wrapped token
+        self.fund_account.load_mut()?.set_wrapped_token(
+            wrapped_token_mint.key(),
+            wrapped_token_program.key(),
+            wrapped_token_mint.decimals,
+            wrapped_token_mint.supply,
+        )?;
+
+        // set token mint authority
+        if wrapped_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
+            anchor_spl::token::set_authority(
+                CpiContext::new(
+                    wrapped_token_program.to_account_info(),
+                    anchor_spl::token::SetAuthority {
+                        current_authority: wrapped_token_mint_current_authority.to_account_info(),
+                        account_or_mint: wrapped_token_mint.to_account_info(),
+                    },
+                ),
+                anchor_spl::token::spl_token::instruction::AuthorityType::MintTokens,
+                Some(self.fund_account.key()),
+            )?;
+        }
 
         self.create_fund_manager_updated_fund_event()
     }

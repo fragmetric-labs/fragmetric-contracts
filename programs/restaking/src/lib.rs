@@ -73,18 +73,17 @@ pub mod restaking {
     pub fn admin_initialize_fund_wrap_account_reward_account(
         ctx: Context<AdminFundWrapAccountRewardAccountInitialContext>,
     ) -> Result<()> {
-        // modules::reward::UserRewardConfigurationService::new(
-        //     &ctx.accounts.receipt_token_mint,
-        //     &ctx.accounts.fund_wrap_account,
-        //     &mut ctx.accounts.reward_account,
-        //     &mut ctx.accounts.fund_wrap_account_reward_account,
-        // )?
-        // .process_initialize_user_reward_account(
-        //     &ctx.accounts.receipt_token_wrap_account,
-        //     ctx.bumps.fund_wrap_account_reward_account,
-        // )?;
-
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_initialize_fund_wrap_account_reward_account(
+            &ctx.accounts.fund_wrap_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.fund_wrap_account_reward_account,
+            ctx.bumps.fund_wrap_account_reward_account,
+        )
     }
 
     ////////////////////////////////////////////
@@ -95,19 +94,19 @@ pub mod restaking {
         ctx: Context<AdminFundWrapAccountRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        // modules::reward::UserRewardConfigurationService::new(
-        //     &ctx.accounts.receipt_token_mint,
-        //     &ctx.accounts.fund_wrap_account,
-        //     &mut ctx.accounts.reward_account,
-        //     &mut ctx.accounts.fund_wrap_account_reward_account,
-        // )?
-        // .process_update_user_reward_account_if_needed(
-        //     &ctx.accounts.receipt_token_wrap_account,
-        //     &ctx.accounts.system_program,
-        //     desired_account_size,
-        // )?;
-
-        Ok(())
+        modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_update_fund_wrap_account_reward_account_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &ctx.accounts.fund_wrap_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.fund_wrap_account_reward_account,
+            desired_account_size,
+        )
     }
 
     ////////////////////////////////////////////
@@ -376,19 +375,19 @@ pub mod restaking {
     pub fn fund_manager_initialize_fund_wrapped_token<'info>(
         ctx: Context<FundManagerFundWrappedTokenInitialContext>,
     ) -> Result<()> {
-        // emit_cpi!(modules::fund::FundConfigurationService::new(
-        //     &mut ctx.accounts.receipt_token_mint,
-        //     &mut ctx.accounts.fund_account,
-        // )?
-        // .process_set_wrapped_token(
-        //     &ctx.accounts.wrapped_token_mint,
-        //     &ctx.accounts.admin,
-        //     &ctx.accounts.wrapped_token_program,
-        //     &ctx.accounts.fund_wrap_account,
-        //     &ctx.accounts.receipt_token_wrap_account,
-        //     &mut ctx.accounts.reward_account,
-        //     &mut ctx.accounts.fund_wrap_account_reward_account,
-        // )?);
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_set_wrapped_token(
+            &ctx.accounts.wrapped_token_mint,
+            &ctx.accounts.admin,
+            &ctx.accounts.wrapped_token_program,
+            &ctx.accounts.fund_wrap_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &mut ctx.accounts.reward_account,
+            &mut ctx.accounts.fund_wrap_account_reward_account,
+        )?);
 
         Ok(())
     }
@@ -1068,13 +1067,11 @@ pub mod restaking {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-        .process_initialize_user_reward_account(
-            &ctx.accounts.user_receipt_token_account,
-            ctx.bumps.user_reward_account,
-        )?;
+        .process_initialize_user_reward_account(ctx.bumps.user_reward_account)?;
 
         if let Some(event) = event {
             emit_cpi!(event);
@@ -1094,11 +1091,12 @@ pub mod restaking {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_update_user_reward_account_if_needed(
-            &ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.user,
             &ctx.accounts.system_program,
             desired_account_size,
         )?;

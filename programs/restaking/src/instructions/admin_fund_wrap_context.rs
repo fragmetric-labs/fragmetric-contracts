@@ -38,6 +38,14 @@ pub struct AdminFundWrapAccountRewardAccountInitialContext<'info> {
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
         mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
@@ -86,6 +94,14 @@ pub struct AdminFundWrapAccountRewardAccountUpdateContext<'info> {
         associated_token::authority = fund_wrap_account,
     )]
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
 
     #[account(
         mut,
