@@ -1033,6 +1033,31 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserFundWrappedTokenContext
+    ////////////////////////////////////////////
+
+    pub fn user_wrap_receipt_token(
+        ctx: Context<UserFundWrappedTokenContext>,
+        amount: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn user_wrap_receipt_token_if_needed(
+        ctx: Context<UserFundWrappedTokenContext>,
+        target_balance: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn user_unwrap_receipt_token(
+        ctx: Context<UserFundWrappedTokenContext>,
+        amount: u64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserRewardAccountInitOrUpdateContext
     ////////////////////////////////////////////
     pub fn user_create_reward_account_idempotent(

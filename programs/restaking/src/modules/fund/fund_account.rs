@@ -230,7 +230,7 @@ impl FundAccount {
         seeds
     }
 
-    pub(super) fn get_wrap_account_address(&self) -> Result<Pubkey> {
+    pub fn get_wrap_account_address(&self) -> Result<Pubkey> {
         Ok(
             Pubkey::create_program_address(&self.get_wrap_account_seeds(), &crate::ID)
                 .map_err(|_| ProgramError::InvalidSeeds)?,

@@ -19,6 +19,7 @@ mod operator_reward_context;
 
 mod user_fund_context;
 mod user_fund_supported_token_context;
+mod user_fund_wrapped_token_context;
 mod user_receipt_token_transfer_context;
 mod user_reward_context;
 
@@ -45,6 +46,7 @@ pub use operator_reward_context::*;
 
 pub use user_fund_context::*;
 pub use user_fund_supported_token_context::*;
+pub use user_fund_wrapped_token_context::*;
 pub use user_receipt_token_transfer_context::*;
 pub use user_reward_context::*;
 
