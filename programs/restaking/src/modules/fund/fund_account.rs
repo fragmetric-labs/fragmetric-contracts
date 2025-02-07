@@ -15,8 +15,9 @@ use super::*;
 
 #[constant]
 /// ## Version History
-/// * v15: migrate to new layout including new fields using bytemuck. (150584 ~= 148KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 15;
+/// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
+/// * v16: add wrap_account and wrapped token field. (151328 ~= 148KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 16;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
@@ -29,7 +30,8 @@ pub struct FundAccount {
     bump: u8,
     reserve_account_bump: u8,
     treasury_account_bump: u8,
-    _padding: [u8; 9],
+    wrap_account_bump: u8,
+    _padding: [u8; 8],
     pub(super) transfer_enabled: u8,
 
     address_lookup_table_enabled: u8,
@@ -75,6 +77,10 @@ pub struct FundAccount {
 
     /// fund operation state
     pub(super) operation: OperationState,
+
+    /// optional wrapped token of fund receipt token
+    wrap_account: Pubkey,
+    wrapped_token: WrappedToken,
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -123,6 +129,11 @@ impl FundAccount {
                 Pubkey::find_program_address(&self.get_treasury_account_seed_phrase(), &crate::ID);
 
             self.data_version = 15;
+        }
+        if self.data_version == 15 {
+            (self.wrap_account, self.wrap_account_bump) =
+                Pubkey::find_program_address(&self.get_wrap_account_seed_phrase(), &crate::ID);
+            self.data_version = 16;
         }
     }
 
@@ -201,6 +212,27 @@ impl FundAccount {
     pub(super) fn get_treasury_account_address(&self) -> Result<Pubkey> {
         Ok(
             Pubkey::create_program_address(&self.get_treasury_account_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub const WRAP_SEED: &'static [u8] = b"fund_wrap";
+
+    #[inline(always)]
+    fn get_wrap_account_seed_phrase(&self) -> [&[u8]; 2] {
+        [Self::WRAP_SEED, self.receipt_token_mint.as_ref()]
+    }
+
+    pub(super) fn get_wrap_account_seeds(&self) -> [&[u8]; 3] {
+        let mut seeds = <[_; 3]>::default();
+        seeds[..2].copy_from_slice(&self.get_wrap_account_seed_phrase());
+        seeds[2] = std::slice::from_ref(&self.wrap_account_bump);
+        seeds
+    }
+
+    pub(super) fn get_wrap_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_wrap_account_seeds(), &crate::ID)
                 .map_err(|_| ProgramError::InvalidSeeds)?,
         )
     }
@@ -534,6 +566,31 @@ impl FundAccount {
         self.num_restaking_vaults += 1;
 
         Ok(())
+    }
+
+    #[inline]
+    pub(super) fn get_wrapped_token(&self) -> Option<&WrappedToken> {
+        (self.wrapped_token.enabled == 1).then_some(&self.wrapped_token)
+    }
+
+    #[inline]
+    pub(super) fn get_wrapped_token_mut(&mut self) -> Option<&mut WrappedToken> {
+        (self.wrapped_token.enabled == 1).then_some(&mut self.wrapped_token)
+    }
+
+    pub(super) fn set_wrapped_token(
+        &mut self,
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
+        supply: u64,
+    ) -> Result<()> {
+        if self.wrapped_token.enabled != 0 {
+            err!(ErrorCode::FundWrappedTokenAlreadySetError)?
+        }
+
+        self.wrapped_token
+            .initialize(mint, program, decimals, supply)
     }
 
     pub(super) fn reload_receipt_token_supply(
