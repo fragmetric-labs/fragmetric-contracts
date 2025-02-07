@@ -71,6 +71,9 @@ if (process.env.JTO) {
     } else if (process.env.JUST_TRANSFER) {
         require('./restaking/5_transfer_hook');
 
+    } else if (process.env.JUST_WRAP) {
+        require('./restaking/12_wrap');
+
     } else if (!process.env.JUST_INIT) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);

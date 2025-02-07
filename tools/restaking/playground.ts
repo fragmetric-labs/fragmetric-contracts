@@ -822,11 +822,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getUserFragSOLFundAccount(user: web3.PublicKey) {
-        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user));
+        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user), "confirmed");
     }
 
     public getUserFragSOLRewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user));
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user), "confirmed");
     }
 
     public getFragSOLFundWrapAccountRewardAccount() {
@@ -834,7 +834,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getFragSOLRewardAccount() {
-        return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward, "confirmed");
     }
 
     public getFragSOLFundAccount() {
@@ -3134,10 +3134,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wFragSOLUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
             this.getFragSOLFundWrapAccountRewardAccount(),
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenWrapAccount(),
@@ -3146,6 +3146,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragSOL balance: ${this.lamportsToWFragSOL(new BN(wFragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
 
         return {
             event,
@@ -3186,10 +3187,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wFragSOLUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
             this.getFragSOLFundWrapAccountRewardAccount(),
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenWrapAccount(),
@@ -3198,6 +3199,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragSOL balance: ${this.lamportsToWFragSOL(new BN(wFragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
 
         return {
             event,
@@ -3239,10 +3241,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wFragSOLUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragSOLFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user.publicKey)),
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
             this.getFragSOLFundWrapAccountRewardAccount(),
             this.getUserFragSOLAccount(user.publicKey),
             this.getFragSOLFundReceiptTokenWrapAccount(),
@@ -3251,6 +3253,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragSOL balance: ${this.lamportsToWFragSOL(new BN(wFragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
 
         return {
             event,

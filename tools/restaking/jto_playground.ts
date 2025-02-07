@@ -625,11 +625,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getUserFragJTOFundAccount(user: web3.PublicKey) {
-        return this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user));
+        return this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user), "confirmed");
     }
 
     public getUserFragJTORewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user));
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user), "confirmed");
     }
 
     public getFragJTOFundWrapAccountRewardAccount() {
@@ -637,7 +637,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getFragJTORewardAccount() {
-        return this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
+        return this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward, "confirmed");
     }
 
     public getFragJTOFundAccount() {
@@ -2509,10 +2509,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragJTOFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user.publicKey)),
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
             this.getFragJTOFundWrapAccountRewardAccount(),
             this.getUserFragJTOAccount(user.publicKey),
             this.getFragJTOFundReceiptTokenWrapAccount(),
@@ -2521,6 +2521,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragJTO balance: ${this.lamportsToWFragJTO(new BN(wFragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
 
         return {
             event,
@@ -2561,10 +2562,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragJTOFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user.publicKey)),
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
             this.getFragJTOFundWrapAccountRewardAccount(),
             this.getUserFragJTOAccount(user.publicKey),
             this.getFragJTOFundReceiptTokenWrapAccount(),
@@ -2573,6 +2574,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragJTO balance: ${this.lamportsToWFragJTO(new BN(wFragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
 
         return {
             event,
@@ -2614,10 +2616,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([
-            this.account.fundAccount.fetch(this.knownAddress.fragJTOFund),
-            this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward),
-            this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user.publicKey)),
-            this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user.publicKey)),
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
             this.getFragJTOFundWrapAccountRewardAccount(),
             this.getUserFragJTOAccount(user.publicKey),
             this.getFragJTOFundReceiptTokenWrapAccount(),
@@ -2626,6 +2628,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         
         logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
         logger.info(`user wFragJTO balance: ${this.lamportsToWFragJTO(new BN(wFragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
 
         return {
             event,

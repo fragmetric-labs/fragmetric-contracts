@@ -114,8 +114,11 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         if self.user_fund_account.is_initialized() {
-            Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?
+            let mut user_fund_account_parsed =
+                Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?;
+            user_fund_account_parsed
                 .reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account_parsed.exit(&crate::ID)?;
         }
 
         let mut user_reward_account_option =
@@ -218,8 +221,11 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
         if self.user_fund_account.is_initialized() {
-            Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?
+            let mut user_fund_account_parsed =
+                Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?;
+            user_fund_account_parsed
                 .reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account_parsed.exit(&crate::ID)?;
         }
 
         let mut user_reward_account_option =
