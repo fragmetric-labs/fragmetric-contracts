@@ -2505,7 +2505,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [user],
-            events: [], // TODO
+            events: ['userWrappedReceiptToken'],
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([
@@ -2558,7 +2558,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [user],
-            events: [], // TODO
+            events: ['userWrappedReceiptToken'],
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([
@@ -2612,7 +2612,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             ],
             signers: [user],
-            events: [], // TODO
+            events: ['userUnwrappedReceiptToken'],
         });
 
         const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wFragJTOUserTokenAccount] = await Promise.all([

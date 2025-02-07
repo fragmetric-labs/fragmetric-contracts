@@ -1039,7 +1039,7 @@ pub mod restaking {
         ctx: Context<UserFundWrappedTokenContext>,
         amount: u64,
     ) -> Result<()> {
-        modules::fund::UserFundWrapService::new(
+        emit_cpi!(modules::fund::UserFundWrapService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.wrapped_token_mint,
@@ -1055,7 +1055,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_wrap_account,
             &mut ctx.accounts.fund_wrap_account_reward_account,
         )?
-        .process_wrap_receipt_token(amount)?;
+        .process_wrap_receipt_token(amount)?);
 
         Ok(())
     }
@@ -1064,7 +1064,7 @@ pub mod restaking {
         ctx: Context<UserFundWrappedTokenContext>,
         target_balance: u64,
     ) -> Result<()> {
-        modules::fund::UserFundWrapService::new(
+        let event = modules::fund::UserFundWrapService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.wrapped_token_mint,
@@ -1082,6 +1082,10 @@ pub mod restaking {
         )?
         .process_wrap_receipt_token_if_needed(target_balance)?;
 
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
         Ok(())
     }
 
@@ -1089,7 +1093,7 @@ pub mod restaking {
         ctx: Context<UserFundWrappedTokenContext>,
         amount: u64,
     ) -> Result<()> {
-        modules::fund::UserFundWrapService::new(
+        emit_cpi!(modules::fund::UserFundWrapService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.wrapped_token_mint,
@@ -1105,7 +1109,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_wrap_account,
             &mut ctx.accounts.fund_wrap_account_reward_account,
         )?
-        .process_unwrap_receipt_token(amount)?;
+        .process_unwrap_receipt_token(amount)?);
 
         Ok(())
     }

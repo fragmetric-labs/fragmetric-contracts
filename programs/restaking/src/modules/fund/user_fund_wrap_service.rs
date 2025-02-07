@@ -10,10 +10,6 @@ use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
 use super::*;
 
-// TODO: create event
-pub type WrapEvent = ();
-pub type UnwrapEvent = ();
-
 pub struct UserFundWrapService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
@@ -79,7 +75,10 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         })
     }
 
-    pub fn process_wrap_receipt_token(&mut self, amount: u64) -> Result<WrapEvent> {
+    pub fn process_wrap_receipt_token(
+        &mut self,
+        amount: u64,
+    ) -> Result<events::UserWrappedReceiptToken> {
         require_gte!(self.user_receipt_token_account.amount, amount);
 
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -113,19 +112,20 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
-        if self.user_fund_account.is_initialized() {
-            let mut user_fund_account_parsed =
-                Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?;
-            user_fund_account_parsed
-                .reload_receipt_token_amount(self.user_receipt_token_account)?;
-            user_fund_account_parsed.exit(&crate::ID)?;
+        let mut user_fund_account_option = self
+            .user_fund_account
+            .as_account_info()
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+        if let Some(user_fund_account) = &mut user_fund_account_option {
+            user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account.exit(&crate::ID)?;
         }
 
         let mut user_reward_account_option =
             self.user_reward_account
                 .as_account_info()
                 .parse_optional_account_loader::<UserRewardAccount>()?;
-        let _event = RewardService::new(self.receipt_token_mint, self.reward_account)?
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 user_reward_account_option.as_mut(),
                 Some(self.fund_wrap_account_reward_account),
@@ -152,13 +152,23 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .reload_wrapped_token_supply(self.wrapped_token_mint)?;
 
         // event
-        Ok(())
+        Ok(events::UserWrappedReceiptToken {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            wrapped_token_mint: self.wrapped_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_wrapped_token_account: self.user_wrapped_token_account.key(),
+            user_fund_account: user_fund_account_option.map(|account| account.key()),
+            user_reward_account: user_reward_account_option.map(|account| account.key()),
+            wrapped_receipt_token_amount: amount,
+        })
     }
 
     pub fn process_wrap_receipt_token_if_needed(
         &mut self,
         target_balance: u64,
-    ) -> Result<Option<WrapEvent>> {
+    ) -> Result<Option<events::UserWrappedReceiptToken>> {
         if self.user_wrapped_token_account.amount >= target_balance {
             return Ok(None);
         }
@@ -168,7 +178,10 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         )?))
     }
 
-    pub fn process_unwrap_receipt_token(&mut self, amount: u64) -> Result<UnwrapEvent> {
+    pub fn process_unwrap_receipt_token(
+        &mut self,
+        amount: u64,
+    ) -> Result<events::UserUnwrappedReceiptToken> {
         require_gte!(self.user_wrapped_token_account.amount, amount);
 
         // burn wrapped token from user
@@ -220,19 +233,20 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
-        if self.user_fund_account.is_initialized() {
-            let mut user_fund_account_parsed =
-                Account::<UserFundAccount>::try_from(self.user_fund_account.as_account_info())?;
-            user_fund_account_parsed
-                .reload_receipt_token_amount(self.user_receipt_token_account)?;
-            user_fund_account_parsed.exit(&crate::ID)?;
+        let mut user_fund_account_option = self
+            .user_fund_account
+            .as_account_info()
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+        if let Some(user_fund_account) = &mut user_fund_account_option {
+            user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account.exit(&crate::ID)?;
         }
 
         let mut user_reward_account_option =
             self.user_reward_account
                 .as_account_info()
                 .parse_optional_account_loader::<UserRewardAccount>()?;
-        let _event = RewardService::new(self.receipt_token_mint, self.reward_account)?
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 Some(self.fund_wrap_account_reward_account),
                 user_reward_account_option.as_mut(),
@@ -241,6 +255,16 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             )?;
 
         // event
-        Ok(())
+        Ok(events::UserUnwrappedReceiptToken {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            wrapped_token_mint: self.wrapped_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_wrapped_token_account: self.user_wrapped_token_account.key(),
+            user_fund_account: user_fund_account_option.map(|account| account.key()),
+            user_reward_account: user_reward_account_option.map(|account| account.key()),
+            unwrapped_receipt_token_amount: amount,
+        })
     }
 }

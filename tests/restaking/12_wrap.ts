@@ -54,6 +54,9 @@ describe("wrap", async function () {
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.muln(2).toString());
         expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.muln(2).toString());
 
+        // event check
+        expect(res1.event.userWrappedReceiptToken.wrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
+
         // global: no change
         expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
             res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq("0");
@@ -108,6 +111,9 @@ describe("wrap", async function () {
         expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(amountEach.toString());
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.toString());
         expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
+
+        // event check
+        expect(res1.event.userUnwrappedReceiptToken.unwrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
 
         // global: no change
         expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
@@ -319,13 +325,17 @@ describe("wrap", async function () {
         expect(fragSOLWrapAccount0.toString()).eq(amountEach.divn(2).toString());
         expect(userBWFragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
 
-        // wrap 10 fragSOL
-        await restaking.runUserWrapReceiptTokenIfNeeded(userB, amountEach);
+        // wrap until 10 fragSOL
+        const res0 = await restaking.runUserWrapReceiptTokenIfNeeded(userB, amountEach);
         const res1 = await restaking.runUserWrapReceiptTokenIfNeeded(userB, amountEach);
 
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq("0");
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.toString());
         expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
+
+        // event check
+        expect(res0.event.userWrappedReceiptToken.wrappedReceiptTokenAmount.toString()).eq(amountEach.divn(2).toString());
+        expect(res1.event.userWrappedReceiptToken ?? null).to.be.null;
 
         // global: no change
         expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
