@@ -7,23 +7,23 @@ use crate::utils::{AccountInfoExt, AccountLoaderExt, AsAccountInfo, PDASeeds, Sy
 
 use super::*;
 
-pub struct UserRewardConfigurationService<'info: 'a, 'a> {
+pub struct UserRewardConfigurationService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    user: &'a Signer<'info>,
+    user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     _current_slot: u64,
 }
 
-impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
-    pub fn process_create_user_reward_account_idempotent<'b>(
-        system_program: &'b Program<'info, System>,
-        receipt_token_mint: &'b mut InterfaceAccount<'info, Mint>,
-        reward_account: &'b mut AccountLoader<'info, RewardAccount>,
+impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
+    pub fn process_create_user_reward_account_idempotent(
+        system_program: &Program<'info, System>,
+        receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
+        reward_account: &mut AccountLoader<'info, RewardAccount>,
 
-        user: &'b Signer<'info>,
-        user_receipt_token_account: &'b InterfaceAccount<'info, TokenAccount>,
-        user_reward_account: &'b mut UncheckedAccount<'info>,
+        user: &Signer<'info>,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        user_reward_account: &mut UncheckedAccount<'info>,
         user_reward_account_bump: u8,
 
         desired_account_size: Option<u32>,
@@ -55,13 +55,11 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             UserRewardConfigurationService::new(
                 receipt_token_mint,
                 user,
+                user_receipt_token_account,
                 reward_account,
                 &mut user_reward_account_parsed,
             )?
-            .process_initialize_user_reward_account(
-                user_receipt_token_account,
-                user_reward_account_bump,
-            )
+            .process_initialize_user_reward_account(user_reward_account_bump)
         } else {
             let mut user_reward_account_parsed = AccountLoader::<UserRewardAccount>::try_from(
                 user_reward_account.as_account_info(),
@@ -75,11 +73,12 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             UserRewardConfigurationService::new(
                 receipt_token_mint,
                 user,
+                user_receipt_token_account,
                 reward_account,
                 &mut user_reward_account_parsed,
             )?
             .process_update_user_reward_account_if_needed(
-                user_receipt_token_account,
+                user,
                 system_program,
                 desired_account_size,
             )
@@ -88,13 +87,41 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &'a Signer<'info>,
+        user: &Signer,
+        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
+        require_keys_eq!(user_receipt_token_account.owner, user.key());
+
         Ok(Self {
             receipt_token_mint,
-            user,
+            user_receipt_token_account,
+            reward_account,
+            user_reward_account,
+            _current_slot: Clock::get()?.slot,
+        })
+    }
+
+    /// Allow off-curve users
+    pub fn new_with_user_seeds(
+        receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
+        user: &AccountInfo,
+        user_signer_seeds: &[&[u8]],
+        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
+        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+    ) -> Result<Self> {
+        require_keys_eq!(
+            user.key(),
+            Pubkey::create_program_address(user_signer_seeds, &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        );
+        require_keys_eq!(user_receipt_token_account.owner, user.key());
+
+        Ok(Self {
+            receipt_token_mint,
+            user_receipt_token_account,
             reward_account,
             user_reward_account,
             _current_slot: Clock::get()?.slot,
@@ -103,7 +130,6 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
     pub fn process_initialize_user_reward_account(
         &mut self,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_account_bump: u8,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
         if self.user_reward_account.as_ref().data_len()
@@ -116,7 +142,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
             self.user_reward_account.load_init()?.initialize(
                 user_reward_account_bump,
                 self.receipt_token_mint,
-                user_receipt_token_account,
+                self.user_receipt_token_account,
             );
             self.user_reward_account.exit(&crate::ID)?;
 
@@ -125,13 +151,15 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                 .update_reward_pools_token_allocation(
                     None,
                     Some(self.user_reward_account),
-                    user_receipt_token_account.amount,
+                    self.user_receipt_token_account.amount,
                     None,
                 )?;
 
             return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_reward_account: self.user_reward_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: true,
             }));
         }
 
@@ -140,7 +168,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
     pub fn process_update_user_reward_account_if_needed(
         &mut self,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        payer: &Signer<'info>,
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
@@ -151,7 +179,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
 
         let new_account_size = system_program.expand_account_size_if_needed(
             self.user_reward_account.as_ref(),
-            self.user,
+            payer,
             &[],
             target_account_size,
             None,
@@ -162,7 +190,7 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                 let mut user_reward_account = self.user_reward_account.load_mut()?;
                 let initializing = user_reward_account.is_initializing();
                 let updated = user_reward_account
-                    .update_if_needed(self.receipt_token_mint, user_receipt_token_account);
+                    .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account);
                 (initializing, updated)
             };
 
@@ -172,15 +200,17 @@ impl<'info, 'a> UserRewardConfigurationService<'info, 'a> {
                     .update_reward_pools_token_allocation(
                         None,
                         Some(self.user_reward_account),
-                        user_receipt_token_account.amount,
+                        self.user_receipt_token_account.amount,
                         None,
                     )?;
             }
 
-            if initializing || updated {
+            if updated {
                 return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                     receipt_token_mint: self.receipt_token_mint.key(),
                     user_reward_account: self.user_reward_account.key(),
+                    receipt_token_amount: self.user_receipt_token_account.amount,
+                    created: initializing,
                 }));
             }
         }

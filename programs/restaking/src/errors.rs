@@ -241,4 +241,10 @@ pub enum ErrorCode {
 
     #[msg("fund: donation is currently disabled")]
     FundDonationDisabledError,
+
+    #[msg("fund: wrapped token already set")]
+    FundWrappedTokenAlreadySetError,
+
+    #[msg("fund: wrapped token is not set")]
+    FundWrappedTokenNotSetError,
 }

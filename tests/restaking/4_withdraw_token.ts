@@ -7,7 +7,7 @@ import { RestakingPlayground } from '../../tools/restaking/playground';
 describe("withdraw token", async () => {
     const restaking = await restakingPlayground as RestakingPlayground;
     const user5 = restaking.keychain.getKeypair('MOCK_USER5');
-    const user6= restaking.keychain.getKeypair('MOCK_USER6');
+    const user6 = restaking.keychain.getKeypair('MOCK_USER6');
 
     step("try airdrop SOL and tokens to mock accounts", async function () {
         await Promise.all([

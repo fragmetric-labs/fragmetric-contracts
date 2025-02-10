@@ -35,6 +35,9 @@ if (process.env.JTO) {
     if (process.env.JUST_WITHDRAW_TOKEN) {
         require('./restaking/4_withdraw_token');
 
+    } else if (process.env.JUST_DONATE) {
+        require('./restaking/2_donate_sol');
+        
     } else if (process.env.JUST_OPERATE) {
         require('./restaking/7_operate')(1);
 
@@ -68,12 +71,16 @@ if (process.env.JTO) {
     } else if (process.env.JUST_TRANSFER) {
         require('./restaking/5_transfer_hook');
 
+    } else if (process.env.JUST_WRAP) {
+        require('./restaking/12_wrap');
+
     } else if (!process.env.JUST_INIT) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);
         require('./restaking/4_withdraw_sol');
         require('./restaking/5_transfer_hook');
         require('./restaking/6_reward');
+        require('./restaking/12_wrap');
 
     }
 }

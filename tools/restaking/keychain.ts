@@ -5,6 +5,8 @@ const keypairs = {
     'FRAGSOL_MINT': './keypairs/restaking/shared_local_fragsol_mint_Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD.json',
     'FRAGJTO_MINT': './keypairs/restaking/shared_local_fragjto_mint_bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v.json',
     'FRAGSOL_NORMALIZED_TOKEN_MINT': './keypairs/restaking/shared_local_nsol_mint_4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX.json',
+    'FRAGSOL_WRAPPED_TOKEN_MINT': './keypairs/restaking/shared_local_wfragsol_mint_h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q.json',
+    'FRAGJTO_WRAPPED_TOKEN_MINT': './keypairs/restaking/shared_local_wfragjto_mint_EAvS1wFjAccNpDYbAkW2dwUDEiC7BMvWzwUj2tjRUkHA.json',
     'ADMIN': './keypairs/restaking/shared_local_admin_9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL.json',
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
 
@@ -20,6 +22,8 @@ const keypairs = {
     'MOCK_USER8': './tests/mocks/user8.json',
     'MOCK_USER9': './tests/mocks/user9.json',
     'MOCK_USER10': './tests/mocks/user10.json',
+    'MOCK_USER11': './tests/mocks/user11.json',
+    'MOCK_USER12': './tests/mocks/user12.json',
 };
 
 const local: KeychainConfig<keyof (typeof keypairs)> = {

@@ -11,8 +11,10 @@ mod user_created_or_updated_reward_account;
 mod user_deposited_to_fund;
 mod user_requested_withdrawal_from_fund;
 mod user_transferred_receipt_token;
+mod user_unwrapped_receipt_token;
 mod user_updated_reward_pool;
 mod user_withdrew_from_fund;
+mod user_wrapped_receipt_token;
 
 pub use fund_manager_updated_fund::*;
 pub use fund_manager_updated_reward_pool::*;
@@ -27,8 +29,10 @@ pub use user_created_or_updated_reward_account::*;
 pub use user_deposited_to_fund::*;
 pub use user_requested_withdrawal_from_fund::*;
 pub use user_transferred_receipt_token::*;
+pub use user_unwrapped_receipt_token::*;
 pub use user_updated_reward_pool::*;
 pub use user_withdrew_from_fund::*;
+pub use user_wrapped_receipt_token::*;
 
 use anchor_lang::prelude::*;
 

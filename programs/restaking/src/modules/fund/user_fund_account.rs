@@ -85,6 +85,11 @@ impl UserFundAccount {
         self.initialize(self.bump, receipt_token_mint, user_receipt_token_account)
     }
 
+    #[inline(always)]
+    pub(super) fn is_initializing(&self) -> bool {
+        self.data_version == 0
+    }
+
     pub(super) fn reload_receipt_token_amount(
         &mut self,
         user_receipt_token_account: &mut InterfaceAccount<TokenAccount>,

@@ -4,6 +4,9 @@ import {BN, web3} from "@coral-xyz/anchor";
 import * as splTokenMetadata from "@solana/spl-token-metadata";
 // @ts-ignore
 import * as spl from "@solana/spl-token-3.x";
+import * as mpl from "@metaplex-foundation/mpl-token-metadata";
+import * as umi from "@metaplex-foundation/umi";
+import * as umi2 from "@metaplex-foundation/umi-bundle-defaults";
 // @ts-ignore
 import {AnchorPlayground, AnchorPlaygroundConfig, getLogger} from "../lib";
 import {Restaking} from "../../target/types/restaking";
@@ -69,6 +72,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeFundSupportedTokens(), // 6
             () => this.runFundManagerInitializeFundJitoRestakingVaults(), // 7
             () => this.runFundManagerUpdateFundConfigurations(), // 8
+            () => this.runAdminInitializeWfragJTOTokenMint(), // 9
+            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 10
+            () => this.runFundManagerInitializeFundWrappedToken(), // 11
         ];
     }
 
@@ -172,6 +178,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragJTOTokenMintBuf = fragJTOTokenMint.toBuffer();
         const fragJTOExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragJTOTokenMint, this.programId);
 
+        // wfragJTO
+        const wfragJTOTokenMint = this.getConstantAsPublicKey('fragjtoWrappedTokenMintAddress');
+
         // JTO
         const jtoTokenMint = this.supportedTokenMetadata['JTO'].mint;
 
@@ -194,6 +203,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             [`fragJTOFundSupportedTokenTreasuryAccount_${symbol}`]: fragJTOFundSupportedTokenTreasuryAccount(symbol as any),
             ...obj,
         }), {} as { string: web3.PublicKey });
+        const [fragJTOFundWrapAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_wrap"), fragJTOTokenMintBuf], this.programId);
+        const fragJTOFundReceiptTokenWrapAccount = spl.getAssociatedTokenAddressSync(
+            fragJTOTokenMint,
+            fragJTOFundWrapAccount,
+            true,
+            spl.TOKEN_2022_PROGRAM_ID,
+        );
 
         const fragJTOFundReceiptTokenLockAccount = spl.getAssociatedTokenAddressSync(
             fragJTOTokenMint,
@@ -212,12 +228,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const fragJTOUserFund = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_fund"), fragJTOTokenMintBuf, user.toBuffer()], this.programId)[0];
         const fragJTOUserTokenAccount = (user: web3.PublicKey) => spl.getAssociatedTokenAddressSync(fragJTOTokenMint, user, false, spl.TOKEN_2022_PROGRAM_ID);
+        const wfragJTOUserTokenAccount = (user: web3.PublicKey) => spl.getAssociatedTokenAddressSync(wfragJTOTokenMint, user, false);
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, user, false, this.supportedTokenMetadata[symbol].program);
 
         // reward
         const [fragJTOReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragJTOTokenMintBuf], this.programId);
         const fragJTOUserReward = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_reward"), fragJTOTokenMintBuf, user.toBuffer()], this.programId)[0];
+        const fragJTOFundWrapAccountReward = fragJTOUserReward(fragJTOFundWrapAccount);
 
         // jito
         const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
@@ -275,6 +293,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             // fragJTO
             fragJTOTokenMint,
             fragJTOExtraAccountMetasAccount,
+            // wfragJTO
+            wfragJTOTokenMint,
             // JTO
             jtoTokenMint,
             // fragJTO jito JTO VRT
@@ -287,14 +307,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragJTOFundTreasuryAccount,
             fragJTOFundSupportedTokenTreasuryAccount,
             ...fragJTOFundSupportedTokenTreasuryAccounts,
+            fragJTOFundWrapAccount,
+            fragJTOFundReceiptTokenWrapAccount,
             fragJTOFundReceiptTokenLockAccount,
             fragJTOFundJitoJTOVRTAccount,
             fragJTOUserFund,
             fragJTOUserTokenAccount,
+            wfragJTOUserTokenAccount,
             userSupportedTokenAccount,
             // reward
             fragJTOReward,
             fragJTOUserReward,
+            fragJTOFundWrapAccountReward,
             // jito
             jitoVaultProgram,
             jitoVaultProgramFeeWallet,
@@ -320,6 +344,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public readonly fragJTODecimals = 9;
+    public readonly wfragJTODecimals = 9;
     public readonly vrtDecimals = 9;
 
     public get supportedTokenMetadata() {
@@ -497,7 +522,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
-    public async getOrCreateUserFragSOLAccount(user: web3.PublicKey) {
+    public async getOrCreateUserFragJTOAccount(user: web3.PublicKey) {
         return await spl.getOrCreateAssociatedTokenAccount(
             this.connection,
             this.wallet,
@@ -509,6 +534,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 commitment: 'confirmed',
             },
             spl.TOKEN_2022_PROGRAM_ID,
+        )
+    }
+
+    public getUserWfragJTOAccount(user: web3.PublicKey) {
+        return spl.getAccount(
+            this.connection,
+            this.knownAddress.wfragJTOUserTokenAccount(user),
+            "confirmed",
         )
     }
 
@@ -572,7 +605,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 spl.TOKEN_PROGRAM_ID,
             );
     }
-        
+
+    public getFragJTOFundReceiptTokenWrapAccount() {
+        return spl.getAccount(
+            this.connection,
+            this.knownAddress.fragJTOFundReceiptTokenWrapAccount,
+            "confirmed",
+            spl.TOKEN_2022_PROGRAM_ID
+        );
+    }
+
     public getFragJTOFundReceiptTokenLockAccount() {
         return spl.getAccount(
             this.connection,
@@ -583,15 +625,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getUserFragJTOFundAccount(user: web3.PublicKey) {
-        return this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user));
+        return this.account.userFundAccount.fetch(this.knownAddress.fragJTOUserFund(user), "confirmed");
     }
 
     public getUserFragJTORewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user));
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragJTOUserReward(user), "confirmed");
+    }
+
+    public getFragJTOFundWrapAccountRewardAccount() {
+        return this.getUserFragJTORewardAccount(this.knownAddress.fragJTOFundWrapAccount);
     }
 
     public getFragJTORewardAccount() {
-        return this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
+        return this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward, "confirmed");
     }
 
     public getFragJTOFundAccount() {
@@ -702,6 +748,66 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
         logger.notice("fragJTO token mint created with extensions".padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOTokenMint.toString());
         return {fragJTOMint};
+    }
+
+    public async runAdminInitializeWfragJTOTokenMint(createMetadata = false) {
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.wfragJTOTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.wfragJTOTokenMint,
+                    this.wfragJTODecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID
+                ),
+            ],
+            signerNames: ["FRAGJTO_WRAPPED_TOKEN_MINT"],
+        });
+
+        if (this.isLocalnet) {
+            const txSig = await this.connection.requestAirdrop(this.keychain.getKeypair("ADMIN").publicKey, 1_000_000_000)
+            await this.connection.confirmTransaction(txSig, 'confirmed');
+        }
+
+        if (createMetadata) {
+            const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+            const keypair = this.keychain.getKeypair('FRAGJTO_WRAPPED_TOKEN_MINT');
+            const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+            const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
+
+            const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+            const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+            umiInstance.use(umi.signerIdentity(authority));
+
+            // TODO
+            await mpl.createV1(umiInstance, {
+                mint,
+                authority,
+                name: "TODO",
+                symbol: "TODO",
+                decimals: this.wfragJTODecimals,
+                uri: "TODO",
+                sellerFeeBasisPoints: umi.percentAmount(0),
+                tokenStandard: mpl.TokenStandard.Fungible,
+            }).sendAndConfirm(umiInstance);
+
+            const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
+            logger.notice("wfragJTO token mint metadata created".padEnd(LOG_PAD_LARGE), assets);
+        }
+
+        const wfragJTOMint = await spl.getMint(this.connection, this.knownAddress.wfragJTOTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID);
+        logger.notice("wfragJTO token mint created".padEnd(LOG_PAD_LARGE), this.knownAddress.wfragJTOTokenMint.toString());
+        return {wfragJTOMint};
     }
 
     public async runAdminUpdateTokenMetadata() {
@@ -831,6 +937,75 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`updated fund account version from=${currentVersion}, to=${fragJTOFundAccount.dataVersion}, target=${targetVersion}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
 
         return {fragJTOMint: fragJTOMint, fragJTOFundAccount: fragJTOFundAccount};
+    }
+
+    public async runAdminInitializeOrUpdateFundWrapAccountRewardAccount() {
+        const fragJTOFundWrapAccountAddress = this.knownAddress.fragJTOFundWrapAccount;
+        const currentRewardVersion = await this.getFragJTOFundWrapAccountRewardAccount()
+            .then(a => a.dataVersion)
+            .catch(err => 0);
+        
+        const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
+
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragJTOFundReceiptTokenWrapAccount,
+                    fragJTOFundWrapAccountAddress,
+                    this.knownAddress.fragJTOTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                ...(currentRewardVersion == 0 ? [
+                    this.program.methods.adminInitializeFundWrapAccountRewardAccount()
+                        .accountsPartial({
+                            payer: this.wallet.publicKey,
+                            receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        })
+                        .instruction(),
+                    ]
+                    : [
+                        ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
+                            this.program.methods
+                                .adminUpdateFundWrapAccountRewardAccountIfNeeded(null)
+                                .accountsPartial({
+                                    payer: this.wallet.publicKey,
+                                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                                })
+                                .instruction(),
+                        )
+                    ]),
+            ],
+            signerNames: ['ADMIN'],
+        });
+
+        const fragJTOFundWrapAccountRewardAccount = await this.getFragJTOFundWrapAccountRewardAccount();
+        logger.notice(`created fund wrap account reward account`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundWrapAccountReward.toString());
+
+        return {fragJTOFundWrapAccountRewardAccount};
+    }
+
+    public async runFundManagerInitializeFundWrappedToken() {
+        await this.run({
+            instructions: [
+                this.program.methods.fundManagerInitializeFundWrappedToken()
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragJTOTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ['ADMIN', 'FUND_MANAGER'],
+            events: ['fundManagerUpdatedFund']
+        });
+
+        const [wfragJTOMint, fragJTOFundAccount] = await Promise.all([
+            spl.getMint(this.connection, this.knownAddress.wfragJTOTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID),
+            this.getFragJTOFundAccount(),
+        ]);
+        logger.notice('set fragJTO fund wrapped token'.padEnd(LOG_PAD_LARGE), this.knownAddress.wfragJTOTokenMint.toString());
+
+        return {wfragJTOMint, fragJTOFundAccount};
     }
 
     public async runFundManagerInitializeFundJitoRestakingVaults() {
@@ -1685,7 +1860,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             donationEnabled: false,
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? false : (this.isMainnet ? false : false),
+            transferEnabled: this.isDevnet ? true : (this.isMainnet ? false : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
 
@@ -2182,6 +2357,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const {event, error} = await this.run({
             instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 300_000,
+                }),
                 this.program.methods
                     .operatorDonateSupportedTokenToFund(amount, offsetReceivable)
                     .accountsPartial({
@@ -2304,6 +2482,170 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragJTOUserTokenAccount,
             fragJTOLockAccount
         };
+    }
+
+    public async runUserWrapReceiptToken(
+        user: web3.Keypair,
+        amount: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.wfragJTOUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.wfragJTOTokenMint,
+                ),
+                this.methods.userWrapReceiptToken(amount)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragJTOTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userWrappedReceiptToken'],
+        });
+
+        const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wfragJTOUserTokenAccount] = await Promise.all([
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
+            this.getFragJTOFundWrapAccountRewardAccount(),
+            this.getUserFragJTOAccount(user.publicKey),
+            this.getFragJTOFundReceiptTokenWrapAccount(),
+            this.getUserWfragJTOAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragJTO balance: ${this.lamportsToWfragJTO(new BN(wfragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragJTOFund,
+            fragJTOReward,
+            fragJTOUserFund,
+            fragJTOUserReward,
+            fragJTOFundWrapAccountReward,
+            fragJTOUserTokenAccount,
+            fragJTOWrapAccount,
+            wfragJTOUserTokenAccount,
+        };
+    }
+
+    public async runUserWrapReceiptTokenIfNeeded(
+        user: web3.Keypair,
+        targetBalance: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.wfragJTOUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.wfragJTOTokenMint,
+                ),
+                this.methods.userWrapReceiptTokenIfNeeded(targetBalance)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragJTOTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userWrappedReceiptToken'],
+        });
+
+        const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wfragJTOUserTokenAccount] = await Promise.all([
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
+            this.getFragJTOFundWrapAccountRewardAccount(),
+            this.getUserFragJTOAccount(user.publicKey),
+            this.getFragJTOFundReceiptTokenWrapAccount(),
+            this.getUserWfragJTOAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragJTO balance: ${this.lamportsToWfragJTO(new BN(wfragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragJTOFund,
+            fragJTOReward,
+            fragJTOUserFund,
+            fragJTOUserReward,
+            fragJTOFundWrapAccountReward,
+            fragJTOUserTokenAccount,
+            fragJTOWrapAccount,
+            wfragJTOUserTokenAccount,
+        };
+    }
+
+    public async runUserUnwrapReceiptToken(
+        user: web3.Keypair,
+        amount: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragJTOUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.fragJTOTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                this.methods.userUnwrapReceiptToken(amount)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragJTOTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userUnwrappedReceiptToken'],
+        });
+
+        const [fragJTOFund, fragJTOReward, fragJTOUserFund, fragJTOUserReward, fragJTOFundWrapAccountReward, fragJTOUserTokenAccount, fragJTOWrapAccount, wfragJTOUserTokenAccount] = await Promise.all([
+            this.getFragJTOFundAccount(),
+            this.getFragJTORewardAccount(),
+            this.getUserFragJTOFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragJTORewardAccount(user.publicKey).catch(err => null),
+            this.getFragJTOFundWrapAccountRewardAccount(),
+            this.getUserFragJTOAccount(user.publicKey),
+            this.getFragJTOFundReceiptTokenWrapAccount(),
+            this.getUserWfragJTOAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragJTO balance: ${this.lamportsToFragJTO(new BN(fragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragJTO balance: ${this.lamportsToWfragJTO(new BN(wfragJTOUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragJTO amount: ${this.lamportsToFragJTO(new BN(fragJTOWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragJTOFund,
+            fragJTOReward,
+            fragJTOUserFund,
+            fragJTOUserReward,
+            fragJTOFundWrapAccountReward,
+            fragJTOUserTokenAccount,
+            fragJTOWrapAccount,
+            wfragJTOUserTokenAccount,
+        };
+    }
+
+    public lamportsToWfragJTO(lamports: BN): string {
+        return super.lamportsToX(lamports, this.fragJTODecimals, "wfragJTO");
     }
 
     public async runOperatorUpdateFundPrices(operator: web3.Keypair = this.wallet) {

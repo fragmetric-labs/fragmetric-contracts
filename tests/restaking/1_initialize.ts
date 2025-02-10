@@ -159,4 +159,24 @@ describe("initialize", async () => {
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
         await restaking.runFundManagerUpdateFundConfigurations();
     });
+
+    step("create wrapped token mint", async function () {
+        const {wfragSOLMint} = await restaking.runAdminInitializeWfragSOLTokenMint();
+        expect(wfragSOLMint.address.toString()).eq(restaking.knownAddress.wfragSOLTokenMint.toString());
+        expect(wfragSOLMint.mintAuthority.toString()).eq(restaking.keychain.getPublicKey('ADMIN').toString());
+        expect(wfragSOLMint.freezeAuthority).null;
+    })
+
+    step("initialize fund wrap account reward account", async () => {
+        const {fragSOLFundWrapAccountRewardAccount} = await restaking.runAdminInitializeOrUpdateFundWrapAccountRewardAccount();
+        expect(fragSOLFundWrapAccountRewardAccount.user.toString()).eq(restaking.knownAddress.fragSOLFundWrapAccount.toString());
+        expect(fragSOLFundWrapAccountRewardAccount.dataVersion).gt(0);
+    })
+
+    step("initialize fund wrapped token", async () => {
+        const {wfragSOLMint, fragSOLFundAccount} = await restaking.runFundManagerInitializeFundWrappedToken();
+        expect(fragSOLFundAccount.wrappedToken.enabled).eq(1);
+        expect(fragSOLFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wfragSOLTokenMint.toString());
+        expect(wfragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
+    })
 });

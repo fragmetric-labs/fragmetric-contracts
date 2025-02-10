@@ -6,10 +6,10 @@ use crate::{events, modules};
 
 use super::*;
 
-pub struct UserFundConfigurationService<'info: 'a, 'a> {
+pub struct UserFundConfigurationService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    _user: &'a Signer<'info>,
     user_fund_account: &'a mut Account<'info, UserFundAccount>,
+    user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
 }
 
 impl Drop for UserFundConfigurationService<'_, '_> {
@@ -18,14 +18,14 @@ impl Drop for UserFundConfigurationService<'_, '_> {
     }
 }
 
-impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
-    pub fn process_create_user_fund_account_idempotent<'c>(
-        system_program: &'c Program<'info, System>,
-        receipt_token_mint: &'c mut InterfaceAccount<'info, Mint>,
+impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
+    pub fn process_create_user_fund_account_idempotent(
+        system_program: &Program<'info, System>,
+        receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
 
-        user: &'c Signer<'info>,
-        user_receipt_token_account: &'c InterfaceAccount<'info, TokenAccount>,
-        user_fund_account: &'c mut UncheckedAccount<'info>,
+        user: &Signer<'info>,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        user_fund_account: &mut UncheckedAccount<'info>,
         user_fund_account_bump: u8,
 
         _desired_account_size: Option<u32>, // reserved
@@ -53,11 +53,9 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
                 receipt_token_mint,
                 &user,
                 &mut user_fund_account_parsed,
-            )?
-            .process_initialize_user_fund_account(
-                user_fund_account_bump,
                 user_receipt_token_account,
-            )?;
+            )?
+            .process_initialize_user_fund_account(user_fund_account_bump)?;
 
             Ok(event)
         } else {
@@ -78,8 +76,9 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
                 receipt_token_mint,
                 user,
                 &mut user_fund_account_parsed,
+                user_receipt_token_account,
             )?
-            .process_update_user_fund_account_if_needed(user_receipt_token_account)?;
+            .process_update_user_fund_account_if_needed()?;
 
             Ok(event)
         }
@@ -87,29 +86,33 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
 
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        user: &'a Signer<'info>,
+        user: &Signer,
         user_fund_account: &'a mut Account<'info, UserFundAccount>,
+        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
     ) -> Result<Self> {
+        require_keys_eq!(user_receipt_token_account.owner, user.key());
+
         Ok(Self {
             receipt_token_mint,
-            _user: user,
             user_fund_account,
+            user_receipt_token_account,
         })
     }
 
     pub fn process_initialize_user_fund_account(
         &mut self,
         user_fund_account_bump: u8,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
     ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
         if self.user_fund_account.initialize(
             user_fund_account_bump,
             self.receipt_token_mint,
-            user_receipt_token_account,
+            self.user_receipt_token_account,
         ) {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_fund_account: self.user_fund_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: true,
             }))
         } else {
             Ok(None)
@@ -118,15 +121,17 @@ impl<'info, 'a> UserFundConfigurationService<'info, 'a> {
 
     pub fn process_update_user_fund_account_if_needed(
         &mut self,
-        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
     ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
+        let initializing = self.user_fund_account.is_initializing();
         if self
             .user_fund_account
-            .update_if_needed(self.receipt_token_mint, user_receipt_token_account)
+            .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account)
         {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_fund_account: self.user_fund_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: initializing,
             }))
         } else {
             Ok(None)

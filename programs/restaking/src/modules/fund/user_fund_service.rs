@@ -12,7 +12,7 @@ use crate::utils::PDASeeds;
 
 use super::FundWithdrawalBatchAccount;
 
-pub struct UserFundService<'info: 'a, 'a> {
+pub struct UserFundService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     receipt_token_program: &'a Program<'info, Token2022>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
@@ -34,7 +34,7 @@ impl Drop for UserFundService<'_, '_> {
     }
 }
 
-impl<'info, 'a> UserFundService<'info, 'a> {
+impl<'a, 'info> UserFundService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         receipt_token_program: &'a Program<'info, Token2022>,

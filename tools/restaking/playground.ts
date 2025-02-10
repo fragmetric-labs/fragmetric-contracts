@@ -78,6 +78,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeFundNormalizedToken(), // 10
             () => this.runFundManagerInitializeFundJitoRestakingVaults(), // 11
             () => this.runFundManagerUpdateFundConfigurations(), // 12
+            () => this.runAdminInitializeWfragSOLTokenMint(), // 13
+            () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 14
+            () => this.runFundManagerInitializeFundWrappedToken(), // 15
         ];
     }
 
@@ -186,6 +189,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const fragSOLTokenMintBuf = fragSOLTokenMint.toBuffer();
         const fragSOLExtraAccountMetasAccount = spl.getExtraAccountMetaAddress(fragSOLTokenMint, this.programId);
 
+        // wfragSOL
+        const wfragSOLTokenMint = this.getConstantAsPublicKey("fragsolWrappedTokenMintAddress");
+
         // nSOL
         const nSOLTokenMint = this.getConstantAsPublicKey("fragsolNormalizedTokenMintAddress");
         const nSOLTokenMintBuf = nSOLTokenMint.toBuffer();
@@ -215,6 +221,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             [`fragSOLFundSupportedTokenTreasuryAccount_${symbol}`]: fragSOLFundSupportedTokenTreasuryAccount(symbol as any),
             ...obj,
         }), {} as { string: web3.PublicKey });
+        const [fragSOLFundWrapAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("fund_wrap"), fragSOLTokenMintBuf], this.programId);
+        const fragSOLFundReceiptTokenWrapAccount = spl.getAssociatedTokenAddressSync(
+            fragSOLTokenMint,
+            fragSOLFundWrapAccount,
+            true,
+            spl.TOKEN_2022_PROGRAM_ID,
+        );
 
         const fragSOLFundReceiptTokenLockAccount = spl.getAssociatedTokenAddressSync(
             fragSOLTokenMint,
@@ -247,12 +260,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const fragSOLUserFund = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_fund"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
         const fragSOLUserTokenAccount = (user: web3.PublicKey) => spl.getAssociatedTokenAddressSync(fragSOLTokenMint, user, false, spl.TOKEN_2022_PROGRAM_ID);
+        const wfragSOLUserTokenAccount = (user: web3.PublicKey) => spl.getAssociatedTokenAddressSync(wfragSOLTokenMint, user, false);
         const userSupportedTokenAccount = (user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) =>
             spl.getAssociatedTokenAddressSync(this.supportedTokenMetadata[symbol].mint, user, false, this.supportedTokenMetadata[symbol].program);
 
         // reward
         const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragSOLTokenMintBuf], this.programId);
         const fragSOLUserReward = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_reward"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
+        const fragSOLFundWrapAccountReward = fragSOLUserReward(fragSOLFundWrapAccount);
 
         // NTP
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
@@ -344,6 +359,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             // fragSOL
             fragSOLTokenMint,
             fragSOLExtraAccountMetasAccount,
+            // wfragSOL
+            wfragSOLTokenMint,
             // nSOL
             nSOLTokenMint,
             // jitoSOL
@@ -360,16 +377,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLFundTreasuryAccount,
             fragSOLFundSupportedTokenTreasuryAccount,
             ...fragSOLFundSupportedTokenTreasuryAccounts,
+            fragSOLFundWrapAccount,
+            fragSOLFundReceiptTokenWrapAccount,
             fragSOLFundReceiptTokenLockAccount,
             fragSOLFundNSOLAccount,
             fragSOLFundJitoNSOLVRTAccount,
             fragSOLFundJitoJitoSOLVRTAccount,
             fragSOLUserFund,
             fragSOLUserTokenAccount,
+            wfragSOLUserTokenAccount,
             userSupportedTokenAccount,
             // reward
             fragSOLReward,
             fragSOLUserReward,
+            fragSOLFundWrapAccountReward,
             // NTP
             nSOLTokenPool,
             nSOLSupportedTokenReserveAccount,
@@ -410,6 +431,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public readonly fragSOLDecimals = 9;
     public readonly nSOLDecimals = 9;
+    public readonly wfragSOLDecimals = 9;
     public readonly vrtDecimals = 9;
 
     public get supportedTokenMetadata() {
@@ -712,6 +734,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         )
     }
 
+    public getUserWfragSOLAccount(user: web3.PublicKey) {
+        return spl.getAccount(
+            this.connection,
+            this.knownAddress.wfragSOLUserTokenAccount(user),
+            "confirmed",
+        )
+    }
+
     public getFragSOLFundSupportedTokenTreasuryAccountBalance(symbol: keyof typeof this.supportedTokenMetadata) {
         return spl.getAccount(
             this.connection,
@@ -773,6 +803,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         throw new Error("fund supported token account not found")
     }
 
+    public getFragSOLFundReceiptTokenWrapAccount() {
+        return spl.getAccount(
+            this.connection,
+            this.knownAddress.fragSOLFundReceiptTokenWrapAccount,
+            "confirmed",
+            spl.TOKEN_2022_PROGRAM_ID,
+        )
+    }
+
     public getFragSOLFundReceiptTokenLockAccount() {
         return spl.getAccount(
             this.connection,
@@ -783,15 +822,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public getUserFragSOLFundAccount(user: web3.PublicKey) {
-        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user));
+        return this.account.userFundAccount.fetch(this.knownAddress.fragSOLUserFund(user), "confirmed");
     }
 
     public getUserFragSOLRewardAccount(user: web3.PublicKey) {
-        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user));
+        return this.account.userRewardAccount.fetch(this.knownAddress.fragSOLUserReward(user), "confirmed");
+    }
+
+    public getFragSOLFundWrapAccountRewardAccount() {
+        return this.getUserFragSOLRewardAccount(this.knownAddress.fragSOLFundWrapAccount);
     }
 
     public getFragSOLRewardAccount() {
-        return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        return this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward, "confirmed");
     }
 
     public getFragSOLFundAccount() {
@@ -991,6 +1034,66 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {nSOLMint};
     }
 
+    public async runAdminInitializeWfragSOLTokenMint(createMetadata = false) {
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: this.knownAddress.wfragSOLTokenMint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: spl.TOKEN_PROGRAM_ID,
+                }),
+                spl.createInitializeMintInstruction(
+                    this.knownAddress.wfragSOLTokenMint,
+                    this.wfragSOLDecimals,
+                    this.keychain.getPublicKey("ADMIN"),
+                    null, // freeze authority to be null
+                    spl.TOKEN_PROGRAM_ID
+                ),
+            ],
+            signerNames: ["FRAGSOL_WRAPPED_TOKEN_MINT"],
+        });
+
+        if (this.isLocalnet) {
+            const txSig = await this.connection.requestAirdrop(this.keychain.getKeypair("ADMIN").publicKey, 1_000_000_000)
+            await this.connection.confirmTransaction(txSig, 'confirmed');
+        }
+
+        if (createMetadata) {
+            const umiInstance = umi2.createUmi(this.connection.rpcEndpoint).use(mpl.mplTokenMetadata());
+            const keypair = this.keychain.getKeypair('FRAGSOL_WRAPPED_TOKEN_MINT');
+            const umiKeypair = umiInstance.eddsa.createKeypairFromSecretKey(keypair.secretKey);
+            const mint = umi.createSignerFromKeypair(umiInstance, umiKeypair);
+
+            const authKeypair = umiInstance.eddsa.createKeypairFromSecretKey(this.keychain.getKeypair("ADMIN").secretKey);
+            const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
+            umiInstance.use(umi.signerIdentity(authority));
+
+            // TODO
+            await mpl.createV1(umiInstance, {
+                mint,
+                authority,
+                name: "TODO",
+                symbol: "TODO",
+                decimals: this.wfragSOLDecimals,
+                uri: "TODO",
+                sellerFeeBasisPoints: umi.percentAmount(0),
+                tokenStandard: mpl.TokenStandard.Fungible,
+            }).sendAndConfirm(umiInstance);
+
+            const assets = await mpl.fetchAllDigitalAssetByUpdateAuthority(umiInstance, authority.publicKey);
+            logger.notice("wfragSOL token mint metadata created".padEnd(LOG_PAD_LARGE), assets);
+        }
+
+        const wfragSOLMint = await spl.getMint(this.connection, this.knownAddress.wfragSOLTokenMint, "confirmed", spl.TOKEN_PROGRAM_ID);
+        logger.notice("wfragSOL token mint created".padEnd(LOG_PAD_LARGE), this.knownAddress.wfragSOLTokenMint.toString());
+        return {wfragSOLMint};
+    }
+
     public async runAdminUpdateTokenMetadata() {
         const fragSOLTokenMetadataAddress = this.knownAddress.fragSOLTokenMint;
 
@@ -1120,6 +1223,52 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLMint, fragSOLFundAccount};
     }
 
+    public async runAdminInitializeOrUpdateFundWrapAccountRewardAccount() {
+        const fragSOLFundWrapAccountAddress = this.knownAddress.fragSOLFundWrapAccount;
+        const currentRewardVersion = await this.getFragSOLFundWrapAccountRewardAccount()
+            .then(a => a.dataVersion)
+            .catch(err => 0);
+        
+        const targetRewardVersion = parseInt(this.getConstant("userRewardAccountCurrentVersion"));
+
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLFundReceiptTokenWrapAccount,
+                    fragSOLFundWrapAccountAddress,
+                    this.knownAddress.fragSOLTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                ...(currentRewardVersion == 0 ? [
+                    this.program.methods.adminInitializeFundWrapAccountRewardAccount()
+                        .accountsPartial({
+                            payer: this.wallet.publicKey,
+                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        })
+                        .instruction(),
+                    ]
+                    : [
+                        ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
+                            this.program.methods
+                                .adminUpdateFundWrapAccountRewardAccountIfNeeded(null)
+                                .accountsPartial({
+                                    payer: this.wallet.publicKey,
+                                    receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                                })
+                                .instruction(),
+                        )
+                    ]),
+            ],
+            signerNames: ['ADMIN'],
+        });
+
+        const fragSOLFundWrapAccountRewardAccount = await this.getFragSOLFundWrapAccountRewardAccount();
+        logger.notice(`created fund wrap account reward account`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundWrapAccountReward.toString());
+
+        return {fragSOLFundWrapAccountRewardAccount};
+    }
+
     public async runAdminInitializeNormalizedTokenPoolAccounts() {
         await this.run({
             instructions: [
@@ -1181,6 +1330,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice("set fragSOL fund normalized token".padEnd(LOG_PAD_LARGE), this.knownAddress.nSOLTokenMint.toString());
 
         return {fragSOLFundAccount};
+    }
+
+    public async runFundManagerInitializeFundWrappedToken() {
+        await this.run({
+            instructions: [
+                this.program.methods.fundManagerInitializeFundWrappedToken()
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ['ADMIN', 'FUND_MANAGER'],
+            events: ['fundManagerUpdatedFund']
+        });
+
+        const [wfragSOLMint, fragSOLFundAccount] = await Promise.all([
+            spl.getMint(this.connection, this.knownAddress.wfragSOLTokenMint, "confirmed"),
+            this.getFragSOLFundAccount(),
+        ]);
+        logger.notice('set fragSOL fund wrapped token'.padEnd(LOG_PAD_LARGE), this.knownAddress.wfragSOLTokenMint.toString());
+
+        return {wfragSOLMint, fragSOLFundAccount};
     }
 
     public async runFundManagerInitializeFundJitoRestakingVaults() {
@@ -2769,6 +2941,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     ) {
         const {event, error} = await this.run({
             instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 300_000,
+                }),
                 this.program.methods
                     .operatorDonateSolToFund(amount, offsetReceivable)
                     .accountsPartial({
@@ -2807,6 +2982,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         const {event, error} = await this.run({
             instructions: [
+                web3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 300_000,
+                }),
                 this.program.methods
                     .operatorDonateSupportedTokenToFund(amount, offsetReceivable)
                     .accountsPartial({
@@ -2929,6 +3107,170 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLUserTokenAccount,
             fragSOLLockAccount
         };
+    }
+
+    public async runUserWrapReceiptToken(
+        user: web3.Keypair,
+        amount: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.wfragSOLUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.wfragSOLTokenMint,
+                ),
+                this.methods.userWrapReceiptToken(amount)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userWrappedReceiptToken'],
+        });
+
+        const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wfragSOLUserTokenAccount] = await Promise.all([
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
+            this.getFragSOLFundWrapAccountRewardAccount(),
+            this.getUserFragSOLAccount(user.publicKey),
+            this.getFragSOLFundReceiptTokenWrapAccount(),
+            this.getUserWfragSOLAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragSOL balance: ${this.lamportsToWfragSOL(new BN(wfragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+            fragSOLReward,
+            fragSOLUserFund,
+            fragSOLUserReward,
+            fragSOLFundWrapAccountReward,
+            fragSOLUserTokenAccount,
+            fragSOLWrapAccount,
+            wfragSOLUserTokenAccount,
+        };
+    }
+
+    public async runUserWrapReceiptTokenIfNeeded(
+        user: web3.Keypair,
+        targetBalance: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.wfragSOLUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.wfragSOLTokenMint,
+                ),
+                this.methods.userWrapReceiptTokenIfNeeded(targetBalance)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userWrappedReceiptToken'],
+        });
+
+        const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wfragSOLUserTokenAccount] = await Promise.all([
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
+            this.getFragSOLFundWrapAccountRewardAccount(),
+            this.getUserFragSOLAccount(user.publicKey),
+            this.getFragSOLFundReceiptTokenWrapAccount(),
+            this.getUserWfragSOLAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragSOL balance: ${this.lamportsToWfragSOL(new BN(wfragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+            fragSOLReward,
+            fragSOLUserFund,
+            fragSOLUserReward,
+            fragSOLFundWrapAccountReward,
+            fragSOLUserTokenAccount,
+            fragSOLWrapAccount,
+            wfragSOLUserTokenAccount,
+        };
+    }
+
+    public async runUserUnwrapReceiptToken(
+        user: web3.Keypair,
+        amount: BN,
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    this.knownAddress.fragSOLUserTokenAccount(user.publicKey),
+                    user.publicKey,
+                    this.knownAddress.fragSOLTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                this.methods.userUnwrapReceiptToken(amount)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        wrappedTokenMint: this.knownAddress.wfragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ['userUnwrappedReceiptToken'],
+        });
+
+        const [fragSOLFund, fragSOLReward, fragSOLUserFund, fragSOLUserReward, fragSOLFundWrapAccountReward, fragSOLUserTokenAccount, fragSOLWrapAccount, wfragSOLUserTokenAccount] = await Promise.all([
+            this.getFragSOLFundAccount(),
+            this.getFragSOLRewardAccount(),
+            this.getUserFragSOLFundAccount(user.publicKey).catch(err => null),
+            this.getUserFragSOLRewardAccount(user.publicKey).catch(err => null),
+            this.getFragSOLFundWrapAccountRewardAccount(),
+            this.getUserFragSOLAccount(user.publicKey),
+            this.getFragSOLFundReceiptTokenWrapAccount(),
+            this.getUserWfragSOLAccount(user.publicKey),
+        ]);
+        
+        logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.info(`user wfragSOL balance: ${this.lamportsToWfragSOL(new BN(wfragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        logger.debug(`total wrapped fragSOL amount: ${this.lamportsToFragSOL(new BN(fragSOLWrapAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFundReceiptTokenWrapAccount.toString());
+
+        return {
+            event,
+            error,
+            fragSOLFund,
+            fragSOLReward,
+            fragSOLUserFund,
+            fragSOLUserReward,
+            fragSOLFundWrapAccountReward,
+            fragSOLUserTokenAccount,
+            fragSOLWrapAccount,
+            wfragSOLUserTokenAccount,
+        };
+    }
+
+    public lamportsToWfragSOL(lamports: BN): string {
+        return super.lamportsToX(lamports, this.fragSOLDecimals, "wfragSOL");
     }
 
     public async runOperatorUpdateFundPrices(operator: web3.Keypair = this.wallet) {

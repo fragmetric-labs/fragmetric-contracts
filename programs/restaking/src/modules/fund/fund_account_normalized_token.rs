@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
-use crate::modules::reward::RewardType::Token;
 
 #[zero_copy]
 #[repr(C)]
