@@ -568,17 +568,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
                 },
-                jitoJitoSOLVault: {
-                    VSTMint: this.knownAddress.jitoSOLTokenMint,
-                    VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
-                    vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
-                    operators: [],
-                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
-                    programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
-                    feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-                    vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
-                    fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
-                }
+                // jitoJitoSOLVault: {
+                //     VSTMint: this.knownAddress.jitoSOLTokenMint,
+                //     VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
+                //     vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
+                //     operators: [],
+                //     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                //     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
+                //     feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
+                //     vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
+                //     fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
+                // }
             };
         } else {
             // for 'localnet', it would be cloned from mainnet
@@ -597,17 +597,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
                 },
-                jitoJitoSOLVault: {
-                    VSTMint: this.knownAddress.jitoSOLTokenMint,
-                    VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
-                    vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
-                    operators: [],
-                    program: this.getConstantAsPublicKey("jitoVaultProgramId"),
-                    programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
-                    feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-                    vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
-                    fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
-                }
+                ...(this.isLocalnet ? {
+                    jitoJitoSOLVault: {
+                        VSTMint: this.knownAddress.jitoSOLTokenMint,
+                        VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
+                        vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
+                        operators: [],
+                        program: this.getConstantAsPublicKey("jitoVaultProgramId"),
+                        programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
+                        feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
+                        vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
+                        fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
+                    }
+                } : {}),
             };
         }
     }
@@ -2281,9 +2283,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         return {
             depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            donationEnabled: this.isDevnet ? true : (this.isMainnet ? false : true),
+            donationEnabled: true,
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? true : (this.isMainnet ? false : false),
+            transferEnabled: this.isDevnet ? true : (this.isMainnet ? true : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
@@ -3331,7 +3333,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), forced: boolean = false) {
         const {event, error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
@@ -3354,7 +3356,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLFund, fragSOLFundReserveAccountBalance, fragSOLReward, fragSOLLockAccount};
     }
 
-    public async runOperatorInitialize(operator: web3.Keypair = this.keychain.getKeypair("FUND_MANAGER")) {
+    public async runOperatorInitialize(operator: web3.Keypair = this.keychain.getKeypair('ADMIN')) {
         await this.runOperatorFundCommands({
             command: {
                 initialize: {
@@ -3369,7 +3371,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }, operator);
     }
 
-    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
@@ -3541,7 +3543,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
+    public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), maxTxCount = 100, setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
             const {event, error} = await this.runOperatorSingleFundCommand(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
@@ -3640,7 +3642,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         console.log('executed result:', commandResult && commandResult[commandName][0]);
 
         // ... track fund asset state
-        if (commandResult) {
+        if (commandResult && this.isLocalnet) {
             await Promise.all([
                 this.getFragSOLFundAccount(),
                 this.getFragSOLFundReceiptTokenLockAccount().then(a => new BN(a.amount.toString())),

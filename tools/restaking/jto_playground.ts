@@ -1857,9 +1857,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public get targetFragJTOFundConfiguration() {
         return {
             depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            donationEnabled: false,
+            donationEnabled: true,
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? true : (this.isMainnet ? false : false),
+            transferEnabled: this.isDevnet ? true : (this.isMainnet ? true : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
 
@@ -2678,7 +2678,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorEnqueueWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), forced: boolean = false) {
         const {event, error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
@@ -2701,7 +2701,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragJTOFund, fragJTOFundReserveAccountBalance, fragJTOReward, fragJTOLockAccount};
     }
 
-    public async runOperatorInitialize(operator: web3.Keypair = this.keychain.getKeypair("FUND_MANAGER")) {
+    public async runOperatorInitialize(operator: web3.Keypair = this.keychain.getKeypair('ADMIN')) {
         await this.runOperatorFundCommands({
             command: {
                 initialize: {
@@ -2716,7 +2716,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }, operator);
     }
 
-    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), forced: boolean = false) {
+    public async runOperatorProcessWithdrawalBatches(operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), forced: boolean = false) {
         const {event: _event, error: _error} = await this.runOperatorFundCommands({
             command: {
                 enqueueWithdrawalBatch: {
@@ -2900,7 +2900,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         this.runOperatorRunScheduled(i+1);
     }
 
-    public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('FUND_MANAGER'), maxTxCount = 100, setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
+    public async runOperatorFundCommands(resetCommand: Parameters<typeof this.program.methods.operatorRunFundCommand>[0] = null, operator: web3.Keypair = this.keychain.getKeypair('ADMIN'), maxTxCount = 100, setComputeUnitLimitUnits?: number, setComputeUnitPriceMicroLamports?: number) {
         let txCount = 0;
         while (txCount < maxTxCount) {
             const {event, error} = await this.runOperatorSingleFundCommand(operator, txCount == 0 ? resetCommand : null, setComputeUnitLimitUnits, setComputeUnitPriceMicroLamports);
@@ -2993,7 +2993,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const commandResult = tx.event.operatorRanFundCommand.result;
         const commandName = Object.keys(executedCommand)[0];
         logger.notice(`operator ran command#${nextOperationSequence}: ${commandName}`.padEnd(LOG_PAD_LARGE));
-        console.log(executedCommand[commandName][0], commandResult && commandResult[commandName][0]);
+        console.log('executed command:', executedCommand[commandName][0]);
+        console.log('executed result:', commandResult && commandResult[commandName][0]);
 
         return {
             event: tx.event,
