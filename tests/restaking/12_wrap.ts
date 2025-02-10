@@ -52,7 +52,7 @@ describe("wrap", async function () {
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq("0", "user fragSOL account");
         expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq("0", "user fund account");
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.muln(2).toString());
-        expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.muln(2).toString());
+        expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq(amountEach.muln(2).toString());
 
         // event check
         expect(res1.event.userWrappedReceiptToken.wrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
@@ -94,14 +94,14 @@ describe("wrap", async function () {
 
     step("userA unwraps fragSOL", async () => {
         const userAFragSOLBalance0 = await restaking.getUserFragSOLAccount(userA.publicKey).then(a => a.amount);
-        const userAWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userA.publicKey).then(a => a.amount);
+        const userAWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userA.publicKey).then(a => a.amount);
         const userARewardAccount0 = await restaking.getUserFragSOLRewardAccount(userA.publicKey);
         const fragSOLWrapAccount0 = await restaking.getFragSOLFundReceiptTokenWrapAccount().then(a => a.amount);
         const fragSOLWrapAccountRewardAccount0 = await restaking.getFragSOLFundWrapAccountRewardAccount();
         const fragSOLReward0 = await restaking.getFragSOLRewardAccount();
 
         expect(userAFragSOLBalance0.toString()).eq("0");
-        expect(userAWFragSOLBalance0.toString()).eq(amountEach.muln(2).toString());
+        expect(userAWfragSOLBalance0.toString()).eq(amountEach.muln(2).toString());
         expect(fragSOLWrapAccount0.toString()).eq(amountEach.muln(2).toString());
 
         // unwrap 10 fragSOL
@@ -110,7 +110,7 @@ describe("wrap", async function () {
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
         expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(amountEach.toString());
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.toString());
-        expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
+        expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
 
         // event check
         expect(res1.event.userUnwrappedReceiptToken.unwrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
@@ -152,24 +152,24 @@ describe("wrap", async function () {
         await spl.createAssociatedTokenAccountIdempotent(
             restaking.connection,
             restaking.wallet,
-            restaking.knownAddress.wFragSOLTokenMint,
+            restaking.knownAddress.wfragSOLTokenMint,
             userB.publicKey,
             {
                 commitment: 'confirmed',
             }
         );
 
-        const userAWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userA.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userAWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userA.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
 
-        expect(userAWFragSOLBalance0.toString()).eq(amountEach.toString(), 'bef user A');
-        expect(userBWFragSOLBalance0.toString()).eq("0", 'bef user B');
+        expect(userAWfragSOLBalance0.toString()).eq(amountEach.toString(), 'bef user A');
+        expect(userBWfragSOLBalance0.toString()).eq("0", 'bef user B');
 
         await spl.transfer(
             restaking.connection,
             restaking.wallet,
-            restaking.knownAddress.wFragSOLUserTokenAccount(userA.publicKey),
-            restaking.knownAddress.wFragSOLUserTokenAccount(userB.publicKey),
+            restaking.knownAddress.wfragSOLUserTokenAccount(userA.publicKey),
+            restaking.knownAddress.wfragSOLUserTokenAccount(userB.publicKey),
             userA,
             amountEach.toNumber(),
             [],
@@ -178,23 +178,23 @@ describe("wrap", async function () {
             }
         )
 
-        const userAWFragSOLBalance1 = await restaking.getUserWFragSOLAccount(userA.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance1 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userAWfragSOLBalance1 = await restaking.getUserWfragSOLAccount(userA.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance1 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
 
-        expect(userAWFragSOLBalance1.toString()).eq("0", 'aft user A');
-        expect(userBWFragSOLBalance1.toString()).eq(amountEach.toString(), 'aft user B');
+        expect(userAWfragSOLBalance1.toString()).eq("0", 'aft user A');
+        expect(userBWfragSOLBalance1.toString()).eq(amountEach.toString(), 'aft user B');
     })
 
     step("userB unwraps fragSOL but still reward not activated", async () => {
         // const userBFragSOLBalance0 = await restaking.getUserFragSOLAccount(userB.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
         // const userBRewardAccount0 = await restaking.getUserFragSOLRewardAccount(userB.publicKey);
         const fragSOLWrapAccount0 = await restaking.getFragSOLFundReceiptTokenWrapAccount().then(a => a.amount);
         const fragSOLWrapAccountRewardAccount0 = await restaking.getFragSOLFundWrapAccountRewardAccount();
         const fragSOLReward0 = await restaking.getFragSOLRewardAccount();
 
         // expect(userBFragSOLBalance0.toString()).eq("0");
-        expect(userBWFragSOLBalance0.toString()).eq(amountEach.toString(), "user B's wFragSOL");
+        expect(userBWfragSOLBalance0.toString()).eq(amountEach.toString(), "user B's wfragSOL");
         expect(fragSOLWrapAccount0.toString()).eq(amountEach.toString(), 'fragSOL wrapped amount');
 
         // unwrap 10 fragSOL
@@ -203,7 +203,7 @@ describe("wrap", async function () {
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
         // expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(amountEach.toString());
         expect(res1.fragSOLWrapAccount.amount.toString()).eq("0");
-        expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq("0");
+        expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq("0");
 
         // global: decrease
         expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
@@ -228,7 +228,7 @@ describe("wrap", async function () {
 
     step("userB wraps fragSOL and still reward not activated", async () => {
         const userBFragSOLBalance0 = await restaking.getUserFragSOLAccount(userB.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
         // const userBRewardAccount0 = await restaking.getUserFragSOLRewardAccount(userB.publicKey);
         const fragSOLWrapAccount0 = await restaking.getFragSOLFundReceiptTokenWrapAccount().then(a => a.amount);
         const fragSOLWrapAccountRewardAccount0 = await restaking.getFragSOLFundWrapAccountRewardAccount();
@@ -236,7 +236,7 @@ describe("wrap", async function () {
 
         expect(userBFragSOLBalance0.toString()).eq(amountEach.toString());
         expect(fragSOLWrapAccount0.toString()).eq("0");
-        expect(userBWFragSOLBalance0.toString()).eq("0");
+        expect(userBWfragSOLBalance0.toString()).eq("0");
 
         // wraps 5 fragSOL
         const res1 = await restaking.runUserWrapReceiptToken(userB, amountEach.divn(2));
@@ -244,7 +244,7 @@ describe("wrap", async function () {
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq(amountEach.divn(2).toString());
         // expect(res1.fragSOLUserFund.receiptTokenAmount.toString()).eq(amountEach.divn(2).toString());
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.divn(2).toString());
-        expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.divn(2).toString());
+        expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq(amountEach.divn(2).toString());
 
         // global: increase
         expect(res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
@@ -269,7 +269,7 @@ describe("wrap", async function () {
 
     step("userB create accounts", async () => {
         const userBFragSOLBalance0 = await restaking.getUserFragSOLAccount(userB.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
         // const userBRewardAccount0 = await restaking.getUserFragSOLRewardAccount(userB.publicKey);
         const fragSOLWrapAccount0 = await restaking.getFragSOLFundReceiptTokenWrapAccount().then(a => a.amount);
         const fragSOLWrapAccountRewardAccount0 = await restaking.getFragSOLFundWrapAccountRewardAccount();
@@ -277,7 +277,7 @@ describe("wrap", async function () {
 
         expect(userBFragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
         expect(fragSOLWrapAccount0.toString()).eq(amountEach.divn(2).toString());
-        expect(userBWFragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
+        expect(userBWfragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
 
         // create account
         await restaking.runUserCreateOrUpdateFragSOLFundAndRewardAccount(userB);
@@ -315,7 +315,7 @@ describe("wrap", async function () {
 
     step("userB wraps fragSOL up to target balance", async () => {
         const userBFragSOLBalance0 = await restaking.getUserFragSOLAccount(userB.publicKey).then(a => a.amount);
-        const userBWFragSOLBalance0 = await restaking.getUserWFragSOLAccount(userB.publicKey).then(a => a.amount);
+        const userBWfragSOLBalance0 = await restaking.getUserWfragSOLAccount(userB.publicKey).then(a => a.amount);
         const userBRewardAccount0 = await restaking.getUserFragSOLRewardAccount(userB.publicKey);
         const fragSOLWrapAccount0 = await restaking.getFragSOLFundReceiptTokenWrapAccount().then(a => a.amount);
         const fragSOLWrapAccountRewardAccount0 = await restaking.getFragSOLFundWrapAccountRewardAccount();
@@ -323,7 +323,7 @@ describe("wrap", async function () {
 
         expect(userBFragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
         expect(fragSOLWrapAccount0.toString()).eq(amountEach.divn(2).toString());
-        expect(userBWFragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
+        expect(userBWfragSOLBalance0.toString()).eq(amountEach.divn(2).toString());
 
         // wrap until 10 fragSOL
         const res0 = await restaking.runUserWrapReceiptTokenIfNeeded(userB, amountEach);
@@ -331,7 +331,7 @@ describe("wrap", async function () {
 
         expect(res1.fragSOLUserTokenAccount.amount.toString()).eq("0");
         expect(res1.fragSOLWrapAccount.amount.toString()).eq(amountEach.toString());
-        expect(res1.wFragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
+        expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq(amountEach.toString());
 
         // event check
         expect(res0.event.userWrappedReceiptToken.wrappedReceiptTokenAmount.toString()).eq(amountEach.divn(2).toString());
