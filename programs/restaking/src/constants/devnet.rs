@@ -49,6 +49,10 @@ pub const FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS: Pubkey =
     pubkey!("nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e");
 
 #[constant]
+pub const FRAGSOL_WRAPPED_TOKEN_MINT_ADDRESS: Pubkey =
+    pubkey!("WFRGSWjaz8tbAxsJitmbfRuFV2mSNwy7BMWcCwaA28U");
+
+#[constant]
 pub const FRAGSOL_JITO_NSOL_VAULT_ACCOUNT_ADDRESS: Pubkey =
     pubkey!("BxhsigZDYjWTzXGgem9W3DsvJgFpEK5pM2RANP22bxBE");
 
@@ -74,6 +78,10 @@ pub const FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS: Pubkey =
 
 #[constant]
 pub const FRAGJTO_MINT_ADDRESS: Pubkey = pubkey!("FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos");
+
+#[constant]
+pub const FRAGJTO_WRAPPED_TOKEN_MINT_ADDRESS: Pubkey =
+    pubkey!("WFRGJnQt5pK8Dv4cDAbrSsgPcmboysrmX3RYhmRRyTR");
 
 #[constant]
 pub const FRAGJTO_JITO_JTO_VAULT_ACCOUNT_ADDRESS: Pubkey =

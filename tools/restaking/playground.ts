@@ -1073,14 +1073,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             const authority = umi.createSignerFromKeypair(umiInstance, authKeypair);
             umiInstance.use(umi.signerIdentity(authority));
 
-            // TODO
             await mpl.createV1(umiInstance, {
                 mint,
                 authority,
-                name: "TODO",
-                symbol: "TODO",
+                name: "Wrapped Fragmetric Restaked SOL",
+                symbol: "wfragSOL",
                 decimals: this.wfragSOLDecimals,
-                uri: "TODO",
+                uri: "https://quicknode.quicknode-ipfs.com/ipfs/QmaTVVmyvbJXs2Rqcqs76N5UiuPZ2iKCKrb5BpyB13vwzU",
                 sellerFeeBasisPoints: umi.percentAmount(0),
                 tokenStandard: mpl.TokenStandard.Fungible,
             }).sendAndConfirm(umiInstance);
