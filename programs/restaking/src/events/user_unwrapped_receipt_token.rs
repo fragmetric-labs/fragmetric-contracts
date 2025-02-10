@@ -9,8 +9,10 @@ pub struct UserUnwrappedReceiptToken {
     pub user: Pubkey,
     pub user_receipt_token_account: Pubkey,
     pub user_wrapped_token_account: Pubkey,
-    pub user_fund_account: Option<Pubkey>,
-    pub user_reward_account: Option<Pubkey>,
+    pub updated_user_fund_account: Option<Pubkey>,
+    pub updated_user_reward_account: Option<Pubkey>,
+
+    pub updated_fund_wrap_account_reward_account: Pubkey,
 
     pub unwrapped_receipt_token_amount: u64,
 }

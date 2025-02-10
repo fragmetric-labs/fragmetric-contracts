@@ -80,6 +80,7 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         amount: u64,
     ) -> Result<events::UserWrappedReceiptToken> {
         require_gte!(self.user_receipt_token_account.amount, amount);
+        let receipt_token_supply_before = self.receipt_token_mint.supply;
 
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
         anchor_spl::token_2022::burn(
@@ -111,6 +112,8 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         self.fund_account
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
+        let receipt_token_supply = self.receipt_token_mint.supply;
+        require_eq!(receipt_token_supply, receipt_token_supply_before);
 
         let mut user_fund_account_option = self
             .user_fund_account
@@ -159,8 +162,9 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_wrapped_token_account: self.user_wrapped_token_account.key(),
-            user_fund_account: user_fund_account_option.map(|account| account.key()),
-            user_reward_account: user_reward_account_option.map(|account| account.key()),
+            updated_user_fund_account: user_fund_account_option.map(|account| account.key()),
+            updated_user_reward_account: user_reward_account_option.map(|account| account.key()),
+            updated_fund_wrap_account_reward_account: self.fund_wrap_account_reward_account.key(),
             wrapped_receipt_token_amount: amount,
         })
     }
@@ -183,6 +187,7 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         amount: u64,
     ) -> Result<events::UserUnwrappedReceiptToken> {
         require_gte!(self.user_wrapped_token_account.amount, amount);
+        let receipt_token_supply_before = self.receipt_token_mint.supply;
 
         // burn wrapped token from user
         anchor_spl::token::burn(
@@ -232,6 +237,8 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         self.fund_account
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
+        let receipt_token_supply = self.receipt_token_mint.supply;
+        require_eq!(receipt_token_supply, receipt_token_supply_before);
 
         let mut user_fund_account_option = self
             .user_fund_account
@@ -262,8 +269,9 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_wrapped_token_account: self.user_wrapped_token_account.key(),
-            user_fund_account: user_fund_account_option.map(|account| account.key()),
-            user_reward_account: user_reward_account_option.map(|account| account.key()),
+            updated_user_fund_account: user_fund_account_option.map(|account| account.key()),
+            updated_user_reward_account: user_reward_account_option.map(|account| account.key()),
+            updated_fund_wrap_account_reward_account: self.fund_wrap_account_reward_account.key(),
             unwrapped_receipt_token_amount: amount,
         })
     }
