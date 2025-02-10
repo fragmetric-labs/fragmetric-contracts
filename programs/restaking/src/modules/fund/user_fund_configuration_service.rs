@@ -111,6 +111,8 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_fund_account: self.user_fund_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: true,
             }))
         } else {
             Ok(None)
@@ -120,6 +122,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
     pub fn process_update_user_fund_account_if_needed(
         &mut self,
     ) -> Result<Option<events::UserCreatedOrUpdatedFundAccount>> {
+        let initializing = self.user_fund_account.is_initializing();
         if self
             .user_fund_account
             .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account)
@@ -127,6 +130,8 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_fund_account: self.user_fund_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: initializing,
             }))
         } else {
             Ok(None)

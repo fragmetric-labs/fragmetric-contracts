@@ -158,6 +158,8 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_reward_account: self.user_reward_account.key(),
+                receipt_token_amount: self.user_receipt_token_account.amount,
+                created: true,
             }));
         }
 
@@ -203,10 +205,12 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                     )?;
             }
 
-            if initializing || updated {
+            if updated {
                 return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                     receipt_token_mint: self.receipt_token_mint.key(),
                     user_reward_account: self.user_reward_account.key(),
+                    receipt_token_amount: self.user_receipt_token_account.amount,
+                    created: initializing,
                 }));
             }
         }
