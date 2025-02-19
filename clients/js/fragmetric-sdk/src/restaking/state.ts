@@ -30,4 +30,5 @@ export type RestakingFundReceiptToken = {
     oneTokenAsSOL: BN;
     updatedSlot: BN;
     withdrawalFeePercent: number;
+    wrappedTokenMint: web3.PublicKey | null;
 };

@@ -15,6 +15,6 @@ $ yarn add @fragmetric-labs/sdk @solana/web3.js
 And to use SDK with Ledger hardware wallet in Node.js environment, it needs to install devDependencies as well.
 
 ### Examples
-- [./examples/react](./examples/react): For web browser application with bundlers like rollup, webpack and more (ESM, CJS).
-- [./examples/html](./examples/html): For web browser application without bundlers (UMD)
-- [./examples/react](./examples/react): For Node.js environment (CJS, ESM)
+- [../examples/react](./examples/react): For web browser application with bundlers like rollup, webpack and more (ESM, CJS).
+- [../examples/html](./examples/html): For web browser application without bundlers (UMD)
+- [../examples/react](./examples/react): For Node.js environment (CJS, ESM)

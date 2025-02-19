@@ -2,9 +2,10 @@
   "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
   "metadata": {
     "name": "restaking",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "spec": "0.1.0",
-    "description": "Fragmetric Liquid Restaking Token Program"
+    "description": "Fragmetric Liquid Restaking Program",
+    "repository": "https://github.com/fragmetric-labs/contracts"
   },
   "instructions": [
     {
@@ -28,7 +29,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -129,7 +130,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -137,6 +138,11 @@
         },
         {
           "name": "receipt_token_mint",
+          "docs": [
+            "Mint authority must be admin or fund account,",
+            "otherwise `set_authority` CPI will fail.",
+            "Therefore, no extra constraint is needed."
+          ],
           "writable": true
         },
         {
@@ -284,6 +290,236 @@
       "args": []
     },
     {
+      "name": "admin_initialize_fund_wrap_account_reward_account",
+      "discriminator": [
+        154,
+        148,
+        28,
+        186,
+        34,
+        182,
+        115,
+        216
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account",
+            "reward_account"
+          ]
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "admin_initialize_normalized_token_pool_account",
       "discriminator": [
         36,
@@ -304,7 +540,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -398,7 +634,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -486,7 +722,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -606,7 +842,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "receipt_token_mint"
@@ -703,7 +939,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -804,6 +1040,243 @@
       ]
     },
     {
+      "name": "admin_update_fund_wrap_account_reward_account_if_needed",
+      "discriminator": [
+        3,
+        62,
+        36,
+        3,
+        185,
+        70,
+        34,
+        146
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account",
+            "reward_account"
+          ]
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "desired_account_size",
+          "type": {
+            "option": "u32"
+          }
+        }
+      ]
+    },
+    {
       "name": "admin_update_normalized_token_pool_account_if_needed",
       "discriminator": [
         117,
@@ -824,7 +1297,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -920,7 +1393,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
         },
         {
           "name": "system_program",
@@ -1010,7 +1483,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "normalized_token_mint",
@@ -1168,7 +1641,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1257,7 +1730,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1364,7 +1837,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1461,7 +1934,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1558,7 +2031,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -1807,492 +2280,6 @@
       ]
     },
     {
-      "name": "fund_manager_change_fund_token_account",
-      "discriminator": [
-        143,
-        2,
-        134,
-        98,
-        240,
-        42,
-        22,
-        107
-      ],
-      "accounts": [
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "fund_manager",
-          "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
-        },
-        {
-          "name": "fund_account",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  110,
-                  100
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  176,
-                  64,
-                  228,
-                  130,
-                  214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
-                  57,
-                  242,
-                  137,
-                  226
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "fund_reserve_account",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  110,
-                  100,
-                  95,
-                  114,
-                  101,
-                  115,
-                  101,
-                  114,
-                  118,
-                  101
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  176,
-                  64,
-                  228,
-                  130,
-                  214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
-                  57,
-                  242,
-                  137,
-                  226
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "token_mint"
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "old_token_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "fund_account"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "token_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "new_token_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "fund_reserve_account"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "token_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "fund_manager_clear_user_sol_withdrawal_requests",
-      "discriminator": [
-        229,
-        235,
-        96,
-        236,
-        74,
-        245,
-        85,
-        243
-      ],
-      "accounts": [
-        {
-          "name": "fund_manager",
-          "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
-        },
-        {
-          "name": "fund_account",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  110,
-                  100
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  176,
-                  64,
-                  228,
-                  130,
-                  214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
-                  57,
-                  242,
-                  137,
-                  226
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "user_fund_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  102,
-                  117,
-                  110,
-                  100
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  176,
-                  64,
-                  228,
-                  130,
-                  214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
-                  57,
-                  242,
-                  137,
-                  226
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "user"
-              }
-            ]
-          }
-        }
-      ],
-      "args": [
-        {
-          "name": "_user",
-          "type": "pubkey"
-        },
-        {
-          "name": "num_expected_requests_left",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "fund_manager_close_fund_account",
-      "discriminator": [
-        158,
-        192,
-        72,
-        180,
-        218,
-        61,
-        228,
-        156
-      ],
-      "accounts": [
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "fund_manager",
-          "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
-        },
-        {
-          "name": "fund_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  110,
-                  100
-                ]
-              },
-              {
-                "kind": "const",
-                "value": [
-                  176,
-                  64,
-                  228,
-                  130,
-                  214,
-                  123,
-                  80,
-                  76,
-                  100,
-                  178,
-                  192,
-                  192,
-                  179,
-                  126,
-                  147,
-                  60,
-                  234,
-                  167,
-                  167,
-                  116,
-                  119,
-                  133,
-                  49,
-                  140,
-                  60,
-                  54,
-                  168,
-                  166,
-                  57,
-                  242,
-                  137,
-                  226
-                ]
-              }
-            ]
-          }
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "fund_manager_close_reward_pool",
       "discriminator": [
         159,
@@ -2308,7 +2295,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -2395,7 +2382,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "system_program",
@@ -2681,6 +2668,96 @@
       "args": []
     },
     {
+      "name": "fund_manager_initialize_fund_jito_restaking_vault_delegation",
+      "discriminator": [
+        163,
+        134,
+        58,
+        94,
+        165,
+        249,
+        166,
+        82
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "vault_account"
+        },
+        {
+          "name": "jito_restaking_program",
+          "address": "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
+        },
+        {
+          "name": "vault_operator"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fund_manager_initialize_fund_normalized_token",
       "discriminator": [
         210,
@@ -2696,7 +2773,7 @@
         {
           "name": "admin",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "system_program",
@@ -2883,6 +2960,239 @@
       "args": []
     },
     {
+      "name": "fund_manager_initialize_fund_wrapped_token",
+      "discriminator": [
+        21,
+        83,
+        102,
+        87,
+        81,
+        163,
+        36,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "address": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
+        },
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account",
+            "reward_account",
+            "fund_wrap_account_reward_account"
+          ]
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "wrapped_token_mint",
+          "writable": true
+        },
+        {
+          "name": "wrapped_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fund_manager_settle_reward",
       "discriminator": [
         105,
@@ -2898,7 +3208,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3001,7 +3311,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3069,7 +3379,15 @@
           "type": "bool"
         },
         {
+          "name": "donation_enabled",
+          "type": "bool"
+        },
+        {
           "name": "withdrawal_enabled",
+          "type": "bool"
+        },
+        {
+          "name": "transfer_enabled",
           "type": "bool"
         },
         {
@@ -3098,7 +3416,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3201,7 +3519,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3294,7 +3612,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3401,7 +3719,7 @@
         {
           "name": "fund_manager",
           "signer": true,
-          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+          "address": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
         },
         {
           "name": "receipt_token_mint",
@@ -3534,7 +3852,6 @@
         },
         {
           "name": "receipt_token_mint",
-          "writable": true,
           "relations": [
             "fund_account"
           ]
@@ -3664,7 +3981,6 @@
         },
         {
           "name": "receipt_token_mint",
-          "writable": true,
           "relations": [
             "fund_account"
           ]
@@ -4079,7 +4395,6 @@
         },
         {
           "name": "normalized_token_mint",
-          "writable": true,
           "relations": [
             "normalized_token_pool_account"
           ]
@@ -4387,7 +4702,6 @@
         },
         {
           "name": "normalized_token_mint",
-          "writable": true,
           "relations": [
             "normalized_token_pool_account",
             "slasher_normalized_token_withdrawal_ticket_account"
@@ -4575,7 +4889,93 @@
       ],
       "accounts": [
         {
-          "name": "source_receipt_token_account"
+          "name": "source_receipt_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "source_receipt_token_account.owner"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
         },
         {
           "name": "receipt_token_mint",
@@ -4585,7 +4985,93 @@
           ]
         },
         {
-          "name": "destination_receipt_token_account"
+          "name": "destination_receipt_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "destination_receipt_token_account.owner"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
         },
         {
           "name": "owner"
@@ -6848,6 +7334,418 @@
       ]
     },
     {
+      "name": "user_unwrap_receipt_token",
+      "discriminator": [
+        86,
+        95,
+        41,
+        69,
+        120,
+        184,
+        110,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "wrapped_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "receipt_token_mint",
+          "writable": true,
+          "relations": [
+            "fund_account",
+            "reward_account",
+            "fund_wrap_account_reward_account"
+          ]
+        },
+        {
+          "name": "wrapped_token_mint",
+          "writable": true
+        },
+        {
+          "name": "user_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_wrapped_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "user_update_fund_account_if_needed",
       "discriminator": [
         22,
@@ -7682,7 +8580,7 @@
       ],
       "args": [
         {
-          "name": "batch_id",
+          "name": "_batch_id",
           "type": "u64"
         },
         {
@@ -8104,11 +9002,835 @@
       ],
       "args": [
         {
-          "name": "batch_id",
+          "name": "_batch_id",
           "type": "u64"
         },
         {
           "name": "request_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "user_wrap_receipt_token",
+      "discriminator": [
+        206,
+        52,
+        33,
+        7,
+        205,
+        206,
+        195,
+        24
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "wrapped_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "receipt_token_mint",
+          "writable": true,
+          "relations": [
+            "fund_account",
+            "reward_account",
+            "fund_wrap_account_reward_account"
+          ]
+        },
+        {
+          "name": "wrapped_token_mint",
+          "writable": true
+        },
+        {
+          "name": "user_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_wrapped_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "user_wrap_receipt_token_if_needed",
+      "discriminator": [
+        243,
+        23,
+        65,
+        33,
+        102,
+        133,
+        41,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "fund_wrap_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  119,
+                  114,
+                  97,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "wrapped_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "receipt_token_mint",
+          "writable": true,
+          "relations": [
+            "fund_account",
+            "reward_account",
+            "fund_wrap_account_reward_account"
+          ]
+        },
+        {
+          "name": "wrapped_token_mint",
+          "writable": true
+        },
+        {
+          "name": "user_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "receipt_token_wrap_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_wrapped_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "wrapped_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_wrap_account_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "fund_wrap_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_balance",
           "type": "u64"
         }
       ]
@@ -8378,6 +10100,19 @@
       ]
     },
     {
+      "name": "UserUnwrappedReceiptToken",
+      "discriminator": [
+        20,
+        70,
+        209,
+        152,
+        169,
+        188,
+        70,
+        136
+      ]
+    },
+    {
       "name": "UserUpdatedRewardPool",
       "discriminator": [
         189,
@@ -8401,6 +10136,19 @@
         207,
         166,
         164
+      ]
+    },
+    {
+      "name": "UserWrappedReceiptToken",
+      "discriminator": [
+        24,
+        198,
+        77,
+        53,
+        129,
+        188,
+        66,
+        155
       ]
     }
   ],
@@ -8799,6 +10547,21 @@
       "code": 6078,
       "name": "RestakingVaultWithdrawalTicketAlreadyInitializedError",
       "msg": "restaking: withdrawal ticket is already initialized"
+    },
+    {
+      "code": 6079,
+      "name": "FundDonationDisabledError",
+      "msg": "fund: donation is currently disabled"
+    },
+    {
+      "code": 6080,
+      "name": "FundWrappedTokenAlreadySetError",
+      "msg": "fund: wrapped token already set"
+    },
+    {
+      "code": 6081,
+      "name": "FundWrappedTokenNotSetError",
+      "msg": "fund: wrapped token is not set"
     }
   ],
   "types": [
@@ -9026,16 +10789,6 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "items",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "ClaimUnrestakedVSTCommandItem"
-                }
-              }
-            }
-          },
-          {
             "name": "state",
             "type": {
               "defined": {
@@ -9052,7 +10805,15 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "vault_address",
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supported_token_mint",
             "type": "pubkey"
           }
         ]
@@ -9062,7 +10823,40 @@
       "name": "ClaimUnrestakedVSTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed_supported_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_supported_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "unrestaked_receipt_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "deducted_receipt_token_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_unrestaking_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
@@ -9071,37 +10865,33 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "Init"
+            "name": "New"
           },
           {
-            "name": "Init2"
-          },
-          {
-            "name": "ReadVaultState"
-          },
-          {
-            "name": "Claim",
+            "name": "Prepare",
             "fields": [
               {
-                "defined": {
-                  "name": "ClaimableUnrestakeWithdrawalStatus"
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "ClaimUnrestakedVSTCommandItem"
+                    }
+                  }
                 }
               }
             ]
           },
           {
-            "name": "SetupDenormalize",
-            "fields": [
-              "u64"
-            ]
-          },
-          {
-            "name": "Denormalize",
+            "name": "Execute",
             "fields": [
               {
-                "vec": {
-                  "defined": {
-                    "name": "DenormalizeSupportedTokenAsset"
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "ClaimUnrestakedVSTCommandItem"
+                    }
                   }
                 }
               }
@@ -9116,16 +10906,6 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "items",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "ClaimUnstakedSOLCommandItem"
-                }
-              }
-            }
-          },
-          {
             "name": "state",
             "type": {
               "defined": {
@@ -9137,28 +10917,67 @@
       }
     },
     {
-      "name": "ClaimUnstakedSOLCommandItem",
+      "name": "ClaimUnstakedSOLCommandResult",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "mint",
+            "name": "token_mint",
             "type": "pubkey"
           },
           {
-            "name": "fund_stake_accounts",
+            "name": "claimed_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_unstaking_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "transferred_sol_revenue_amount",
+            "type": "u64"
+          },
+          {
+            "name": "offsetted_sol_receivable_amount",
+            "type": "u64"
+          },
+          {
+            "name": "offsetted_asset_receivables",
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "ClaimUnstakedSOLCommandResultAssetReceivable"
+                }
+              }
             }
+          },
+          {
+            "name": "operation_reserved_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_receivable_sol_amount",
+            "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "ClaimUnstakedSOLCommandResult",
+      "name": "ClaimUnstakedSOLCommandResultAssetReceivable",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "asset_token_mint",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "asset_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
@@ -9167,59 +10986,44 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "Init"
+            "name": "New"
           },
           {
-            "name": "ReadPoolState"
-          },
-          {
-            "name": "Claim"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ClaimableUnrestakeWithdrawalStatus",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "withdrawal_tickets",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "ClaimableUnrestakeWithdrawalTicket"
+            "name": "Prepare",
+            "fields": [
+              {
+                "name": "pool_token_mints",
+                "type": {
+                  "vec": "pubkey"
                 }
               }
-            }
+            ]
           },
           {
-            "name": "expected_ncn_epoch",
-            "type": "u64"
+            "name": "GetClaimableStakeAccounts",
+            "fields": [
+              {
+                "name": "pool_token_mints",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
           },
           {
-            "name": "delayed_ncn_epoch",
-            "type": "u64"
-          },
-          {
-            "name": "unrestaked_vst_amount",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ClaimableUnrestakeWithdrawalTicket",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "withdrawal_ticket_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "withdrawal_ticket_token_account",
-            "type": "pubkey"
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "pool_token_mints",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
+                "name": "claimable_stake_account_indices",
+                "type": "bytes"
+              }
+            ]
           }
         ]
       }
@@ -9228,46 +11032,196 @@
       "name": "DelegateVSTCommand",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "DelegateVSTCommandState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateVSTCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "operator",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegation_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
       "name": "DelegateVSTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegated_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_delegated_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateVSTCommandState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "New"
+          },
+          {
+            "name": "Prepare",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateVSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DelegateVSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
       }
     },
     {
       "name": "DenormalizeNTCommand",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "DenormalizeNTCommandState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DenormalizeNTCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "allocated_normalized_token_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
       "name": "DenormalizeNTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
-      }
-    },
-    {
-      "name": "DenormalizeSupportedTokenAsset",
-      "type": {
-        "kind": "struct",
         "fields": [
           {
-            "name": "operation_reserved_amount",
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "burnt_normalized_token_amount",
             "type": "u64"
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
+            "name": "operation_reserved_normalized_token_amount",
+            "type": "u64"
           },
           {
-            "name": "token_program",
-            "type": "pubkey"
+            "name": "denormalized_supported_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_supported_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DenormalizeNTCommandState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "New"
+          },
+          {
+            "name": "Prepare",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DenormalizeNTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "DenormalizeNTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
           }
         ]
       }
@@ -9287,7 +11241,7 @@
           },
           {
             "name": "contribution_accrual_rate",
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "expired_at",
@@ -9350,11 +11304,15 @@
             "type": "u8"
           },
           {
+            "name": "wrap_account_bump",
+            "type": "u8"
+          },
+          {
             "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                9
+                8
               ]
             }
           },
@@ -9442,11 +11400,15 @@
             "type": "u8"
           },
           {
+            "name": "donation_enabled",
+            "type": "u8"
+          },
+          {
             "name": "_padding4",
             "type": {
               "array": [
                 "u8",
-                4
+                3
               ]
             }
           },
@@ -9538,6 +11500,21 @@
             "type": {
               "defined": {
                 "name": "OperationState"
+              }
+            }
+          },
+          {
+            "name": "wrap_account",
+            "docs": [
+              "optional wrapped token of fund receipt token"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "wrapped_token",
+            "type": {
+              "defined": {
+                "name": "WrappedToken"
               }
             }
           }
@@ -10267,21 +12244,21 @@
             ]
           },
           {
-            "name": "UnstakeLST",
-            "fields": [
-              {
-                "defined": {
-                  "name": "UnstakeLSTCommand"
-                }
-              }
-            ]
-          },
-          {
             "name": "ProcessWithdrawalBatch",
             "fields": [
               {
                 "defined": {
                   "name": "ProcessWithdrawalBatchCommand"
+                }
+              }
+            ]
+          },
+          {
+            "name": "UnstakeLST",
+            "fields": [
+              {
+                "defined": {
+                  "name": "UnstakeLSTCommand"
                 }
               }
             ]
@@ -10557,21 +12534,21 @@
             ]
           },
           {
-            "name": "UnstakeLST",
-            "fields": [
-              {
-                "defined": {
-                  "name": "UnstakeLSTCommandResult"
-                }
-              }
-            ]
-          },
-          {
             "name": "ProcessWithdrawalBatch",
             "fields": [
               {
                 "defined": {
                   "name": "ProcessWithdrawalBatchCommandResult"
+                }
+              }
+            ]
+          },
+          {
+            "name": "UnstakeLST",
+            "fields": [
+              {
+                "defined": {
+                  "name": "UnstakeLSTCommandResult"
                 }
               }
             ]
@@ -10688,7 +12665,7 @@
             "type": {
               "array": [
                 "u8",
-                128
+                640
               ]
             }
           }
@@ -10857,6 +12834,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "required_asset_amount",
+            "type": "u64"
           },
           {
             "name": "reserved_asset_user_amount",
@@ -11792,6 +13773,14 @@
             "type": "u64"
           },
           {
+            "name": "operation_reserved_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_receivable_sol_amount",
+            "type": "u64"
+          },
+          {
             "name": "operation_reserved_token_amount",
             "type": "u64"
           }
@@ -11914,11 +13903,22 @@
             "type": "u64"
           },
           {
+            "name": "pending_unstaking_amount_as_sol",
+            "type": "u64"
+          },
+          {
+            "name": "one_token_as_receipt_token",
+            "docs": [
+              "informative"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                64
+                48
               ]
             }
           }
@@ -11986,14 +13986,14 @@
               "Contribution accrual rate per 1 lamports (decimals = 2)",
               "e.g., rate = 135 => actual rate = 1.35"
             ],
-            "type": "u8"
+            "type": "u16"
           },
           {
             "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                7
+                6
               ]
             }
           }
@@ -12178,16 +14178,6 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "items",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "UnrestakeVSTCommandItem"
-                }
-              }
-            }
-          },
-          {
             "name": "state",
             "type": {
               "defined": {
@@ -12202,7 +14192,28 @@
       "name": "UnrestakeVRTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "unrestaking_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_unrestaking_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_token_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
@@ -12211,16 +14222,35 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "Init"
+            "name": "New"
           },
           {
-            "name": "ReadVaultState"
-          },
-          {
-            "name": "Unstake",
+            "name": "Prepare",
             "fields": [
               {
-                "vec": "bytes"
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UnrestakeVSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UnrestakeVSTCommandItem"
+                    }
+                  }
+                }
               }
             ]
           }
@@ -12233,11 +14263,19 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "vault_address",
+            "name": "vault",
             "type": "pubkey"
           },
           {
-            "name": "sol_amount",
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "allocated_receipt_token_amount",
             "type": "u64"
           }
         ]
@@ -12248,16 +14286,6 @@
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "items",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "UnstakeLSTCommandItem"
-                }
-              }
-            }
-          },
           {
             "name": "state",
             "type": {
@@ -12275,11 +14303,11 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "mint",
+            "name": "token_mint",
             "type": "pubkey"
           },
           {
-            "name": "token_amount",
+            "name": "allocated_token_amount",
             "type": "u64"
           }
         ]
@@ -12289,7 +14317,44 @@
       "name": "UnstakeLSTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "burnt_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "deducted_sol_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "unstaked_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "unstaking_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_unstaking_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_receivable_sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_token_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
@@ -12298,24 +14363,62 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "Init"
+            "name": "New"
           },
           {
-            "name": "ReadPoolState"
-          },
-          {
-            "name": "GetAvailableUnstakeAccount"
-          },
-          {
-            "name": "Unstake"
-          },
-          {
-            "name": "RequestUnstake",
+            "name": "Prepare",
             "fields": [
               {
-                "vec": {
-                  "defined": {
-                    "name": "WithdrawStakeItem"
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UnstakeLSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "GetWithdrawStakeItems",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UnstakeLSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UnstakeLSTCommandItem"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "withdraw_sol",
+                "type": "bool"
+              },
+              {
+                "name": "withdraw_stake_items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "WithdrawStakeItem"
+                    }
                   }
                 }
               }
@@ -12388,6 +14491,14 @@
           {
             "name": "user_fund_account",
             "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "created",
+            "type": "bool"
           }
         ]
       }
@@ -12404,6 +14515,14 @@
           {
             "name": "user_reward_account",
             "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "created",
+            "type": "bool"
           }
         ]
       }
@@ -12460,7 +14579,7 @@
           {
             "name": "contribution_accrual_rate",
             "type": {
-              "option": "u8"
+              "option": "u16"
             }
           },
           {
@@ -12794,6 +14913,58 @@
       }
     },
     {
+      "name": "UserUnwrappedReceiptToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "wrapped_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_receipt_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_wrapped_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "updated_user_fund_account",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "updated_user_reward_account",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "updated_fund_wrap_account_reward_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "unwrapped_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "UserUpdatedRewardPool",
       "type": {
         "kind": "struct",
@@ -12880,6 +15051,58 @@
       }
     },
     {
+      "name": "UserWrappedReceiptToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "wrapped_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_receipt_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_wrapped_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "updated_user_fund_account",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "updated_user_reward_account",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "updated_fund_wrap_account_reward_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "wrapped_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "WithdrawStakeItem",
       "type": {
         "kind": "struct",
@@ -12893,14 +15116,8 @@
             "type": "pubkey"
           },
           {
-            "name": "fund_stake_account_signer_seeds",
-            "type": {
-              "vec": "bytes"
-            }
-          },
-          {
-            "name": "token_amount",
-            "type": "u64"
+            "name": "fund_stake_account_index",
+            "type": "u8"
           }
         ]
       }
@@ -12986,13 +15203,63 @@
           }
         ]
       }
+    },
+    {
+      "name": "WrappedToken",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "enabled",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
+          },
+          {
+            "name": "supply",
+            "type": "u64"
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "constants": [
     {
       "name": "ADMIN_PUBKEY",
       "type": "pubkey",
-      "value": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
+      "value": "fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby"
     },
     {
       "name": "DEVNET_BSOL_MINT_ADDRESS",
@@ -13003,6 +15270,26 @@
       "name": "DEVNET_BSOL_STAKE_POOL_ADDRESS",
       "type": "pubkey",
       "value": "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
+    },
+    {
+      "name": "DEVNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
+      "type": "pubkey",
+      "value": "6VHmiiuZAW2PVoY5N16oqs8wYVkXnfmZBcM7Vkbb76jH"
+    },
+    {
+      "name": "DEVNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
+      "type": "pubkey",
+      "value": "5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU"
+    },
+    {
+      "name": "DEVNET_JITOSOL_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    },
+    {
+      "name": "DEVNET_JITOSOL_STAKE_POOL_ADDRESS",
+      "type": "pubkey",
+      "value": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
     },
     {
       "name": "DEVNET_JTO_LIQUIDITY_POOL_ADDRESS",
@@ -13037,56 +15324,77 @@
     {
       "name": "FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
       "type": "pubkey",
-      "value": "FQ3yeuugxQ6ZhdcoTrFdm8h42uEMpjCnor1kEuvVEsdw"
+      "value": "AQtDes99nLUnSK6BQJgj9KJ6b3eDv8bUUxGCmnEJUkY5"
     },
     {
-      "name": "FRAGJTO_JITO_VAULT_ACCOUNT_ADDRESS",
+      "name": "FRAGJTO_JITO_JTO_VAULT_ACCOUNT_ADDRESS",
       "type": "pubkey",
-      "value": "C7sXJS2nGtk6wALstidEtwEnKFgdUmXtJYHsRdSHpnG2"
+      "value": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd"
     },
     {
-      "name": "FRAGJTO_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
+      "name": "FRAGJTO_JITO_JTO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "C4XojL5AHPS79KVenf5UPESSdrizJNqA6W5qBXauBtsr"
+      "value": "FRJtoBLuU72X3qgkVeBU1wXtmgQpWQmWptYsAdyyu3qT"
     },
     {
       "name": "FRAGJTO_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v"
+      "value": "FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos"
+    },
+    {
+      "name": "FRAGJTO_WRAPPED_TOKEN_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "WFRGJnQt5pK8Dv4cDAbrSsgPcmboysrmX3RYhmRRyTR"
     },
     {
       "name": "FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
       "type": "pubkey",
-      "value": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
+      "value": "HjNXH2HMfso5YU6U7McfhsbfoecGR5QTBAxTCSbFoYqy"
     },
     {
-      "name": "FRAGSOL_JITO_VAULT_ACCOUNT_ADDRESS",
+      "name": "FRAGSOL_JITO_JITOSOL_VAULT_ACCOUNT_ADDRESS",
       "type": "pubkey",
-      "value": "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
+      "value": "CyGwYsiNg1FEYNCVXmPAixCkn2ZqWQVQJVy9RBCPNF7t"
     },
     {
-      "name": "FRAGSOL_JITO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
+      "name": "FRAGSOL_JITO_JITOSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
+      "value": "FRj1uf9W7TsGfSoHc1gU6V2sKxs4wMhaXC5A8KjVYvA5"
+    },
+    {
+      "name": "FRAGSOL_JITO_NSOL_VAULT_ACCOUNT_ADDRESS",
+      "type": "pubkey",
+      "value": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S"
+    },
+    {
+      "name": "FRAGSOL_JITO_NSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg"
     },
     {
       "name": "FRAGSOL_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"
+      "value": "FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo"
     },
     {
       "name": "FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS",
       "type": "pubkey",
-      "value": "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX"
+      "value": "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e"
+    },
+    {
+      "name": "FRAGSOL_WRAPPED_TOKEN_MINT_ADDRESS",
+      "type": "pubkey",
+      "value": "WFRGSWjaz8tbAxsJitmbfRuFV2mSNwy7BMWcCwaA28U"
     },
     {
       "name": "FUND_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
-        "* v15: migrate to new layout including new fields using bytemuck. (150584 ~= 148KB)"
+        "* v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)",
+        "* v16: add wrap_account and wrapped token field. (151328 ~= 148KB)"
       ],
       "type": "u16",
-      "value": "15"
+      "value": "16"
     },
     {
       "name": "FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS",
@@ -13096,7 +15404,17 @@
     {
       "name": "FUND_MANAGER_PUBKEY",
       "type": "pubkey",
-      "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+      "value": "79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84"
+    },
+    {
+      "name": "JITO_RESTAKING_CONFIG_ADDRESS",
+      "type": "pubkey",
+      "value": "4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn"
+    },
+    {
+      "name": "JITO_RESTAKING_PROGRAM_ID",
+      "type": "pubkey",
+      "value": "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
     },
     {
       "name": "JITO_VAULT_CONFIG_ADDRESS",
@@ -13135,9 +15453,6 @@
     },
     {
       "name": "MAINNET_BSOL_MINT_ADDRESS",
-      "docs": [
-        "Below address are needed to be passed to transactions which includes pricing of tokens (token deposit, withdrawal request)\nA complete list will be provided to client via address lookup table later.\n*"
-      ],
       "type": "pubkey",
       "value": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
     },
@@ -13145,6 +15460,19 @@
       "name": "MAINNET_BSOL_STAKE_POOL_ADDRESS",
       "type": "pubkey",
       "value": "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
+    },
+    {
+      "name": "MAINNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
+      "type": "pubkey",
+      "value": "AQtDes99nLUnSK6BQJgj9KJ6b3eDv8bUUxGCmnEJUkY5"
+    },
+    {
+      "name": "MAINNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
+      "docs": [
+        "Below address are needed to be passed to transactions which includes pricing of tokens (token deposit, withdrawal request)\nA complete list will be provided to client via address lookup table later.\n*"
+      ],
+      "type": "pubkey",
+      "value": "HjNXH2HMfso5YU6U7McfhsbfoecGR5QTBAxTCSbFoYqy"
     },
     {
       "name": "MAINNET_JITOSOL_MINT_ADDRESS",
@@ -13208,7 +15536,7 @@
     {
       "name": "PROGRAM_REVENUE_ADDRESS",
       "type": "pubkey",
-      "value": "GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA"
+      "value": "XEhpR3UauMkARQ8ztwaU9Kbv16jEpBbXs9ftELka9wj"
     },
     {
       "name": "REWARD_ACCOUNT_CURRENT_VERSION",
@@ -13222,7 +15550,7 @@
     {
       "name": "TARGET",
       "type": "string",
-      "value": "\"local\""
+      "value": "\"mainnet\""
     },
     {
       "name": "USER_REWARD_ACCOUNT_CURRENT_VERSION",

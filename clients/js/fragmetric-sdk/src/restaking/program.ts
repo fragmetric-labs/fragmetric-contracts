@@ -25,7 +25,8 @@ export class RestakingClient extends Program<RestakingIDL> {
 
     public static async createAll(args: Omit<ConstructorParameters<typeof RestakingClient>[0], 'receiptTokenMint'>): Promise<RestakingClient[]> {
         const program = new RestakingClient({ ...args, receiptTokenMint: RestakingClient.receiptTokenMints.fragSOL });
-        const fundAccountResults = await program.programAccounts.fundAccount.all();
+        // @ts-ignore: TODO: fix deep instantiation error workaround
+        const fundAccountResults = await program.programAccounts.fundAccount.all() as any[];
         const fundAccounts = fundAccountResults.map(res => res.account);
         return fundAccounts.map(fundAccount => {
             const thisProgram = fundAccount.receiptTokenMint.equals(program.receiptTokenMint)
@@ -41,11 +42,12 @@ export class RestakingClient extends Program<RestakingIDL> {
         const fundAccountForVault = fundAccounts.find(fundAccount => {
                 return fundAccount.restakingVaults
                     .slice(0, fundAccount.numRestakingVaults)
-                    .some(fundRestakingVault => fundRestakingVault.vault.equals(restakingVault));
+                    .some((fundRestakingVault: any) => fundRestakingVault.vault.equals(restakingVault));
             });
         if (!fundAccountForVault) {
             throw new Error('failed to find a fund account related to the given restaking vault');
         }
+        // @ts-ignore: TODO: fix deep instantiation error workaround
         return funds.find(fund => fund.receiptTokenMint.equals(fundAccountForVault.receiptTokenMint))!;
     }
 
@@ -62,12 +64,12 @@ export class RestakingClient extends Program<RestakingIDL> {
     }
 
     public readonly state = {
-        /* internal states */
-        _fund: dedupe(async (refresh: boolean = false): ReturnType<typeof this.programAccounts.fundAccount.fetch> => {
+        _fund: dedupe(async (refresh: boolean = false): Promise<any> => { // ReturnType<typeof this.programAccounts.fundAccount.fetch> => {
             const k = '_fund';
             if (!refresh && this.cache.has(k)) return this.cache.get(k);
 
             const address = web3.PublicKey.findProgramAddressSync([Buffer.from('fund'), this.receiptTokenMint.toBuffer()], this.programID)[0];
+            // @ts-ignore
             return this.cache.set(k, await this.programAccounts.fundAccount.fetch(address));
         }),
         _addressLookupTables: dedupe(async (refresh: boolean = false): Promise<web3.AddressLookupTableAccount[]> => {
@@ -115,7 +117,7 @@ export class RestakingClient extends Program<RestakingIDL> {
                 { assetState: fundAccount.sol, supportedToken: null },
                 ...fundAccount.supportedTokens
                     .slice(0, fundAccount.numSupportedTokens)
-                    .map(supportedToken => ({ assetState: supportedToken.token, supportedToken }))
+                    .map((supportedToken: any) => ({ assetState: supportedToken.token, supportedToken }))
             ].map(({assetState, supportedToken}) => {
                 const oneTokenAsSOL = supportedToken?.oneTokenAsSol ?? new BN(web3.LAMPORTS_PER_SOL);
                 return {
@@ -160,7 +162,14 @@ export class RestakingClient extends Program<RestakingIDL> {
                 oneTokenAsSOL: fundAccount.oneReceiptTokenAsSol,
                 updatedSlot: fundAccount.receiptTokenValueUpdatedSlot,
                 withdrawalFeePercent: fundAccount.withdrawalFeeRateBps / 100,
+                wrappedTokenMint: null,
             };
+
+            console.log(fundAccount, "FUCK");
+            if (fundAccount.wrappedToken.enabled == 1) {
+                receiptToken.wrappedTokenMint = fundAccount.wrappedToken.mint;
+            }
+
             return this.cache.set(k, receiptToken);
         }),
     };

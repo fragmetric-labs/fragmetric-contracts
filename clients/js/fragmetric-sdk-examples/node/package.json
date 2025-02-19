@@ -9,11 +9,14 @@
     "dev": "ts-node --transpile-only ./index.ts"
   },
   "dependencies": {
-    "@fragmetric-labs/sdk": "*",
-    "@solana/web3.js": "^1.98.0",
+    "@fragmetric-labs/sdk": "workspace:*",
     "@ledgerhq/hw-app-solana": "^7.2.4",
     "@ledgerhq/hw-transport": "^6.31.4",
-    "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5"
+    "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5",
+    "@solana/web3.js": "^1.98.0"
+  },
+  "workspaceDependencies": {
+    "@fragmetric-labs/sdk": "*"
   },
   "devDependencies": {
     "ts-node": "^10.9.2"

@@ -9,7 +9,7 @@
     "dev": "yarn workspace @fragmetric-labs/sdk link; yarn link @fragmetric-labs/sdk; serve ."
   },
   "dependencies": {
-    "@fragmetric-labs/sdk": "*"
+    "@fragmetric-labs/sdk": "workspace:*"
   },
   "devDependencies": {
     "serve": "^14.2.4"

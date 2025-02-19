@@ -2,9 +2,7 @@
   "private": true,
   "workspaces": [
     "codegen",
-    "js/fragmetric-sdk/examples/*",
+    "js/fragmetric-sdk-examples/*",
     "js/*"
-  ],
-  "scripts": {
-  }
+  ]
 }
