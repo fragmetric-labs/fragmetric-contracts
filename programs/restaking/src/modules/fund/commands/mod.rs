@@ -310,7 +310,7 @@ impl OperationCommand {
     }
 }
 
-const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2535;
+const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 3126;
 
 #[zero_copy]
 #[repr(C)]
@@ -528,7 +528,7 @@ mod tests {
             OperationCommand::INIT_SPACE,
         );
         assert_eq!(
-            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE > OperationCommand::INIT_SPACE,
+            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE >= OperationCommand::INIT_SPACE,
             true
         );
     }

@@ -22,7 +22,7 @@ pub(super) struct OperationState {
 
     next_command: OperationCommandEntryPod,
 
-    _reserved: [u8; 640],
+    _reserved: [u8; 49],
 }
 
 impl OperationState {
