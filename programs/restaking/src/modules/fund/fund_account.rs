@@ -16,12 +16,12 @@ use super::*;
 #[constant]
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
-/// * v16: add wrap_account and wrapped token field. (151328 ~= 148KB)
+/// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 16;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
-pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 30;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -71,9 +71,11 @@ pub struct FundAccount {
     normalized_token: NormalizedToken,
 
     /// investments
-    _padding7: [u8; 15],
+    reward_commission_rate_bps: u16,
+    _padding7: [u8; 13],
     num_restaking_vaults: u8,
     restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
+    _padding8: [u8; 112],
 
     /// fund operation state
     pub(super) operation: OperationState,
