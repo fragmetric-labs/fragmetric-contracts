@@ -17,7 +17,8 @@ use super::*;
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
 /// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 16;
+/// * v17: add reserved space for 60 pubkeys in wrapped token (153256 ~= 150KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 17;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
@@ -136,6 +137,10 @@ impl FundAccount {
             (self.wrap_account, self.wrap_account_bump) =
                 Pubkey::find_program_address(&self.get_wrap_account_seed_phrase(), &crate::ID);
             self.data_version = 16;
+        }
+        if self.data_version == 16 {
+            // Just account size increased, no change to data layout
+            self.data_version = 17;
         }
     }
 
