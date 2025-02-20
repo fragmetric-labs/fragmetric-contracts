@@ -4,6 +4,7 @@ use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
+use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
@@ -78,4 +79,24 @@ pub struct AdminFundAccountUpdateContext<'info> {
         bump,
     )]
     pub fund_reserve_account: SystemAccount<'info>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct AdminFundContext<'info> {
+    pub payer: Signer<'info>,
+
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 }

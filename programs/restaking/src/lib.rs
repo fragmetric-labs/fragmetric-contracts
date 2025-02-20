@@ -55,8 +55,12 @@ pub mod restaking {
         )
     }
 
+    ////////////////////////////////////////////
+    // AdminFundContext
+    ////////////////////////////////////////////
+
     pub fn admin_set_address_lookup_table_account(
-        ctx: Context<AdminFundAccountUpdateContext>,
+        ctx: Context<AdminFundContext>,
         address_lookup_table_account: Option<Pubkey>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
@@ -73,9 +77,9 @@ pub mod restaking {
     pub fn admin_initialize_fund_wrap_account_reward_account(
         ctx: Context<AdminFundWrapAccountRewardAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
+        modules::fund::FundWrapAccountRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.fund_account,
         )?
         .process_initialize_fund_wrap_account_reward_account(
             &ctx.accounts.fund_wrap_account,
@@ -94,9 +98,9 @@ pub mod restaking {
         ctx: Context<AdminFundWrapAccountRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
+        modules::fund::FundWrapAccountRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.fund_account,
         )?
         .process_update_fund_wrap_account_reward_account_if_needed(
             &ctx.accounts.payer,
@@ -127,6 +131,10 @@ pub mod restaking {
         )
     }
 
+    ////////////////////////////////////////////
+    // AdminNormalizedTokenPoolUpdateContext
+    ////////////////////////////////////////////
+
     pub fn admin_update_normalized_token_pool_account_if_needed(
         ctx: Context<AdminNormalizedTokenPoolUpdateContext>,
     ) -> Result<()> {
@@ -147,7 +155,6 @@ pub mod restaking {
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
     ) -> Result<()> {
         modules::fund::FundReceiptTokenConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
         .process_initialize_extra_account_meta_list()
@@ -161,7 +168,6 @@ pub mod restaking {
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListUpdateContext>,
     ) -> Result<()> {
         modules::fund::FundReceiptTokenConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.extra_account_meta_list,
         )?
         .process_update_extra_account_meta_list_if_needed()
@@ -359,9 +365,9 @@ pub mod restaking {
         )?
         .process_set_normalized_token(
             &ctx.accounts.fund_normalized_token_reserve_account,
-            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_mint,
             &ctx.accounts.normalized_token_program,
-            &mut ctx.accounts.normalized_token_pool_account,
+            &ctx.accounts.normalized_token_pool_account,
             ctx.remaining_accounts,
         )?);
 

@@ -11,7 +11,7 @@ use crate::{errors, events};
 
 use super::*;
 
-pub struct FundConfigurationService<'info: 'a, 'a> {
+pub struct FundConfigurationService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
 }
@@ -22,7 +22,7 @@ impl Drop for FundConfigurationService<'_, '_> {
     }
 }
 
-impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
+impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut AccountLoader<'info, FundAccount>,
@@ -98,54 +98,6 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         Ok(())
     }
 
-    pub fn process_initialize_fund_wrap_account_reward_account(
-        &self,
-        fund_wrap_account: &SystemAccount,
-        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
-        fund_wrap_account_reward_account_bump: u8,
-    ) -> Result<()> {
-        reward::UserRewardConfigurationService::new_with_user_seeds(
-            self.receipt_token_mint,
-            fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
-            receipt_token_wrap_account,
-            reward_account,
-            fund_wrap_account_reward_account,
-        )?
-        .process_initialize_user_reward_account(fund_wrap_account_reward_account_bump)?;
-
-        Ok(())
-    }
-
-    pub fn process_update_fund_wrap_account_reward_account_if_needed(
-        &self,
-        payer: &Signer<'info>,
-        system_program: &Program<'info, System>,
-        fund_wrap_account: &SystemAccount,
-        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()> {
-        reward::UserRewardConfigurationService::new_with_user_seeds(
-            self.receipt_token_mint,
-            fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
-            receipt_token_wrap_account,
-            reward_account,
-            fund_wrap_account_reward_account,
-        )?
-        .process_update_user_reward_account_if_needed(
-            payer,
-            system_program,
-            desired_account_size,
-        )?;
-
-        Ok(())
-    }
-
     pub fn process_set_address_lookup_table_account(
         &mut self,
         address_lookup_table_account: &Option<Pubkey>,
@@ -174,7 +126,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_mint.key()
         );
         require_keys_eq!(
-            *supported_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
             supported_token_program.key()
         );
 
@@ -196,9 +148,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn process_set_normalized_token(
         &mut self,
         fund_normalized_token_reserve_account: &InterfaceAccount<TokenAccount>,
-        normalized_token_mint: &mut InterfaceAccount<'info, Mint>,
+        normalized_token_mint: &InterfaceAccount<'info, Mint>,
         normalized_token_program: &Program<'info, Token>,
-        normalized_token_pool: &mut Account<'info, NormalizedTokenPoolAccount>,
+        normalized_token_pool: &Account<'info, NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
@@ -210,12 +162,12 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             normalized_token_mint.key()
         );
         require_keys_eq!(
-            *normalized_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_program.key()
         );
 
         // validate accounts
-        NormalizedTokenPoolService::new(
+        NormalizedTokenPoolService::validate_accounts(
             normalized_token_pool,
             normalized_token_mint,
             normalized_token_program,
@@ -267,10 +219,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
 
         // validate accounts
-        reward::UserRewardService::new_with_user_seeds(
+        reward::UserRewardService::validate_accounts(
             self.receipt_token_mint,
             fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
+            Some(&self.fund_account.load()?.get_wrap_account_seeds()),
             reward_account,
             fund_wrap_account_reward_account,
         )?;
@@ -325,7 +277,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_supported_token_mint.key()
         );
         require_keys_eq!(
-            *vault_supported_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(vault_supported_token_mint).owner,
             vault_supported_token_program.key()
         );
 
@@ -338,12 +290,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_receipt_token_mint.key()
         );
         require_keys_eq!(
-            *fund_vault_receipt_token_account.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(fund_vault_receipt_token_account).owner,
             vault_receipt_token_program.key()
         );
 
         // TODO add more vault validation since we do not check vault address anymore
-        require_keys_eq!(*vault.to_account_info().owner, vault_program.key());
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(vault).owner,
+            vault_program.key()
+        );
 
         // TODO add more vault receipt token mint validation since we do not check mint address anymore
 
@@ -371,16 +326,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         restaking_program: &UncheckedAccount,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            require_keys_eq!(*vault_operator.owner, restaking_program.key());
+        require_keys_eq!(*vault_operator.owner, restaking_program.key());
 
-            // TODO add more operator validation
+        // TODO add more operator validation
 
-            self.fund_account
-                .load_mut()?
-                .get_restaking_vault_mut(vault.key)?
-                .add_delegation(vault_operator.key)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault.key)?
+            .add_delegation(vault_operator.key)?;
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?

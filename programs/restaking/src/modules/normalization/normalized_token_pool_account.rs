@@ -86,7 +86,7 @@ impl NormalizedTokenPoolAccount {
         self.migrate(
             bump,
             normalized_token_mint.key(),
-            *normalized_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_mint.decimals,
             normalized_token_mint.supply,
         );
