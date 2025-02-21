@@ -165,7 +165,6 @@ export class RestakingClient extends Program<RestakingIDL> {
                 wrappedTokenMint: null,
             };
 
-            console.log(fundAccount, "FUCK");
             if (fundAccount.wrappedToken.enabled == 1) {
                 receiptToken.wrappedTokenMint = fundAccount.wrappedToken.mint;
             }
