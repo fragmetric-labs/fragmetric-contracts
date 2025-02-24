@@ -2,9 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
-use std::cell::RefMut;
 
-use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::fund::{DepositMetadata, FundAccount, FundService, UserFundAccount};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};

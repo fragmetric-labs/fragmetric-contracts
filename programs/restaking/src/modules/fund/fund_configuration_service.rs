@@ -351,16 +351,14 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            fund_account.set_deposit_enabled(deposit_enabled);
-            fund_account.set_donation_enabled(donation_enabled);
-            fund_account.set_withdrawal_enabled(withdrawal_enabled);
-            fund_account.set_transfer_enabled(transfer_enabled);
-            fund_account.set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
-            fund_account
-                .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .set_deposit_enabled(deposit_enabled)
+            .set_donation_enabled(donation_enabled)
+            .set_withdrawal_enabled(withdrawal_enabled)
+            .set_transfer_enabled(transfer_enabled)
+            .set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?
+            .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -377,22 +375,17 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
 
-            fund_account.sol.set_depositable(sol_depositable);
-            fund_account
-                .sol
-                .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
             if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
                 fund_account
                     .sol
                     .set_accumulated_deposit_amount(sol_accumulated_deposit_amount)?;
             }
-
-            fund_account.sol.set_withdrawable(sol_withdrawable);
             fund_account
                 .sol
-                .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
-            fund_account
-                .sol
+                .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?
+                .set_depositable(sol_depositable)
+                .set_withdrawable(sol_withdrawable)
+                .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?
                 .set_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
 
             // all underlying assets should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
@@ -426,24 +419,17 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             let sol_withdrawable = fund_account.sol.withdrawable == 1;
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
-            supported_token.token.set_depositable(token_depositable);
-            supported_token
-                .token
-                .set_accumulated_deposit_capacity_amount(
-                    token_accumulated_deposit_capacity_amount,
-                )?;
-
             if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
                 supported_token
                     .token
                     .set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
             }
-            supported_token.token.set_withdrawable(token_withdrawable);
             supported_token
                 .token
-                .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?;
-            supported_token
-                .token
+                .set_depositable(token_depositable)
+                .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?
+                .set_withdrawable(token_withdrawable)
+                .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?
                 .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
             if let Some(token_rebalancing_amount) = token_rebalancing_amount {
@@ -470,14 +456,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            let vault = fund_account.get_restaking_vault_mut(vault)?;
-            vault.set_sol_allocation_strategy(
-                sol_allocation_weight,
-                sol_allocation_capacity_amount,
-            )?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -512,11 +494,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         vault: &Pubkey,
         compounding_reward_token_mint: &Pubkey,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            let vault = fund_account.get_restaking_vault_mut(vault)?;
-            vault.add_compounding_reward_token(compounding_reward_token_mint)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .add_compounding_reward_token(compounding_reward_token_mint)?;
 
         self.create_fund_manager_updated_fund_event()
     }

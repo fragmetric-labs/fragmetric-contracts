@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::*;
 use spl_tlv_account_resolution::account::ExtraAccountMeta;
 use spl_tlv_account_resolution::seeds::Seed;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;

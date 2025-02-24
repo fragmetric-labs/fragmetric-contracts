@@ -3,7 +3,6 @@ use bytemuck::Zeroable;
 
 use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
-use crate::modules::fund::SupportedToken;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;

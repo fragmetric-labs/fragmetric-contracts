@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::Mint;
 use bytemuck::Zeroable;
 use std::ops::Neg;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{
-    Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
-};
-use crate::utils::{get_proportional_amount, PDASeeds, ZeroCopyHeader};
+use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
+use crate::utils::*;
 
 use super::*;
 
@@ -387,7 +385,7 @@ impl FundAccount {
         get_proportional_amount(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
     }
 
-    pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<()> {
+    pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
             FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT,
             fee_rate_bps,
@@ -396,35 +394,38 @@ impl FundAccount {
 
         self.withdrawal_fee_rate_bps = fee_rate_bps;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub(super) fn set_deposit_enabled(&mut self, enabled: bool) {
-        self.deposit_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_deposit_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.deposit_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_donation_enabled(&mut self, enabled: bool) {
-        self.donation_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_donation_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.donation_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) {
-        self.withdrawal_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.withdrawal_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_transfer_enabled(&mut self, enabled: bool) {
-        self.transfer_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_transfer_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.transfer_enabled = enabled as u8;
+        self
     }
 
-    pub(super) fn set_withdrawal_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
+    pub(super) fn set_withdrawal_batch_threshold(
+        &mut self,
+        interval_seconds: i64,
+    ) -> Result<&mut Self> {
         require_gte!(interval_seconds, 0);
 
         self.withdrawal_batch_threshold_interval_seconds = interval_seconds;
 
-        Ok(())
+        Ok(self)
     }
 
     pub(super) fn add_supported_token(
@@ -863,7 +864,7 @@ pub(super) struct FundUnstakingTicketAddress<'a> {
 }
 
 impl<'a> FundUnstakingTicketAddress<'a> {
-    pub const SEED: &'static [u8] = b"unstaking_ticket";
+    const SEED: &'static [u8] = b"unstaking_ticket";
 
     fn new(fund_account: &'a Pubkey, pool_account: &'a Pubkey, index: u8) -> Self {
         let (unstaking_ticket_address, bump) = Pubkey::find_program_address(
@@ -918,7 +919,7 @@ pub(super) struct FundUnrestakingTicketAddress<'a> {
 }
 
 impl<'a> FundUnrestakingTicketAddress<'a> {
-    pub const SEED: &'static [u8] = b"unrestaking_ticket";
+    const SEED: &'static [u8] = b"unrestaking_ticket";
 
     fn new(fund_account: &'a Pubkey, vault_account: &'a Pubkey, index: u8) -> Self {
         let (unrestaking_ticket_address, bump) = Pubkey::find_program_address(
@@ -1024,6 +1025,7 @@ mod tests {
         fund.sol.accumulated_deposit_amount = 1_000_000_000_000;
         fund.sol
             .set_accumulated_deposit_capacity_amount(0)
+            .map(|_| ())
             .unwrap_err();
 
         let interval_seconds = 60;
@@ -1097,6 +1099,7 @@ mod tests {
             .unwrap()
             .token
             .set_accumulated_deposit_capacity_amount(0)
+            .map(|_| ())
             .unwrap_err();
     }
 

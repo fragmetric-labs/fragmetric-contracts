@@ -7,7 +7,7 @@ use super::AssetState;
 
 #[zero_copy]
 #[repr(C)]
-pub struct SupportedToken {
+pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,

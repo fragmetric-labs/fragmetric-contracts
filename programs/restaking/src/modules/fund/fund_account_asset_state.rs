@@ -10,7 +10,7 @@ pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[zero_copy]
 #[repr(C)]
-pub struct AssetState {
+pub(super) struct AssetState {
     token_mint: Pubkey,
     token_program: Pubkey,
 
@@ -73,7 +73,7 @@ impl AssetState {
         }
     }
 
-    pub fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<&mut Self> {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
             amount,
@@ -82,10 +82,10 @@ impl AssetState {
 
         self.accumulated_deposit_amount = amount;
 
-        Ok(())
+        Ok(self)
     }
 
-    pub fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<&mut Self> {
         require_gte!(
             amount,
             self.accumulated_deposit_amount,
@@ -94,15 +94,15 @@ impl AssetState {
 
         self.accumulated_deposit_capacity_amount = amount;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub fn set_normal_reserve_max_amount(&mut self, amount: u64) {
+    pub fn set_normal_reserve_max_amount(&mut self, amount: u64) -> &mut Self {
         self.normal_reserve_max_amount = amount;
+        self
     }
 
-    pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+    pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
             10_00, // 10%
             reserve_rate_bps,
@@ -111,17 +111,17 @@ impl AssetState {
 
         self.normal_reserve_rate_bps = reserve_rate_bps;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub fn set_depositable(&mut self, depositable: bool) {
-        self.depositable = if depositable { 1 } else { 0 };
+    pub fn set_depositable(&mut self, depositable: bool) -> &mut Self {
+        self.depositable = depositable as u8;
+        self
     }
 
-    #[inline(always)]
-    pub fn set_withdrawable(&mut self, withdrawable: bool) {
-        self.withdrawable = if withdrawable { 1 } else { 0 };
+    pub fn set_withdrawable(&mut self, withdrawable: bool) -> &mut Self {
+        self.withdrawable = withdrawable as u8;
+        self
     }
 
     /// returns [deposited_amount]
@@ -399,7 +399,7 @@ impl AssetState {
 
 #[zero_copy]
 #[repr(C)]
-pub struct WithdrawalBatch {
+pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,
