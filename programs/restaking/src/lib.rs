@@ -631,7 +631,7 @@ pub mod restaking {
             // and admin can reset the operation state only if the command is safe.
             if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
                 || ctx.accounts.operator.key() == ADMIN_PUBKEY
-                    && command_entry.is_safe_with_unchecked_params())
+                    && command_entry.command.is_safe_with_unchecked_params())
             {
                 err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
             }

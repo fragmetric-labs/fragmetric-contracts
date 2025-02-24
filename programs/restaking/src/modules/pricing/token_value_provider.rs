@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::errors;
+use crate::errors::ErrorCode;
 
 use super::{TokenPricingSource, TokenPricingSourcePod};
 
@@ -85,7 +85,7 @@ impl TokenValue {
 
     pub fn serialize_as_pod(&self, pod: &mut TokenValuePod) -> Result<()> {
         if self.numerator.len() > TOKEN_VALUE_MAX_NUMERATORS_SIZE {
-            err!(errors::ErrorCode::IndexOutOfBoundsException)?;
+            err!(ErrorCode::IndexOutOfBoundsException)?;
         }
         pod.num_numerator = self.numerator.len() as u64;
         for (numerator, asset) in pod.numerator.iter_mut().zip(&self.numerator) {
@@ -97,6 +97,7 @@ impl TokenValue {
     }
 }
 
+/// Pod type of `TokenValue`
 #[zero_copy]
 #[repr(C)]
 pub struct TokenValuePod {
@@ -107,15 +108,13 @@ pub struct TokenValuePod {
 
 impl TokenValuePod {
     pub fn try_deserialize(&self) -> Result<TokenValue> {
-        let pods = &self.numerator[..self.num_numerator as usize];
-        let count = pods.iter().filter(|pod| pod.is_some()).count();
-
-        let mut numerator = Vec::with_capacity(count);
-        for pod in pods {
-            if let Some(asset) = pod.try_deserialize()? {
-                numerator.push(asset);
-            }
-        }
+        let mut numerator = Vec::with_capacity(self.num_numerator as usize);
+        self.numerator[..self.num_numerator as usize]
+            .iter()
+            .try_for_each(|pod| {
+                numerator.push(pod.try_deserialize()?);
+                Ok::<_, Error>(())
+            })?;
 
         Ok(TokenValue {
             numerator,
@@ -141,7 +140,7 @@ impl Asset {
                 pod.sol_amount = *sol_amount;
                 pod.token_amount = 0;
                 pod.token_mint = Pubkey::default();
-                pod.token_pricing_source.clear();
+                pod.token_pricing_source.set_none();
             }
             Asset::Token(token_mint, token_pricing_source, token_amount) => {
                 pod.discriminant = 2;
@@ -151,13 +150,14 @@ impl Asset {
                 if let Some(source) = token_pricing_source {
                     source.serialize_as_pod(&mut pod.token_pricing_source);
                 } else {
-                    pod.token_pricing_source.clear();
+                    pod.token_pricing_source.set_none();
                 }
             }
         }
     }
 }
 
+/// Pod type of `Asset`
 #[zero_copy]
 #[repr(C)]
 pub struct AssetPod {
@@ -170,24 +170,16 @@ pub struct AssetPod {
 }
 
 impl AssetPod {
-    pub fn is_some(&self) -> bool {
-        self.discriminant != 0
-    }
-
-    pub fn try_deserialize(&self) -> Result<Option<Asset>> {
-        self.is_some()
-            .then(|| {
-                Ok(match self.discriminant {
-                    1 => Asset::SOL(self.sol_amount),
-                    2 => Asset::Token(
-                        self.token_mint,
-                        self.token_pricing_source.try_deserialize()?,
-                        self.token_amount,
-                    ),
-                    _ => return Err(Error::from(ProgramError::InvalidAccountData)),
-                })
-            })
-            .transpose()
+    pub fn try_deserialize(&self) -> Result<Asset> {
+        Ok(match self.discriminant {
+            1 => Asset::SOL(self.sol_amount),
+            2 => Asset::Token(
+                self.token_mint,
+                self.token_pricing_source.try_deserialize()?,
+                self.token_amount,
+            ),
+            _ => return Err(Error::from(ProgramError::InvalidAccountData)),
+        })
     }
 }
 

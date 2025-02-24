@@ -100,6 +100,7 @@ impl TokenPricingSource {
     }
 }
 
+/// Pod type of `Option<TokenPricingSource>`
 #[zero_copy]
 #[repr(C)]
 pub struct TokenPricingSourcePod {
@@ -109,52 +110,45 @@ pub struct TokenPricingSourcePod {
 }
 
 impl TokenPricingSourcePod {
-    pub fn is_some(&self) -> bool {
-        self.discriminant != 0
-    }
-
     pub fn address(&self) -> Option<Pubkey> {
-        self.is_some().then_some(self.address)
+        (self.discriminant != 0).then_some(self.address)
     }
 
-    pub fn clear(&mut self) {
+    pub fn set_none(&mut self) {
         self.discriminant = 0;
         self.address = Pubkey::default();
     }
 
     pub fn try_deserialize(&self) -> Result<Option<TokenPricingSource>> {
-        self.is_some()
-            .then(|| {
-                Ok(match self.discriminant {
-                    1 => TokenPricingSource::SPLStakePool {
-                        address: self.address,
-                    },
-                    2 => TokenPricingSource::MarinadeStakePool {
-                        address: self.address,
-                    },
-                    3 => TokenPricingSource::JitoRestakingVault {
-                        address: self.address,
-                    },
-                    4 => TokenPricingSource::FragmetricNormalizedTokenPool {
-                        address: self.address,
-                    },
-                    5 => TokenPricingSource::FragmetricRestakingFund {
-                        address: self.address,
-                    },
-                    6 => TokenPricingSource::OrcaDEXLiquidityPool {
-                        address: self.address,
-                    },
-                    7 => TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                        address: self.address,
-                    },
-                    #[cfg(all(test, not(feature = "idl-build")))]
-                    255 => TokenPricingSource::Mock {
-                        numerator: vec![],
-                        denominator: 1,
-                    },
-                    _ => Err(Error::from(ProgramError::InvalidAccountData))?,
-                })
-            })
-            .transpose()
+        Ok(Some(match self.discriminant {
+            0 => return Ok(None),
+            1 => TokenPricingSource::SPLStakePool {
+                address: self.address,
+            },
+            2 => TokenPricingSource::MarinadeStakePool {
+                address: self.address,
+            },
+            3 => TokenPricingSource::JitoRestakingVault {
+                address: self.address,
+            },
+            4 => TokenPricingSource::FragmetricNormalizedTokenPool {
+                address: self.address,
+            },
+            5 => TokenPricingSource::FragmetricRestakingFund {
+                address: self.address,
+            },
+            6 => TokenPricingSource::OrcaDEXLiquidityPool {
+                address: self.address,
+            },
+            7 => TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                address: self.address,
+            },
+            #[cfg(all(test, not(feature = "idl-build")))]
+            255 => TokenPricingSource::Mock {
+                numerator: vec![],
+                denominator: 1,
+            },
+            _ => Err(Error::from(ProgramError::InvalidAccountData))?,
+        }))
     }
 }

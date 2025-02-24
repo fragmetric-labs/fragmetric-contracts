@@ -9,10 +9,7 @@ use crate::modules::reward;
 use crate::modules::reward::RewardService;
 use crate::utils::*;
 
-use super::commands::{
-    OperationCommandContext, OperationCommandEntry, SelfExecutable,
-    FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
-};
+use super::commands::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
@@ -341,14 +338,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             self.current_timestamp,
         )?;
 
-        let (command, required_account_metas) = fund_account
+        let OperationCommandEntry {
+            command,
+            required_accounts: required_account_metas,
+        } = fund_account
             .operation
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
         // accounts = [...required_accounts, ...pricing_sources]
         let mut operation_command_accounts = Vec::with_capacity(
-            FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE + pricing_source_accounts.len(),
+            OperationCommandEntry::MAX_ACCOUNT_SIZE + pricing_source_accounts.len(),
         );
         for required_account_meta in required_account_metas {
             if let Some(remaining_account) = remaining_accounts
