@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
-use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
@@ -52,7 +51,8 @@ pub(super) struct RestakingVault {
 }
 
 impl RestakingVault {
-    pub(super) fn initialize(
+    #[deny(clippy::wildcard_enum_match_arm)]
+    pub fn initialize(
         &mut self,
         vault: Pubkey,
         program: Pubkey,
@@ -62,14 +62,28 @@ impl RestakingVault {
         receipt_token_mint: Pubkey,
         receipt_token_program: Pubkey,
         receipt_token_decimals: u8,
+        receipt_token_pricing_source: TokenPricingSource,
 
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
-        let receipt_token_pricing_source = if program == JITO_VAULT_PROGRAM_ID {
-            Ok(TokenPricingSource::JitoRestakingVault { address: vault })
-        } else {
-            err!(ErrorCode::FundRestakingNotSupportedVaultError)
-        }?;
+        match receipt_token_pricing_source {
+            TokenPricingSource::JitoRestakingVault { .. } => {}
+            // otherwise fails
+            TokenPricingSource::SPLStakePool { .. }
+            | TokenPricingSource::MarinadeStakePool { .. }
+            | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. }
+            | TokenPricingSource::OrcaDEXLiquidityPool { .. }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {
+                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => {
+                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
+            }
+        }
+
+        *self = Zeroable::zeroed();
 
         self.vault = vault;
         self.program = program;
@@ -92,7 +106,7 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub(super) fn set_sol_allocation_strategy(
+    pub fn set_sol_allocation_strategy(
         &mut self,
         weight: u64,
         sol_capacity_amount: u64,
@@ -103,7 +117,7 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub(super) fn add_compounding_reward_token(
+    pub fn add_compounding_reward_token(
         &mut self,
         compounding_reward_token_mint: &Pubkey,
     ) -> Result<()> {
@@ -129,7 +143,7 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub(super) fn add_delegation(&mut self, operator: &Pubkey) -> Result<()> {
+    pub fn add_delegation(&mut self, operator: &Pubkey) -> Result<()> {
         if self
             .delegations
             .iter()
@@ -145,19 +159,23 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDelegationsError
         );
 
-        let mut delegation = RestakingVaultDelegation::zeroed();
-        delegation.initialize(*operator);
-        self.delegations[self.num_delegations as usize] = delegation;
+        self.delegations[self.num_delegations as usize].initialize(*operator);
         self.num_delegations += 1;
 
         Ok(())
     }
 
-    pub(super) fn get_delegations_iter(&self) -> impl Iterator<Item = &RestakingVaultDelegation> {
-        self.delegations.iter().take(self.num_delegations as usize)
+    pub fn get_delegations_iter(&self) -> impl Iterator<Item = &RestakingVaultDelegation> {
+        self.delegations[..self.num_delegations as usize].iter()
     }
 
-    pub(super) fn get_delegation(&self, operator: &Pubkey) -> Result<&RestakingVaultDelegation> {
+    pub fn get_delegations_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut RestakingVaultDelegation> {
+        self.delegations[..self.num_delegations as usize].iter_mut()
+    }
+
+    pub fn get_delegation(&self, operator: &Pubkey) -> Result<&RestakingVaultDelegation> {
         self.delegations
             .iter()
             .take(self.num_delegations as usize)
@@ -165,13 +183,11 @@ impl RestakingVault {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
 
-    pub(super) fn get_delegation_mut(
+    pub fn get_delegation_mut(
         &mut self,
         operator: &Pubkey,
     ) -> Result<&mut RestakingVaultDelegation> {
-        self.delegations
-            .iter_mut()
-            .take(self.num_delegations as usize)
+        self.get_delegations_iter_mut()
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
@@ -197,11 +213,12 @@ pub(super) struct RestakingVaultDelegation {
 }
 
 impl RestakingVaultDelegation {
-    pub(super) fn initialize(&mut self, operator: Pubkey) {
+    fn initialize(&mut self, operator: Pubkey) {
+        *self = Zeroable::zeroed();
         self.operator = operator;
     }
 
-    pub(super) fn set_supported_token_allocation_strategy(
+    pub fn set_supported_token_allocation_strategy(
         &mut self,
         weight: u64,
         supported_token_capacity_amount: u64,
@@ -212,10 +229,7 @@ impl RestakingVaultDelegation {
         Ok(())
     }
 
-    pub(super) fn set_supported_token_redelegating_amount(
-        &mut self,
-        token_amount: u64,
-    ) -> Result<()> {
+    pub fn set_supported_token_redelegating_amount(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
             token_amount,
             self.supported_token_delegated_amount,

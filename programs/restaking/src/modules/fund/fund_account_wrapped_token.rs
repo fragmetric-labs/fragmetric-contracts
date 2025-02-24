@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 #[zero_copy]
 #[repr(C)]
@@ -21,6 +22,8 @@ impl WrappedToken {
         supply: u64,
     ) -> Result<()> {
         require_eq!(self.enabled, 0);
+
+        *self = Zeroable::zeroed();
 
         self.enabled = 1;
         self.mint = mint;

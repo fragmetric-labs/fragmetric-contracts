@@ -265,6 +265,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         vault_program: &UncheckedAccount,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_program: &Interface<TokenInterface>,
+        vault_receipt_token_pricing_source: TokenPricingSource,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -309,6 +310,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault_receipt_token_mint.key(),
             vault_receipt_token_program.key(),
             vault_receipt_token_mint.decimals,
+            vault_receipt_token_pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
 

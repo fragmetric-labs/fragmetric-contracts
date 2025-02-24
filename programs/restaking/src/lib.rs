@@ -418,6 +418,9 @@ pub mod restaking {
             &ctx.accounts.vault_program,
             &ctx.accounts.vault_receipt_token_mint,
             &ctx.accounts.vault_receipt_token_program,
+            modules::pricing::TokenPricingSource::JitoRestakingVault {
+                address: ctx.accounts.vault_account.key(),
+            },
             ctx.remaining_accounts,
         )?);
 

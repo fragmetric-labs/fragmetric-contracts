@@ -2,8 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::Mint;
-use bytemuck::Zeroable;
-use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
@@ -336,20 +334,16 @@ impl FundAccount {
         )
     }
 
-    #[inline]
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
-        self.supported_tokens
-            .iter()
-            .take(self.num_supported_tokens as usize)
+        self.supported_tokens[..self.num_supported_tokens as usize].iter()
     }
 
-    #[inline]
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SupportedToken> {
-        self.supported_tokens
-            .iter_mut()
-            .take(self.num_supported_tokens as usize)
+        self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
     }
 
     pub(super) fn get_supported_token(&self, token_mint: &Pubkey) -> Result<&SupportedToken> {
@@ -449,15 +443,13 @@ impl FundAccount {
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        let mut supported_token = SupportedToken::zeroed();
-        supported_token.initialize(
+        self.supported_tokens[self.num_supported_tokens as usize].initialize(
             mint,
             program,
             decimals,
             pricing_source,
             operation_reserved_amount,
         )?;
-        self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
         Ok(())
@@ -465,11 +457,7 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token(&self) -> Option<&NormalizedToken> {
-        if self.normalized_token.enabled == 1 {
-            Some(&self.normalized_token)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1).then_some(&self.normalized_token)
     }
 
     #[inline]
@@ -481,11 +469,7 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token_mut(&mut self) -> Option<&mut NormalizedToken> {
-        if self.normalized_token.enabled == 1 {
-            Some(&mut self.normalized_token)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1).then_some(&mut self.normalized_token)
     }
 
     pub(super) fn set_normalized_token(
@@ -500,15 +484,13 @@ impl FundAccount {
             err!(ErrorCode::FundNormalizedTokenAlreadySetError)?
         }
 
-        let normalized_token = &mut self.normalized_token;
-        normalized_token.initialize(mint, program, decimals, pool, operation_reserved_amount)
+        self.normalized_token
+            .initialize(mint, program, decimals, pool, operation_reserved_amount)
     }
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
-        self.restaking_vaults
-            .iter()
-            .take(self.num_restaking_vaults as usize)
+        self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
     }
 
     #[inline]
@@ -543,6 +525,7 @@ impl FundAccount {
         receipt_token_mint: Pubkey,
         receipt_token_program: Pubkey,
         receipt_token_decimals: u8,
+        receipt_token_pricing_source: TokenPricingSource,
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
         if self.get_restaking_vaults_iter().any(|v| v.vault == vault) {
@@ -555,17 +538,16 @@ impl FundAccount {
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
 
-        let mut restaking_vault = RestakingVault::zeroed();
-        restaking_vault.initialize(
+        self.restaking_vaults[self.num_restaking_vaults as usize].initialize(
             vault,
             program,
             supported_token_mint,
             receipt_token_mint,
             receipt_token_program,
             receipt_token_decimals,
+            receipt_token_pricing_source,
             receipt_token_operation_reserved_amount,
         )?;
-        self.restaking_vaults[self.num_restaking_vaults as usize] = restaking_vault;
         self.num_restaking_vaults += 1;
 
         Ok(())
@@ -644,13 +626,10 @@ impl FundAccount {
     }
 
     pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
-        let sol = &mut self.sol;
-        let tokens = self
-            .supported_tokens
+        let tokens = self.supported_tokens[..self.num_supported_tokens as usize]
             .iter_mut()
-            .take(self.num_supported_tokens as usize)
             .map(|v| &mut v.token);
-        std::iter::once(sol).chain(tokens)
+        std::iter::once(&mut self.sol).chain(tokens)
     }
 
     /// returns [deposited_amount]
@@ -799,7 +778,7 @@ impl FundAccount {
         let sol_net_operation_reserved_amount =
             self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
         Ok(
-            u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?.saturating_sub(
+            u64::try_from(-sol_net_operation_reserved_amount.min(0))?.saturating_sub(
                 self.get_supported_tokens_iter()
                     .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
                     .sum(),
@@ -1135,8 +1114,9 @@ mod tests {
     fn test_deposit_token() {
         let mut fund = create_initialized_fund_account();
 
+        let supported_token_mint = Pubkey::new_unique();
         fund.add_supported_token(
-            Pubkey::new_unique(),
+            supported_token_mint,
             Pubkey::default(),
             9,
             TokenPricingSource::SPLStakePool {
@@ -1153,12 +1133,10 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].token.operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].token.accumulated_deposit_amount, 0);
 
-        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
-            .unwrap_err();
+        fund.deposit(Some(supported_token_mint), 1_000).unwrap_err();
         fund.set_deposit_enabled(true);
         fund.supported_tokens[0].token.set_depositable(true);
-        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
-            .unwrap();
+        fund.deposit(Some(supported_token_mint), 1_000).unwrap();
         assert_eq!(
             fund.supported_tokens[0].token.operation_reserved_amount,
             1_000
