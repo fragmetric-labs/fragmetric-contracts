@@ -1,19 +1,17 @@
 use anchor_lang::prelude::*;
 
 use super::{
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, StakeSOLCommand,
+    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    UnstakeLSTCommand,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
-pub struct UndelegateVSTCommand {
-    // TODO v0.4.3: UndelegateVSTCommand
-}
+pub struct HarvestRewardCommand {}
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct UndelegateVSTCommandResult {}
+pub struct HarvestRewardCommandResult {}
 
-impl SelfExecutable for UndelegateVSTCommand {
+impl SelfExecutable for HarvestRewardCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         _ctx: &mut OperationCommandContext<'info, 'a>,
@@ -22,9 +20,10 @@ impl SelfExecutable for UndelegateVSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
+        // TODO v0.5.0: HarvestRewardCommand.execute
         Ok((
             None,
-            Some(StakeSOLCommand::default().without_required_accounts()),
+            Some(UnstakeLSTCommand::default().without_required_accounts()),
         ))
     }
 }

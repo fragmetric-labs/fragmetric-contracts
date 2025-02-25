@@ -12,8 +12,8 @@ use crate::modules::staking::{
 use crate::utils::AccountInfoExt;
 
 use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundService, HarvestRewardCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -173,7 +173,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                                 num_processing_batches,
                                 receipt_token_amount: requested_receipt_token_amount,
                             },
-                            forced: false,
+                            forced: self.forced,
                         }
                         .with_required_accounts(required_accounts),
                     ),
@@ -491,7 +491,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         result,
                         ProcessWithdrawalBatchCommand {
                             state: ProcessWithdrawalBatchCommandState::Prepare { asset_token_mint },
-                            forced: false,
+                            forced: self.forced,
                         }
                         .execute(ctx, accounts)?
                         .1,
@@ -499,7 +499,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 }
                 None => (
                     result,
-                    Some(UnstakeLSTCommand::default().without_required_accounts()),
+                    Some(HarvestRewardCommand::default().without_required_accounts()),
                 ),
             }
         })
