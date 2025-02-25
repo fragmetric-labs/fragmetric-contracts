@@ -48,7 +48,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 fund_account_bump,
                 self.receipt_token_mint,
                 fund_reserve_account.lamports(),
-            );
+            )?;
         }
 
         // set token mint authority
@@ -92,7 +92,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         if new_account_size >= min_account_size {
             self.fund_account
                 .load_mut()?
-                .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports());
+                .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports())?;
         }
 
         Ok(())

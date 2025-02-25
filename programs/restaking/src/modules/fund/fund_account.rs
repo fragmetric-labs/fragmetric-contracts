@@ -119,7 +119,7 @@ impl FundAccount {
         receipt_token_decimals: u8,
         receipt_token_supply: u64,
         sol_operation_reserved_amount: u64,
-    ) {
+    ) -> Result<()> {
         if self.data_version == 0 {
             self.receipt_token_mint = receipt_token_mint;
             self.receipt_token_program = token_2022::ID;
@@ -145,6 +145,10 @@ impl FundAccount {
             self.num_token_swap_strategies = 0;
             self.data_version = 17;
         }
+
+        require_eq!(self.data_version, FUND_ACCOUNT_CURRENT_VERSION);
+
+        Ok(())
     }
 
     #[inline(always)]
@@ -153,14 +157,14 @@ impl FundAccount {
         bump: u8,
         receipt_token_mint: &InterfaceAccount<Mint>,
         sol_operation_reserved_amount: u64,
-    ) {
+    ) -> Result<()> {
         self.migrate(
             bump,
             receipt_token_mint.key(),
             receipt_token_mint.decimals,
             receipt_token_mint.supply,
             sol_operation_reserved_amount,
-        );
+        )
     }
 
     #[inline(always)]
@@ -168,8 +172,8 @@ impl FundAccount {
         &mut self,
         receipt_token_mint: &InterfaceAccount<Mint>,
         sol_operation_reserved_amount: u64,
-    ) {
-        self.initialize(self.bump, receipt_token_mint, sol_operation_reserved_amount);
+    ) -> Result<()> {
+        self.initialize(self.bump, receipt_token_mint, sol_operation_reserved_amount)
     }
 
     #[inline(always)]
@@ -1044,7 +1048,7 @@ mod tests {
     fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + std::mem::size_of::<FundAccount>()];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
-        fund.migrate(0, Pubkey::new_unique(), 9, 0, 0);
+        fund.migrate(0, Pubkey::new_unique(), 9, 0, 0).unwrap();
         fund
     }
 
