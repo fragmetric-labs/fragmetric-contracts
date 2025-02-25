@@ -5,6 +5,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
+use crate::modules::swap::TokenSwapSource;
 use crate::utils::*;
 
 use super::*;
@@ -13,12 +14,13 @@ use super::*;
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
 /// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
-/// * v17: add reserved space for 60 pubkeys in wrapped token (153256 ~= 150KB)
+/// * v17: add reserved space for 60 pubkeys in wrapped token and swap strategies. (160224 ~= 157KB)
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 17;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
+pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -80,6 +82,11 @@ pub struct FundAccount {
     /// optional wrapped token of fund receipt token
     wrap_account: Pubkey,
     wrapped_token: WrappedToken,
+
+    /// which DEX to use for swap between two tokens
+    num_token_swap_strategies: u8,
+    _padding9: [u8; 7],
+    token_swap_strategies: [TokenSwapStrategy; FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES],
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -135,7 +142,7 @@ impl FundAccount {
             self.data_version = 16;
         }
         if self.data_version == 16 {
-            // Just account size increased, no change to data layout
+            self.num_token_swap_strategies = 0;
             self.data_version = 17;
         }
     }
@@ -571,6 +578,50 @@ impl FundAccount {
 
         self.wrapped_token
             .initialize(mint, program, decimals, supply)
+    }
+
+    #[inline(always)]
+    pub(super) fn get_token_swap_strategies_iter(
+        &self,
+    ) -> impl Iterator<Item = &TokenSwapStrategy> {
+        self.token_swap_strategies[..self.num_token_swap_strategies as usize].iter()
+    }
+
+    pub(super) fn get_token_swap_strategy(
+        &self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+    ) -> Result<&TokenSwapStrategy> {
+        self.get_token_swap_strategies_iter()
+            .find(|strategy| strategy.is_swap_pair(from_token_mint, to_token_mint))
+            .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))
+    }
+
+    /// This strategy also supports reversed order swap(to -> from)
+    pub(super) fn add_token_swap_strategy(
+        &mut self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: TokenSwapSource,
+    ) -> Result<()> {
+        if self
+            .get_token_swap_strategy(from_token_mint, to_token_mint)
+            .is_ok()
+        {
+            err!(ErrorCode::FundTokenSwapStrategyAlreadyRegistered)?
+        }
+
+        require_gt!(
+            FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES,
+            self.num_token_swap_strategies as usize,
+            ErrorCode::FundExceededMaxTokenSwapStrategiesError
+        );
+
+        self.token_swap_strategies[self.num_token_swap_strategies as usize]
+            .initialize([from_token_mint, to_token_mint], swap_source);
+        self.num_token_swap_strategies += 1;
+
+        Ok(())
     }
 
     pub(super) fn reload_receipt_token_supply(

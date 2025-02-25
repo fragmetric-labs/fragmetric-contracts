@@ -192,6 +192,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         match pricing_source {
                             None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                             Some(pricing_source) => {
+                                #[deny(clippy::wildcard_enum_match_arm)]
                                 match pricing_source {
                                     TokenPricingSource::SPLStakePool { .. }
                                     | TokenPricingSource::MarinadeStakePool { .. }

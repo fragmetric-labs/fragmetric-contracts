@@ -247,4 +247,13 @@ pub enum ErrorCode {
 
     #[msg("fund: wrapped token is not set")]
     FundWrappedTokenNotSetError,
+
+    #[msg("fund: token swap strategy already registered")]
+    FundTokenSwapStrategyAlreadyRegistered,
+
+    #[msg("reward: exceeded max token swap strategies")]
+    FundExceededMaxTokenSwapStrategiesError,
+
+    #[msg("fund: token swap strategy not found")]
+    FundTokenSwapStrategyNotFoundError,
 }
