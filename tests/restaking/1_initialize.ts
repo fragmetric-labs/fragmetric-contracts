@@ -150,7 +150,7 @@ describe("initialize", async () => {
         await Promise.all(
             Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
                 return vault.operators.map(operator => {
-                    return restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault.vault, operator);
+                    return restaking.runFundManagerAddJitoRestakingVaultDelegation(vault.vault, operator);
                 })
             }),
         );
@@ -179,4 +179,16 @@ describe("initialize", async () => {
         expect(fragSOLFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wfragSOLTokenMint.toString());
         expect(wfragSOLMint.mintAuthority.toString()).eq(restaking.knownAddress.fragSOLFund.toString());
     })
+
+    step("add restaking vault compoundin reward tokens", async () => {
+        const {fragSOLFund} = await restaking.runFundManagerAddRestakingVaultCompoundingRewardTokens();
+
+        expect(fragSOLFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);
+        Object.values(restaking.restakingVaultMetadata).forEach((vaultMetadata, i) => {
+            const vault = fragSOLFund.restakingVaults[i];
+            (vaultMetadata.compoundingRewards ?? []).forEach((rewardTokenMint, j) => {
+                expect(vault.compoundingRewardTokenMints[j].toString()).eq(rewardTokenMint.toString());
+            })
+        });
+    });
 });

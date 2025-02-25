@@ -36,7 +36,7 @@ describe("operator_restaking_delegation", async () => {
     });
 
     step("initialize vault delegation at fund account", async function() {
-        await restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault, operator);
+        await restaking.runFundManagerAddJitoRestakingVaultDelegation(vault, operator);
     });
 
     step("run command add_delegation", async function() {

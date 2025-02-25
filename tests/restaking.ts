@@ -48,14 +48,15 @@ if (process.env.JTO) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/8_operator_deprecating_spl_stake_pool');
 
+    } else if (process.env.JUST_DENORMALIZE) {
+        require('./restaking/2_deposit_sol')(1);
+        require('./restaking/3_deposit_token')(1);
+        require('./restaking/11_operator_denormalize');
+
     } else if (process.env.JUST_RESTAKE) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);
         require('./restaking/9_operator_restaking');
-
-    } else if (process.env.JUST_WITHDRAW) {
-        require('./restaking/2_deposit_sol')(1);
-        require('./restaking/4_withdraw_sol');
 
     } else if (process.env.JUST_DELEGATE) {
         require('./restaking/2_deposit_sol')(1);
@@ -63,10 +64,8 @@ if (process.env.JTO) {
         require('./restaking/9_operator_restaking');
         require('./restaking/10_operator_restaking_delegation');
 
-    } else if (process.env.JUST_DENORMALIZE) {
-        require('./restaking/2_deposit_sol')(1);
-        require('./restaking/3_deposit_token')(1);
-        require('./restaking/11_operator_denormalize');
+    } else if (process.env.JUST_WITHDRAW) {
+        require('./restaking/4_withdraw_sol');
 
     } else if (process.env.JUST_TRANSFER) {
         require('./restaking/5_transfer_hook');

@@ -117,7 +117,7 @@ describe("initialize", async () => {
         await Promise.all(
             Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
                 return vault.operators.map(operator => {
-                    return restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault.vault, operator);
+                    return restaking.runFundManagerAddJitoRestakingVaultDelegation(vault.vault, operator);
                 })
             }),
         );
@@ -146,4 +146,16 @@ describe("initialize", async () => {
         expect(fragJTOFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wfragJTOTokenMint.toString());
         expect(wfragJTOMint.mintAuthority.toString()).eq(restaking.knownAddress.fragJTOFund.toString());
     })
+
+    step("add restaking vault compoundin reward tokens", async () => {
+        const {fragJTOFund} = await restaking.runFundManagerAddRestakingVaultCompoundingRewardTokens();
+
+        expect(fragJTOFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);
+        Object.values(restaking.restakingVaultMetadata).forEach((vaultMetadata, i) => {
+            const vault = fragJTOFund.restakingVaults[i];
+            (vaultMetadata.compoundingRewards ?? []).forEach((rewardTokenMint, j) => {
+                expect(vault.compoundingRewardTokenMints[j].toString()).eq(rewardTokenMint.toString());
+            })
+        });
+    });
 });

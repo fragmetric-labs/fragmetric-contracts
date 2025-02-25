@@ -407,6 +407,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     feeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultFeeWalletTokenAccount,
                     vaultTokenAccount: this.knownAddress.fragJTOJitoJTOVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragJTOFundJitoJTOVRTAccount,
+                    compoundingRewards: [
+                        new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                    ],
                 },
             };
         } else {
@@ -422,6 +425,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     feeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultFeeWalletTokenAccount,
                     vaultTokenAccount: this.knownAddress.fragJTOJitoJTOVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragJTOFundJitoJTOVRTAccount,
+                    compoundingRewards: [
+                        new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                    ],
                 },
             };
         }
@@ -910,7 +916,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
-            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
+            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accountsPartial({
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction(),
@@ -1211,7 +1217,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
-    public async runFundManagerAddFundJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
+    public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
         await this.run({
             instructions: [
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
@@ -1509,8 +1515,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     // need for operation - set vault_delegation_admin to fund_account
     public async runAdminSetSecondaryAdminForJitoVault(vault: web3.PublicKey, oldAuthority = this.keychain.getKeypair("ADMIN")) {
         const newAuthority = this.knownAddress.fragJTOFund;
-        logger.notice("old authority".padEnd(LOG_PAD_LARGE), oldAuthority.publicKey.toString());
-        logger.notice("new authority".padEnd(LOG_PAD_LARGE), newAuthority.toString());
 
         const SetSecondaryAdminInstructionDataSize = {
             discriminator: 1, // u8
@@ -1561,6 +1565,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [ix],
             signers: [oldAuthority],
         });
+
+        logger.notice(`jito vault delegation admin set to fund account`.padEnd(LOG_PAD_LARGE), vault.toString());
     }
 
     // for test - initialize ncn operator state
@@ -1814,6 +1820,43 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`updated fragJTO extra account meta list`.padEnd(LOG_PAD_LARGE));
 
         return {fragJTOExtraAccountMetasAccount};
+    }
+
+    public async runFundManagerAddRestakingVaultCompoundingRewardTokens() {
+        const {event, error} = await this.run({
+            instructions: Object.values(this.restakingVaultMetadata).flatMap(vault =>
+                (vault.compoundingRewards ?? []).map(rewardTokenMint =>
+                    this.methods.fundManagerAddRestakingVaultCompoundingRewardToken(
+                            vault.vault,
+                            rewardTokenMint
+                        ).accountsPartial({
+                            receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        }).instruction())),
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added fragJTO restaking vaults compounding reward tokens`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
+        const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund, 'confirmed');
+        return {event, error, fragJTOFund};
+    }
+
+    public async runFundManagerAddRestakingVaultCompoundingRewardToken(vault: web3.PublicKey, rewardTokenMint: web3.PublicKey) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.methods.fundManagerAddRestakingVaultCompoundingRewardToken(vault, rewardTokenMint)
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added compounding reward token`.padEnd(LOG_PAD_LARGE), rewardTokenMint);
+        const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund, 'confirmed');
+        return {event, error, fragJTOFund};
     }
 
     public async runFundManagerInitializeFundSupportedTokens() {
