@@ -4,6 +4,8 @@ use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
+use super::OrcaDEXLiquidityPoolService;
+
 pub struct OrcaDEXLiquidityPoolValueProvider;
 
 impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
@@ -16,7 +18,8 @@ impl TokenValueProvider for OrcaDEXLiquidityPoolValueProvider {
     ) -> Result<()> {
         require_eq!(pricing_source_accounts.len(), 1);
 
-        let whirlpool = Account::<Whirlpool>::try_from(pricing_source_accounts[0])?;
+        let whirlpool =
+            OrcaDEXLiquidityPoolService::deserialize_pool_account(pricing_source_accounts[0])?;
 
         let (is_inverse, base_token_mint) = if whirlpool.token_mint_a == *token_mint {
             (false, whirlpool.token_mint_b)

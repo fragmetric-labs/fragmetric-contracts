@@ -227,6 +227,7 @@ source = "git+https://github.com/fragmetric-labs/anchor.git?branch=v0.30.1#d5d08
 dependencies = [
  "anchor-lang",
  "spl-associated-token-account 3.0.4",
+ "spl-memo",
  "spl-pod 0.2.5",
  "spl-token",
  "spl-token-2022 3.0.5",
