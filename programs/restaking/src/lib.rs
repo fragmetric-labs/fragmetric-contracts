@@ -346,8 +346,23 @@ pub mod restaking {
         )?
         .process_add_restaking_vault_compounding_reward_token(
             &vault,
-            &compounding_reward_token_mint,
+            compounding_reward_token_mint,
         )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_add_token_swap_strategy(
+        ctx: Context<FundManagerFundContext>,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: modules::swap::TokenSwapSource,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_add_token_swap_strategy(from_token_mint, to_token_mint, swap_source)?);
 
         Ok(())
     }

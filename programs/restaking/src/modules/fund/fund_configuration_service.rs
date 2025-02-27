@@ -6,6 +6,7 @@ use anchor_spl::token_interface::*;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::reward;
+use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, SystemProgramExt};
 use crate::{errors, events};
 
@@ -494,12 +495,27 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_add_restaking_vault_compounding_reward_token(
         &mut self,
         vault: &Pubkey,
-        compounding_reward_token_mint: &Pubkey,
+        compounding_reward_token_mint: Pubkey,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
             .add_compounding_reward_token(compounding_reward_token_mint)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_token_swap_strategy(
+        &mut self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: TokenSwapSource,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account.load_mut()?.add_token_swap_strategy(
+            from_token_mint,
+            to_token_mint,
+            swap_source,
+        )?;
 
         self.create_fund_manager_updated_fund_event()
     }

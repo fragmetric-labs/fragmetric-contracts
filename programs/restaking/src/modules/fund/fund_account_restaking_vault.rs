@@ -119,13 +119,13 @@ impl RestakingVault {
 
     pub fn add_compounding_reward_token(
         &mut self,
-        compounding_reward_token_mint: &Pubkey,
+        compounding_reward_token_mint: Pubkey,
     ) -> Result<()> {
         if self
             .compounding_reward_token_mints
             .iter()
             .take(self.num_compounding_reward_tokens as usize)
-            .any(|reward_token| reward_token == compounding_reward_token_mint)
+            .any(|reward_token| *reward_token == compounding_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
@@ -137,7 +137,7 @@ impl RestakingVault {
         );
 
         self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
-            *compounding_reward_token_mint;
+            compounding_reward_token_mint;
         self.num_compounding_reward_tokens += 1;
 
         Ok(())
