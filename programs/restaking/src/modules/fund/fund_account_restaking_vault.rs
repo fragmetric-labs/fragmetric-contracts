@@ -143,6 +143,10 @@ impl RestakingVault {
         Ok(())
     }
 
+    pub fn get_compounding_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
+        self.compounding_reward_token_mints[..self.num_compounding_reward_tokens as usize].iter()
+    }
+
     pub fn add_delegation(&mut self, operator: &Pubkey) -> Result<()> {
         if self
             .delegations

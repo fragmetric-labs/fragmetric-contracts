@@ -595,11 +595,10 @@ impl FundAccount {
 
     pub(super) fn get_token_swap_strategy(
         &self,
-        from_token_mint: Pubkey,
-        to_token_mint: Pubkey,
+        from_token_mint: &Pubkey,
     ) -> Result<&TokenSwapStrategy> {
         self.get_token_swap_strategies_iter()
-            .find(|strategy| strategy.is_swap_pair(from_token_mint, to_token_mint))
+            .find(|strategy| strategy.from_token_mint == *from_token_mint)
             .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))
     }
 
@@ -610,10 +609,7 @@ impl FundAccount {
         to_token_mint: Pubkey,
         swap_source: TokenSwapSource,
     ) -> Result<()> {
-        if self
-            .get_token_swap_strategy(from_token_mint, to_token_mint)
-            .is_ok()
-        {
+        if self.get_token_swap_strategy(&from_token_mint).is_ok() {
             err!(ErrorCode::FundTokenSwapStrategyAlreadyRegistered)?
         }
 
@@ -623,8 +619,11 @@ impl FundAccount {
             ErrorCode::FundExceededMaxTokenSwapStrategiesError
         );
 
-        self.token_swap_strategies[self.num_token_swap_strategies as usize]
-            .initialize([from_token_mint, to_token_mint], swap_source);
+        self.token_swap_strategies[self.num_token_swap_strategies as usize].initialize(
+            from_token_mint,
+            to_token_mint,
+            swap_source,
+        );
         self.num_token_swap_strategies += 1;
 
         Ok(())
