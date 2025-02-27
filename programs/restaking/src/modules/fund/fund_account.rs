@@ -14,8 +14,8 @@ use super::*;
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
 /// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
-/// * v17: add reserved space for 60 pubkeys in wrapped token and swap strategies. (160224 ~= 157KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 17;
+/// * v18: add reserved space for 60 pubkeys in wrapped token and swap strategies. (163840 = 160KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 18;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
@@ -87,6 +87,8 @@ pub struct FundAccount {
     num_token_swap_strategies: u8,
     _padding9: [u8; 7],
     token_swap_strategies: [TokenSwapStrategy; FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES],
+
+    _reserved: [u8; 3616],
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -143,7 +145,7 @@ impl FundAccount {
         }
         if self.data_version == 16 {
             self.num_token_swap_strategies = 0;
-            self.data_version = 17;
+            self.data_version = 18;
         }
 
         require_eq!(self.data_version, FUND_ACCOUNT_CURRENT_VERSION);

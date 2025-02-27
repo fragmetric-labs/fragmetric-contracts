@@ -60,7 +60,7 @@ impl NormalizedTokenPoolAccount {
         normalized_token_program: Pubkey,
         normalized_token_decimals: u8,
         normalized_token_supply_amount: u64,
-    ) {
+    ) -> Result<()> {
         if self.data_version == 0 {
             self.bump = bump;
             self.normalized_token_mint = normalized_token_mint;
@@ -79,22 +79,36 @@ impl NormalizedTokenPoolAccount {
 
             self.data_version = 2;
         }
+
+        require_eq!(
+            self.data_version,
+            NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION,
+        );
+
+        Ok(())
     }
 
     #[inline(always)]
-    pub(super) fn initialize(&mut self, bump: u8, normalized_token_mint: &InterfaceAccount<Mint>) {
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        normalized_token_mint: &InterfaceAccount<Mint>,
+    ) -> Result<()> {
         self.migrate(
             bump,
             normalized_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_mint.decimals,
             normalized_token_mint.supply,
-        );
+        )
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, normalized_token_mint: &InterfaceAccount<Mint>) {
-        self.initialize(self.bump, normalized_token_mint);
+    pub(super) fn update_if_needed(
+        &mut self,
+        normalized_token_mint: &InterfaceAccount<Mint>,
+    ) -> Result<()> {
+        self.initialize(self.bump, normalized_token_mint)
     }
 
     #[inline(always)]

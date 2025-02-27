@@ -30,13 +30,12 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
     pub fn process_initialize_reward_account(&mut self, reward_account_bump: u8) -> Result<()> {
         if self.reward_account.as_ref().data_len() < 8 + std::mem::size_of::<RewardAccount>() {
             self.reward_account
-                .initialize_zero_copy_header(reward_account_bump)?;
+                .initialize_zero_copy_header(reward_account_bump)
         } else {
             self.reward_account
                 .load_init()?
-                .initialize(reward_account_bump, self.receipt_token_mint.key());
+                .initialize(reward_account_bump, self.receipt_token_mint.key())
         }
-        Ok(())
     }
 
     pub fn process_update_reward_account_if_needed(
@@ -61,7 +60,7 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         if new_account_size >= min_account_size {
             self.reward_account
                 .load_mut()?
-                .update_if_needed(self.receipt_token_mint.key());
+                .update_if_needed(self.receipt_token_mint.key())?;
         }
 
         Ok(())

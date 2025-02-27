@@ -40,7 +40,7 @@ impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
         self.normalized_token_pool_account.initialize(
             normalized_token_pool_account_bump,
             self.normalized_token_mint,
-        );
+        )?;
 
         // set token mint authority
         if !self
@@ -67,8 +67,7 @@ impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
 
     pub fn process_update_normalized_token_pool_account_if_needed(&mut self) -> Result<()> {
         self.normalized_token_pool_account
-            .update_if_needed(self.normalized_token_mint);
-        Ok(())
+            .update_if_needed(self.normalized_token_mint)
     }
 
     pub fn process_add_supported_token(
