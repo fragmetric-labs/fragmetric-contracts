@@ -158,4 +158,15 @@ describe("initialize", async () => {
             })
         });
     });
+
+    step("add token swap strategies", async () => {
+        const {fragJTOFund} = await restaking.runFundManagerAddTokenSwapStrategies();
+
+        expect(fragJTOFund.numTokenSwapStrategies).eq(Object.values(restaking.tokenSwapStrategies).length);
+        Object.values(restaking.tokenSwapStrategies).forEach((strategyMetadata, i) => {
+            const strategy = fragJTOFund.tokenSwapStrategies[i];
+            expect(strategy.fromTokenMint.toString()).eq(strategyMetadata.fromTokenMint.toString());
+            expect(strategy.toTokenMint.toString()).eq(strategyMetadata.toTokenMint.toString());
+        })
+    })
 });

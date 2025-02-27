@@ -75,6 +75,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runAdminInitializeWfragJTOTokenMint(), // 9
             () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 10
             () => this.runFundManagerInitializeFundWrappedToken(), // 11
+            () => this.runFundManagerAddRestakingVaultCompoundingRewardTokens(), // 12
+            () => this.runFundManagerAddTokenSwapStrategies(), // 13
         ];
     }
 
@@ -457,6 +459,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 }
             }),
         ];
+    }
+
+    public get tokenSwapStrategies() {
+        if (this._tokenSwapStrategies) return this._tokenSwapStrategies;
+        return (this._tokenSwapStrategies = this._getTokenSwapStrategies());
+    }
+    private _tokenSwapStrategies: ReturnType<typeof this._getTokenSwapStrategies>;
+    private _getTokenSwapStrategies() {
+        return [
+            {
+                fromTokenMint: new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                toTokenMint: this.knownAddress.jtoTokenMint,
+                tokenSwapSource: {
+                    orcaDexLiquidityPool: {
+                        address: new web3.PublicKey("G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA"),
+                    }
+                }
+            }
+        ]
     }
 
     public async tryAirdropJTO(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
@@ -1855,6 +1876,52 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
 
         logger.notice(`added compounding reward token`.padEnd(LOG_PAD_LARGE), rewardTokenMint);
+        const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund, 'confirmed');
+        return {event, error, fragJTOFund};
+    }
+
+    public async runFundManagerAddTokenSwapStrategies() {
+        const {event, error} = await this.run({
+            instructions: this.tokenSwapStrategies.map(strategy => {
+                return this.methods.fundManagerAddTokenSwapStrategy(
+                    strategy.fromTokenMint,
+                    strategy.toTokenMint,
+                    strategy.tokenSwapSource,
+                )
+                .accountsPartial({
+                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                })
+                .instruction();
+            }),
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added fragJTO token swap strategies`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
+        const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund, 'confirmed');
+        return {event, error, fragJTOFund};
+    }
+
+    public async runFundManagerAddTokenSwapStrategy(
+        strategy: typeof this.tokenSwapStrategies[number],
+    ) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.methods.fundManagerAddTokenSwapStrategy(
+                    strategy.fromTokenMint,
+                    strategy.toTokenMint,
+                    strategy.tokenSwapSource,
+                )
+                .accountsPartial({
+                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                })
+                .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added token swap strategy`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
         const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund, 'confirmed');
         return {event, error, fragJTOFund};
     }
