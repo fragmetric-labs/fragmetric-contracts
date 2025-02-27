@@ -22,30 +22,19 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
         token_mint_a: &'info AccountInfo<'info>,
         token_vault_a: &'info AccountInfo<'info>,
+        token_program_a: &'info AccountInfo<'info>,
         token_mint_b: &'info AccountInfo<'info>,
         token_vault_b: &'info AccountInfo<'info>,
-        token_program: &'info AccountInfo<'info>,
-        token_2022_program: &'info AccountInfo<'info>,
+        token_program_b: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
-        let _ = Program::<token::Token>::try_from(token_program)?;
-        let _ = Program::<token_2022::Token2022>::try_from(token_2022_program)?;
 
         require_keys_eq!(pool_account.token_mint_a, token_mint_a.key());
         require_keys_eq!(pool_account.token_vault_a, token_vault_a.key());
+        require_keys_eq!(token_mint_a.key(), token_program_a.key());
         require_keys_eq!(pool_account.token_mint_b, token_mint_b.key());
         require_keys_eq!(pool_account.token_vault_b, token_vault_b.key());
-
-        let token_program_a = match token_mint_a.owner {
-            &token::ID => token_program,
-            &token_2022::ID => token_2022_program,
-            _ => err!(error::ErrorCode::InvalidProgramId)?,
-        };
-        let token_program_b = match token_mint_b.owner {
-            &token::ID => token_program,
-            &token_2022::ID => token_2022_program,
-            _ => err!(error::ErrorCode::InvalidProgramId)?,
-        };
+        require_keys_eq!(token_mint_b.key(), token_program_b.key());
 
         Ok(Self {
             whirlpool_program: Program::try_from(whirlpool_program)?,
@@ -64,6 +53,22 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         pool_account: &'info AccountInfo<'info>,
     ) -> Result<Account<'info, Whirlpool>> {
         Account::try_from(pool_account)
+    }
+
+    fn a_to_b(
+        pool_account: &Account<Whirlpool>,
+        from_token_mint: &Pubkey,
+        to_token_mint: &Pubkey,
+    ) -> Result<bool> {
+        let a_to_b = pool_account.token_mint_a == *from_token_mint;
+        if a_to_b {
+            require_keys_eq!(pool_account.token_mint_b, *to_token_mint);
+        } else {
+            require_keys_eq!(pool_account.token_mint_a, *to_token_mint);
+            require_keys_eq!(pool_account.token_mint_b, *from_token_mint);
+        }
+
+        Ok(a_to_b)
     }
 
     fn find_tick_array_address<'a>(
@@ -85,20 +90,24 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     /// * pool_account(writable)
     /// * token_mint_a
     /// * token_vault_a(writable)
+    /// * token_program_a
     /// * token_mint_b
     /// * token_vault_b(writable)
-    /// * token_program
-    /// * token_2022_program
-    fn find_accounts_to_new(pool_account: &Account<Whirlpool>) -> [(Pubkey, bool); 8] {
+    /// * token_program_b
+    fn find_accounts_to_new(
+        pool_account: &Account<Whirlpool>,
+        token_program_a: &Pubkey,
+        token_program_b: &Pubkey,
+    ) -> [(Pubkey, bool); 8] {
         [
             (whirlpool_cpi::whirlpool::ID, false),
             (pool_account.key(), true),
             (pool_account.token_mint_a, false),
             (pool_account.token_vault_a, true),
+            (*token_program_a, false),
             (pool_account.token_mint_b, false),
             (pool_account.token_vault_b, true),
-            (token::ID, false),
-            (token_2022::ID, false),
+            (*token_program_b, false),
         ]
     }
 
@@ -146,10 +155,10 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     /// * (1) pool_account(writable)
     /// * (2) token_mint_a
     /// * (3) token_vault_a(writable)
-    /// * (4) token_mint_b
-    /// * (5) token_vault_b(writable)
-    /// * (6) token_program
-    /// * (7) token_2022_program
+    /// * (4) token_program_a
+    /// * (5) token_mint_b
+    /// * (6) token_vault_b(writable)
+    /// * (7) token_program_b
     /// * (8) memo_program
     /// * (9) oracle(writable)
     /// * (10) tick_array0(writable)
@@ -158,11 +167,23 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     #[inline(never)]
     pub fn find_accounts_to_swap(
         pool_account: &'info AccountInfo<'info>,
-        a_to_b: bool,
+        from_token_mint: &AccountInfo,
+        to_token_mint: &AccountInfo,
     ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let pool_account = &Self::deserialize_pool_account(pool_account)?;
 
-        let accounts = Self::find_accounts_to_new(pool_account)
+        let a_to_b = Self::a_to_b(pool_account, from_token_mint.key, to_token_mint.key)?;
+        let token_program_a;
+        let token_program_b;
+        if a_to_b {
+            token_program_a = from_token_mint.owner;
+            token_program_b = to_token_mint.owner;
+        } else {
+            token_program_a = to_token_mint.owner;
+            token_program_b = from_token_mint.owner;
+        }
+
+        let accounts = Self::find_accounts_to_new(pool_account, token_program_a, token_program_b)
             .into_iter()
             .chain([
                 // memo_program
@@ -182,7 +203,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         Ok(accounts)
     }
 
-    /// returns [amount_in, amount_out]
+    /// returns [to_token_account_amount, from_token_swapped_amount, to_token_swapped_amount]
     #[inline(never)]
     pub fn swap(
         &self,
@@ -194,28 +215,32 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         tick_array2: &AccountInfo<'info>,
 
         // variant
-        token_owner_account_a: &'info AccountInfo<'info>,
-        token_owner_account_b: &'info AccountInfo<'info>,
-        token_owner: &AccountInfo<'info>,
-        token_owner_seeds: &[&[&[u8]]],
+        from_token_account: &'info AccountInfo<'info>,
+        to_token_account: &'info AccountInfo<'info>,
+        token_account_signer: &AccountInfo<'info>,
+        token_account_signer_seeds: &[&[&[u8]]],
 
-        amount_in: u64,
-        a_to_b: bool, // if a_to_b then input = token_a
-    ) -> Result<(u64, u64)> {
-        let (mut input_token_account, mut output_token_account) = {
-            let token_owner_account_a =
-                InterfaceAccount::<TokenAccount>::try_from(token_owner_account_a)?;
-            let token_owner_account_b =
-                InterfaceAccount::<TokenAccount>::try_from(token_owner_account_b)?;
-            if a_to_b {
-                (token_owner_account_a, token_owner_account_b)
-            } else {
-                (token_owner_account_b, token_owner_account_a)
-            }
+        from_token_amount: u64,
+    ) -> Result<(u64, u64, u64)> {
+        let mut from_token_account =
+            InterfaceAccount::<TokenAccount>::try_from(from_token_account)?;
+        let mut to_token_account = InterfaceAccount::<TokenAccount>::try_from(to_token_account)?;
+
+        let a_to_b = Self::a_to_b(
+            &self.pool_account,
+            &from_token_account.mint,
+            &to_token_account.mint,
+        )?;
+        let (token_owner_account_a, token_owner_account_b) = if a_to_b {
+            (&from_token_account, &to_token_account)
+        } else {
+            (&to_token_account, &from_token_account)
         };
 
-        let input_token_amount_before = input_token_account.amount;
-        let output_token_amount_before = output_token_account.amount;
+        let from_token_account_amount_before = from_token_account.amount;
+        let to_token_account_amount_before = to_token_account.amount;
+
+        require_gte!(from_token_account_amount_before, from_token_amount);
 
         whirlpool_cpi::whirlpool::cpi::swap_v2(
             CpiContext::new_with_signer(
@@ -224,7 +249,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
                     token_program_a: self.token_program_a.to_account_info(),
                     token_program_b: self.token_program_b.to_account_info(),
                     memo_program: memo_program.to_account_info(),
-                    token_authority: token_owner.to_account_info(),
+                    token_authority: token_account_signer.to_account_info(),
                     whirlpool: self.pool_account.to_account_info(),
                     token_mint_a: self.token_mint_a.to_account_info(),
                     token_mint_b: self.token_mint_b.to_account_info(),
@@ -237,9 +262,9 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
                     tick_array2: tick_array2.to_account_info(),
                     oracle: oracle.to_account_info(),
                 },
-                token_owner_seeds,
+                token_account_signer_seeds,
             ),
-            amount_in,
+            from_token_amount,
             0,
             0,
             true,
@@ -247,21 +272,27 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
             None,
         )?;
 
-        input_token_account.reload()?;
-        output_token_account.reload()?;
-        let input_token_amount = input_token_account.amount;
-        let output_token_amount = output_token_account.amount;
-        let amount_in = input_token_amount_before - input_token_amount;
-        let amount_out = output_token_amount - output_token_amount_before;
+        from_token_account.reload()?;
+        to_token_account.reload()?;
+        let from_token_account_amount = from_token_account.amount;
+        let to_token_account_amount = to_token_account.amount;
+        let from_token_swapped_amount =
+            from_token_account_amount_before - from_token_account_amount;
+        let to_token_swapped_amount = to_token_account_amount - to_token_account_amount_before;
 
         msg!(
-            "SWAP#orca: input_token_mint={}, output_token_mint={}, amount_in={}, amount_out={}",
-            input_token_account.mint,
-            output_token_account.mint,
-            amount_in,
-            amount_out
+            "SWAP#orca: from_token_mint={}, to_token_mint={}, to_token_accont_amount={}, ∆from_token_amount={}, ∆to_token_amount={}",
+            from_token_account.mint,
+            to_token_account.mint,
+            to_token_account_amount,
+            from_token_swapped_amount,
+            to_token_swapped_amount,
         );
 
-        Ok((amount_in, amount_out))
+        Ok((
+            to_token_account_amount,
+            from_token_swapped_amount,
+            to_token_swapped_amount,
+        ))
     }
 }
