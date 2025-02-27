@@ -1590,6 +1590,79 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`jito vault delegation admin set to fund account`.padEnd(LOG_PAD_LARGE), vault.toString());
     }
 
+    // need for operation - delegate vault_token_account to fund_account
+    public async runAdminDelegateJitoVaultTokenAccount(
+        vault: web3.PublicKey,
+        tokenMint: web3.PublicKey,
+        delegateAssetAdmin: web3.Keypair = this.keychain.getKeypair('ADMIN'),
+    ) {
+        const vaultTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            this.wallet,
+            tokenMint,
+            vault,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+            spl.TOKEN_PROGRAM_ID,
+        );
+    
+        const data = Buffer.from([20]);
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoVaultProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoVaultConfig,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: vault,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: delegateAssetAdmin.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: tokenMint,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: vaultTokenAccount.address,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: this.knownAddress.fragJTOFund,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: spl.TOKEN_PROGRAM_ID,
+                        isSigner: false,
+                        isWritable: false,
+                    }
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [delegateAssetAdmin],
+        });
+
+        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.toString());
+    }
+
     // for test - initialize ncn operator state
     public async runAdminJitoInitializeNcnOperatorState(ncn: web3.PublicKey, operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeNcnOperatorStateInstructionDataSize = {
