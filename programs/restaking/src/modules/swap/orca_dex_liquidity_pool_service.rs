@@ -31,10 +31,10 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
 
         require_keys_eq!(pool_account.token_mint_a, token_mint_a.key());
         require_keys_eq!(pool_account.token_vault_a, token_vault_a.key());
-        require_keys_eq!(token_mint_a.key(), token_program_a.key());
+        require_keys_eq!(*token_mint_a.owner, token_program_a.key());
         require_keys_eq!(pool_account.token_mint_b, token_mint_b.key());
         require_keys_eq!(pool_account.token_vault_b, token_vault_b.key());
-        require_keys_eq!(token_mint_b.key(), token_program_b.key());
+        require_keys_eq!(*token_mint_b.owner, token_program_b.key());
 
         Ok(Self {
             whirlpool_program: Program::try_from(whirlpool_program)?,
@@ -129,7 +129,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
                 current_tick_index / ticks_in_array
             } else {
                 current_tick_index / ticks_in_array - 1
-            };
+            } * ticks_in_array;
         let offset = if a_to_b {
             [0, -1, -2]
         } else if current_tick_index + tick_spacing as i32
