@@ -779,6 +779,127 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
+    public async getJitoRestakingVault(symbol: keyof typeof this.restakingVaultMetadata) {
+        const restakingVault = this.restakingVaultMetadata[symbol];
+        let vaultData = await this.connection.getAccountInfo(restakingVault.vault).then(a => a.data);
+        let expected = vaultData.length;
+
+        const checkLengthDecreased = (decreased: number, msg: string) => {
+            expected -= decreased;
+            if (vaultData.length != expected) {
+                throw msg;
+            }
+        }
+        const parsePubkey = (msg?: string) => {
+            const key = new web3.PublicKey(Uint8Array.from(vaultData.subarray(0, 32)));
+            vaultData = vaultData.subarray(32);
+            checkLengthDecreased(32, msg ?? "");
+            return key;
+        };
+        const parseValue = (msg?: string) => {
+            const value = vaultData.readBigUInt64LE();
+            vaultData = vaultData.subarray(8);
+            checkLengthDecreased(8, msg ?? "");
+            return value;
+        };
+        const parseBps = (msg?: string) => {
+            const bps = vaultData.readUInt16LE();
+            vaultData = vaultData.subarray(2);
+            checkLengthDecreased(2, msg ?? "");
+            return bps;
+        };
+        const parseByte = (msg? : string) => {
+            const byte = vaultData[0];
+            vaultData = vaultData.subarray(1);
+            checkLengthDecreased(1, msg ?? "");
+            return byte;
+        };
+        
+        parseValue();
+        const base = parsePubkey();
+        const vrtMint = parsePubkey();
+        const supportedMint = parsePubkey();
+        const vrtSupply = parseValue();
+        const tokensDeposited = parseValue();
+        const depositCapacity = parseValue();
+        const stakedAmount = parseValue();
+        const enqueuedForCooldownAmount = parseValue();
+        const coolingDownAmount = parseValue();
+        const delegationState = {stakedAmount, enqueuedForCooldownAmount, coolingDownAmount};
+        vaultData = vaultData.subarray(256);
+        checkLengthDecreased(256, "reserve");
+        const additionalAssetsNeedUnstaking = parseValue();
+        const vrtEnqueuedForCooldownAmount = parseValue();
+        const vrtCoolingDownAmount = parseValue();
+        const vrtReadyToClaimAmount = parseValue();
+        const admin = parsePubkey();
+        const delegationAdmin = parsePubkey();
+        const operatorAdmin = parsePubkey();
+        const ncnAdmin = parsePubkey();
+        const slasherAdmin = parsePubkey();
+        const capacityAdmin = parsePubkey();
+        const feeAdmin = parsePubkey();
+        const delegateAssetAdmin = parsePubkey();
+        const feeWallet = parsePubkey();
+        const mintBurnAdmin = parsePubkey();
+        const metadataAdmin = parsePubkey();
+        const vaultIndex = parseValue();
+        const ncnCount = parseValue();
+        const operatorCount = parseValue();
+        const slasherCount = parseValue();
+        const lastFeeChangeSlot = parseValue();
+        const lastFullStateUpdateSlot = parseValue();
+        const depositFeeBps = parseBps();
+        const withdrawalFeeBps = parseBps();
+        const nextWithdrawalFeeBps = parseBps();
+        const rewardFeeBps = parseBps();
+        const programFeeBps = parseBps();
+        const bump = parseByte();
+        const isPaused = (parseByte() > 0);
+        const lastStartStateUpdateSlot = parseValue();
+        vaultData = vaultData.subarray(251);
+        checkLengthDecreased(251, "done");
+
+        return {
+            base,
+            vrtMint,
+            supportedMint,
+            vrtSupply,
+            tokensDeposited,
+            depositCapacity,
+            delegationState,
+            additionalAssetsNeedUnstaking,
+            vrtEnqueuedForCooldownAmount,
+            vrtCoolingDownAmount,
+            vrtReadyToClaimAmount,
+            admin,
+            delegationAdmin,
+            operatorAdmin,
+            ncnAdmin,
+            slasherAdmin,
+            capacityAdmin,
+            feeAdmin,
+            delegateAssetAdmin,
+            feeWallet,
+            mintBurnAdmin,
+            metadataAdmin,
+            vaultIndex,
+            ncnCount,
+            operatorCount,
+            slasherCount,
+            lastFeeChangeSlot,
+            lastFullStateUpdateSlot,
+            depositFeeBps,
+            withdrawalFeeBps,
+            nextWithdrawalFeeBps,
+            rewardFeeBps,
+            programFeeBps,
+            bump,
+            isPaused,
+            lastStartStateUpdateSlot,
+        }
+    }
+
     private fragJTOImageURI = "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragjto.png";
     private fragJTOMetadataURI = "https://quicknode.quicknode-ipfs.com/ipfs/QmQyCKdba9f6dpxc43pGwQ66DvjpPFbE6S8rPrKDh1Sz72";
     private fragJTOMetadata: splTokenMetadata.TokenMetadata = {
