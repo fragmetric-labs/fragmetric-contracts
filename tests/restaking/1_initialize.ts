@@ -55,9 +55,9 @@ describe("initialize", async () => {
 
         expect(res0.fragSOLReward.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
 
-        expect(res0.fragSOLReward.numRewards).eq(Object.values(restaking.rewardsMetadata).length);
+        expect(res0.fragSOLReward.numRewards).eq(Object.values(restaking.distributingRewardsMetadata).length);
         let i = 0;
-        for (const v of Object.values(restaking.rewardsMetadata)) {
+        for (const v of Object.values(restaking.distributingRewardsMetadata)) {
             const reward = res0.fragSOLReward.rewards1[i++];
             expect(restaking.binToString(reward.name)).eq(v.name.toString());
             expect(restaking.binToString(reward.description)).eq(v.description.toString());

@@ -2,6 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import {BN, web3} from "@coral-xyz/anchor";
 // @ts-ignore
 import * as splTokenMetadata from "@solana/spl-token-metadata";
+import * as splStakePool from "@solana/spl-stake-pool";
 // @ts-ignore
 import * as spl from "@solana/spl-token-3.x";
 import * as mpl from "@metaplex-foundation/mpl-token-metadata";
@@ -410,7 +411,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragJTOJitoJTOVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragJTOFundJitoJTOVRTAccount,
                     compoundingRewards: [
-                        new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                        this.rewardTokenMetadata["jitoSOL"].mint,
                     ],
                 },
             };
@@ -428,11 +429,36 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     vaultTokenAccount: this.knownAddress.fragJTOJitoJTOVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragJTOFundJitoJTOVRTAccount,
                     compoundingRewards: [
-                        new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                        this.rewardTokenMetadata["jitoSOL"].mint,
                     ],
                 },
             };
         }
+    }
+
+    public get rewardTokenMetadata() {
+        if (this._rewardTokenMetadata) return this._getRewardTokenMetadata();
+        return (this._rewardTokenMetadata = this._getRewardTokenMetadata());
+    }
+    private _rewardTokenMetadata: ReturnType<typeof this._getRewardTokenMetadata>;
+    private _getRewardTokenMetadata() {
+        return {
+            jitoSOL: {
+                mint: this.isDevnet
+                    ? this.getConstantAsPublicKey("devnetJitosolMintAddress")
+                    : this.getConstantAsPublicKey("mainnetJitosolMintAddress"),
+                program: spl.TOKEN_PROGRAM_ID,
+                decimals: 9,
+                // for test
+                airdropSource: {
+                    splStakePool: {
+                        address: this.isDevnet
+                            ? this.getConstantAsPublicKey("devnetJitosolStakePoolAddress")
+                            : this.getConstantAsPublicKey("mainnetJitosolStakePoolAddress"),
+                    }
+                }
+            }
+        };
     }
 
     public get pricingSourceAccounts() {
@@ -529,6 +555,63 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             const balance = new BN(ata.amount.toString());
             logger.debug(`${symbol} airdropped (+${this.lamportsToX(lamports, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
         }
+    }
+
+    public async tryAirdropRewardToken(vault: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
+        const token = this.rewardTokenMetadata[symbol];
+        let balanceBefore: BN;
+
+        await (async () => {
+            const ata = await spl.getOrCreateAssociatedTokenAccount(
+                this.connection,
+                this.wallet,
+                token.mint,
+                vault,
+                true,
+                "confirmed",
+                {
+                    skipPreflight: false,
+                    commitment: "confirmed",
+                },
+                token.program
+            );
+            balanceBefore = new BN(ata.amount.toString());
+
+            // If reward token is SPL stake pool token
+            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource["splStakePool"]?.address ?? null;
+            if (splStakePoolAddress) {
+                const {instructions, signers} = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, lamports.toNumber(), ata.address);
+                return await this.run({instructions, signers});
+            }
+
+            // As a fallback, mint by authority
+            return await this.run({
+                instructions: [
+                    spl.createMintToInstruction(
+                        token.mint,
+                        ata.address,
+                        this.keychain.getPublicKey("ALL_MINT_AUTHORITY"),
+                        lamports.toNumber(),
+                        [],
+                        token.program,
+                    ),
+                ],
+                signerNames: ["ALL_MINT_AUTHORITY"],
+            })
+        })();
+
+        const ata = await (async () => {
+            const ata = spl.getAssociatedTokenAddressSync(
+                token.mint,
+                vault,
+                true,
+                token.program,
+            );
+            return await spl.getAccount(this.connection, ata, "confirmed", token.program);
+        })();
+        const balance = new BN(ata.amount.toString());
+        const balanceDiff = balance.sub(balanceBefore);
+        logger.debug(`${symbol} reward deposited (+${this.lamportsToX(balanceDiff, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
     }
 
     public getUserSupportedTokenAccount(user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) {
@@ -2268,13 +2351,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragJTOFund};
     }
 
-    public get rewardsMetadata() {
-        return this._getRewardsMetadata;
+    public get distributingRewardsMetadata() {
+        return this._getDistributingRewardsMetadata;
     }
 
-    private readonly _getRewardsMetadata = this.getRewardsMetadata();
+    private readonly _getDistributingRewardsMetadata = this.getDistributingRewardsMetadata();
 
-    private getRewardsMetadata() {
+    private getDistributingRewardsMetadata() {
         return [
             {
                 name: "fPoint",
@@ -2318,7 +2401,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         })
                         .instruction();
                 }),
-                ...this.rewardsMetadata.map((v) => {
+                ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddReward(v.name, v.description, v.type)
                         .accountsPartial({

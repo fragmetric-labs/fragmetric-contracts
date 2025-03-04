@@ -64,9 +64,9 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
 
         expect(res0.fragJTOReward.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
 
-        expect(res0.fragJTOReward.numRewards).eq(Object.values(restaking.rewardsMetadata).length);
+        expect(res0.fragJTOReward.numRewards).eq(Object.values(restaking.distributingRewardsMetadata).length);
         let i = 0;
-        for (const v of Object.values(restaking.rewardsMetadata)) {
+        for (const v of Object.values(restaking.distributingRewardsMetadata)) {
             const reward = res0.fragJTOReward.rewards1[i++];
             expect(restaking.binToString(reward.name)).eq(v.name.toString());
             expect(restaking.binToString(reward.description)).eq(v.description.toString());
