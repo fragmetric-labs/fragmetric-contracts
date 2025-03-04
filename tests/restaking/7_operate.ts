@@ -89,11 +89,24 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         logger.info('epoch 10: operator claim unrestaked - denormalize - request unstake');
         await restaking.runOperatorFundCommands();
 
+        // jitoSOL reward airdropped to vault but token account is not delegated.
+        const rewardMetadata = restaking.rewardTokenMetadata['jitoSOL'];
+        const vaultMetadata = restaking.restakingVaultMetadata['jitoNSOLVault'];
+        await restaking.tryAirdropRewardToken(vaultMetadata.vault, 'jitoSOL', new BN(web3.LAMPORTS_PER_SOL * 30));
+
         logger.info('waiting...');
         await restaking.sleepUntil(epochToSlot(12));
         logger.info('epoch 12: operator claim unstaked - process withdrawal');
         await restaking.runOperatorFundCommands();
 
         await restaking.runUserWithdraw(user1, null, new BN(2));
+
+        // delegate token account to fund account
+        await restaking.runAdminDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
+
+        logger.info('waiting...');
+        await restaking.sleepUntil(epochToSlot(13));
+        logger.info('epoch 13: operator harvest reward');
+        await restaking.runOperatorFundCommands();
     });
 });

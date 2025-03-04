@@ -169,11 +169,11 @@ impl HarvestRewardCommand {
         Option<OperationCommandEntry>,
     )> {
         let fund_account = ctx.fund_account.load()?;
-        let vaults_iter = fund_account
+        let vaults = fund_account
             .get_restaking_vaults_iter()
             .map(|vault| vault.vault);
 
-        Ok((None, self.create_prepare_command(ctx, vaults_iter)?))
+        Ok((None, self.create_prepare_command(ctx, vaults)?))
     }
 
     fn create_prepare_command<'info>(
@@ -198,31 +198,38 @@ impl HarvestRewardCommand {
         let mut vaults = vaults.peekable();
         while let Some(vault) = vaults.peek() {
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
-            let items = restaking_vault
-                .get_compounding_reward_tokens_iter()
-                .filter_map(|reward_token_mint| {
-                    let harvest_type =
-                        if fund_account.get_supported_token(reward_token_mint).is_ok() {
-                            HarvestType::Transfer
-                        } else {
-                            // For now, we don't support multiple-hop swap and
-                            // `to_token` is always one of fund's supported tokens.
-                            let swap_strategy = fund_account
-                                .get_token_swap_strategy(reward_token_mint)
-                                .ok()?;
-                            HarvestType::Swap(swap_strategy.to_token_mint)
-                        };
-                    Some(HarvestRewardCommandItem {
-                        reward_token_mint: *reward_token_mint,
-                        harvest_type,
-                    })
-                })
+            let items = {
                 // TODO distribute
-                // .chain(restaking_vault.get_distributing_reward_tokens_iter().map(|reward_token_mint| HarvestRewardCommandItem {
-                //     reward_token_mint: *reward_token_mint,
-                //     harvest_type: HarvestType::Settle,
-                // }))
-                .collect::<Vec<_>>();
+                // + restaking_vault.get_distributing_reward_tokens_iter().count();
+                let num_reward_tokens =
+                    restaking_vault.get_compounding_reward_tokens_iter().count();
+                let mut items = Vec::with_capacity(num_reward_tokens);
+                restaking_vault
+                    .get_compounding_reward_tokens_iter()
+                    .try_for_each(|reward_token_mint| {
+                        let harvest_type =
+                            if fund_account.get_supported_token(reward_token_mint).is_ok() {
+                                HarvestType::Transfer
+                            } else {
+                                let swap_strategy =
+                                    fund_account.get_token_swap_strategy(reward_token_mint)?;
+                                HarvestType::Swap(swap_strategy.to_token_mint)
+                            };
+                        items.push(HarvestRewardCommandItem {
+                            reward_token_mint: *reward_token_mint,
+                            harvest_type,
+                        });
+                        Ok::<_, Error>(())
+                    })?;
+                // TODO distribute
+                // items.extend(restaking_vault.get_distributing_reward_tokens_iter().map(
+                //     |reward_token_mint| HarvestRewardCommandItem {
+                //         reward_token_mint: *reward_token_mint,
+                //         harvest_type: HarvestType::Settle,
+                //     },
+                // ));
+                items
+            };
 
             if !items.is_empty() {
                 return Ok((vaults.collect(), items));
@@ -333,7 +340,7 @@ impl HarvestRewardCommand {
                 return Ok(None);
             }
 
-            // Token account must be delegated to fund account, otherwise harvest manually
+            // Token account must be delegated to fund account, otherwise skip and harvest manually
             Ok(vault_reward_token_account
                 .delegate
                 .contains(&ctx.fund_account.key())
@@ -367,7 +374,7 @@ impl HarvestRewardCommand {
                 items.to_vec(),
             )?,
             // TODO distribute
-            // HarvestType::Distribute => unimplemented!("distributing reward is not implemented yet"),
+            // HarvestType::Settle => unimplemented!("distributing reward is not implemented yet"),
         };
 
         Ok((None, Some(entry)))
@@ -416,7 +423,7 @@ impl HarvestRewardCommand {
             (*reward_token_mint, false),
             (vault_reward_token_account.key(), true),
             (fund_supported_token_reserve_account, true),
-            (*vault_reward_token_account.owner, false),
+            (*vault_reward_token_account.owner, false), // token program
         ];
         let entry = Self {
             state: HarvestRewardCommandState::Execute { vaults, items },
@@ -449,7 +456,6 @@ impl HarvestRewardCommand {
 
         let fund_account = ctx.fund_account.load()?;
         let swap_strategy = fund_account.get_token_swap_strategy(&item.reward_token_mint)?;
-
         match swap_strategy.swap_source.try_deserialize()? {
             TokenSwapSource::OrcaDEXLiquidityPool { address } => {
                 let [pool_account, reward_token_mint, supported_token_mint, ..] = accounts else {
@@ -510,8 +516,8 @@ impl HarvestRewardCommand {
             return Ok((None, None));
         }
         if items.is_empty() {
-            let vaults_iter = vaults[1..].iter().copied().peekable();
-            return Ok((None, self.create_prepare_command(ctx, vaults_iter)?));
+            let vaults = vaults[1..].iter().copied().peekable();
+            return Ok((None, self.create_prepare_command(ctx, vaults)?));
         }
         let vault = &vaults[0];
         let item = &items[0];
@@ -631,6 +637,7 @@ impl HarvestRewardCommand {
         }
 
         // Update fund account
+        drop(fund_account);
         let mut fund_account = ctx.fund_account.load_mut()?;
         let supported_token = fund_account.get_supported_token_mut(supported_token_mint)?;
         supported_token.token.operation_reserved_amount += swapped_supported_token_amount;
@@ -720,6 +727,7 @@ impl HarvestRewardCommand {
         )?;
 
         // Update fund account
+        drop(fund_account);
         let mut fund_account = ctx.fund_account.load_mut()?;
         let supported_token = fund_account.get_supported_token_mut(&item.reward_token_mint)?;
         supported_token.token.operation_reserved_amount += reward_token_amount;
