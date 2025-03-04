@@ -2275,7 +2275,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [delegateAssetAdmin],
         });
 
-        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.toString());
+        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.address.toString());
     }
 
     // for test - initialize ncn operator state

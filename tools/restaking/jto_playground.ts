@@ -1864,7 +1864,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             signers: [delegateAssetAdmin],
         });
 
-        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.toString());
+        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.address.toString());
     }
 
     // for test - initialize ncn operator state
@@ -2248,7 +2248,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
             transferEnabled: this.isDevnet ? true : (this.isMainnet ? true : false),
             WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
-            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 60)), // seconds
+            withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
             solDepositable: false,
             solAccumulatedDepositCapacity: new BN(0),

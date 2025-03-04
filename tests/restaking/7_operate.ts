@@ -54,9 +54,9 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetBsolMintAddress'));
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetMsolMintAddress'));
 
-        logger.info('waiting... (1 epoch = 32 slots)');
-        await restaking.sleepUntil(epochToSlot(4));
-        logger.info('epoch 4: operator enqueue withdrawal - process withdrawal - stake - normalize - restake');
+        logger.info('waiting until epoch 2... (1 epoch = 32 slots)');
+        await restaking.sleepUntil(epochToSlot(2));
+        logger.info('epoch 2: operator enqueue withdrawal - process withdrawal - stake - normalize - restake');
         await restaking.runOperatorFundCommands();
 
         await Promise.all([
@@ -65,28 +65,28 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
             restaking.runUserRequestWithdrawal(user1, quarter),
         ]);
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(5));
-        logger.info('epoch 5: operator enqueue withdrawal - request unrestake');
+        logger.info('waiting until epoch 3...');
+        await restaking.sleepUntil(epochToSlot(3));
+        logger.info('epoch 3: operator enqueue withdrawal - request unrestake');
         await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(7)); // wait for more than one epoch
-        logger.info('epoch 7: operator claim unrestaked - denormalize - request unstake');
+        logger.info('waiting until epoch 5...');
+        await restaking.sleepUntil(epochToSlot(5)); // unrestaking takes for more than one epoch
+        logger.info('epoch 5: operator claim unrestaked - denormalize - request unstake');
         await restaking.runOperatorFundCommands();
 
         const res2 = await restaking.getUserFragSOLFundAccount(user1.publicKey); // last withdrawal request
         await restaking.runUserRequestWithdrawal(user1, res2.receiptTokenAmount);
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(8));
-        logger.info('epoch 8: operator enqueue withdrawal - claim unstaked - process withdrawal - request unrestake');
+        logger.info('waiting until epoch 6...');
+        await restaking.sleepUntil(epochToSlot(6));
+        logger.info('epoch 6: operator enqueue withdrawal - claim unstaked - process withdrawal - request unrestake');
         await restaking.runOperatorFundCommands();
         await restaking.runUserWithdraw(user1, null, new BN(1));
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(10)); // wait for more than one epoch
-        logger.info('epoch 10: operator claim unrestaked - denormalize - request unstake');
+        logger.info('waiting until epoch 8...');
+        await restaking.sleepUntil(epochToSlot(8)); // unrestaking takes for more than one epoch
+        logger.info('epoch 8: operator claim unrestaked - denormalize - request unstake');
         await restaking.runOperatorFundCommands();
 
         // jitoSOL reward airdropped to vault but token account is not delegated.
@@ -94,19 +94,18 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         const vaultMetadata = restaking.restakingVaultMetadata['jitoNSOLVault'];
         await restaking.tryAirdropRewardToken(vaultMetadata.vault, 'jitoSOL', new BN(web3.LAMPORTS_PER_SOL * 30));
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(12));
-        logger.info('epoch 12: operator claim unstaked - process withdrawal');
+        logger.info('waiting until epoch 10...');
+        await restaking.sleepUntil(epochToSlot(10)); // due to msol, unstaking takes for more than one epoch
+        logger.info('epoch 10: operator claim unstaked - process withdrawal');
         await restaking.runOperatorFundCommands();
-
         await restaking.runUserWithdraw(user1, null, new BN(2));
 
         // delegate token account to fund account
         await restaking.runAdminDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
 
-        logger.info('waiting...');
-        await restaking.sleepUntil(epochToSlot(13));
-        logger.info('epoch 13: operator harvest reward');
+        logger.info('waiting until epoch 11...');
+        await restaking.sleepUntil(epochToSlot(11));
+        logger.info('epoch 11: operator harvest reward');
         await restaking.runOperatorFundCommands();
     });
 });
