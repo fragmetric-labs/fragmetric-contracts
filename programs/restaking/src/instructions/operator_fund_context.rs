@@ -35,10 +35,8 @@ pub struct OperatorFundDonationContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(mint::token_program = receipt_token_program)]
+    #[account(mint::token_program = Token2022::id())]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(
         mut,
@@ -63,11 +61,9 @@ pub struct OperatorFundSupportedTokenDonationContext<'info> {
     #[account(mut)]
     pub operator: Signer<'info>,
 
-    pub receipt_token_program: Program<'info, Token2022>,
-
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mint::token_program = receipt_token_program)]
+    #[account(mint::token_program = Token2022::id())]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
