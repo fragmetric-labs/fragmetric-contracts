@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
@@ -602,7 +604,6 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))
     }
 
-    /// This strategy also supports reversed order swap(to -> from)
     pub(super) fn add_token_swap_strategy(
         &mut self,
         from_token_mint: Pubkey,
@@ -834,7 +835,7 @@ impl FundAccount {
         let sol_net_operation_reserved_amount =
             self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
         Ok(
-            u64::try_from(-sol_net_operation_reserved_amount.min(0))?.saturating_sub(
+            u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?.saturating_sub(
                 self.get_supported_tokens_iter()
                     .map(|supported_token| supported_token.pending_unstaking_amount_as_sol)
                     .sum(),

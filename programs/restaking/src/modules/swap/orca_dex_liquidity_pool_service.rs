@@ -281,9 +281,10 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         let to_token_swapped_amount = to_token_account_amount - to_token_account_amount_before;
 
         msg!(
-            "SWAP#orca: from_token_mint={}, to_token_mint={}, to_token_accont_amount={}, ∆from_token_amount={}, ∆to_token_amount={}",
+            "SWAP#orca: from_token_mint={}, to_token_mint={}, from_token_account_amount={}, to_token_account_amount={}, ∆from_token_amount={}, ∆to_token_amount={}",
             from_token_account.mint,
             to_token_account.mint,
+            from_token_account_amount,
             to_token_account_amount,
             from_token_swapped_amount,
             to_token_swapped_amount,

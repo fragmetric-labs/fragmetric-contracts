@@ -117,16 +117,11 @@ impl std::fmt::Debug for HarvestType {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct HarvestRewardCommandResult {
-    pub harvested_reward_token_mint: Pubkey,
-    pub harvested_reward_token_amount: u64,
-    /// `Some` iff is_swappped = true
-    pub swapped_supported_token_mint: Option<Pubkey>,
-    /// `Some` iff is_swappped = true
-    pub swapped_supported_token_amount: Option<u64>,
-    /// `Some` iff is_compounded = true
-    pub operation_reserved_token_amount: Option<u64>,
-    pub is_swapped: bool,
-    pub is_compounded: bool,
+    pub reward_token_mint: Pubkey,
+    pub reward_token_amount: u64,
+    pub swapped_token_mint: Option<Pubkey>,
+    pub distributed_token_amount: u64,
+    pub compounded_token_amount: u64,
 }
 
 impl SelfExecutable for HarvestRewardCommand {
@@ -649,15 +644,11 @@ impl HarvestRewardCommand {
 
         Ok(Some((
             HarvestRewardCommandResult {
-                harvested_reward_token_mint: item.reward_token_mint,
-                harvested_reward_token_amount,
-                swapped_supported_token_mint: Some(*supported_token_mint),
-                swapped_supported_token_amount: Some(swapped_supported_token_amount),
-                operation_reserved_token_amount: Some(
-                    supported_token.token.operation_reserved_amount,
-                ),
-                is_swapped: true,
-                is_compounded: true,
+                reward_token_mint: item.reward_token_mint,
+                reward_token_amount: harvested_reward_token_amount,
+                swapped_token_mint: Some(*supported_token_mint),
+                distributed_token_amount: 0,
+                compounded_token_amount: swapped_supported_token_amount,
             }
             .into(),
             pricing_sources,
@@ -740,15 +731,11 @@ impl HarvestRewardCommand {
 
         Ok(Some((
             HarvestRewardCommandResult {
-                harvested_reward_token_mint: item.reward_token_mint,
-                harvested_reward_token_amount: reward_token_amount,
-                swapped_supported_token_mint: None,
-                swapped_supported_token_amount: None,
-                operation_reserved_token_amount: Some(
-                    supported_token.token.operation_reserved_amount,
-                ),
-                is_swapped: false,
-                is_compounded: true,
+                reward_token_mint: item.reward_token_mint,
+                reward_token_amount,
+                swapped_token_mint: None,
+                distributed_token_amount: 0,
+                compounded_token_amount: reward_token_amount,
             }
             .into(),
             pricing_sources,
