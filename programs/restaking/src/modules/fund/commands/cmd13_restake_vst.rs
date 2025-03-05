@@ -13,11 +13,9 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
-    DelegateVSTCommand, FundService, HarvestRewardCommand, NormalizeSTCommandResult,
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    RestakingVault, SelfExecutable, SupportedToken, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
+    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
+    SelfExecutable, WeightedAllocationParticipant, WeightedAllocationStrategy,
+    FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -366,7 +364,7 @@ impl SelfExecutable for RestakeVSTCommand {
         // transition to next command
         Ok((
             result,
-            Some(match remaining_items {
+            match remaining_items {
                 Some(remaining_items) if remaining_items.len() > 0 => {
                     let pricing_source = ctx
                         .fund_account
@@ -375,34 +373,38 @@ impl SelfExecutable for RestakeVSTCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?;
 
-                    RestakeVSTCommand {
-                        state: RestakeVSTCommandState::Prepare {
-                            items: remaining_items,
-                        },
-                    }
-                    .with_required_accounts(match pricing_source {
-                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            JitoRestakingVaultService::find_accounts_to_new(address)?
+                    Some(
+                        RestakeVSTCommand {
+                            state: RestakeVSTCommandState::Prepare {
+                                items: remaining_items,
+                            },
                         }
-                        // otherwise fails
-                        Some(TokenPricingSource::SPLStakePool { .. })
-                        | Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | None => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        Some(TokenPricingSource::Mock { .. }) => {
-                            err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
-                        }
-                    })
+                        .with_required_accounts(match pricing_source {
+                            Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                                JitoRestakingVaultService::find_accounts_to_new(address)?
+                            }
+                            // otherwise fails
+                            Some(TokenPricingSource::SPLStakePool { .. })
+                            | Some(TokenPricingSource::MarinadeStakePool { .. })
+                            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                ..
+                            })
+                            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | None => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                            #[cfg(all(test, not(feature = "idl-build")))]
+                            Some(TokenPricingSource::Mock { .. }) => err!(
+                                errors::ErrorCode::FundOperationCommandExecutionFailedException
+                            )?,
+                        }),
+                    )
                 }
                 // TODO: DelegateVST...
-                _ => HarvestRewardCommand::default().without_required_accounts(),
-            }),
+                _ => None,
+            },
         ))
     }
 }

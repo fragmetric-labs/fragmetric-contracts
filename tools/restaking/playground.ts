@@ -81,6 +81,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runAdminInitializeWfragSOLTokenMint(), // 13
             () => this.runAdminInitializeOrUpdateFundWrapAccountRewardAccount(), // 14
             () => this.runFundManagerInitializeFundWrappedToken(), // 15
+            () => this.runFundManagerAddRestakingVaultCompoundingRewardTokens(), // 16
+            // () => this.runFundManagerAddTokenSwapStrategies(),
         ];
     }
 
@@ -567,18 +569,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     feeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultFeeWalletTokenAccount,
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
+                    compoundingRewards: [
+                        this.rewardTokenMetadata["jitoSOL"].mint,
+                    ]
                 },
-                // jitoJitoSOLVault: {
-                //     VSTMint: this.knownAddress.jitoSOLTokenMint,
-                //     VRTMint: this.knownAddress.fragSOLJitoJitoSOLVRTMint,
-                //     vault: this.getConstantAsPublicKey("fragsolJitoJitosolVaultAccountAddress"),
-                //     operators: [],
-                //     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
-                //     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultProgramFeeWalletTokenAccount,
-                //     feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
-                //     vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
-                //     fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
-                // }
             };
         } else {
             // for 'localnet', it would be cloned from mainnet
@@ -587,15 +581,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.nSOLTokenMint,
                     VRTMint: this.knownAddress.fragSOLJitoNSOLVRTMint,
                     vault: this.getConstantAsPublicKey("fragsolJitoNsolVaultAccountAddress"),
-                    operators: [
-                        // TODO v0.4.2: operator mock file is missing?!
-                        // new web3.PublicKey("2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"),
-                    ],
+                    operators: [],
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultFeeWalletTokenAccount,
                     vaultTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultTokenAccount,
                     fundVRTAccount: this.knownAddress.fragSOLFundJitoNSOLVRTAccount,
+                    compoundingRewards: [
+                        this.rewardTokenMetadata["jitoSOL"].mint,
+                    ]
                 },
                 ...(this.isLocalnet ? {
                     jitoJitoSOLVault: {
@@ -608,10 +602,36 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         feeWalletTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultFeeWalletTokenAccount,
                         vaultTokenAccount: this.knownAddress.fragSOLJitoJitoSOLVaultTokenAccount,
                         fundVRTAccount: this.knownAddress.fragSOLFundJitoJitoSOLVRTAccount,
+                        compoundingRewards: [] as web3.PublicKey[],
                     }
                 } : {}),
             };
         }
+    }
+
+    public get rewardTokenMetadata() {
+        if (this._rewardTokenMetadata) return this._getRewardTokenMetadata();
+        return (this._rewardTokenMetadata = this._getRewardTokenMetadata());
+    }
+    private _rewardTokenMetadata: ReturnType<typeof this._getRewardTokenMetadata>;
+    private _getRewardTokenMetadata() {
+        return {
+            jitoSOL: {
+                mint: this.isDevnet
+                    ? this.getConstantAsPublicKey("devnetJitosolMintAddress")
+                    : this.getConstantAsPublicKey("mainnetJitosolMintAddress"),
+                program: spl.TOKEN_PROGRAM_ID,
+                decimals: 9,
+                // for test
+                airdropSource: {
+                    splStakePool: {
+                        address: this.isDevnet
+                            ? this.getConstantAsPublicKey("devnetJitosolStakePoolAddress")
+                            : this.getConstantAsPublicKey("mainnetJitosolStakePoolAddress"),
+                    }
+                }
+            }
+        };
     }
 
     public get pricingSourceAccounts() {
@@ -644,6 +664,25 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             }),
         ];
     }
+
+    // public get tokenSwapStrategies() {
+    //     if (this._tokenSwapStrategies) return this._tokenSwapStrategies;
+    //     return (this._tokenSwapStrategies = this._getTokenSwapStrategies());
+    // }
+    // private _tokenSwapStrategies: ReturnType<typeof this._getTokenSwapStrategies>;
+    // private _getTokenSwapStrategies() {
+    //     return [
+    //         {
+    //             fromTokenMint: something,
+    //             toTokenMint: something,
+    //             swapSource: {
+    //                 orcaDexLiquidityPool: {
+    //                     address: something,
+    //                 }
+    //             }
+    //         }
+    //     ]
+    // }
 
     public async tryAirdropSupportedTokens(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
         await this.tryAirdrop(account, lamports.muln(Object.keys(this.supportedTokenMetadata).length));
@@ -701,6 +740,63 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             const balance = new BN(ata.amount.toString());
             logger.debug(`${symbol} airdropped (+${this.lamportsToSOL(lamports)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
         }
+    }
+
+    public async tryAirdropRewardToken(vault: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
+        const token = this.rewardTokenMetadata[symbol];
+        let balanceBefore: BN;
+
+        await (async () => {
+            const ata = await spl.getOrCreateAssociatedTokenAccount(
+                this.connection,
+                this.wallet,
+                token.mint,
+                vault,
+                true,
+                "confirmed",
+                {
+                    skipPreflight: false,
+                    commitment: "confirmed",
+                },
+                token.program
+            );
+            balanceBefore = new BN(ata.amount.toString());
+
+            // If reward token is SPL stake pool token
+            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource["splStakePool"]?.address ?? null;
+            if (splStakePoolAddress) {
+                const {instructions, signers} = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, lamports.toNumber(), ata.address);
+                return await this.run({instructions, signers});
+            }
+
+            // As a fallback, mint by authority
+            return await this.run({
+                instructions: [
+                    spl.createMintToInstruction(
+                        token.mint,
+                        ata.address,
+                        this.keychain.getPublicKey("ALL_MINT_AUTHORITY"),
+                        lamports.toNumber(),
+                        [],
+                        token.program,
+                    ),
+                ],
+                signerNames: ["ALL_MINT_AUTHORITY"],
+            })
+        })();
+
+        const ata = await (async () => {
+            const ata = spl.getAssociatedTokenAddressSync(
+                token.mint,
+                vault,
+                true,
+                token.program,
+            );
+            return await spl.getAccount(this.connection, ata, "confirmed", token.program);
+        })();
+        const balance = new BN(ata.amount.toString());
+        const balanceDiff = balance.sub(balanceBefore);
+        logger.debug(`${symbol} reward deposited (+${this.lamportsToX(balanceDiff, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
     }
 
     public getUserSupportedTokenAccount(user: web3.PublicKey, symbol: keyof typeof this.supportedTokenMetadata) {
@@ -895,6 +991,127 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             this.connection,
             stakePoolAddress,
         );
+    }
+
+    public async getJitoRestakingVault(symbol: keyof typeof this.restakingVaultMetadata) {
+        const restakingVault = this.restakingVaultMetadata[symbol];
+        let vaultData = await this.connection.getAccountInfo(restakingVault.vault).then(a => a.data);
+        let expected = vaultData.length;
+
+        const checkLengthDecreased = (decreased: number, msg: string) => {
+            expected -= decreased;
+            if (vaultData.length != expected) {
+                throw msg;
+            }
+        }
+        const parsePubkey = (msg?: string) => {
+            const key = new web3.PublicKey(Uint8Array.from(vaultData.subarray(0, 32)));
+            vaultData = vaultData.subarray(32);
+            checkLengthDecreased(32, msg ?? "");
+            return key;
+        };
+        const parseValue = (msg?: string) => {
+            const value = vaultData.readBigUInt64LE();
+            vaultData = vaultData.subarray(8);
+            checkLengthDecreased(8, msg ?? "");
+            return value;
+        };
+        const parseBps = (msg?: string) => {
+            const bps = vaultData.readUInt16LE();
+            vaultData = vaultData.subarray(2);
+            checkLengthDecreased(2, msg ?? "");
+            return bps;
+        };
+        const parseByte = (msg? : string) => {
+            const byte = vaultData[0];
+            vaultData = vaultData.subarray(1);
+            checkLengthDecreased(1, msg ?? "");
+            return byte;
+        };
+        
+        parseValue();
+        const base = parsePubkey();
+        const vrtMint = parsePubkey();
+        const supportedMint = parsePubkey();
+        const vrtSupply = parseValue();
+        const tokensDeposited = parseValue();
+        const depositCapacity = parseValue();
+        const stakedAmount = parseValue();
+        const enqueuedForCooldownAmount = parseValue();
+        const coolingDownAmount = parseValue();
+        const delegationState = {stakedAmount, enqueuedForCooldownAmount, coolingDownAmount};
+        vaultData = vaultData.subarray(256);
+        checkLengthDecreased(256, "reserve");
+        const additionalAssetsNeedUnstaking = parseValue();
+        const vrtEnqueuedForCooldownAmount = parseValue();
+        const vrtCoolingDownAmount = parseValue();
+        const vrtReadyToClaimAmount = parseValue();
+        const admin = parsePubkey();
+        const delegationAdmin = parsePubkey();
+        const operatorAdmin = parsePubkey();
+        const ncnAdmin = parsePubkey();
+        const slasherAdmin = parsePubkey();
+        const capacityAdmin = parsePubkey();
+        const feeAdmin = parsePubkey();
+        const delegateAssetAdmin = parsePubkey();
+        const feeWallet = parsePubkey();
+        const mintBurnAdmin = parsePubkey();
+        const metadataAdmin = parsePubkey();
+        const vaultIndex = parseValue();
+        const ncnCount = parseValue();
+        const operatorCount = parseValue();
+        const slasherCount = parseValue();
+        const lastFeeChangeSlot = parseValue();
+        const lastFullStateUpdateSlot = parseValue();
+        const depositFeeBps = parseBps();
+        const withdrawalFeeBps = parseBps();
+        const nextWithdrawalFeeBps = parseBps();
+        const rewardFeeBps = parseBps();
+        const programFeeBps = parseBps();
+        const bump = parseByte();
+        const isPaused = (parseByte() > 0);
+        const lastStartStateUpdateSlot = parseValue();
+        vaultData = vaultData.subarray(251);
+        checkLengthDecreased(251, "done");
+
+        return {
+            base,
+            vrtMint,
+            supportedMint,
+            vrtSupply,
+            tokensDeposited,
+            depositCapacity,
+            delegationState,
+            additionalAssetsNeedUnstaking,
+            vrtEnqueuedForCooldownAmount,
+            vrtCoolingDownAmount,
+            vrtReadyToClaimAmount,
+            admin,
+            delegationAdmin,
+            operatorAdmin,
+            ncnAdmin,
+            slasherAdmin,
+            capacityAdmin,
+            feeAdmin,
+            delegateAssetAdmin,
+            feeWallet,
+            mintBurnAdmin,
+            metadataAdmin,
+            vaultIndex,
+            ncnCount,
+            operatorCount,
+            slasherCount,
+            lastFeeChangeSlot,
+            lastFullStateUpdateSlot,
+            depositFeeBps,
+            withdrawalFeeBps,
+            nextWithdrawalFeeBps,
+            rewardFeeBps,
+            programFeeBps,
+            bump,
+            isPaused,
+            lastStartStateUpdateSlot,
+        }
     }
 
     private fragSOLImageURI = "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragsol.png";
@@ -1196,7 +1413,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
             }).instruction()),
-            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accounts({
+            this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accountsPartial({
                 payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
             }).instruction(),
@@ -1560,7 +1777,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
-    public async runFundManagerAddFundJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
+    public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
         await this.run({
             instructions: [
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
@@ -1934,8 +2151,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     // need for operation - set vault_delegation_admin to fund_account
     public async runAdminSetSecondaryAdminForJitoVault(vault: web3.PublicKey, oldAuthority = this.keychain.getKeypair("ADMIN")) {
         const newAuthority = this.knownAddress.fragSOLFund;
-        logger.notice("old authority".padEnd(LOG_PAD_LARGE), oldAuthority.publicKey.toString());
-        logger.notice("new authority".padEnd(LOG_PAD_LARGE), newAuthority.toString());
 
         const SetSecondaryAdminInstructionDataSize = {
             discriminator: 1, // u8
@@ -1986,6 +2201,81 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [ix],
             signers: [oldAuthority],
         });
+
+        logger.notice(`jito vault delegation admin set to fund account`.padEnd(LOG_PAD_LARGE), vault.toString());
+    }
+
+    // need for operation - delegate vault_token_account to fund_account
+    public async runAdminDelegateJitoVaultTokenAccount(
+        vault: web3.PublicKey,
+        tokenMint: web3.PublicKey,
+        delegateAssetAdmin: web3.Keypair = this.keychain.getKeypair('ADMIN'),
+    ) {
+        const vaultTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
+            this.connection,
+            this.wallet,
+            tokenMint,
+            vault,
+            true,
+            "confirmed",
+            {
+                skipPreflight: false,
+                commitment: "confirmed",
+            },
+            spl.TOKEN_PROGRAM_ID,
+        );
+
+        const data = Buffer.from([20]);
+        const ix = new web3.TransactionInstruction(
+            {
+                programId: this.knownAddress.jitoVaultProgram,
+                keys: [
+                    {
+                        pubkey: this.knownAddress.jitoVaultConfig,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: vault,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: delegateAssetAdmin.publicKey,
+                        isSigner: true,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: tokenMint,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: vaultTokenAccount.address,
+                        isSigner: false,
+                        isWritable: true,
+                    },
+                    {
+                        pubkey: this.knownAddress.fragSOLFund,
+                        isSigner: false,
+                        isWritable: false,
+                    },
+                    {
+                        pubkey: spl.TOKEN_PROGRAM_ID,
+                        isSigner: false,
+                        isWritable: false,
+                    }
+                ],
+                data,
+            }
+        );
+
+        await this.run({
+            instructions: [ix],
+            signers: [delegateAssetAdmin],
+        });
+
+        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.address.toString());
     }
 
     // for test - initialize ncn operator state
@@ -2240,6 +2530,89 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
         return {fragSOLExtraAccountMetasAccount};
     }
+
+    public async runFundManagerAddRestakingVaultCompoundingRewardTokens() {
+        const {event, error} = await this.run({
+            instructions: Object.values(this.restakingVaultMetadata).flatMap(vault =>
+                (vault.compoundingRewards ?? []).map(rewardTokenMint =>
+                    this.methods.fundManagerAddRestakingVaultCompoundingRewardToken(
+                            vault.vault,
+                            rewardTokenMint
+                        ).accountsPartial({
+                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        }).instruction())),
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added fragSOL restaking vaults compounding reward tokens`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+        const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, 'confirmed');
+        return {event, error, fragSOLFund};
+    }
+
+    public async runFundManagerAddRestakingVaultCompoundingRewardToken(vault: web3.PublicKey, rewardTokenMint: web3.PublicKey) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.methods.fundManagerAddRestakingVaultCompoundingRewardToken(vault, rewardTokenMint)
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        });
+
+        logger.notice(`added compounding reward token`.padEnd(LOG_PAD_LARGE), rewardTokenMint);
+        const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, 'confirmed');
+        return {event, error, fragSOLFund};
+    }
+
+    // public async runFundManagerAddTokenSwapStrategies() {
+    //     const {event, error} = await this.run({
+    //         instructions: this.tokenSwapStrategies.map(strategy => {
+    //             return this.methods.fundManagerAddTokenSwapStrategy(
+    //                 strategy.fromTokenMint,
+    //                 strategy.toTokenMint,
+    //                 strategy.tokenSwapSource,
+    //             )
+    //             .accountsPartial({
+    //                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+    //             })
+    //             .instruction();
+    //         }),
+    //         signerNames: ["FUND_MANAGER"],
+    //         events: ["fundManagerUpdatedFund"],
+    //     });
+
+    //     logger.notice(`added fragSOL token swap strategies`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+    //     const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, 'confirmed');
+    //     return {event, error, fragSOLFund};
+    // }
+
+    // public async runFundManagerAddTokenSwapStrategy(
+    //     strategy: typeof this.tokenSwapStrategies[number],
+    // ) {
+    //     const {event, error} = await this.run({
+    //         instructions: [
+    //             this.methods.fundManagerAddTokenSwapStrategy(
+    //                 strategy.fromTokenMint,
+    //                 strategy.toTokenMint,
+    //                 strategy.tokenSwapSource,
+    //             )
+    //             .accountsPartial({
+    //                 receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+    //             })
+    //             .instruction(),
+    //         ],
+    //         signerNames: ["FUND_MANAGER"],
+    //         events: ["fundManagerUpdatedFund"],
+    //     });
+
+    //     logger.notice(`added token swap strategy`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
+    //     const fragSOLFund = await this.account.fundAccount.fetch(this.knownAddress.fragSOLFund, 'confirmed');
+    //     return {event, error, fragSOLFund};
+    // }
 
     public async runFundManagerInitializeFundSupportedTokens() {
         const {event, error} = await this.run({
@@ -2620,13 +2993,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {nSOLTokenPool};
     }
 
-    public get rewardsMetadata() {
-        return this._getRewardsMetadata;
+    public get distributingRewardsMetadata() {
+        return this._getDistributingRewardsMetadata;
     }
 
-    private readonly _getRewardsMetadata = this.getRewardsMetadata();
+    private readonly _getDistributingRewardsMetadata = this.getDistributingRewardsMetadata();
 
-    private getRewardsMetadata() {
+    private getDistributingRewardsMetadata() {
         return [
             {
                 name: "fPoint",
@@ -2670,7 +3043,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         })
                         .instruction();
                 }),
-                ...this.rewardsMetadata.map((v) => {
+                ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddReward(v.name, v.description, v.type)
                         .accountsPartial({

@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 #[zero_copy]
 #[repr(C)]
@@ -9,7 +10,7 @@ pub(super) struct WrappedToken {
     pub enabled: u8,
     _padding: [u8; 6],
     pub supply: u64,
-    _reserved: [u8; 64],
+    _reserved: [u8; 1984],
 }
 
 impl WrappedToken {
@@ -21,6 +22,8 @@ impl WrappedToken {
         supply: u64,
     ) -> Result<()> {
         require_eq!(self.enabled, 0);
+
+        *self = Zeroable::zeroed();
 
         self.enabled = 1;
         self.mint = mint;

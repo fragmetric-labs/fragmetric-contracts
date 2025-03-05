@@ -1,45 +1,46 @@
-mod cmd10_stake_sol;
-mod cmd11_normalize_st;
-mod cmd12_restake_vst;
-mod cmd13_delegate_vst;
-mod cmd14_harvest_reward;
+mod cmd10_undelegate_vst;
+mod cmd11_stake_sol;
+mod cmd12_normalize_st;
+mod cmd13_restake_vst;
+mod cmd14_delegate_vst;
 mod cmd1_initialize;
 mod cmd2_enqueue_withdrawal_batch;
 mod cmd3_claim_unrestaked_vst;
 mod cmd4_denormalize_nt;
 mod cmd5_claim_unstaked_sol;
 mod cmd6_process_withdrawal_batch;
-mod cmd7_unstake_lst;
-mod cmd8_unrestake_vrt;
-mod cmd9_undelegate_vst;
+mod cmd7_harvest_reward;
+mod cmd8_unstake_lst;
+mod cmd9_unrestake_vrt;
 
-pub use cmd10_stake_sol::*;
-pub use cmd11_normalize_st::*;
-pub use cmd12_restake_vst::*;
-pub use cmd13_delegate_vst::*;
-pub use cmd14_harvest_reward::*;
+pub use cmd10_undelegate_vst::*;
+pub use cmd11_stake_sol::*;
+pub use cmd12_normalize_st::*;
+pub use cmd13_restake_vst::*;
+pub use cmd14_delegate_vst::*;
 pub use cmd1_initialize::*;
 pub use cmd2_enqueue_withdrawal_batch::*;
 pub use cmd3_claim_unrestaked_vst::*;
 pub use cmd4_denormalize_nt::*;
 pub use cmd5_claim_unstaked_sol::*;
 pub use cmd6_process_withdrawal_batch::*;
-pub use cmd7_unstake_lst::*;
-pub use cmd8_unrestake_vrt::*;
-pub use cmd9_undelegate_vst::*;
+pub use cmd7_harvest_reward::*;
+pub use cmd8_unstake_lst::*;
+pub use cmd9_unrestake_vrt::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
-use bytemuck::Zeroable;
+
+use crate::errors::ErrorCode;
 
 use super::*;
 
 // propagate common accounts and values to all commands
-pub struct OperationCommandContext<'info, 'a> {
-    pub(super) operator: &'a Signer<'info>,
-    pub(super) receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    pub(super) fund_account: &'a mut AccountLoader<'info, FundAccount>,
-    pub(super) system_program: &'a Program<'info, System>,
+pub(super) struct OperationCommandContext<'info, 'a> {
+    pub operator: &'a Signer<'info>,
+    pub receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+    pub fund_account: &'a mut AccountLoader<'info, FundAccount>,
+    pub system_program: &'a Program<'info, System>,
 }
 
 // enum to hold all command variants
@@ -283,7 +284,7 @@ impl From<HarvestRewardCommandResult> for OperationCommandResult {
 }
 
 impl OperationCommand {
-    fn discriminant(&self) -> u8 {
+    pub fn discriminant(&self) -> u8 {
         match self {
             OperationCommand::Initialize(_) => 1,
             OperationCommand::EnqueueWithdrawalBatch(_) => 2,
@@ -302,16 +303,26 @@ impl OperationCommand {
         }
     }
 
-    fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
-        pod.clear();
+    pub fn is_safe_with_unchecked_params(&self) -> bool {
+        match self {
+            Self::Initialize(_)
+            | Self::EnqueueWithdrawalBatch(_)
+            | Self::ProcessWithdrawalBatch(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
+        pod.set_none();
         pod.discriminant = self.discriminant();
         self.serialize(&mut pod.buffer.as_mut_slice())?;
         Ok(())
     }
 }
 
-const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 2535;
+const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 3126;
 
+/// Pod type of `Option<OperationCommand>`
 #[zero_copy]
 #[repr(C)]
 pub struct OperationCommandPod {
@@ -320,31 +331,46 @@ pub struct OperationCommandPod {
 }
 
 impl OperationCommandPod {
-    fn clear(&mut self) {
+    pub fn discriminant(&self) -> Option<u8> {
+        (self.discriminant != 0).then_some(self.discriminant)
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.discriminant == 0
+    }
+
+    pub fn set_none(&mut self) {
         self.discriminant = 0;
         self.buffer.fill(0);
     }
 
-    fn try_deserialize(&self) -> Result<Option<OperationCommand>> {
-        Ok({
-            if self.discriminant == 0 {
-                None
-            } else {
-                let command = OperationCommand::deserialize(&mut self.buffer.as_slice())?;
-                if self.discriminant == command.discriminant() {
-                    Some(command)
-                } else {
-                    Err(Error::from(ProgramError::InvalidAccountData))?
-                }
-            }
-        })
+    pub fn try_deserialize(&self) -> Result<Option<OperationCommand>> {
+        if self.discriminant == 0 {
+            return Ok(None);
+        }
+
+        let command = OperationCommand::deserialize(&mut &self.buffer[..])?;
+        if self.discriminant == command.discriminant() {
+            Ok(Some(command))
+        } else {
+            Err(Error::from(ProgramError::InvalidAccountData))?
+        }
     }
 }
 
 #[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct OperationCommandAccountMeta {
-    pub(super) pubkey: Pubkey,
-    pub(super) is_writable: bool,
+    pub pubkey: Pubkey,
+    pub is_writable: bool,
+}
+
+impl From<(Pubkey, bool)> for OperationCommandAccountMeta {
+    fn from((pubkey, is_writable): (Pubkey, bool)) -> Self {
+        Self {
+            pubkey,
+            is_writable,
+        }
+    }
 }
 
 impl std::fmt::Debug for OperationCommandAccountMeta {
@@ -360,12 +386,13 @@ impl std::fmt::Debug for OperationCommandAccountMeta {
 impl OperationCommandAccountMeta {
     pub fn serialize_as_pod(&self, pod: &mut OperationCommandAccountMetaPod) {
         pod.pubkey = self.pubkey;
-        pod.is_writable = if self.is_writable { 1 } else { 0 };
+        pod.is_writable = self.is_writable as u8;
     }
 }
 
 #[zero_copy]
 #[repr(C)]
+/// Pod type of `OperationCommandAccountMeta`
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
     is_writable: u8,
@@ -382,39 +409,42 @@ impl OperationCommandAccountMetaPod {
 }
 
 /// Technically, can contain up to 57 accounts out of 64 with reserved 6 accounts and payer.
-pub const FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 32;
+const FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE: usize = 32;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct OperationCommandEntry {
-    pub(super) command: OperationCommand,
+    pub command: OperationCommand,
     #[max_len(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)]
-    pub(super) required_accounts: Vec<OperationCommandAccountMeta>,
+    pub required_accounts: Vec<OperationCommandAccountMeta>,
+}
+
+impl Default for OperationCommandEntry {
+    fn default() -> Self {
+        InitializeCommand::default().without_required_accounts()
+    }
 }
 
 impl OperationCommandEntry {
-    pub fn is_safe_with_unchecked_params(&self) -> bool {
-        match self.command {
-            OperationCommand::Initialize(..)
-            | OperationCommand::EnqueueWithdrawalBatch(..)
-            | OperationCommand::ProcessWithdrawalBatch(..) => true,
-            _ => false,
-        }
-    }
+    pub const MAX_ACCOUNT_SIZE: usize = FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE;
 
     pub fn serialize_as_pod(&self, pod: &mut OperationCommandEntryPod) -> Result<()> {
+        if self.required_accounts.len() > Self::MAX_ACCOUNT_SIZE {
+            err!(ErrorCode::IndexOutOfBoundsException)?;
+        }
+
         pod.num_required_accounts = self.required_accounts.len() as u8;
-        for (i, account_meta) in self
+        for (pod, meta) in pod
             .required_accounts
-            .iter()
-            .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
-            .enumerate()
+            .iter_mut()
+            .zip(&self.required_accounts)
         {
-            account_meta.serialize_as_pod(&mut pod.required_accounts[i]);
+            meta.serialize_as_pod(pod);
         }
         self.command.serialize_as_pod(&mut pod.command)
     }
 }
 
+/// Pod type of `Option<OperationCommandEntry>`
 #[zero_copy]
 #[repr(C)]
 pub struct OperationCommandEntryPod {
@@ -426,30 +456,32 @@ pub struct OperationCommandEntryPod {
 }
 
 impl OperationCommandEntryPod {
-    pub fn is_none(&self) -> bool {
-        self.command.discriminant == 0
+    pub fn discriminant(&self) -> Option<u8> {
+        self.command.discriminant()
     }
 
-    pub fn clear(&mut self) {
-        self.command.clear();
+    pub fn is_none(&self) -> bool {
+        self.command.is_none()
+    }
+
+    pub fn set_none(&mut self) {
+        self.command.set_none();
         self.num_required_accounts = 0;
-        self.required_accounts
-            .fill(OperationCommandAccountMetaPod::zeroed());
     }
 
     pub fn try_deserialize(&self) -> Result<Option<OperationCommandEntry>> {
-        Ok({
-            let command = self.command.try_deserialize()?;
-            command.map(|command| OperationCommandEntry {
-                command,
-                required_accounts: self
-                    .required_accounts
-                    .iter()
-                    .take(self.num_required_accounts as usize)
-                    .map(|account_meta_pod| account_meta_pod.deserialize())
-                    .collect::<Vec<_>>(),
-            })
-        })
+        let Some(command) = self.command.try_deserialize()? else {
+            return Ok(None);
+        };
+        let required_accounts = self.required_accounts[..self.num_required_accounts as usize]
+            .iter()
+            .map(|pod| pod.deserialize())
+            .collect();
+
+        Ok(Some(OperationCommandEntry {
+            command,
+            required_accounts,
+        }))
     }
 }
 
@@ -497,14 +529,7 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
     ) -> OperationCommandEntry {
         OperationCommandEntry {
             command: self.into(),
-            required_accounts: required_accounts
-                .into_iter()
-                .take(FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE)
-                .map(|(pubkey, is_writable)| OperationCommandAccountMeta {
-                    pubkey,
-                    is_writable,
-                })
-                .collect(),
+            required_accounts: required_accounts.into_iter().map(Into::into).collect(),
         }
     }
 
@@ -528,7 +553,7 @@ mod tests {
             OperationCommand::INIT_SPACE,
         );
         assert_eq!(
-            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE > OperationCommand::INIT_SPACE,
+            FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE >= OperationCommand::INIT_SPACE,
             true
         );
     }

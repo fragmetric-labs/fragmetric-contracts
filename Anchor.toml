@@ -216,7 +216,7 @@ filename = "./tests/mocks/mainnet/bbSOL_stake_pool_validator_stake_account_1.jso
 # clone mainnet Jito restaking vault protocol to localnet
 [[test.genesis]]
 address = "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
-program = "./tests/mocks/mainnet/jito_restaking_vault.so"
+program = "./tests/mocks/mainnet/jito_vault_program.so"
 
 # clone mainnet Jito restaking vault protocol global config to localnet
 [[test.validator.account]]
@@ -286,7 +286,7 @@ filename = "./tests/mocks/local/fragjto_address_lookup_table.json"
 
 [[test.validator.account]]
 address = "2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ"
-filename = "./tests/mocks/mainnet/jto_liquidity_pool_account.json"
+filename = "./tests/mocks/mainnet/orca_wsol_jto_liquidity_pool_account.json"
 
 # clone empty Jito restaking vault of fragJTO
 [[test.validator.account]]
@@ -297,3 +297,20 @@ filename = "./tests/mocks/local/fragjto_jito_jto_vault.json"
 [[test.validator.account]]
 address = "8VHeGZjPRswfDKqNuZfkrBEXH2uhYnuG4ejeKumeMWBu"
 filename = "./tests/mocks/local/fragjto_jito_jto_vrt_mint.json"
+
+# Orca JTO-jitoSOL Liquidity pool
+[[test.genesis]]
+address = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+program = "./tests/mocks/mainnet/orca_whirlpool_program.so"
+
+[[test.validator.account]]
+address = "G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA"
+filename = "./tests/mocks/mainnet/orca_jto_jitosol_liquidity_pool_account.json"
+
+[[test.validator.account]]
+address = "7fku98xvSRXusRHWUh7vEvRRjCq2akzBinipKsQPXg9u"
+filename = "./tests/mocks/mainnet/orca_jto_jitosol_liquidity_pool_jto_vault_account.json"
+
+[[test.validator.account]]
+address = "AVZgewZzC8AQRCeXJTSnzQof25Y4R77tma59Htp5w245"
+filename = "./tests/mocks/mainnet/orca_jto_jitosol_liquidity_pool_jitosol_vault_account.json"

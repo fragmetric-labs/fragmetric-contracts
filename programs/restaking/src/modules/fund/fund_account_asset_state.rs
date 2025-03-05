@@ -1,16 +1,16 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
-use super::WithdrawalRequest;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, PricingService, TokenValue};
-use crate::utils::get_proportional_amount;
+
+use super::WithdrawalRequest;
 
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[zero_copy]
 #[repr(C)]
-pub struct AssetState {
+pub(super) struct AssetState {
     token_mint: Pubkey,
     token_program: Pubkey,
 
@@ -57,6 +57,8 @@ impl AssetState {
         asset_token_mint_and_program: Option<(Pubkey, Pubkey)>,
         operation_reserved_amount: u64,
     ) {
+        *self = Zeroable::zeroed();
+
         if let Some((token_mint, token_program)) = asset_token_mint_and_program {
             self.token_mint = token_mint;
             self.token_program = token_program;
@@ -73,7 +75,7 @@ impl AssetState {
         }
     }
 
-    pub fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn set_accumulated_deposit_amount(&mut self, amount: u64) -> Result<&mut Self> {
         require_gte!(
             self.accumulated_deposit_capacity_amount,
             amount,
@@ -82,10 +84,10 @@ impl AssetState {
 
         self.accumulated_deposit_amount = amount;
 
-        Ok(())
+        Ok(self)
     }
 
-    pub fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<()> {
+    pub fn set_accumulated_deposit_capacity_amount(&mut self, amount: u64) -> Result<&mut Self> {
         require_gte!(
             amount,
             self.accumulated_deposit_amount,
@@ -94,15 +96,15 @@ impl AssetState {
 
         self.accumulated_deposit_capacity_amount = amount;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub fn set_normal_reserve_max_amount(&mut self, amount: u64) {
+    pub fn set_normal_reserve_max_amount(&mut self, amount: u64) -> &mut Self {
         self.normal_reserve_max_amount = amount;
+        self
     }
 
-    pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<()> {
+    pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
             10_00, // 10%
             reserve_rate_bps,
@@ -111,17 +113,17 @@ impl AssetState {
 
         self.normal_reserve_rate_bps = reserve_rate_bps;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub fn set_depositable(&mut self, depositable: bool) {
-        self.depositable = if depositable { 1 } else { 0 };
+    pub fn set_depositable(&mut self, depositable: bool) -> &mut Self {
+        self.depositable = depositable as u8;
+        self
     }
 
-    #[inline(always)]
-    pub fn set_withdrawable(&mut self, withdrawable: bool) {
-        self.withdrawable = if withdrawable { 1 } else { 0 };
+    pub fn set_withdrawable(&mut self, withdrawable: bool) -> &mut Self {
+        self.withdrawable = withdrawable as u8;
+        self
     }
 
     /// returns [deposited_amount]
@@ -130,15 +132,14 @@ impl AssetState {
             err!(ErrorCode::FundDepositNotSupportedAsset)?
         }
 
-        let new_accumulated_deposit_amount = self.accumulated_deposit_amount + asset_amount;
+        self.accumulated_deposit_amount += asset_amount;
+        self.operation_reserved_amount += asset_amount;
+
         require_gte!(
             self.accumulated_deposit_capacity_amount,
-            new_accumulated_deposit_amount,
+            self.accumulated_deposit_amount,
             ErrorCode::FundExceededDepositCapacityAmountError
         );
-
-        self.accumulated_deposit_amount = new_accumulated_deposit_amount;
-        self.operation_reserved_amount += asset_amount;
 
         Ok(asset_amount)
     }
@@ -146,11 +147,9 @@ impl AssetState {
     /// returns [deposited_amount, offsetted_receivable_amount]
     pub fn donate(&mut self, asset_amount: u64, offset_receivable: bool) -> Result<(u64, u64)> {
         // offset receivable first if requested
-        let offsetting_receivable_amount = if offset_receivable {
-            self.operation_receivable_amount.min(asset_amount)
-        } else {
-            0
-        };
+        let offsetting_receivable_amount = offset_receivable
+            .then(|| self.operation_receivable_amount.min(asset_amount))
+            .unwrap_or_default();
         self.operation_receivable_amount -= offsetting_receivable_amount;
         self.operation_reserved_amount += offsetting_receivable_amount;
 
@@ -223,11 +222,8 @@ impl AssetState {
         }
 
         let next_batch_id = self.withdrawal_pending_batch.batch_id + 1;
-        let mut pending_batch = std::mem::replace(&mut self.withdrawal_pending_batch, {
-            let mut new_pending_batch = WithdrawalBatch::zeroed();
-            new_pending_batch.initialize(next_batch_id);
-            new_pending_batch
-        });
+        let mut pending_batch = std::mem::take(&mut self.withdrawal_pending_batch);
+        self.withdrawal_pending_batch.initialize(next_batch_id);
         pending_batch.enqueued_at = current_timestamp;
 
         self.withdrawal_last_batch_enqueued_at = current_timestamp;
@@ -250,31 +246,23 @@ impl AssetState {
         self.withdrawal_last_processed_batch_id =
             self.withdrawal_queued_batches[count - 1].batch_id;
         self.withdrawal_last_batch_processed_at = current_timestamp;
-        let processing_batches = self
-            .withdrawal_queued_batches
-            .into_iter()
-            .take(count)
-            .collect::<Vec<_>>();
-
-        for i in 0..self.withdrawal_num_queued_batches as usize {
-            if i < (self.withdrawal_num_queued_batches as usize) - count {
-                self.withdrawal_queued_batches[i] = self.withdrawal_queued_batches[i + count];
-            } else {
-                self.withdrawal_queued_batches[i] = WithdrawalBatch::zeroed();
-            }
-        }
+        // take `count` batches from front
+        let processing_batches = (0..count)
+            .map(|i| std::mem::take(&mut self.withdrawal_queued_batches[i]))
+            .collect();
+        // then shift to left
+        self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize]
+            .rotate_left(count);
         self.withdrawal_num_queued_batches -= count as u8;
 
         Ok(processing_batches)
     }
 
     fn get_queued_withdrawal_batches_iter(&self) -> impl Iterator<Item = &WithdrawalBatch> {
-        self.withdrawal_queued_batches
-            .iter()
-            .take(self.withdrawal_num_queued_batches as usize)
+        self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize].iter()
     }
 
-    pub(super) fn get_queued_withdrawal_batches_to_process_iter(
+    pub fn get_queued_withdrawal_batches_to_process_iter(
         &self,
         withdrawal_batch_threshold_interval_seconds: i64,
         current_timestamp: i64,
@@ -295,26 +283,19 @@ impl AssetState {
     }
 
     /// total asset amount from given receipt_token_value, so it includes cash, receivable, normalized, restaked assets.
-    pub(super) fn get_total_amount(&self, receipt_token_value: &TokenValue) -> u64 {
+    pub fn get_total_amount(&self, receipt_token_value: &TokenValue) -> u64 {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
         receipt_token_value
             .numerator
             .iter()
-            .find_map(|asset| match asset {
-                Asset::SOL(sol_amount) => {
-                    if supported_token_mint.is_none() {
-                        Some(*sol_amount)
-                    } else {
-                        None
-                    }
+            .find_map(|asset| match (asset, supported_token_mint) {
+                (Asset::SOL(sol_amount), None) => Some(*sol_amount),
+                (Asset::Token(mint, _, token_amount), Some(supported_token_mint))
+                    if supported_token_mint == *mint =>
+                {
+                    Some(*token_amount)
                 }
-                Asset::Token(mint, _, token_amount) => {
-                    if supported_token_mint.is_some() && supported_token_mint.unwrap() == *mint {
-                        Some(*token_amount)
-                    } else {
-                        None
-                    }
-                }
+                _ => None,
             })
             .unwrap_or_default()
     }
@@ -337,7 +318,7 @@ impl AssetState {
         &self,
         receipt_token_value: &TokenValue,
     ) -> Result<u64> {
-        Ok(get_proportional_amount(
+        Ok(crate::utils::get_proportional_amount(
             self.get_total_amount(receipt_token_value),
             self.normal_reserve_rate_bps as u64,
             10_000,
@@ -354,18 +335,12 @@ impl AssetState {
         pricing_service: &PricingService,
         with_normal_reserve: bool,
     ) -> Result<u64> {
-        let asset_withdrawal_obligated_reserve_amount_as_sol = pricing_service
-            .get_token_amount_as_sol(
-                receipt_token_mint,
-                self.get_receipt_token_withdrawal_obligated_amount(),
-            )?;
-        let asset_withdrawal_obligated_reserve_amount = match self.get_token_mint_and_program() {
-            None => asset_withdrawal_obligated_reserve_amount_as_sol,
-            Some((supported_token_mint, _)) => pricing_service.get_sol_amount_as_token(
-                &supported_token_mint,
-                asset_withdrawal_obligated_reserve_amount_as_sol,
-            )?,
-        };
+        let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
+        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_asset(
+            receipt_token_mint,
+            self.get_receipt_token_withdrawal_obligated_amount(),
+            supported_token_mint.as_ref(),
+        )?;
 
         Ok(asset_withdrawal_obligated_reserve_amount
             + if with_normal_reserve {
@@ -380,7 +355,7 @@ impl AssetState {
     }
 
     /// represents the surplus or shortage amount after fulfilling the withdrawal obligations for the given asset.
-    pub(super) fn get_net_operation_reserved_amount(
+    pub fn get_net_operation_reserved_amount(
         &self,
         receipt_token_mint: &Pubkey,
         receipt_token_value: &TokenValue,
@@ -399,7 +374,8 @@ impl AssetState {
 
 #[zero_copy]
 #[repr(C)]
-pub struct WithdrawalBatch {
+#[derive(Default)]
+pub(super) struct WithdrawalBatch {
     pub batch_id: u64,
     pub num_requests: u64,
     pub receipt_token_amount: u64,

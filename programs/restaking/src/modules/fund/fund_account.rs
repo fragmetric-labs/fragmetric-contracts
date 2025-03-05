@@ -1,27 +1,28 @@
+use std::ops::Neg;
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
-use bytemuck::Zeroable;
-use std::ops::Neg;
+use anchor_spl::token_interface::Mint;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{
-    Asset, PricingService, TokenPricingSource, TokenValue, TokenValuePod,
-};
-use crate::utils::{get_proportional_amount, PDASeeds, ZeroCopyHeader};
+use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
+use crate::modules::swap::TokenSwapSource;
+use crate::utils::*;
 
 use super::*;
 
 #[constant]
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
-/// * v16: add wrap_account and wrapped token field. (151328 ~= 148KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 16;
+/// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
+/// * v18: add reserved space for 60 pubkeys in wrapped token and swap strategies. (163840 = 160KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 18;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
-pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 30;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
+pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -71,9 +72,11 @@ pub struct FundAccount {
     normalized_token: NormalizedToken,
 
     /// investments
-    _padding7: [u8; 15],
+    reward_commission_rate_bps: u16,
+    _padding7: [u8; 13],
     num_restaking_vaults: u8,
     restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
+    _padding8: [u8; 112],
 
     /// fund operation state
     pub(super) operation: OperationState,
@@ -81,6 +84,13 @@ pub struct FundAccount {
     /// optional wrapped token of fund receipt token
     wrap_account: Pubkey,
     wrapped_token: WrappedToken,
+
+    /// which DEX to use for swap between two tokens
+    num_token_swap_strategies: u8,
+    _padding9: [u8; 7],
+    token_swap_strategies: [TokenSwapStrategy; FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES],
+
+    _reserved: [u8; 3616],
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -113,7 +123,7 @@ impl FundAccount {
         receipt_token_decimals: u8,
         receipt_token_supply: u64,
         sol_operation_reserved_amount: u64,
-    ) {
+    ) -> Result<()> {
         if self.data_version == 0 {
             self.receipt_token_mint = receipt_token_mint;
             self.receipt_token_program = token_2022::ID;
@@ -135,6 +145,14 @@ impl FundAccount {
                 Pubkey::find_program_address(&self.get_wrap_account_seed_phrase(), &crate::ID);
             self.data_version = 16;
         }
+        if self.data_version == 16 {
+            self.num_token_swap_strategies = 0;
+            self.data_version = 18;
+        }
+
+        require_eq!(self.data_version, FUND_ACCOUNT_CURRENT_VERSION);
+
+        Ok(())
     }
 
     #[inline(always)]
@@ -143,14 +161,14 @@ impl FundAccount {
         bump: u8,
         receipt_token_mint: &InterfaceAccount<Mint>,
         sol_operation_reserved_amount: u64,
-    ) {
+    ) -> Result<()> {
         self.migrate(
             bump,
             receipt_token_mint.key(),
             receipt_token_mint.decimals,
             receipt_token_mint.supply,
             sol_operation_reserved_amount,
-        );
+        )
     }
 
     #[inline(always)]
@@ -158,8 +176,8 @@ impl FundAccount {
         &mut self,
         receipt_token_mint: &InterfaceAccount<Mint>,
         sol_operation_reserved_amount: u64,
-    ) {
-        self.initialize(self.bump, receipt_token_mint, sol_operation_reserved_amount);
+    ) -> Result<()> {
+        self.initialize(self.bump, receipt_token_mint, sol_operation_reserved_amount)
     }
 
     #[inline(always)]
@@ -331,20 +349,16 @@ impl FundAccount {
         )
     }
 
-    #[inline]
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
-        self.supported_tokens
-            .iter()
-            .take(self.num_supported_tokens as usize)
+        self.supported_tokens[..self.num_supported_tokens as usize].iter()
     }
 
-    #[inline]
+    #[inline(always)]
     pub(super) fn get_supported_tokens_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut SupportedToken> {
-        self.supported_tokens
-            .iter_mut()
-            .take(self.num_supported_tokens as usize)
+        self.supported_tokens[..self.num_supported_tokens as usize].iter_mut()
     }
 
     pub(super) fn get_supported_token(&self, token_mint: &Pubkey) -> Result<&SupportedToken> {
@@ -380,7 +394,7 @@ impl FundAccount {
         get_proportional_amount(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
     }
 
-    pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<()> {
+    pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
             FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT,
             fee_rate_bps,
@@ -389,35 +403,38 @@ impl FundAccount {
 
         self.withdrawal_fee_rate_bps = fee_rate_bps;
 
-        Ok(())
+        Ok(self)
     }
 
-    #[inline(always)]
-    pub(super) fn set_deposit_enabled(&mut self, enabled: bool) {
-        self.deposit_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_deposit_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.deposit_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_donation_enabled(&mut self, enabled: bool) {
-        self.donation_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_donation_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.donation_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) {
-        self.withdrawal_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_withdrawal_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.withdrawal_enabled = enabled as u8;
+        self
     }
 
-    #[inline(always)]
-    pub(super) fn set_transfer_enabled(&mut self, enabled: bool) {
-        self.transfer_enabled = if enabled { 1 } else { 0 };
+    pub(super) fn set_transfer_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.transfer_enabled = enabled as u8;
+        self
     }
 
-    pub(super) fn set_withdrawal_batch_threshold(&mut self, interval_seconds: i64) -> Result<()> {
+    pub(super) fn set_withdrawal_batch_threshold(
+        &mut self,
+        interval_seconds: i64,
+    ) -> Result<&mut Self> {
         require_gte!(interval_seconds, 0);
 
         self.withdrawal_batch_threshold_interval_seconds = interval_seconds;
 
-        Ok(())
+        Ok(self)
     }
 
     pub(super) fn add_supported_token(
@@ -441,15 +458,13 @@ impl FundAccount {
             ErrorCode::FundExceededMaxSupportedTokensError
         );
 
-        let mut supported_token = SupportedToken::zeroed();
-        supported_token.initialize(
+        self.supported_tokens[self.num_supported_tokens as usize].initialize(
             mint,
             program,
             decimals,
             pricing_source,
             operation_reserved_amount,
         )?;
-        self.supported_tokens[self.num_supported_tokens as usize] = supported_token;
         self.num_supported_tokens += 1;
 
         Ok(())
@@ -457,11 +472,7 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token(&self) -> Option<&NormalizedToken> {
-        if self.normalized_token.enabled == 1 {
-            Some(&self.normalized_token)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1).then_some(&self.normalized_token)
     }
 
     #[inline]
@@ -473,11 +484,7 @@ impl FundAccount {
 
     #[inline]
     pub(super) fn get_normalized_token_mut(&mut self) -> Option<&mut NormalizedToken> {
-        if self.normalized_token.enabled == 1 {
-            Some(&mut self.normalized_token)
-        } else {
-            None
-        }
+        (self.normalized_token.enabled == 1).then_some(&mut self.normalized_token)
     }
 
     pub(super) fn set_normalized_token(
@@ -492,15 +499,13 @@ impl FundAccount {
             err!(ErrorCode::FundNormalizedTokenAlreadySetError)?
         }
 
-        let normalized_token = &mut self.normalized_token;
-        normalized_token.initialize(mint, program, decimals, pool, operation_reserved_amount)
+        self.normalized_token
+            .initialize(mint, program, decimals, pool, operation_reserved_amount)
     }
 
     #[inline]
     pub(super) fn get_restaking_vaults_iter(&self) -> impl Iterator<Item = &RestakingVault> {
-        self.restaking_vaults
-            .iter()
-            .take(self.num_restaking_vaults as usize)
+        self.restaking_vaults[..self.num_restaking_vaults as usize].iter()
     }
 
     #[inline]
@@ -535,6 +540,7 @@ impl FundAccount {
         receipt_token_mint: Pubkey,
         receipt_token_program: Pubkey,
         receipt_token_decimals: u8,
+        receipt_token_pricing_source: TokenPricingSource,
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
         if self.get_restaking_vaults_iter().any(|v| v.vault == vault) {
@@ -547,17 +553,16 @@ impl FundAccount {
             ErrorCode::FundExceededMaxRestakingVaultsError
         );
 
-        let mut restaking_vault = RestakingVault::zeroed();
-        restaking_vault.initialize(
+        self.restaking_vaults[self.num_restaking_vaults as usize].initialize(
             vault,
             program,
             supported_token_mint,
             receipt_token_mint,
             receipt_token_program,
             receipt_token_decimals,
+            receipt_token_pricing_source,
             receipt_token_operation_reserved_amount,
         )?;
-        self.restaking_vaults[self.num_restaking_vaults as usize] = restaking_vault;
         self.num_restaking_vaults += 1;
 
         Ok(())
@@ -581,6 +586,48 @@ impl FundAccount {
 
         self.wrapped_token
             .initialize(mint, program, decimals, supply)
+    }
+
+    #[inline(always)]
+    pub(super) fn get_token_swap_strategies_iter(
+        &self,
+    ) -> impl Iterator<Item = &TokenSwapStrategy> {
+        self.token_swap_strategies[..self.num_token_swap_strategies as usize].iter()
+    }
+
+    pub(super) fn get_token_swap_strategy(
+        &self,
+        from_token_mint: &Pubkey,
+    ) -> Result<&TokenSwapStrategy> {
+        self.get_token_swap_strategies_iter()
+            .find(|strategy| strategy.from_token_mint == *from_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))
+    }
+
+    pub(super) fn add_token_swap_strategy(
+        &mut self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: TokenSwapSource,
+    ) -> Result<()> {
+        if self.get_token_swap_strategy(&from_token_mint).is_ok() {
+            err!(ErrorCode::FundTokenSwapStrategyAlreadyRegistered)?
+        }
+
+        require_gt!(
+            FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES,
+            self.num_token_swap_strategies as usize,
+            ErrorCode::FundExceededMaxTokenSwapStrategiesError
+        );
+
+        self.token_swap_strategies[self.num_token_swap_strategies as usize].initialize(
+            from_token_mint,
+            to_token_mint,
+            swap_source,
+        );
+        self.num_token_swap_strategies += 1;
+
+        Ok(())
     }
 
     pub(super) fn reload_receipt_token_supply(
@@ -636,13 +683,10 @@ impl FundAccount {
     }
 
     pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
-        let sol = &mut self.sol;
-        let tokens = self
-            .supported_tokens
+        let tokens = self.supported_tokens[..self.num_supported_tokens as usize]
             .iter_mut()
-            .take(self.num_supported_tokens as usize)
             .map(|v| &mut v.token);
-        std::iter::once(sol).chain(tokens)
+        std::iter::once(&mut self.sol).chain(tokens)
     }
 
     /// returns [deposited_amount]
@@ -856,7 +900,7 @@ pub(super) struct FundUnstakingTicketAddress<'a> {
 }
 
 impl<'a> FundUnstakingTicketAddress<'a> {
-    pub const SEED: &'static [u8] = b"unstaking_ticket";
+    const SEED: &'static [u8] = b"unstaking_ticket";
 
     fn new(fund_account: &'a Pubkey, pool_account: &'a Pubkey, index: u8) -> Self {
         let (unstaking_ticket_address, bump) = Pubkey::find_program_address(
@@ -911,7 +955,7 @@ pub(super) struct FundUnrestakingTicketAddress<'a> {
 }
 
 impl<'a> FundUnrestakingTicketAddress<'a> {
-    pub const SEED: &'static [u8] = b"unrestaking_ticket";
+    const SEED: &'static [u8] = b"unrestaking_ticket";
 
     fn new(fund_account: &'a Pubkey, vault_account: &'a Pubkey, index: u8) -> Self {
         let (unrestaking_ticket_address, bump) = Pubkey::find_program_address(
@@ -1006,7 +1050,7 @@ mod tests {
     fn create_initialized_fund_account() -> FundAccount {
         let buffer = [0u8; 8 + std::mem::size_of::<FundAccount>()];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
-        fund.migrate(0, Pubkey::new_unique(), 9, 0, 0);
+        fund.migrate(0, Pubkey::new_unique(), 9, 0, 0).unwrap();
         fund
     }
 
@@ -1017,6 +1061,7 @@ mod tests {
         fund.sol.accumulated_deposit_amount = 1_000_000_000_000;
         fund.sol
             .set_accumulated_deposit_capacity_amount(0)
+            .map(|_| ())
             .unwrap_err();
 
         let interval_seconds = 60;
@@ -1090,6 +1135,7 @@ mod tests {
             .unwrap()
             .token
             .set_accumulated_deposit_capacity_amount(0)
+            .map(|_| ())
             .unwrap_err();
     }
 
@@ -1125,8 +1171,9 @@ mod tests {
     fn test_deposit_token() {
         let mut fund = create_initialized_fund_account();
 
+        let supported_token_mint = Pubkey::new_unique();
         fund.add_supported_token(
-            Pubkey::new_unique(),
+            supported_token_mint,
             Pubkey::default(),
             9,
             TokenPricingSource::SPLStakePool {
@@ -1143,12 +1190,10 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].token.operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].token.accumulated_deposit_amount, 0);
 
-        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
-            .unwrap_err();
+        fund.deposit(Some(supported_token_mint), 1_000).unwrap_err();
         fund.set_deposit_enabled(true);
         fund.supported_tokens[0].token.set_depositable(true);
-        fund.deposit(Some(fund.supported_tokens[0].mint), 1_000)
-            .unwrap();
+        fund.deposit(Some(supported_token_mint), 1_000).unwrap();
         assert_eq!(
             fund.supported_tokens[0].token.operation_reserved_amount,
             1_000

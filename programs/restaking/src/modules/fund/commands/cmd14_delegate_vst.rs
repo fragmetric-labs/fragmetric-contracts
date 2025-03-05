@@ -6,8 +6,8 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 
 use super::{
-    HarvestRewardCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
+    FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -62,10 +62,7 @@ impl SelfExecutable for DelegateVSTCommand {
             }
         };
 
-        Ok((
-            result,
-            entry.or_else(|| Some(HarvestRewardCommand::default().without_required_accounts())),
-        ))
+        Ok((result, entry))
     }
 }
 

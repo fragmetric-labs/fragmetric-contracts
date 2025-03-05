@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
@@ -27,6 +28,8 @@ impl NormalizedToken {
     ) -> Result<()> {
         require_eq!(self.enabled, 0);
 
+        *self = Zeroable::zeroed();
+
         self.enabled = 1;
         self.mint = mint;
         self.program = program;
@@ -36,10 +39,5 @@ impl NormalizedToken {
         self.operation_reserved_amount = operation_reserved_amount;
 
         Ok(())
-    }
-
-    #[inline(always)]
-    pub fn get_total_reserved_amount(&self) -> u64 {
-        self.operation_reserved_amount
     }
 }

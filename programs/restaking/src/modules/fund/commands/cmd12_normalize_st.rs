@@ -403,7 +403,7 @@ impl NormalizeSTCommand {
 
         require_gte!(
             to_normalized_token_account_amount,
-            normalized_token.get_total_reserved_amount()
+            normalized_token.operation_reserved_amount,
         );
 
         let result = Some(

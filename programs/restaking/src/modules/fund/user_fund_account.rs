@@ -1,10 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
-
-use super::*;
 
 pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 4;
 

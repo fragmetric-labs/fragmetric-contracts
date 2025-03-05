@@ -6,12 +6,13 @@ use anchor_spl::token_interface::*;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::reward;
+use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, SystemProgramExt};
 use crate::{errors, events};
 
 use super::*;
 
-pub struct FundConfigurationService<'info: 'a, 'a> {
+pub struct FundConfigurationService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
 }
@@ -22,7 +23,7 @@ impl Drop for FundConfigurationService<'_, '_> {
     }
 }
 
-impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
+impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut AccountLoader<'info, FundAccount>,
@@ -48,7 +49,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
                 fund_account_bump,
                 self.receipt_token_mint,
                 fund_reserve_account.lamports(),
-            );
+            )?;
         }
 
         // set token mint authority
@@ -92,56 +93,8 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         if new_account_size >= min_account_size {
             self.fund_account
                 .load_mut()?
-                .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports());
+                .update_if_needed(self.receipt_token_mint, fund_reserve_account.lamports())?;
         }
-
-        Ok(())
-    }
-
-    pub fn process_initialize_fund_wrap_account_reward_account(
-        &self,
-        fund_wrap_account: &SystemAccount,
-        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
-        fund_wrap_account_reward_account_bump: u8,
-    ) -> Result<()> {
-        reward::UserRewardConfigurationService::new_with_user_seeds(
-            self.receipt_token_mint,
-            fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
-            receipt_token_wrap_account,
-            reward_account,
-            fund_wrap_account_reward_account,
-        )?
-        .process_initialize_user_reward_account(fund_wrap_account_reward_account_bump)?;
-
-        Ok(())
-    }
-
-    pub fn process_update_fund_wrap_account_reward_account_if_needed(
-        &self,
-        payer: &Signer<'info>,
-        system_program: &Program<'info, System>,
-        fund_wrap_account: &SystemAccount,
-        receipt_token_wrap_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()> {
-        reward::UserRewardConfigurationService::new_with_user_seeds(
-            self.receipt_token_mint,
-            fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
-            receipt_token_wrap_account,
-            reward_account,
-            fund_wrap_account_reward_account,
-        )?
-        .process_update_user_reward_account_if_needed(
-            payer,
-            system_program,
-            desired_account_size,
-        )?;
 
         Ok(())
     }
@@ -174,7 +127,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             supported_token_mint.key()
         );
         require_keys_eq!(
-            *supported_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
             supported_token_program.key()
         );
 
@@ -196,9 +149,9 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn process_set_normalized_token(
         &mut self,
         fund_normalized_token_reserve_account: &InterfaceAccount<TokenAccount>,
-        normalized_token_mint: &mut InterfaceAccount<'info, Mint>,
+        normalized_token_mint: &InterfaceAccount<'info, Mint>,
         normalized_token_program: &Program<'info, Token>,
-        normalized_token_pool: &mut Account<'info, NormalizedTokenPoolAccount>,
+        normalized_token_pool: &Account<'info, NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
@@ -210,12 +163,12 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             normalized_token_mint.key()
         );
         require_keys_eq!(
-            *normalized_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_program.key()
         );
 
         // validate accounts
-        NormalizedTokenPoolService::new(
+        NormalizedTokenPoolService::validate_accounts(
             normalized_token_pool,
             normalized_token_mint,
             normalized_token_program,
@@ -267,10 +220,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
 
         // validate accounts
-        reward::UserRewardService::new_with_user_seeds(
+        reward::UserRewardService::validate_accounts(
             self.receipt_token_mint,
             fund_wrap_account,
-            &self.fund_account.load()?.get_wrap_account_seeds(),
+            Some(&self.fund_account.load()?.get_wrap_account_seeds()),
             reward_account,
             fund_wrap_account_reward_account,
         )?;
@@ -313,6 +266,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         vault_program: &UncheckedAccount,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_program: &Interface<TokenInterface>,
+        vault_receipt_token_pricing_source: TokenPricingSource,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -325,7 +279,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_supported_token_mint.key()
         );
         require_keys_eq!(
-            *vault_supported_token_mint.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(vault_supported_token_mint).owner,
             vault_supported_token_program.key()
         );
 
@@ -338,12 +292,15 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_receipt_token_mint.key()
         );
         require_keys_eq!(
-            *fund_vault_receipt_token_account.to_account_info().owner,
+            *AsRef::<AccountInfo>::as_ref(fund_vault_receipt_token_account).owner,
             vault_receipt_token_program.key()
         );
 
         // TODO add more vault validation since we do not check vault address anymore
-        require_keys_eq!(*vault.to_account_info().owner, vault_program.key());
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(vault).owner,
+            vault_program.key()
+        );
 
         // TODO add more vault receipt token mint validation since we do not check mint address anymore
 
@@ -354,6 +311,7 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             vault_receipt_token_mint.key(),
             vault_receipt_token_program.key(),
             vault_receipt_token_mint.decimals,
+            vault_receipt_token_pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
 
@@ -371,16 +329,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         restaking_program: &UncheckedAccount,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            require_keys_eq!(*vault_operator.owner, restaking_program.key());
+        require_keys_eq!(*vault_operator.owner, restaking_program.key());
 
-            // TODO add more operator validation
+        // TODO add more operator validation
 
-            self.fund_account
-                .load_mut()?
-                .get_restaking_vault_mut(vault.key)?
-                .add_delegation(vault_operator.key)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault.key)?
+            .add_delegation(vault_operator.key)?;
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
@@ -398,16 +354,14 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            fund_account.set_deposit_enabled(deposit_enabled);
-            fund_account.set_donation_enabled(donation_enabled);
-            fund_account.set_withdrawal_enabled(withdrawal_enabled);
-            fund_account.set_transfer_enabled(transfer_enabled);
-            fund_account.set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
-            fund_account
-                .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .set_deposit_enabled(deposit_enabled)
+            .set_donation_enabled(donation_enabled)
+            .set_withdrawal_enabled(withdrawal_enabled)
+            .set_transfer_enabled(transfer_enabled)
+            .set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?
+            .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -424,22 +378,17 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         {
             let mut fund_account = self.fund_account.load_mut()?;
 
-            fund_account.sol.set_depositable(sol_depositable);
-            fund_account
-                .sol
-                .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?;
             if let Some(sol_accumulated_deposit_amount) = sol_accumulated_deposit_amount {
                 fund_account
                     .sol
                     .set_accumulated_deposit_amount(sol_accumulated_deposit_amount)?;
             }
-
-            fund_account.sol.set_withdrawable(sol_withdrawable);
             fund_account
                 .sol
-                .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?;
-            fund_account
-                .sol
+                .set_accumulated_deposit_capacity_amount(sol_accumulated_deposit_capacity_amount)?
+                .set_depositable(sol_depositable)
+                .set_withdrawable(sol_withdrawable)
+                .set_normal_reserve_rate_bps(sol_withdrawal_normal_reserve_rate_bps)?
                 .set_normal_reserve_max_amount(sol_withdrawal_normal_reserve_max_amount);
 
             // all underlying assets should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
@@ -473,24 +422,17 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
             let sol_withdrawable = fund_account.sol.withdrawable == 1;
             let supported_token = fund_account.get_supported_token_mut(token_mint)?;
 
-            supported_token.token.set_depositable(token_depositable);
-            supported_token
-                .token
-                .set_accumulated_deposit_capacity_amount(
-                    token_accumulated_deposit_capacity_amount,
-                )?;
-
             if let Some(token_accumulated_deposit_amount) = token_accumulated_deposit_amount {
                 supported_token
                     .token
                     .set_accumulated_deposit_amount(token_accumulated_deposit_amount)?;
             }
-            supported_token.token.set_withdrawable(token_withdrawable);
             supported_token
                 .token
-                .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?;
-            supported_token
-                .token
+                .set_depositable(token_depositable)
+                .set_accumulated_deposit_capacity_amount(token_accumulated_deposit_capacity_amount)?
+                .set_withdrawable(token_withdrawable)
+                .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?
                 .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
             if let Some(token_rebalancing_amount) = token_rebalancing_amount {
@@ -517,14 +459,10 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            let vault = fund_account.get_restaking_vault_mut(vault)?;
-            vault.set_sol_allocation_strategy(
-                sol_allocation_weight,
-                sol_allocation_capacity_amount,
-            )?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -557,13 +495,27 @@ impl<'info: 'a, 'a> FundConfigurationService<'info, 'a> {
     pub fn process_add_restaking_vault_compounding_reward_token(
         &mut self,
         vault: &Pubkey,
-        compounding_reward_token_mint: &Pubkey,
+        compounding_reward_token_mint: Pubkey,
     ) -> Result<events::FundManagerUpdatedFund> {
-        {
-            let mut fund_account = self.fund_account.load_mut()?;
-            let vault = fund_account.get_restaking_vault_mut(vault)?;
-            vault.add_compounding_reward_token(compounding_reward_token_mint)?;
-        }
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .add_compounding_reward_token(compounding_reward_token_mint)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_token_swap_strategy(
+        &mut self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: TokenSwapSource,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account.load_mut()?.add_token_swap_strategy(
+            from_token_mint,
+            to_token_mint,
+            swap_source,
+        )?;
 
         self.create_fund_manager_updated_fund_event()
     }

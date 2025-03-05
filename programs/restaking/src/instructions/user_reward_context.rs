@@ -117,7 +117,6 @@ pub struct DeprecatingUserRewardAccountUpdateContext<'info> {
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.get_bump()?,
-        // DO NOT use has_one constraint, since reward_account is not safe yet
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

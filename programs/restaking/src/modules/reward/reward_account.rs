@@ -55,7 +55,7 @@ impl ZeroCopyHeader for RewardAccount {
 }
 
 impl RewardAccount {
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) {
+    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) -> Result<()> {
         if self.data_version == 0 {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
@@ -70,11 +70,15 @@ impl RewardAccount {
         //     self.max_reward_pools += REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_2 as u8;
         //     self.data_version = 43;
         // }
+
+        require_eq!(self.data_version, REWARD_ACCOUNT_CURRENT_VERSION);
+
+        Ok(())
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) {
-        self.initialize(self.bump, receipt_token_mint);
+    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) -> Result<()> {
+        self.initialize(self.bump, receipt_token_mint)
     }
 
     #[inline(always)]

@@ -26,12 +26,10 @@ pub struct FundManagerFundWrappedTokenInitialContext<'info> {
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub receipt_token_program: Program<'info, Token2022>,
-
     #[account(
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = fund_wrap_account,
+        associated_token::token_program = Token2022::id(),
     )]
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

@@ -13,37 +13,48 @@ pub struct UserRewardService<'info: 'a, 'a> {
 }
 
 impl<'info, 'a> UserRewardService<'info, 'a> {
+    pub fn validate_accounts(
+        receipt_token_mint: &InterfaceAccount<Mint>,
+        user: &AccountInfo,
+        user_signer_seeds: Option<&[&[u8]]>,
+        reward_account: &AccountLoader<RewardAccount>,
+        user_reward_account: &AccountLoader<UserRewardAccount>,
+    ) -> Result<()> {
+        let reward_account = reward_account.load()?;
+        let user_reward_account = user_reward_account.load()?;
+
+        if !user.is_signer {
+            let user_signer_seeds =
+                user_signer_seeds.ok_or_else(|| ProgramError::MissingRequiredSignature)?;
+            require_keys_eq!(
+                user.key(),
+                Pubkey::create_program_address(user_signer_seeds, &crate::ID)
+                    .map_err(|_| ProgramError::InvalidSeeds)?,
+            );
+        }
+        require_keys_eq!(user_reward_account.user, user.key());
+        require_keys_eq!(
+            user_reward_account.receipt_token_mint,
+            receipt_token_mint.key()
+        );
+        require_keys_eq!(reward_account.receipt_token_mint, receipt_token_mint.key());
+
+        Ok(())
+    }
+
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         user: &Signer,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
-        require_keys_eq!(user_reward_account.load()?.user, user.key());
-
-        let clock = Clock::get()?;
-        Ok(Self {
+        Self::validate_accounts(
             receipt_token_mint,
+            user,
+            None,
             reward_account,
             user_reward_account,
-            current_slot: clock.slot,
-        })
-    }
-
-    /// Allow off-curve users
-    pub fn new_with_user_seeds(
-        receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &AccountInfo,
-        user_signer_seeds: &[&[u8]],
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
-    ) -> Result<Self> {
-        require_keys_eq!(
-            user.key(),
-            Pubkey::create_program_address(user_signer_seeds, &crate::ID)
-                .map_err(|_| ProgramError::InvalidSeeds)?,
-        );
-        require_keys_eq!(user_reward_account.load()?.user, user.key());
+        )?;
 
         let clock = Clock::get()?;
         Ok(Self {

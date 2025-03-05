@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::*;
 use spl_tlv_account_resolution::account::ExtraAccountMeta;
 use spl_tlv_account_resolution::seeds::Seed;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
@@ -10,18 +9,13 @@ use crate::utils::PDASeeds;
 
 use super::*;
 
-pub struct FundReceiptTokenConfigurationService<'info: 'a, 'a> {
-    _receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    extra_account_meta_list: &'a AccountInfo<'info>,
+pub struct FundReceiptTokenConfigurationService<'a, 'info> {
+    extra_account_meta_list: &'a UncheckedAccount<'info>,
 }
 
-impl<'info, 'a> FundReceiptTokenConfigurationService<'info, 'a> {
-    pub fn new(
-        receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        extra_account_meta_list: &'a AccountInfo<'info>,
-    ) -> Result<Self> {
+impl<'a, 'info> FundReceiptTokenConfigurationService<'a, 'info> {
+    pub fn new(extra_account_meta_list: &'a UncheckedAccount<'info>) -> Result<Self> {
         Ok(Self {
-            _receipt_token_mint: receipt_token_mint,
             extra_account_meta_list,
         })
     }

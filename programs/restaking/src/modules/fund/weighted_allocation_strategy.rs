@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use std::ops::Index;
 
 use crate::errors;
 

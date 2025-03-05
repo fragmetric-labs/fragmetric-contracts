@@ -28,17 +28,14 @@ pub struct AdminFundWrapAccountRewardAccountInitialContext<'info> {
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub receipt_token_program: Program<'info, Token2022>,
-
     #[account(
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = fund_wrap_account,
+        associated_token::token_program = Token2022::id(),
     )]
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
@@ -87,17 +84,14 @@ pub struct AdminFundWrapAccountRewardAccountUpdateContext<'info> {
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub receipt_token_program: Program<'info, Token2022>,
-
     #[account(
         associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
         associated_token::authority = fund_wrap_account,
+        associated_token::token_program = Token2022::id(),
     )]
     pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = fund_account.get_bump()?,
         has_one = receipt_token_mint,
@@ -118,7 +112,6 @@ pub struct AdminFundWrapAccountRewardAccountUpdateContext<'info> {
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), fund_wrap_account.key().as_ref()],
         bump = fund_wrap_account_reward_account.get_bump()?,
-        // DO NOT use has_one constraint, since reward_account is not safe yet
     )]
     pub fund_wrap_account_reward_account: AccountLoader<'info, UserRewardAccount>,
 }

@@ -55,9 +55,9 @@ describe("initialize", async () => {
 
         expect(res0.fragJTOReward.dataVersion).eq(parseInt(restaking.getConstant('rewardAccountCurrentVersion')));
 
-        expect(res0.fragJTOReward.numRewards).eq(Object.values(restaking.rewardsMetadata).length);
+        expect(res0.fragJTOReward.numRewards).eq(Object.values(restaking.distributingRewardsMetadata).length);
         let i = 0;
-        for (const v of Object.values(restaking.rewardsMetadata)) {
+        for (const v of Object.values(restaking.distributingRewardsMetadata)) {
             const reward = res0.fragJTOReward.rewards1[i++];
             expect(restaking.binToString(reward.name)).eq(v.name.toString());
             expect(restaking.binToString(reward.description)).eq(v.description.toString());
@@ -117,7 +117,7 @@ describe("initialize", async () => {
         await Promise.all(
             Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
                 return vault.operators.map(operator => {
-                    return restaking.runFundManagerAddFundJitoRestakingVaultDelegation(vault.vault, operator);
+                    return restaking.runFundManagerAddJitoRestakingVaultDelegation(vault.vault, operator);
                 })
             }),
         );
@@ -145,5 +145,28 @@ describe("initialize", async () => {
         expect(fragJTOFundAccount.wrappedToken.enabled).eq(1);
         expect(fragJTOFundAccount.wrappedToken.mint.toString()).eq(restaking.knownAddress.wfragJTOTokenMint.toString());
         expect(wfragJTOMint.mintAuthority.toString()).eq(restaking.knownAddress.fragJTOFund.toString());
+    })
+
+    step("add restaking vault compoundin reward tokens", async () => {
+        const {fragJTOFund} = await restaking.runFundManagerAddRestakingVaultCompoundingRewardTokens();
+
+        expect(fragJTOFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);
+        Object.values(restaking.restakingVaultMetadata).forEach((vaultMetadata, i) => {
+            const vault = fragJTOFund.restakingVaults[i];
+            (vaultMetadata.compoundingRewards ?? []).forEach((rewardTokenMint, j) => {
+                expect(vault.compoundingRewardTokenMints[j].toString()).eq(rewardTokenMint.toString());
+            })
+        });
+    });
+
+    step("add token swap strategies", async () => {
+        const {fragJTOFund} = await restaking.runFundManagerAddTokenSwapStrategies();
+
+        expect(fragJTOFund.numTokenSwapStrategies).eq(Object.values(restaking.tokenSwapStrategies).length);
+        Object.values(restaking.tokenSwapStrategies).forEach((strategyMetadata, i) => {
+            const strategy = fragJTOFund.tokenSwapStrategies[i];
+            expect(strategy.fromTokenMint.toString()).eq(strategyMetadata.fromTokenMint.toString());
+            expect(strategy.toTokenMint.toString()).eq(strategyMetadata.toTokenMint.toString());
+        })
     })
 });

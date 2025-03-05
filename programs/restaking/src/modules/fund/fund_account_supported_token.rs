@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
@@ -7,7 +8,7 @@ use super::AssetState;
 
 #[zero_copy]
 #[repr(C)]
-pub struct SupportedToken {
+pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
     pub decimals: u8,
@@ -38,6 +39,7 @@ pub struct SupportedToken {
 }
 
 impl SupportedToken {
+    #[deny(clippy::wildcard_enum_match_arm)]
     pub fn initialize(
         &mut self,
         mint: Pubkey,
@@ -61,6 +63,8 @@ impl SupportedToken {
             TokenPricingSource::Mock { .. } => err!(ErrorCode::FundNotSupportedTokenError)?,
         }
 
+        *self = Zeroable::zeroed();
+
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
@@ -71,7 +75,7 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn set_sol_allocation_strategy(
+    pub fn set_sol_allocation_strategy(
         &mut self,
         weight: u64,
         sol_capacity_amount: u64,
@@ -82,7 +86,7 @@ impl SupportedToken {
         Ok(())
     }
 
-    pub(super) fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
+    pub fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
         require_gte!(
             self.token.operation_reserved_amount,
             token_amount,

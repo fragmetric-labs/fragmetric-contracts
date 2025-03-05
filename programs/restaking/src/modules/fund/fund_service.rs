@@ -1,29 +1,22 @@
-use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke;
-use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token::accessor::{amount, mint};
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use anchor_spl::{token_2022, token_interface};
-use std::cell::RefMut;
-use std::cmp::min;
 use std::ops::Neg;
 
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
 use crate::errors::ErrorCode;
+use crate::events;
 use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
 use crate::modules::reward;
 use crate::modules::reward::RewardService;
 use crate::utils::*;
-use crate::{events, utils};
 
-use super::commands::{
-    OperationCommandContext, OperationCommandEntry, SelfExecutable,
-    FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE,
-};
+use super::commands::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use super::*;
 
 pub struct FundService<'info: 'a, 'a> {
-    pub receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-    pub fund_account: &'a mut AccountLoader<'info, FundAccount>,
+    receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+    fund_account: &'a mut AccountLoader<'info, FundAccount>,
     current_timestamp: i64,
     current_slot: u64,
 }
@@ -48,7 +41,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         })
     }
 
-    // create a pricing service and register fund assets' value resolver
+    // create a pricing service and update current underlying assets' price
     pub(in crate::modules) fn new_pricing_service<I>(
         &mut self,
         pricing_sources: I,
@@ -85,7 +78,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         fund_account
             .get_normalized_token()
-            .iter()
+            .into_iter()
             .map(|normalized_token| &normalized_token.pricing_source)
             .chain(
                 fund_account
@@ -129,16 +122,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
 
-        {
-            // update fund asset values
-            let receipt_token_mint_key = self.fund_account.load()?.receipt_token_mint.key();
-            pricing_service.resolve_token_pricing_source(
-                &receipt_token_mint_key,
-                &TokenPricingSource::FragmetricRestakingFund {
-                    address: self.fund_account.key(),
-                },
-            )?;
-        }
+        // update fund asset values
+        let receipt_token_mint_key = self.fund_account.load()?.receipt_token_mint.key();
+        pricing_service.resolve_token_pricing_source(
+            &receipt_token_mint_key,
+            &TokenPricingSource::FragmetricRestakingFund {
+                address: self.fund_account.key(),
+            },
+        )?;
 
         {
             // the values being written below are informative, only for event emission.
@@ -188,7 +179,6 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             fund_account.receipt_token_value_updated_slot = self.current_slot;
 
             // now estimate withdrawal-request acceptable amount for each assets.
-            let receipt_token_value = fund_account.receipt_token_value.try_deserialize()?;
             let mut total_withdrawal_requested_receipt_token_amount = 0;
 
             // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
@@ -204,6 +194,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         match pricing_source {
                             None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                             Some(pricing_source) => {
+                                #[deny(clippy::wildcard_enum_match_arm)]
                                 match pricing_source {
                                     TokenPricingSource::SPLStakePool { .. }
                                     | TokenPricingSource::MarinadeStakePool { .. }
@@ -350,14 +341,17 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             self.current_timestamp,
         )?;
 
-        let (command, required_account_metas) = fund_account
+        let OperationCommandEntry {
+            command,
+            required_accounts: required_account_metas,
+        } = fund_account
             .operation
             .get_next_command()?
             .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?;
         // rearrange given accounts in required order
         // accounts = [...required_accounts, ...pricing_sources]
         let mut operation_command_accounts = Vec::with_capacity(
-            FUND_ACCOUNT_OPERATION_COMMAND_MAX_ACCOUNT_SIZE + pricing_source_accounts.len(),
+            OperationCommandEntry::MAX_ACCOUNT_SIZE + pricing_source_accounts.len(),
         );
         for required_account_meta in required_account_metas {
             if let Some(remaining_account) = remaining_accounts
@@ -648,10 +642,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 asset_user_amount_processing - asset.operation_reserved_amount;
             match &supported_token_mint {
                 Some(supported_token_mint) => {
-                    token_interface::transfer_checked(
+                    anchor_spl::token_interface::transfer_checked(
                         CpiContext::new_with_signer(
                             supported_token_program.as_ref().unwrap().to_account_info(),
-                            token_interface::TransferChecked {
+                            anchor_spl::token_interface::TransferChecked {
                                 from: fund_supported_token_treasury_account
                                     .as_ref()
                                     .unwrap()
@@ -1063,10 +1057,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             match supported_token_mint {
                 Some(supported_token_mint) => {
-                    token_interface::transfer_checked(
+                    anchor_spl::token_interface::transfer_checked(
                         CpiContext::new_with_signer(
                             supported_token_program.as_ref().unwrap().to_account_info(),
-                            token_interface::TransferChecked {
+                            anchor_spl::token_interface::TransferChecked {
                                 from: fund_supported_token_reserve_account
                                     .as_ref()
                                     .unwrap()
@@ -1147,7 +1141,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         program_supported_token_revenue_account.unwrap();
                     let supported_token_program = supported_token_program.unwrap();
                     if !program_supported_token_revenue_account.is_initialized() {
-                        invoke(
+                        anchor_lang::solana_program::program::invoke(
                             &spl_associated_token_account::instruction::create_associated_token_account(
                                 &payer.key(),
                                 &program_revenue_account.key(),
@@ -1166,10 +1160,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         )?;
                     }
 
-                    token_interface::transfer_checked(
+                    anchor_spl::token_interface::transfer_checked(
                         CpiContext::new_with_signer(
                             supported_token_program.to_account_info(),
-                            token_interface::TransferChecked {
+                            anchor_spl::token_interface::TransferChecked {
                                 from: fund_supported_token_treasury_account.to_account_info(),
                                 to: program_supported_token_revenue_account.to_account_info(),
                                 mint: supported_token_mint.to_account_info(),
@@ -1306,10 +1300,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         match supported_token_mint {
             Some(supported_token_mint) => {
-                token_interface::transfer_checked(
+                anchor_spl::token_interface::transfer_checked(
                     CpiContext::new(
                         supported_token_program.unwrap().to_account_info(),
-                        token_interface::TransferChecked {
+                        anchor_spl::token_interface::TransferChecked {
                             from: operator_supported_token_account.unwrap().to_account_info(),
                             to: fund_supported_token_reserve_account
                                 .unwrap()

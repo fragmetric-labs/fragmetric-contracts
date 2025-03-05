@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use std::mem::discriminant;
 
 use super::commands::*;
 
@@ -22,7 +21,7 @@ pub(super) struct OperationState {
 
     next_command: OperationCommandEntryPod,
 
-    _reserved: [u8; 640],
+    _reserved: [u8; 49],
 }
 
 impl OperationState {
@@ -39,12 +38,11 @@ impl OperationState {
             self.no_transition = 0;
             self.next_sequence = 0;
             self.set_command(
-                reset_command
-                    .or_else(|| Some(InitializeCommand::default().without_required_accounts())),
+                reset_command.or_else(|| Some(Default::default())),
                 current_slot,
                 current_timestamp,
             )?;
-            self.no_transition = if has_reset_command { 1 } else { 0 };
+            self.no_transition = has_reset_command as u8;
         }
         Ok(())
     }
@@ -58,10 +56,12 @@ impl OperationState {
     ) -> Result<()> {
         // deal with no_transition state, to adjust next command.
         if self.no_transition == 1 {
-            let prev_command: Option<OperationCommandEntry> =
-                self.next_command.try_deserialize().unwrap_or_default();
-            if let (Some(prev_entry), Some(next_entry)) = (&prev_command, &next_command) {
-                if discriminant(&prev_entry.command) != discriminant(&next_entry.command) {
+            let prev = self.next_command.discriminant();
+            let next = next_command
+                .as_ref()
+                .map(|command| command.command.discriminant());
+            if let (Some(prev), Some(next)) = (prev, next) {
+                if prev != next {
                     // when the type of the command changes on no_transition state, ignore the next command and clear no_transition state.
                     msg!(
                         "COMMAND#{} reset due to no_transition state",
@@ -87,17 +87,13 @@ impl OperationState {
         };
         match &next_command {
             Some(next_command) => next_command.serialize_as_pod(&mut self.next_command)?,
-            None => self.next_command.clear(),
+            None => self.next_command.set_none(),
         };
         Ok(())
     }
 
-    pub fn get_next_command(
-        &self,
-    ) -> Result<Option<(OperationCommand, Vec<OperationCommandAccountMeta>)>> {
-        Ok(self
-            .next_command
-            .try_deserialize()?
-            .map(|entry: OperationCommandEntry| (entry.command, entry.required_accounts)))
+    #[inline(always)]
+    pub fn get_next_command(&self) -> Result<Option<OperationCommandEntry>> {
+        self.next_command.try_deserialize()
     }
 }

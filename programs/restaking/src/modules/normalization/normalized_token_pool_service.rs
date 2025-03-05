@@ -24,11 +24,11 @@ impl Drop for NormalizedTokenPoolService<'_, '_> {
 }
 
 impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
-    pub fn new(
-        normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        normalized_token_program: &'a Program<'info, Token>,
-    ) -> Result<Self> {
+    pub fn validate_accounts(
+        normalized_token_pool_account: &Account<NormalizedTokenPoolAccount>,
+        normalized_token_mint: &InterfaceAccount<Mint>,
+        normalized_token_program: &Program<Token>,
+    ) -> Result<()> {
         require!(
             normalized_token_pool_account.is_latest_version(),
             ErrorCode::InvalidAccountDataVersionError
@@ -41,6 +41,20 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
             normalized_token_pool_account.normalized_token_program,
             normalized_token_program.key(),
         );
+
+        Ok(())
+    }
+
+    pub fn new(
+        normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
+        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+        normalized_token_program: &'a Program<'info, Token>,
+    ) -> Result<Self> {
+        Self::validate_accounts(
+            normalized_token_pool_account,
+            normalized_token_mint,
+            normalized_token_program,
+        )?;
 
         let clock = Clock::get()?;
         Ok(Self {

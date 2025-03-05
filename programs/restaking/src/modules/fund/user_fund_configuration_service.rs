@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::*;
 
+use crate::events;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds, SystemProgramExt};
-use crate::{events, modules};
 
 use super::*;
 

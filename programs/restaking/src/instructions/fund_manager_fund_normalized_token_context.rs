@@ -12,7 +12,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[derive(Accounts)]
 pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
-    pub admin: Signer<'info>,
+    pub fund_manager: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 
@@ -45,7 +45,6 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
     pub fund_normalized_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [NormalizedTokenPoolAccount::SEED, normalized_token_mint.key().as_ref()],
         bump = normalized_token_pool_account.get_bump(),
         has_one = normalized_token_mint,
