@@ -47,11 +47,23 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: I,
     ) -> Result<PricingService<'info>>
     where
-        I: IntoIterator<Item = &'info AccountInfo<'info>>,
+        I: IntoIterator<Item = &'info AccountInfo<'info>> + Clone,
         I::IntoIter: ExactSizeIterator,
     {
-        let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(self.fund_account.as_account_info());
+        let mut pricing_service = if pricing_sources
+            .clone()
+            .into_iter()
+            .find(|source| source.key() == self.fund_account.key())
+            .is_some()
+        {
+            PricingService::new(pricing_sources)
+        } else {
+            PricingService::new(
+                pricing_sources
+                    .into_iter()
+                    .chain([self.fund_account.as_account_info()]),
+            )
+        };
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;

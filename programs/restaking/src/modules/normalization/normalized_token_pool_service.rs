@@ -501,10 +501,19 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         &mut self,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<PricingService<'info>> {
-        let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(
-                self.normalized_token_pool_account.as_account_info(),
-            );
+        let mut pricing_service = if pricing_sources
+            .iter()
+            .find(|source| source.key() == self.normalized_token_pool_account.key())
+            .is_some()
+        {
+            PricingService::new(pricing_sources)
+        } else {
+            PricingService::new(
+                pricing_sources
+                    .iter()
+                    .chain([self.normalized_token_pool_account.as_account_info()]),
+            )
+        };
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;
