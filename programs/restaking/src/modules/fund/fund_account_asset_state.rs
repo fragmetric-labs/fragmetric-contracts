@@ -314,7 +314,7 @@ impl AssetState {
     }
 
     /// based on asset normal reserve configuration, the normal reserve amount relative to total_asset_amount of the fund.
-    fn get_withdrawal_normal_reserved_amount(
+    fn get_withdrawal_normal_reserve_amount(
         &self,
         receipt_token_value: &TokenValue,
     ) -> Result<u64> {
@@ -327,8 +327,8 @@ impl AssetState {
     }
 
     /// get asset amount required for withdrawal in current state, including normal reserve if there is remaining asset_operation_reserved_amount after withdrawal obligation met.
-    /// asset_withdrawal_obligated_reserved_amount + MIN(asset_withdrawal_normal_reserved_amount, MAX(0, asset_operation_reserved_amount - asset_withdrawal_obligated_reserved_amount))
-    fn get_total_withdrawal_reserved_amount(
+    /// asset_withdrawal_obligated_reserve_amount + MIN(asset_withdrawal_normal_reserve_amount, MAX(0, asset_operation_reserved_amount - asset_withdrawal_obligated_reserve_amount))
+    fn get_total_withdrawal_reserve_amount(
         &self,
         receipt_token_mint: &Pubkey,
         receipt_token_value: &TokenValue,
@@ -336,19 +336,18 @@ impl AssetState {
         with_normal_reserve: bool,
     ) -> Result<u64> {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
-        let asset_withdrawal_obligated_reserved_amount = pricing_service
-            .get_token_amount_as_asset(
-                receipt_token_mint,
-                self.get_receipt_token_withdrawal_obligated_amount(),
-                supported_token_mint.as_ref(),
-            )?;
+        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_asset(
+            receipt_token_mint,
+            self.get_receipt_token_withdrawal_obligated_amount(),
+            supported_token_mint.as_ref(),
+        )?;
 
-        Ok(asset_withdrawal_obligated_reserved_amount
+        Ok(asset_withdrawal_obligated_reserve_amount
             + if with_normal_reserve {
-                self.get_withdrawal_normal_reserved_amount(receipt_token_value)?
+                self.get_withdrawal_normal_reserve_amount(receipt_token_value)?
                     .min(
                         self.operation_reserved_amount
-                            .saturating_sub(asset_withdrawal_obligated_reserved_amount),
+                            .saturating_sub(asset_withdrawal_obligated_reserve_amount),
                     )
             } else {
                 0
@@ -364,7 +363,7 @@ impl AssetState {
         pricing_service: &PricingService,
     ) -> Result<i128> {
         Ok(self.operation_reserved_amount as i128
-            - self.get_total_withdrawal_reserved_amount(
+            - self.get_total_withdrawal_reserve_amount(
                 receipt_token_mint,
                 receipt_token_value,
                 pricing_service,

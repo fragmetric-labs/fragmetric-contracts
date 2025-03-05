@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -836,13 +838,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         let fund_account = self.fund_account.load()?;
         let asset_amount_required = u64::try_from(
-            -fund_account
+            fund_account
                 .get_asset_net_operation_reserved_amount(
                     supported_token_mint_key,
                     false,
                     pricing_service,
                 )?
-                .min(0),
+                .min(0)
+                .neg(),
         )?;
 
         Ok((

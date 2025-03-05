@@ -251,7 +251,7 @@ pub enum ErrorCode {
     #[msg("fund: token swap strategy already registered")]
     FundTokenSwapStrategyAlreadyRegistered,
 
-    #[msg("reward: exceeded max token swap strategies")]
+    #[msg("fund: exceeded max token swap strategies")]
     FundExceededMaxTokenSwapStrategiesError,
 
     #[msg("fund: token swap strategy not found")]

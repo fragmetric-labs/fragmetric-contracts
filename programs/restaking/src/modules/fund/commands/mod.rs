@@ -313,6 +313,7 @@ impl OperationCommand {
     }
 
     pub fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
+        pod.set_none();
         pod.discriminant = self.discriminant();
         self.serialize(&mut pod.buffer.as_mut_slice())?;
         Ok(())
@@ -340,6 +341,7 @@ impl OperationCommandPod {
 
     pub fn set_none(&mut self) {
         self.discriminant = 0;
+        self.buffer.fill(0);
     }
 
     pub fn try_deserialize(&self) -> Result<Option<OperationCommand>> {
