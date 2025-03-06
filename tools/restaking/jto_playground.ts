@@ -78,6 +78,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             () => this.runFundManagerInitializeFundWrappedToken(), // 11
             () => this.runFundManagerAddRestakingVaultCompoundingRewardTokens(), // 12
             () => this.runFundManagerAddTokenSwapStrategies(), // 13
+            () => this.runFundManagerAddJitoRestakingVaultDelegations(), // 14
         ];
     }
 
@@ -442,23 +443,29 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
     private _rewardTokenMetadata: ReturnType<typeof this._getRewardTokenMetadata>;
     private _getRewardTokenMetadata() {
-        return {
-            jitoSOL: {
-                mint: this.isDevnet
-                    ? this.getConstantAsPublicKey("devnetJitosolMintAddress")
-                    : this.getConstantAsPublicKey("mainnetJitosolMintAddress"),
-                program: spl.TOKEN_PROGRAM_ID,
-                decimals: 9,
-                // for test
-                airdropSource: {
-                    splStakePool: {
-                        address: this.isDevnet
-                            ? this.getConstantAsPublicKey("devnetJitosolStakePoolAddress")
-                            : this.getConstantAsPublicKey("mainnetJitosolStakePoolAddress"),
+        if (this.isDevnet) {
+            return {
+                jitoSOL: {
+                    mint: this.getConstantAsPublicKey("devnetJitosolMintAddress"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    decimals: 9,
+                }
+            }
+        } else {
+            return {
+                jitoSOL: {
+                    mint: this.getConstantAsPublicKey("mainnetJitosolMintAddress"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    decimals: 9,
+                    // for test
+                    airdropSource: {
+                        splStakePool: {
+                            address: this.getConstantAsPublicKey("mainnetJitosolStakePoolAddress"),
+                        }
                     }
                 }
             }
-        };
+        }
     }
 
     public get pricingSourceAccounts() {
@@ -507,54 +514,38 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async tryAirdropJTO(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
-        const txData = await Promise.all(
-            Object.entries(this.supportedTokenMetadata).map(async ([_, token]) => {
-                const ata = await spl.getOrCreateAssociatedTokenAccount(
-                    this.connection,
-                    this.wallet,
-                    token.mint,
-                    account,
-                    false,
-                    "confirmed",
-                    {
-                        skipPreflight: false,
-                        commitment: "confirmed",
-                    },
-                    token.program,
-                );
-
-                const orcaDEXLiquidityPoolAddress: web3.PublicKey | null = token.pricingSource["orcaDexLiquidityPool"]?.address ?? null;
-                if (orcaDEXLiquidityPoolAddress) {
-                    return {
-                        instructions: [
-                            spl.createMintToInstruction(
-                                token.mint,
-                                ata.address,
-                                this.keychain.getPublicKey('ALL_MINT_AUTHORITY'),
-                                lamports.toNumber(),
-                                [],
-                                token.program,
-                            ),
-                        ],
-                        signers: [
-                            this.keychain.getKeypair('ALL_MINT_AUTHORITY')
-                        ]
-                    };
-                }
-
-                return {instructions: [], signers: []};
-            })
+        const symbol = 'JTO'
+        const token = this.supportedTokenMetadata[symbol];
+        const ata = spl.getAssociatedTokenAddressSync(
+            token.mint,
+            account,
+            false,
+            token.program,
         );
 
-        for (const {instructions, signers} of txData) {
-            await this.run({instructions, signers});
-        }
+        await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    ata,
+                    account,
+                    token.mint,
+                    token.program,
+                ),
+                spl.createMintToInstruction(
+                    token.mint,
+                    ata,
+                    this.keychain.getPublicKey('ALL_MINT_AUTHORITY'),
+                    lamports.toNumber(),
+                    [],
+                    token.program,
+                ),
+            ],
+            signerNames: ["ALL_MINT_AUTHORITY"],
+        })
 
-        for (const [symbol, token] of Object.entries(this.supportedTokenMetadata)) {
-            const ata = await this.getUserSupportedTokenAccount(account, symbol as any);
-            const balance = new BN(ata.amount.toString());
-            logger.debug(`${symbol} airdropped (+${this.lamportsToX(lamports, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, symbol)}`.padEnd(LOG_PAD_LARGE), ata.address.toString());
-        }
+        const balance = await this.getUserSupportedTokenAccount(account, symbol).then(a => new BN(a.amount.toString()));
+        logger.debug(`JTO airdropped (+${this.lamportsToX(lamports, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, 'JTO')}`.padEnd(LOG_PAD_LARGE), ata.toString());
     }
 
     public async tryAirdropRewardToken(vault: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
@@ -1442,8 +1433,32 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         });
     }
 
+    public async runFundManagerAddJitoRestakingVaultDelegations() {
+        const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
+            vault.operators.map(operator =>
+                this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        vaultAccount: vault.vault,
+                        vaultOperator: operator,
+                    })
+                    .remainingAccounts(this.pricingSourceAccounts)
+                    .instruction(),
+            )
+        );
+        const {event, error} = (instructions.length > 0) ? await this.run({
+            instructions,
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedFund"],
+        }) : {event: null, error: null};
+
+        logger.notice(`initialized fragJTO jito vaults operator delegations`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
+        const fragJTOFund = await this.getFragJTOFundAccount();
+        return {event, error, fragJTOFund};
+    }
+
     public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
-        await this.run({
+        const {event, error} = await this.run({
             instructions: [
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
                     .accountsPartial({
@@ -1458,7 +1473,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ['fundManagerUpdatedFund'],
         });
 
-        logger.notice("jito vault operator initialized".padEnd(LOG_PAD_LARGE), operator.toString());
+        logger.notice("initialized fragJTO jito vault operator delegation".padEnd(LOG_PAD_LARGE), operator.toString());
+        const fragJTOFund = await this.getFragJTOFundAccount();
+        return {event, error, fragJTOFund};
     }
 
     // for test - create and initialize operator
@@ -2180,8 +2197,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runFundManagerAddTokenSwapStrategy(
-        strategy: typeof this.tokenSwapStrategies[number],
+        fromTokenMint: web3.PublicKey,
     ) {
+        const strategy = this.tokenSwapStrategies.find(strategy => strategy.fromTokenMint.equals(fromTokenMint));
         const {event, error} = await this.run({
             instructions: [
                 this.methods.fundManagerAddTokenSwapStrategy(

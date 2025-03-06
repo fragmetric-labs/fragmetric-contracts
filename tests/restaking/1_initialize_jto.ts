@@ -113,14 +113,16 @@ describe("initialize", async () => {
         }
     });
 
-    step("initialize vault delegation at fund account", async function() {
-        await Promise.all(
-            Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
-                return vault.operators.map(operator => {
-                    return restaking.runFundManagerAddJitoRestakingVaultDelegation(vault.vault, operator);
-                })
-            }),
-        );
+    step("initialize jito vault delegation at fund account", async function() {
+        const {fragJTOFund} = await restaking.runFundManagerAddJitoRestakingVaultDelegations();
+
+        Object.values(restaking.restakingVaultMetadata).forEach((v, i) => {
+            const vault = fragJTOFund.restakingVaults[i];
+            expect(vault.numDelegations).eq(v.operators.length);
+            v.operators.forEach((operator, i) => {
+                expect(vault.delegations[i].operator.toString()).eq(operator.toString());
+            })
+        })
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
@@ -162,7 +164,7 @@ describe("initialize", async () => {
     step("add token swap strategies", async () => {
         const {fragJTOFund} = await restaking.runFundManagerAddTokenSwapStrategies();
 
-        expect(fragJTOFund.numTokenSwapStrategies).eq(Object.values(restaking.tokenSwapStrategies).length);
+        expect(fragJTOFund.numTokenSwapStrategies).eq(restaking.tokenSwapStrategies.length);
         Object.values(restaking.tokenSwapStrategies).forEach((strategyMetadata, i) => {
             const strategy = fragJTOFund.tokenSwapStrategies[i];
             expect(strategy.fromTokenMint.toString()).eq(strategyMetadata.fromTokenMint.toString());
