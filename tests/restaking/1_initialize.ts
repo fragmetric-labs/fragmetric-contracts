@@ -132,7 +132,8 @@ describe("initialize", async () => {
     });
 
     step("initialize fund jito restaking vault", async () => {
-        await Promise.all(Object.values(restaking.restakingVaultMetadata).map(v => restaking.runAdminSetSecondaryAdminForJitoVault(v.vault)));
+        await Promise.all(Object.values(restaking.restakingVaultMetadata).map(v =>
+            restaking.runAdminSetSecondaryAdminForJitoVault(v.vault, "DELEGATION_ADMIN")));
         const {fragSOLFund} = await restaking.runFundManagerInitializeFundJitoRestakingVaults();
 
         expect(fragSOLFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);

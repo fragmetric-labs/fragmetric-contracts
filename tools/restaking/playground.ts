@@ -1685,97 +1685,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultTokenAccount, fragSOLFundJitoFeeWalletTokenAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
-    // for test - create jito vault
-    public async runAdminCreateJitoVault(vstMint: web3.PublicKey, depositFeeBps = 0, withdrawalFeeBps = 0, rewardFeeBps = 0, vstDecimals = 9, authority = this.keychain.getKeypair("ADMIN")) {
-        const vrtMint = web3.Keypair.generate();
-        const InitializeVaultInstructionDataSize = {
-            discriminator: 1, // u8
-            depositFeeBps: 2, // u16
-            withdrawalFeeBps: 2, // u16
-            rewardFeeBps: 2, /// u16
-            decimals: 1, // u8
-        };
-
-        const base = web3.Keypair.generate();
-        const vaultPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("vault"), base.publicKey.toBuffer()],
-            this.knownAddress.jitoVaultProgram,
-        );
-
-        const discriminator = 1;
-        const data = Buffer.alloc(
-            InitializeVaultInstructionDataSize.discriminator +
-            InitializeVaultInstructionDataSize.depositFeeBps +
-            InitializeVaultInstructionDataSize.withdrawalFeeBps +
-            InitializeVaultInstructionDataSize.rewardFeeBps +
-            InitializeVaultInstructionDataSize.decimals
-        );
-        logger.notice("vst mint".padEnd(LOG_PAD_LARGE), vstMint.toString());
-        logger.notice("vault account".padEnd(LOG_PAD_LARGE), vaultPublicKey[0].toString());
-        logger.notice("vrt mint".padEnd(LOG_PAD_LARGE), vrtMint.publicKey.toString());
-
-        let offset = 0;
-        data.writeUInt8(discriminator, offset);
-        data.writeUInt16LE(depositFeeBps, offset += InitializeVaultInstructionDataSize.discriminator);
-        data.writeUInt16LE(withdrawalFeeBps, offset += InitializeVaultInstructionDataSize.depositFeeBps);
-        data.writeUint16LE(rewardFeeBps, offset += InitializeVaultInstructionDataSize.withdrawalFeeBps);
-        data.writeUInt8(vstDecimals, offset += InitializeVaultInstructionDataSize.rewardFeeBps);
-
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vaultPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vrtMint.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vstMint,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: base.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: spl.TOKEN_PROGRAM_ID,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
-
-        await this.run({
-            instructions: [ix],
-            signers: [authority, vrtMint, base],
-        });
-    }
-
     public async runFundManagerAddJitoRestakingVaultDelegations() {
         const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
             vault.operators.map(operator =>
@@ -1821,361 +1730,297 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLFund};
     }
 
-    // for test - create and initialize operator
-    public async runAdminInitializeJitoRestakingOperator(operatorFeeBps = 0, authority = this.keychain.getKeypair("ADMIN")) {
+    // below functions are auxillary functions for jito instructions.
+    private getPublicKey(authority: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS) {
+        if (authority instanceof web3.Keypair)  return authority.publicKey;
+        if (authority instanceof web3.PublicKey) return authority;
+        return this.keychain.getPublicKey(authority);
+    }
+    private getSigners(...keypairOrNames: (web3.Keypair | KEYCHAIN_KEYS)[]) {
+        const signers = keypairOrNames.filter(keypairOrName => keypairOrName instanceof web3.Keypair) as web3.Signer[];
+        const signerNames = keypairOrNames.filter(keypairOrName => !(keypairOrName instanceof web3.Keypair)) as KEYCHAIN_KEYS[];
+        return { signers, signerNames };
+    }
+    private getAccountMeta(
+        account: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS,
+        ...signerOrWritable: ("SIGNER" | "WRITABLE")[]
+    ) {
+        const pubkey = this.getPublicKey(account);
+        const isSigner = signerOrWritable.includes("SIGNER");
+        const isWritable = signerOrWritable.includes("WRITABLE");
+        return {pubkey, isSigner, isWritable};
+    }
+
+    // need for operation & test environment setup - create jito vault
+    public async runAdminCreateJitoRestakingVault(
+        vstMint: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        vrtMint = web3.Keypair.generate(),
+        base = web3.Keypair.generate(),
+        depositFeeBps = 0,
+        withdrawalFeeBps = 0,
+        rewardFeeBps = 0,
+        vstDecimals = 9,
+        initializeTokenAmount = BigInt(0),
+    ) {
+        const [vaultPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault"), base.publicKey.toBuffer()],
+            this.knownAddress.jitoVaultProgram
+        );
+        const [burnVaultPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("burn_vault"), base.publicKey.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        const authorityVstTokenAccount = spl.getAssociatedTokenAddressSync(vstMint, this.getPublicKey(authority), true);
+        const vaultVstTokenAccount = spl.getAssociatedTokenAddressSync(vstMint, vaultPublicKey, true);
+        const burnVaultVrtTokenAccount = spl.getAssociatedTokenAddressSync(vrtMint.publicKey, burnVaultPublicKey, true);
+        logger.debug("vst mint".padEnd(LOG_PAD_LARGE), vstMint.toString());
+        logger.debug("vrt mint".padEnd(LOG_PAD_LARGE), vrtMint.publicKey.toString());
+
+        const InitializeVaultInstructionDataSize = {
+            discriminator: 1, // u8
+            depositFeeBps: 2, // u16
+            withdrawalFeeBps: 2, // u16
+            rewardFeeBps: 2, /// u16
+            decimals: 1, // u8
+            initializeTokenAmount: 8, // u64
+        };
+
+        const discriminator = 1;
+        const data = Buffer.alloc(Object.values(InitializeVaultInstructionDataSize).reduce((x, y) => x + y));
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset); offset += InitializeVaultInstructionDataSize.discriminator;
+        data.writeUInt16LE(depositFeeBps, offset); offset += InitializeVaultInstructionDataSize.depositFeeBps;
+        data.writeUInt16LE(withdrawalFeeBps, offset); offset += InitializeVaultInstructionDataSize.withdrawalFeeBps;
+        data.writeUint16LE(rewardFeeBps, offset); offset += InitializeVaultInstructionDataSize.rewardFeeBps;
+        data.writeUInt8(vstDecimals, offset); offset += InitializeVaultInstructionDataSize.decimals;
+        data.writeBigUInt64LE(initializeTokenAmount, offset); offset += InitializeVaultInstructionDataSize.initializeTokenAmount;
+
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig, "WRITABLE"),
+                this.getAccountMeta(vaultPublicKey, "WRITABLE"),
+                this.getAccountMeta(vrtMint, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(vstMint),
+                this.getAccountMeta(authorityVstTokenAccount, "WRITABLE"),
+                this.getAccountMeta(vaultVstTokenAccount, "WRITABLE"),
+                this.getAccountMeta(burnVaultPublicKey),
+                this.getAccountMeta(burnVaultVrtTokenAccount, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(base, "SIGNER"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+                this.getAccountMeta(spl.TOKEN_PROGRAM_ID),
+                this.getAccountMeta(spl.ASSOCIATED_TOKEN_PROGRAM_ID),
+            ],
+            data,
+        });
+
+        await this.run({
+            instructions: [ix],
+            ...this.getSigners(vrtMint, authority, base),
+        });
+
+        logger.notice("created jito restaking vault".padEnd(LOG_PAD_LARGE), vaultPublicKey.toString);
+
+        return { vault: vaultPublicKey };
+    }
+
+    // need for test environment setup - create jito operator
+    public async runAdminCreateJitoRestakingOperator(
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        base = web3.Keypair.generate(),
+        operatorFeeBps = 0,
+    ) {
+        const [operatorPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("operator"), base.publicKey.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+
         const InitializeOperatorInstructionDataSize = {
             discriminator: 1, // u8
             operatorFeeBps: 2, // u16
         };
 
-        const base = web3.Keypair.generate();
-        const operatorPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("operator"), base.publicKey.toBuffer()],
-            this.knownAddress.jitoRestakingProgram,
-        );
-        logger.notice(`operator key`.padEnd(LOG_PAD_LARGE), operatorPublicKey.toString());
-
         const discriminator = 2;
-        const data = Buffer.alloc(
-            InitializeOperatorInstructionDataSize.discriminator +
-            InitializeOperatorInstructionDataSize.operatorFeeBps
-        );
+        const data = Buffer.alloc(Object.values(InitializeOperatorInstructionDataSize).reduce((x, y) => x + y));
 
         let offset = 0;
-        data.writeUInt8(discriminator, offset);
-        data.writeUInt16LE(operatorFeeBps, offset += InitializeOperatorInstructionDataSize.discriminator);
+        data.writeUInt8(discriminator, offset); offset += InitializeOperatorInstructionDataSize.discriminator;
+        data.writeUInt16LE(operatorFeeBps, offset); offset += InitializeOperatorInstructionDataSize.operatorFeeBps;
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoRestakingProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoRestakingConfig,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: operatorPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: base.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoRestakingProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoRestakingConfig, "WRITABLE"),
+                this.getAccountMeta(operatorPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(base, "SIGNER"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, base],
+            ...this.getSigners(authority, base),
         });
+
+        logger.notice("created jito restaking operator".padEnd(LOG_PAD_LARGE), operatorPublicKey.toString());
 
         return { operator: operatorPublicKey };
     }
 
-    // for test - create and initialize ncn
-    public async runAdminJitoInitializeNcn(authority = this.keychain.getKeypair("ADMIN")) {
+    // no use
+    public async runAdminCreateJitoRestakingNcn(
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        base = web3.Keypair.generate(),
+    ) {
+        const [ncnPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("ncn"), base.publicKey.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+
         const InitializeNcnInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const base = web3.Keypair.generate();
-        const ncnPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("ncn"), base.publicKey.toBuffer()],
+        const discriminator = 1;
+        const data = Buffer.alloc(InitializeNcnInstructionDataSize.discriminator);
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset);
+
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoRestakingProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoRestakingConfig, "WRITABLE"),
+                this.getAccountMeta(ncnPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(base, "SIGNER"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
+
+        await this.run({
+            instructions: [ix],
+            ...this.getSigners(authority, base),
+        });
+
+        logger.notice("created jito restaking ncn".padEnd(LOG_PAD_LARGE), ncnPublicKey.toString());
+
+        return { ncn: ncnPublicKey };
+    }
+
+    // need for test environment setup - initialize operator_vault_ticket
+    public async runAdminInitializeJitoOperatorVaultTicket(
+        operator: web3.PublicKey,
+        vault: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        const [operatorVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
             this.knownAddress.jitoRestakingProgram,
         );
-        logger.notice("ncn key".padEnd(LOG_PAD_LARGE), ncnPublicKey[0].toString());
+        logger.debug(`operator`.padEnd(LOG_PAD_LARGE), operator.toString());
+        logger.debug(`vault`.padEnd(LOG_PAD_LARGE), vault.toString());
 
-        const discriminator = 1;
-        const data = Buffer.alloc(
-            InitializeNcnInstructionDataSize.discriminator
-        );
-
-        let offset = 0;
-        data.writeUInt8(discriminator, offset);
-
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoRestakingProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoRestakingConfig,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: ncnPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: base.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
-
-        await this.run({
-            instructions: [ix],
-            signers: [authority, base],
-        });
-    }
-
-    // for test - delegate jito vault token account
-    public async runAdminJitoVaultDelegateJitoSOLTokenAccount() {
-        const DelegateTokenAccountInstructionDataSize = {
-            discriminator: 1, // u8
-        };
-
-        const discriminator = 20;
-        const data = Buffer.alloc(
-            DelegateTokenAccountInstructionDataSize.discriminator
-        );
-
-        let offset = 0;
-        data.writeUInt8(discriminator, offset);
-
-        ///   0. `[]` config
-        ///   1. `[]` vault
-        ///   2. `[signer]` delegate_asset_admin
-        ///   3. `[]` token_mint
-        ///   4. `[writable]` token_account
-        ///   5. `[]` delegate
-        const admin = this.keychain.getKeypair("ADMIN");
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.restakingVaultMetadata.jitoNSOLVault.vault,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: admin.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.supportedTokenMetadata.jitoSOL.mint,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: spl.getAssociatedTokenAddressSync(
-                            this.supportedTokenMetadata.jitoSOL.mint,
-                            this.restakingVaultMetadata.jitoNSOLVault.vault,
-                            true,
-                            this.supportedTokenMetadata.jitoSOL.program,
-                        ),
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: admin.publicKey,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.supportedTokenMetadata.jitoSOL.program,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
-
-        await this.run({
-            instructions: [ix],
-            signers: [admin, this.wallet],
-        });
-    }
-
-    // for test - initialize operator_vault_ticket
-    public async runAdminInitializeOperatorVaultTicket(vault: web3.PublicKey, operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
         const InitializeOperatorVaultTicketInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const operatorVaultTicketPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
-            this.knownAddress.jitoRestakingProgram,
-        );
-        logger.notice(`operator_vault_ticket key`.padEnd(LOG_PAD_LARGE), operatorVaultTicketPublicKey.toString());
-
         const discriminator = 5;
-        const data = Buffer.alloc(
-            InitializeOperatorVaultTicketInstructionDataSize.discriminator
-        );
+        const data = Buffer.alloc(InitializeOperatorVaultTicketInstructionDataSize.discriminator);
 
         let offset = 0;
         data.writeUInt8(discriminator, offset);
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoRestakingProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoRestakingConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: operator,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: operatorVaultTicketPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.wallet.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoRestakingProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoRestakingConfig),
+                this.getAccountMeta(operator, "WRITABLE"),
+                this.getAccountMeta(vault),
+                this.getAccountMeta(operatorVaultTicketPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(this.wallet, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, this.wallet],
+            ...this.getSigners(authority),
         });
+
+        logger.notice(`initialized jito restaking operator_vault_ticket`.padEnd(LOG_PAD_LARGE), operatorVaultTicketPublicKey.toString());
 
         return { operatorVaultTicket: operatorVaultTicketPublicKey };
     }
 
-    // need for operation - initialize vault_operator_delegation
-    public async runAdminInitializeVaultOperatorDelegation(vault: web3.PublicKey, operator: web3.PublicKey, operatorVaultTicket: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
+    // need for operation & test environment setup - initialize vault_operator_delegation
+    public async runAdminInitializeJitoVaultOperatorDelegation(
+        vault: web3.PublicKey,
+        operator: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        const [operatorVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+        const [vaultOperatorDelegationPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault_operator_delegation"), vault.toBuffer(), operator.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        logger.debug(`vault`.padEnd(LOG_PAD_LARGE), vault.toString());
+        logger.debug(`operator`.padEnd(LOG_PAD_LARGE), operator.toString());
+
         const InitializeVaultOperatorDelegationInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const vaultOperatorDelegationPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("vault_operator_delegation"), vault.toBuffer(), operator.toBuffer()],
-            this.knownAddress.jitoVaultProgram,
-        );
-        logger.notice(`vault_operator_delegation key`.padEnd(LOG_PAD_LARGE), vaultOperatorDelegationPublicKey.toString());
-
         const discriminator = 3;
-        const data = Buffer.alloc(
-            InitializeVaultOperatorDelegationInstructionDataSize.discriminator
-        );
+        const data = Buffer.alloc(InitializeVaultOperatorDelegationInstructionDataSize.discriminator);
 
         let offset = 0;
         data.writeUInt8(discriminator, offset);
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: operator,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: operatorVaultTicket,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vaultOperatorDelegationPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.wallet.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig),
+                this.getAccountMeta(vault, "WRITABLE"),
+                this.getAccountMeta(operator, "WRITABLE"),
+                this.getAccountMeta(operatorVaultTicketPublicKey),
+                this.getAccountMeta(vaultOperatorDelegationPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(this.wallet, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, this.wallet],
+            ...this.getSigners(authority),
         });
+
+        logger.notice(`initialized jito restaking vault_operator_delegation`.padEnd(LOG_PAD_LARGE), vaultOperatorDelegationPublicKey.toString());
 
         return { vaultOperatorDelegation: vaultOperatorDelegationPublicKey };
     }
 
-    // need for operation - set vault_delegation_admin to fund_account
-    public async runAdminSetSecondaryAdminForJitoVault(vault: web3.PublicKey, oldAuthority = this.keychain.getKeypair("ADMIN")) {
-        const newAuthority = this.knownAddress.fragSOLFund;
+    // need for operation & test environment setup - set secondary admin to fund_account
+    public async runAdminSetSecondaryAdminForJitoVault(
+        vault: web3.PublicKey,
+        secondaryAdminRole: "DELEGATION_ADMIN",
+        newAuthority = this.knownAddress.fragSOLFund,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        logger.debug(`new ${secondaryAdminRole.replace(/_/g, ' ').toLowerCase()}`.padEnd(LOG_PAD_LARGE), newAuthority.toString());
 
         const SetSecondaryAdminInstructionDataSize = {
             discriminator: 1, // u8
@@ -2183,58 +2028,43 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
 
         const discriminator = 22;
-        const vaultDelegationAdminRole = 0; // enum 0
-        const data = Buffer.alloc(
-            SetSecondaryAdminInstructionDataSize.discriminator +
-            SetSecondaryAdminInstructionDataSize.vaultAdminRole
-        );
+        const vaultAdminRole = (() => {
+            switch (secondaryAdminRole) {
+                case "DELEGATION_ADMIN":
+                    return 0; // enum 0
+            }
+        })();
+        const data = Buffer.alloc(Object.values(SetSecondaryAdminInstructionDataSize).reduce((x, y) => x + y));
 
         let offset = 0;
-        data.writeUInt8(discriminator, offset);
-        data.writeUInt8(vaultDelegationAdminRole, offset += SetSecondaryAdminInstructionDataSize.discriminator);
+        data.writeUInt8(discriminator, offset); offset += SetSecondaryAdminInstructionDataSize.discriminator;
+        data.writeUInt8(vaultAdminRole, offset); offset += SetSecondaryAdminInstructionDataSize.vaultAdminRole;
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: oldAuthority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: newAuthority,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig),
+                this.getAccountMeta(vault, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(newAuthority),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [oldAuthority],
+            ...this.getSigners(authority),
         });
 
-        logger.notice(`jito vault delegation admin set to fund account`.padEnd(LOG_PAD_LARGE), vault.toString());
+        logger.notice(`changed jito restaking vault secondary admin`.padEnd(LOG_PAD_LARGE), vault.toString());
     }
 
-    // need for operation - delegate vault_token_account to fund_account
+    // need for operation & test - delegate vault_token_account to fund_account
     public async runAdminDelegateJitoVaultTokenAccount(
         vault: web3.PublicKey,
         tokenMint: web3.PublicKey,
-        delegateAssetAdmin: web3.Keypair = this.keychain.getKeypair('ADMIN'),
+        delegate = this.knownAddress.fragSOLFund,
+        delegateAssetAdmin: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
     ) {
         const vaultTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
             this.connection,
@@ -2250,278 +2080,176 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             spl.TOKEN_PROGRAM_ID,
         );
 
+        logger.debug(`delegate token mint`.padEnd(LOG_PAD_LARGE), tokenMint.toString());
+        logger.debug(`delegate to`.padEnd(LOG_PAD_LARGE), delegate.toString());
+
         const data = Buffer.from([20]);
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: delegateAssetAdmin.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: tokenMint,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vaultTokenAccount.address,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: this.knownAddress.fragSOLFund,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: spl.TOKEN_PROGRAM_ID,
-                        isSigner: false,
-                        isWritable: false,
-                    }
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig),
+                this.getAccountMeta(vault),
+                this.getAccountMeta(delegateAssetAdmin, "SIGNER"),
+                this.getAccountMeta(tokenMint),
+                this.getAccountMeta(vaultTokenAccount.address, "WRITABLE"),
+                this.getAccountMeta(delegate),
+                this.getAccountMeta(spl.TOKEN_PROGRAM_ID),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [delegateAssetAdmin],
+            ...this.getSigners(delegateAssetAdmin),
         });
 
-        logger.notice(`jito vault token account delegated to fund account`.padEnd(LOG_PAD_LARGE), vaultTokenAccount.address.toString());
+        logger.notice(`delegated jito vault token account`.padEnd(LOG_PAD_LARGE), vault.toString());
     }
 
-    // for test - initialize ncn operator state
-    public async runAdminJitoInitializeNcnOperatorState(ncn: web3.PublicKey, operator: web3.PublicKey, authority = this.keychain.getKeypair("ADMIN")) {
+    // no use
+    public async runAdminInitializeJitoNcnOperatorState(
+        ncn: web3.PublicKey,
+        operator: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        const [ncnOperatorStatePublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("ncn_operator_state"), ncn.toBuffer(), operator.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+        logger.debug(`ncn`.padEnd(LOG_PAD_LARGE), ncn.toString());
+        logger.debug(`operator`.padEnd(LOG_PAD_LARGE), operator.toString());
+
         const InitializeNcnOperatorStateInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const ncnOperatorStatePublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("ncn_operator_state"), ncn.toBuffer(), operator.toBuffer()],
-            this.knownAddress.jitoRestakingProgram,
-        );
-        logger.notice("ncn_operator_state key".padEnd(LOG_PAD_LARGE), ncnOperatorStatePublicKey[0].toString());
-
         const discriminator = 6;
-        const data = Buffer.alloc(
-            InitializeNcnOperatorStateInstructionDataSize.discriminator
-        );
+        const data = Buffer.alloc(InitializeNcnOperatorStateInstructionDataSize.discriminator);
 
         const offset = 0;
         data.writeUInt8(discriminator, offset);
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoRestakingProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoRestakingConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: ncn,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: operator,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: ncnOperatorStatePublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.wallet.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoRestakingProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoRestakingConfig),
+                this.getAccountMeta(ncn, "WRITABLE"),
+                this.getAccountMeta(operator, "WRITABLE"),
+                this.getAccountMeta(ncnOperatorStatePublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(this.wallet, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, this.wallet],
+            ...this.getSigners(authority),
         });
 
-        return { ncnOperatorState: ncnOperatorStatePublicKey[0] };
+        logger.notice(`initialized jito restaking ncn_operator_state`.padEnd(LOG_PAD_LARGE), ncnOperatorStatePublicKey.toString());
+
+        return { ncnOperatorState: ncnOperatorStatePublicKey };
     }
 
-    // for test - initialize ncn_vault_ticket
-    public async runAdminJitoInitializeNcnVaultTicket(ncn: web3.PublicKey, vault: web3.PublicKey, authority: web3.Keypair = this.keychain.getKeypair("ADMIN")) {
+    // no use
+    public async runAdminInitializeJitoNcnVaultTicket(
+        ncn: web3.PublicKey,
+        vault: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        const [ncnVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("ncn_vault_ticket"), ncn.toBuffer(), vault.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+        logger.debug(`ncn`.padEnd(LOG_PAD_LARGE), ncn.toString());
+        logger.debug(`vault`.padEnd(LOG_PAD_LARGE), vault.toString());
+
         const InitializeNcnVaultTicketInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const ncnVaultTicketPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("ncn_vault_ticket"), ncn.toBuffer(), vault.toBuffer()],
-            this.knownAddress.jitoRestakingProgram,
-        );
-        logger.notice("ncn_vault_ticket key".padEnd(LOG_PAD_LARGE), ncnVaultTicketPublicKey[0].toString());
-
         const discriminator = 4;
-        const data = Buffer.alloc(
-            InitializeNcnVaultTicketInstructionDataSize.discriminator
-        );
+        const data = Buffer.alloc(InitializeNcnVaultTicketInstructionDataSize.discriminator);
 
         let offset = 0;
         data.writeUInt8(discriminator, offset);
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoRestakingProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoRestakingConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: ncn,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: ncnVaultTicketPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.wallet.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoRestakingProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoRestakingConfig),
+                this.getAccountMeta(ncn, "WRITABLE"),
+                this.getAccountMeta(vault),
+                this.getAccountMeta(ncnVaultTicketPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(this.wallet, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, this.wallet],
+            ...this.getSigners(authority),
         });
 
-        return { ncnVaultTicket: ncnVaultTicketPublicKey[0] };
+        logger.notice(`initialized jito restaking ncn_vault_ticket`.padEnd(LOG_PAD_LARGE), ncnVaultTicketPublicKey.toString());
+
+        return { ncnVaultTicket: ncnVaultTicketPublicKey };
     }
 
     // need for operation - initialize vault_ncn_ticket
-    public async runAdminJitoInitializeVaultNcnTicket(vault: web3.PublicKey, ncn: web3.PublicKey, ncnVaultTicket: web3.PublicKey, authority: web3.Keypair = this.keychain.getKeypair("ADMIN")) {
+    public async runAdminInitializeJitoVaultNcnTicket(
+        vault: web3.PublicKey,
+        ncn: web3.PublicKey,
+        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    ) {
+        const [ncnVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("ncn_vault_ticket"), ncn.toBuffer(), vault.toBuffer()],
+            this.knownAddress.jitoRestakingProgram,
+        );
+        const [vaultNcnTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault_ncn_ticket"), vault.toBuffer(), ncn.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        logger.debug(`vault`.padEnd(LOG_PAD_LARGE), vault.toString());
+        logger.debug(`ncn`.padEnd(LOG_PAD_LARGE), ncn.toString());
+
         const InitializeVaultNcnTicketInstructionDataSize = {
             discriminator: 1, // u8
         };
 
-        const vaultNcnTicketPublicKey = web3.PublicKey.findProgramAddressSync(
-            [Buffer.from("vault_ncn_ticket"), vault.toBuffer(), ncn.toBuffer()],
-            this.knownAddress.jitoVaultProgram,
-        );
-        logger.notice("vault_ncn_ticket key".padEnd(LOG_PAD_LARGE), vaultNcnTicketPublicKey[0].toString());
-
         const discriminator = 4;
-        const data = Buffer.alloc(
-            InitializeVaultNcnTicketInstructionDataSize.discriminator
-        );
+        const data = Buffer.alloc(InitializeVaultNcnTicketInstructionDataSize.discriminator);
 
         let offset = 0;
         data.writeUInt8(discriminator, offset);
 
-        const ix = new web3.TransactionInstruction(
-            {
-                programId: this.knownAddress.jitoVaultProgram,
-                keys: [
-                    {
-                        pubkey: this.knownAddress.jitoVaultConfig,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: vault,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: ncn,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: ncnVaultTicket,
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: vaultNcnTicketPublicKey[0],
-                        isSigner: false,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: authority.publicKey,
-                        isSigner: true,
-                        isWritable: false,
-                    },
-                    {
-                        pubkey: this.wallet.publicKey,
-                        isSigner: true,
-                        isWritable: true,
-                    },
-                    {
-                        pubkey: web3.SystemProgram.programId,
-                        isSigner: false,
-                        isWritable: false,
-                    },
-                ],
-                data,
-            }
-        );
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig),
+                this.getAccountMeta(vault, "WRITABLE"),
+                this.getAccountMeta(ncn),
+                this.getAccountMeta(ncnVaultTicketPublicKey),
+                this.getAccountMeta(vaultNcnTicketPublicKey, "WRITABLE"),
+                this.getAccountMeta(authority, "SIGNER"),
+                this.getAccountMeta(this.wallet, "SIGNER", "WRITABLE"),
+                this.getAccountMeta(web3.SystemProgram.programId),
+            ],
+            data,
+        });
 
         await this.run({
             instructions: [ix],
-            signers: [authority, this.wallet],
+            ...this.getSigners(authority),
         });
 
-        return { vaultNcnTicket: vaultNcnTicketPublicKey[0] };
+        logger.notice(`initialized jito restaking vault_ncn_ticket`.padEnd(LOG_PAD_LARGE), vaultNcnTicketPublicKey.toString());
+
+        return { vaultNcnTicket: vaultNcnTicketPublicKey };
     }
 
     public async runAdminInitializeFragSOLExtraAccountMetaList() {
