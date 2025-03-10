@@ -46,23 +46,23 @@ if (process.env.JTO) {
 
     } else if (process.env.JUST_STAKE) {
         require('./restaking/2_deposit_sol')(1);
-        require('./restaking/8_operator_deprecating_spl_stake_pool');
+        require('./restaking/8_operator_stake');
 
-    } else if (process.env.JUST_DENORMALIZE) {
+    } else if (process.env.JUST_NORMALIZE) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);
-        require('./restaking/11_operator_denormalize');
+        require('./restaking/11_operator_normalize');
 
     } else if (process.env.JUST_RESTAKE) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);
-        require('./restaking/9_operator_restaking');
+        require('./restaking/9_operator_restake');
 
     } else if (process.env.JUST_DELEGATE) {
         require('./restaking/2_deposit_sol')(1);
         require('./restaking/3_deposit_token')(1);
-        require('./restaking/9_operator_restaking');
-        require('./restaking/10_operator_restaking_delegation');
+        require('./restaking/9_operator_restake');
+        require('./restaking/10_operator_delegate');
 
     } else if (process.env.JUST_WITHDRAW) {
         require('./restaking/4_withdraw_sol');

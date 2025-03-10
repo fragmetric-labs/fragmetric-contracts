@@ -1,0 +1,14 @@
+{
+  "pubkey": "44rxT4DnjsWVgcd14WdxsP6uQ3t2hTPChShwrmThJmJr",
+  "account": {
+    "lamports": 5289600,
+    "data": [
+      "BAAAAAAAAAAi/SY5wxoPt68VnU+bUDoH6FUZB96KHWV02tWF6KbdvedQ/vesQodaQk1ohg3ryhmarnDUnhJksZYIQH7f+yOlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhmarnDUnhJksZYIQH7f+yOl51D+96xCh1pCTWiGDevKGZqucNSeEmSxlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhmarnDUnhJksZYIQH7f+yOl51D+96xCh1pCTWiGDevKGZqucNSeEmSxlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhmarnDUnhJksQAAAAAAAAAAAgAAAAAAAAD+TWiGDevKGZqucNSeEmSxlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhmarnDUnhJksZYIQH7f+yOl51D+96xCh1pCTWiGDevKGZqucNSeEmSxlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhmarnDUnhJksZYIQH7f+yOl51D+96xCh1pCTWiGDevKGZqucNSeEmSxlghAft/7I6XnUP73rEKHWkJNaIYN68oZmq5w1J4SZLGWCEB+3/sjpedQ/vesQodaQk1ohg3ryhk=",
+      "base64"
+    ],
+    "owner": "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8",
+    "executable": false,
+    "rentEpoch": 18446744073709551615,
+    "space": 632
+  }
+}

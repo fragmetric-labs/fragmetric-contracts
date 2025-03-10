@@ -132,7 +132,6 @@ describe("initialize", async () => {
     });
 
     step("initialize fund jito restaking vault", async () => {
-        await Promise.all(Object.values(restaking.restakingVaultMetadata).map(v => restaking.runAdminSetSecondaryAdminForJitoVault(v.vault)));
         const {fragSOLFund} = await restaking.runFundManagerInitializeFundJitoRestakingVaults();
 
         expect(fragSOLFund.numRestakingVaults).eq(Object.values(restaking.restakingVaultMetadata).length);
@@ -146,14 +145,16 @@ describe("initialize", async () => {
         }
     });
 
-    step("initialize vault delegation at fund account", async function() {
-        await Promise.all(
-            Object.values(restaking.restakingVaultMetadata).flatMap(vault => {
-                return vault.operators.map(operator => {
-                    return restaking.runFundManagerAddJitoRestakingVaultDelegation(vault.vault, operator);
-                })
-            }),
-        );
+    step("initialize jito vault delegation at fund account", async function() {
+        const {fragSOLFund} = await restaking.runFundManagerAddJitoRestakingVaultDelegations();
+
+        Object.values(restaking.restakingVaultMetadata).forEach((v, i) => {
+            const vault = fragSOLFund.restakingVaults[i];
+            expect(vault.numDelegations).eq(Object.keys(v.operators).length);
+            Object.values(v.operators).forEach((operator, i) => {
+                expect(vault.delegations[i].operator.toString()).eq(operator.toString());
+            })
+        })
     });
 
     step("initialize fund, supported tokens, restaking vaults strategy", async () => {
@@ -192,14 +193,18 @@ describe("initialize", async () => {
         });
     });
 
-    // step("add token swap strategies", async () => {
-    //     const {fragSOLFund} = await restaking.runFundManagerAddTokenSwapStrategies();
+    step("add token swap strategies", async () => {
+        if (restaking.tokenSwapStrategies.length == 0) {
+            return;
+        }
 
-    //     expect(fragSOLFund.numTokenSwapStrategies).eq(Object.values(restaking.tokenSwapStrategies).length);
-    //     Object.values(restaking.tokenSwapStrategies).forEach((strategyMetadata, i) => {
-    //         const strategy = fragSOLFund.tokenSwapStrategies[i];
-    //         expect(strategy.fromTokenMint.toString()).eq(strategyMetadata.fromTokenMint.toString());
-    //         expect(strategy.toTokenMint.toString()).eq(strategyMetadata.toTokenMint.toString());
-    //     })
-    // })
+        const {fragSOLFund} = await restaking.runFundManagerAddTokenSwapStrategies();
+
+        expect(fragSOLFund.numTokenSwapStrategies).eq(restaking.tokenSwapStrategies.length);
+        Object.values(restaking.tokenSwapStrategies).forEach((strategyMetadata, i) => {
+            const strategy = fragSOLFund.tokenSwapStrategies[i];
+            expect(strategy.fromTokenMint.toString()).eq(strategyMetadata.fromTokenMint.toString());
+            expect(strategy.toTokenMint.toString()).eq(strategyMetadata.toTokenMint.toString());
+        })
+    })
 });

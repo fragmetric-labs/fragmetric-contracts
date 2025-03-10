@@ -28,7 +28,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, restaking.keychain.getKeypair('FUND_MANAGER'));
     });
 
     step("withdraw SOL or stake", async function () {
@@ -84,7 +84,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, restaking.keychain.getKeypair('FUND_MANAGER'));
 
         const [
             fragSOLFundReserveAccountBalance1,
@@ -128,7 +128,7 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, restaking.keychain.getKeypair('FUND_MANAGER'));
     });
 
     step("claim sol after 2 epoch wait", async () => {
@@ -146,6 +146,6 @@ describe("operator_spl_stake_pool", async () => {
                 },
             },
             requiredAccounts: [],
-        });
+        }, restaking.keychain.getKeypair('FUND_MANAGER'));
     })
 });
