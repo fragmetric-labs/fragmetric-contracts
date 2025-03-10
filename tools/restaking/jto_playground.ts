@@ -405,7 +405,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.jtoTokenMint,
                     VRTMint: this.knownAddress.fragJTOJitoJTOVRTMint,
                     vault: this.getConstantAsPublicKey("fragjtoJitoJtoVaultAccountAddress"),
-                    operators: [],
+                    operators: {},
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultFeeWalletTokenAccount,
@@ -423,7 +423,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.jtoTokenMint,
                     VRTMint: this.knownAddress.fragJTOJitoJTOVRTMint,
                     vault: this.getConstantAsPublicKey("fragjtoJitoJtoVaultAccountAddress"),
-                    operators: [],
+                    operators: {
+                        Everstake: new web3.PublicKey("FzZ9EXmHv7ANCXijpALUBzCza6wYNprnsfaEHuoNx9sE"),
+                        Luganodes: new web3.PublicKey("LKFpfXtBkH5b7D9mo8dPcjCLZCZpmLQC9ELkbkyVdah"),
+                        PierTwo: new web3.PublicKey("GZxp4e2Tm3Pw9GyAaxuF6odT3XkRM96jpZkp3nxhoK4Y"),
+                        Temporal: new web3.PublicKey("CA8PaNSoFWzvbCJ2oK3QxBEutgyHSTT5omEptpj8YHPY"),
+                        ChorusOne: new web3.PublicKey("7yofWXChEHkPTSnyFdKx2Smq5iWVbGB4P1dkdC6zHWYR"),
+                        KILN: new web3.PublicKey("29rxXT5zbTR1ctiooHtb1Sa1TD4odzhQHsrLz3D78G5w"),
+                        Helius: new web3.PublicKey("BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2"),
+                        Hashkey: new web3.PublicKey("2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop"),
+                        InfStones: new web3.PublicKey("5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L"),
+                    },
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultFeeWalletTokenAccount,
@@ -891,6 +901,71 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
     }
 
+    public async getJitoVaultOperatorDelegation(
+        symbol: keyof typeof this.restakingVaultMetadata,
+        operator: web3.PublicKey | string
+    ) {
+        const restakingVault = this.restakingVaultMetadata[symbol];
+        const restakingOperator = operator instanceof web3.PublicKey ? operator : new web3.PublicKey(operator);
+        const [vaultOperatorDelegation] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault_operator_delegation"), restakingVault.vault.toBuffer(), restakingOperator.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
+        logger.debug(`vault_operator_delegation`.padEnd(LOG_PAD_LARGE), vaultOperatorDelegation);
+
+        let data = await this.connection.getAccountInfo(vaultOperatorDelegation).then(a => a.data);
+        let expectedLength = data.length;
+
+        const checkLengthDecreased = (decreased: number, msg: string) => {
+            expectedLength -= decreased;
+            if (data.length != expectedLength) {
+                throw msg;
+            }
+        };
+        const parsePubkey = (msg?: string) => {
+            const key = new web3.PublicKey(Uint8Array.from(data.subarray(0, 32)));
+            data = data.subarray(32);
+            checkLengthDecreased(32, msg ?? "");
+            return key;
+        };
+        const parseValue = (msg?: string) => {
+            const value = data.readBigUInt64LE();
+            data = data.subarray(8);
+            checkLengthDecreased(8, msg ?? "");
+            return value;
+        };
+        const parseByte = (msg?: string) => {
+            const byte = data[0];
+            data = data.subarray(1);
+            checkLengthDecreased(1, msg ?? "");
+            return byte;
+        };
+
+        parseValue();
+        const vault = parsePubkey();
+        const operatorKey = parsePubkey();
+        const stakedAmount = parseValue();
+        const enqueuedForCooldownAmount = parseValue();
+        const coolingDownAmount = parseValue();
+        const delegationState = {stakedAmount, enqueuedForCooldownAmount, coolingDownAmount};
+        data = data.subarray(256);
+        checkLengthDecreased(256, "reserve");
+        const lastUpdateSlot = parseValue();
+        const index = parseValue();
+        const bump = parseByte();
+        data = data.subarray(263);
+        checkLengthDecreased(263, "done");
+
+        return {
+            vault,
+            operator: operatorKey,
+            delegationState,
+            lastUpdateSlot,
+            index,
+            bump,
+        };
+    }
+
     private fragJTOImageURI = "https://fragmetric-assets.s3.ap-northeast-2.amazonaws.com/fragjto.png";
     private fragJTOMetadataURI = "https://quicknode.quicknode-ipfs.com/ipfs/QmQyCKdba9f6dpxc43pGwQ66DvjpPFbE6S8rPrKDh1Sz72";
     private fragJTOMetadata: splTokenMetadata.TokenMetadata = {
@@ -1344,12 +1419,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public async runFundManagerAddJitoRestakingVaultDelegations() {
         const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
-            vault.operators.map(operator =>
+            Object.values(vault.operators).map(operator =>
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault.vault,
-                        vaultOperator: operator,
+                        vaultOperator: operator as web3.PublicKey,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
@@ -2130,42 +2205,78 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
                 })(),
-                delegations: v.operators.map((operator, index) => ({
+                delegations: Object.entries(v.operators).map(([name, operator]) => ({
                     operator,
                     supportedTokenAllocationWeight: (() => {
                         switch (symbol) {
                             case "jitoJTOVault":
-                                if (index == 0) {
-                                    return new BN(this.isDevnet ? 0 : 1);
-                                } else if (index == 1) {
-                                    return new BN(this.isDevnet ? 0 : 2);
+                                if (this.isDevnet) {
+                                    switch (name) {
+                                        default:
+                                            throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
+                                    }
+                                } else {
+                                    switch (name) {
+                                        case "InfStones":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Hashkey":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "PierTwo":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Luganodes":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Everstake":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Temporal":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "ChorusOne":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "KILN":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Helius":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        default:
+                                            throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
+                                    }
                                 }
-                            case "jitoJTOVault":
-                                if (index == 0) {
-                                    return new BN(this.isDevnet ? 0 : 1);
-                                } else if (index == 1) {
-                                    return new BN(this.isDevnet ? 0 : 2);
-                                }
-                            default:
-                                throw `invalid supported token allocation weight for ${symbol}`;
+                                default:
+                                    throw `invalid restaking vault operator supported token allocation weight for ${symbol}`;
                         }
                     })(),
                     supportedTokenAllocationCapacityAmount: (() => {
                         switch (symbol) {
                             case "jitoJTOVault":
-                                if (index == 0) {
-                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
-                                } else if (index == 1) {
-                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
-                                }
-                            case "jitoJTOVault":
-                                if (index == 0) {
-                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
-                                } else if (index == 1) {
-                                    return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                if (this.isDevnet) {
+                                    switch (name) {
+                                        default:
+                                            throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
+                                    }
+                                } else {
+                                    switch (name) {
+                                        case "InfStones":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "Hashkey":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "PierTwo":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "Luganodes":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "Everstake":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "Temporal":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "ChorusOne":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "KILN":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        case "Helius":
+                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                        default:
+                                            throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
+                                    }
                                 }
                             default:
-                                throw `invalid supported token allocation capacity amount for ${symbol}`;
+                                throw `invalid restaking vault operator supported token allocation capacity amount for ${symbol}`;
                         }
                     })(),
                 })),
@@ -2266,28 +2377,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         })
                         .remainingAccounts(this.pricingSourceAccounts)
                         .instruction(),
-                        // vault's delegations
-                        ...v.delegations.flatMap(delegation => {
-                            return [
-                                this.methods.fundManagerUpdateRestakingVaultDelegationStrategy(
-                                    v.vault,
-                                    delegation.operator,
-                                    delegation.supportedTokenAllocationWeight,
-                                    delegation.supportedTokenAllocationCapacityAmount,
-                                    null,
-                                ).accountsPartial({
-                                    receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-                                })
-                                .remainingAccounts(this.pricingSourceAccounts)
-                                .instruction(),
-                            ];
-                        })
                     ];
                 }),
             ],
             signerNames: ["FUND_MANAGER"],
             events: ["fundManagerUpdatedFund"],
         });
+
+        const updateDelegationStrategyInstructions = config.restakingVaults.flatMap(vault => vault.delegations.map(delegation => {
+            return this.methods.fundManagerUpdateRestakingVaultDelegationStrategy(
+                vault.vault as web3.PublicKey,
+                delegation.operator as web3.PublicKey,
+                delegation.supportedTokenAllocationWeight,
+                delegation.supportedTokenAllocationCapacityAmount,
+                null,
+            ).accountsPartial({
+                receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+            })
+            .remainingAccounts(this.pricingSourceAccounts)
+            .instruction();
+        }));
+        const numInstructions = updateDelegationStrategyInstructions.length;
+        const batchSize = 5;
+        if (numInstructions > 0) {
+            for (let i = 0; i < numInstructions / batchSize; i++) {
+                const batchedInstructions = [];
+                for (let j = i * batchSize; j < numInstructions && batchedInstructions.length < batchSize; j++) {
+                    batchedInstructions.push(updateDelegationStrategyInstructions[j]);
+                }
+                logger.debug(`running batched "update_restaking_vault_delegation_strategy" instructions`.padEnd(LOG_PAD_LARGE), `${i * batchSize + batchedInstructions.length}/${numInstructions}`);
+                await this.run({
+                    instructions: batchedInstructions,
+                    signerNames: ["FUND_MANAGER"],
+                    events: ["fundManagerUpdatedFund"],
+                });
+            }
+        }
 
         logger.notice(`updated fragJTO fund configuration`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
         const fragJTOFund = await this.account.fundAccount.fetch(this.knownAddress.fragJTOFund);

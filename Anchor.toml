@@ -313,6 +313,51 @@ filename = "./tests/mocks/local/fragsol_jito_jitosol_vault.json"
 address = "7FViuSBAkJktHkN4jFxFRSmKat9hNenf3MDcbhVRSu24"
 filename = "./tests/mocks/local/fragsol_jito_jitosol_vrt_mint.json"
 
+# clone empty fragSOL Jito nSOL vault operator delegation: Infstones
+[[test.validator.account]]
+address = "D4PF5uzMG5LU68x6xbi8po9a16qcDuCRAfiDrn7Jg8pa"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_1.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Hashkey
+[[test.validator.account]]
+address = "BaF6o4PqWVfXcukqBqx7fzYVDqM7EgZHkgTzpWq1NqxK"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_2.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Pier Two
+[[test.validator.account]]
+address = "5GWU4cpM2RMHtQcisjGqp61TMh248YVejZFX4THokt57"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_3.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Luganodes
+[[test.validator.account]]
+address = "GUfnkNBhHUxzq6GLaNuk6ULBFVdnP9i81GxubKFT5Bnw"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_4.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Everstake
+[[test.validator.account]]
+address = "CtcrcrH37MbCTp5EdpykRW74aWHFru4THfbsBqtdnmci"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_5.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Temporal
+[[test.validator.account]]
+address = "Fd1veQDS3xTzssNRtW8SnW8g8sbu4RDS7yiXpUpCFuEJ"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_6.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Chorus One
+[[test.validator.account]]
+address = "DghtBJg9SvUfDZRrrdRieQtQsRWnLwatbatXUHTrLnXJ"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_7.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: KILN
+[[test.validator.account]]
+address = "7pF1AQjjzexGCnrR6MdoeGnr3vgsTwwL1vrB9GfsDr7H"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_8.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Helius
+[[test.validator.account]]
+address = "Hpv7Q4YqYmSjtuERUn5ivZTBApQsEN9vwrf8oUb4zGHw"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_9.json"
+
 ###### JTO ######
 # clone mainnet JTO mint to localnet
 [[test.validator.account]]
@@ -338,6 +383,51 @@ filename = "./tests/mocks/local/fragjto_jito_jto_vault.json"
 [[test.validator.account]]
 address = "8VHeGZjPRswfDKqNuZfkrBEXH2uhYnuG4ejeKumeMWBu"
 filename = "./tests/mocks/local/fragjto_jito_jto_vrt_mint.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Infstones
+[[test.validator.account]]
+address = "7gFXRPcjBCSUcj4STdptuQWCb146HWBZ4zq1kkzxPorN"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_1.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Hashkey
+[[test.validator.account]]
+address = "H5Fp8iqfAtUZxizHqHsEgZBbPsu8FwySv61uhs8uJGDG"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_2.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Pier Two
+[[test.validator.account]]
+address = "44rxT4DnjsWVgcd14WdxsP6uQ3t2hTPChShwrmThJmJr"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_3.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Luganodes
+[[test.validator.account]]
+address = "Dn6cqaYNuFdSs1cLujwvCwexMZq45bjPugSfNgEhGeRT"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_4.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Everstake
+[[test.validator.account]]
+address = "5PiUmsQneHR3H59FmV8iKtj7WtLcoNFRsWdHhnvYoxhW"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_5.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Temporal
+[[test.validator.account]]
+address = "83PyVe4wEKB4k46zNXVEB9W2dmtmW2RDFfMBg8P56VhU"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_6.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Chorus One
+[[test.validator.account]]
+address = "EbppTWK69jz3or8u6p7NdT9ogjo36ja5Wggtd9UmMU3f"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_7.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: KILN
+[[test.validator.account]]
+address = "24iCAXE1HFcSqs2p9DDTBD6XvCo7WfsmFGdDEAXSt3cb"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_8.json"
+
+# clone empty fragJTO Jito JTO vault operator delegation: Helius
+[[test.validator.account]]
+address = "44Y6asW2f3oU1i71ATYANgiJ3qkQezcKGdDefLHTEbKn"
+filename = "./tests/mocks/local/fragjto_jito_jto_vault_operator_delegation_9.json"
 
 ###### Orca ######
 # Orca JTO-jitoSOL Liquidity pool
