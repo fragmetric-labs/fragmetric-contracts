@@ -242,15 +242,50 @@ program = "./tests/mocks/mainnet/jito_restaking_program.so"
 address = "4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn"
 filename = "./tests/mocks/mainnet/jito_restaking_config.json"
 
-# # clone empty Jito restaking protocol operator for test
-# [[test.validator.account]]
-# address = "2p4kQZTYL3jKHpkjTaFULvqcKNsF8LoeFGEHWYt2sJAV"
-# filename = "./tests/mocks/local/jito_restaking_operator_1.json"
+# clone mainnet Jito restaking protocol operator: InfStones
+[[test.validator.account]]
+address = "5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_1.json"
 
-# # clone empty Jito restaking protocol ncn for test
-# [[test.validator.account]]
-# address = "FT69N1tbmjqmwFWmWvB18xvZwfiX43b9jpLUAmEiLDeC"
-# filename = "./tests/mocks/local/jito_restaking_ncn_1.json"
+# clone mainnet Jito restaking protocol operator: Hashkey
+[[test.validator.account]]
+address = "2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_2.json"
+
+# clone mainnet Jito restaking protocol operator: Pier Two
+[[test.validator.account]]
+address = "GZxp4e2Tm3Pw9GyAaxuF6odT3XkRM96jpZkp3nxhoK4Y"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_3.json"
+
+# clone mainnet Jito restaking protocol operator: Luganodes
+[[test.validator.account]]
+address = "LKFpfXtBkH5b7D9mo8dPcjCLZCZpmLQC9ELkbkyVdah"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_4.json"
+
+# clone mainnet Jito restaking protocol operator: Everstake
+[[test.validator.account]]
+address = "FzZ9EXmHv7ANCXijpALUBzCza6wYNprnsfaEHuoNx9sE"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_5.json"
+
+# clone mainnet Jito restaking protocol operator: Temporal
+[[test.validator.account]]
+address = "CA8PaNSoFWzvbCJ2oK3QxBEutgyHSTT5omEptpj8YHPY"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_6.json"
+
+# clone mainnet Jito restaking protocol operator: Chorus One
+[[test.validator.account]]
+address = "7yofWXChEHkPTSnyFdKx2Smq5iWVbGB4P1dkdC6zHWYR"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_7.json"
+
+# clone mainnet Jito restaking protocol operator: KILN
+[[test.validator.account]]
+address = "29rxXT5zbTR1ctiooHtb1Sa1TD4odzhQHsrLz3D78G5w"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_8.json"
+
+# clone mainnet Jito restaking protocol operator: Helius
+[[test.validator.account]]
+address = "BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_9.json"
 
 ###### fragSOL ######
 # clone initial ALT of fragSOL for faster bootstrap
