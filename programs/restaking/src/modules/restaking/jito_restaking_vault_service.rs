@@ -983,4 +983,67 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         Ok(())
     }
+
+    pub fn find_accounts_to_cooldown_delegation(
+        &self,
+        operator: Pubkey,
+    ) -> Result<Vec<(Pubkey, bool)>> {
+        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        accounts.extend(vec![
+            (operator, false),
+            (
+                Self::find_vault_operator_delegation_address(&self, &operator),
+                true,
+            ),
+            (vault.delegation_admin, false),
+        ]);
+        Ok(accounts)
+    }
+
+    pub fn cooldown_delegation(
+        &self,
+        operator_account: &AccountInfo<'info>,
+        vault_operator_delegation_account: &AccountInfo<'info>,
+        vault_delegation_admin_account: &AccountInfo<'info>,
+        vault_delegation_admin_signer_seeds: &[&[u8]],
+
+        undelegation_amount: u64,
+    ) -> Result<()> {
+        let cooldown_delegation_ix = jito_vault_sdk::sdk::cooldown_delegation(
+            self.vault_program.key,
+            self.vault_config_account.key,
+            self.vault_account.key,
+            operator_account.key,
+            vault_operator_delegation_account.key,
+            vault_delegation_admin_account.key,
+            undelegation_amount,
+        );
+
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        msg!(
+            "Before vault delegation_state enqueued_for_cooldown_amount {}",
+            vault.delegation_state.enqueued_for_cooldown_amount()
+        );
+
+        invoke_signed(
+            &cooldown_delegation_ix,
+            &[
+                self.vault_config_account.clone(),
+                self.vault_account.clone(),
+                operator_account.clone(),
+                vault_operator_delegation_account.clone(),
+                vault_delegation_admin_account.clone(),
+            ],
+            &[vault_delegation_admin_signer_seeds],
+        )?;
+
+        let vault = Self::deserialize_vault(self.vault_account)?;
+        msg!(
+            "After vault delegation_state enqueued_for_cooldown_amount {}",
+            vault.delegation_state.enqueued_for_cooldown_amount()
+        );
+
+        Ok(())
+    }
 }
