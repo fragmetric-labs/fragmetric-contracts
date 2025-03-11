@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
@@ -40,13 +41,11 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
 
     pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(address = anchor_spl::token::ID)]
-    pub vault_receipt_token_program: Interface<'info, TokenInterface>,
+    pub vault_receipt_token_program: Program<'info, Token>,
 
     pub vault_supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    #[account(address = anchor_spl::token::ID)]
-    pub vault_supported_token_program: Interface<'info, TokenInterface>,
+    pub vault_supported_token_program: Program<'info, Token>,
 
     #[account(
         associated_token::mint = vault_receipt_token_mint,

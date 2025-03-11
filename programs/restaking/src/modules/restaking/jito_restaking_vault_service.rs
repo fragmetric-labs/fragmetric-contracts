@@ -46,8 +46,26 @@ impl<'info> JitoRestakingVaultService<'info> {
         })
     }
 
+    pub fn validate_vault(
+        vault_account: &AccountInfo,
+        vault_program: &AccountInfo,
+        vault_supported_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &AccountInfo,
+    ) -> Result<()> {
+        let vault_account_data = Self::deserialize_vault(vault_account)?;
+
+        require_keys_eq!(*vault_account.owner, vault_program.key());
+        require_keys_eq!(
+            vault_account_data.supported_mint,
+            vault_supported_token_mint.key()
+        );
+        require_keys_eq!(vault_account_data.vrt_mint, vault_receipt_token_mint.key());
+
+        Ok(())
+    }
+
     pub(super) fn deserialize_vault(
-        vault_account: &'info AccountInfo<'info>,
+        vault_account: &AccountInfo,
     ) -> Result<jito_vault_core::vault::Vault> {
         if !vault_account.is_initialized() {
             Err(ProgramError::InvalidAccountData.into())
