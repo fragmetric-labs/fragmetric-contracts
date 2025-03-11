@@ -160,7 +160,7 @@ export class AnchorPlayground<IDL extends anchor.Idl, KEYS extends string> {
                 throw anchor.translateError({ logs: txResult.meta.logMessages }, this.idlErrorsMap);
             }
 
-            logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig.substring(0, 40) + ' ...');
+            logger.info(`transaction confirmed (${tx.serialize().length}/1232 byte)`.padEnd(LOG_PAD_LARGE), txSig);
             return {
                 txSig,
                 error: anchor.AnchorError.parse(txResult.meta.logMessages),
