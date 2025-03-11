@@ -10,6 +10,8 @@ const keypairs = {
     'ADMIN': './keypairs/restaking/shared_local_admin_9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL.json',
     'FUND_MANAGER': './keypairs/restaking/shared_local_fund_manager_5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx.json',
 
+    'FAKE_SWTCH_MINT': './keypairs/restaking/shared_local_swtch_mint_FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn.json',
+
     // fixtures for local test
     'ALL_MINT_AUTHORITY': './tests/mocks/all_mint_authority.json',
     'MOCK_USER1': './tests/mocks/user1.json',

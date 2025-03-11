@@ -3969,4 +3969,67 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             error: tx.error,
         };
     }
+
+    public async runFundManagerRegisterTestingSWTCHTokenReward() {
+        if (this.isMainnet) throw new Error('NOT READY FOR MAINNET SWTCH MINT');
+
+        const rewardToken = {
+            mint: this.keychain.getPublicKey('FAKE_SWTCH_MINT'),
+            program: spl.TOKEN_PROGRAM_ID,
+            decimals: 9,
+        };
+
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: rewardToken.mint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: rewardToken.program,
+                }),
+                spl.createInitializeMintInstruction(
+                    rewardToken.mint,
+                    rewardToken.decimals,
+                    this.keychain.getPublicKey("ALL_MINT_AUTHORITY"),
+                    null, // freeze authority to be null
+                    rewardToken.program,
+                ),
+            ],
+            signerNames: ["FAKE_SWTCH_MINT"],
+        });
+        logger.notice(`created fake SWTCH mint`.padEnd(LOG_PAD_LARGE), rewardToken.mint.toString());
+
+        await this.sleep(100);
+
+        const {event, error} = await this.run({
+            instructions: [
+                ...this.distributingRewardsMetadata.map((v) => {
+                    return this.program.methods
+                        .fundManagerAddReward('SWTCH', 'Switchboard Token', {
+                            token: rewardToken
+                        })
+                        .accountsPartial({
+                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                            rewardTokenMint: rewardToken.mint,
+                            rewardTokenProgram: rewardToken.program,
+                        })
+                        .instruction();
+                }),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedRewardPool"],
+        });
+
+        logger.notice(`configured fragSOL reward (SWTCH)`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
+        const fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        return {event, error, fragSOLReward};
+    }
+
+    public async runFundManagerSettleSWTCHTokenReward(amount: BN) {
+        return this.runFundManagerSettleReward({ poolName: "base", rewardName: "SWTCH", amount });
+    }
 }
