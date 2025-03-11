@@ -47,8 +47,8 @@ pub fn emit_cpi<'info>(
     require_keys_eq!(program_info.key(), crate::ID);
 
     let disc = anchor_lang::event::EVENT_IX_TAG_LE;
-    let inner_data = anchor_lang::Event::data(event);
-    let ix_data: Vec<u8> = disc.into_iter().chain(inner_data.into_iter()).collect();
+    let inner_data = event.data();
+    let ix_data = disc.iter().copied().chain(inner_data).collect::<Vec<_>>();
 
     let ix = anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
         crate::ID,

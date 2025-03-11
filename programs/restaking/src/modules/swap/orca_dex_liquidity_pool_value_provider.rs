@@ -214,48 +214,51 @@ mod tests {
             .try_serialize(&mut data)
             .expect("Failed to serialize data");
 
-        let mut accounts = MockAccountsDb::default();
-        accounts.add_or_update_accounts(pool_address, 0, data, whirlpool_cpi::whirlpool::ID, false);
-        accounts.run_with_accounts(
-            &[AccountMeta::new_readonly(pool_address, false)],
-            move |pricing_source_accounts| {
-                let mut token_value = TokenValue::default();
-                OrcaDEXLiquidityPoolValueProvider
-                    .resolve_underlying_assets(
-                        &whirlpool.token_mint_a,
-                        &[&pricing_source_accounts[0]],
-                        &mut token_value,
+        MockAccountsDb::default()
+            .add_account(pool_address, 0, data, whirlpool_cpi::whirlpool::ID, false)
+            .run(
+                &[AccountMeta::new_readonly(pool_address, false)],
+                move |pricing_source_accounts| {
+                    let mut token_value = TokenValue::default();
+                    OrcaDEXLiquidityPoolValueProvider
+                        .resolve_underlying_assets(
+                            &whirlpool.token_mint_a,
+                            &[&pricing_source_accounts[0]],
+                            &mut token_value,
+                        )
+                        .expect("Failed to resolve underlying asset");
+
+                    let numerator = token_value.numerator;
+                    assert_eq!(numerator.len(), 1);
+                    let Asset::SOL(numerator) = numerator[0] else {
+                        panic!("Asset must be SOL");
+                    };
+
+                    let sqrt_price_f64 = whirlpool.sqrt_price as f64 / (1u128 << 64) as f64;
+                    let price_f64 = sqrt_price_f64 * sqrt_price_f64;
+
+                    let denominator = token_value.denominator;
+                    let resolved_token_amount_a_as_b = crate::utils::get_proportional_amount(
+                        token_amount_a,
+                        numerator,
+                        denominator,
                     )
-                    .expect("Failed to resolve underlying asset");
-
-                let numerator = token_value.numerator;
-                assert_eq!(numerator.len(), 1);
-                let Asset::SOL(numerator) = numerator[0] else {
-                    panic!("Asset must be SOL");
-                };
-
-                let sqrt_price_f64 = whirlpool.sqrt_price as f64 / (1u128 << 64) as f64;
-                let price_f64 = sqrt_price_f64 * sqrt_price_f64;
-
-                let denominator = token_value.denominator;
-                let resolved_token_amount_a_as_b =
-                    crate::utils::get_proportional_amount(token_amount_a, numerator, denominator)
-                        .expect("Arithmetic error");
-                let expected_token_amount_a_as_b = (token_amount_a as f64 * price_f64) as u64;
-                let diff = resolved_token_amount_a_as_b.abs_diff(expected_token_amount_a_as_b);
-                let error = if expected_token_amount_a_as_b == 0 {
-                    if diff == 0 {
-                        0f32
+                    .expect("Arithmetic error");
+                    let expected_token_amount_a_as_b = (token_amount_a as f64 * price_f64) as u64;
+                    let diff = resolved_token_amount_a_as_b.abs_diff(expected_token_amount_a_as_b);
+                    let error = if expected_token_amount_a_as_b == 0 {
+                        if diff == 0 {
+                            0f32
+                        } else {
+                            1f32
+                        }
                     } else {
-                        1f32
-                    }
-                } else {
-                    diff as f32 / expected_token_amount_a_as_b as f32
-                };
+                        diff as f32 / expected_token_amount_a_as_b as f32
+                    };
 
-                // Acceptance Criteria: price error within 2^-14 ~= 0.006%
-                assert!(error < 1e-14);
-            },
-        );
+                    // Acceptance Criteria: price error within 2^-14 ~= 0.006%
+                    assert!(error < 1e-14);
+                },
+            );
     }
 }

@@ -1,5 +1,9 @@
-#![cfg_attr(feature = "idl-build", allow(unexpected_cfgs))]
+#![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
+use spl_discriminator::SplDiscriminate;
+use spl_transfer_hook_interface::instruction::{
+    ExecuteInstruction, InitializeExtraAccountMetaListInstruction,
+};
 
 mod constants;
 mod errors;
@@ -150,7 +154,7 @@ pub mod restaking {
     // AdminReceiptTokenMintExtraAccountMetaListInitialContext
     ////////////////////////////////////////////
 
-    #[interface(spl_transfer_hook_interface::initialize_extra_account_meta_list)]
+    #[instruction(discriminator = InitializeExtraAccountMetaListInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn admin_initialize_extra_account_meta_list(
         ctx: Context<AdminReceiptTokenMintExtraAccountMetaListInitialContext>,
     ) -> Result<()> {
@@ -1245,7 +1249,7 @@ pub mod restaking {
     // UserReceiptTokenTransferContext
     ////////////////////////////////////////////
 
-    #[interface(spl_transfer_hook_interface::execute)]
+    #[instruction(discriminator = ExecuteInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn token_transfer_hook<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserReceiptTokenTransferContext<'info>>,
         amount: u64,

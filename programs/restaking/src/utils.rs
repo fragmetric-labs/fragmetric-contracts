@@ -449,9 +449,15 @@ pub mod tests {
         collections::HashMap,
     };
 
-    use solana_sdk::account::Account;
-
     use super::*;
+
+    struct Account {
+        lamports: u64,
+        data: Vec<u8>,
+        owner: Pubkey,
+        executable: bool,
+        rent_epoch: u64,
+    }
 
     /// Mocks `solana_account_db::accounts_db::AccountDb`.
     ///
@@ -461,6 +467,8 @@ pub mod tests {
     /// Usage:
     ///
     /// ```ignore
+    /// use anchor_lang::prelude::*;
+    ///
     /// fn method_to_test(state: &Account<State>) -> Result<()> { /* ... */ }
     ///
     /// #[test]
@@ -494,27 +502,28 @@ pub mod tests {
     pub struct MockAccountsDb(HashMap<Pubkey, RefCell<Account>>);
 
     impl MockAccountsDb {
-        pub fn add_or_update_accounts(
+        pub fn add_account(
             &mut self,
             key: Pubkey,
             lamports: u64,
-            data: Vec<u8>,
+            data: impl AsRef<[u8]>,
             owner: Pubkey,
             executable: bool,
-        ) {
+        ) -> &mut Self {
             self.0.insert(
                 key,
                 RefCell::new(Account {
                     lamports,
-                    data,
+                    data: data.as_ref().to_vec(),
                     owner,
                     executable,
                     rent_epoch: u64::MAX,
                 }),
             );
+            self
         }
 
-        pub fn run_with_accounts<'a, F, R>(
+        pub fn run<'a, F, R>(
             &self,
             account_metas: impl IntoIterator<Item = &'a AccountMeta>,
             f: F,

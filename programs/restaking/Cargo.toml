@@ -32,20 +32,19 @@ mainnet = []
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
-bincode = { workspace = true }
+borsh1 = { workspace = true }
 bytemuck = { workspace = true }
 jito-vault-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-bytemuck = { workspace = true }
 spl-tlv-account-resolution = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
+spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
-# marinade-client = { workspace = true }
-# whirlpool-client = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
 # solana-program-test = { workspace = true }
-solana-sdk = { workspace = true }
+# solana-sdk = "2.2.1"

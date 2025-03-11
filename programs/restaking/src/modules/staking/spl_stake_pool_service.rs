@@ -54,6 +54,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_pool_account(pool_account: &AccountInfo) -> Result<StakePool> {
+        use borsh1::BorshDeserialize;
+
         let pool_account_data =
             StakePool::deserialize(&mut pool_account.try_borrow_data()?.as_ref())
                 .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
