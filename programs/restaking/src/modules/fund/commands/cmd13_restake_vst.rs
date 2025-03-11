@@ -1,16 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use std::cmp;
-use std::ops::Deref;
 
 use crate::errors;
-use crate::modules::fund::fund_account_normalized_token::NormalizedToken;
-use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
     FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,

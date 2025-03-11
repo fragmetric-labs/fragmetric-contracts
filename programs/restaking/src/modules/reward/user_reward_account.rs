@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
-use crate::events;
 use crate::utils::{PDASeeds, ZeroCopyHeader};
 
 use super::*;

@@ -1,14 +1,12 @@
 use anchor_lang::prelude::*;
 
 use crate::errors;
-use crate::modules::fund::fund_account_restaking_vault::RestakingVault;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 
 use super::{
-    EnqueueWithdrawalBatchCommand, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, RestakeVSTCommand, RestakeVSTCommandState,
-    SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    EnqueueWithdrawalBatchCommand, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
     FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
 };
 

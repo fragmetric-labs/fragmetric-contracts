@@ -2,10 +2,7 @@ use anchor_lang::prelude::*;
 use jito_bytemuck::AccountDeserialize;
 use jito_vault_core::vault::Vault;
 
-use crate::constants::*;
-use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
-use crate::modules::restaking::JitoRestakingVaultService;
 
 pub struct JitoRestakingVaultValueProvider;
 

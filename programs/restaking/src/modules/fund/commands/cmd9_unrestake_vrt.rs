@@ -1,18 +1,14 @@
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token;
-use anchor_spl::associated_token::{
-    get_associated_token_address, get_associated_token_address_with_program_id,
-    spl_associated_token_account,
-};
 use std::cell::Ref;
-use std::iter;
 use std::ops::Neg;
 
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token;
+
+use crate::errors;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::{AccountInfoExt, PDASeeds};
-use crate::{errors, utils};
+use crate::utils::AccountInfoExt;
 
 use super::{
     FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
@@ -209,7 +205,7 @@ impl UnrestakeVRTCommand {
                         let pool = normalized_token_pool_account.unwrap();
                         pricing_service.get_token_amount_as_sol(
                             &supported_token.mint,
-                            utils::get_proportional_amount(
+                            crate::utils::get_proportional_amount(
                                 pool.get_supported_token(&supported_token.mint)
                                     .map(|t| t.locked_amount)
                                     .unwrap(),
@@ -301,7 +297,7 @@ impl UnrestakeVRTCommand {
                                     let pool = normalized_token_pool_account.unwrap();
                                     pricing_service.get_token_amount_as_sol(
                                         &supported_token.mint,
-                                        utils::get_proportional_amount(
+                                        crate::utils::get_proportional_amount(
                                             pool.get_supported_token(&supported_token.mint)
                                                 .map(|t| t.locked_amount)
                                                 .unwrap(),
