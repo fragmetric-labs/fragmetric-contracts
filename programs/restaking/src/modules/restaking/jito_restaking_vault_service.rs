@@ -248,7 +248,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// * vault_operator_delegation(writable)
     /// * operator
-    pub fn find_accounts_to_update_delegation_state(
+    pub fn find_accounts_to_update_operator_delegation_state(
         &self,
         operator: Pubkey,
     ) -> impl Iterator<Item = (Pubkey, bool)> {

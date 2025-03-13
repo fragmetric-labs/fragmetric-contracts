@@ -244,11 +244,12 @@ impl InitializeCommand {
                     .collect::<Vec<_>>(); // this may be empty
                 let accounts_to_update_vault_delegation_state =
                     vault_service.find_accounts_to_update_vault_delegation_state()?;
-                let accounts_to_update_delegation_state = operators.iter().flat_map(|operator| {
-                    vault_service.find_accounts_to_update_delegation_state(*operator)
-                });
+                let accounts_to_update_operator_delegation_state =
+                    operators.iter().flat_map(|operator| {
+                        vault_service.find_accounts_to_update_operator_delegation_state(*operator)
+                    });
                 let required_accounts = accounts_to_update_vault_delegation_state
-                    .chain(accounts_to_update_delegation_state);
+                    .chain(accounts_to_update_operator_delegation_state);
                 let command = Self {
                     state: ExecuteRestakingVaultUpdate {
                         vaults: vaults.to_vec(),
@@ -386,14 +387,15 @@ impl InitializeCommand {
                     let items = &items[batch_size..];
                     let accounts_to_update_vault_delegation_state =
                         vault_service.find_accounts_to_update_vault_delegation_state()?;
-                    let accounts_to_update_delegation_state = items
+                    let accounts_to_update_operator_delegation_state = items
                         .iter()
                         .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
                         .flat_map(|item| {
-                            vault_service.find_accounts_to_update_delegation_state(item.operator)
+                            vault_service
+                                .find_accounts_to_update_operator_delegation_state(item.operator)
                         });
                     let required_accounts = accounts_to_update_vault_delegation_state
-                        .chain(accounts_to_update_delegation_state);
+                        .chain(accounts_to_update_operator_delegation_state);
                     let entry = Self {
                         state: ExecuteRestakingVaultUpdate {
                             vaults: vaults.to_vec(),
