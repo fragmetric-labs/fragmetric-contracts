@@ -68,18 +68,37 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     pub fn validate_vault(
         vault_account: &AccountInfo,
-        vault_program: &AccountInfo,
         vault_supported_token_mint: &AccountInfo,
         vault_receipt_token_mint: &AccountInfo,
     ) -> Result<()> {
         let data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 
-        require_keys_eq!(*vault_account.owner, vault_program.key());
         require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
         require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
 
         Ok(())
+    }
+
+    /// returns [delegation_index, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
+    /// in other words [delegation_index, delegated_amount, undelegation_requested_amount, undelegating_amount]
+    pub fn validate_vault_operator_delegation(
+        vault_operator_delegation: &AccountInfo,
+        vault_account: &AccountInfo,
+        operator: &AccountInfo,
+    ) -> Result<(u64, u64, u64, u64)> {
+        let data = &Self::borrow_account_data(vault_operator_delegation)?;
+        let delegation = Self::deserialize_account_data::<VaultOperatorDelegation>(data)?;
+
+        require_keys_eq!(delegation.vault, vault_account.key());
+        require_keys_eq!(delegation.operator, operator.key());
+
+        Ok((
+            delegation.index(),
+            delegation.delegation_state.staked_amount(),
+            delegation.delegation_state.enqueued_for_cooldown_amount(),
+            delegation.delegation_state.cooling_down_amount(),
+        ))
     }
 
     #[inline(always)]
@@ -265,7 +284,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     /// it might already be updated.
     ///
     /// returns [staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
-    /// in other words [restaked_amount, undelegation_requested_amount, undelegating_amount]
+    /// in other words [delegated_amount, undelegation_requested_amount, undelegating_amount]
     pub fn update_operator_delegation_state_if_needed(
         &self,
         // fixed

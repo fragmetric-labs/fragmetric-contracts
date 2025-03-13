@@ -463,10 +463,10 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account
         )?
-        .process_add_restaking_vault_delegation(
+        .process_add_jito_restaking_vault_delegation(
             &ctx.accounts.vault_account,
-            &ctx.accounts.vault_operator,
-            &ctx.accounts.jito_restaking_program,
+            &ctx.accounts.operator_account,
+            &ctx.accounts.vault_operator_delegation,
             ctx.remaining_accounts,
         )?);
 

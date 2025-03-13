@@ -277,7 +277,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             TokenPricingSource::JitoRestakingVault { .. } => {
                 restaking::JitoRestakingVaultService::validate_vault(
                     vault,
-                    vault_program,
                     vault_supported_token_mint.as_ref(),
                     vault_receipt_token_mint.as_ref(),
                 )?
@@ -340,21 +339,35 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_restaking_vault_delegation(
+    pub fn process_add_jito_restaking_vault_delegation(
         &mut self,
+        vault_operator_delegation: &UncheckedAccount,
         vault: &UncheckedAccount,
-        vault_operator: &UncheckedAccount,
-        restaking_program: &UncheckedAccount,
+        operator: &UncheckedAccount,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(*vault_operator.owner, restaking_program.key());
+        let (
+            delegation_index,
+            delegated_amount,
+            undelegation_requested_amount,
+            undelegating_amount,
+        ) = restaking::JitoRestakingVaultService::validate_vault_operator_delegation(
+            vault_operator_delegation,
+            vault,
+            operator,
+        )?;
 
-        // TODO add more operator validation
+        require_gte!(u8::MAX as u64, delegation_index);
 
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault.key)?
-            .add_delegation(vault_operator.key)?;
+            .add_delegation_with_desired_index(
+                operator.key(),
+                delegation_index as u8,
+                delegated_amount,
+                undelegation_requested_amount + undelegating_amount,
+            )?;
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?

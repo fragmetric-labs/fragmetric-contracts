@@ -145,10 +145,26 @@ impl RestakingVault {
         self.compounding_reward_token_mints[..self.num_compounding_reward_tokens as usize].iter()
     }
 
-    pub fn add_delegation(&mut self, operator: &Pubkey) -> Result<()> {
+    pub fn add_delegation_with_desired_index(
+        &mut self,
+        operator: Pubkey,
+        desired_index: u8,
+        delegated_amount: u64,
+        undelegating_amount: u64,
+    ) -> Result<()> {
+        require_eq!(self.num_delegations, desired_index);
+        self.add_delegation(operator, delegated_amount, undelegating_amount)
+    }
+
+    pub fn add_delegation(
+        &mut self,
+        operator: Pubkey,
+        delegated_amount: u64,
+        undelegating_amount: u64,
+    ) -> Result<()> {
         if self
             .get_delegations_iter()
-            .any(|delegation| delegation.operator == *operator)
+            .any(|delegation| delegation.operator == operator)
         {
             err!(ErrorCode::FundRestakingVaultOperatorAlreadyRegisteredError)?
         }
@@ -159,7 +175,11 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDelegationsError
         );
 
-        self.delegations[self.num_delegations as usize].initialize(*operator);
+        self.delegations[self.num_delegations as usize].initialize(
+            operator,
+            delegated_amount,
+            undelegating_amount,
+        );
         self.num_delegations += 1;
 
         Ok(())
@@ -211,9 +231,11 @@ pub(super) struct RestakingVaultDelegation {
 }
 
 impl RestakingVaultDelegation {
-    fn initialize(&mut self, operator: Pubkey) {
+    fn initialize(&mut self, operator: Pubkey, delegated_amount: u64, undelegating_amount: u64) {
         *self = Zeroable::zeroed();
         self.operator = operator;
+        self.supported_token_delegated_amount = delegated_amount;
+        self.supported_token_undelegating_amount = undelegating_amount;
     }
 
     pub fn set_supported_token_allocation_strategy(

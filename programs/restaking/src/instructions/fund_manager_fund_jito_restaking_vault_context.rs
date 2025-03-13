@@ -37,6 +37,7 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
     pub vault_program: UncheckedAccount<'info>,
 
     /// CHECK: will be validated by pricing service
+    #[account(owner = vault_program.key())]
     pub vault_account: UncheckedAccount<'info>,
 
     pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -87,12 +88,18 @@ pub struct FundManagerFundJitoRestakingVaultDelegationInitialContext<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: will be validated by pricing service
+    #[account(owner = JITO_VAULT_PROGRAM_ID)]
     pub vault_account: UncheckedAccount<'info>,
 
-    /// CHECK: just need to validate vault operator is owned by the jito restaking program
-    #[account(address = JITO_RESTAKING_PROGRAM_ID)]
-    pub jito_restaking_program: UncheckedAccount<'info>,
+    /// CHECK: will be validated by jito restaking vault service
+    #[account(owner = JITO_RESTAKING_PROGRAM_ID)]
+    pub operator_account: UncheckedAccount<'info>,
 
-    /// CHECK: just verify that it's owner is Jito Restaking Program
-    pub vault_operator: UncheckedAccount<'info>,
+    /// CHECK: will be validated by jito restaking vault service
+    #[account(
+        seeds = [b"vault_operator_delegation", vault_account.key.as_ref(), operator_account.key.as_ref()],
+        bump,
+        seeds::program = JITO_VAULT_PROGRAM_ID,
+    )]
+    pub vault_operator_delegation: UncheckedAccount<'info>,
 }

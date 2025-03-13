@@ -337,7 +337,7 @@ impl InitializeCommand {
                     let operator = accounts_to_update_delegation_state[2 * i + 1];
                     require_keys_eq!(operator.key(), item.operator);
 
-                    let (restaked_amount, undelegation_requested_amount, undelegating_amount) =
+                    let (delegated_amount, undelegation_requested_amount, undelegating_amount) =
                         vault_service.update_operator_delegation_state_if_needed(
                             vault_update_state_tracker,
                             vault_operator_delegation,
@@ -347,7 +347,7 @@ impl InitializeCommand {
 
                     // sync the state of the delegation
                     let delegation = restaking_vault.get_delegation_mut(&item.operator)?;
-                    delegation.supported_token_delegated_amount = restaked_amount;
+                    delegation.supported_token_delegated_amount = delegated_amount;
                     delegation.supported_token_undelegating_amount =
                         undelegation_requested_amount + undelegating_amount;
 
