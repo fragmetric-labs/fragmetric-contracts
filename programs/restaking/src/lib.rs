@@ -464,9 +464,9 @@ pub mod restaking {
             &mut ctx.accounts.fund_account
         )?
         .process_add_jito_restaking_vault_delegation(
+            &ctx.accounts.vault_operator_delegation,
             &ctx.accounts.vault_account,
             &ctx.accounts.operator_account,
-            &ctx.accounts.vault_operator_delegation,
             ctx.remaining_accounts,
         )?);
 
