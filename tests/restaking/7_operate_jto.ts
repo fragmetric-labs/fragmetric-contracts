@@ -11,7 +11,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
     const restaking = await restakingPlayground as RestakingPlayground;
     const user1 = restaking.keychain.getKeypair('MOCK_USER1');
 
-    const slotPerEpoch = 32;
+    const slotPerEpoch = 64;
     const epochToSlot = (epoch: number) => epoch * slotPerEpoch;
 
     step("deposit sol and tokens & request withdraw for most of them", async () => {
@@ -28,7 +28,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetJtoMintAddress'));
         await restaking.runUserRequestWithdrawal(user1, quarter, restaking.getConstantAsPublicKey('mainnetJtoMintAddress'));
 
-        logger.info('waiting until epoch 2... (1 epoch = 32 slots)');
+        logger.info(`waiting until epoch 2... (1 epoch = ${slotPerEpoch} slots)`);
         await restaking.sleepUntil(epochToSlot(2));
         logger.info('epoch 2: operator enqueue withdrawal - process withdrawal restake');
         await restaking.runOperatorFundCommands();
@@ -68,5 +68,19 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         logger.info('epoch 7: operator claim unrestaked - process withdrawal - harvest reward - restake');
         await restaking.runOperatorFundCommands();
         await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetJtoMintAddress'), new BN(4));
+
+        logger.info('try to initialize in same epoch');
+        await restaking.runOperatorFundCommands({
+            command: {
+                initialize: {
+                    0: {
+                        state: {
+                            newRestakingVaultUpdate: {},
+                        }
+                    }
+                }
+            },
+            requiredAccounts: [],
+        });
     });
 });
