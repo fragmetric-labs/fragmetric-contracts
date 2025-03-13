@@ -175,14 +175,13 @@ impl SelfExecutable for RestakeVSTCommand {
                             };
                             require_keys_eq!(address, vault_account.key());
 
-                            let mut required_accounts = JitoRestakingVaultService::new(
+                            let required_accounts = JitoRestakingVaultService::new(
                                 vault_program,
                                 vault_config,
                                 vault_account,
                             )?
-                            .find_accounts_to_deposit()?;
-
-                            required_accounts.extend(vec![
+                            .find_accounts_to_deposit()?
+                            .chain([
                                 // from_supported_token_account,
                                 (
                                     match fund_account.get_normalized_token() {
