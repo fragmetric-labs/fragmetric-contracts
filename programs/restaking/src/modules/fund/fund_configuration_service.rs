@@ -3,12 +3,14 @@ use anchor_spl::token::Token;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::*;
 
+use crate::errors::ErrorCode;
+use crate::events;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
+use crate::modules::restaking;
 use crate::modules::reward;
 use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, SystemProgramExt};
-use crate::{errors, events};
 
 use super::*;
 
@@ -260,16 +262,39 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
 
         vault_supported_token_mint: &InterfaceAccount<Mint>,
-        vault_supported_token_program: &Interface<TokenInterface>,
+        vault_supported_token_program: &Program<Token>,
 
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
-        vault_receipt_token_program: &Interface<TokenInterface>,
+        vault_receipt_token_program: &Program<Token>,
         vault_receipt_token_pricing_source: TokenPricingSource,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
+        #[deny(clippy::wildcard_enum_match_arm)]
+        match vault_receipt_token_pricing_source {
+            TokenPricingSource::JitoRestakingVault { .. } => {
+                restaking::JitoRestakingVaultService::validate_vault(
+                    vault,
+                    vault_supported_token_mint.as_ref(),
+                    vault_receipt_token_mint.as_ref(),
+                )?
+            }
+            TokenPricingSource::SPLStakePool { .. }
+            | TokenPricingSource::MarinadeStakePool { .. }
+            | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. }
+            | TokenPricingSource::OrcaDEXLiquidityPool { .. }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {
+                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => {
+                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
+            }
+        }
+
         require_keys_eq!(
             fund_vault_supported_token_account.owner,
             self.fund_account.load()?.get_reserve_account_address()?,
@@ -296,14 +321,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault_receipt_token_program.key()
         );
 
-        // TODO add more vault validation since we do not check vault address anymore
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(vault).owner,
-            vault_program.key()
-        );
-
-        // TODO add more vault receipt token mint validation since we do not check mint address anymore
-
         self.fund_account.load_mut()?.add_restaking_vault(
             vault.key(),
             vault_program.key(),
@@ -322,21 +339,35 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_restaking_vault_delegation(
+    pub fn process_add_jito_restaking_vault_delegation(
         &mut self,
+        vault_operator_delegation: &UncheckedAccount,
         vault: &UncheckedAccount,
-        vault_operator: &UncheckedAccount,
-        restaking_program: &UncheckedAccount,
+        operator: &UncheckedAccount,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(*vault_operator.owner, restaking_program.key());
+        let (
+            delegation_index,
+            delegated_amount,
+            undelegation_requested_amount,
+            undelegating_amount,
+        ) = restaking::JitoRestakingVaultService::validate_vault_operator_delegation(
+            vault_operator_delegation,
+            vault,
+            operator,
+        )?;
 
-        // TODO add more operator validation
+        require_gte!(u8::MAX as u64, delegation_index);
 
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault.key)?
-            .add_delegation(vault_operator.key)?;
+            .add_delegation_with_desired_index(
+                operator.key(),
+                delegation_index as u8,
+                delegated_amount,
+                undelegation_requested_amount + undelegating_amount,
+            )?;
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
@@ -397,7 +428,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                     || fund_account
                         .get_supported_tokens_iter()
                         .all(|supported_token| supported_token.token.withdrawable == 1),
-                errors::ErrorCode::FundInvalidConfigurationUpdateError
+                ErrorCode::FundInvalidConfigurationUpdateError
             );
         }
 
@@ -446,7 +477,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             // given underlying asset should be able to be either withdrawn directly or withdrawn as SOL through unstaking or swap.
             require!(
                 sol_withdrawable || supported_token.token.withdrawable == 1,
-                errors::ErrorCode::FundInvalidConfigurationUpdateError
+                ErrorCode::FundInvalidConfigurationUpdateError
             );
         }
 

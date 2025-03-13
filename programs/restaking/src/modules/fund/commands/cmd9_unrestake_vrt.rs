@@ -1,18 +1,14 @@
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token;
-use anchor_spl::associated_token::{
-    get_associated_token_address, get_associated_token_address_with_program_id,
-    spl_associated_token_account,
-};
 use std::cell::Ref;
-use std::iter;
 use std::ops::Neg;
 
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token;
+
+use crate::errors;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::{AccountInfoExt, PDASeeds};
-use crate::{errors, utils};
+use crate::utils::AccountInfoExt;
 
 use super::{
     FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
@@ -209,7 +205,7 @@ impl UnrestakeVRTCommand {
                         let pool = normalized_token_pool_account.unwrap();
                         pricing_service.get_token_amount_as_sol(
                             &supported_token.mint,
-                            utils::get_proportional_amount(
+                            crate::utils::get_proportional_amount(
                                 pool.get_supported_token(&supported_token.mint)
                                     .map(|t| t.locked_amount)
                                     .unwrap(),
@@ -301,7 +297,7 @@ impl UnrestakeVRTCommand {
                                     let pool = normalized_token_pool_account.unwrap();
                                     pricing_service.get_token_amount_as_sol(
                                         &supported_token.mint,
-                                        utils::get_proportional_amount(
+                                        crate::utils::get_proportional_amount(
                                             pool.get_supported_token(&supported_token.mint)
                                                 .map(|t| t.locked_amount)
                                                 .unwrap(),
@@ -423,40 +419,42 @@ impl UnrestakeVRTCommand {
 
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
-                let mut required_accounts = vault_service.find_accounts_to_request_withdraw()?;
-                required_accounts.extend(vec![
-                    (
-                        fund_account
-                            .find_vault_receipt_token_reserve_account_address(vault_account.key)?,
-                        true,
-                    ),
-                    (fund_account.get_reserve_account_address()?, true),
-                ]);
-                required_accounts.extend(
-                    (0..5)
-                        .map(|index| {
-                            let ticket_base_account =
-                                *FundAccount::find_unrestaking_ticket_account_address(
-                                    &ctx.fund_account.key(),
-                                    &item.vault,
-                                    index,
-                                );
-                            let ticket_account =
-                                vault_service.find_withdrawal_ticket_account(&ticket_base_account);
-                            let ticket_receipt_token_account =
-                                associated_token::get_associated_token_address_with_program_id(
-                                    &ticket_account,
-                                    &item.receipt_token_mint,
-                                    &anchor_spl::token::ID,
-                                );
-                            [
-                                (ticket_account, true),
-                                (ticket_receipt_token_account, true),
-                                (ticket_base_account, false),
-                            ]
-                        })
-                        .flatten(),
-                );
+                let required_accounts = vault_service
+                    .find_accounts_to_request_withdraw()?
+                    .chain([
+                        (
+                            fund_account.find_vault_receipt_token_reserve_account_address(
+                                vault_account.key,
+                            )?,
+                            true,
+                        ),
+                        (fund_account.get_reserve_account_address()?, true),
+                    ])
+                    .chain(
+                        (0..5)
+                            .map(|index| {
+                                let ticket_base_account =
+                                    *FundAccount::find_unrestaking_ticket_account_address(
+                                        &ctx.fund_account.key(),
+                                        &item.vault,
+                                        index,
+                                    );
+                                let ticket_account = vault_service
+                                    .find_withdrawal_ticket_account(&ticket_base_account);
+                                let ticket_receipt_token_account =
+                                    associated_token::get_associated_token_address_with_program_id(
+                                        &ticket_account,
+                                        &item.receipt_token_mint,
+                                        &anchor_spl::token::ID,
+                                    );
+                                [
+                                    (ticket_account, true),
+                                    (ticket_receipt_token_account, true),
+                                    (ticket_base_account, false),
+                                ]
+                            })
+                            .flatten(),
+                    );
 
                 Ok((
                     None,

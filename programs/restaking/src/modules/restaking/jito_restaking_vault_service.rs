@@ -3,19 +3,25 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::system_program;
 use anchor_spl::associated_token;
 use anchor_spl::token_interface::TokenAccount;
-use jito_bytemuck::AccountDeserialize;
+use jito_vault_core::{
+    config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation,
+    vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket,
+    vault_update_state_tracker::VaultUpdateStateTracker,
+};
 
 use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
-use crate::errors;
+use crate::errors::ErrorCode;
 use crate::utils;
 use crate::utils::AccountInfoExt;
 
-pub struct JitoRestakingVaultService<'info> {
+pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
     vault_config_account: &'info AccountInfo<'info>,
     vault_account: &'info AccountInfo<'info>,
+    num_operators: u64,
     current_slot: u64,
     current_epoch: u64,
+    last_update_epoch: u64,
     epoch_length: u64,
     vault_program_fee_wallet: Pubkey,
 }
@@ -26,96 +32,121 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_config_account: &'info AccountInfo<'info>,
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
-        let vault_config = Self::deserialize_vault_config(vault_config_account)?;
+        require_keys_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
+        require_keys_eq!(JITO_VAULT_CONFIG_ADDRESS, vault_config_account.key());
+        require_keys_eq!(*vault_config_account.owner, vault_program.key());
+        require_keys_eq!(*vault_account.owner, vault_program.key());
 
+        let vault_config_data = &Self::borrow_account_data(vault_config_account)?;
+        let vault_config = Self::deserialize_account_data::<Config>(vault_config_data)?;
+        let vault_data = &Self::borrow_account_data(vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(vault_data)?;
+
+        let num_operators = vault.operator_count();
         let current_slot = Clock::get()?.slot;
+        let last_update_slot = vault.last_full_state_update_slot();
         let epoch_length = vault_config.epoch_length();
         let current_epoch = current_slot
             .checked_div(epoch_length)
-            .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let last_update_epoch = last_update_slot
+            .checked_div(epoch_length)
+            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(Self {
             vault_program,
             vault_config_account,
             vault_account,
+            num_operators,
             current_slot,
             current_epoch,
+            last_update_epoch,
             epoch_length,
             vault_program_fee_wallet: vault_config.program_fee_wallet,
         })
     }
 
-    pub(super) fn deserialize_vault(
-        vault_account: &'info AccountInfo<'info>,
-    ) -> Result<jito_vault_core::vault::Vault> {
-        if !vault_account.is_initialized() {
-            Err(ProgramError::InvalidAccountData.into())
-        } else {
-            Ok(*jito_vault_core::vault::Vault::try_from_slice_unchecked(
-                vault_account.try_borrow_data()?.as_ref(),
-            )?)
-        }
+    pub fn validate_vault(
+        vault_account: &AccountInfo,
+        vault_supported_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &AccountInfo,
+    ) -> Result<()> {
+        let data = &Self::borrow_account_data(vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
+        require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
+
+        Ok(())
     }
 
-    fn deserialize_vault_config(
-        vault_config: &'info AccountInfo<'info>,
-    ) -> Result<jito_vault_core::config::Config> {
-        if !vault_config.is_initialized() {
-            Err(ProgramError::InvalidAccountData.into())
-        } else {
-            Ok(*jito_vault_core::config::Config::try_from_slice_unchecked(
-                vault_config.try_borrow_data()?.as_ref(),
-            )?)
-        }
+    /// returns [delegation_index, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
+    /// in other words [delegation_index, delegated_amount, undelegation_requested_amount, undelegating_amount]
+    pub fn validate_vault_operator_delegation(
+        vault_operator_delegation: &AccountInfo,
+        vault_account: &AccountInfo,
+        operator: &AccountInfo,
+    ) -> Result<(u64, u64, u64, u64)> {
+        let data = &Self::borrow_account_data(vault_operator_delegation)?;
+        let delegation = Self::deserialize_account_data::<VaultOperatorDelegation>(data)?;
+
+        require_keys_eq!(delegation.vault, vault_account.key());
+        require_keys_eq!(delegation.operator, operator.key());
+
+        Ok((
+            delegation.index(),
+            delegation.delegation_state.staked_amount(),
+            delegation.delegation_state.enqueued_for_cooldown_amount(),
+            delegation.delegation_state.cooling_down_amount(),
+        ))
     }
 
-    fn deserialize_vault_update_state_tracker(
-        vault_update_state_tracker: &'info AccountInfo<'info>,
-    ) -> Result<jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker> {
-        if !vault_update_state_tracker.is_initialized() {
-            Err(ProgramError::InvalidAccountData.into())
-        } else {
-            Ok(*jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::try_from_slice_unchecked(
-                vault_update_state_tracker.try_borrow_data()?.as_ref(),
-            )?)
-        }
+    #[inline(always)]
+    fn borrow_account_data<'a, 'b>(
+        account: &'a AccountInfo<'b>,
+    ) -> Result<std::cell::Ref<'a, &'b mut [u8]>> {
+        Ok(account
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?)
     }
 
-    fn deserialize_vault_operator_delegation(
-        vault_operator_delegation: &'info AccountInfo<'info>,
-    ) -> Result<jito_vault_core::vault_operator_delegation::VaultOperatorDelegation> {
-        if !vault_operator_delegation.is_initialized() {
-            Err(ProgramError::InvalidAccountData.into())
-        } else {
-            Ok(*jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::try_from_slice_unchecked(
-                vault_operator_delegation.try_borrow_data()?.as_ref(),
-            )?)
-        }
+    #[inline(always)]
+    fn deserialize_account_data<'a, T: jito_bytemuck::AccountDeserialize>(
+        data: &'a std::cell::Ref<&mut [u8]>,
+    ) -> Result<&'a T> {
+        Ok(T::try_from_slice_unchecked(data)?)
     }
 
-    fn find_vault_update_state_tracker_address(&self, epoch: Option<u64>) -> Pubkey {
-        jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker::find_program_address(
+    fn find_vault_update_state_tracker_address(&self) -> Pubkey {
+        Pubkey::find_program_address(
+            &[
+                b"vault_update_state_tracker",
+                self.vault_account.key.as_ref(),
+                &self.current_epoch.to_le_bytes(),
+            ],
             self.vault_program.key,
-            self.vault_account.key,
-            epoch.unwrap_or(self.current_epoch),
         )
         .0
     }
 
-    pub fn find_vault_operator_delegation_address(&self, operator: &Pubkey) -> Pubkey {
-        jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::find_program_address(
+    fn find_vault_operator_delegation_address(&self, operator: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[
+                b"vault_operator_delegation",
+                self.vault_account.key.as_ref(),
+                operator.as_ref(),
+            ],
             self.vault_program.key,
-            self.vault_account.key,
-            operator,
         )
         .0
     }
 
     /// gives max fee/expense ratio during a cycle of circulation
     /// returns (numerator, denominator)
-    pub fn get_max_cycle_fee(vault_account: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
-        let vault = Self::deserialize_vault(vault_account)?;
+    pub fn get_max_cycle_fee(vault_account: &AccountInfo) -> Result<(u64, u64)> {
+        let data = &Self::borrow_account_data(vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
 
         Ok((
             vault.deposit_fee_bps() as u64 // vault's deposit fee
@@ -125,242 +156,155 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account]
-    pub fn find_accounts_to_new(vault_address: Pubkey) -> Result<Vec<(Pubkey, bool)>> {
-        Ok(vec![
+    fn is_vault_up_to_date(&self) -> bool {
+        self.last_update_epoch >= self.current_epoch
+    }
+
+    /// * (0) vault_program
+    /// * (1) vault_config_account(writable)
+    /// * (2) vault_account(writable)
+    pub fn find_accounts_to_new(
+        vault_address: Pubkey,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        Ok([
             (JITO_VAULT_PROGRAM_ID, false),
             (JITO_VAULT_CONFIG_ADDRESS, true), // well, idk why but deposit ix needs it to be writable.
             (vault_address, true),
-        ])
-    }
-
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, system_program, vault_update_state_tracker_for_current_epoch, vault_update_state_tracker_for_next_epoch]
-    pub fn find_account_to_ensure_state_update_required(&self) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        accounts.extend(vec![
-            (anchor_lang::solana_program::system_program::id(), false),
-            (self.find_vault_update_state_tracker_address(None), true),
-            (
-                self.find_vault_update_state_tracker_address(Some(self.current_epoch + 1)),
-                true,
-            ),
-        ]);
-        Ok(accounts)
+        ]
+        .into_iter())
     }
 
     pub fn get_current_epoch(&self) -> u64 {
         self.current_epoch
     }
 
-    /// check whether vault epoch-process should be fulfilled or not.
-    /// returns valid [vault_update_state_tracker] among [vault_update_state_tracker1 or vault_update_state_tracker2] if state update is required.
-    /// after run [update_delegation_state] for all operators, this method should to be called to finalize it.
-    pub fn ensure_state_update_required(
-        &self,
-        system_program: &'info AccountInfo<'info>,
-        vault_update_state_tracker1: &'info AccountInfo<'info>,
-        vault_update_state_tracker2: &'info AccountInfo<'info>,
+    /// returns vault update indices in proper order.
+    /// For example, when start index = 3,
+    /// then order is [3, 4, ..., N-1, 0, 1, 2].
+    pub fn get_ordered_vault_update_indices(&self) -> Vec<u64> {
+        if self.num_operators == 0 {
+            return vec![];
+        }
 
+        let start_index = self.current_epoch % self.num_operators;
+        let mut indices: Vec<_> = (0..self.num_operators).collect();
+        indices.rotate_left(start_index as usize);
+        indices
+    }
+
+    /// * (0) vault_program
+    /// * (1) vault_config_account(writable)
+    /// * (2) vault_account(writable)
+    /// * (3) vault_update_state_tracker(writable)
+    pub fn find_accounts_to_update_vault_delegation_state(
+        &self,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let accounts = Self::find_accounts_to_new(self.vault_account.key())?
+            .chain([(self.find_vault_update_state_tracker_address(), true)]);
+
+        Ok(accounts)
+    }
+
+    /// initialize vault_update_state_tracker if needed
+    pub fn initialize_vault_update_state_tracker_if_needed(
+        &self,
+        // fixed
+        system_program: &Program<'info, System>,
+        vault_update_state_tracker: &AccountInfo<'info>,
+
+        // variant
         payer: &AccountInfo<'info>,
         payer_seeds: &[&[&[u8]]],
-    ) -> Result<Option<&'info AccountInfo<'info>>> {
-        let (last_updated_epoch, vault_operator_count) = {
-            let vault = Self::deserialize_vault(self.vault_account)?;
-            let vault_config = Self::deserialize_vault_config(self.vault_config_account)?;
-            let last_updated_slot = vault.last_full_state_update_slot();
-            let last_updated_epoch = last_updated_slot
-                .checked_div(vault_config.epoch_length())
-                .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))?;
-            let vault_operator_count = vault.operator_count();
-            (last_updated_epoch, vault_operator_count)
-        };
-
-        if self.current_epoch == last_updated_epoch {
-            // epoch process not required
+    ) -> Result<()> {
+        if self.is_vault_up_to_date() {
             msg!(
                 "RESTAKE#jito vault_update_state_tracker is up-to-date: current_epoch={}",
                 self.current_epoch
             );
-            return Ok(None);
+
+            return Ok(());
         }
 
-        // check new tracker is required
-        let initializing_tracker_account = match Self::deserialize_vault_update_state_tracker(
-            vault_update_state_tracker1,
-        ) {
-            Ok(current_tracker) => {
-                if current_tracker.ncn_epoch() != self.current_epoch {
-                    // just close out-dated state tracker
-                    let closing_epoch = current_tracker.ncn_epoch();
-                    let close_vault_update_state_tracker_ix =
-                        jito_vault_sdk::sdk::close_vault_update_state_tracker(
-                            self.vault_program.key,
-                            self.vault_config_account.key,
-                            self.vault_account.key,
-                            vault_update_state_tracker1.key,
-                            payer.key,
-                            closing_epoch,
-                        );
-                    invoke_signed(
-                        &close_vault_update_state_tracker_ix,
-                        &[
-                            self.vault_program.to_account_info(),
-                            self.vault_config_account.to_account_info(),
-                            self.vault_account.to_account_info(),
-                            vault_update_state_tracker1.to_account_info(),
-                            payer.to_account_info(),
-                        ],
-                        payer_seeds,
-                    )?;
-                    msg!("RESTAKE#jito vault_update_state_tracker needs to be initialized: closed_epoch={}, current_epoch={}", closing_epoch, self.current_epoch);
-                    Some(vault_update_state_tracker2)
-                } else {
-                    None
-                }
-            }
-            Err(err) => {
-                msg!("RESTAKE#jito vault_update_state_tracker needs to be initialized: current_epoch={}, error={}", self.current_epoch, err);
-                Some(
-                    if vault_update_state_tracker1.key()
-                        == self.find_vault_update_state_tracker_address(None)
-                    {
-                        vault_update_state_tracker1
-                    } else {
-                        vault_update_state_tracker2
-                    },
-                )
-            }
-        };
-
-        // initialize new tracker and return
-        if let Some(tracker_account) = initializing_tracker_account {
-            let required_space = 8 + std::mem::size_of::<
-                jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker,
-            >();
-            let current_lamports = tracker_account.get_lamports();
-            let required_lamports = Rent::get()?
-                .minimum_balance(required_space)
-                .max(1)
-                .saturating_sub(current_lamports);
-
-            anchor_lang::system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    anchor_lang::system_program::Transfer {
-                        from: payer.to_account_info(),
-                        to: tracker_account.to_account_info(),
-                    },
-                    payer_seeds,
-                ),
-                required_lamports,
-            )?;
-
-            let initialize_vault_update_state_tracker_ix =
-                jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
-                    self.vault_program.key,
-                    self.vault_config_account.key,
-                    self.vault_account.key,
-                    tracker_account.key,
-                    payer.key,
-                    jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
-                );
-
-            invoke_signed(
-                &initialize_vault_update_state_tracker_ix,
-                &[
-                    self.vault_program.to_account_info(),
-                    self.vault_config_account.to_account_info(),
-                    self.vault_account.to_account_info(),
-                    tracker_account.to_account_info(),
-                    payer.to_account_info(),
-                    system_program.to_account_info(),
-                ],
-                payer_seeds,
-            )?;
-
+        if vault_update_state_tracker.is_initialized() {
             msg!(
-                "RESTAKE#jito vault_update_state_tracker initialized: current_epoch={}",
+                "RESTAKE#jito vault_update_state_tracker already initialized: current_epoch={}",
                 self.current_epoch
             );
 
-            return Ok(Some(tracker_account));
+            return Ok(());
         }
 
-        // check current tracker is ready to close
-        let current_tracker_account = vault_update_state_tracker1;
-
-        // check all operator has been updated
-        let current_tracker =
-            Self::deserialize_vault_update_state_tracker(current_tracker_account)?;
-        let all_cranked = vault_operator_count == 0 || current_tracker
-            .all_operators_updated(vault_operator_count)
-            .unwrap_or_else(|err| {
-                msg!(
-                        "RESTAKE#jito failed to compute all_operators_updated: vault_operator_count={}, error={}",
-                        vault_operator_count,
-                        err
-                    );
-                false
-            });
-
-        // update still need to be cranked then closed
-        if !all_cranked {
-            msg!("RESTAKE#jito vault_update_state_tracker needs to be cranked then closed: vault_operator_count={}, current_epoch={}", vault_operator_count, self.current_epoch);
-            return Ok(Some(current_tracker_account));
-        }
-
-        // close the tracker and finalize current epoch process
-        let close_vault_update_state_tracker_ix =
-            jito_vault_sdk::sdk::close_vault_update_state_tracker(
+        let initialize_vault_update_state_tracker_ix =
+            jito_vault_sdk::sdk::initialize_vault_update_state_tracker(
                 self.vault_program.key,
                 self.vault_config_account.key,
                 self.vault_account.key,
-                current_tracker_account.key,
+                vault_update_state_tracker.key,
                 payer.key,
-                self.current_epoch,
+                jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
             );
 
         invoke_signed(
-            &close_vault_update_state_tracker_ix,
+            &initialize_vault_update_state_tracker_ix,
             &[
                 self.vault_program.to_account_info(),
                 self.vault_config_account.to_account_info(),
                 self.vault_account.to_account_info(),
-                current_tracker_account.to_account_info(),
+                vault_update_state_tracker.to_account_info(),
                 payer.to_account_info(),
+                system_program.to_account_info(),
             ],
             payer_seeds,
         )?;
 
         msg!(
-            "RESTAKE#jito vault_update_state_tracker closed: current_epoch={}",
+            "RESTAKE#jito vault_update_state_tracker initialized: current_epoch={}",
             self.current_epoch
         );
-        Ok(None)
+
+        Ok(())
     }
 
+    /// * vault_operator_delegation(writable)
+    /// * operator
+    pub fn find_accounts_to_update_operator_delegation_state(
+        &self,
+        operator: Pubkey,
+    ) -> impl Iterator<Item = (Pubkey, bool)> {
+        let accounts = [
+            (self.find_vault_operator_delegation_address(&operator), true),
+            (operator, false),
+        ];
+
+        accounts.into_iter()
+    }
+
+    /// updates vault_operator_delegation if needed
+    /// since anyone can update vault_operator_delegation,
+    /// it might already be updated.
+    ///
     /// returns [staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
-    /// in other words [restaked_amount, undelegation_requested_amount, undelegating_amount]
-    pub fn update_delegation_state(
-        self: &Self,
-        vault_update_state_tracker: &'info AccountInfo<'info>,
-        vault_operator_delegation: &'info AccountInfo<'info>,
-        operator: &'info AccountInfo<'info>,
+    /// in other words [delegated_amount, undelegation_requested_amount, undelegating_amount]
+    pub fn update_operator_delegation_state_if_needed(
+        &self,
+        // fixed
+        vault_update_state_tracker: &AccountInfo<'info>,
 
-        payer: &AccountInfo<'info>,
-        payer_seeds: &[&[&[u8]]],
+        // variant
+        vault_operator_delegation: &AccountInfo<'info>,
+        operator: &AccountInfo<'info>,
+
+        next_index: u64,
     ) -> Result<(u64, u64, u64)> {
-        let mut delegation =
-            Self::deserialize_vault_operator_delegation(vault_operator_delegation)?;
+        let delegation_index = {
+            let data = &Self::borrow_account_data(vault_operator_delegation)?;
+            let delegation = Self::deserialize_account_data::<VaultOperatorDelegation>(data)?;
+            delegation.index()
+        };
+        require_eq!(delegation_index, next_index);
 
-        // assertion: `check_is_already_updated` returns Err when already updated
-        if !match delegation.check_is_already_updated(self.current_slot, self.current_epoch) {
-            Ok(_) => false,
-            Err(err) => {
-                msg!("RESTAKE#jito vault_operator_delegation is up-to-date: current_epoch={}, operator={}, error={}", self.current_epoch, operator.key(), err);
-                true
-            }
-        } {
+        let next_update_index = self.get_vault_update_next_index(vault_update_state_tracker)?;
+        if next_update_index.is_some_and(|next_index| next_index == next_index) {
             let crank_vault_update_state_tracker_ix =
                 jito_vault_sdk::sdk::crank_vault_update_state_tracker(
                     self.vault_program.key,
@@ -380,20 +324,21 @@ impl<'info> JitoRestakingVaultService<'info> {
                     operator.to_account_info(),
                     vault_operator_delegation.to_account_info(),
                     vault_update_state_tracker.to_account_info(),
-                    payer.to_account_info(),
                 ],
-                payer_seeds,
+                &[],
             )?;
-
-            delegation = Self::deserialize_vault_operator_delegation(vault_operator_delegation)?;
         }
+
+        let data = &Self::borrow_account_data(vault_operator_delegation)?;
+        let delegation = Self::deserialize_account_data::<VaultOperatorDelegation>(data)?;
 
         let staked_amount = delegation.delegation_state.staked_amount();
         let enqueued_for_cooldown_amount =
             delegation.delegation_state.enqueued_for_cooldown_amount();
         let cooling_down_amount = delegation.delegation_state.cooling_down_amount();
 
-        msg!("RESTAKE#jito vault_update_state_tracker cranked: current_epoch={}, operator={}, staked_amount={}, enqueued_for_cooldown_amount={}, cooling_down_amount={}", self.current_epoch, operator.key, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount);
+        msg!("RESTAKE#jito vault_operator_delegation updated: current_epoch={}, operator={}, index={}, staked_amount={}, enqueued_for_cooldown_amount={}, cooling_down_amount={}", self.current_epoch, operator.key, delegation_index, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount);
+
         Ok((
             staked_amount,
             enqueued_for_cooldown_amount,
@@ -401,11 +346,89 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account]
-    pub fn find_accounts_to_deposit(&self) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        accounts.extend(vec![
+    /// gets index of the delegation to be updated at next.
+    /// this returns `None` if vault is up to date (no update needed),
+    /// or all delegations are updated.
+    fn get_vault_update_next_index(
+        &self,
+        vault_update_state_tracker: &AccountInfo,
+    ) -> Result<Option<u64>> {
+        if self.is_vault_up_to_date() {
+            return Ok(None);
+        }
+
+        if self.num_operators == 0 {
+            return Ok(None);
+        }
+
+        let data = &Self::borrow_account_data(vault_update_state_tracker)?;
+        let tracker = Self::deserialize_account_data::<VaultUpdateStateTracker>(data)?;
+        let start_index = tracker.ncn_epoch() % self.num_operators;
+
+        if tracker.last_updated_index() == u64::MAX {
+            return Ok(Some(start_index));
+        }
+
+        let next_index = (tracker.last_updated_index() + 1) % self.num_operators;
+        if next_index == start_index {
+            return Ok(None);
+        }
+
+        Ok(Some(next_index))
+    }
+
+    /// closes vault_update_state_tracker if needed
+    pub fn close_vault_update_state_tracker_if_needed(
+        &self,
+        vault_update_state_tracker: &AccountInfo<'info>,
+        payer: &AccountInfo<'info>,
+        payer_seeds: &[&[&[u8]]],
+    ) -> Result<()> {
+        if self.is_vault_up_to_date() {
+            return Ok(());
+        }
+
+        let close_vault_update_state_tracker_ix =
+            jito_vault_sdk::sdk::close_vault_update_state_tracker(
+                self.vault_program.key,
+                self.vault_config_account.key,
+                self.vault_account.key,
+                vault_update_state_tracker.key,
+                payer.key,
+                self.current_epoch,
+            );
+        invoke_signed(
+            &close_vault_update_state_tracker_ix,
+            &[
+                self.vault_program.to_account_info(),
+                self.vault_config_account.to_account_info(),
+                self.vault_account.to_account_info(),
+                vault_update_state_tracker.to_account_info(),
+                payer.to_account_info(),
+            ],
+            payer_seeds,
+        )?;
+
+        msg!(
+            "RESTAKE#jito vault_update_state_tracker closed: current_epoch={}",
+            self.current_epoch
+        );
+
+        Ok(())
+    }
+
+    /// * (0) vault_program
+    /// * (1) vault_config_account(writable)
+    /// * (2) vault_account(writable)
+    /// * (3) token_program
+    /// * (4) vault_receipt_token_mint(writable)
+    /// * (5) vault_receipt_token_fee_wallet_account(writable)
+    /// * (6) vault_supported_token_reserve_account(writable),
+    pub fn find_accounts_to_deposit(&self) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (anchor_spl::token::ID, false),
             (vault.vrt_mint, true),
             (
@@ -425,6 +448,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 true,
             ),
         ]);
+
         Ok(accounts)
     }
 
@@ -432,13 +456,13 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub fn deposit(
         &self,
         // fixed
-        token_program: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
-        vault_receipt_token_fee_wallet_account: &'info AccountInfo<'info>,
-        vault_supported_token_reserve_account: &'info AccountInfo<'info>,
+        token_program: &AccountInfo<'info>,
+        vault_receipt_token_mint: &AccountInfo<'info>,
+        vault_receipt_token_fee_wallet_account: &AccountInfo<'info>,
+        vault_supported_token_reserve_account: &AccountInfo<'info>,
 
         // variant
-        from_vault_supported_token_account: &'info AccountInfo<'info>,
+        from_vault_supported_token_account: &AccountInfo<'info>,
         to_vault_receipt_token_account: &'info AccountInfo<'info>,
         signer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
@@ -480,7 +504,8 @@ impl<'info> JitoRestakingVaultService<'info> {
             vault_deposit_fee_bps,
             vault_receipt_token_supply,
         ) = {
-            let vault = Self::deserialize_vault(self.vault_account)?;
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
             (
                 vault.deposit_capacity(),
                 vault.tokens_deposited(),
@@ -548,37 +573,52 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, token_program, associated_token_program, system_program, vault_receipt_token_mint]
-    pub fn find_accounts_to_request_withdraw(&self) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        accounts.extend(vec![
+    /// * (0) vault_program
+    /// * (1) vault_config_account(writable)
+    /// * (2) vault_account(writable)
+    /// * (3) token_program
+    /// * (4) associated_token_program
+    /// * (5) system_program
+    /// * (6) vault_receipt_token_mint
+    pub fn find_accounts_to_request_withdraw(
+        &self,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (anchor_spl::token::ID, false),
             (associated_token::ID, false),
             (system_program::ID, false),
             (vault.vrt_mint, false),
         ]);
+
         Ok(accounts)
     }
 
     pub fn find_withdrawal_ticket_account(&self, authority_account: &Pubkey) -> Pubkey {
-        jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket::find_program_address(self.vault_program.key, self.vault_account.key, authority_account).0
+        VaultStakerWithdrawalTicket::find_program_address(
+            self.vault_program.key,
+            self.vault_account.key,
+            authority_account,
+        )
+        .0
     }
 
     /// returns [from_vault_receipt_token_account, enqueued_vault_receipt_token_amount]
     pub fn request_withdraw(
         &self,
         // fixed
-        token_program: &'info AccountInfo<'info>,
-        associated_token_program: &'info AccountInfo<'info>,
-        system_program: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
+        token_program: &AccountInfo<'info>,
+        associated_token_program: &AccountInfo<'info>,
+        system_program: &AccountInfo<'info>,
+        vault_receipt_token_mint: &AccountInfo<'info>,
 
         // variant
         from_vault_receipt_token_account: &'info AccountInfo<'info>,
-        withdrawal_ticket_account: &'info AccountInfo<'info>,
+        withdrawal_ticket_account: &AccountInfo<'info>,
         withdrawal_ticket_receipt_token_account: &'info AccountInfo<'info>,
-        withdrawal_ticket_base_account: &'info AccountInfo<'info>,
+        withdrawal_ticket_base_account: &AccountInfo<'info>,
 
         payer: &AccountInfo<'info>,
         payer_seeds: &[&[&[u8]]],
@@ -607,9 +647,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))?;
 
         // pay withdrawal ticket rent
-        let required_space = 8 + std::mem::size_of::<
-            jito_vault_core::vault_update_state_tracker::VaultUpdateStateTracker,
-        >();
+        let required_space = 8 + std::mem::size_of::<VaultUpdateStateTracker>();
 
         let current_lamports = withdrawal_ticket_account.get_lamports();
         let required_lamports = Rent::get()?
@@ -678,15 +716,11 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    pub fn is_claimable_withdrawal_ticket(
-        &self,
-        withdrawal_ticket: &'info AccountInfo<'info>,
-    ) -> Result<bool> {
+    pub fn is_claimable_withdrawal_ticket(&self, withdrawal_ticket: &AccountInfo) -> Result<bool> {
         Ok({
             if withdrawal_ticket.is_initialized() {
-                let ticket_data_ref = withdrawal_ticket.data.borrow();
-                let ticket_data = ticket_data_ref.as_ref();
-                let ticket = jito_vault_core::vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket::try_from_slice_unchecked(ticket_data)?;
+                let data = &Self::borrow_account_data(withdrawal_ticket)?;
+                let ticket = Self::deserialize_account_data::<VaultStakerWithdrawalTicket>(data)?;
                 let claimable = ticket.is_withdrawable(self.current_slot, self.epoch_length)?;
                 msg!("CHECK_UNRESTAKED#jito: ticket={}, current_epoch={} ({}), unstaked_epoch={} ({}), withdrawalble={}", withdrawal_ticket.key, self.current_slot / self.epoch_length, self.current_slot, ticket.slot_unstaked() / self.epoch_length, ticket.slot_unstaked(), claimable);
                 claimable
@@ -696,11 +730,20 @@ impl<'info> JitoRestakingVaultService<'info> {
         })
     }
 
-    /// returns (pubkey, writable) of [vault_program, vault_config, vault_account, token_program, system_program, vault_receipt_token_mint, vault_program_fee_receipt_token_account, vault_fee_receipt_token_account, vault_supported_token_reserve_account]
-    pub fn find_accounts_to_withdraw(&self) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        accounts.extend(vec![
+    /// * (0) vault_program
+    /// * (1) vault_config_account(writable)
+    /// * (2) vault_account(writable)
+    /// * (3) token_program
+    /// * (4) system_program
+    /// * (5) vault_receipt_token_mint(writable)
+    /// * (6) vault_program_fee_wallet_receipt_token_account(writable)
+    /// * (7) vault_fee_wallet_receipt_token_account(writable)
+    /// * (8) vault_supported_token_account(writable)
+    pub fn find_accounts_to_withdraw(&self) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (anchor_spl::token::ID, false),
             (system_program::ID, false),
             (vault.vrt_mint, true),
@@ -729,6 +772,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 true,
             ),
         ]);
+
         Ok(accounts)
     }
 
@@ -736,19 +780,19 @@ impl<'info> JitoRestakingVaultService<'info> {
     pub fn withdraw(
         &self,
         // fixed
-        token_program: &'info AccountInfo<'info>,
-        system_program: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
+        token_program: &AccountInfo<'info>,
+        system_program: &AccountInfo<'info>,
+        vault_receipt_token_mint: &AccountInfo<'info>,
         vault_program_fee_receipt_token_account: &'info AccountInfo<'info>,
         vault_fee_receipt_token_account: &'info AccountInfo<'info>,
         vault_supported_token_reserve_account: &'info AccountInfo<'info>,
 
         // variant
-        withdrawal_ticket: &'info AccountInfo<'info>,
+        withdrawal_ticket: &AccountInfo<'info>,
         withdrawal_ticket_receipt_token_account: &'info AccountInfo<'info>,
         to_vault_supported_token_account: &'info AccountInfo<'info>,
 
-        signer: &'info AccountInfo<'info>,
+        signer: &AccountInfo<'info>,
         signer_seeds: &[&[&[u8]]],
 
         to_rent_fee_return_account: &AccountInfo<'info>,
@@ -876,14 +920,19 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    pub fn find_accounts_to_add_delegation(&self, operator: Pubkey) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        accounts.extend(vec![
+    pub fn find_accounts_to_add_delegation(
+        &self,
+        operator: Pubkey,
+    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (operator, false),
-            (jito_vault_core::vault_operator_delegation::VaultOperatorDelegation::find_program_address(self.vault_program.key, self.vault_account.key, &operator).0, true),
+            (self.find_vault_operator_delegation_address(&operator), true),
             (vault.delegation_admin, false),
         ]);
+
         Ok(accounts)
     }
 
@@ -906,7 +955,8 @@ impl<'info> JitoRestakingVaultService<'info> {
             delegation_amount,
         );
 
-        let vault = Self::deserialize_vault(self.vault_account)?;
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
         msg!(
             "Before vault delegation_state staked_amount {}",
             vault.delegation_state.staked_amount()
@@ -924,7 +974,8 @@ impl<'info> JitoRestakingVaultService<'info> {
             &[vault_delegation_admin_signer_seeds],
         )?;
 
-        let vault = Self::deserialize_vault(self.vault_account)?;
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
         msg!(
             "After vault delegation_state staked_amount {}",
             vault.delegation_state.staked_amount()

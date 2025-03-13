@@ -512,9 +512,7 @@ impl FundAccount {
     pub(super) fn get_restaking_vaults_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RestakingVault> {
-        self.restaking_vaults
-            .iter_mut()
-            .take(self.num_restaking_vaults as usize)
+        self.restaking_vaults[..self.num_restaking_vaults as usize].iter_mut()
     }
 
     pub(super) fn get_restaking_vault(&self, vault: &Pubkey) -> Result<&RestakingVault> {

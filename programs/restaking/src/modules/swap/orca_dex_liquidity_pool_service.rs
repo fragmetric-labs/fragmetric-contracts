@@ -1,8 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token;
-use anchor_spl::token_2022;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use whirlpool_cpi::whirlpool::accounts::{Whirlpool, WhirlpoolsConfig};
+use anchor_spl::token_interface::TokenAccount;
+use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
     whirlpool_program: Program<'info, whirlpool_cpi::whirlpool::program::Whirlpool>,

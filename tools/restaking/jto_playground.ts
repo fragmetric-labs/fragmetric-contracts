@@ -1424,7 +1424,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault.vault,
-                        vaultOperator: operator as web3.PublicKey,
+                        operatorAccount: operator as web3.PublicKey,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
@@ -1448,7 +1448,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault,
-                        vaultOperator: operator,
+                        operatorAccount: operator,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),

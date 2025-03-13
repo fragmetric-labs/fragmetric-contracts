@@ -83,7 +83,7 @@ impl std::fmt::Debug for OperationCommand {
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum OperationCommandResult {
     Initialize(InitializeCommandResult),
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommandResult),
@@ -358,7 +358,7 @@ impl OperationCommandPod {
     }
 }
 
-#[derive(Clone, Copy, InitSpace, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct OperationCommandAccountMeta {
     pub pubkey: Pubkey,
     pub is_writable: bool,

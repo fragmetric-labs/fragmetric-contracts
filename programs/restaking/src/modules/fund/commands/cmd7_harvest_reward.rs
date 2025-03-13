@@ -3,14 +3,12 @@ use anchor_spl::associated_token;
 use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::{
     FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    RestakingVault, SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
     FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS,
 };
 

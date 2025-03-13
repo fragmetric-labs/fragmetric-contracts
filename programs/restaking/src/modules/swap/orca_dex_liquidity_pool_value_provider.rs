@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::spl_token;
-use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
@@ -181,6 +180,7 @@ impl OrcaDEXLiquidityPoolValueProvider {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
     use crate::utils::tests::MockAccountsDb;
 

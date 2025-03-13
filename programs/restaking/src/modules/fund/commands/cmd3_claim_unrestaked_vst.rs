@@ -1,23 +1,16 @@
+use std::cell::Ref;
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
-use anchor_spl::associated_token::spl_associated_token_account;
-use anchor_spl::token::accessor::authority;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use std::cell::Ref;
-use std::{cmp, iter};
 
 use crate::errors;
 use crate::modules::fund::FundAccount;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::{debug_msg_heap_size, AccountInfoExt, PDASeeds};
 
 use super::{
-    ClaimUnstakedSOLCommandResultAssetReceivable, DenormalizeNTCommand, FundService,
-    OperationCommand, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    DenormalizeNTCommand, FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -174,37 +167,38 @@ impl ClaimUnrestakedVSTCommand {
 
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
-                let mut required_accounts = vault_service.find_accounts_to_withdraw()?;
-                required_accounts.extend(vec![
-                    (
-                        fund_account.find_vault_supported_token_reserve_account_address(
-                            vault_account.key,
-                        )?,
-                        true,
-                    ),
-                    (fund_account.get_reserve_account_address()?, true),
-                ]);
-                required_accounts.extend(
-                    (0..5)
-                        .map(|index| {
-                            let ticket_base_account =
-                                *FundAccount::find_unrestaking_ticket_account_address(
-                                    &ctx.fund_account.key(),
-                                    &item.vault,
-                                    index,
-                                );
-                            let ticket_account =
-                                vault_service.find_withdrawal_ticket_account(&ticket_base_account);
-                            let ticket_receipt_token_account =
-                                associated_token::get_associated_token_address_with_program_id(
-                                    &ticket_account,
-                                    &item.receipt_token_mint,
-                                    &anchor_spl::token::ID,
-                                );
-                            [(ticket_account, true), (ticket_receipt_token_account, true)]
-                        })
-                        .flatten(),
-                );
+                let required_accounts = vault_service
+                    .find_accounts_to_withdraw()?
+                    .chain([
+                        (
+                            fund_account.find_vault_supported_token_reserve_account_address(
+                                vault_account.key,
+                            )?,
+                            true,
+                        ),
+                        (fund_account.get_reserve_account_address()?, true),
+                    ])
+                    .chain(
+                        (0..5)
+                            .map(|index| {
+                                let ticket_base_account =
+                                    *FundAccount::find_unrestaking_ticket_account_address(
+                                        &ctx.fund_account.key(),
+                                        &item.vault,
+                                        index,
+                                    );
+                                let ticket_account = vault_service
+                                    .find_withdrawal_ticket_account(&ticket_base_account);
+                                let ticket_receipt_token_account =
+                                    associated_token::get_associated_token_address_with_program_id(
+                                        &ticket_account,
+                                        &item.receipt_token_mint,
+                                        &anchor_spl::token::ID,
+                                    );
+                                [(ticket_account, true), (ticket_receipt_token_account, true)]
+                            })
+                            .flatten(),
+                    );
 
                 Ok((
                     None,
