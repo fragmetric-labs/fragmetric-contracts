@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "target": "esnext",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}

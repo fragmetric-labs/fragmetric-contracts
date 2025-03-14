@@ -1,9 +1,19 @@
-export const codegenConfig: {
+import { AnchorIdl } from '@codama/nodes-from-anchor';
+import { TraitOptions } from '@codama/renderers-rust/dist/types/utils';
+import { Node, Visitor } from 'codama';
+import {
+  anchorTransformEventsToAccountsVisitor,
+  jitoProgramsVisitor,
+} from './visitors';
+
+const codegenConfig: {
   targets: {
     [id: string]: {
       idlFilePath: string;
       javascript?: boolean;
       rust?: boolean;
+      rustTraitOptions?: TraitOptions;
+      visitors?: Array<(idl: AnchorIdl) => Visitor<Node | null>[]>;
     };
   };
   outputBaseDir: {
@@ -17,29 +27,37 @@ export const codegenConfig: {
     javascript: '../js',
     rust: '../rust',
   },
-  skipHashCheck: typeof process.env.ALL !== 'undefined',
+  skipHashCheck: typeof process.env.FORCE !== 'undefined',
   watch: typeof process.env.WATCH !== 'undefined',
   targets: {
-    'fragmetric-restaking': {
-      idlFilePath: typeof process.env.LOCAL !== 'undefined' ? '../../target/idl/restaking.json' : './idls/fragmetric-restaking.json',
-      rust: true,
-      // JS SDK IS NOT USING THIS YET, STILL STICK TO @solana/web3.js@1
-      javascript: false,
-    },
-    'jito-restaking': {
-      idlFilePath: './idls/jito-restaking.json',
+    'fragmetric-sdk/src/generated/restaking': {
+      idlFilePath: '../../target/idl/restaking.json',
       rust: false,
+      javascript: true,
+      visitors: [anchorTransformEventsToAccountsVisitor],
     },
-    'jito-vault': {
+    'fragmetric-sdk/src/generated/jito_vault': {
       idlFilePath: './idls/jito-vault.json',
       rust: false,
+      javascript: true,
+      visitors: [jitoProgramsVisitor],
     },
-    'marinade': {
-      idlFilePath: './idls/marinade.json',
-    },
-    'whirlpool': {
-      idlFilePath: './idls/whirlpool.json',
-    },
+    // 'jito-vault-client/src/generated': {
+    //   idlFilePath: './idls/jito-vault.json',
+    //   rust: false,
+    // },
+    // 'jito-restaking-client/src/generated': {
+    //   idlFilePath: './idls/jito-restaking.json',
+    //   rust: false,
+    // },
+    // 'marinade-client/src/generated': {
+    //   idlFilePath: './idls/marinade.json',
+    //   rust: false,
+    // },
+    // 'whirlpool-client/src/generated': {
+    //   idlFilePath: './idls/whirlpool.json',
+    //   rust: false,
+    // },
   },
 };
 

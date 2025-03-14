@@ -1,0 +1,17 @@
+{
+  "name": "fragmetric-sdk-node-example",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "build2": "tsc --build",
+    "dev": "tsx ./index.ts"
+  },
+  "dependencies": {
+    "@fragmetric-labs/sdk": "workspace:*",
+    "@solana/kit": "^2.1.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
+  }
+}

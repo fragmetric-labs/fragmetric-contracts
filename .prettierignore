@@ -5,3 +5,9 @@ node_modules
 dist
 build
 test-ledger
+**/*.d.ts
+**/generated/**
+
+# temporarily ignoring
+/tests
+/tools

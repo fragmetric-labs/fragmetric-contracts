@@ -1,0 +1,16 @@
+packages:
+  - clients/codegen
+  - clients/js/*
+  - clients/js/fragmetric-sdk/examples/*
+onlyBuiltDependencies:
+  - bigint-buffer
+  - blake-hash
+  - bufferutil
+  - ed25519
+  - esbuild
+  - keccak
+  - node-hid
+  - protobufjs
+  - tiny-secp256k1
+  - usb
+  - utf-8-validate

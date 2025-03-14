@@ -1,61 +1,90 @@
 {
   "name": "@fragmetric-labs/sdk",
-  "version": "1.0.3",
-  "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM, CJS, and UMD formats) as well as Node.js bundles (in ESM and CJS formats).",
+  "version": "2.3.0",
+  "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM and UMD formats) as well as Node.js bundles (in ESM formats).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fragmetric-labs/fragmetric-contracts.git"
   },
   "author": "Fragmetric Labs",
   "license": "MIT",
-  "types": "lib/index.d.ts",
-  "main": "lib/index.cjs.js",
-  "module": "lib/index.esm.js",
-  "browser": {
-    "lib/index.cjs.js": "lib/index.browser.cjs.js",
-    "lib/index.esm.js": "lib/index.browser.esm.js"
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.node.cjs",
+  "browser": "dist/index.browser.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": {
+        "browser": "./dist/index.browser.mjs",
+        "default": "./dist/index.node.cjs"
+      },
+      "require": "./dist/index.node.cjs"
+    }
+  },
+  "bin": {
+    "fragmetric": "index.cjs"
   },
   "files": [
-    "lib",
+    "dist",
+    "examples",
+    "index.cjs",
+    "tsconfig.json",
     "README.md"
   ],
   "scripts": {
-    "test": "echo \"noop\"",
-    "activate-stable-idl": "ln -sf ./program.idl.stable.ts ./src/restaking/program.idl.active.ts && ln -sf ./program.idl.stable.json ./src/restaking/program.idl.active.json",
-    "build": "yarn activate-stable-idl && rollup --config",
-    "dev": "yarn activate-stable-idl && rollup --config --watch",
-    "dev:node": "ROLLUP_FILTER=node:* yarn dev",
-    "dev:node:cjs": "ROLLUP_FILTER=node:cjs yarn dev",
-    "dev:node:esm": "ROLLUP_FILTER=node:esm yarn dev",
-    "dev:browser": "ROLLUP_FILTER=browser:* yarn dev",
-    "dev:browser:cjs": "ROLLUP_FILTER=browser:cjs yarn dev",
-    "dev:browser:esm": "ROLLUP_FILTER=browser:esm yarn dev",
-    "dev:browser:umd": "ROLLUP_FILTER=browser:umd yarn dev",
-    "activate-local-idl": "ln -sf ../../../../../target/types/restaking.ts ./src/restaking/program.idl.active.ts && ln -sf ../../../../../target/idl/restaking.json ./src/restaking/program.idl.active.json",
-    "dev:local": "yarn activate-local-idl && ROLLUP_FILTER=node:cjs rollup --preserveSymlinks --config --watch"
+    "lint": "prettier \"**.ts\" --write",
+    "test": "pnpm vitest --run",
+    "build": "pnpm rollup --config && tsc --build",
+    "dev": "./src/cli/cli.executable.ts"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.1",
-    "@solana/spl-token": "^0.3.0",
-    "async-cache-dedupe": "^2.2.0",
-    "bn.js": "^5.2.1",
-    "chalk": "^4.1.2",
-    "lru-cache": "^11.0.2"
+    "@solana-program/address-lookup-table": "^0.7.0",
+    "@solana-program/compute-budget": "^0.7.0",
+    "@solana-program/system": "^0.7.0",
+    "@solana-program/token": "^0.5.1",
+    "@solana-program/token-2022": "^0.4.0",
+    "@solana/compat": "^2.1.0",
+    "@solana/kit": "^2.1.0",
+    "@solana/spl-token-metadata": "^0.1.6",
+    "@solana/webcrypto-ed25519-polyfill": "^2.1.0",
+    "chalk": "4.1.2",
+    "consola": "^3.4.2",
+    "dataloader": "^2.2.3",
+    "lru-cache": "^11.0.2",
+    "strip-ansi": "6.0.1",
+    "valibot": "^1.0.0",
+    "ws": "^8.18.1"
   },
-  "peerDependencies": {
-    "@solana/web3.js": "^1.94.0"
-  },
-  "devDependencies": {
+  "optionalDependencies": {
     "@ledgerhq/hw-app-solana": "^7.2.4",
     "@ledgerhq/hw-transport": "^6.31.4",
     "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.1.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.1.1",
+    "commander": "^13.1.0",
+    "node-hid": "^3.1.2",
+    "pretty-repl": "^4.0.1",
+    "terminal-link": "^2.1.1"
+  },
+  "devDependencies": {
     "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-replace": "^6.0.2",
+    "@solana/web3.js": "^1.98.0",
+    "litesvm": "^0.2.0",
     "rollup": "^4.29.1",
-    "rollup-plugin-terser": "^7.0.2",
-    "rollup-plugin-typescript2": "^0.36.0"
+    "rollup-plugin-delete": "^3.0.1",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "rollup-plugin-polyfill-node": "^0.13.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.8"
   }
 }

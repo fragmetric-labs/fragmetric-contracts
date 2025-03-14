@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TestValidator with litesvm > airdrop, getAccount 1`] = `
+{
+  "data": [
+    "",
+    "base64",
+  ],
+  "executable": false,
+  "lamports": 500000000n,
+  "owner": "11111111111111111111111111111111",
+  "rentEpoch": 18446744073709551615n,
+  "space": 0n,
+}
+`;
+
+exports[`TestValidator with litesvm > airdrop, getAccount 2`] = `
+{
+  "data": [
+    "",
+    "base64",
+  ],
+  "executable": false,
+  "lamports": 1000000000n,
+  "owner": "11111111111111111111111111111111",
+  "rentEpoch": 18446744073709551615n,
+  "space": 0n,
+}
+`;
+
+exports[`TestValidator with solana > airdrop, getAccount 1`] = `
+{
+  "data": [
+    "",
+    "base64",
+  ],
+  "executable": false,
+  "lamports": 500000000n,
+  "owner": "11111111111111111111111111111111",
+  "rentEpoch": 18446744073709551615n,
+  "space": 0n,
+}
+`;
+
+exports[`TestValidator with solana > airdrop, getAccount 2`] = `
+{
+  "data": [
+    "",
+    "base64",
+  ],
+  "executable": false,
+  "lamports": 1000000000n,
+  "owner": "11111111111111111111111111111111",
+  "rentEpoch": 18446744073709551615n,
+  "space": 0n,
+}
+`;

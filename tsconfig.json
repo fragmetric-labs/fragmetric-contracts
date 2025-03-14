@@ -1,10 +1,17 @@
 {
+  "extends": "./clients/js/fragmetric-sdk/tsconfig.json",
   "compilerOptions": {
-    "types": ["mocha", "chai", "chai-as-promised"],
-    "typeRoots": ["./node_modules/@types"],
-    "lib": ["es2015"],
-    "module": "node16",
-    "target": "ES2020",
-    "esModuleInterop": true
-  }
+    "rootDir": "./",
+    "noEmit": true,
+    "moduleResolution": "node",
+    "module": "esnext",
+    "paths": {
+      "@fragmetric-labs/sdk": ["./clients/js/fragmetric-sdk/src/index.ts"],
+      "@fragmetric-labs/testutil": ["./clients/js/testutil/index.ts"]
+    }
+  },
+  "exclude": [
+    "tools", "tests", "target", "clients/codegen",
+    "**/*.test.ts", "**/vitest.config.ts", "**/examples", "**/dist"
+  ]
 }

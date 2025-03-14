@@ -1,5 +1,5 @@
 node_modules
-lib
+dist
 
 # ignore the symlinked IDL files
 src/restaking/program.idl.active.json
