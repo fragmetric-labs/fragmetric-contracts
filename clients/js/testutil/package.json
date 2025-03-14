@@ -1,0 +1,23 @@
+{
+  "name": "@fragmetric-labs/testutil",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts"
+    }
+  },
+  "devDependencies": {
+    "@solana-program/token": "^0.5.1",
+    "@solana/kit": "^2.1.0",
+    "@solana/web3.js": "^1.98.0",
+    "litesvm": "^0.2.0",
+    "vitest": "^3.0.9",
+    "ws": "^8.18.1"
+  }
+}

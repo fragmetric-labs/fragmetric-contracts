@@ -3229,6 +3229,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             command: {
                 enqueueWithdrawalBatch: {
                     0: {
+                        state: {
+                          new: {},
+                        },
                         forced: forced,
                     }
                 }

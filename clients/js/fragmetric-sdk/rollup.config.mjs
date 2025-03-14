@@ -1,101 +1,112 @@
-import replace from '@rollup/plugin-replace';
 import alias from '@rollup/plugin-alias';
-import nodeResolve from '@rollup/plugin-node-resolve';
-import json from '@rollup/plugin-json';
 import commonjs from '@rollup/plugin-commonjs';
-import typescript from 'rollup-plugin-typescript2';
-import { terser } from 'rollup-plugin-terser';
+import json from '@rollup/plugin-json';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import { builtinModules } from 'node:module';
+import { defineConfig } from 'rollup';
+import del from 'rollup-plugin-delete';
+import esbuild from 'rollup-plugin-esbuild';
+import polyfillNode from 'rollup-plugin-polyfill-node'; // for Buffer/crypto/etc
+import packageJSON from './package.json' with { type: 'json' };
 
-import packageJson from './package.json' with { type: 'json' };
+export default defineConfig([
+  {
+    input: 'src/index.ts',
+    output: [
+      {
+        file: 'dist/index.browser.mjs',
+        format: 'esm',
+        sourcemap: true,
+      },
+    ],
+    plugins: [
+      del({ targets: 'dist/*' }),
 
-let generatedOnce = false;
-
-const generationFilter = process.env.ROLLUP_FILTER ?? '';
-
-const generateConfig = (format, browser = false, generateTypes = !generatedOnce) => {
-    if (!['cjs', 'esm', 'umd'].includes(format)) {
-        throw "unsupported output format";
-    }
-
-    let skip = false;
-    if (generationFilter) {
-        if (browser) {
-            if (!generationFilter.includes('browser') || !generationFilter.includes(format) && !generationFilter.includes('browser:*')) {
-                skip = true;
-            }
-        } else {
-            if (!generationFilter.includes('node') || !generationFilter.includes(format) && !generationFilter.includes('node:*')) {
-                skip = true;
-            }
-        }
-    }
-    if (skip) {
-        console.log(`[${browser ? 'browser.' : ''}${format}] build skipped`);
-        return null;
-    }
-
-    generatedOnce = true;
-
-    return {
-        input: 'src/index.ts',
-        output: [
-            {
-                file: `lib/index${browser ? '.browser' : ''}.${format}.js`,
-                format,
-                sourcemap: true,
-                name: format === 'umd' ? 'fragmetricSDK' : undefined,
-                globals: format === 'umd' ? { '@solana/web3.js': 'solanaWeb3' } : undefined,
-                exports: format === 'cjs' ? 'named' : undefined,
-                interop: 'auto',
-            },
+      // rewrite paths before anything else
+      alias({
+        entries: [
+          {
+            find: './signer.node',
+            replacement: './signer.browser',
+          },
+          {
+            find: './litesvm.node',
+            replacement: './litesvm.browser',
+          },
+          {
+            find: './cli.node',
+            replacement: './cli.browser',
+          },
+          {
+            find: './__devtools',
+            replacement: './__devtools/.dist',
+          },
         ],
-        plugins: [
-            replace({
-                preventAssignment: true,
-                'process.env.NODE_ENV': JSON.stringify('production'),
-            }),
-            ...(browser ? [
-                alias({
-                    entries: [
-                        {
-                            find: './ledger_signer.node',
-                            replacement: './ledger_signer.browser',
-                        },
-                    ],
-                }),
-            ] : []),
-            json(), // handle JSON imports
-            nodeResolve({
-                browser,
-                preferBuiltins: !browser,
-            }),
-            commonjs({
-                esmExternals: true,
-                transformMixedEsModules: true,
-            }),
-            typescript({
-                tsconfig: 'tsconfig.json',
-                tsconfigOverride: {
-                    compilerOptions: {
-                        declaration: generateTypes,
-                        declarationMap: generateTypes,
-                    },
-                },
-            }),
-            ...(format === 'umd' ? [ terser() ] : []), // minifies the bundle
-        ],
-        external: [
-            ...Object.keys(packageJson.peerDependencies || {}),
-            ...Object.keys(packageJson.devDependencies || {}),
-            ...(browser ? [] : Object.keys(packageJson.dependencies || {}))
-        ],
-    };
-};
+      }),
 
-export default [
-    generateConfig('cjs', false),
-    generateConfig('esm', false),
-    generateConfig('cjs', true),
-    generateConfig('esm', true),
-    generateConfig('umd', true),
-].filter(v => !!v);
+      // replace env vars and globals before parsing files
+      replace({
+        preventAssignment: true,
+        values: {
+          'process.env.NODE_ENV': JSON.stringify('production'),
+        },
+      }),
+
+      // polyfill Node.js globals and built-ins for browser
+      polyfillNode(),
+
+      // resolve modules (with browser-friendly versions preferred)
+      nodeResolve({
+        browser: true,
+        preferBuiltins: false,
+      }),
+
+      // handle CommonJS modules
+      commonjs(),
+
+      // handle JSON imports
+      json(),
+
+      // compile TypeScript last (after aliasing and resolving modules)
+      esbuild({
+        keepNames: true,
+      }),
+    ],
+  },
+  {
+    input: 'src/index.ts',
+    output: [
+      {
+        file: 'dist/index.node.cjs',
+        format: 'cjs',
+        sourcemap: true,
+      },
+    ],
+    plugins: [
+      // rewrite paths before anything else
+      alias({
+        entries: [
+          {
+            find: './__devtools',
+            replacement: './__devtools/.dist',
+          },
+        ],
+      }),
+
+      nodeResolve({
+        preferBuiltins: true,
+      }),
+      commonjs(),
+      json(),
+      esbuild({
+        keepNames: true,
+      }),
+    ],
+    external: [
+      ...builtinModules,
+      ...Object.keys(packageJSON.optionalDependencies ?? {}),
+      ...Object.keys(packageJSON.dependencies ?? {}),
+    ],
+  },
+]);
