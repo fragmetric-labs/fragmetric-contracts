@@ -2484,18 +2484,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public get targetFragSOLFundConfiguration() {
 
         return {
-            depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            depositEnabled: true,
             donationEnabled: true,
-            withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? true : (this.isMainnet ? true : false),
-            WithdrawalFeedRateBPS: this.isDevnet ? 20 : 20,
+            withdrawalEnabled: true,
+            transferEnabled: true,
+            WithdrawalFeedRateBPS: 20,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
             solDepositable: true,
-            solAccumulatedDepositCapacity: this.isDevnet
-                ? new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL)) : (
-                    this.isMainnet ? new BN(185_844_305_400_574) : new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL))
-                ),
+            solAccumulatedDepositCapacity: this.isMainnet || this.isDevnet ? new BN(MAX_CAPACITY) : new BN(1_000_000_000).mul(new BN(web3.LAMPORTS_PER_SOL)),
             solAccumulatedDepositAmount: null,
             solWithdrawalable: true,
             solWithdrawalNormalReserveRateBPS: 0,
@@ -2506,15 +2503,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 tokenDepositable: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return this.isDevnet ? true : (this.isMainnet ? false : true);
+                            return (!(this.isMainnet || this.isDevnet));
                         case "jitoSOL":
                             return true;
                         case "mSOL":
-                            return true;
+                            return (!(this.isMainnet || this.isDevnet));
                         case "BNSOL":
-                            return true;
+                            return (!(this.isMainnet || this.isDevnet));
                         case "bbSOL":
-                            return this.isDevnet ? true : (this.isMainnet ? false : true);
+                            return (!(this.isMainnet || this.isDevnet));
                         default:
                             throw `invalid accumulated deposit cap for ${symbol}`;
                     }
@@ -2524,7 +2521,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         case "bSOL":
                             return new BN(this.isDevnet ? 90_000_000_000 : (this.isMainnet ? 0 : 90_000_000_000));
                         case "jitoSOL":
-                            return new BN(this.isDevnet ? 80_000_000_000 : (this.isMainnet ? 90_941_492_854_023 : 80_000_000_000));
+                            return new BN(this.isDevnet ? 80_000_000_000 : (this.isMainnet ? MAX_CAPACITY : 80_000_000_000));
                         case "mSOL":
                             return new BN(this.isDevnet ? 70_000_000_000 : (this.isMainnet ? 4_500_002_000_000 : 70_000_000_000));
                         case "BNSOL":
@@ -2559,15 +2556,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "bSOL":
-                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         case "jitoSOL":
-                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         case "mSOL":
-                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         case "BNSOL":
-                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         case "bbSOL":
-                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
