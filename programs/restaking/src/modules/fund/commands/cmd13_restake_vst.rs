@@ -5,9 +5,9 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 
 use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, WeightedAllocationParticipant, WeightedAllocationStrategy,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    DelegateVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
+    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
+    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -393,8 +393,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }),
                     )
                 }
-                // TODO: DelegateVST...
-                _ => None,
+                _ => Some(DelegateVSTCommand::default().without_required_accounts()),
             },
         ))
     }
