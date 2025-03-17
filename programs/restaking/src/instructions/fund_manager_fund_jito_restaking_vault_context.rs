@@ -42,30 +42,26 @@ pub struct FundManagerFundJitoRestakingVaultInitialContext<'info> {
 
     pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub vault_receipt_token_program: Program<'info, Token>,
-
     pub vault_supported_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub vault_supported_token_program: Program<'info, Token>,
 
     #[account(
         associated_token::mint = vault_receipt_token_mint,
         associated_token::authority = fund_reserve_account,
-        associated_token::token_program = vault_receipt_token_program,
+        associated_token::token_program = Token::id(),
     )]
     pub fund_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         associated_token::mint = vault_supported_token_mint,
         associated_token::authority = fund_reserve_account,
-        associated_token::token_program = vault_supported_token_program,
+        associated_token::token_program = Token::id(),
     )]
     pub fund_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         associated_token::mint = vault_supported_token_mint,
         associated_token::authority = vault_account,
-        associated_token::token_program = vault_supported_token_program,
+        associated_token::token_program = Token::id(),
     )]
     pub vault_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }

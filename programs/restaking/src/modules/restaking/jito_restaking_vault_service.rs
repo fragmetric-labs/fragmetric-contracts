@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::system_program;
 use anchor_spl::associated_token;
+use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
 use jito_vault_core::{
     config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation,
@@ -76,7 +77,9 @@ impl<'info> JitoRestakingVaultService<'info> {
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 
         require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
+        require_keys_eq!(*vault_supported_token_mint.owner, Token::id());
         require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
+        require_keys_eq!(*vault_receipt_token_mint.owner, Token::id());
 
         Ok(())
     }

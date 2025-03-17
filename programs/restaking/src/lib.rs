@@ -71,7 +71,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_set_address_lookup_table_account(&address_lookup_table_account)
+        .process_set_address_lookup_table_account(address_lookup_table_account)
     }
 
     ////////////////////////////////////////////
@@ -385,7 +385,6 @@ pub mod restaking {
         .process_set_normalized_token(
             &ctx.accounts.fund_normalized_token_reserve_account,
             &ctx.accounts.normalized_token_mint,
-            &ctx.accounts.normalized_token_program,
             &ctx.accounts.normalized_token_pool_account,
             ctx.remaining_accounts,
         )?);
@@ -428,18 +427,13 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_add_restaking_vault(
+        .process_add_jito_restaking_vault(
             &ctx.accounts.fund_vault_supported_token_account,
             &ctx.accounts.fund_vault_receipt_token_account,
             &ctx.accounts.vault_supported_token_mint,
-            &ctx.accounts.vault_supported_token_program,
             &ctx.accounts.vault_account,
             &ctx.accounts.vault_program,
             &ctx.accounts.vault_receipt_token_mint,
-            &ctx.accounts.vault_receipt_token_program,
-            modules::pricing::TokenPricingSource::JitoRestakingVault {
-                address: ctx.accounts.vault_account.key(),
-            },
             ctx.remaining_accounts,
         )?);
 
@@ -488,7 +482,6 @@ pub mod restaking {
         .process_add_supported_token(
             &ctx.accounts.supported_token_reserve_account,
             &ctx.accounts.supported_token_mint,
-            &ctx.accounts.supported_token_program,
             pricing_source,
             ctx.remaining_accounts,
         )?);
@@ -851,8 +844,7 @@ pub mod restaking {
         ctx: Context<DeprecatingUserFundAccountInitialContext>,
     ) -> Result<()> {
         let event = modules::fund::UserFundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user,
+            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.user_fund_account,
             &ctx.accounts.user_receipt_token_account,
         )?
@@ -873,8 +865,7 @@ pub mod restaking {
         ctx: Context<DeprecatingUserFundAccountUpdateContext>,
     ) -> Result<()> {
         let event = modules::fund::UserFundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user,
+            &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.user_fund_account,
             &ctx.accounts.user_receipt_token_account,
         )?

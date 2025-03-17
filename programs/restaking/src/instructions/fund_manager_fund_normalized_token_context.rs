@@ -35,12 +35,10 @@ pub struct FundManagerFundNormalizedTokenInitialContext<'info> {
 
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub normalized_token_program: Program<'info, Token>,
-
     #[account(
         associated_token::mint = normalized_token_mint,
         associated_token::authority = fund_reserve_account,
-        associated_token::token_program = normalized_token_program,
+        associated_token::token_program = Token::id(),
     )]
     pub fund_normalized_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

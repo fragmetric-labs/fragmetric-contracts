@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
-use anchor_spl::token_2022;
-use anchor_spl::token_interface::*;
+use anchor_spl::token_2022::spl_token_2022;
+use anchor_spl::token_2022::Token2022;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
@@ -40,7 +41,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         receipt_token_program: &Program<'info, Token2022>,
         receipt_token_mint_current_authority: &Signer<'info>,
-        fund_reserve_account: &SystemAccount<'info>,
+        fund_reserve_account: &SystemAccount,
         fund_account_bump: u8,
     ) -> Result<()> {
         if self.fund_account.as_ref().data_len() < 8 + std::mem::size_of::<FundAccount>() {
@@ -56,10 +57,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // set token mint authority
         if self.receipt_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
-            token_2022::set_authority(
+            anchor_spl::token_2022::set_authority(
                 CpiContext::new(
                     receipt_token_program.to_account_info(),
-                    token_2022::SetAuthority {
+                    anchor_spl::token_2022::SetAuthority {
                         current_authority: receipt_token_mint_current_authority.to_account_info(),
                         account_or_mint: self.receipt_token_mint.to_account_info(),
                     },
@@ -76,7 +77,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &self,
         payer: &Signer<'info>,
         system_program: &Program<'info, System>,
-        fund_reserve_account: &SystemAccount<'info>,
+        fund_reserve_account: &SystemAccount,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
         let min_account_size = 8 + std::mem::size_of::<FundAccount>();
@@ -103,7 +104,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_set_address_lookup_table_account(
         &mut self,
-        address_lookup_table_account: &Option<Pubkey>,
+        address_lookup_table_account: Option<Pubkey>,
     ) -> Result<()> {
         self.fund_account
             .load_mut()?
@@ -116,7 +117,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
         supported_token_mint: &InterfaceAccount<Mint>,
-        supported_token_program: &Interface<TokenInterface>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -128,14 +128,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             fund_supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
-            supported_token_program.key()
-        );
 
         self.fund_account.load_mut()?.add_supported_token(
             supported_token_mint.key(),
-            supported_token_program.key(),
+            *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
             supported_token_mint.decimals,
             pricing_source,
             fund_supported_token_reserve_account.amount,
@@ -151,9 +147,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_set_normalized_token(
         &mut self,
         fund_normalized_token_reserve_account: &InterfaceAccount<TokenAccount>,
-        normalized_token_mint: &InterfaceAccount<'info, Mint>,
-        normalized_token_program: &Program<'info, Token>,
-        normalized_token_pool: &Account<'info, NormalizedTokenPoolAccount>,
+        normalized_token_mint: &InterfaceAccount<Mint>,
+        normalized_token_pool: &Account<NormalizedTokenPoolAccount>,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
@@ -164,22 +159,17 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             fund_normalized_token_reserve_account.mint,
             normalized_token_mint.key()
         );
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
-            normalized_token_program.key()
-        );
 
         // validate accounts
-        NormalizedTokenPoolService::validate_accounts(
+        NormalizedTokenPoolService::validate_normalized_token_pool(
             normalized_token_pool,
             normalized_token_mint,
-            normalized_token_program,
         )?;
 
         // set normalized token and validate pricing source
         self.fund_account.load_mut()?.set_normalized_token(
             normalized_token_mint.key(),
-            normalized_token_program.key(),
+            *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_mint.decimals,
             normalized_token_pool.key(),
             fund_normalized_token_reserve_account.amount,
@@ -197,10 +187,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         wrapped_token_mint: &InterfaceAccount<'info, Mint>,
         wrapped_token_mint_current_authority: &Signer<'info>,
         wrapped_token_program: &Program<'info, Token>,
-        fund_wrap_account: &SystemAccount<'info>,
+        fund_wrap_account: &SystemAccount,
         receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
-        reward_account: &mut AccountLoader<'info, reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<'info, reward::UserRewardAccount>,
+        reward_account: &mut AccountLoader<reward::RewardAccount>,
+        fund_wrap_account_reward_account: &mut AccountLoader<reward::UserRewardAccount>,
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
             *AsRef::<AccountInfo>::as_ref(wrapped_token_mint).owner,
@@ -222,7 +212,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
 
         // validate accounts
-        reward::UserRewardService::validate_accounts(
+        reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
             fund_wrap_account,
             Some(&self.fund_account.load()?.get_wrap_account_seeds()),
@@ -256,45 +246,19 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_restaking_vault(
+    pub fn process_add_jito_restaking_vault(
         &mut self,
         fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
 
         vault_supported_token_mint: &InterfaceAccount<Mint>,
-        vault_supported_token_program: &Program<Token>,
 
         vault: &UncheckedAccount,
         vault_program: &UncheckedAccount,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
-        vault_receipt_token_program: &Program<Token>,
-        vault_receipt_token_pricing_source: TokenPricingSource,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        #[deny(clippy::wildcard_enum_match_arm)]
-        match vault_receipt_token_pricing_source {
-            TokenPricingSource::JitoRestakingVault { .. } => {
-                restaking::JitoRestakingVaultService::validate_vault(
-                    vault,
-                    vault_supported_token_mint.as_ref(),
-                    vault_receipt_token_mint.as_ref(),
-                )?
-            }
-            TokenPricingSource::SPLStakePool { .. }
-            | TokenPricingSource::MarinadeStakePool { .. }
-            | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
-            | TokenPricingSource::FragmetricRestakingFund { .. }
-            | TokenPricingSource::OrcaDEXLiquidityPool { .. }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {
-                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
-            }
-            #[cfg(all(test, not(feature = "idl-build")))]
-            TokenPricingSource::Mock { .. } => {
-                err!(ErrorCode::FundRestakingNotSupportedVaultError)?
-            }
-        }
-
         require_keys_eq!(
             fund_vault_supported_token_account.owner,
             self.fund_account.load()?.get_reserve_account_address()?,
@@ -302,10 +266,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         require_keys_eq!(
             fund_vault_supported_token_account.mint,
             vault_supported_token_mint.key()
-        );
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(vault_supported_token_mint).owner,
-            vault_supported_token_program.key()
         );
 
         require_keys_eq!(
@@ -316,19 +276,23 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             fund_vault_receipt_token_account.mint,
             vault_receipt_token_mint.key()
         );
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(fund_vault_receipt_token_account).owner,
-            vault_receipt_token_program.key()
-        );
+
+        restaking::JitoRestakingVaultService::validate_vault(
+            vault,
+            vault_supported_token_mint.as_ref(),
+            vault_receipt_token_mint.as_ref(),
+        )?;
 
         self.fund_account.load_mut()?.add_restaking_vault(
             vault.key(),
             vault_program.key(),
             vault_supported_token_mint.key(),
             vault_receipt_token_mint.key(),
-            vault_receipt_token_program.key(),
+            *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
             vault_receipt_token_mint.decimals,
-            vault_receipt_token_pricing_source,
+            TokenPricingSource::JitoRestakingVault {
+                address: vault.key(),
+            },
             fund_vault_receipt_token_account.amount,
         )?;
 
