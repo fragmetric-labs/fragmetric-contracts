@@ -955,12 +955,14 @@ impl<'info> JitoRestakingVaultService<'info> {
             delegation_amount,
         );
 
-        let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-        msg!(
-            "Before vault delegation_state staked_amount {}",
-            vault.delegation_state.staked_amount()
-        );
+        {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            msg!(
+                "Before vault delegation_state staked_amount {}",
+                vault.delegation_state.staked_amount()
+            );
+        }
 
         invoke_signed(
             &add_delegation_ix,
@@ -974,22 +976,48 @@ impl<'info> JitoRestakingVaultService<'info> {
             &[vault_delegation_admin_signer_seeds],
         )?;
 
-        let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-        msg!(
-            "After vault delegation_state staked_amount {}",
-            vault.delegation_state.staked_amount()
-        );
+        {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            msg!(
+                "After vault delegation_state staked_amount {}",
+                vault.delegation_state.staked_amount()
+            );
+        }
 
         Ok(())
+    }
+
+    pub fn get_vault_requested_unrestake_amount(&self) -> Result<u64> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+        Ok(vault.vrt_enqueued_for_cooldown_amount())
+    }
+
+    pub fn get_vault_requested_undelegate_amount(&self) -> Result<u64> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+        Ok(vault.delegation_state.enqueued_for_cooldown_amount())
+    }
+
+    pub fn get_vault_supported_token_remaining_amount(&self) -> Result<u64> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+        Ok(vault.tokens_deposited().saturating_sub(
+            vault.delegation_state.staked_amount()
+                + vault.delegation_state.enqueued_for_cooldown_amount()
+                + vault.delegation_state.cooling_down_amount(),
+        ))
     }
 
     pub fn find_accounts_to_cooldown_delegation(
         &self,
         operator: Pubkey,
     ) -> Result<Vec<(Pubkey, bool)>> {
-        let mut accounts = Self::find_accounts_to_new(self.vault_account.key())?;
-        let vault = Self::deserialize_vault(self.vault_account)?;
+        let mut accounts =
+            Self::find_accounts_to_new(self.vault_account.key())?.collect::<Vec<(Pubkey, bool)>>();
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
         accounts.extend(vec![
             (operator, false),
             (
@@ -1020,11 +1048,14 @@ impl<'info> JitoRestakingVaultService<'info> {
             undelegation_amount,
         );
 
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        msg!(
-            "Before vault delegation_state enqueued_for_cooldown_amount {}",
-            vault.delegation_state.enqueued_for_cooldown_amount()
-        );
+        {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            msg!(
+                "Before vault delegation_state enqueued_for_cooldown_amount {}",
+                vault.delegation_state.enqueued_for_cooldown_amount()
+            );
+        }
 
         invoke_signed(
             &cooldown_delegation_ix,
@@ -1038,11 +1069,14 @@ impl<'info> JitoRestakingVaultService<'info> {
             &[vault_delegation_admin_signer_seeds],
         )?;
 
-        let vault = Self::deserialize_vault(self.vault_account)?;
-        msg!(
-            "After vault delegation_state enqueued_for_cooldown_amount {}",
-            vault.delegation_state.enqueued_for_cooldown_amount()
-        );
+        {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            msg!(
+                "After vault delegation_state enqueued_for_cooldown_amount {}",
+                vault.delegation_state.enqueued_for_cooldown_amount()
+            );
+        }
 
         Ok(())
     }
