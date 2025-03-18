@@ -69,7 +69,7 @@ pub struct InitializeCommandRestakingVaultDelegationUpdateItem {
     pub index: u64,
 }
 
-const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 5;
+const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 10;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct InitializeCommandResult {
@@ -243,10 +243,10 @@ impl InitializeCommand {
                     .map(|item| item.operator)
                     .collect::<Vec<_>>(); // this may be empty
                 let accounts_to_update_vault_delegation_state =
-                    vault_service.find_accounts_to_update_vault_delegation_state()?;
+                    vault_service.find_accounts_to_update_vault_state()?;
                 let accounts_to_update_operator_delegation_state =
                     operators.iter().flat_map(|operator| {
-                        vault_service.find_accounts_to_update_operator_delegation_state(*operator)
+                        vault_service.find_accounts_to_update_delegation_state(*operator)
                     });
                 let required_accounts = accounts_to_update_vault_delegation_state
                     .chain(accounts_to_update_operator_delegation_state);
@@ -277,6 +277,7 @@ impl InitializeCommand {
         }
     }
 
+    #[inline(never)]
     fn execute_execute_restaking_vault_update<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
@@ -386,13 +387,12 @@ impl InitializeCommand {
                     // move on to next delegations
                     let items = &items[batch_size..];
                     let accounts_to_update_vault_delegation_state =
-                        vault_service.find_accounts_to_update_vault_delegation_state()?;
+                        vault_service.find_accounts_to_update_vault_state()?;
                     let accounts_to_update_operator_delegation_state = items
                         .iter()
                         .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
                         .flat_map(|item| {
-                            vault_service
-                                .find_accounts_to_update_operator_delegation_state(item.operator)
+                            vault_service.find_accounts_to_update_delegation_state(item.operator)
                         });
                     let required_accounts = accounts_to_update_vault_delegation_state
                         .chain(accounts_to_update_operator_delegation_state);

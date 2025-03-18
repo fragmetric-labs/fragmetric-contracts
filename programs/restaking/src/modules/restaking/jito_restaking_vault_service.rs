@@ -11,6 +11,7 @@ use jito_vault_core::{
 
 use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
+use crate::modules::pricing::PricingService;
 use crate::utils;
 use crate::utils::AccountInfoExt;
 
@@ -196,7 +197,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     /// * (1) vault_config_account(writable)
     /// * (2) vault_account(writable)
     /// * (3) vault_update_state_tracker(writable)
-    pub fn find_accounts_to_update_vault_delegation_state(
+    pub fn find_accounts_to_update_vault_state(
         &self,
     ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let accounts = Self::find_accounts_to_new(self.vault_account.key())?
@@ -267,7 +268,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// * vault_operator_delegation(writable)
     /// * operator
-    pub fn find_accounts_to_update_operator_delegation_state(
+    pub fn find_accounts_to_update_delegation_state(
         &self,
         operator: Pubkey,
     ) -> impl Iterator<Item = (Pubkey, bool)> {
@@ -920,65 +921,170 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))
     }
 
-    pub fn find_accounts_to_add_delegation(
-        &self,
-        operator: Pubkey,
-    ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
+    /// If there is more idle(not staked) vst than required amount for withdrawals, delegate them
+    /// ref: https://github.com/jito-foundation/restaking/blob/master/vault_core/src/vault.rs#L1110
+    pub fn get_available_amount_to_delegate(&self) -> Result<u64> {
         let data = &Self::borrow_account_data(self.vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 
-        let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
-            (operator, false),
-            (self.find_vault_operator_delegation_address(&operator), true),
-            (vault.delegation_admin, false),
-        ]);
+        // requested_for_withdrawal = vrt_to_vst_price * (vrt_enqueued + vrt_cooling_down + vrt_ready_to_claim)
+        let amount_requested_for_withdrawals = vault
+            .calculate_supported_assets_requested_for_withdrawal()
+            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
 
-        Ok(accounts)
+        // available_for_withdrawal = tokens_deposited - staked
+        // note that this included undelegating amount
+        let available_amount_for_withdrawal =
+            vault.tokens_deposited() - vault.delegation_state.staked_amount();
+
+        let surplus_amount =
+            available_amount_for_withdrawal.saturating_sub(amount_requested_for_withdrawals);
+
+        // available_for_delegation = tokens_deposited - (staked + enqueued + cooling_down)
+        let available_amount_for_delegation = vault.tokens_deposited()
+            - vault
+                .delegation_state
+                .total_security()
+                .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
+
+        // undelegating amounts are not able to delegate..
+        let amount_to_delegate = surplus_amount.min(available_amount_for_delegation);
+
+        Ok(amount_to_delegate)
     }
 
     pub fn add_delegation(
         &self,
-        operator_account: &AccountInfo<'info>,
-        vault_operator_delegation_account: &AccountInfo<'info>,
-        vault_delegation_admin_account: &AccountInfo<'info>, // fund_account
-        vault_delegation_admin_signer_seeds: &[&[u8]],
+        // fixed
+        vault_operator_delegation: &AccountInfo<'info>,
+        operator: &AccountInfo<'info>,
+        vault_delegation_admin: &AccountInfo<'info>,
+        vault_delegation_admin_seeds: &[&[&[u8]]],
 
-        delegation_amount: u64,
+        supported_token_amount: u64,
     ) -> Result<()> {
+        if supported_token_amount == 0 {
+            return Ok(());
+        }
+
         let add_delegation_ix = jito_vault_sdk::sdk::add_delegation(
             self.vault_program.key,
             self.vault_config_account.key,
             self.vault_account.key,
-            operator_account.key,
-            vault_operator_delegation_account.key,
-            vault_delegation_admin_account.key,
-            delegation_amount,
+            operator.key,
+            vault_operator_delegation.key,
+            vault_delegation_admin.key,
+            supported_token_amount,
         );
 
-        let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-        msg!(
-            "Before vault delegation_state staked_amount {}",
+        let total_delegated_amount_before = {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
             vault.delegation_state.staked_amount()
-        );
+        };
 
         invoke_signed(
             &add_delegation_ix,
             &[
-                self.vault_config_account.clone(),
-                self.vault_account.clone(),
-                operator_account.clone(),
-                vault_operator_delegation_account.clone(),
-                vault_delegation_admin_account.clone(),
+                self.vault_config_account.to_account_info(),
+                self.vault_account.to_account_info(),
+                operator.to_account_info(),
+                vault_operator_delegation.to_account_info(),
+                vault_delegation_admin.to_account_info(),
             ],
-            &[vault_delegation_admin_signer_seeds],
+            vault_delegation_admin_seeds,
         )?;
 
+        let total_delegated_amount = {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            vault.delegation_state.staked_amount()
+        };
+        let delegated_amount = total_delegated_amount - total_delegated_amount_before;
+
+        msg!("DELEGATE#jito: operator={}, delegated_supported_token_amount={}, total_delegated_supported_token_amount={}",
+            operator.key(),
+            delegated_amount,
+            total_delegated_amount,
+        );
+
+        Ok(())
+    }
+
+    /// If there is a shortage of required vst amount for withdrawals, undelegate them
+    /// ref: https://github.com/jito-foundation/restaking/blob/master/vault_core/src/vault.rs#L1110
+    pub fn get_additional_undelegation_amount_needed(&self) -> Result<u64> {
         let data = &Self::borrow_account_data(self.vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
-        msg!(
-            "After vault delegation_state staked_amount {}",
-            vault.delegation_state.staked_amount()
+
+        // amount_requested_for_withdrawal = vrt_to_vst(enqueued + cooling_down + ready_to_claim)
+        let amount_requested_for_withdrawals = vault
+            .calculate_supported_assets_requested_for_withdrawal()
+            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
+
+        // available_for_withdrawal = tokens_deposited - staked
+        // note that this included undelegating amount
+        let available_amount_for_withdrawal =
+            vault.tokens_deposited() - vault.delegation_state.staked_amount();
+
+        Ok(amount_requested_for_withdrawals.saturating_sub(available_amount_for_withdrawal))
+    }
+
+    pub fn cooldown_delegation(
+        &self,
+        // fixed
+        vault_operator_delegation: &AccountInfo<'info>,
+        operator: &AccountInfo<'info>,
+        vault_delegation_admin: &AccountInfo<'info>,
+        vault_delegation_admin_seeds: &[&[&[u8]]],
+
+        supported_token_amount: u64,
+    ) -> Result<()> {
+        if supported_token_amount == 0 {
+            return Ok(());
+        }
+
+        let cooldown_delegation_ix = jito_vault_sdk::sdk::cooldown_delegation(
+            self.vault_program.key,
+            self.vault_config_account.key,
+            self.vault_account.key,
+            operator.key,
+            vault_operator_delegation.key,
+            vault_delegation_admin.key,
+            supported_token_amount,
+        );
+
+        let total_undelegating_amount_before = {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            vault.delegation_state.enqueued_for_cooldown_amount()
+                + vault.delegation_state.cooling_down_amount()
+        };
+
+        invoke_signed(
+            &cooldown_delegation_ix,
+            &[
+                self.vault_config_account.clone(),
+                self.vault_account.clone(),
+                operator.clone(),
+                vault_operator_delegation.clone(),
+                vault_delegation_admin.clone(),
+            ],
+            vault_delegation_admin_seeds,
+        )?;
+
+        let total_undelegating_amount = {
+            let data = &Self::borrow_account_data(self.vault_account)?;
+            let vault = Self::deserialize_account_data::<Vault>(data)?;
+            vault.delegation_state.enqueued_for_cooldown_amount()
+                + vault.delegation_state.cooling_down_amount()
+        };
+        let undelegating_amount = total_undelegating_amount - total_undelegating_amount_before;
+
+        msg!("UNDELEGATE#jito: operator={}, enqueued_supported_token_amount={}, total_undelegating_supported_token_amount={}",
+            operator.key(),
+            undelegating_amount,
+            total_undelegating_amount,
         );
 
         Ok(())

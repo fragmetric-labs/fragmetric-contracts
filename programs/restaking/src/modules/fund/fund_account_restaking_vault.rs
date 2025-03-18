@@ -195,12 +195,6 @@ impl RestakingVault {
         self.delegations[..self.num_delegations as usize].iter_mut()
     }
 
-    pub fn get_delegation(&self, operator: &Pubkey) -> Result<&RestakingVaultDelegation> {
-        self.get_delegations_iter()
-            .find(|op| op.operator == *operator)
-            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
-    }
-
     pub fn get_delegation_mut(
         &mut self,
         operator: &Pubkey,

@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
 
-use crate::errors;
-use crate::modules::pricing::TokenPricingSource;
+use crate::errors::ErrorCode;
+use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 
 use super::{
     OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    WeightedAllocationParticipant, WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
+    FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -17,10 +18,11 @@ pub struct DelegateVSTCommand {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
 pub struct DelegateVSTCommandItem {
-    vault: Pubkey,
     operator: Pubkey,
-    delegation_amount: u64,
+    allocated_supported_token_amount: u64,
 }
+
+const RESTAKING_VAULT_DELEGATE_BATCH_SIZE: usize = 10;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum DelegateVSTCommandState {
@@ -28,19 +30,30 @@ pub enum DelegateVSTCommandState {
     New,
     Prepare {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
-        items: Vec<DelegateVSTCommandItem>,
+        vaults: Vec<Pubkey>,
     },
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
+        vaults: Vec<Pubkey>,
+
+        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS)]
         items: Vec<DelegateVSTCommandItem>,
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+use DelegateVSTCommandState::*;
+
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct DelegateVSTCommandResult {
-    pub vault_supported_token_mint: Pubkey,
-    pub delegated_token_amount: u64,
-    pub total_delegated_token_amount: u64,
+    pub vault: Pubkey,
+    pub delegations: Vec<DelegateVSTCommandResultDelegated>,
+}
+
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct DelegateVSTCommandResultDelegated {
+    pub operator: Pubkey,
+    pub delegated_amount: u64,
+    pub total_delegated_amount: u64,
 }
 
 impl SelfExecutable for DelegateVSTCommand {
@@ -53,13 +66,9 @@ impl SelfExecutable for DelegateVSTCommand {
         Option<OperationCommandEntry>,
     )> {
         let (result, entry) = match &self.state {
-            DelegateVSTCommandState::New => self.execute_new(ctx, accounts)?,
-            DelegateVSTCommandState::Prepare { items } => {
-                self.execute_prepare(ctx, accounts, items.clone(), None)?
-            }
-            DelegateVSTCommandState::Execute { items } => {
-                self.execute_execute(ctx, accounts, items)?
-            }
+            New => self.execute_new(ctx)?,
+            Prepare { vaults } => self.execute_prepare(ctx, accounts, vaults)?,
+            Execute { vaults, items } => self.execute_execute(ctx, accounts, vaults, items)?,
         };
 
         Ok((result, entry))
@@ -68,51 +77,45 @@ impl SelfExecutable for DelegateVSTCommand {
 
 #[deny(clippy::wildcard_enum_match_arm)]
 impl DelegateVSTCommand {
+    #[inline(never)]
     fn execute_new<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, '_>,
-        _accounts: &[&'info AccountInfo<'info>],
+        ctx: &OperationCommandContext<'info, '_>,
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        // TODO v0.4.3: items size capacity should be changed for more acurate cf. unstake command
-        let mut items =
-            Vec::<DelegateVSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
-
-        ctx.fund_account
-            .load()?
-            .get_restaking_vaults_iter()
-            .for_each(|restaking_vault| {
-                let num_operators = restaking_vault.get_delegations_iter().count();
-                restaking_vault
-                    .get_delegations_iter()
-                    .for_each(|delegation| {
-                        items.push(DelegateVSTCommandItem {
-                            vault: restaking_vault.vault,
-                            operator: delegation.operator,
-                            delegation_amount: restaking_vault
-                                .receipt_token_operation_reserved_amount
-                                .saturating_div(num_operators as u64),
-                        });
-                    });
-            });
-
-        // nothing to delegate
-        if items.is_empty() {
-            return Ok((None, None));
+        let fund_account = ctx.fund_account.load()?;
+        let mut vaults = Vec::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
+        for restaking_vault in fund_account.get_restaking_vaults_iter() {
+            vaults.push(restaking_vault.vault);
         }
 
-        let pricing_source = ctx
+        Ok((None, self.create_prepare_command(ctx, vaults)?))
+    }
+
+    fn create_prepare_command<'info>(
+        &self,
+        ctx: &OperationCommandContext<'info, '_>,
+        vaults: Vec<Pubkey>,
+    ) -> Result<Option<OperationCommandEntry>> {
+        if vaults.is_empty() {
+            return Ok(None);
+        }
+        let receipt_token_pricing_source = ctx
             .fund_account
             .load()?
-            .get_restaking_vault(&items.first().unwrap().vault)?
+            .get_restaking_vault(&vaults[0])?
             .receipt_token_pricing_source
             .try_deserialize()?;
 
-        let required_accounts = match pricing_source {
+        let command = Self {
+            state: Prepare { vaults },
+        };
+        let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                JitoRestakingVaultService::find_accounts_to_new(address)?
+                let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
+                command.with_required_accounts(required_accounts)
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -121,61 +124,105 @@ impl DelegateVSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
         };
 
-        let command = Self {
-            state: DelegateVSTCommandState::Prepare { items },
-        }
-        .with_required_accounts(required_accounts);
-
-        Ok((None, Some(command)))
+        Ok(Some(entry))
     }
 
+    #[inline(never)]
     fn execute_prepare<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        items: Vec<DelegateVSTCommandItem>,
-        previous_execution_result: Option<OperationCommandResult>,
+        vaults: &[Pubkey],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if items.is_empty() {
-            return Ok((previous_execution_result, None));
+        if vaults.is_empty() {
+            return Ok((None, None));
         }
 
-        let item = &items[0];
         let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-
-        match restaking_vault
+        let restaking_vault = fund_account.get_restaking_vault(&vaults[0])?;
+        let receipt_token_pricing_source = restaking_vault
             .receipt_token_pricing_source
-            .try_deserialize()?
-        {
+            .try_deserialize()?;
+
+        match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                let [vault_program, vault_config, vault_account, _remaining_accounts @ ..] =
-                    accounts
-                else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                let [vault_program, vault_config, vault_account, ..] = accounts else {
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
 
-                let required_accounts =
-                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?
-                        .find_accounts_to_add_delegation(item.operator)?;
+                let vault_service =
+                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
 
-                let command = Self {
-                    state: DelegateVSTCommandState::Execute { items },
+                // find items
+                let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS);
+                let mut strategy = WeightedAllocationStrategy::<
+                    FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
+                >::new(
+                    restaking_vault.get_delegations_iter().map(|delegation| {
+                        items.push(DelegateVSTCommandItem {
+                            operator: delegation.operator,
+                            allocated_supported_token_amount: 0,
+                        });
+
+                        WeightedAllocationParticipant::new(
+                            delegation.supported_token_allocation_weight,
+                            delegation.supported_token_delegated_amount,
+                            delegation.supported_token_allocation_capacity_amount,
+                        )
+                    }),
+                );
+                strategy.put(vault_service.get_available_amount_to_delegate()?)?;
+
+                const MIN_ALLOCATED_TOKEN_AMOUNT: u64 = 1_000_000_000;
+                for (index, _) in strategy.get_participants_iter().enumerate() {
+                    let allocated_token_amount =
+                        strategy.get_participant_last_put_amount_by_index(index)?;
+
+                    if allocated_token_amount >= MIN_ALLOCATED_TOKEN_AMOUNT {
+                        items[index].allocated_supported_token_amount = allocated_token_amount;
+                    }
+                }
+                items.retain(|item| {
+                    item.allocated_supported_token_amount >= MIN_ALLOCATED_TOKEN_AMOUNT
+                });
+
+                if items.is_empty() {
+                    // move on to next vault
+                    let vaults = vaults[1..].to_vec();
+                    return Ok((None, self.create_prepare_command(ctx, vaults)?));
+                }
+
+                let operators = items
+                    .iter()
+                    .take(RESTAKING_VAULT_DELEGATE_BATCH_SIZE)
+                    .map(|item| item.operator)
+                    .collect::<Vec<_>>();
+                let accounts_to_new = JitoRestakingVaultService::find_accounts_to_new(address)?;
+                let accounts_to_delegate = operators.iter().flat_map(|operator| {
+                    vault_service.find_accounts_to_update_delegation_state(*operator)
+                });
+
+                let required_accounts = accounts_to_new.chain(accounts_to_delegate);
+                let entry = Self {
+                    state: Execute {
+                        vaults: vaults.to_vec(),
+                        items,
+                    },
                 }
                 .with_required_accounts(required_accounts);
 
-                Ok((previous_execution_result, Some(command)))
+                Ok((None, Some(entry)))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -184,10 +231,10 @@ impl DelegateVSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
         }
     }
@@ -196,75 +243,110 @@ impl DelegateVSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
+        vaults: &[Pubkey],
         items: &[DelegateVSTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if items.is_empty() {
+        if vaults.is_empty() {
             return Ok((None, None));
         }
-        let item = items[0];
+        if items.is_empty() {
+            // move on to next vault
+            let vaults = vaults[1..].to_vec();
+            return Ok((None, self.create_prepare_command(ctx, vaults)?));
+        }
+
+        let batch_size = items.len().min(RESTAKING_VAULT_DELEGATE_BATCH_SIZE);
+        let mut delegation_results = Vec::with_capacity(RESTAKING_VAULT_DELEGATE_BATCH_SIZE);
 
         let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-
-        match restaking_vault
+        let receipt_token_pricing_source = fund_account
+            .get_restaking_vault(&vaults[0])?
             .receipt_token_pricing_source
-            .try_deserialize()?
-        {
+            .try_deserialize()?;
+        match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                let [vault_program, vault_config, vault_account, vault_operator, vault_operator_delegation, vault_delegation_admin, ..] =
+                let [vault_program, vault_config, vault_account, remaining_accounts @ ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
-                require_keys_eq!(vault_delegation_admin.key(), ctx.fund_account.key());
+
+                if remaining_accounts.len() < 2 * batch_size {
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
+                }
+                let (accounts_to_delegate, _) = remaining_accounts.split_at(2 * batch_size);
 
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
 
-                vault_service.add_delegation(
-                    vault_operator,
-                    vault_operator_delegation,
-                    vault_delegation_admin,
-                    fund_account.get_seeds().as_ref(),
-                    item.delegation_amount,
-                )?;
+                for (i, item) in items.iter().take(batch_size).enumerate() {
+                    let vault_operator_delegation = accounts_to_delegate[2 * i];
+                    let operator = accounts_to_delegate[2 * i + 1];
+                    require_keys_eq!(operator.key(), item.operator);
+
+                    vault_service.add_delegation(
+                        vault_operator_delegation,
+                        operator,
+                        ctx.fund_account.as_ref(),
+                        &[fund_account.get_seeds().as_ref()],
+                        item.allocated_supported_token_amount,
+                    )?;
+                }
 
                 drop(fund_account);
                 let mut fund_account = ctx.fund_account.load_mut()?;
-
-                {
-                    let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
-                    restaking_vault.receipt_token_operation_reserved_amount -=
-                        item.delegation_amount;
-
-                    let delegation = restaking_vault.get_delegation_mut(&item.operator)?;
-                    delegation.supported_token_delegated_amount += item.delegation_amount;
+                let restaking_vault = fund_account.get_restaking_vault_mut(&vaults[0])?;
+                for (i, item) in items.iter().take(batch_size).enumerate() {
+                    let operator = accounts_to_delegate[2 * i + 1];
+                    let delegation = restaking_vault.get_delegation_mut(operator.key)?;
+                    delegation.supported_token_delegated_amount +=
+                        item.allocated_supported_token_amount;
+                    delegation_results.push(DelegateVSTCommandResultDelegated {
+                        operator: operator.key(),
+                        delegated_amount: item.allocated_supported_token_amount,
+                        total_delegated_amount: delegation.supported_token_delegated_amount,
+                    });
                 }
 
-                let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-                let delegation = restaking_vault.get_delegation(&item.operator)?;
+                let result = DelegateVSTCommandResult {
+                    vault: vaults[0],
+                    delegations: delegation_results,
+                }
+                .into();
 
-                let result = Some(
-                    DelegateVSTCommandResult {
-                        vault_supported_token_mint: restaking_vault.supported_token_mint,
-                        delegated_token_amount: item.delegation_amount,
-                        total_delegated_token_amount: delegation.supported_token_delegated_amount,
+                let finalized = batch_size == items.len();
+                if !finalized {
+                    // move on to next delegations
+                    let items = &items[batch_size..];
+                    let accounts_to_new =
+                        JitoRestakingVaultService::find_accounts_to_new(vaults[0])?;
+                    let accounts_to_delegate = items
+                        .iter()
+                        .take(RESTAKING_VAULT_DELEGATE_BATCH_SIZE)
+                        .flat_map(|item| {
+                            vault_service
+                                .find_accounts_to_update_delegation_state(item.operator)
+                        });
+                    let required_accounts = accounts_to_new.chain(accounts_to_delegate);
+                    let entry = Self {
+                        state: Execute {
+                            vaults: vaults.to_vec(),
+                            items: items.to_vec(),
+                        },
                     }
-                    .into(),
-                );
+                    .with_required_accounts(required_accounts);
 
-                if items.is_empty() {
-                    return Ok((result, None));
+                    Ok((Some(result), Some(entry)))
+                } else {
+                    drop(fund_account);
+                    // move on to next vault
+                    let vaults = vaults[1..].to_vec();
+                    Ok((Some(result), self.create_prepare_command(ctx, vaults)?))
                 }
-
-                // prepare state does not require additional accounts,
-                // so we can execute directly.
-                drop(fund_account);
-                self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -273,10 +355,10 @@ impl DelegateVSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
         }
     }
