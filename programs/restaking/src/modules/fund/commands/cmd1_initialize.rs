@@ -69,7 +69,7 @@ pub struct InitializeCommandRestakingVaultDelegationUpdateItem {
     pub index: u64,
 }
 
-const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 5;
+const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 10;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct InitializeCommandResult {
@@ -277,6 +277,7 @@ impl InitializeCommand {
         }
     }
 
+    #[inline(never)]
     fn execute_execute_restaking_vault_update<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,

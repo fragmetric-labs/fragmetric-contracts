@@ -56,7 +56,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
         logger.info(`waiting until epoch 2... (1 epoch = ${slotPerEpoch} slots)`);
         await restaking.sleepUntil(epochToSlot(2));
-        logger.info('epoch 2: operator enqueue withdrawal - process withdrawal - stake - normalize - restake');
+        logger.info('epoch 2: operator enqueue withdrawal - process withdrawal - stake - normalize - restake - delegate');
         await restaking.runOperatorFundCommands();
 
         await Promise.all([
@@ -67,7 +67,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
         logger.info('waiting until epoch 3...');
         await restaking.sleepUntil(epochToSlot(3));
-        logger.info('epoch 3: operator enqueue withdrawal - request unrestake');
+        logger.info('epoch 3: operator enqueue withdrawal - request unrestake - undelegate');
         await restaking.runOperatorFundCommands(); // here a unrestaking request made
 
         logger.info('waiting until epoch 5...');
@@ -80,7 +80,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
 
         logger.info('waiting until epoch 6...');
         await restaking.sleepUntil(epochToSlot(6));
-        logger.info('epoch 6: operator enqueue withdrawal - claim unstaked - process withdrawal - request unrestake');
+        logger.info('epoch 6: operator enqueue withdrawal - claim unstaked - process withdrawal - request unrestake - undelegate');
         await restaking.runOperatorFundCommands();
         await restaking.runUserWithdraw(user1, null, new BN(1));
 
