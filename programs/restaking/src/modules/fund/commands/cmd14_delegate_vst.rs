@@ -210,7 +210,7 @@ impl DelegateVSTCommand {
                     .collect::<Vec<_>>();
                 let accounts_to_new = JitoRestakingVaultService::find_accounts_to_new(address)?;
                 let accounts_to_delegate = operators.iter().flat_map(|operator| {
-                    vault_service.find_accounts_to_update_operator_delegation_state(*operator)
+                    vault_service.find_accounts_to_update_delegation_state(*operator)
                 });
 
                 let required_accounts = accounts_to_new.chain(accounts_to_delegate);
@@ -329,7 +329,7 @@ impl DelegateVSTCommand {
                         .take(RESTAKING_VAULT_DELEGATE_BATCH_SIZE)
                         .flat_map(|item| {
                             vault_service
-                                .find_accounts_to_update_operator_delegation_state(item.operator)
+                                .find_accounts_to_update_delegation_state(item.operator)
                         });
                     let required_accounts = accounts_to_new.chain(accounts_to_delegate);
                     let entry = Self {

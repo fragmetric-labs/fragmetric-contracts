@@ -197,7 +197,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     /// * (1) vault_config_account(writable)
     /// * (2) vault_account(writable)
     /// * (3) vault_update_state_tracker(writable)
-    pub fn find_accounts_to_update_vault_delegation_state(
+    pub fn find_accounts_to_update_vault_state(
         &self,
     ) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let accounts = Self::find_accounts_to_new(self.vault_account.key())?
@@ -268,7 +268,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     /// * vault_operator_delegation(writable)
     /// * operator
-    pub fn find_accounts_to_update_operator_delegation_state(
+    pub fn find_accounts_to_update_delegation_state(
         &self,
         operator: Pubkey,
     ) -> impl Iterator<Item = (Pubkey, bool)> {

@@ -209,7 +209,7 @@ impl UndelegateVSTCommand {
                     .collect::<Vec<_>>();
                 let accounts_to_new = JitoRestakingVaultService::find_accounts_to_new(address)?;
                 let accounts_to_undelegate = operators.iter().flat_map(|operator| {
-                    vault_service.find_accounts_to_update_operator_delegation_state(*operator)
+                    vault_service.find_accounts_to_update_delegation_state(*operator)
                 });
 
                 let required_accounts = accounts_to_new.chain(accounts_to_undelegate);
@@ -331,8 +331,7 @@ impl UndelegateVSTCommand {
                         .iter()
                         .take(RESTAKING_VAULT_UNDELEGATE_BATCH_SIZE)
                         .flat_map(|item| {
-                            vault_service
-                                .find_accounts_to_update_operator_delegation_state(item.operator)
+                            vault_service.find_accounts_to_update_delegation_state(item.operator)
                         });
                     let required_accounts = accounts_to_new.chain(accounts_to_undelegate);
                     let entry = Self {
