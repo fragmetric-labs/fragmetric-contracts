@@ -632,8 +632,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
             receipt_token_amount_processing = next_receipt_token_amount_processing;
             asset_user_amount_processing = next_asset_user_amount_processing;
-            asset_fee_amount_processing =
-                next_asset_fee_amount_processing.saturating_sub(lack_of_asset_amount);
+            asset_fee_amount_processing = next_asset_fee_amount_processing - lack_of_asset_amount;
             processing_batch_count += 1;
         }
 
