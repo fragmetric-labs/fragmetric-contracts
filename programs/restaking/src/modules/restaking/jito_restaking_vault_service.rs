@@ -11,6 +11,7 @@ use jito_vault_core::{
 
 use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
+use crate::modules::pricing::PricingService;
 use crate::utils;
 use crate::utils::AccountInfoExt;
 
@@ -988,26 +989,34 @@ impl<'info> JitoRestakingVaultService<'info> {
         Ok(())
     }
 
-    pub fn get_vault_requested_unrestake_amount(&self) -> Result<u64> {
+    pub fn calc_undelegation_amount(
+        &self,
+        pricing_service: &PricingService,
+        vault_receipt_token_mint: &Pubkey,
+        vault_supported_token_mint: &Pubkey,
+    ) -> Result<u64> {
         let data = &Self::borrow_account_data(self.vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
-        Ok(vault.vrt_enqueued_for_cooldown_amount())
-    }
 
-    pub fn get_vault_requested_undelegate_amount(&self) -> Result<u64> {
-        let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-        Ok(vault.delegation_state.enqueued_for_cooldown_amount())
-    }
-
-    pub fn get_vault_supported_token_remaining_amount(&self) -> Result<u64> {
-        let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-        Ok(vault.tokens_deposited().saturating_sub(
+        let vault_requested_unrestake_amount_as_vst_amount = pricing_service
+            .get_token_amount_as_asset(
+                vault_receipt_token_mint,
+                vault.vrt_enqueued_for_cooldown_amount(),
+                Some(vault_supported_token_mint),
+            )?;
+        let vault_requested_undelegate_amount =
+            vault.delegation_state.enqueued_for_cooldown_amount();
+        let vault_supported_token_remaining_amount = vault.tokens_deposited().saturating_sub(
             vault.delegation_state.staked_amount()
                 + vault.delegation_state.enqueued_for_cooldown_amount()
                 + vault.delegation_state.cooling_down_amount(),
-        ))
+        );
+
+        let undelegation_amount = vault_requested_unrestake_amount_as_vst_amount
+            .saturating_sub(vault_requested_undelegate_amount)
+            .saturating_sub(vault_supported_token_remaining_amount);
+
+        Ok(undelegation_amount)
     }
 
     pub fn find_accounts_to_cooldown_delegation(

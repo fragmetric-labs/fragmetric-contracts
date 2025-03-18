@@ -161,29 +161,13 @@ impl UndelegateVSTCommand {
                 };
                 require_keys_eq!(address, vault_account.key());
 
-                let vault_service =
-                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
-
-                let vault_requested_unrestake_amount_as_vst_amount = pricing_service
-                    .get_token_amount_as_asset(
-                        &restaking_vault.receipt_token_mint,
-                        vault_service.get_vault_requested_unrestake_amount()?,
-                        Some(&restaking_vault.supported_token_mint),
-                    )?;
-                let vault_requested_undelegate_amount =
-                    vault_service.get_vault_requested_undelegate_amount()?;
-                let vault_supported_token_remaining_amount =
-                    vault_service.get_vault_supported_token_remaining_amount()?;
-                msg!(
-                    "vault_requested_unrestake_amount_as_vst_amount {}, vault_requested_undelegate_amount {}, vault_supported_token_remaining_amount {}",
-                    vault_requested_unrestake_amount_as_vst_amount,
-                    vault_requested_undelegate_amount,
-                    vault_supported_token_remaining_amount
-                );
-                let undelegation_amount = vault_requested_unrestake_amount_as_vst_amount
-                    .saturating_sub(vault_requested_undelegate_amount)
-                    .saturating_sub(vault_supported_token_remaining_amount);
-                msg!("willing to undelegation_amount {}", undelegation_amount);
+                let undelegation_amount =
+                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?
+                        .calc_undelegation_amount(
+                            &pricing_service,
+                            &restaking_vault.receipt_token_mint,
+                            &restaking_vault.supported_token_mint,
+                        )?;
 
                 strategy.cut_greedy(undelegation_amount)?;
 
