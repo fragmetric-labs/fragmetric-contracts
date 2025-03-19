@@ -72,8 +72,7 @@ pub struct FundAccount {
     normalized_token: NormalizedToken,
 
     /// investments
-    reward_commission_rate_bps: u16,
-    _padding7: [u8; 13],
+    _padding7: [u8; 15],
     num_restaking_vaults: u8,
     restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
     _padding8: [u8; 112],

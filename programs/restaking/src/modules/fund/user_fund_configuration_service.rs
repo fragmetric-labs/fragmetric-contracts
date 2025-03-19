@@ -107,7 +107,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
             user_fund_account_bump,
             self.receipt_token_mint,
             self.user_receipt_token_account,
-        ) {
+        )? {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
                 user_fund_account: self.user_fund_account.key(),
@@ -125,7 +125,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
         let initializing = self.user_fund_account.is_initializing();
         if self
             .user_fund_account
-            .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account)
+            .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account)?
         {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),

@@ -52,8 +52,8 @@ pub struct DelegateVSTCommandResult {
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct DelegateVSTCommandResultDelegated {
     pub operator: Pubkey,
-    pub delegated_amount: u64,
-    pub total_delegated_amount: u64,
+    pub delegated_token_amount: u64,
+    pub total_delegated_token_amount: u64,
 }
 
 impl SelfExecutable for DelegateVSTCommand {
@@ -307,8 +307,8 @@ impl DelegateVSTCommand {
                         item.allocated_supported_token_amount;
                     delegation_results.push(DelegateVSTCommandResultDelegated {
                         operator: operator.key(),
-                        delegated_amount: item.allocated_supported_token_amount,
-                        total_delegated_amount: delegation.supported_token_delegated_amount,
+                        delegated_token_amount: item.allocated_supported_token_amount,
+                        total_delegated_token_amount: delegation.supported_token_delegated_amount,
                     });
                 }
 
@@ -328,8 +328,7 @@ impl DelegateVSTCommand {
                         .iter()
                         .take(RESTAKING_VAULT_DELEGATE_BATCH_SIZE)
                         .flat_map(|item| {
-                            vault_service
-                                .find_accounts_to_update_delegation_state(item.operator)
+                            vault_service.find_accounts_to_update_delegation_state(item.operator)
                         });
                     let required_accounts = accounts_to_new.chain(accounts_to_delegate);
                     let entry = Self {

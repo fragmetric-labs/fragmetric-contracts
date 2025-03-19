@@ -66,6 +66,7 @@ pub struct UserFundSupportedTokenContext<'info> {
         bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,
         has_one = user,
+        constraint = user_fund_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 
@@ -173,6 +174,7 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
         bump = user_fund_account.get_bump(),
         has_one = receipt_token_mint,
         has_one = user,
+        constraint = user_fund_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 

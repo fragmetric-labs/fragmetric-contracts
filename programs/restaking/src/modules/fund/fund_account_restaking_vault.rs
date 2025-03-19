@@ -35,8 +35,10 @@ pub(super) struct RestakingVault {
     num_delegations: u8,
     delegations: [RestakingVaultDelegation; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS],
 
+    pub reward_commission_rate_bps: u16,
+
     /// auto-compounding
-    _padding3: [u8; 7],
+    _padding3: [u8; 5],
     num_compounding_reward_tokens: u8,
     compounding_reward_token_mints:
         [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],

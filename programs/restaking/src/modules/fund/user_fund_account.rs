@@ -4,6 +4,13 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
+#[constant]
+/// ## Version History
+/// * v1: Initial Version (567 ~= 0.55KB)
+pub const USER_FUND_ACCOUNT_CURRENT_VERSION: u16 = 1;
+#[constant]
+pub const USER_FUND_ACCOUNT_CURRENT_SIZE: u64 = 8 + UserFundAccount::INIT_SPACE as u64;
+
 pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 4;
 
 #[account]
@@ -45,7 +52,7 @@ impl UserFundAccount {
         receipt_token_mint: Pubkey,
         receipt_token_amount: u64,
         user: Pubkey,
-    ) -> bool {
+    ) -> Result<bool> {
         let old_data_version = self.data_version;
 
         if self.data_version == 0 {
@@ -56,7 +63,9 @@ impl UserFundAccount {
             self.user = user;
         }
 
-        old_data_version < self.data_version
+        require_eq!(self.data_version, USER_FUND_ACCOUNT_CURRENT_VERSION);
+
+        Ok(old_data_version < self.data_version)
     }
 
     #[inline(always)]
@@ -65,7 +74,7 @@ impl UserFundAccount {
         user_fund_account_bump: u8,
         receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) -> bool {
+    ) -> Result<bool> {
         self.migrate(
             user_fund_account_bump,
             receipt_token_mint.key(),
@@ -79,13 +88,18 @@ impl UserFundAccount {
         &mut self,
         receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) -> bool {
+    ) -> Result<bool> {
         self.initialize(self.bump, receipt_token_mint, user_receipt_token_account)
     }
 
     #[inline(always)]
     pub(super) fn is_initializing(&self) -> bool {
         self.data_version == 0
+    }
+
+    #[inline(always)]
+    pub fn is_latest_version(&self) -> bool {
+        self.data_version == USER_FUND_ACCOUNT_CURRENT_VERSION
     }
 
     pub(super) fn reload_receipt_token_amount(

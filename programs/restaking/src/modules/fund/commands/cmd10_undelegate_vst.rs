@@ -52,7 +52,7 @@ pub struct UndelegateVSTCommandResult {
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct UndelegateVSTCommandResultUndelegated {
     pub operator: Pubkey,
-    pub undelegation_requested_amount: u64,
+    pub undelegation_requested_token_amount: u64,
     pub total_delegated_token_amount: u64,
     pub total_undelegating_token_amount: u64,
 }
@@ -308,7 +308,7 @@ impl UndelegateVSTCommand {
                         item.allocated_supported_token_amount;
                     undelegation_results.push(UndelegateVSTCommandResultUndelegated {
                         operator: operator.key(),
-                        undelegation_requested_amount: item.allocated_supported_token_amount,
+                        undelegation_requested_token_amount: item.allocated_supported_token_amount,
                         total_delegated_token_amount: delegation.supported_token_delegated_amount,
                         total_undelegating_token_amount: delegation
                             .supported_token_undelegating_amount,
