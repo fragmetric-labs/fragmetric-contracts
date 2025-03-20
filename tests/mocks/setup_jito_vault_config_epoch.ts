@@ -38,16 +38,16 @@ const setupJitoVaultConfigEpoch = () => {
     EPOCH_LENGTHS.map((epoch) => {
         if (epoch == 256) return;
 
-        fs.copyFileSync(path.join(__dirname, `./mocks/mainnet/${TARGET_FILE_PREFIX}256.json`), path.join(__dirname, `./mocks/mainnet/${TARGET_FILE_PREFIX}${epoch}.json`));
+        fs.copyFileSync(path.join(__dirname, `./mainnet/${TARGET_FILE_PREFIX}256.json`), path.join(__dirname, `./mainnet/${TARGET_FILE_PREFIX}${epoch}.json`));
     });
 
     // 2. setup epoch length
-    fs.readdirSync(path.join(__dirname, "./mocks/mainnet/")).forEach(filename => {
+    fs.readdirSync(path.join(__dirname, "./mainnet/")).forEach(filename => {
         if (!filename.startsWith(TARGET_FILE_PREFIX)) return;
 
         const targetEpochLength = filename.slice(TARGET_FILE_PREFIX.length).split(".")[0];
 
-        const jitoVaultConfigRaw = fs.readFileSync(path.join(__dirname, `./mocks/mainnet/${filename}`), {encoding: "utf-8"});
+        const jitoVaultConfigRaw = fs.readFileSync(path.join(__dirname, `./mainnet/${filename}`), {encoding: "utf-8"});
         const jitoVaultConfig = JSON.parse(jitoVaultConfigRaw);
         const data = Uint8Array.from(Buffer.from(jitoVaultConfig["account"]["data"][0], "base64"));
 
@@ -67,7 +67,7 @@ const setupJitoVaultConfigEpoch = () => {
 
         jitoVaultConfig["account"]["data"][0] = Buffer.from(data).toString("base64");
 
-        fs.writeFileSync(path.join(__dirname, `./mocks/mainnet/${filename}`), JSON.stringify(jitoVaultConfig, null, 2));
+        fs.writeFileSync(path.join(__dirname, `./mainnet/${filename}`), JSON.stringify(jitoVaultConfig, null, 2));
     });
 }
 setupJitoVaultConfigEpoch();

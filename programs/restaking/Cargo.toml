@@ -43,6 +43,7 @@ spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
+switchboard-on-demand = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

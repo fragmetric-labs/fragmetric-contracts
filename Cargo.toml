@@ -35,6 +35,7 @@ spl-discriminator = "0.4.1"
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
 borsh1 = { package = "borsh", version = "1.5.5" } # This version is used in spl-stake-pool
 proptest = "1.6.0"
+switchboard-on-demand = { version = "0.3.5" }
 
 # solana-program-test = "2.1.15"
 # solana-sdk = "2.1.15"
