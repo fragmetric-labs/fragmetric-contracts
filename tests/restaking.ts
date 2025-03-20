@@ -19,7 +19,9 @@ export const restakingPlayground = (process.env.JTO)
 
 
 /** define test suites here **/
-if (process.env.JTO) {
+if (process.env.JUST_LOAD) {
+    // Even skip 1_initialize.ts
+} else if (process.env.JTO) {
     require('./restaking/1_initialize_jto');
 
     if (process.env.JUST_WITHDRAW) {

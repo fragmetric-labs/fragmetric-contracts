@@ -244,7 +244,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         // jito
         const jitoVaultProgram = this.getConstantAsPublicKey('jitoVaultProgramId');
         const jitoVaultProgramFeeWallet = this.getConstantAsPublicKey('jitoVaultProgramFeeWallet');
-        const jitoVaultFeeWallet = this.keychain.getPublicKey('ADMIN');
+        const jitoVaultFeeWallet = this.keychain.getPublicKey('FUND_MANAGER');
         const jitoVaultConfig = this.getConstantAsPublicKey('jitoVaultConfigAddress');
         const jitoRestakingProgram = this.getConstantAsPublicKey('jitoRestakingProgramId');
         const jitoRestakingConfig = this.getConstantAsPublicKey('jitoRestakingConfigAddress');
@@ -405,7 +405,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     VSTMint: this.knownAddress.jtoTokenMint,
                     VRTMint: this.knownAddress.fragJTOJitoJTOVRTMint,
                     vault: this.getConstantAsPublicKey("fragjtoJitoJtoVaultAccountAddress"),
-                    operators: {},
+                    operators: {
+                        MOCK1: new web3.PublicKey("A8em9djsTqVv8a35QpXzhFGSvd1HV5wCwJoNMQidbRbi"),
+                        MOCK2: new web3.PublicKey("Df3W2ZSgKdWzZGpMZM9FTrEZmyiHqJgBUzFpwNRvA8kr"),
+                        MOCK3: new web3.PublicKey("2YUffFhU1awyvBthVMi6a6hTABxSdUstHpkqsisZkm8R"),
+                        MOCK4: new web3.PublicKey("FzDm7mpkGBFL6ykhPNxk5PZMBko1JWLUJ3Qhxe9hUUqU"),
+                    },
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultProgramFeeWalletTokenAccount,
                     feeWalletTokenAccount: this.knownAddress.fragJTOJitoJTOVaultFeeWalletTokenAccount,
@@ -510,17 +515,31 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
     private _tokenSwapStrategies: ReturnType<typeof this._getTokenSwapStrategies>;
     private _getTokenSwapStrategies() {
-        return [
-            {
-                fromTokenMint: new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
-                toTokenMint: this.knownAddress.jtoTokenMint,
-                tokenSwapSource: {
-                    orcaDexLiquidityPool: {
-                        address: new web3.PublicKey("G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA"),
+        if (this.isDevnet) {
+            return [
+                {
+                    fromTokenMint: new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                    toTokenMint: this.knownAddress.jtoTokenMint,
+                    tokenSwapSource: {
+                        orcaDexLiquidityPool: {
+                            address: new web3.PublicKey("GoKRZ48mhDrNVMKmTG9zWMgfacq3S6KRN9LWRNqhtQNL"),
+                        }
                     }
                 }
-            }
-        ]
+            ];
+        } else {
+            return [
+                {
+                    fromTokenMint: new web3.PublicKey("J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"),
+                    toTokenMint: this.knownAddress.jtoTokenMint,
+                    tokenSwapSource: {
+                        orcaDexLiquidityPool: {
+                            address: new web3.PublicKey("G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA"),
+                        }
+                    }
+                }
+            ];
+        }
     }
 
     public async tryAirdropJTO(account: web3.PublicKey, lamports: BN = new BN(100 * web3.LAMPORTS_PER_SOL)) {
@@ -780,9 +799,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         );
     }
 
-    public async getJitoRestakingVault(symbol: keyof typeof this.restakingVaultMetadata) {
-        const restakingVault = this.restakingVaultMetadata[symbol];
-        let vaultData = await this.connection.getAccountInfo(restakingVault.vault).then(a => a.data);
+    public async getJitoRestakingVault(
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+    ) {
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
+        let vaultData = await this.connection.getAccountInfo(vault).then(a => a.data);
         let expected = vaultData.length;
 
         const checkLengthDecreased = (decreased: number, msg: string) => {
@@ -1308,7 +1329,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: Object.entries(this.restakingVaultMetadata).flatMap(([symbol, v]) => {
                 return [
-                    // TODO v0.3/restaking: adjust authority of fee wallet
                     spl.createAssociatedTokenAccountIdempotentInstruction(
                         this.wallet.publicKey,
                         v.feeWalletTokenAccount,
@@ -1357,7 +1377,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const vault = this.restakingVaultMetadata[symbol];
         await this.run({
             instructions: [
-                // TODO v0.3/restaking: adjust authority of fee wallet
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
                     vault.feeWalletTokenAccount,
@@ -1463,10 +1482,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // below functions are auxillary functions for jito instructions.
-    private getPublicKey(authority: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS) {
-        if (authority instanceof web3.Keypair)  return authority.publicKey;
-        if (authority instanceof web3.PublicKey) return authority;
-        return this.keychain.getPublicKey(authority);
+    private getPublicKey(source: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS | string) {
+        if (source instanceof web3.Keypair)  return source.publicKey;
+        if (source instanceof web3.PublicKey) return source;
+        return this.keychain.getPublicKey(source as KEYCHAIN_KEYS) ?? new web3.PublicKey(source);
     }
     private getSigners(...keypairOrNames: (web3.Keypair | KEYCHAIN_KEYS)[]) {
         const signers = keypairOrNames.filter(keypairOrName => keypairOrName instanceof web3.Keypair) as web3.Signer[];
@@ -1474,7 +1493,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { signers, signerNames };
     }
     private getAccountMeta(
-        account: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS,
+        account: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS | string,
         ...signerOrWritable: ("SIGNER" | "WRITABLE")[]
     ) {
         const pubkey = this.getPublicKey(account);
@@ -1648,10 +1667,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     // need for test environment setup - initialize operator_vault_ticket
     public async runAdminInitializeJitoOperatorVaultTicket(
-        operator: web3.PublicKey,
-        vault: web3.PublicKey,
+        operator: web3.PublicKey | string,
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
         authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
     ) {
+        operator = this.getPublicKey(operator);
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
         const [operatorVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
             [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
             this.knownAddress.jitoRestakingProgram,
@@ -1695,10 +1716,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     // need for operation & test environment setup - initialize vault_operator_delegation
     public async runAdminInitializeJitoVaultOperatorDelegation(
-        vault: web3.PublicKey,
-        operator: web3.PublicKey,
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+        operator: web3.PublicKey | string,
         authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
     ) {
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
+        operator = this.getPublicKey(operator);
         const [operatorVaultTicketPublicKey] = web3.PublicKey.findProgramAddressSync(
             [Buffer.from("operator_vault_ticket"), operator.toBuffer(), vault.toBuffer()],
             this.knownAddress.jitoRestakingProgram,
@@ -1745,14 +1768,97 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return { vaultOperatorDelegation: vaultOperatorDelegationPublicKey };
     }
 
-    // need for operation & test environment setup - set secondary admin to fund_account
-    public async runAdminSetSecondaryAdminForJitoVault(
-        vault: web3.PublicKey,
-        secondaryAdminRole: "DELEGATION_ADMIN",
-        newAuthority = this.knownAddress.fragJTOFund,
-        authority: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+    private async getInstructionsToCreateNewJitoFeeWalletTokenAccount(
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+        args: {
+            newAdmin: web3.Keypair | KEYCHAIN_KEYS,
+        } | {
+            newFeeWallet: web3.Keypair | web3.PublicKey | KEYCHAIN_KEYS | string,
+        }
     ) {
-        logger.debug(`new ${secondaryAdminRole.replace(/_/g, ' ').toLowerCase()}`.padEnd(LOG_PAD_LARGE), newAuthority.toString());
+        // @ts-ignore
+        const newFeeWallet = args.newFeeWallet ? this.getPublicKey(args.newFeeWallet) : undefined;
+        // @ts-ignore
+        const newAdmin = args.newAdmin ? this.getPublicKey(args.newAdmin) : undefined;
+
+        const vaultObject = await this.getJitoRestakingVault(vault);
+        if (newFeeWallet && !vaultObject.feeWallet.equals(newFeeWallet)) {
+            const ata = spl.getAssociatedTokenAddressSync(
+                vaultObject.vrtMint,
+                newFeeWallet,
+                true,
+            );
+            return [spl.createAssociatedTokenAccountIdempotentInstruction(
+                this.wallet.publicKey,
+                ata,
+                newFeeWallet,
+                vaultObject.vrtMint,
+            )];
+        }
+        if (newAdmin && vaultObject.admin.equals(vaultObject.feeWallet) && !vaultObject.admin.equals(newAdmin)) {
+            const ata = spl.getAssociatedTokenAddressSync(
+                vaultObject.vrtMint,
+                newAdmin,
+                true,
+            );
+            return [spl.createAssociatedTokenAccountIdempotentInstruction(
+                this.wallet.publicKey,
+                ata,
+                newAdmin,
+                vaultObject.vrtMint,
+            )];
+        }
+        return [];
+    }
+
+    // need for operation & test environment setup - set vault admin to fund_manager
+    public async runAdminSetJitoVaultAdmin(
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+        admin: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        newAdmin: web3.Keypair | KEYCHAIN_KEYS = "FUND_MANAGER",
+    ) {
+        const createATAIx = await this.getInstructionsToCreateNewJitoFeeWalletTokenAccount(vault, { newAdmin });
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
+        logger.debug(`new vault admin`.padEnd(LOG_PAD_LARGE), this.getPublicKey(newAdmin).toString());
+
+        const SetAdminInstructionDataSize = {
+            discriminator: 1, // u8
+        };
+
+        const discriminator = 21;
+        const data = Buffer.alloc(Object.values(SetAdminInstructionDataSize).reduce((x, y) => x + y));
+
+        let offset = 0;
+        data.writeUInt8(discriminator, offset); offset += SetAdminInstructionDataSize.discriminator;
+
+        const ix = new web3.TransactionInstruction({
+            programId: this.knownAddress.jitoVaultProgram,
+            keys: [
+                this.getAccountMeta(this.knownAddress.jitoVaultConfig),
+                this.getAccountMeta(vault, "WRITABLE"),
+                this.getAccountMeta(admin, "SIGNER"),
+                this.getAccountMeta(newAdmin, "SIGNER"),
+            ],
+            data,
+        });
+
+        await this.run({
+            instructions: [...createATAIx, ix],
+            ...this.getSigners(admin, newAdmin),
+        });
+
+        logger.notice(`changed jito restaking vault admin`.padEnd(LOG_PAD_LARGE), vault.toString());
+    }
+
+    // need for operation & test environment setup - set secondary admin to fund_account
+    public async runAdminSetJitoVaultSecondaryAdmin(
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+        secondaryAdminRole: "DELEGATION_ADMIN",
+        vaultAdmin: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        newSecondaryAdmin = this.knownAddress.fragJTOFund,
+    ) {
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
+        logger.debug(`new ${secondaryAdminRole.replace(/_/g, ' ').toLowerCase()}`.padEnd(LOG_PAD_LARGE), newSecondaryAdmin.toString());
 
         const SetSecondaryAdminInstructionDataSize = {
             discriminator: 1, // u8
@@ -1777,15 +1883,15 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             keys: [
                 this.getAccountMeta(this.knownAddress.jitoVaultConfig),
                 this.getAccountMeta(vault, "WRITABLE"),
-                this.getAccountMeta(authority, "SIGNER"),
-                this.getAccountMeta(newAuthority),
+                this.getAccountMeta(vaultAdmin, "SIGNER"),
+                this.getAccountMeta(newSecondaryAdmin),
             ],
             data,
         });
 
         await this.run({
             instructions: [ix],
-            ...this.getSigners(authority),
+            ...this.getSigners(vaultAdmin),
         });
 
         logger.notice(`changed jito restaking vault secondary admin`.padEnd(LOG_PAD_LARGE), vault.toString());
@@ -1793,11 +1899,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     // need for operation & test - delegate vault_token_account to fund_account
     public async runAdminDelegateJitoVaultTokenAccount(
-        vault: web3.PublicKey,
-        tokenMint: web3.PublicKey,
+        vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
+        tokenMint: web3.PublicKey | string,
         delegate = this.knownAddress.fragJTOFund,
         delegateAssetAdmin: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
     ) {
+        vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
+        tokenMint = this.getPublicKey(tokenMint);
         const vaultTokenAccount = await spl.getOrCreateAssociatedTokenAccount(
             this.connection,
             this.wallet,
@@ -2140,11 +2248,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public get targetFragJTOFundConfiguration() {
         return {
-            depositEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
+            depositEnabled: true,
             donationEnabled: true,
-            withdrawalEnabled: this.isDevnet ? true : (this.isMainnet ? true : true),
-            transferEnabled: this.isDevnet ? true : (this.isMainnet ? true : false),
-            WithdrawalFeedRateBPS: this.isDevnet ? 10 : 10,
+            withdrawalEnabled: true,
+            transferEnabled: true,
+            WithdrawalFeedRateBPS: 10,
             withdrawalBatchThresholdSeconds: new BN(this.isDevnet ? 60 : (this.isMainnet ? 86400 : 10)), // seconds
 
             solDepositable: false,
@@ -2166,8 +2274,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     }
                 })(),
                 tokenAccumulatedDepositAmount: null,
-                withdrawable: this.isDevnet ? true : (this.isMainnet ? true : true),
-                withdrawalNormalReserveRateBPS: this.isDevnet ? 5 : 5,
+                withdrawable: true,
+                withdrawalNormalReserveRateBPS: 5,
                 withdrawalNormalReserveMaxAmount: new BN(MAX_CAPACITY),
                 tokenRebalancingAmount: null,
                 solAllocationWeight: (() => {
@@ -2181,7 +2289,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "JTO":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
@@ -2192,7 +2300,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationWeight: (() => {
                     switch (symbol) {
                         case "jitoJTOVault":
-                            return new BN(this.isMainnet ? 1 : 1);
+                            return new BN(this.isDevnet ? 1 : 1);
                         default:
                             throw `invalid sol allocation weight for ${symbol}`;
                     }
@@ -2200,7 +2308,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 solAllocationCapacityAmount: (() => {
                     switch (symbol) {
                         case "jitoJTOVault":
-                            return new BN(this.isMainnet ? MAX_CAPACITY : MAX_CAPACITY);
+                            return new BN(MAX_CAPACITY);
                         default:
                             throw `invalid sol allocation cap for ${symbol}`;
                     }
@@ -2212,6 +2320,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             case "jitoJTOVault":
                                 if (this.isDevnet) {
                                     switch (name) {
+                                        case "MOCK1":
+                                            return new BN(1);
+                                        case "MOCK2":
+                                            return new BN(1);
+                                        case "MOCK3":
+                                            return new BN(1);
+                                        case "MOCK4":
+                                            return new BN(1);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
                                     }
@@ -2248,29 +2364,37 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             case "jitoJTOVault":
                                 if (this.isDevnet) {
                                     switch (name) {
+                                        case "MOCK1":
+                                            return new BN(MAX_CAPACITY);
+                                        case "MOCK2":
+                                            return new BN(MAX_CAPACITY);
+                                        case "MOCK3":
+                                            return new BN(MAX_CAPACITY);
+                                        case "MOCK4":
+                                            return new BN(MAX_CAPACITY);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
                                     }
                                 } else {
                                     switch (name) {
                                         case "InfStones":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "Hashkey":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "PierTwo":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "Luganodes":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "Everstake":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "Temporal":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "ChorusOne":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "KILN":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         case "Helius":
-                                            return new BN(this.isDevnet ? MAX_CAPACITY : MAX_CAPACITY);
+                                            return new BN(MAX_CAPACITY);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
                                     }
