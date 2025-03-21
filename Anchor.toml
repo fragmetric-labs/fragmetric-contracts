@@ -446,9 +446,3 @@ filename = "./tests/mocks/mainnet/orca_jto_jitosol_liquidity_pool_jto_vault_acco
 [[test.validator.account]]
 address = "AVZgewZzC8AQRCeXJTSnzQof25Y4R77tma59Htp5w245"
 filename = "./tests/mocks/mainnet/orca_jto_jitosol_liquidity_pool_jitosol_vault_account.json"
-
-###### Switchboard ######
-# Switchboard on demand program
-[[test.genesis]]
-address = "SBondMDrcV3K4kxZR1HNVT7osZxAHVHgYXL5Ze1oMUv"
-program = "./tests/mocks/mainnet/switchboard_on_demand_program.so"
