@@ -257,6 +257,7 @@ pub(super) struct RestakingVaultDelegation {
 impl RestakingVaultDelegation {
     fn initialize(&mut self, operator: Pubkey, delegated_amount: u64, undelegating_amount: u64) {
         *self = Zeroable::zeroed();
+
         self.operator = operator;
         self.supported_token_delegated_amount = delegated_amount;
         self.supported_token_undelegating_amount = undelegating_amount;
