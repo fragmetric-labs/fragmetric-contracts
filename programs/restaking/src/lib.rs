@@ -356,6 +356,23 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_add_restaking_vault_distributing_reward_token(
+        ctx: Context<FundManagerFundContext>,
+        vault: Pubkey,
+        distributing_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_vault_distributing_reward_token(
+            &vault,
+            distributing_reward_token_mint
+        )?);
+
+        Ok(())
+    }
+
     pub fn fund_manager_add_token_swap_strategy(
         ctx: Context<FundManagerFundContext>,
         from_token_mint: Pubkey,

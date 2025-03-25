@@ -256,4 +256,10 @@ pub enum ErrorCode {
 
     #[msg("fund: token swap strategy not found")]
     FundTokenSwapStrategyNotFoundError,
+
+    #[msg("fund: restaking vault distributing reward token already registered")]
+    FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError,
+
+    #[msg("fund: exceeded max restaking vault distributing reward tokens")]
+    FundExceededMaxRestakingVaultDistributingRewardTokensError,
 }
