@@ -6,14 +6,14 @@ use crate::events;
 
 use super::*;
 
-pub struct UserRewardService<'info: 'a, 'a> {
+pub struct UserRewardService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     current_slot: u64,
 }
 
-impl<'info, 'a> UserRewardService<'info, 'a> {
+impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         user: &Signer,

@@ -7,14 +7,14 @@ use crate::utils::{AccountLoaderExt, SystemProgramExt};
 
 use super::*;
 
-pub struct RewardConfigurationService<'info: 'a, 'a> {
+pub struct RewardConfigurationService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
 
     current_slot: u64,
 }
 
-impl<'info, 'a> RewardConfigurationService<'info, 'a> {
+impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
@@ -77,15 +77,6 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
             .add_new_holder(name, description, pubkeys)?;
 
         self.create_fund_manager_updated_reward_pool_event()
-    }
-
-    fn create_fund_manager_updated_reward_pool_event(
-        &self,
-    ) -> Result<events::FundManagerUpdatedRewardPool> {
-        Ok(events::FundManagerUpdatedRewardPool {
-            receipt_token_mint: self.receipt_token_mint.key(),
-            reward_account: self.reward_account.key(),
-        })
     }
 
     pub fn process_add_reward_pool(
@@ -185,5 +176,14 @@ impl<'info, 'a> RewardConfigurationService<'info, 'a> {
         )?;
 
         self.create_fund_manager_updated_reward_pool_event()
+    }
+
+    fn create_fund_manager_updated_reward_pool_event(
+        &self,
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
+        Ok(events::FundManagerUpdatedRewardPool {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            reward_account: self.reward_account.key(),
+        })
     }
 }
