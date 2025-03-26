@@ -13,6 +13,12 @@ pub struct RewardService<'a, 'info> {
     current_slot: u64,
 }
 
+impl Drop for RewardService<'_, '_> {
+    fn drop(&mut self) {
+        self.reward_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'a, 'info> RewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
@@ -48,7 +54,7 @@ impl<'a, 'info> RewardService<'a, 'info> {
     pub fn process_update_reward_pools(&self) -> Result<events::OperatorUpdatedRewardPools> {
         self.reward_account
             .load_mut()?
-            .update_reward_pools(self.current_slot)?;
+            .update_reward_pools(self.current_slot);
 
         Ok(events::OperatorUpdatedRewardPools {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -70,9 +76,14 @@ impl<'a, 'info> RewardService<'a, 'info> {
 
         let mut updated_user_reward_accounts = Vec::with_capacity(2);
         if let Some(from) = &from_user_reward_account {
+            require_keys_eq!(
+                self.receipt_token_mint.key(),
+                from.load()?.receipt_token_mint,
+            );
             updated_user_reward_accounts.push(from.key());
         }
         if let Some(to) = &to_user_reward_account {
+            require_keys_eq!(self.receipt_token_mint.key(), to.load()?.receipt_token_mint);
             updated_user_reward_accounts.push(to.key());
         }
 
@@ -86,7 +97,6 @@ impl<'a, 'info> RewardService<'a, 'info> {
         self.reward_account
             .load_mut()?
             .update_reward_pools_token_allocation(
-                self.receipt_token_mint.key(),
                 amount,
                 contribution_accrual_rate,
                 from_account_ref.as_deref_mut(),

@@ -10,29 +10,24 @@ const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 // const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_2: usize = 8;
 
 #[zero_copy]
-#[repr(C)]
-pub struct RewardPool {
+#[repr(C, packed(8))]
+pub(super) struct RewardPool {
     /// ID is determined by reward account.
-    pub(super) id: u8,
+    pub id: u8,
     name: [u8; REWARD_POOL_NAME_MAX_LEN],
 
-    // bit 0: custom contribution accrual rate enabled?
-    // bit 1: is closed?
-    // bit 2: has holder? (not provided for default holder (fragmetric))
-    reward_pool_bitmap: u8,
+    pub custom_contribution_accrual_rate_enabled: u8,
 
-    token_allocated_amount: TokenAllocatedAmount,
-    contribution: u128,
+    pub token_allocated_amount: TokenAllocatedAmount,
+    pub contribution: u128,
 
-    pub(super) initial_slot: u64,
-    updated_slot: u64,
-    closed_slot: u64,
+    pub initial_slot: u64,
+    pub updated_slot: u64,
 
-    holder_id: u8,
+    _padding: [u8; 9],
     num_reward_settlements: u8,
-    _padding: [u8; 6],
 
-    _reserved: [u64; 32], // 256 byte
+    _reserved: [u8; 262],
 
     reward_settlements_1: [RewardSettlement; REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1],
 }
@@ -49,77 +44,51 @@ pub struct RewardPool {
 // And add new field reward_pools_1_ext_v3: [RewardPoolExtV3; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1] to reward account.
 
 impl RewardPool {
-    const CUSTOM_CONTRIBUTION_ACCRUAL_RATE_ENABLED_BIT: u8 = 1 << 0;
-    const IS_CLOSED_BIT: u8 = 1 << 1;
-    const HAS_HOLDER_BIT: u8 = 1 << 2;
-
-    pub(super) fn initialize(
+    pub fn initialize(
         &mut self,
         id: u8,
-        name: String,
-        holder_id: Option<u8>,
+        name: impl AsRef<str>,
         custom_contribution_accrual_rate_enabled: bool,
         current_slot: u64,
     ) -> Result<()> {
+        let name = name.as_ref().trim_matches('\0');
+
         require_gte!(
             REWARD_POOL_NAME_MAX_LEN,
             name.len(),
             ErrorCode::RewardInvalidMetadataNameLengthError
         );
 
+        *self = Zeroable::zeroed();
+
         self.id = id;
         self.name[..name.len()].copy_from_slice(name.as_bytes());
-        self.reward_pool_bitmap &= 0; // reset
-        if custom_contribution_accrual_rate_enabled {
-            self.reward_pool_bitmap |= Self::CUSTOM_CONTRIBUTION_ACCRUAL_RATE_ENABLED_BIT;
-        }
-        if holder_id.is_some() {
-            self.reward_pool_bitmap |= Self::HAS_HOLDER_BIT;
-        }
-        self.token_allocated_amount = TokenAllocatedAmount::zeroed();
-        self.contribution = 0;
+        self.custom_contribution_accrual_rate_enabled =
+            custom_contribution_accrual_rate_enabled as u8;
         self.initial_slot = current_slot;
         self.updated_slot = current_slot;
-        self.closed_slot = 0;
-        self.holder_id = holder_id.unwrap_or_default();
-        self.num_reward_settlements = 0;
 
         Ok(())
     }
 
-    pub(super) fn get_name(&self) -> Result<&str> {
+    pub fn get_name(&self) -> Result<&str> {
         Ok(std::str::from_utf8(&self.name)
-            .map_err(|_| crate::errors::ErrorCode::UTF8DecodingException)?
+            .map_err(|_| ErrorCode::UTF8DecodingException)?
             .trim_matches('\0'))
     }
 
-    #[inline(always)]
-    pub(super) fn is_custom_contribution_accrual_rate_enabled(&self) -> bool {
-        self.reward_pool_bitmap & Self::CUSTOM_CONTRIBUTION_ACCRUAL_RATE_ENABLED_BIT > 0
+    pub fn get_reward_settlements_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut RewardSettlement> {
+        self.reward_settlements_1[..self.num_reward_settlements as usize].iter_mut()
     }
 
-    #[inline(always)]
-    pub(super) fn get_closed_slot(&self) -> Option<u64> {
-        self.is_closed().then_some(self.closed_slot)
+    pub fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
+        self.get_reward_settlements_iter_mut()
+            .find(|s| s.reward_id == reward_id)
     }
 
-    #[inline(always)]
-    fn is_closed(&self) -> bool {
-        self.reward_pool_bitmap & Self::IS_CLOSED_BIT > 0
-    }
-
-    #[inline(always)]
-    fn set_closed(&mut self, closed_slot: u64) {
-        self.reward_pool_bitmap |= Self::IS_CLOSED_BIT;
-        self.closed_slot = closed_slot;
-    }
-
-    #[inline(always)]
-    pub(super) fn get_holder_id(&self) -> Option<u8> {
-        (self.reward_pool_bitmap & Self::HAS_HOLDER_BIT > 0).then_some(self.holder_id)
-    }
-
-    fn add_new_reward_settlement(
+    fn add_reward_settlement(
         &mut self,
         reward_id: u16,
         current_slot: u64,
@@ -137,83 +106,53 @@ impl RewardPool {
         Ok(settlement)
     }
 
-    /// How to integrate multiple fields into a single array slice or whatever...
-    /// You may change the return type if needed
-    #[inline(always)]
-    fn get_reward_settlements_mut(&mut self) -> &mut [RewardSettlement] {
-        &mut self.reward_settlements_1[..self.num_reward_settlements as usize]
-    }
-
-    #[inline(always)]
-    pub(super) fn get_reward_settlements_iter_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut RewardSettlement> {
-        self.get_reward_settlements_mut().iter_mut()
-    }
-
-    fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
-        self.get_reward_settlements_iter_mut()
-            .find(|s| s.reward_id == reward_id)
-    }
-
-    pub(super) fn settle_reward(
-        &mut self,
-        reward_id: u16,
-        amount: u64,
-        current_slot: u64,
-    ) -> Result<()> {
-        if self.is_closed() {
-            err!(ErrorCode::RewardPoolClosedError)?;
-        }
-
-        // First update contribution
-        self.update_contribution(current_slot)?;
-
-        // Find settlement and settle
-        let current_reward_pool_contribution = self.contribution;
-        let settlement = if let Some(settlement) = self.get_reward_settlement_mut(reward_id) {
-            settlement
-        } else {
-            self.add_new_reward_settlement(reward_id, current_slot)?
-        };
-
-        settlement.settle_reward(amount, current_reward_pool_contribution, current_slot)
-    }
-
     /// Updates the contribution of the pool into recent value.
-    pub(super) fn update_contribution(&mut self, updated_slot: u64) -> Result<()> {
-        let elapsed_slot = updated_slot
-            .checked_sub(self.updated_slot)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+    fn update_contribution(&mut self, current_slot: u64) {
+        let elapsed_slot = current_slot - self.updated_slot;
 
         if elapsed_slot == 0 {
-            return Ok(());
+            return;
         }
 
         let total_contribution_accrual_rate = self
             .token_allocated_amount
-            .get_total_contribution_accrual_rate()?;
-        let total_contribution = (elapsed_slot as u128)
-            .checked_mul(total_contribution_accrual_rate as u128)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.contribution = self
-            .contribution
-            .checked_add(total_contribution)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        self.updated_slot = updated_slot;
+            .get_total_contribution_accrual_rate();
+        self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate as u128;
+        self.updated_slot = current_slot;
+    }
 
-        Ok(())
+    pub fn update_reward_settlements(&mut self, current_slot: u64) {
+        // First update contribution
+        self.update_contribution(current_slot);
+
+        // Clear stale blocks
+        self.get_reward_settlements_iter_mut()
+            .for_each(|settlement| settlement.clear_stale_settlement_blocks());
+    }
+
+    /// add new settlement block to corresponding reward settlement
+    pub fn settle_reward(&mut self, reward_id: u16, amount: u64, current_slot: u64) -> Result<()> {
+        // First update contribution
+        self.update_contribution(current_slot);
+
+        // Find settlement and settle
+        let current_reward_pool_contribution = self.contribution;
+        if let Some(settlement) = self.get_reward_settlement_mut(reward_id) {
+            settlement
+        } else {
+            self.add_reward_settlement(reward_id, current_slot)?
+        }
+        .settle_reward(amount, current_reward_pool_contribution, current_slot)
     }
 
     /// Updates the token allocated amount and contribution of the pool into recent value.
-    pub(super) fn update(
+    pub fn update_token_allocated_amount(
         &mut self,
         deltas: Vec<TokenAllocatedAmountDelta>,
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         // First update contribution
-        let updated_slot = self.get_closed_slot().unwrap_or(current_slot);
-        self.update_contribution(updated_slot)?;
+        self.update_contribution(current_slot);
 
         // Apply deltas
         if !deltas.is_empty() {
@@ -222,16 +161,49 @@ impl RewardPool {
             Ok(deltas)
         }
     }
+}
 
-    pub(super) fn close(&mut self, current_slot: u64) -> Result<()> {
-        if self.is_closed() {
-            err!(ErrorCode::RewardPoolClosedError)?
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        // update contribution as last
-        self.update_contribution(current_slot)?;
-        self.set_closed(current_slot);
+    #[test]
+    fn test_update_token_allocated_amount() {
+        let mut pool = RewardPool::zeroed();
 
-        Ok(())
+        let mut current_slot = 10;
+        pool.update_token_allocated_amount(
+            vec![
+                TokenAllocatedAmountDelta::new_positive(None, 50),
+                TokenAllocatedAmountDelta::new_positive(Some(130), 100),
+            ],
+            current_slot,
+        )
+        .unwrap();
+
+        let contribution = pool.contribution;
+        assert_eq!(contribution, 0);
+        assert_eq!(
+            pool.token_allocated_amount
+                .get_total_contribution_accrual_rate(),
+            180_00,
+        );
+        assert_eq!(pool.updated_slot, current_slot);
+
+        current_slot = 20;
+        pool.update_token_allocated_amount(
+            vec![TokenAllocatedAmountDelta::new_negative(100)],
+            current_slot,
+        )
+        .unwrap();
+
+        let contribution = pool.contribution;
+        assert_eq!(contribution, 180_000);
+        assert_eq!(
+            pool.token_allocated_amount
+                .get_total_contribution_accrual_rate(),
+            65_00,
+        );
+        assert_eq!(pool.updated_slot, current_slot);
     }
 }

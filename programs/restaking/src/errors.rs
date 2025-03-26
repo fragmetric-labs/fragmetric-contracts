@@ -32,9 +32,11 @@ pub enum ErrorCode {
     #[msg("reward: invalid metadata description length")]
     RewardInvalidMetadataDescriptionLengthError,
 
+    // deprecated
     #[msg("reward: invalid reward type")]
     RewardInvalidRewardTypeError,
 
+    // deprecated
     #[msg("reward: already existing holder")]
     RewardAlreadyExistingHolderError,
 
@@ -44,6 +46,7 @@ pub enum ErrorCode {
     #[msg("reward: already existing pool")]
     RewardAlreadyExistingPoolError,
 
+    // deprecated
     #[msg("reward: holder not found")]
     RewardHolderNotFoundError,
 
@@ -56,12 +59,15 @@ pub enum ErrorCode {
     #[msg("reward: user pool not found")]
     RewardUserPoolNotFoundError,
 
+    // deprecated
     #[msg("reward: pool is closed")]
     RewardPoolClosedError,
 
+    // deprecated
     #[msg("reward: invalid pool configuration")]
     RewardInvalidPoolConfigurationException,
 
+    // deprecated
     #[msg("reward: invalid reward pool access")]
     RewardInvalidPoolAccessException,
 
@@ -71,6 +77,7 @@ pub enum ErrorCode {
     #[msg("reward: invalid amount or contribution accrual rate")]
     RewardInvalidAllocatedAmountDeltaException,
 
+    // deprecated
     #[msg("reward: exceeded max holders")]
     RewardExceededMaxHoldersError,
 
@@ -83,6 +90,7 @@ pub enum ErrorCode {
     #[msg("reward: exceeded max user reward pools")]
     RewardExceededMaxUserRewardPoolsError,
 
+    // deprecated
     #[msg("reward: exceeded max pubkeys per holder")]
     RewardExceededMaxHolderPubkeysError,
 
@@ -92,8 +100,8 @@ pub enum ErrorCode {
     #[msg("reward: exceeded max reward settlements per pool")]
     RewardExceededMaxRewardSettlementError,
 
-    #[msg("reward: stale settlement block not exist")]
-    RewardStaleSettlementBlockNotExistError,
+    #[msg("reward: exceeded max reward settlement block per settlement")]
+    RewardExceededMaxRewardSettlementBlockError,
 
     #[msg("reward: invalid settlement block height")]
     RewardInvalidSettlementBlockHeightException,
@@ -107,6 +115,7 @@ pub enum ErrorCode {
     #[msg("reward: sum of user settled contribution cannot exceed total contribution")]
     RewardInvalidTotalUserSettledContributionException,
 
+    // deprecated
     #[msg("reward: cannot close the reward pool")]
     RewardPoolCloseConditionError,
 
@@ -170,7 +179,7 @@ pub enum ErrorCode {
     #[msg("fund: restaking vault already registered")]
     FundRestakingVaultAlreadyRegisteredError,
 
-    #[msg("reward: exceeded max restaking vaults")]
+    #[msg("fund: exceeded max restaking vaults")]
     FundExceededMaxRestakingVaultsError,
 
     #[msg("fund: not supported restaking vault")]

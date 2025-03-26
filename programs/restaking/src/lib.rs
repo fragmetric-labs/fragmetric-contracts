@@ -81,17 +81,15 @@ pub mod restaking {
     pub fn admin_initialize_fund_wrap_account_reward_account(
         ctx: Context<AdminFundWrapAccountRewardAccountInitialContext>,
     ) -> Result<()> {
-        modules::fund::FundWrapAccountRewardConfigurationService::new(
+        modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.fund_account,
-        )?
-        .process_initialize_fund_wrap_account_reward_account(
-            &ctx.accounts.fund_wrap_account,
             &ctx.accounts.receipt_token_wrap_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.fund_wrap_account_reward_account,
-            ctx.bumps.fund_wrap_account_reward_account,
-        )
+        )?
+        .process_initialize_user_reward_account(ctx.bumps.fund_wrap_account_reward_account)?;
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -102,19 +100,19 @@ pub mod restaking {
         ctx: Context<AdminFundWrapAccountRewardAccountUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        modules::fund::FundWrapAccountRewardConfigurationService::new(
+        modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.fund_account,
-        )?
-        .process_update_fund_wrap_account_reward_account_if_needed(
-            &ctx.accounts.payer,
-            &ctx.accounts.system_program,
-            &ctx.accounts.fund_wrap_account,
             &ctx.accounts.receipt_token_wrap_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.fund_wrap_account_reward_account,
+        )?
+        .process_update_user_reward_account_if_needed(
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
             desired_account_size,
-        )
+        )?;
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -540,49 +538,16 @@ pub mod restaking {
     // FundManagerRewardContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_add_reward_pool_holder(
-        ctx: Context<FundManagerRewardContext>,
-        name: String,
-        description: String,
-        pubkeys: Vec<Pubkey>,
-    ) -> Result<()> {
-        emit_cpi!(modules::reward::RewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
-        )?
-        .process_add_reward_pool_holder(name, description, pubkeys)?);
-
-        Ok(())
-    }
-
     pub fn fund_manager_add_reward_pool(
         ctx: Context<FundManagerRewardContext>,
         name: String,
-        holder_id: Option<u8>,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-        .process_add_reward_pool(
-            name,
-            holder_id,
-            custom_contribution_accrual_rate_enabled,
-        )?);
-
-        Ok(())
-    }
-
-    pub fn fund_manager_close_reward_pool(
-        ctx: Context<FundManagerRewardContext>,
-        reward_pool_id: u8,
-    ) -> Result<()> {
-        emit_cpi!(modules::reward::RewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
-        )?
-        .process_close_reward_pool(reward_pool_id)?);
+        .process_add_reward_pool(name, custom_contribution_accrual_rate_enabled)?);
 
         Ok(())
     }
@@ -595,19 +560,15 @@ pub mod restaking {
         ctx: Context<FundManagerRewardDistributionContext>,
         name: String,
         description: String,
-        reward_type: modules::reward::RewardType,
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-        .process_add_reward(
-            ctx.accounts.reward_token_mint.as_deref(),
-            ctx.accounts.reward_token_program.as_ref(),
-            name,
-            description,
-            reward_type,
-        )?);
+        .process_add_reward(name, description, mint, program, decimals)?);
 
         Ok(())
     }
@@ -1184,7 +1145,6 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user,
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
@@ -1208,7 +1168,6 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user,
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,

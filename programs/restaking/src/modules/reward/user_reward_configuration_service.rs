@@ -15,6 +15,13 @@ pub struct UserRewardConfigurationService<'a, 'info> {
     _current_slot: u64,
 }
 
+impl Drop for UserRewardConfigurationService<'_, '_> {
+    fn drop(&mut self) {
+        self.reward_account.exit(&crate::ID).unwrap();
+        self.user_reward_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn process_create_user_reward_account_idempotent(
         system_program: &Program<'info, System>,
@@ -52,27 +59,29 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                     user_reward_account.as_account_info(),
                 )?;
 
-            UserRewardConfigurationService::new(
+            let event = UserRewardConfigurationService::new(
                 receipt_token_mint,
-                user,
                 user_receipt_token_account,
                 reward_account,
                 &mut user_reward_account_parsed,
             )?
-            .process_initialize_user_reward_account(user_reward_account_bump)
+            .process_initialize_user_reward_account(user_reward_account_bump)?;
+
+            Ok(event)
         } else {
             let mut user_reward_account_parsed = AccountLoader::<UserRewardAccount>::try_from(
                 user_reward_account.as_account_info(),
             )?;
 
+            // Constraint check
+            // bump = user_reward_account.get_bump()?
             require_eq!(
                 user_reward_account_bump,
-                user_reward_account_parsed.load()?.get_bump()
+                user_reward_account_parsed.get_bump()?,
             );
 
-            UserRewardConfigurationService::new(
+            let event = UserRewardConfigurationService::new(
                 receipt_token_mint,
-                user,
                 user_receipt_token_account,
                 reward_account,
                 &mut user_reward_account_parsed,
@@ -81,44 +90,18 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 user,
                 system_program,
                 desired_account_size,
-            )
+            )?;
+
+            Ok(event)
         }
     }
 
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &Signer,
         user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
-        require_keys_eq!(user_receipt_token_account.owner, user.key());
-
-        Ok(Self {
-            receipt_token_mint,
-            user_receipt_token_account,
-            reward_account,
-            user_reward_account,
-            _current_slot: Clock::get()?.slot,
-        })
-    }
-
-    /// Allow off-curve users
-    pub fn new_with_user_seeds(
-        receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &AccountInfo,
-        user_signer_seeds: &[&[u8]],
-        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
-    ) -> Result<Self> {
-        require_keys_eq!(
-            user.key(),
-            Pubkey::create_program_address(user_signer_seeds, &crate::ID)
-                .map_err(|_| ProgramError::InvalidSeeds)?,
-        );
-        require_keys_eq!(user_receipt_token_account.owner, user.key());
-
         Ok(Self {
             receipt_token_mint,
             user_receipt_token_account,
@@ -139,11 +122,9 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 .initialize_zero_copy_header(user_reward_account_bump)?;
         } else {
             // initialize account
-            self.user_reward_account.load_init()?.initialize(
-                user_reward_account_bump,
-                self.receipt_token_mint,
-                self.user_receipt_token_account,
-            );
+            self.user_reward_account
+                .load_init()?
+                .initialize(user_reward_account_bump, self.user_receipt_token_account)?;
             self.user_reward_account.exit(&crate::ID)?;
 
             // reflect existing token amount
@@ -189,8 +170,23 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             let (initializing, updated) = {
                 let mut user_reward_account = self.user_reward_account.load_mut()?;
                 let initializing = user_reward_account.is_initializing();
-                let updated = user_reward_account
-                    .update_if_needed(self.receipt_token_mint, self.user_receipt_token_account);
+
+                if !initializing {
+                    // Constraint check
+                    // has_one = receipt_token_mint
+                    // has_one = user
+                    require_keys_eq!(
+                        user_reward_account.receipt_token_mint,
+                        self.receipt_token_mint.key(),
+                    );
+                    require_keys_eq!(
+                        user_reward_account.user,
+                        self.user_receipt_token_account.owner
+                    );
+                }
+
+                let updated =
+                    user_reward_account.update_if_needed(self.user_receipt_token_account)?;
                 (initializing, updated)
             };
 
@@ -214,6 +210,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 }));
             }
         }
+
         Ok(None)
     }
 }

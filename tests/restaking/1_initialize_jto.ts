@@ -81,8 +81,10 @@ describe("initialize", async () => {
         expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].numRewardSettlements).eq(1);
         expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardId).eq(res0.reward.id);
         expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardPoolId).eq(res0.rewardPool.id);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(1);
+        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(0);
         expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settledAmount.toNumber()).eq(0);
+        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
+            .eq(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].updatedSlot.toNumber());
     });
 
     step("initialize fund supported tokens", async function () {

@@ -13,6 +13,13 @@ pub struct UserRewardService<'a, 'info> {
     current_slot: u64,
 }
 
+impl Drop for UserRewardService<'_, '_> {
+    fn drop(&mut self) {
+        self.reward_account.exit(&crate::ID).unwrap();
+        self.user_reward_account.exit(&crate::ID).unwrap();
+    }
+}
+
 impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
@@ -58,20 +65,25 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             );
         }
 
+        // has_one = receipt_token_mint
+        // constraint = reward_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError
+        require_keys_eq!(reward_account.receipt_token_mint, receipt_token_mint.key());
         require!(
             reward_account.is_latest_version(),
             ErrorCode::InvalidAccountDataVersionError,
         );
-        require_keys_eq!(reward_account.receipt_token_mint, receipt_token_mint.key());
 
-        require!(
-            user_reward_account.is_latest_version(),
-            ErrorCode::InvalidAccountDataVersionError,
-        );
-        require_keys_eq!(user_reward_account.user, user.key());
+        // has_one = receipt_token_mint
+        // has_one = user
+        // constraint = user_reward_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError
         require_keys_eq!(
             user_reward_account.receipt_token_mint,
             receipt_token_mint.key()
+        );
+        require_keys_eq!(user_reward_account.user, user.key());
+        require!(
+            user_reward_account.is_latest_version(),
+            ErrorCode::InvalidAccountDataVersionError,
         );
 
         Ok(())
