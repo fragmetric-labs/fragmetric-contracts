@@ -1436,7 +1436,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragJTOFundJitoVRTAccount, fragJTOJitoVaultTokenAccount, fragJTOFundJitoFeeWalletTokenAccount, fragJTOJitoVaultProgramFeeWalletTokenAccount, fragJTOFundAccount};
     }
 
-    public async runFundManagerAddJitoRestakingVaultDelegations() {
+    public async runFundManagerAddJitoRestakingVaultDelegations(batchSize = 6) {
         const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
             Object.values(vault.operators).map(operator =>
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
@@ -1449,15 +1449,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             )
         );
-        const {event, error} = (instructions.length > 0) ? await this.run({
-            instructions,
-            signerNames: ["FUND_MANAGER"],
-            events: ["fundManagerUpdatedFund"],
-        }) : {event: null, error: null};
+
+        for (let i = 0; i < instructions.length / batchSize; i++) {
+            const batchedInstructions = [];
+            for (let j = i * batchSize; j < instructions.length && batchedInstructions.length < batchSize; j++) {
+                batchedInstructions.push(instructions[j]);
+            }
+            logger.debug(`running batched "add_jito_restaking_vault_delegation" instructions`.padEnd(LOG_PAD_LARGE), `${i * batchSize + batchedInstructions.length}/${instructions.length}`);
+            await this.run({
+                instructions: batchedInstructions,
+                signerNames: ["FUND_MANAGER"],
+                events: ["fundManagerUpdatedFund"],
+            });
+        }
 
         logger.notice(`initialized fragJTO jito vaults operator delegations`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOFund.toString());
         const fragJTOFund = await this.getFragJTOFundAccount();
-        return {event, error, fragJTOFund};
+        return {fragJTOFund};
     }
 
     public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
@@ -2334,23 +2342,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                 } else {
                                     switch (name) {
                                         case "InfStones":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Hashkey":
                                             return new BN(this.isMainnet ? 0 : 1);
                                         case "PierTwo":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Luganodes":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Everstake":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Temporal":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "ChorusOne":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "KILN":
                                             return new BN(this.isMainnet ? 0 : 1);
                                         case "Helius":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
                                     }

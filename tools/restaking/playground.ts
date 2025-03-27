@@ -598,6 +598,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         Helius: new web3.PublicKey("BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2"),
                         Hashkey: new web3.PublicKey("2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop"),
                         InfStones: new web3.PublicKey("5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L"),
+                        StakingFacilities: new web3.PublicKey("EkroMQiZJfphVd9iPvR4zMCHasTW72Uh1mFYkTxtQuY6"),
+                        Adrastea: new web3.PublicKey("574DmorRvpaYrSrBRUwAjG7bBmrZYiTW3Fc8mvQatFqo"),
+                        Figment: new web3.PublicKey("C6AF8qGCo2dL815ziRCmfdbFeL5xbRLuSTSZzTGBH68y"),
                     },
                     program: this.getConstantAsPublicKey("jitoVaultProgramId"),
                     programFeeWalletTokenAccount: this.knownAddress.fragSOLJitoNSOLVaultProgramFeeWalletTokenAccount,
@@ -1766,7 +1769,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLFundJitoVRTAccount, fragSOLJitoVaultTokenAccount, fragSOLFundJitoFeeWalletTokenAccount, fragSOLJitoVaultProgramFeeWalletTokenAccount, fragSOLFundAccount};
     }
 
-    public async runFundManagerAddJitoRestakingVaultDelegations() {
+    public async runFundManagerAddJitoRestakingVaultDelegations(batchSize = 6) {
         const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
             Object.values(vault.operators).map(operator =>
                 this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
@@ -1779,15 +1782,23 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     .instruction(),
             )
         );
-        const {event, error} = (instructions.length > 0) ? await this.run({
-            instructions,
-            signerNames: ["FUND_MANAGER"],
-            events: ['fundManagerUpdatedFund'],
-        }) : {event: null, error: null};
+
+        for (let i = 0; i < instructions.length / batchSize; i++) {
+            const batchedInstructions = [];
+            for (let j = i * batchSize; j < instructions.length && batchedInstructions.length < batchSize; j++) {
+                batchedInstructions.push(instructions[j]);
+            }
+            logger.debug(`running batched "add_jito_restaking_vault_delegation" instructions`.padEnd(LOG_PAD_LARGE), `${i * batchSize + batchedInstructions.length}/${instructions.length}`);
+            await this.run({
+                instructions: batchedInstructions,
+                signerNames: ["FUND_MANAGER"],
+                events: ["fundManagerUpdatedFund"],
+            });
+        }
 
         logger.notice(`initialized fragSOL jito vaults operator delegations`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLFund.toString());
         const fragSOLFund = await this.getFragSOLFundAccount();
-        return {event, error, fragSOLFund};
+        return {fragSOLFund};
     }
 
     public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
@@ -2709,22 +2720,28 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                 } else {
                                     switch (name) {
                                         case "InfStones":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Hashkey":
                                             return new BN(this.isMainnet ? 0 : 1);
                                         case "PierTwo":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Luganodes":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "Everstake":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 100 : 1);
                                         case "Temporal":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "ChorusOne":
-                                            return new BN(this.isMainnet ? 0 : 1);
+                                            return new BN(this.isMainnet ? 1 : 1);
                                         case "KILN":
                                             return new BN(this.isMainnet ? 0 : 1);
                                         case "Helius":
+                                            return new BN(this.isMainnet ? 1 : 1);
+                                        case "StakingFacilities":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Adrastea":
+                                            return new BN(this.isMainnet ? 0 : 1);
+                                        case "Figment":
                                             return new BN(this.isMainnet ? 0 : 1);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
@@ -2773,6 +2790,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                                         case "KILN":
                                             return new BN(MAX_CAPACITY);
                                         case "Helius":
+                                            return new BN(MAX_CAPACITY);
+                                        case "StakingFacilities":
+                                            return new BN(MAX_CAPACITY);
+                                        case "Adrastea":
+                                            return new BN(MAX_CAPACITY);
+                                        case "Figment":
                                             return new BN(MAX_CAPACITY);
                                         default:
                                             throw `invalid restaking vault operator supported token allocation weight for ${symbol}(${name})`;
