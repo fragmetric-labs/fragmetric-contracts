@@ -70,39 +70,66 @@ impl<'a, 'info> RewardService<'a, 'info> {
         amount: u64,
         contribution_accrual_rate: Option<u16>,
     ) -> Result<Vec<Pubkey>> {
+        // Contribution accrual rate is only allowed for deposits
+        if contribution_accrual_rate.is_some()
+            && !(from_user_reward_account.is_none() && to_user_reward_account.is_some())
+        {
+            err!(ErrorCode::RewardInvalidTransferArgsException)?
+        }
+
         if amount == 0 {
             return Ok(vec![]);
         }
 
+        let mut reward_account = self.reward_account.load_mut()?;
         let mut updated_user_reward_accounts = Vec::with_capacity(2);
-        if let Some(from) = &from_user_reward_account {
-            require_keys_eq!(
-                self.receipt_token_mint.key(),
-                from.load()?.receipt_token_mint,
-            );
-            updated_user_reward_accounts.push(from.key());
-        }
-        if let Some(to) = &to_user_reward_account {
-            require_keys_eq!(self.receipt_token_mint.key(), to.load()?.receipt_token_mint);
-            updated_user_reward_accounts.push(to.key());
+
+        if let Some(from_user_reward_account) = &from_user_reward_account {
+            let mut from = from_user_reward_account.load_mut()?;
+
+            require_keys_eq!(self.receipt_token_mint.key(), from.receipt_token_mint);
+
+            from.backfill_not_existing_pools(&reward_account)?;
+            for reward_pool in reward_account.get_reward_pools_iter_mut() {
+                let user_reward_pool = from.get_user_reward_pool_mut(reward_pool.id)?;
+
+                let effective_deltas = user_reward_pool.update_token_allocated_amount(
+                    reward_pool,
+                    vec![TokenAllocatedAmountDelta::new_negative(amount)],
+                    self.current_slot,
+                )?;
+                reward_pool.update_token_allocated_amount(effective_deltas, self.current_slot)?;
+            }
+
+            updated_user_reward_accounts.push(from_user_reward_account.key());
         }
 
-        let mut from_account_ref = from_user_reward_account
-            .map(|loader| loader.load_mut())
-            .transpose()?;
-        let mut to_account_ref = to_user_reward_account
-            .map(|loader| loader.load_mut())
-            .transpose()?;
+        if let Some(to_user_reward_account) = &to_user_reward_account {
+            let mut to = to_user_reward_account.load_mut()?;
 
-        self.reward_account
-            .load_mut()?
-            .update_reward_pools_token_allocation(
-                amount,
-                contribution_accrual_rate,
-                from_account_ref.as_deref_mut(),
-                to_account_ref.as_deref_mut(),
-                self.current_slot,
-            )?;
+            require_keys_eq!(self.receipt_token_mint.key(), to.receipt_token_mint);
+
+            to.backfill_not_existing_pools(&reward_account)?;
+            for reward_pool in reward_account.get_reward_pools_iter_mut() {
+                let user_reward_pool = to.get_user_reward_pool_mut(reward_pool.id)?;
+                let effective_contribution_accrual_rate =
+                    (reward_pool.custom_contribution_accrual_rate_enabled == 1)
+                        .then_some(contribution_accrual_rate)
+                        .flatten();
+
+                let effective_deltas = user_reward_pool.update_token_allocated_amount(
+                    reward_pool,
+                    vec![TokenAllocatedAmountDelta::new_positive(
+                        effective_contribution_accrual_rate,
+                        amount,
+                    )],
+                    self.current_slot,
+                )?;
+                reward_pool.update_token_allocated_amount(effective_deltas, self.current_slot)?;
+            }
+
+            updated_user_reward_accounts.push(to_user_reward_account.key());
+        }
 
         Ok(updated_user_reward_accounts)
     }
