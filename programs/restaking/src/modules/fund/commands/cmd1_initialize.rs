@@ -69,7 +69,7 @@ pub struct InitializeCommandRestakingVaultDelegationUpdateItem {
     pub index: u64,
 }
 
-const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 10;
+const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 6;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct InitializeCommandResult {
