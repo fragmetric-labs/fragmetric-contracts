@@ -161,6 +161,12 @@ impl RewardAccount {
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
+    pub(super) fn get_reward_mut(&mut self, id: u16) -> Result<&mut Reward> {
+        self.rewards_1[..self.num_rewards as usize]
+            .get_mut(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
+    }
+
     pub(super) fn add_reward(
         &mut self,
         name: String,
@@ -239,6 +245,24 @@ impl RewardAccount {
         self.num_reward_pools += 1;
 
         Ok(())
+    }
+
+    pub(super) fn get_total_reward_settled_amount(&self, reward_id: u16) -> u64 {
+        self.get_reward_pools_iter().fold(0, |sum, pool| {
+            sum + pool
+                .get_reward_settlement(reward_id)
+                .map(|settlement| settlement.settled_amount)
+                .unwrap_or_default()
+        })
+    }
+
+    pub(super) fn get_total_reward_claimed_amount(&self, reward_id: u16) -> u64 {
+        self.get_reward_pools_iter().fold(0, |sum, pool| {
+            sum + pool
+                .get_reward_settlement(reward_id)
+                .map(|settlement| settlement.claimed_amount)
+                .unwrap_or_default()
+        })
     }
 
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) {

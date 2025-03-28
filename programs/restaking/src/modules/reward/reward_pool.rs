@@ -77,10 +77,19 @@ impl RewardPool {
             .trim_matches('\0'))
     }
 
+    pub fn get_reward_settlements_iter(&self) -> impl Iterator<Item = &RewardSettlement> {
+        self.reward_settlements_1[..self.num_reward_settlements as usize].iter()
+    }
+
     pub fn get_reward_settlements_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlement> {
         self.reward_settlements_1[..self.num_reward_settlements as usize].iter_mut()
+    }
+
+    pub fn get_reward_settlement(&self, reward_id: u16) -> Option<&RewardSettlement> {
+        self.get_reward_settlements_iter()
+            .find(|s| s.reward_id == reward_id)
     }
 
     pub fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {

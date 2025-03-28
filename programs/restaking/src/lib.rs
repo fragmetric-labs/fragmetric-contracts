@@ -573,6 +573,28 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_update_reward(
+        ctx: Context<FundManagerRewardDistributionContext>,
+        reward_id: u16,
+        claimable: bool,
+    ) -> Result<()> {
+        emit_cpi!(modules::reward::RewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.reward_account,
+        )?
+        .process_update_reward(
+            ctx.accounts.reward_token_mint.as_deref(),
+            ctx.accounts.reward_token_program.as_ref(),
+            ctx.accounts.reward_token_reserve_account.as_deref_mut(),
+            ctx.accounts.source_reward_token_account.as_deref(),
+            Some(&ctx.accounts.fund_manager),
+            reward_id,
+            claimable,
+        )?);
+
+        Ok(())
+    }
+
     pub fn fund_manager_settle_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         reward_pool_id: u8,

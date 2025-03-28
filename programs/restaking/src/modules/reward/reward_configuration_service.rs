@@ -101,6 +101,60 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_reward_pool_event()
     }
 
+    pub fn process_update_reward(
+        &self,
+        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
+        reward_token_program: Option<&Interface<'info, TokenInterface>>,
+        reward_token_reserve_account: Option<&mut InterfaceAccount<'info, TokenAccount>>,
+        from_reward_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        from_reward_token_account_signer: Option<&Signer<'info>>,
+
+        reward_id: u16,
+        claimable: bool,
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
+        self.reward_account
+            .load_mut()?
+            .get_reward_mut(reward_id)?
+            .set_claimable(claimable);
+
+        if claimable {
+            let amount_to_transfer = {
+                let reward_account = self.reward_account.load()?;
+                let reward_total_settled_amount =
+                    reward_account.get_total_reward_settled_amount(reward_id);
+                let reward_total_claimed_amount =
+                    reward_account.get_total_reward_claimed_amount(reward_id);
+                reward_total_settled_amount.saturating_sub(reward_total_claimed_amount)
+            };
+
+            if amount_to_transfer > 0 {
+                let reward_token_mint =
+                    reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+                let reward_token_program = reward_token_program
+                    .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+                let reward_token_reserve_account = reward_token_reserve_account
+                    .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+                let from_reward_token_account = from_reward_token_account
+                    .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+                let from_reward_token_account_signer = from_reward_token_account_signer
+                    .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+
+                self.transfer_reward(
+                    reward_token_mint,
+                    reward_token_program,
+                    reward_token_reserve_account,
+                    from_reward_token_account,
+                    from_reward_token_account_signer,
+                    &[],
+                    reward_id,
+                    amount_to_transfer,
+                )?;
+            }
+        }
+
+        self.create_fund_manager_updated_reward_pool_event()
+    }
+
     pub fn process_settle_reward(
         &mut self,
         reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
@@ -115,13 +169,12 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         transfer: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
         if !transfer {
-            let mut reward_account = self.reward_account.load_mut()?;
+            require_eq!(
+                self.reward_account.load()?.get_reward(reward_id)?.claimable,
+                0
+            );
 
-            require_eq!(reward_account.get_reward(reward_id)?.claimable, 0);
-
-            reward_account
-                .get_reward_pool_mut(reward_pool_id)?
-                .settle_reward(reward_id, amount, self.current_slot)?;
+            self.settle_reward(reward_pool_id, reward_id, amount)?;
         } else {
             let reward_token_mint =
                 reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
@@ -134,7 +187,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             let from_reward_token_account_signer = from_reward_token_account_signer
                 .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
 
-            self.settle_reward(
+            self.settle_and_transfer_reward(
                 reward_token_mint,
                 reward_token_program,
                 reward_token_reserve_account,
@@ -150,8 +203,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_reward_pool_event()
     }
 
-    /// Settle and transfer reward.
-    pub(in crate::modules) fn settle_reward(
+    pub(in crate::modules) fn settle_and_transfer_reward(
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
         reward_token_program: &Interface<'info, TokenInterface>,
@@ -159,16 +211,50 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         from_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_reward_token_account_signer: &AccountInfo<'info>,
         from_reward_token_account_signer_seeds: &[&[&[u8]]],
-
         reward_pool_id: u8,
         reward_id: u16,
         amount: u64,
     ) -> Result<()> {
-        let mut reward_account = self.reward_account.load_mut()?;
+        self.settle_reward(reward_pool_id, reward_id, amount)?;
+        self.transfer_reward(
+            reward_token_mint,
+            reward_token_program,
+            reward_token_reserve_account,
+            from_reward_token_account,
+            from_reward_token_account_signer,
+            from_reward_token_account_signer_seeds,
+            reward_id,
+            amount,
+        )?;
 
+        Ok(())
+    }
+
+    /// Settle reward.
+    fn settle_reward(&self, reward_pool_id: u8, reward_id: u16, amount: u64) -> Result<()> {
+        self.reward_account
+            .load_mut()?
+            .get_reward_pool_mut(reward_pool_id)?
+            .settle_reward(reward_id, amount, self.current_slot)
+    }
+
+    /// Transfer reward.
+    fn transfer_reward(
+        &self,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_program: &Interface<'info, TokenInterface>,
+        reward_token_reserve_account: &mut InterfaceAccount<'info, TokenAccount>,
+        from_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        from_reward_token_account_signer: &AccountInfo<'info>,
+        from_reward_token_account_signer_seeds: &[&[&[u8]]],
+        reward_id: u16,
+        amount: u64,
+    ) -> Result<()> {
         require_keys_eq!(
             reward_token_reserve_account.key(),
-            reward_account.find_reward_token_reserve_account_address(reward_id)?,
+            self.reward_account
+                .load()?
+                .find_reward_token_reserve_account_address(reward_id)?,
         );
 
         require_gte!(
@@ -192,10 +278,6 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             amount,
             reward_token_mint.decimals,
         )?;
-
-        reward_account
-            .get_reward_pool_mut(reward_pool_id)?
-            .settle_reward(reward_id, amount, self.current_slot)?;
 
         Ok(())
     }

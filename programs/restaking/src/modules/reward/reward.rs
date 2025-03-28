@@ -65,4 +65,9 @@ impl Reward {
             .map_err(|_| ErrorCode::UTF8DecodingException)?
             .trim_matches('\0'))
     }
+
+    pub fn set_claimable(&mut self, claimable: bool) -> &mut Self {
+        self.claimable = claimable as u8;
+        self
+    }
 }
