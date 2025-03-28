@@ -578,12 +578,23 @@ pub mod restaking {
         reward_pool_id: u8,
         reward_id: u16,
         amount: u64,
+        transfer: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-        .process_settle_reward(reward_pool_id, reward_id, amount)?);
+        .process_settle_reward(
+            ctx.accounts.reward_token_mint.as_deref(),
+            ctx.accounts.reward_token_program.as_ref(),
+            ctx.accounts.reward_token_reserve_account.as_deref_mut(),
+            ctx.accounts.source_reward_token_account.as_deref(),
+            Some(&ctx.accounts.fund_manager),
+            reward_pool_id,
+            reward_id,
+            amount,
+            transfer,
+        )?);
 
         Ok(())
     }

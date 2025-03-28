@@ -2604,6 +2604,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                             rewardTokenMint: v.mint ?? this.programId,
                             rewardTokenProgram: v.program ?? this.programId,
+                            rewardTokenReserveAccount: this.programId,
+                            sourceRewardTokenAccount: this.programId,
                         })
                         .instruction();
                 }),
@@ -2631,11 +2633,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerSettleReward(rewardPool.id, reward.id, args.amount)
+                    .fundManagerSettleReward(rewardPool.id, reward.id, args.amount, false)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         rewardTokenMint,
                         rewardTokenProgram,
+                        rewardTokenReserveAccount: this.programId,
+                        sourceRewardTokenAccount: this.programId,
                     })
                     .instruction(),
             ],

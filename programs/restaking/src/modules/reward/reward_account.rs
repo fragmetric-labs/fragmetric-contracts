@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::errors::ErrorCode;
 use crate::utils::{PDASeeds, ZeroCopyHeader};
@@ -19,7 +20,7 @@ pub struct RewardAccount {
     data_version: u16,
     bump: u8,
     pub receipt_token_mint: Pubkey,
-    _padding: u8,
+    reserve_account_bump: u8,
 
     max_rewards: u16,
     max_reward_pools: u8,
@@ -29,7 +30,10 @@ pub struct RewardAccount {
     num_reward_pools: u8,
     _padding2: [u8; 5],
 
-    _reserved: [u8; 2624],
+    // informative
+    reserve_account: Pubkey,
+
+    _reserved: [u8; 2592],
 
     rewards_1: [Reward; REWARD_ACCOUNT_REWARDS_MAX_LEN_1],
     reward_pools_1: [RewardPool; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
@@ -74,11 +78,15 @@ impl RewardAccount {
                 .for_each(|reward| reward.claimable = 0);
             // previous field:
             // // bit 0: custom contribution accrual rate enabled
-            // // bit 1: is closed
-            // // bit 2: has holder? (not provided for default holder (fragmetric))
+            // // bit 1 (deprecated): is closed
+            // // bit 2 (deprecated): has holder? (not provided for default holder (fragmetric))
             // reward_pool_bitmap: u8,
             self.get_reward_pools_iter_mut()
                 .for_each(|pool| pool.custom_contribution_accrual_rate_enabled &= 1);
+
+            (self.reserve_account, self.reserve_account_bump) =
+                Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID);
+
             self.data_version = 35;
         }
 
@@ -102,6 +110,41 @@ impl RewardAccount {
         self.data_version == REWARD_ACCOUNT_CURRENT_VERSION
     }
 
+    pub const RESERVE_SEED: &'static [u8] = b"reward_reserve";
+
+    #[inline(always)]
+    fn get_reserve_account_seed_phrase(&self) -> [&[u8]; 2] {
+        [Self::RESERVE_SEED, self.receipt_token_mint.as_ref()]
+    }
+
+    pub(super) fn get_reserve_account_seeds(&self) -> [&[u8]; 3] {
+        let mut seeds = <[_; 3]>::default();
+        seeds[..2].copy_from_slice(&self.get_reserve_account_seed_phrase());
+        seeds[2] = std::slice::from_ref(&self.reserve_account_bump);
+        seeds
+    }
+
+    pub(super) fn get_reserve_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_reserve_account_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
+    pub(super) fn find_reward_token_reserve_account_address(
+        &self,
+        reward_id: u16,
+    ) -> Result<Pubkey> {
+        let reward = self.get_reward(reward_id)?;
+        Ok(
+            spl_associated_token_account::get_associated_token_address_with_program_id(
+                &self.get_reserve_account_address()?,
+                &reward.mint,
+                &reward.program,
+            ),
+        )
+    }
+
     #[inline(always)]
     pub(super) fn get_rewards_iter(&self) -> impl Iterator<Item = &Reward> {
         self.rewards_1[..self.num_rewards as usize].iter()
@@ -110,6 +153,12 @@ impl RewardAccount {
     #[inline(always)]
     pub(super) fn get_rewards_iter_mut(&mut self) -> impl Iterator<Item = &mut Reward> {
         self.rewards_1[..self.num_rewards as usize].iter_mut()
+    }
+
+    pub(super) fn get_reward(&self, id: u16) -> Result<&Reward> {
+        self.rewards_1[..self.num_rewards as usize]
+            .get(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
     pub(super) fn add_reward(

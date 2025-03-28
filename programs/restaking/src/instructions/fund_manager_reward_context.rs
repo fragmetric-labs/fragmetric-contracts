@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::*;
 use crate::errors::ErrorCode;
@@ -41,7 +41,29 @@ pub struct FundManagerRewardDistributionContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
-    #[account(mint::token_program = reward_token_program)]
+    #[account(
+        seeds = [RewardAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub reward_reserve_account: SystemAccount<'info>,
+
     pub reward_token_mint: Option<Box<InterfaceAccount<'info, Mint>>>,
+
     pub reward_token_program: Option<Interface<'info, TokenInterface>>,
+
+    #[account(
+        associated_token::mint = reward_token_mint,
+        associated_token::authority = reward_reserve_account,
+        associated_token::token_program = reward_token_program,
+    )]
+    pub reward_token_reserve_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
+
+    /// Owner could be anyone but must be delegated to fund manager
+    #[account(
+        token::mint = reward_token_mint,
+        token::token_program = reward_token_program,
+        constraint = source_reward_token_account.owner == fund_manager.key()
+            || source_reward_token_account.delegate.unwrap_or_default() == fund_manager.key(),
+    )]
+    pub source_reward_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 }
