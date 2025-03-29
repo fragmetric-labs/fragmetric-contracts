@@ -28,11 +28,9 @@ impl UserRewardSettlement {
     ///
     /// All blocks whose ending_slot <= last_settled_slot are already settled.
     /// All the other blocks, including transparent blocks are obviously
-    /// created after last_updated_slot, so ending_slot >= last_updated_slot.
+    /// created after last update, so ending_slot >= last_updated_slot.
     ///
-    /// Transparent blocks are block which is omitted in settlement block list
-    /// because their amount is 0. It does NOT mean that non-transparent block
-    /// has amount > 0.
+    /// this operation is idempotent
     pub fn settle_reward(
         &mut self,
         reward_settlement: &mut RewardSettlement,
@@ -40,8 +38,6 @@ impl UserRewardSettlement {
         last_contribution: u128,
         last_updated_slot: u64,
     ) -> Result<()> {
-        reward_settlement.clear_stale_settlement_blocks();
-
         if self.last_settled_slot >= reward_settlement.settlement_blocks_last_slot {
             // All settlement blocks are already settled.
             return Ok(());
@@ -110,6 +106,20 @@ impl UserRewardSettlement {
         self.last_settled_slot = ending_slot;
 
         user_block_settled_contribution
+    }
+
+    /// returns claimed amount
+    pub fn claim_reward(
+        &mut self,
+        reward_settlement: &mut RewardSettlement,
+        current_slot: u64,
+    ) -> Result<u64> {
+        let amount = self.total_settled_amount - self.total_claimed_amount;
+
+        self.total_claimed_amount += amount;
+        reward_settlement.claim_user_reward(amount, current_slot)?;
+
+        Ok(amount)
     }
 }
 

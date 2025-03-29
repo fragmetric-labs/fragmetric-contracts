@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
@@ -100,7 +100,57 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         })
     }
 
-    pub fn process_claim_user_rewards(&self) -> Result<()> {
-        unimplemented!()
+    pub fn process_claim_user_rewards(
+        &self,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_program: &Interface<'info, TokenInterface>,
+        reward_reserve_account: &SystemAccount<'info>,
+        reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        reward_pool_id: u8,
+        reward_id: u16,
+    ) -> Result<events::UserClaimedReward> {
+        let mut reward_account = self.reward_account.load_mut()?;
+        let mut user_reward_account = self.user_reward_account.load_mut()?;
+
+        require_keys_eq!(
+            reward_token_reserve_account.key(),
+            reward_account.find_reward_token_reserve_account_address(reward_id)?,
+        );
+
+        require_eq!(
+            reward_account.get_reward(reward_id)?.claimable,
+            0,
+            ErrorCode::RewardNotClaimableError
+        );
+
+        user_reward_account.backfill_not_existing_pools(&*reward_account)?;
+        let reward_pool = reward_account.get_reward_pool_mut(reward_pool_id)?;
+        let amount = user_reward_account
+            .get_user_reward_pool_mut(reward_pool_id)?
+            .claim_reward(reward_pool, reward_id, self.current_slot)?;
+
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                reward_token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: reward_token_reserve_account.to_account_info(),
+                    mint: reward_token_mint.to_account_info(),
+                    to: user_reward_token_account.to_account_info(),
+                    authority: reward_reserve_account.to_account_info(),
+                },
+                &[&reward_account.get_reserve_account_seeds()],
+            ),
+            amount,
+            reward_token_mint.decimals,
+        )?;
+
+        Ok(events::UserClaimedReward {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            reward_token_mint: reward_token_mint.key(),
+            reward_account: self.reward_account.key(),
+            user_reward_account: self.user_reward_account.key(),
+            claimed_reward_token_amount: amount,
+        })
     }
 }

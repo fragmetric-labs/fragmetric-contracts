@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
+use crate::errors;
 use crate::events;
 use crate::utils::{AccountLoaderExt, SystemProgramExt};
 
@@ -105,28 +106,20 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         &self,
         reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&mut InterfaceAccount<'info, TokenAccount>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
         from_reward_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
         from_reward_token_account_signer: Option<&Signer<'info>>,
 
         reward_id: u16,
         claimable: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        self.reward_account
-            .load_mut()?
+        let mut reward_account = self.reward_account.load_mut()?;
+        reward_account
             .get_reward_mut(reward_id)?
             .set_claimable(claimable);
 
         if claimable {
-            let amount_to_transfer = {
-                let reward_account = self.reward_account.load()?;
-                let reward_total_settled_amount =
-                    reward_account.get_total_reward_settled_amount(reward_id);
-                let reward_total_claimed_amount =
-                    reward_account.get_total_reward_claimed_amount(reward_id);
-                reward_total_settled_amount.saturating_sub(reward_total_claimed_amount)
-            };
-
+            let amount_to_transfer = reward_account.get_total_reward_unclaimed_amount(reward_id);
             if amount_to_transfer > 0 {
                 let reward_token_mint =
                     reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
@@ -159,7 +152,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         &mut self,
         reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&mut InterfaceAccount<'info, TokenAccount>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
         from_reward_token_account: Option<&InterfaceAccount<'info, TokenAccount>>,
         from_reward_token_account_signer: Option<&Signer<'info>>,
 
@@ -171,7 +164,8 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         if !transfer {
             require_eq!(
                 self.reward_account.load()?.get_reward(reward_id)?.claimable,
-                0
+                0,
+                errors::ErrorCode::RewardClaimableError,
             );
 
             self.settle_reward(reward_pool_id, reward_id, amount)?;
@@ -207,7 +201,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
         reward_token_program: &Interface<'info, TokenInterface>,
-        reward_token_reserve_account: &mut InterfaceAccount<'info, TokenAccount>,
+        reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         from_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_reward_token_account_signer: &AccountInfo<'info>,
         from_reward_token_account_signer_seeds: &[&[&[u8]]],
@@ -243,7 +237,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
         reward_token_program: &Interface<'info, TokenInterface>,
-        reward_token_reserve_account: &mut InterfaceAccount<'info, TokenAccount>,
+        reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         from_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         from_reward_token_account_signer: &AccountInfo<'info>,
         from_reward_token_account_signer_seeds: &[&[&[u8]]],

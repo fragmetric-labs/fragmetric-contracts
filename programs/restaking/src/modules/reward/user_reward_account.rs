@@ -157,7 +157,7 @@ impl UserRewardAccount {
         self.get_user_reward_pools_iter_mut()
             .zip(reward_account.get_reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {
-                user_reward_pool.update_reward_settlements(reward_pool, current_slot)
+                user_reward_pool.update_user_reward_pool(reward_pool, current_slot)
             })
     }
 }

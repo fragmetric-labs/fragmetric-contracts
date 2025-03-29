@@ -92,45 +92,59 @@ impl RewardPool {
             .find(|s| s.reward_id == reward_id)
     }
 
-    pub fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Option<&mut RewardSettlement> {
-        self.get_reward_settlements_iter_mut()
-            .find(|s| s.reward_id == reward_id)
-    }
-
-    fn add_reward_settlement(
+    pub fn get_or_add_reward_settlement_mut(
         &mut self,
         reward_id: u16,
         current_slot: u64,
     ) -> Result<&mut RewardSettlement> {
-        require_gt!(
-            REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
-            self.num_reward_settlements as usize,
-            ErrorCode::RewardExceededMaxRewardPoolsError,
-        );
+        let index = self
+            .get_reward_settlements_iter()
+            .enumerate()
+            .find_map(|(i, settlement)| (settlement.reward_id == reward_id).then_some(i));
 
-        let settlement = &mut self.reward_settlements_1[self.num_reward_settlements as usize];
-        settlement.initialize(reward_id, self.id, self.initial_slot, current_slot);
-        self.num_reward_settlements += 1;
+        let index = match index {
+            Some(index) => index,
+            None => {
+                require_gt!(
+                    REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
+                    self.num_reward_settlements as usize,
+                    ErrorCode::RewardExceededMaxRewardPoolsError,
+                );
 
-        Ok(settlement)
+                self.reward_settlements_1[self.num_reward_settlements as usize].initialize(
+                    reward_id,
+                    self.id,
+                    self.initial_slot,
+                    current_slot,
+                );
+                self.num_reward_settlements += 1;
+                self.num_reward_settlements as usize - 1
+            }
+        };
+
+        Ok(&mut self.reward_settlements_1[index])
     }
 
     /// Updates the contribution of the pool into recent value.
+    ///
+    /// this operation is idempotent
     fn update_contribution(&mut self, current_slot: u64) {
-        let elapsed_slot = current_slot - self.updated_slot;
-
-        if elapsed_slot == 0 {
+        if current_slot <= self.updated_slot {
             return;
         }
 
         let total_contribution_accrual_rate = self
             .token_allocated_amount
             .get_total_contribution_accrual_rate();
-        self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate as u128;
+        self.contribution +=
+            (current_slot - self.updated_slot) as u128 * total_contribution_accrual_rate as u128;
         self.updated_slot = current_slot;
     }
 
-    pub fn update_reward_settlements(&mut self, current_slot: u64) {
+    /// Updates the contribution of the pool and clear stale settlement blocks.
+    ///
+    /// this operation is idempotent
+    pub fn update_reward_pool(&mut self, current_slot: u64) {
         // First update contribution
         self.update_contribution(current_slot);
 
@@ -146,12 +160,8 @@ impl RewardPool {
 
         // Find settlement and settle
         let current_reward_pool_contribution = self.contribution;
-        if let Some(settlement) = self.get_reward_settlement_mut(reward_id) {
-            settlement
-        } else {
-            self.add_reward_settlement(reward_id, current_slot)?
-        }
-        .settle_reward(amount, current_reward_pool_contribution, current_slot)
+        self.get_or_add_reward_settlement_mut(reward_id, current_slot)?
+            .settle_reward(amount, current_reward_pool_contribution, current_slot)
     }
 
     /// Updates the token allocated amount and contribution of the pool into recent value.

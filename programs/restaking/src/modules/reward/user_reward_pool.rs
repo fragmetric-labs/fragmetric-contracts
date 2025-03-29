@@ -44,45 +44,45 @@ impl UserRewardPool {
     }
 
     #[inline(always)]
-    pub fn get_reward_settlements_iter_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut UserRewardSettlement> {
-        self.reward_settlements_1[..self.num_reward_settlements as usize].iter_mut()
+    pub fn get_reward_settlements_iter(&self) -> impl Iterator<Item = &UserRewardSettlement> {
+        self.reward_settlements_1[..self.num_reward_settlements as usize].iter()
     }
 
-    pub fn get_reward_settlement_mut(
-        &mut self,
-        reward_id: u16,
-    ) -> Option<&mut UserRewardSettlement> {
-        self.get_reward_settlements_iter_mut()
-            .find(|s| s.reward_id == reward_id)
-    }
-
-    fn add_reward_settlement(
+    pub fn get_or_add_reward_settlement_mut(
         &mut self,
         reward_id: u16,
         reward_pool_initial_slot: u64,
     ) -> Result<&mut UserRewardSettlement> {
-        require_gt!(
-            USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
-            self.num_reward_settlements as usize,
-            ErrorCode::RewardExceededMaxRewardSettlementError,
-        );
+        let index = self
+            .get_reward_settlements_iter()
+            .enumerate()
+            .find_map(|(i, settlement)| (settlement.reward_id == reward_id).then_some(i));
 
-        let settlement = &mut self.reward_settlements_1[self.num_reward_settlements as usize];
-        settlement.initialize(reward_id, reward_pool_initial_slot);
-        self.num_reward_settlements += 1;
+        let index = match index {
+            Some(index) => index,
+            None => {
+                require_gt!(
+                    USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
+                    self.num_reward_settlements as usize,
+                    ErrorCode::RewardExceededMaxRewardSettlementError,
+                );
 
-        Ok(settlement)
+                self.reward_settlements_1[self.num_reward_settlements as usize]
+                    .initialize(reward_id, reward_pool_initial_slot);
+                self.num_reward_settlements += 1;
+                self.num_reward_settlements as usize - 1
+            }
+        };
+
+        Ok(&mut self.reward_settlements_1[index])
     }
 
-    pub fn update_reward_settlements(
+    /// this operation is idempotent
+    pub fn update_user_reward_pool(
         &mut self,
         reward_pool: &mut RewardPool,
         current_slot: u64,
     ) -> Result<()> {
-        require_eq!(reward_pool.id, self.reward_pool_id);
-
         let total_contribution_accrual_rate = self
             .token_allocated_amount
             .get_total_contribution_accrual_rate();
@@ -92,13 +92,10 @@ impl UserRewardPool {
         let last_updated_slot = self.updated_slot;
         let reward_pool_initial_slot = reward_pool.initial_slot;
         for reward_settlement in reward_pool.get_reward_settlements_iter_mut() {
-            if let Some(user_reward_settlement) =
-                self.get_reward_settlement_mut(reward_settlement.reward_id)
-            {
-                user_reward_settlement
-            } else {
-                self.add_reward_settlement(reward_settlement.reward_id, reward_pool_initial_slot)?
-            }
+            self.get_or_add_reward_settlement_mut(
+                reward_settlement.reward_id,
+                reward_pool_initial_slot,
+            )?
             .settle_reward(
                 reward_settlement,
                 total_contribution_accrual_rate,
@@ -121,8 +118,8 @@ impl UserRewardPool {
         deltas: Vec<TokenAllocatedAmountDelta>,
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
-        // First update reward settlements
-        self.update_reward_settlements(reward_pool, current_slot)?;
+        // First update reward pool
+        self.update_user_reward_pool(reward_pool, current_slot)?;
 
         // Apply deltas
         if !deltas.is_empty() {
@@ -130,5 +127,24 @@ impl UserRewardPool {
         } else {
             Ok(deltas)
         }
+    }
+
+    pub fn claim_reward(
+        &mut self,
+        reward_pool: &mut RewardPool,
+        reward_id: u16,
+        current_slot: u64,
+    ) -> Result<u64> {
+        // First update reward pool
+        self.update_user_reward_pool(reward_pool, current_slot)?;
+
+        // Claim reward
+        let reward_pool_initial_slot = reward_pool.initial_slot;
+        let reward_settlement =
+            reward_pool.get_or_add_reward_settlement_mut(reward_id, current_slot)?;
+        let user_reward_settlement =
+            self.get_or_add_reward_settlement_mut(reward_id, reward_pool_initial_slot)?;
+
+        user_reward_settlement.claim_reward(reward_settlement, current_slot)
     }
 }

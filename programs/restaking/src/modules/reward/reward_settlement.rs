@@ -59,30 +59,31 @@ impl RewardSettlement {
             .chain(front.iter_mut().take(front_len))
     }
 
-    /// create new settlement block.
+    /// this operation is idempotent
+    pub fn clear_stale_settlement_blocks(&mut self) {
+        for _ in 0..self.num_settlement_blocks {
+            let block = &mut self.settlement_blocks[self.settlement_blocks_head as usize];
+            if block.is_stale() {
+                self.remaining_amount += block.get_remaining_amount();
+                // pop_front
+                self.settlement_blocks_head = (self.settlement_blocks_head + 1)
+                    % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+                self.num_settlement_blocks -= 1;
+            } else {
+                return;
+            }
+        }
+    }
+
+    /// first clear stale settlement blocks and then create new settlement block.
+    ///
     /// when block has amount 0, they are not added to settlement block queue for efficiency.
     /// these blocks are called "transparent", and amount == 0 is guaranteed for them.
+    ///
+    /// when block has contribution 0, they are stale block so cleared immediately.
     pub fn settle_reward(
         &mut self,
         amount: u64,
-        current_reward_pool_contribution: u128,
-        current_slot: u64,
-    ) -> Result<()> {
-        self.assert_next_settlement_block_is_valid(current_reward_pool_contribution, current_slot)?;
-
-        if amount > 0 {
-            self.settled_amount += amount;
-            self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
-        }
-
-        self.settlement_blocks_last_slot = current_slot;
-        self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
-
-        Ok(())
-    }
-
-    fn assert_next_settlement_block_is_valid(
-        &self,
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
@@ -100,6 +101,23 @@ impl RewardSettlement {
             ErrorCode::RewardInvalidSettlementBlockContributionException,
         );
 
+        self.clear_stale_settlement_blocks();
+
+        if amount > 0 {
+            self.settled_amount += amount;
+            if current_reward_pool_contribution
+                == self.settlement_blocks_last_reward_pool_contribution
+            {
+                // block with contribution 0 is already stale so immediately clear
+                self.remaining_amount += amount;
+            } else {
+                self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
+            }
+        }
+
+        self.settlement_blocks_last_slot = current_slot;
+        self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
+
         Ok(())
     }
 
@@ -109,9 +127,11 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        if self.num_settlement_blocks as usize == REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN {
-            err!(ErrorCode::RewardExceededMaxRewardSettlementBlockError)?;
-        }
+        require_gt!(
+            REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN,
+            self.num_settlement_blocks as usize,
+            ErrorCode::RewardExceededMaxRewardSettlementBlockError
+        );
 
         // push_back
         self.settlement_blocks[self.settlement_blocks_tail as usize].initialize(
@@ -128,19 +148,14 @@ impl RewardSettlement {
         Ok(())
     }
 
-    pub fn clear_stale_settlement_blocks(&mut self) {
-        for _ in 0..self.num_settlement_blocks {
-            let block = &mut self.settlement_blocks[self.settlement_blocks_head as usize];
-            if block.is_stale() {
-                self.remaining_amount += block.get_remaining_amount();
-                // pop_front
-                self.settlement_blocks_head = (self.settlement_blocks_head + 1)
-                    % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
-                self.num_settlement_blocks -= 1;
-            } else {
-                return;
-            }
-        }
+    pub fn claim_user_reward(&mut self, amount: u64, current_slot: u64) -> Result<()> {
+        require_gte!(current_slot, self.claimed_amount_updated_slot);
+        require_gte!(self.settled_amount, self.claimed_amount + amount);
+
+        self.claimed_amount += amount;
+        self.claimed_amount_updated_slot = current_slot;
+
+        Ok(())
     }
 }
 
@@ -175,6 +190,7 @@ impl RewardSettlementBlock {
         self.ending_reward_pool_contribution = ending_reward_pool_contribution;
     }
 
+    /// Block contribution is always > 0
     #[inline(always)]
     pub fn get_block_contribution(&self) -> u128 {
         self.ending_reward_pool_contribution - self.starting_reward_pool_contribution
@@ -198,6 +214,7 @@ impl RewardSettlementBlock {
             return Ok(0);
         }
 
+        // TODO: use big int arithmetic
         let amount = (self.amount as u128)
             .checked_mul(contribution)
             .and_then(|v| v.checked_div(self.get_block_contribution()))

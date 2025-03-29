@@ -585,7 +585,7 @@ pub mod restaking {
         .process_update_reward(
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
-            ctx.accounts.reward_token_reserve_account.as_deref_mut(),
+            ctx.accounts.reward_token_reserve_account.as_deref(),
             ctx.accounts.source_reward_token_account.as_deref(),
             Some(&ctx.accounts.fund_manager),
             reward_id,
@@ -609,7 +609,7 @@ pub mod restaking {
         .process_settle_reward(
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
-            ctx.accounts.reward_token_reserve_account.as_deref_mut(),
+            ctx.accounts.reward_token_reserve_account.as_deref(),
             ctx.accounts.source_reward_token_account.as_deref(),
             Some(&ctx.accounts.fund_manager),
             reward_pool_id,
@@ -1232,17 +1232,27 @@ pub mod restaking {
 
     #[allow(unused_variables)]
     pub fn user_claim_rewards(
-        ctx: Context<UserRewardContext>,
+        ctx: Context<UserRewardClaimContext>,
         reward_pool_id: u8,
-        reward_id: u8,
+        reward_id: u16,
     ) -> Result<()> {
-        modules::reward::UserRewardService::new(
+        emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-        .process_claim_user_rewards()
+        .process_claim_user_rewards(
+            &ctx.accounts.reward_token_mint,
+            &ctx.accounts.reward_token_program,
+            &ctx.accounts.reward_reserve_account,
+            &ctx.accounts.reward_token_reserve_account,
+            &ctx.accounts.destination_reward_token_account,
+            reward_pool_id,
+            reward_id,
+        )?);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////

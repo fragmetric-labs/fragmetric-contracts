@@ -247,27 +247,20 @@ impl RewardAccount {
         Ok(())
     }
 
-    pub(super) fn get_total_reward_settled_amount(&self, reward_id: u16) -> u64 {
+    pub(super) fn get_total_reward_unclaimed_amount(&self, reward_id: u16) -> u64 {
         self.get_reward_pools_iter().fold(0, |sum, pool| {
             sum + pool
                 .get_reward_settlement(reward_id)
-                .map(|settlement| settlement.settled_amount)
+                .map(|settlement| settlement.settled_amount - settlement.claimed_amount)
                 .unwrap_or_default()
         })
     }
 
-    pub(super) fn get_total_reward_claimed_amount(&self, reward_id: u16) -> u64 {
-        self.get_reward_pools_iter().fold(0, |sum, pool| {
-            sum + pool
-                .get_reward_settlement(reward_id)
-                .map(|settlement| settlement.claimed_amount)
-                .unwrap_or_default()
-        })
-    }
-
+    /// this operation is idempotent
+    /// update contribution and clear stale blocks
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) {
         self.get_reward_pools_iter_mut().for_each(|pool| {
-            pool.update_reward_settlements(current_slot);
+            pool.update_reward_pool(current_slot);
         });
     }
 }

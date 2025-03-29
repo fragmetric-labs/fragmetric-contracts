@@ -32,13 +32,11 @@ pub enum ErrorCode {
     #[msg("reward: invalid metadata description length")]
     RewardInvalidMetadataDescriptionLengthError,
 
-    // deprecated
-    #[msg("reward: invalid reward type")]
-    RewardInvalidRewardTypeError,
+    #[msg("reward: reward is claimable")]
+    RewardClaimableError,
 
-    // deprecated
-    #[msg("reward: already existing holder")]
-    RewardAlreadyExistingHolderError,
+    #[msg("reward: not enough rewards to claim")]
+    RewardNotEnoughRewardsError,
 
     #[msg("reward: already existing reward")]
     RewardAlreadyExistingRewardError,
@@ -59,9 +57,8 @@ pub enum ErrorCode {
     #[msg("reward: user pool not found")]
     RewardUserPoolNotFoundError,
 
-    // deprecated
-    #[msg("reward: pool is closed")]
-    RewardPoolClosedError,
+    #[msg("reward: reward is not claimable")]
+    RewardNotClaimableError,
 
     // deprecated
     #[msg("reward: invalid pool configuration")]
