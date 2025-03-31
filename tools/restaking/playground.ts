@@ -3133,8 +3133,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             rewardTokenMint: this.programId,
                             rewardTokenProgram: this.programId,
                             rewardTokenReserveAccount: this.programId,
-                            sourceRewardTokenAccountOwner: this.programId,
-                            sourceRewardTokenAccount: this.programId,
                         })
                         .instruction();
                 }),
@@ -3156,6 +3154,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const { source, rewardName, claimable } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
+        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const totalUnclaimedAmount = claimable ? fragSOLReward.rewardPools1.map(r => {
+            const settlement = r.rewardSettlements1.find(s => s.rewardId = reward.id);
+            return settlement.settledAmount - settlement.claimedAmount
+        }).reduce((x, y) => x + y) : 0;
+
         const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
         const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
         const sourceRewardTokenAccount = claimable ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
@@ -3164,9 +3170,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             false,
             rewardMetadata.program,
         ) : null : null;
-
-        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         const instructions = [
             ...(rewardTokenReserveAccount ? [
@@ -3187,6 +3190,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardMetadata.program,
                 ),
             ] : []),
+            ...(totalUnclaimedAmount > 0 ? [
+                spl.createTransferCheckedInstruction(
+                    sourceRewardTokenAccount,
+                    rewardMetadata.mint,
+                    rewardTokenReserveAccount,
+                    sourceRewardTokenAccountOwner,
+                    totalUnclaimedAmount,
+                    rewardMetadata.decimals,
+                    undefined,
+                    rewardMetadata.program,
+                )
+            ] : []),
             this.program.methods
                 .fundManagerUpdateReward(reward.id, rewardMetadata.mint, rewardMetadata.program, rewardMetadata.decimals, claimable)
                 .accountsPartial({
@@ -3194,8 +3209,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardTokenMint: rewardMetadata.mint ?? this.programId,
                     rewardTokenProgram: rewardMetadata.program ?? this.programId,
                     rewardTokenReserveAccount: rewardTokenReserveAccount ?? this.programId,
-                    sourceRewardTokenAccountOwner: sourceRewardTokenAccountOwner ?? this.programId,
-                    sourceRewardTokenAccount: sourceRewardTokenAccount ?? this.programId,
                 })
                 .instruction(),
         ];
@@ -3219,35 +3232,68 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         poolName: (typeof this.rewardPoolsMetadata)[number]["name"],
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
         amount: BN,
-        transfer?: boolean,
     }) {
-        const { source, poolName, rewardName, amount, transfer = false } = args;
+        const { source, poolName, rewardName, amount } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
-        const rewardTokenReserveAccount = transfer ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
-        const sourceRewardTokenAccountOwner = transfer ? source?.publicKey ?? null : null;
-        const sourceRewardTokenAccount = transfer ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
+        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const claimable = reward.claimable;
+        const totalUnclaimedAmount = claimable ? fragSOLReward.rewardPools1.map(r => {
+            const settlement = r.rewardSettlements1.find(s => s.rewardId = reward.id);
+            return settlement.settledAmount - settlement.claimedAmount
+        }).reduce((x, y) => x + y) : 0;
+
+        const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
+        const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
+        const sourceRewardTokenAccount = claimable ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
             rewardMetadata.mint,
             source.publicKey,
             false,
             rewardMetadata.program,
         ) : null : null;
 
-        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
-        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
-
         const {event, error} = await this.run({
             instructions: [
+                ...(rewardTokenReserveAccount ? [
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        this.wallet.publicKey,
+                        rewardTokenReserveAccount,
+                        this.knownAddress.fragSOLRewardReserveAccount,
+                        rewardMetadata.mint,
+                        rewardMetadata.program,
+                    ),
+                ]: []),
+                ...(sourceRewardTokenAccount ? [
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        this.wallet.publicKey,
+                        sourceRewardTokenAccount,
+                        sourceRewardTokenAccountOwner,
+                        rewardMetadata.mint,
+                        rewardMetadata.program,
+                    ),
+                ] : []),
+                ...(totalUnclaimedAmount > 0 ? [
+                    spl.createTransferCheckedInstruction(
+                        sourceRewardTokenAccount,
+                        rewardMetadata.mint,
+                        rewardTokenReserveAccount,
+                        sourceRewardTokenAccountOwner,
+                        totalUnclaimedAmount,
+                        rewardMetadata.decimals,
+                        undefined,
+                        rewardMetadata.program,
+                    )
+                ] : []),
                 this.program.methods
-                    .fundManagerSettleReward(rewardPool.id, reward.id, amount, transfer)
+                    .fundManagerSettleReward(rewardPool.id, reward.id, amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         rewardTokenMint: rewardMetadata.mint ?? this.programId,
                         rewardTokenProgram: rewardMetadata.program ?? this.programId,
                         rewardTokenReserveAccount: rewardTokenReserveAccount ?? this.programId,
-                        sourceRewardTokenAccountOwner: sourceRewardTokenAccountOwner ?? this.programId,
-                        sourceRewardTokenAccount: sourceRewardTokenAccount ?? this.programId,
                     })
                     .instruction(),
             ],

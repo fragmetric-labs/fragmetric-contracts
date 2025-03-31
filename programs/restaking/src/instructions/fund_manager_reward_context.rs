@@ -58,14 +58,4 @@ pub struct FundManagerRewardDistributionContext<'info> {
         associated_token::token_program = reward_token_program,
     )]
     pub reward_token_reserve_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
-
-    pub source_reward_token_account_owner: Option<Signer<'info>>,
-
-    #[account(
-        mut,
-        token::mint = reward_token_mint,
-        token::authority = source_reward_token_account_owner,
-        token::token_program = reward_token_program,
-    )]
-    pub source_reward_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 }

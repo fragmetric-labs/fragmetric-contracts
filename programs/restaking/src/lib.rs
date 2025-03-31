@@ -600,8 +600,6 @@ pub mod restaking {
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
-            ctx.accounts.source_reward_token_account.as_deref(),
-            ctx.accounts.source_reward_token_account_owner.as_ref(),
             reward_id,
             mint,
             program,
@@ -617,7 +615,6 @@ pub mod restaking {
         reward_pool_id: u8,
         reward_id: u16,
         amount: u64,
-        transfer: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
@@ -627,12 +624,9 @@ pub mod restaking {
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
-            ctx.accounts.source_reward_token_account.as_deref(),
-            ctx.accounts.source_reward_token_account_owner.as_ref(),
             reward_pool_id,
             reward_id,
             amount,
-            transfer,
         )?);
 
         Ok(())
