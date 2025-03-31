@@ -3150,17 +3150,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         source?: web3.Keypair,
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
         claimable: boolean,
+        transferAmount?: BN,
     }) {
-        const { source, rewardName, claimable } = args;
+        const { source, rewardName, claimable, transferAmount } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
-
-        const totalUnclaimedAmount = claimable ? fragSOLReward.rewardPools1.map(r => {
-            const settlement = r.rewardSettlements1.find(s => s.rewardId = reward.id);
-            return settlement.settledAmount - settlement.claimedAmount
-        }).reduce((x, y) => x + y) : 0;
 
         const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
         const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
@@ -3190,13 +3186,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardMetadata.program,
                 ),
             ] : []),
-            ...(totalUnclaimedAmount > 0 ? [
+            ...(claimable && transferAmount?.toNumber() ? [
                 spl.createTransferCheckedInstruction(
                     sourceRewardTokenAccount,
                     rewardMetadata.mint,
                     rewardTokenReserveAccount,
                     sourceRewardTokenAccountOwner,
-                    totalUnclaimedAmount,
+                    transferAmount.toNumber(),
                     rewardMetadata.decimals,
                     undefined,
                     rewardMetadata.program,
@@ -3241,11 +3237,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         const claimable = reward.claimable;
-        const totalUnclaimedAmount = claimable ? fragSOLReward.rewardPools1.map(r => {
-            const settlement = r.rewardSettlements1.find(s => s.rewardId = reward.id);
-            return settlement.settledAmount - settlement.claimedAmount
-        }).reduce((x, y) => x + y) : 0;
-
         const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
         const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
         const sourceRewardTokenAccount = claimable ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
@@ -3275,13 +3266,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         rewardMetadata.program,
                     ),
                 ] : []),
-                ...(totalUnclaimedAmount > 0 ? [
+                ...(claimable && amount.toNumber() ? [
                     spl.createTransferCheckedInstruction(
                         sourceRewardTokenAccount,
                         rewardMetadata.mint,
                         rewardTokenReserveAccount,
                         sourceRewardTokenAccountOwner,
-                        totalUnclaimedAmount,
+                        amount.toNumber(),
                         rewardMetadata.decimals,
                         undefined,
                         rewardMetadata.program,
@@ -3336,7 +3327,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardMetadata.mint,
                     rewardMetadata.program,
                 ),
-                this.methods.userClaimRewards(rewardPool.id, reward.id)
+                this.methods.userClaimReward(rewardPool.id, reward.id)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
