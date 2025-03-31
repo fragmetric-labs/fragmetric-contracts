@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
 use crate::utils::{PDASeeds, ZeroCopyHeader};
@@ -54,7 +54,7 @@ impl ZeroCopyHeader for UserRewardAccount {
 }
 
 impl UserRewardAccount {
-    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) -> bool {
+    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) -> Result<bool> {
         let old_data_version = self.data_version;
 
         if self.data_version == 0 {
@@ -70,19 +70,20 @@ impl UserRewardAccount {
         //     self.max_user_reward_pools += USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_2;
         // }
 
-        old_data_version < self.data_version
+        require_eq!(self.data_version, USER_REWARD_ACCOUNT_CURRENT_VERSION);
+
+        Ok(old_data_version < self.data_version)
     }
 
     #[inline(always)]
     pub(super) fn initialize(
         &mut self,
         bump: u8,
-        receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) -> bool {
+    ) -> Result<bool> {
         self.migrate(
             bump,
-            receipt_token_mint.key(),
+            user_receipt_token_account.mint,
             user_receipt_token_account.owner,
         )
     }
@@ -90,12 +91,11 @@ impl UserRewardAccount {
     #[inline(always)]
     pub(super) fn update_if_needed(
         &mut self,
-        receipt_token_mint: &InterfaceAccount<Mint>,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-    ) -> bool {
+    ) -> Result<bool> {
         self.migrate(
             self.bump,
-            receipt_token_mint.key(),
+            user_receipt_token_account.mint,
             user_receipt_token_account.owner,
         )
     }
@@ -110,40 +110,31 @@ impl UserRewardAccount {
         self.data_version == 0
     }
 
-    fn add_new_user_reward_pool(
+    #[inline(always)]
+    pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
-        reward_pool_id: u8,
-        reward_pool_initial_slot: u64,
-    ) -> Result<()> {
+    ) -> impl Iterator<Item = &mut UserRewardPool> {
+        self.user_reward_pools_1[..self.num_user_reward_pools as usize].iter_mut()
+    }
+
+    pub(super) fn get_user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
+        self.user_reward_pools_1[..self.num_user_reward_pools as usize]
+            .get_mut(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardUserPoolNotFoundError))
+    }
+
+    fn add_user_reward_pool(&mut self, reward_pool_initial_slot: u64) -> Result<()> {
         require_gt!(
             self.max_user_reward_pools,
             self.num_user_reward_pools,
             ErrorCode::RewardExceededMaxUserRewardPoolsError,
         );
 
-        let pool = &mut self.user_reward_pools_1[self.num_user_reward_pools as usize];
-        pool.initialize(reward_pool_id, reward_pool_initial_slot);
+        self.user_reward_pools_1[self.num_user_reward_pools as usize]
+            .initialize(self.num_user_reward_pools, reward_pool_initial_slot);
         self.num_user_reward_pools += 1;
 
         Ok(())
-    }
-
-    /// How to integrate multiple fields into a single array slice or whatever...
-    /// You may change the return type if needed
-    #[inline(always)]
-    fn get_user_reward_pools_mut(&mut self) -> &mut [UserRewardPool] {
-        &mut self.user_reward_pools_1
-    }
-
-    #[inline(always)]
-    fn get_user_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut UserRewardPool> {
-        self.get_user_reward_pools_mut().iter_mut()
-    }
-
-    pub(super) fn get_user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
-        self.get_user_reward_pools_mut()
-            .get_mut(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardUserPoolNotFoundError))
     }
 
     pub(super) fn backfill_not_existing_pools(
@@ -153,9 +144,7 @@ impl UserRewardAccount {
         reward_account
             .get_reward_pools_iter()
             .skip(self.num_user_reward_pools as usize)
-            .try_for_each(|reward_pool| {
-                self.add_new_user_reward_pool(reward_pool.id, reward_pool.initial_slot)
-            })
+            .try_for_each(|reward_pool| self.add_user_reward_pool(reward_pool.initial_slot))
     }
 
     pub(super) fn update_user_reward_pools(
@@ -165,12 +154,10 @@ impl UserRewardAccount {
     ) -> Result<()> {
         self.backfill_not_existing_pools(reward_account)?;
 
-        for (user_reward_pool, reward_pool) in self
-            .get_user_reward_pools_iter_mut()
+        self.get_user_reward_pools_iter_mut()
             .zip(reward_account.get_reward_pools_iter_mut())
-        {
-            user_reward_pool.update(reward_pool, vec![], current_slot)?;
-        }
-        Ok(())
+            .try_for_each(|(user_reward_pool, reward_pool)| {
+                user_reward_pool.update_user_reward_pool(reward_pool, current_slot)
+            })
     }
 }

@@ -138,13 +138,14 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        let event = RewardService::new(self.receipt_token_mint, self.reward_account)?
-            .update_reward_pools_token_allocation(
-                None,
-                Some(self.user_reward_account),
-                receipt_token_mint_amount,
-                contribution_accrual_rate,
-            )?;
+        let updated_user_reward_accounts =
+            RewardService::new(self.receipt_token_mint, self.reward_account)?
+                .update_reward_pools_token_allocation(
+                    None,
+                    Some(self.user_reward_account),
+                    receipt_token_mint_amount,
+                    contribution_accrual_rate,
+                )?;
 
         // transfer user asset to the fund
         let deposited_amount = self
@@ -193,7 +194,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
             supported_token_mint: supported_token_mint_key,
-            updated_user_reward_accounts: event.updated_user_reward_accounts,
+            updated_user_reward_accounts,
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
@@ -331,20 +332,21 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
         // reduce user's reward accrual rate
-        let event1 = RewardService::new(self.receipt_token_mint, self.reward_account)?
-            .update_reward_pools_token_allocation(
-                Some(self.user_reward_account),
-                None,
-                receipt_token_amount,
-                None,
-            )?;
+        let updated_user_reward_accounts =
+            RewardService::new(self.receipt_token_mint, self.reward_account)?
+                .update_reward_pools_token_allocation(
+                    Some(self.user_reward_account),
+                    None,
+                    receipt_token_amount,
+                    None,
+                )?;
 
         // log withdrawal request event
         Ok(events::UserRequestedWithdrawalFromFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
             supported_token_mint,
-            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+            updated_user_reward_accounts,
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
@@ -415,20 +417,21 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
         // increase user's reward accrual rate
-        let event1 = RewardService::new(self.receipt_token_mint, self.reward_account)?
-            .update_reward_pools_token_allocation(
-                None,
-                Some(self.user_reward_account),
-                receipt_token_amount,
-                None,
-            )?;
+        let updated_user_reward_accounts =
+            RewardService::new(self.receipt_token_mint, self.reward_account)?
+                .update_reward_pools_token_allocation(
+                    None,
+                    Some(self.user_reward_account),
+                    receipt_token_amount,
+                    None,
+                )?;
 
         // log withdrawal request canceled event
         Ok(events::UserCanceledWithdrawalRequestFromFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
             supported_token_mint: withdrawal_request.supported_token_mint,
-            updated_user_reward_accounts: event1.updated_user_reward_accounts,
+            updated_user_reward_accounts,
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),

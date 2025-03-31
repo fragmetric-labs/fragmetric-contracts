@@ -50,6 +50,10 @@ describe("initialize", async () => {
         expect(fragSOLExtraAccountMetasAccount.length).eq(8);
     })
 
+    step("initialize fake SWTCH reward token", async () => {
+        await restaking.runAdminInitializeTestingSWTCHTokenReward();
+    })
+
     step("initialize reward pools and rewards", async function () {
         const res0 = await restaking.runFundManagerInitializeRewardPools();
 
@@ -83,6 +87,8 @@ describe("initialize", async () => {
         expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardPoolId).eq(res0.rewardPool.id);
         expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(1);
         expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settledAmount.toNumber()).eq(0);
+        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
+            .eq(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].updatedSlot.toNumber());
     });
 
     step("create normalized token token mint", async function () {

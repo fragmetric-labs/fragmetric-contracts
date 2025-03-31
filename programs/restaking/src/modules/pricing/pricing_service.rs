@@ -22,34 +22,18 @@ pub(in crate::modules) struct PricingService<'info> {
 }
 
 impl<'info> PricingService<'info> {
-    pub fn new<I>(token_pricing_source_accounts: I) -> Result<Self>
-    where
-        I: IntoIterator<Item = &'info AccountInfo<'info>>,
-        I::IntoIter: ExactSizeIterator,
-    {
-        Ok(Self {
+    /// `token_pricing_source_accounts` must provide exact size_hint.
+    pub fn new(
+        token_pricing_source_accounts: impl IntoIterator<Item = &'info AccountInfo<'info>>,
+    ) -> Self {
+        Self {
             token_pricing_sources_account_infos: token_pricing_source_accounts
                 .into_iter()
                 .collect(),
             token_mints: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
             token_pricing_sources: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
             token_values: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
-        })
-    }
-
-    pub fn register_token_pricing_source_account(
-        mut self,
-        token_pricing_source_account: &'info AccountInfo<'info>,
-    ) -> Self {
-        if !self
-            .token_pricing_sources_account_infos
-            .iter()
-            .any(|account| token_pricing_source_account.key() == *account.key)
-        {
-            self.token_pricing_sources_account_infos
-                .push(token_pricing_source_account);
         }
-        self
     }
 
     fn get_token_pricing_source_account_info(
@@ -532,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_get_token_exchange_ratio() {
-        let mut pricing_service = PricingService::new(&[]).unwrap();
+        let mut pricing_service = PricingService::new(&[]);
         let token_mint = Pubkey::new_unique();
         pricing_service
             .resolve_token_pricing_source(
@@ -623,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_resolve_token_pricing_source() {
-        let mut pricing_service = PricingService::new(&[]).unwrap();
+        let mut pricing_service = PricingService::new(&[]);
 
         let mock_mint_10_10 = Pubkey::new_unique();
         pricing_service
@@ -724,7 +708,7 @@ mod tests {
 
     #[test]
     fn test_resolve_token_total_value_as_atomic() {
-        let mut pricing_service = PricingService::new(&[]).unwrap();
+        let mut pricing_service = PricingService::new(&[]);
 
         let atomic_mint_10_10 = Pubkey::new_unique();
         pricing_service

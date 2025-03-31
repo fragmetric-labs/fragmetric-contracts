@@ -1,6 +1,6 @@
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::modules::reward::*;
@@ -127,7 +127,33 @@ pub struct UserRewardContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct UserRewardClaimContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -149,4 +175,30 @@ pub struct UserRewardContext<'info> {
         constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+
+    #[account(
+        seeds = [RewardAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub reward_reserve_account: SystemAccount<'info>,
+
+    pub reward_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub reward_token_program: Interface<'info, TokenInterface>,
+
+    #[account(
+        mut,
+        associated_token::mint = reward_token_mint,
+        associated_token::authority = reward_reserve_account,
+        associated_token::token_program = reward_token_program,
+    )]
+    pub reward_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        token::mint = reward_token_mint,
+        token::authority = user,
+        token::token_program = reward_token_program,
+    )]
+    pub user_reward_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }

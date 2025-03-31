@@ -24,10 +24,26 @@ impl Drop for NormalizedTokenPoolService<'_, '_> {
 }
 
 impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
-    pub fn validate_accounts(
+    pub fn new(
+        normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
+        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
+        normalized_token_program: &'a Program<'info, Token>,
+    ) -> Result<Self> {
+        Self::validate_normalized_token_pool(normalized_token_pool_account, normalized_token_mint)?;
+
+        let clock = Clock::get()?;
+        Ok(Self {
+            normalized_token_pool_account,
+            normalized_token_mint,
+            normalized_token_program,
+            current_slot: clock.slot,
+            current_timestamp: clock.unix_timestamp,
+        })
+    }
+
+    pub fn validate_normalized_token_pool(
         normalized_token_pool_account: &Account<NormalizedTokenPoolAccount>,
         normalized_token_mint: &InterfaceAccount<Mint>,
-        normalized_token_program: &Program<Token>,
     ) -> Result<()> {
         require!(
             normalized_token_pool_account.is_latest_version(),
@@ -39,31 +55,10 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         );
         require_keys_eq!(
             normalized_token_pool_account.normalized_token_program,
-            normalized_token_program.key(),
+            Token::id(),
         );
 
         Ok(())
-    }
-
-    pub fn new(
-        normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
-        normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
-        normalized_token_program: &'a Program<'info, Token>,
-    ) -> Result<Self> {
-        Self::validate_accounts(
-            normalized_token_pool_account,
-            normalized_token_mint,
-            normalized_token_program,
-        )?;
-
-        let clock = Clock::get()?;
-        Ok(Self {
-            normalized_token_pool_account,
-            normalized_token_mint,
-            normalized_token_program,
-            current_slot: clock.slot,
-            current_timestamp: clock.unix_timestamp,
-        })
     }
 
     #[inline(always)]
@@ -501,10 +496,19 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         &mut self,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<PricingService<'info>> {
-        let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(
-                self.normalized_token_pool_account.as_account_info(),
-            );
+        let mut pricing_service = if pricing_sources
+            .iter()
+            .find(|source| source.key() == self.normalized_token_pool_account.key())
+            .is_some()
+        {
+            PricingService::new(pricing_sources)
+        } else {
+            PricingService::new(
+                pricing_sources
+                    .iter()
+                    .chain([self.normalized_token_pool_account.as_account_info()]),
+            )
+        };
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;

@@ -5,8 +5,8 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
-pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS: usize = 10;
-pub const FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS: usize = 30;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS: usize = 30;
 
 #[zero_copy]
 #[repr(C)]
@@ -41,13 +41,13 @@ pub(super) struct RestakingVault {
     _padding3: [u8; 5],
     num_compounding_reward_tokens: u8,
     compounding_reward_token_mints:
-        [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS],
+        [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS],
 
     /// reward to distribute
     _padding4: [u8; 7],
     num_distributing_reward_tokens: u8,
     distributing_reward_token_mints:
-        [Pubkey; FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS],
+        [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
     _reserved: [u8; 2296],
 }
@@ -131,7 +131,7 @@ impl RestakingVault {
         }
 
         require_gt!(
-            FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS,
+            FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS,
             self.num_compounding_reward_tokens as usize,
             ErrorCode::FundExceededMaxRestakingVaultCompoundingRewardTokensError
         );
@@ -147,18 +147,46 @@ impl RestakingVault {
         self.compounding_reward_token_mints[..self.num_compounding_reward_tokens as usize].iter()
     }
 
-    pub fn add_delegation_with_desired_index(
+    pub fn add_distributing_reward_token(
         &mut self,
-        operator: Pubkey,
-        desired_index: u8,
-        delegated_amount: u64,
-        undelegating_amount: u64,
+        distributing_reward_token_mint: Pubkey,
     ) -> Result<()> {
-        require_eq!(self.num_delegations, desired_index);
-        self.add_delegation(operator, delegated_amount, undelegating_amount)
+        if self
+            .get_distributing_reward_tokens_iter()
+            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
+        }
+
+        require_gt!(
+            FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS,
+            self.num_distributing_reward_tokens as usize,
+            ErrorCode::FundExceededMaxRestakingVaultDistributingRewardTokensError,
+        );
+
+        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
+            distributing_reward_token_mint;
+        self.num_distributing_reward_tokens += 1;
+
+        Ok(())
+    }
+
+    pub fn get_distributing_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
+        self.distributing_reward_token_mints[..self.num_distributing_reward_tokens as usize].iter()
     }
 
     pub fn add_delegation(
+        &mut self,
+        operator: Pubkey,
+        index: u8,
+        delegated_amount: u64,
+        undelegating_amount: u64,
+    ) -> Result<()> {
+        require_eq!(self.num_delegations, index);
+        self.add_delegation_unchecked(operator, delegated_amount, undelegating_amount)
+    }
+
+    pub fn add_delegation_unchecked(
         &mut self,
         operator: Pubkey,
         delegated_amount: u64,
@@ -229,6 +257,7 @@ pub(super) struct RestakingVaultDelegation {
 impl RestakingVaultDelegation {
     fn initialize(&mut self, operator: Pubkey, delegated_amount: u64, undelegating_amount: u64) {
         *self = Zeroable::zeroed();
+
         self.operator = operator;
         self.supported_token_delegated_amount = delegated_amount;
         self.supported_token_undelegating_amount = undelegating_amount;

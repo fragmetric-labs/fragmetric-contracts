@@ -3,10 +3,12 @@ use anchor_lang::prelude::*;
 use crate::errors::ErrorCode;
 
 const REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN: usize = 10;
+const MIN_CONTRIBUTION_ACCRUAL_RATE: u16 = 100;
+const MAX_CONTRIBUTION_ACCRUAL_RATE: u16 = 500;
 
 #[zero_copy]
 #[repr(C)]
-pub struct TokenAllocatedAmount {
+pub(super) struct TokenAllocatedAmount {
     total_amount: u64,
     num_records: u8,
     _padding: [u8; 7],
@@ -16,37 +18,15 @@ pub struct TokenAllocatedAmount {
 impl TokenAllocatedAmount {
     /// Sum of contribution accrual rate (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    pub(super) fn get_total_contribution_accrual_rate(&self) -> Result<u64> {
-        self.records.iter().try_fold(0u64, |sum, record| {
-            sum.checked_add(record.get_total_contribution_accrual_rate()?)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    pub fn get_total_contribution_accrual_rate(&self) -> u64 {
+        self.records.iter().fold(0, |sum, record| {
+            sum + record.get_total_contribution_accrual_rate()
         })
-    }
-
-    fn add_new_record(&mut self, amount: u64, contribution_accrual_rate: u16) -> Result<()> {
-        require_gt!(
-            REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN,
-            self.num_records as usize,
-            ErrorCode::RewardExceededMaxTokenAllocatedAmountRecordException
-        );
-
-        let record = &mut self.records[self.num_records as usize];
-        record.initialize(amount, contribution_accrual_rate);
-        self.num_records += 1;
-
-        Ok(())
-    }
-
-    /// How to integrate multiple fields into a single array slice or whatever...
-    /// You may change the return type if needed
-    #[inline(always)]
-    fn get_records_mut(&mut self) -> &mut [TokenAllocatedAmountRecord] {
-        &mut self.records[..self.num_records as usize]
     }
 
     #[inline(always)]
     fn get_records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
-        self.get_records_mut().iter_mut()
+        self.records[..self.num_records as usize].iter_mut()
     }
 
     fn get_record_mut(
@@ -57,18 +37,17 @@ impl TokenAllocatedAmount {
             .find(|r| r.contribution_accrual_rate == contribution_accrual_rate)
     }
 
-    pub(super) fn update(
+    pub fn update(
         &mut self,
         deltas: Vec<TokenAllocatedAmountDelta>,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
-        let total_amount_orig = deltas.iter().try_fold(0u64, |sum, delta| {
-            sum.checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-        })?;
+        let total_amount_before: u64 = deltas.iter().map(|delta| delta.amount).sum();
 
         let mut effective_deltas = vec![];
-        for delta in deltas.into_iter().filter(|delta| delta.amount > 0) {
-            if delta.is_positive {
+        for delta in deltas {
+            if delta.amount == 0 {
+                continue;
+            } else if delta.is_positive {
                 effective_deltas.push(self.add(delta)?);
             } else {
                 effective_deltas.extend(self.subtract(delta)?);
@@ -76,16 +55,16 @@ impl TokenAllocatedAmount {
         }
 
         // Accounting: check total amount before and after
-        let total_amount_effective = effective_deltas.iter().try_fold(0u64, |sum, delta| {
-            sum.checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-        })?;
+        let total_amount: u64 = effective_deltas.iter().map(|delta| delta.amount).sum();
 
         require_eq!(
-            total_amount_orig,
-            total_amount_effective,
-            ErrorCode::RewardInvalidAccountingException
+            total_amount_before,
+            total_amount,
+            ErrorCode::RewardInvalidAccountingException,
         );
+
+        self.clear_stale_records();
+        self.sort_records();
 
         Ok(effective_deltas)
     }
@@ -93,72 +72,105 @@ impl TokenAllocatedAmount {
     /// When add amount, rate = null => rate = 1.0
     fn add(&mut self, mut delta: TokenAllocatedAmountDelta) -> Result<TokenAllocatedAmountDelta> {
         delta.assert_valid_addition()?;
-        delta.set_default_contribution_accrual_rate();
-        // SAFE: contribution_accrual_rate is set to default if not exist
-        let contribution_accrual_rate = delta.contribution_accrual_rate.unwrap();
 
+        let contribution_accrual_rate = match delta.contribution_accrual_rate {
+            Some(rate) => rate,
+            None => {
+                delta.contribution_accrual_rate = Some(100);
+                100
+            }
+        };
+
+        self.total_amount += delta.amount;
         if let Some(existing_record) = self.get_record_mut(contribution_accrual_rate) {
-            existing_record.amount = existing_record
-                .amount
-                .checked_add(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            existing_record.amount += delta.amount;
         } else {
-            self.add_new_record(delta.amount, contribution_accrual_rate)?;
-            self.get_records_mut()
-                .sort_by_key(|r| r.contribution_accrual_rate);
+            self.add_record(delta.amount, contribution_accrual_rate)?;
         }
-
-        self.total_amount = self
-            .total_amount
-            .checked_add(delta.amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
         Ok(delta)
     }
 
-    fn subtract(
-        &mut self,
-        delta: TokenAllocatedAmountDelta,
-    ) -> Result<Vec<TokenAllocatedAmountDelta>> {
+    fn subtract<'a>(
+        &'a mut self,
+        mut delta: TokenAllocatedAmountDelta,
+    ) -> Result<impl IntoIterator<Item = TokenAllocatedAmountDelta> + 'a> {
         delta.assert_valid_subtraction()?;
 
-        self.total_amount = self
-            .total_amount
-            .checked_sub(delta.amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-
-        let mut deltas = vec![];
-        if delta.contribution_accrual_rate.is_some_and(|r| r != 100) {
-            let record = self
-                // SAFE: already checked that contribution_accrual_rate exists
-                .get_record_mut(delta.contribution_accrual_rate.unwrap())
-                .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
-            record.amount = record
-                .amount
-                .checked_sub(delta.amount)
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-            deltas.push(delta);
-        } else {
-            let mut remaining_delta_amount = delta.amount;
-            for record in self.get_records_iter_mut() {
-                if remaining_delta_amount == 0 {
-                    break;
-                }
-
-                let amount = std::cmp::min(record.amount, remaining_delta_amount);
-                if amount > 0 {
-                    record.amount -= amount;
-                    remaining_delta_amount -= amount;
-                    deltas.push(TokenAllocatedAmountDelta {
-                        contribution_accrual_rate: Some(record.contribution_accrual_rate),
-                        is_positive: false,
-                        amount,
-                    });
-                }
+        self.total_amount -= delta.amount;
+        Ok(match delta.contribution_accrual_rate {
+            Some(rate) if rate > 100 => {
+                let record = self
+                    .get_record_mut(rate)
+                    .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
+                record.amount -= delta.amount;
+                OneOrManyDeltas::Single(delta)
             }
+            _ => OneOrManyDeltas::Multiple(self.get_records_iter_mut().map_while(move |record| {
+                if delta.amount == 0 {
+                    return None;
+                }
+
+                let amount = record.amount.min(delta.amount);
+                record.amount -= amount;
+                delta.amount -= amount;
+                Some(TokenAllocatedAmountDelta {
+                    contribution_accrual_rate: Some(record.contribution_accrual_rate),
+                    is_positive: false,
+                    amount,
+                })
+            })),
+        })
+    }
+
+    fn add_record(&mut self, amount: u64, contribution_accrual_rate: u16) -> Result<()> {
+        require_gt!(
+            REWARD_ACCOUNTS_TOKEN_ALLOCATED_AMOUNT_RECORD_MAX_LEN,
+            self.num_records as usize,
+            ErrorCode::RewardExceededMaxTokenAllocatedAmountRecordException
+        );
+
+        self.records[self.num_records as usize].initialize(amount, contribution_accrual_rate);
+        self.num_records += 1;
+
+        Ok(())
+    }
+
+    /// record is stale if amount = 0 and contribution accrual rate != 1.0.
+    fn clear_stale_records(&mut self) {
+        let mut l = 0;
+        let mut r = self.num_records as usize;
+
+        loop {
+            // 1. move l to right until record[l] is stale
+            // invariant: record[0..l] are all non-stale
+            while l < self.num_records as usize && !self.records[l].is_stale() {
+                l += 1;
+            }
+            // 2. move r to left until record[r-1] is non-stale
+            // invariant: record[r..n] are all stale
+            while r > 0 && self.records[r - 1].is_stale() {
+                r -= 1;
+            }
+
+            if l == r {
+                break; // done
+            }
+
+            // if l == n or r == 0, then obviously l == r
+            // if l == r-1 then record[l], which is record[r-1] is both empty and non-empty so contradiction.
+            // therefore l < r-1 so l+1 <= r-1.
+            // swap record[l] and record[r-1]
+            self.records.swap(l, r - 1);
+            l += 1;
+            r -= 1;
         }
 
-        Ok(deltas)
+        self.num_records = l as u8;
+    }
+
+    fn sort_records(&mut self) {
+        self.records[..self.num_records as usize].sort_by_key(|r| r.contribution_accrual_rate);
     }
 }
 
@@ -180,10 +192,14 @@ impl TokenAllocatedAmountRecord {
 
     /// Contribution accrual rate multiplied by amount (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    fn get_total_contribution_accrual_rate(&self) -> Result<u64> {
-        self.amount
-            .checked_mul(self.contribution_accrual_rate as u64)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+    #[inline(always)]
+    fn get_total_contribution_accrual_rate(&self) -> u64 {
+        self.amount * self.contribution_accrual_rate as u64
+    }
+
+    /// record is stale if amount = 0 and contribution accrual rate != 1.0.
+    fn is_stale(&self) -> bool {
+        self.amount == 0 && self.contribution_accrual_rate != MIN_CONTRIBUTION_ACCRUAL_RATE
     }
 }
 
@@ -199,7 +215,7 @@ pub(super) struct TokenAllocatedAmountDelta {
 }
 
 impl TokenAllocatedAmountDelta {
-    pub(super) fn new_positive(contribution_accrual_rate: Option<u16>, amount: u64) -> Self {
+    pub fn new_positive(contribution_accrual_rate: Option<u16>, amount: u64) -> Self {
         Self {
             contribution_accrual_rate,
             is_positive: true,
@@ -207,7 +223,7 @@ impl TokenAllocatedAmountDelta {
         }
     }
 
-    pub(super) fn new_negative(amount: u64) -> Self {
+    pub fn new_negative(amount: u64) -> Self {
         Self {
             contribution_accrual_rate: None,
             is_positive: false,
@@ -215,29 +231,127 @@ impl TokenAllocatedAmountDelta {
         }
     }
 
-    fn assert_valid_addition(&self) -> Result<()> {
-        let is_contribution_accrual_rate_invalid = || {
-            self.contribution_accrual_rate
-                .is_some_and(|rate| !(100..500).contains(&rate))
-        };
-        if !self.is_positive || is_contribution_accrual_rate_invalid() {
+    fn assert_valid_contribution_accrual_rate(&self) -> Result<()> {
+        if self.contribution_accrual_rate.as_ref().is_some_and(|rate| {
+            !(MIN_CONTRIBUTION_ACCRUAL_RATE..MAX_CONTRIBUTION_ACCRUAL_RATE).contains(rate)
+        }) {
             err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
+        }
+
+        Ok(())
+    }
+
+    fn assert_valid_addition(&self) -> Result<()> {
+        self.assert_valid_contribution_accrual_rate()?;
+
+        if !self.is_positive {
+            err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?;
         }
 
         Ok(())
     }
 
     fn assert_valid_subtraction(&self) -> Result<()> {
+        self.assert_valid_contribution_accrual_rate()?;
+
         if self.is_positive {
             err!(ErrorCode::RewardInvalidAllocatedAmountDeltaException)?
         }
 
         Ok(())
     }
+}
 
-    fn set_default_contribution_accrual_rate(&mut self) {
-        if self.contribution_accrual_rate.is_none() {
-            self.contribution_accrual_rate = Some(100);
+/// Auxillary type for better code - represents either a single delta or multiple deltas
+enum OneOrManyDeltas<T: IntoIterator<Item = TokenAllocatedAmountDelta>> {
+    Single(TokenAllocatedAmountDelta),
+    Multiple(T),
+}
+
+enum OneOrManyDeltasIter<T: Iterator<Item = TokenAllocatedAmountDelta>> {
+    Single(std::option::IntoIter<TokenAllocatedAmountDelta>),
+    Multiple(T),
+}
+
+impl<T: IntoIterator<Item = TokenAllocatedAmountDelta>> IntoIterator for OneOrManyDeltas<T> {
+    type Item = TokenAllocatedAmountDelta;
+    type IntoIter = OneOrManyDeltasIter<T::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Self::Single(single) => OneOrManyDeltasIter::Single(Some(single).into_iter()),
+            Self::Multiple(multiple) => OneOrManyDeltasIter::Multiple(multiple.into_iter()),
         }
+    }
+}
+
+impl<T: Iterator<Item = TokenAllocatedAmountDelta>> Iterator for OneOrManyDeltasIter<T> {
+    type Item = TokenAllocatedAmountDelta;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Single(single) => single.next(),
+            Self::Multiple(multiple) => multiple.next(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bytemuck::Zeroable;
+
+    use super::*;
+
+    #[test]
+    fn test_clear_empty_records() {
+        let non_empty = [0, 1, 3, 5];
+        let mut amount = TokenAllocatedAmount::zeroed();
+        amount.total_amount = 400;
+        amount.num_records = 10;
+        amount.records = std::array::from_fn(|i| {
+            let mut record = TokenAllocatedAmountRecord::zeroed();
+            record.contribution_accrual_rate = 100 + i as u16 * 10;
+            record.amount = non_empty.contains(&i).then_some(100).unwrap_or_default();
+            record
+        });
+
+        amount.clear_stale_records();
+        amount.sort_records();
+
+        assert_eq!(amount.num_records, 4);
+        for (record, rate) in amount
+            .get_records_iter_mut()
+            .zip(non_empty.iter().map(|i| 100 + *i as u16 * 10))
+        {
+            assert_eq!(record.amount, 100);
+            assert_eq!(record.contribution_accrual_rate, rate);
+        }
+    }
+
+    #[test]
+    fn test_subtract() {
+        let deltas = vec![TokenAllocatedAmountDelta::new_negative(100)];
+        let mut amount = TokenAllocatedAmount::zeroed();
+        amount.total_amount = 150;
+        amount.num_records = 2;
+        amount.records[0].amount = 50;
+        amount.records[0].contribution_accrual_rate = 100;
+        amount.records[1].amount = 100;
+        amount.records[1].contribution_accrual_rate = 120;
+
+        let effective_deltas = amount.update(deltas).unwrap();
+
+        assert_eq!(effective_deltas.len(), 2);
+        assert_eq!(effective_deltas[0].amount, 50);
+        assert_eq!(effective_deltas[0].contribution_accrual_rate, Some(100));
+        assert_eq!(effective_deltas[1].amount, 50);
+        assert_eq!(effective_deltas[1].contribution_accrual_rate, Some(120));
+
+        // default(rate = 1.0) record is not removed
+        assert_eq!(amount.num_records, 2);
+        assert_eq!(amount.records[0].amount, 0);
+        assert_eq!(amount.records[0].contribution_accrual_rate, 100);
+        assert_eq!(amount.records[1].amount, 50);
+        assert_eq!(amount.records[1].contribution_accrual_rate, 120);
     }
 }

@@ -9,7 +9,7 @@ use crate::utils::{AccountInfoExt, PDASeeds};
 use super::{
     FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
     SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS,
+    FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS,
 };
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
@@ -28,7 +28,7 @@ pub enum HarvestRewardCommandState {
         vaults: Vec<Pubkey>,
         // TODO distribute
         // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
         items: Vec<HarvestRewardCommandItem>,
     },
     /// Before swap, find required accounts. Swap needs a number of accounts.
@@ -37,7 +37,7 @@ pub enum HarvestRewardCommandState {
         vaults: Vec<Pubkey>,
         // TODO distribute
         // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
         items: Vec<HarvestRewardCommandItem>,
     },
     /// Executes swap, transfer, or settle. Destination token account of swapped
@@ -47,7 +47,7 @@ pub enum HarvestRewardCommandState {
         vaults: Vec<Pubkey>,
         // TODO distribute
         // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_RESTAKING_VAULT_MAX_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
         items: Vec<HarvestRewardCommandItem>,
     },
 }

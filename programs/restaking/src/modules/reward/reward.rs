@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 
@@ -8,30 +9,34 @@ const REWARD_DESCRIPTION_MAX_LEN: usize = 128;
 /// Reward type.
 #[zero_copy]
 #[repr(C)]
-pub struct Reward {
+pub(super) struct Reward {
     /// ID is determined by reward account.
-    id: u16,
+    pub id: u16,
     name: [u8; REWARD_NAME_MAX_LEN],
     description: [u8; REWARD_DESCRIPTION_MAX_LEN],
 
-    // RewardType as u8 representation
-    reward_type_discriminant: u8,
-    token_mint: Pubkey,
-    token_program: Pubkey,
-    decimals: u8,
-    _padding: [u8; 14],
+    pub claimable: u8,
+    pub mint: Pubkey,
+    pub program: Pubkey,
+    pub decimals: u8,
 
-    _reserved: [u64; 16],
+    _reserved: [u8; 142],
 }
 
 impl Reward {
-    pub(super) fn initialize(
+    pub fn initialize(
         &mut self,
         id: u16,
-        name: String,
-        description: String,
-        reward_type: RewardType,
+        name: impl AsRef<str>,
+        description: impl AsRef<str>,
+        mint: Pubkey,
+        program: Pubkey,
+        decimals: u8,
+        claimable: bool,
     ) -> anchor_lang::Result<()> {
+        let name = name.as_ref().trim_matches('\0');
+        let description = description.as_ref().trim_matches('\0');
+
         require_gte!(
             REWARD_NAME_MAX_LEN,
             name.len(),
@@ -43,89 +48,35 @@ impl Reward {
             ErrorCode::RewardInvalidMetadataDescriptionLengthError
         );
 
+        *self = Zeroable::zeroed();
+
         self.id = id;
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
-        // RewardType
-        self.reward_type_discriminant = reward_type.get_discriminant();
-        self.token_mint = reward_type.get_token_mint().unwrap_or_default();
-        self.token_program = reward_type.get_token_program().unwrap_or_default();
-        self.decimals = reward_type.get_decimals().unwrap_or_default();
+        self.claimable = claimable as u8;
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
 
         Ok(())
     }
 
-    pub(super) fn get_name(&self) -> anchor_lang::Result<&str> {
+    pub fn get_name(&self) -> Result<&str> {
         Ok(std::str::from_utf8(&self.name)
             .map_err(|_| ErrorCode::UTF8DecodingException)?
             .trim_matches('\0'))
     }
 
-    // fn reward_type(&self) -> Result<RewardType> {
-    //     let reward_type = match self.reward_type_discriminant {
-    //         // Point
-    //         0 => RewardType::Point {
-    //             decimals: self.decimals,
-    //         },
-    //         // Token
-    //         1 => RewardType::Token {
-    //             mint: self.token_mint,
-    //             program: self.token_program,
-    //             decimals: self.decimals,
-    //         },
-    //         // SOL
-    //         2 => RewardType::SOL,
-    //         // Unknown
-    //         _ => {
-    //             return Err(ErrorCode::RewardInvalidRewardType)?;
-    //         }
-    //     };
-
-    //     Ok(reward_type)
-    // }
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-#[non_exhaustive]
-pub enum RewardType {
-    Point {
-        decimals: u8,
-    },
-    Token {
-        mint: Pubkey,
-        program: Pubkey,
-        decimals: u8,
-    },
-    SOL,
-}
-
-impl RewardType {
-    fn get_discriminant(&self) -> u8 {
-        match self {
-            RewardType::Point { .. } => 0,
-            RewardType::Token { .. } => 1,
-            RewardType::SOL => 2,
-        }
+    pub fn set_claimable(&mut self, claimable: bool) -> &mut Self {
+        self.claimable = claimable as u8;
+        self
     }
 
-    fn get_token_mint(&self) -> Option<Pubkey> {
-        match self {
-            Self::Token { mint, .. } => Some(*mint),
-            Self::Point { .. } | Self::SOL => None,
-        }
-    }
-
-    fn get_token_program(&self) -> Option<Pubkey> {
-        match self {
-            Self::Token { program, .. } => Some(*program),
-            Self::Point { .. } | Self::SOL => None,
-        }
-    }
-
-    fn get_decimals(&self) -> Option<u8> {
-        match self {
-            Self::Point { decimals } | Self::Token { decimals, .. } => Some(*decimals),
-            Self::SOL => None,
-        }
+    /// Reward token can be changed only if unclaimable
+    pub fn set_reward_token(&mut self, mint: Pubkey, program: Pubkey, decimals: u8) -> &mut Self {
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
+        self
     }
 }

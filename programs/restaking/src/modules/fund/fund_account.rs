@@ -377,11 +377,11 @@ impl FundAccount {
 
     pub(super) fn set_address_lookup_table_account(
         &mut self,
-        address_lookup_table_account: &Option<Pubkey>,
+        address_lookup_table_account: Option<Pubkey>,
     ) {
         if let Some(address) = address_lookup_table_account {
             self.address_lookup_table_enabled = 1;
-            self.address_lookup_table_account = *address;
+            self.address_lookup_table_account = address;
         } else {
             self.address_lookup_table_enabled = 0;
             self.address_lookup_table_account = Pubkey::default();

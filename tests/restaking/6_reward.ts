@@ -15,7 +15,7 @@ function printUserRewardAccount(alias: string, account: IdlAccounts<Restaking>['
         logger.debug(`[slot=${pool.updatedSlot.toString()}] ${alias}-pool#${pool.rewardPoolId}: allocated=${pool.tokenAllocatedAmount.totalAmount.toNumber().toLocaleString()}, contribution=${pool.contribution.toNumber().toLocaleString()}`);
         for (let j = 0; j < pool.numRewardSettlements; j++) {
             const settle = pool.rewardSettlements1[j];
-            logger.debug(`> ${alias}-pool#${pool.rewardPoolId}-reward#${settle.rewardId}: settled-slot=${settle.settledSlot.toNumber().toLocaleString()}, settled-amount=${settle.settledAmount.toNumber().toLocaleString()}, settled-contribution=${settle.settledContribution.toNumber().toLocaleString()}`);
+            logger.debug(`> ${alias}-pool#${pool.rewardPoolId}-reward#${settle.rewardId}: settled-slot=${settle.lastSettledSlot.toNumber().toLocaleString()}, settled-amount=${settle.totalSettledAmount.toNumber().toLocaleString()}, settled-contribution=${settle.totalSettledContribution.toNumber().toLocaleString()}`);
         }
     }
 }
@@ -88,15 +88,15 @@ describe("reward", async function () {
         printUserRewardAccount('A', a6.fragSOLUserReward);
         printUserRewardAccount('B', b6.fragSOLUserReward);
 
-        const aSettledAmountDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount
-            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount);
-        const aSettledContribDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
-            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
-        const bSettledAmountDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount
-            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount);
-        const bSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
-            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
-        // aSettle.settledAmount/bSettle.settledAmount = aSettle.settledContribution/bSettle.settledContribution
+        const aSettledAmountDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount
+            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount);
+        const aSettledContribDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution
+            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution);
+        const bSettledAmountDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount
+            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount);
+        const bSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution
+            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution);
+        // aSettle.totalSettledAmount/bSettle.totalSettledAmount = aSettle.totalSettledContribution/bSettle.totalSettledContribution
 
         expect((aSettledAmountDelta.toNumber() / bSettledAmountDelta.toNumber()).toPrecision(4))
             .eq((aSettledContribDelta.toNumber() / bSettledContribDelta.toNumber()).toPrecision(4), 'd');
@@ -166,20 +166,20 @@ describe("reward", async function () {
         ]);
 
         // new base pool settled amounts are same; A: 400, B: 400 => A:B = 1:1
-        expect(a6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'a6 base settled')
-            .eq(b6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].settledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base settled');
+        expect(a6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].totalSettledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'a6 base settled')
+            .eq(b6.fragSOLUserReward.userRewardPools1[0].rewardSettlements1[0].totalSettledAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base settled');
         expect(a6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base allocated')
             .eq(b6.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.divn(PRICING_DIFF_ERROR_MODIFIER).toNumber(), 'b6 base allocated');
 
         // added bonus pool settled amounts are different; A: 400, B: 200+200(x1.5) => A:B = 4:5
-        const a6BonusSettledAmountDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount
-            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount);
-        const b6BonusSettledAmountDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount
-            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledAmount);
-        const a6BonusSettledContribDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
-            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
-        const b6BonusSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution
-            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].settledContribution);
+        const a6BonusSettledAmountDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount
+            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount);
+        const b6BonusSettledAmountDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount
+            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledAmount);
+        const a6BonusSettledContribDelta = a6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution
+            .sub(a3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution);
+        const b6BonusSettledContribDelta = b6.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution
+            .sub(b3.fragSOLUserReward.userRewardPools1[1].rewardSettlements1[0].totalSettledContribution);
 
         expect((a6BonusSettledAmountDelta.toNumber() / b6BonusSettledAmountDelta.toNumber()).toPrecision(4), 'a6_amount / b6_amount')
             .eq((a6BonusSettledContribDelta.toNumber() / b6BonusSettledContribDelta.toNumber()).toPrecision(4), 'a6_contrib / b6_contrib');
@@ -187,4 +187,27 @@ describe("reward", async function () {
         expect(a6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(5)).toString(), 'a6_contrib x 5')
             .eq(b6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(4)).toString(), 'b6_contrib x 4');
     });
+
+    step("user can claim rewards", async () => {
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(0)});
+        await restaking.sleep(1);
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(5)});
+        await restaking.sleep(1);
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(0)});
+
+        await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
+        await restaking.runFundManagerUpdateReward({source: restaking.wallet, rewardName: "SWTCH", claimable: true, transferAmount: new BN(5)});
+        await restaking.sleep(1);
+
+        const res = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
+        expect(res.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(2);
+
+        await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
+        await restaking.runFundManagerSettleReward({source: restaking.wallet, poolName: "base", rewardName: "SWTCH", amount: new BN(5)});
+
+        const res1 = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
+        expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+    })
 });

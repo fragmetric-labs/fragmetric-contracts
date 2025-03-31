@@ -271,6 +271,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const [fragSOLReward] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward"), fragSOLTokenMintBuf], this.programId);
         const fragSOLUserReward = (user: web3.PublicKey) => web3.PublicKey.findProgramAddressSync([Buffer.from("user_reward"), fragSOLTokenMintBuf, user.toBuffer()], this.programId)[0];
         const fragSOLFundWrapAccountReward = fragSOLUserReward(fragSOLFundWrapAccount);
+        const [fragSOLRewardReserveAccount] = web3.PublicKey.findProgramAddressSync([Buffer.from("reward_reserve"), fragSOLTokenMintBuf], this.programId);
+        const fragSOLRewardTokenReserveAccount = (name: typeof this.distributingRewardsMetadata[number]["name"]) => {
+            const reward = this.distributingRewardsMetadata.find(r => r.name == name);
+            return reward.mint
+                ? spl.getAssociatedTokenAddressSync(reward.mint, fragSOLRewardReserveAccount, true, reward.program)
+                : null;
+        };
 
         // NTP
         const [nSOLTokenPool] = web3.PublicKey.findProgramAddressSync([Buffer.from("nt_pool"), nSOLTokenMintBuf], this.programId);
@@ -394,6 +401,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLReward,
             fragSOLUserReward,
             fragSOLFundWrapAccountReward,
+            fragSOLRewardReserveAccount,
+            fragSOLRewardTokenReserveAccount,
             // NTP
             nSOLTokenPool,
             nSOLSupportedTokenReserveAccount,
@@ -641,7 +650,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     mint: this.getConstantAsPublicKey("devnetJitosolMintAddress"),
                     program: spl.TOKEN_PROGRAM_ID,
                     decimals: 9,
-                }
+                },
+                SWTCH: {
+                    mint: this.keychain.getPublicKey("FAKE_SWTCH_MINT"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    decimals: 9,
+                },
             }
         } else {
             return {
@@ -655,7 +669,14 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                             address: this.getConstantAsPublicKey("mainnetJitosolStakePoolAddress"),
                         }
                     }
-                }
+                },
+                SWTCH: {
+                    mint: this.keychain.getPublicKey("FAKE_SWTCH_MINT"),
+                    program: spl.TOKEN_PROGRAM_ID,
+                    decimals: 9,
+                    // for test
+                    airdropSource: null,
+                },
             }
         }
     }
@@ -760,7 +781,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         }
     }
 
-    public async tryAirdropRewardToken(vault: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
+    public async tryAirdropRewardToken(owner: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
         const token = this.rewardTokenMetadata[symbol];
         let balanceBefore: BN;
 
@@ -769,7 +790,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.connection,
                 this.wallet,
                 token.mint,
-                vault,
+                owner,
                 true,
                 "confirmed",
                 {
@@ -781,7 +802,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             balanceBefore = new BN(ata.amount.toString());
 
             // If reward token is SPL stake pool token
-            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource["splStakePool"]?.address ?? null;
+            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource?.splStakePool?.address ?? null;
             if (splStakePoolAddress) {
                 const {instructions, signers} = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, lamports.toNumber(), ata.address);
                 return await this.run({instructions, signers});
@@ -806,7 +827,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const ata = await (async () => {
             const ata = spl.getAssociatedTokenAddressSync(
                 token.mint,
-                vault,
+                owner,
                 true,
                 token.program,
             );
@@ -3022,9 +3043,16 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             {
                 name: "fPoint",
                 description: "Airdrop point for fToken",
-                type: {point: {decimals: 4}},
-                tokenMint: null,
-                tokenProgram: null,
+                mint: null,
+                program: null,
+                decimals: 4,
+            },
+            {
+                name: "SWTCH",
+                description: "Switchboard Token",
+                mint: this.rewardTokenMetadata["SWTCH"].mint,
+                program: this.rewardTokenMetadata["SWTCH"].program,
+                decimals: this.rewardTokenMetadata["SWTCH"].decimals,
             },
         ];
     }
@@ -3039,15 +3067,44 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return [
             {
                 name: "base",
-                holderId: null,
                 customAccrualRateEnabled: false,
             },
             {
                 name: "bonus",
-                holderId: null,
                 customAccrualRateEnabled: true,
             },
         ];
+    }
+
+    public async runAdminInitializeTestingSWTCHTokenReward() {
+        if (this.isMainnet) throw new Error("NOT READY FOR MAINNET SWTCH MINT");
+
+        const rewardToken = this.rewardTokenMetadata["SWTCH"];
+
+        const mintSize = spl.getMintLen([]);
+        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
+
+        const {event, error} = await this.run({
+            instructions: [
+                web3.SystemProgram.createAccount({
+                    fromPubkey: this.wallet.publicKey,
+                    newAccountPubkey: rewardToken.mint,
+                    lamports: lamports,
+                    space: mintSize,
+                    programId: rewardToken.program,
+                }),
+                spl.createInitializeMintInstruction(
+                    rewardToken.mint,
+                    rewardToken.decimals,
+                    this.keychain.getPublicKey("ALL_MINT_AUTHORITY"),
+                    null, // freeze authority to be null
+                    rewardToken.program,
+                ),
+            ],
+            signerNames: ["FAKE_SWTCH_MINT"],
+        })
+        logger.notice(`created fake SWTCH mint`.padEnd(LOG_PAD_LARGE), rewardToken.mint.toString());
+        return {event, error};
     }
 
     public async runFundManagerInitializeRewardPools() {
@@ -3055,7 +3112,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 ...this.rewardPoolsMetadata.map((v) => {
                     return this.program.methods
-                        .fundManagerAddRewardPool(v.name, v.holderId, v.customAccrualRateEnabled)
+                        .fundManagerAddRewardPool(v.name, v.customAccrualRateEnabled)
                         .accountsPartial({
                             receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         })
@@ -3063,11 +3120,19 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 }),
                 ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
-                        .fundManagerAddReward(v.name, v.description, v.type)
+                        .fundManagerAddReward(
+                            v.name,
+                            v.description,
+                            v.mint ?? web3.SystemProgram.programId,
+                            v.program ?? web3.SystemProgram.programId,
+                            v.decimals,
+                            false,
+                        )
                         .accountsPartial({
                             receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                            rewardTokenMint: v.tokenMint ?? this.programId,
-                            rewardTokenProgram: v.tokenProgram ?? this.programId,
+                            rewardTokenMint: this.programId,
+                            rewardTokenProgram: this.programId,
+                            rewardTokenReserveAccount: this.programId,
                         })
                         .instruction();
                 }),
@@ -3081,25 +3146,145 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward};
     }
 
-    public async runFundManagerSettleReward(args: {
-        poolName: (typeof this.rewardPoolsMetadata)[number]["name"];
-        rewardName: (typeof this.rewardsMetadata)[number]["name"];
-        amount: BN
+    public async runFundManagerUpdateReward(args: {
+        source?: web3.Keypair,
+        rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
+        claimable: boolean,
+        transferAmount?: BN,
     }) {
-        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == args.poolName);
-        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == args.rewardName);
+        const { source, rewardName, claimable, transferAmount } = args;
+        const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
-        const rewardTokenMint = this.binIsEmpty(reward.tokenMint.toBuffer()) ? this.programId : reward.tokenMint;
-        const rewardTokenProgram = this.binIsEmpty(reward.tokenProgram.toBuffer()) ? this.programId : reward.tokenProgram;
+        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
+        const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
+        const sourceRewardTokenAccount = claimable ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
+            rewardMetadata.mint,
+            source.publicKey,
+            false,
+            rewardMetadata.program,
+        ) : null : null;
+
+        const instructions = [
+            ...(rewardTokenReserveAccount ? [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    rewardTokenReserveAccount,
+                    this.knownAddress.fragSOLRewardReserveAccount,
+                    rewardMetadata.mint,
+                    rewardMetadata.program,
+                ),
+            ]: []),
+            ...(sourceRewardTokenAccount ? [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    sourceRewardTokenAccount,
+                    sourceRewardTokenAccountOwner,
+                    rewardMetadata.mint,
+                    rewardMetadata.program,
+                ),
+            ] : []),
+            ...(claimable && transferAmount?.toNumber() ? [
+                spl.createTransferCheckedInstruction(
+                    sourceRewardTokenAccount,
+                    rewardMetadata.mint,
+                    rewardTokenReserveAccount,
+                    sourceRewardTokenAccountOwner,
+                    transferAmount.toNumber(),
+                    rewardMetadata.decimals,
+                    undefined,
+                    rewardMetadata.program,
+                )
+            ] : []),
+            this.program.methods
+                .fundManagerUpdateReward(reward.id, rewardMetadata.mint, rewardMetadata.program, rewardMetadata.decimals, claimable)
+                .accountsPartial({
+                    receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    rewardTokenMint: rewardMetadata.mint ?? this.programId,
+                    rewardTokenProgram: rewardMetadata.program ?? this.programId,
+                    rewardTokenReserveAccount: rewardTokenReserveAccount ?? this.programId,
+                })
+                .instruction(),
+        ];
+
+        const {event, error} = await this.run({
+            instructions,
+            signers: [source],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedRewardPool"],
+        });
+
+        logger.notice(`updated fragSOL reward=${reward.id}/${rewardName}, mint=${rewardMetadata.mint}, claimable=${claimable}`);
+        fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        return {event, error, fragSOLReward, reward};
+    }
+
+    public async runFundManagerSettleReward(args: {
+        source?: web3.Keypair,
+        poolName: (typeof this.rewardPoolsMetadata)[number]["name"],
+        rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
+        amount: BN,
+    }) {
+        const { source, poolName, rewardName, amount } = args;
+        const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
+
+        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const claimable = reward.claimable;
+        const rewardTokenReserveAccount = claimable ? this.knownAddress.fragSOLRewardTokenReserveAccount(rewardName) : null;
+        const sourceRewardTokenAccountOwner = claimable ? source?.publicKey ?? null : null;
+        const sourceRewardTokenAccount = claimable ? rewardMetadata.mint ? spl.getAssociatedTokenAddressSync(
+            rewardMetadata.mint,
+            source.publicKey,
+            false,
+            rewardMetadata.program,
+        ) : null : null;
+
         const {event, error} = await this.run({
             instructions: [
+                ...(rewardTokenReserveAccount ? [
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        this.wallet.publicKey,
+                        rewardTokenReserveAccount,
+                        this.knownAddress.fragSOLRewardReserveAccount,
+                        rewardMetadata.mint,
+                        rewardMetadata.program,
+                    ),
+                ]: []),
+                ...(sourceRewardTokenAccount ? [
+                    spl.createAssociatedTokenAccountIdempotentInstruction(
+                        this.wallet.publicKey,
+                        sourceRewardTokenAccount,
+                        sourceRewardTokenAccountOwner,
+                        rewardMetadata.mint,
+                        rewardMetadata.program,
+                    ),
+                ] : []),
+                ...(claimable && amount.toNumber() ? [
+                    spl.createTransferCheckedInstruction(
+                        sourceRewardTokenAccount,
+                        rewardMetadata.mint,
+                        rewardTokenReserveAccount,
+                        sourceRewardTokenAccountOwner,
+                        amount.toNumber(),
+                        rewardMetadata.decimals,
+                        undefined,
+                        rewardMetadata.program,
+                    )
+                ] : []),
                 this.program.methods
-                    .fundManagerSettleReward(rewardPool.id, reward.id, args.amount)
+                    .fundManagerSettleReward(rewardPool.id, reward.id, amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        rewardTokenMint,
-                        rewardTokenProgram,
+                        rewardTokenMint: rewardMetadata.mint ?? this.programId,
+                        rewardTokenProgram: rewardMetadata.program ?? this.programId,
+                        rewardTokenReserveAccount: rewardTokenReserveAccount ?? this.programId,
                     })
                     .instruction(),
             ],
@@ -3107,12 +3292,62 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["fundManagerUpdatedRewardPool"],
         });
 
-        logger.notice(`settled fragSOL reward to pool=${rewardPool.id}/${args.poolName}, rewardId=${reward.id}/${args.rewardName}, amount=${args.amount.toString()} (decimals=${reward.decimals})`);
+        logger.notice(`settled fragSOL reward to pool=${rewardPool.id}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${amount.toString()} (decimals=${reward.decimals})`);
         fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == args.poolName);
-        reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == args.rewardName);
+        rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         return {event, error, fragSOLReward, rewardPool, reward};
+    }
+
+    public async runUserClaimReward(user: web3.Keypair, args: {
+        poolName: (typeof this.rewardPoolsMetadata)[number]["name"],
+        rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
+    }) {
+        const { poolName, rewardName } = args;
+        const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
+
+        let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const userRewardTokenAccount = spl.getAssociatedTokenAddressSync(
+            rewardMetadata.mint,
+            user.publicKey,
+            false,
+            rewardMetadata.program,
+        );
+
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    userRewardTokenAccount,
+                    user.publicKey,
+                    rewardMetadata.mint,
+                    rewardMetadata.program,
+                ),
+                this.methods.userClaimReward(rewardPool.id, reward.id)
+                    .accountsPartial({
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                        rewardTokenMint: rewardMetadata.mint,
+                        rewardTokenProgram: rewardMetadata.program,
+                        userRewardTokenAccount,
+                    })
+                    .instruction(),
+            ],
+            signers: [user],
+            events: ["userClaimedReward"],
+        });
+
+        logger.notice(`user claimed fragSOL reward from pool=${rewardPool.id}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${event.userClaimedReward.claimedRewardTokenAmount.toString()}`);
+        fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
+        rewardPool = fragSOLReward.rewardPools1[rewardPool.id];
+        const userFragSOLReward = await this.getUserFragSOLRewardAccount(user.publicKey);
+        const userRewardPool = userFragSOLReward.userRewardPools1[rewardPool.id];
+
+        return {event, error, fragSOLReward, rewardPool, userFragSOLReward, userRewardPool};
     }
 
     private async getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user: web3.Keypair) {
@@ -4102,68 +4337,5 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             event: tx.event,
             error: tx.error,
         };
-    }
-
-    public async runFundManagerRegisterTestingSWTCHTokenReward() {
-        if (this.isMainnet) throw new Error('NOT READY FOR MAINNET SWTCH MINT');
-
-        const rewardToken = {
-            mint: this.keychain.getPublicKey('FAKE_SWTCH_MINT'),
-            program: spl.TOKEN_PROGRAM_ID,
-            decimals: 9,
-        };
-
-        const mintSize = spl.getMintLen([]);
-        const lamports = await this.connection.getMinimumBalanceForRentExemption(mintSize);
-
-        await this.run({
-            instructions: [
-                web3.SystemProgram.createAccount({
-                    fromPubkey: this.wallet.publicKey,
-                    newAccountPubkey: rewardToken.mint,
-                    lamports: lamports,
-                    space: mintSize,
-                    programId: rewardToken.program,
-                }),
-                spl.createInitializeMintInstruction(
-                    rewardToken.mint,
-                    rewardToken.decimals,
-                    this.keychain.getPublicKey("ALL_MINT_AUTHORITY"),
-                    null, // freeze authority to be null
-                    rewardToken.program,
-                ),
-            ],
-            signerNames: ["FAKE_SWTCH_MINT"],
-        });
-        logger.notice(`created fake SWTCH mint`.padEnd(LOG_PAD_LARGE), rewardToken.mint.toString());
-
-        await this.sleep(100);
-
-        const {event, error} = await this.run({
-            instructions: [
-                ...this.distributingRewardsMetadata.map((v) => {
-                    return this.program.methods
-                        .fundManagerAddReward('SWTCH', 'Switchboard Token', {
-                            token: rewardToken
-                        })
-                        .accountsPartial({
-                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                            rewardTokenMint: rewardToken.mint,
-                            rewardTokenProgram: rewardToken.program,
-                        })
-                        .instruction();
-                }),
-            ],
-            signerNames: ["FUND_MANAGER"],
-            events: ["fundManagerUpdatedRewardPool"],
-        });
-
-        logger.notice(`configured fragSOL reward (SWTCH)`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragSOLReward.toString());
-        const fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        return {event, error, fragSOLReward};
-    }
-
-    public async runFundManagerSettleSWTCHTokenReward(amount: BN) {
-        return this.runFundManagerSettleReward({ poolName: "base", rewardName: "SWTCH", amount });
     }
 }

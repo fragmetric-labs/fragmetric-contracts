@@ -8,7 +8,6 @@ use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
 use crate::modules::reward;
-use crate::modules::reward::RewardService;
 use crate::utils::*;
 
 use super::commands::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
@@ -47,11 +46,23 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         pricing_sources: I,
     ) -> Result<PricingService<'info>>
     where
-        I: IntoIterator<Item = &'info AccountInfo<'info>>,
+        I: IntoIterator<Item = &'info AccountInfo<'info>> + Clone,
         I::IntoIter: ExactSizeIterator,
     {
-        let mut pricing_service = PricingService::new(pricing_sources)?
-            .register_token_pricing_source_account(self.fund_account.as_account_info());
+        let mut pricing_service = if pricing_sources
+            .clone()
+            .into_iter()
+            .find(|source| source.key() == self.fund_account.key())
+            .is_some()
+        {
+            PricingService::new(pricing_sources)
+        } else {
+            PricingService::new(
+                pricing_sources
+                    .into_iter()
+                    .chain([self.fund_account.as_account_info()]),
+            )
+        };
 
         // try to update current underlying assets' price
         self.update_asset_values(&mut pricing_service)?;
@@ -273,21 +284,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         )?;
 
         // transfer source's reward accrual rate to destination
-        let event = match (
-            &source_reward_account_option,
-            &destination_reward_account_option,
-        ) {
-            (None, None) => None,
-            _ => Some(
-                RewardService::new(self.receipt_token_mint, reward_account)?
-                    .update_reward_pools_token_allocation(
-                        source_reward_account_option.as_mut(),
-                        destination_reward_account_option.as_mut(),
-                        transfer_amount,
-                        None,
-                    )?,
-            ),
-        };
+        let updated_user_reward_accounts =
+            reward::RewardService::new(self.receipt_token_mint, reward_account)?
+                .update_reward_pools_token_allocation(
+                    source_reward_account_option.as_mut(),
+                    destination_reward_account_option.as_mut(),
+                    transfer_amount,
+                    None,
+                )?;
 
         // sync user fund accounts
         if let Some(source_fund_account) = source_fund_account_option.as_deref_mut() {
@@ -307,9 +311,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         Ok(events::UserTransferredReceiptToken {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
-            updated_user_reward_accounts: event
-                .map(|event| event.updated_user_reward_accounts)
-                .unwrap_or_default(),
+            updated_user_reward_accounts,
 
             source: source_receipt_token_account.owner,
             source_receipt_token_account: source_receipt_token_account.key(),
