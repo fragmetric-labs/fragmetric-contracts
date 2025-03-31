@@ -27,8 +27,8 @@ impl UserRewardSettlement {
     /// Settle [RewardSettlementBlock]s from corresponding [RewardSettlement].
     ///
     /// All blocks whose ending_slot <= last_settled_slot are already settled.
-    /// All the other blocks, including transparent blocks are obviously
-    /// created after last update, so ending_slot >= last_updated_slot.
+    /// All the other blocks are obviously created after last update,
+    /// so ending_slot >= last_updated_slot.
     ///
     /// this operation is idempotent
     pub fn settle_reward(
@@ -38,7 +38,7 @@ impl UserRewardSettlement {
         last_contribution: u128,
         last_updated_slot: u64,
     ) -> Result<()> {
-        if self.last_settled_slot >= reward_settlement.settlement_blocks_last_slot {
+        if self.last_settled_slot == reward_settlement.settlement_blocks_last_slot {
             // All settlement blocks are already settled.
             return Ok(());
         }
@@ -49,8 +49,7 @@ impl UserRewardSettlement {
             .skip_while(|block| block.ending_slot <= last_settled_slot)
         {
             if block.starting_slot > self.last_settled_slot {
-                // There is a transparent block between last settled block and this block.
-                // Maybe more than one, but it doesn't matter because block settled amount is 0.
+                // There is a gap between last settled block and this block so just follow up the contribution.
                 self.add_block_settled_contribution(
                     last_contribution,
                     last_updated_slot,
@@ -70,8 +69,7 @@ impl UserRewardSettlement {
         }
 
         if self.last_settled_slot < reward_settlement.settlement_blocks_last_slot {
-            // There is a transparent block after last settled block
-            // Maybe more than one, but it doesn't matter because block settled amount is 0.
+            // There is a gap after last settled block so just follow up the contribution.
             self.add_block_settled_contribution(
                 last_contribution,
                 last_updated_slot,
@@ -80,13 +78,18 @@ impl UserRewardSettlement {
             );
         }
 
+        require_eq!(
+            self.last_settled_slot,
+            reward_settlement.settlement_blocks_last_slot,
+        );
+
         Ok(())
     }
 
     /// We known ending_slot >= last_updated_slot,
     /// and starting_slot = last_settled_slot.
     /// So there are only two cases:
-    /// case 1(last_updated_slot < last_settled_slot): updated...[staring...ending)
+    /// case 1(last_updated_slot < last_settled_slot): updated...[starting...ending)
     /// case 2(last_updated_slot >= last_settled_slot): [starting...updated...ending)
     ///
     /// returns user_block_settled_contribution
@@ -168,7 +171,7 @@ mod tests {
         // user minted 1 lamports at slot=15
         user_total_contribution_accrual_rate = 1_00; // 1 lamports
 
-        // new block (0, [10, 20)) at slot=20, which is transparent
+        // new block (0, [10, 20)) at slot=20
         current_slot += 5;
         current_reward_pool_contribution += 2_00 * 5; // 2 lamports * 5 slots
         reward_settlement
@@ -182,7 +185,7 @@ mod tests {
             .settle_reward(10, current_reward_pool_contribution, current_slot)
             .unwrap();
 
-        // new block (0, [30, 40)) at slot=40, which is transparent
+        // new block (0, [30, 40)) at slot=40
         current_slot += 10;
         current_reward_pool_contribution += 2_00 * 10; // 2 lamports * 10 slots
         reward_settlement

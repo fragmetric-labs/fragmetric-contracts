@@ -63,7 +63,7 @@ impl TokenAllocatedAmount {
             ErrorCode::RewardInvalidAccountingException,
         );
 
-        self.clear_empty_records();
+        self.clear_stale_records();
         self.sort_records();
 
         Ok(effective_deltas)
@@ -136,19 +136,20 @@ impl TokenAllocatedAmount {
         Ok(())
     }
 
-    fn clear_empty_records(&mut self) {
+    /// record is stale if amount = 0 and contribution accrual rate != 1.0.
+    fn clear_stale_records(&mut self) {
         let mut l = 0;
         let mut r = self.num_records as usize;
 
         loop {
-            // 1. move l to right until record[l] is empty
-            // invariant: record[0..l] are all non-empty
-            while l < self.num_records as usize && self.records[l].amount != 0 {
+            // 1. move l to right until record[l] is stale
+            // invariant: record[0..l] are all non-stale
+            while l < self.num_records as usize && !self.records[l].is_stale() {
                 l += 1;
             }
-            // 2. move r to left until record[r-1] is non-empty
-            // invariant: record[r..n] are all empty
-            while r > 0 && self.records[r - 1].amount == 0 {
+            // 2. move r to left until record[r-1] is non-stale
+            // invariant: record[r..n] are all stale
+            while r > 0 && self.records[r - 1].is_stale() {
                 r -= 1;
             }
 
@@ -194,6 +195,11 @@ impl TokenAllocatedAmountRecord {
     #[inline(always)]
     fn get_total_contribution_accrual_rate(&self) -> u64 {
         self.amount * self.contribution_accrual_rate as u64
+    }
+
+    /// record is stale if amount = 0 and contribution accrual rate != 1.0.
+    fn is_stale(&self) -> bool {
+        self.amount == 0 && self.contribution_accrual_rate != MIN_CONTRIBUTION_ACCRUAL_RATE
     }
 }
 
@@ -257,7 +263,7 @@ impl TokenAllocatedAmountDelta {
 }
 
 /// Auxillary type for better code - represents either a single delta or multiple deltas
-enum OneOrManyDeltas<T: Iterator<Item = TokenAllocatedAmountDelta>> {
+enum OneOrManyDeltas<T: IntoIterator<Item = TokenAllocatedAmountDelta>> {
     Single(TokenAllocatedAmountDelta),
     Multiple(T),
 }
@@ -267,14 +273,14 @@ enum OneOrManyDeltasIter<T: Iterator<Item = TokenAllocatedAmountDelta>> {
     Multiple(T),
 }
 
-impl<T: Iterator<Item = TokenAllocatedAmountDelta>> IntoIterator for OneOrManyDeltas<T> {
+impl<T: IntoIterator<Item = TokenAllocatedAmountDelta>> IntoIterator for OneOrManyDeltas<T> {
     type Item = TokenAllocatedAmountDelta;
-    type IntoIter = OneOrManyDeltasIter<T>;
+    type IntoIter = OneOrManyDeltasIter<T::IntoIter>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
             Self::Single(single) => OneOrManyDeltasIter::Single(Some(single).into_iter()),
-            Self::Multiple(multiple) => OneOrManyDeltasIter::Multiple(multiple),
+            Self::Multiple(multiple) => OneOrManyDeltasIter::Multiple(multiple.into_iter()),
         }
     }
 }
@@ -309,7 +315,7 @@ mod tests {
             record
         });
 
-        amount.clear_empty_records();
+        amount.clear_stale_records();
         amount.sort_records();
 
         assert_eq!(amount.num_records, 4);
@@ -341,8 +347,11 @@ mod tests {
         assert_eq!(effective_deltas[1].amount, 50);
         assert_eq!(effective_deltas[1].contribution_accrual_rate, Some(120));
 
-        assert_eq!(amount.num_records, 1);
-        assert_eq!(amount.records[0].amount, 50);
-        assert_eq!(amount.records[0].contribution_accrual_rate, 120);
+        // default(rate = 1.0) record is not removed
+        assert_eq!(amount.num_records, 2);
+        assert_eq!(amount.records[0].amount, 0);
+        assert_eq!(amount.records[0].contribution_accrual_rate, 100);
+        assert_eq!(amount.records[1].amount, 50);
+        assert_eq!(amount.records[1].contribution_accrual_rate, 120);
     }
 }

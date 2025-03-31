@@ -100,7 +100,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         })
     }
 
-    pub fn process_claim_user_rewards(
+    pub fn process_claim_user_reward(
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
         reward_token_program: &Interface<'info, TokenInterface>,
@@ -148,8 +148,8 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         Ok(events::UserClaimedReward {
             receipt_token_mint: self.receipt_token_mint.key(),
             reward_token_mint: reward_token_mint.key(),
-            reward_account: self.reward_account.key(),
-            user_reward_account: self.user_reward_account.key(),
+            updated_reward_account: self.reward_account.key(),
+            updated_user_reward_account: self.user_reward_account.key(),
             claimed_reward_token_amount: claimed_amount,
             total_claimed_reward_token_amount: total_claimed_amount,
         })

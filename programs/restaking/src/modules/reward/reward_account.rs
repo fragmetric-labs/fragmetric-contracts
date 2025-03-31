@@ -9,7 +9,7 @@ use super::*;
 #[constant]
 /// ## Version History
 /// * v34: Initial Version (Data Size = 342072 ~= 335KB)
-/// * v35: remove holder (Data Size = 348160 = 340KB)
+/// * v35: remove holder (Data Size = 342072 ~= 335KB)
 pub const REWARD_ACCOUNT_CURRENT_VERSION: u16 = 35;
 const REWARD_ACCOUNT_REWARDS_MAX_LEN_1: usize = 16;
 const REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
@@ -37,8 +37,6 @@ pub struct RewardAccount {
 
     rewards_1: [Reward; REWARD_ACCOUNT_REWARDS_MAX_LEN_1],
     reward_pools_1: [RewardPool; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
-
-    _reserved1: [u8; 6088],
 }
 
 impl PDASeeds<3> for RewardAccount {

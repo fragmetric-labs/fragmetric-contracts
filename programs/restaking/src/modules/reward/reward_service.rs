@@ -77,7 +77,7 @@ impl<'a, 'info> RewardService<'a, 'info> {
             err!(ErrorCode::RewardInvalidTransferArgsException)?
         }
 
-        if amount == 0 {
+        if amount == 0 || from_user_reward_account.is_none() && to_user_reward_account.is_none() {
             return Ok(vec![]);
         }
 

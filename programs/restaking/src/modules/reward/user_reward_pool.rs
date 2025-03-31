@@ -48,6 +48,22 @@ impl UserRewardPool {
         self.reward_settlements_1[..self.num_reward_settlements as usize].iter()
     }
 
+    #[inline(always)]
+    pub fn get_reward_settlements_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut UserRewardSettlement> {
+        self.reward_settlements_1[..self.num_reward_settlements as usize].iter_mut()
+    }
+
+    pub fn get_reward_settlement_mut(
+        &mut self,
+        reward_id: u16,
+    ) -> Result<&mut UserRewardSettlement> {
+        self.get_reward_settlements_iter_mut()
+            .find(|s| s.reward_id == reward_id)
+            .ok_or_else(|| error!(ErrorCode::RewardSettlementNotFoundError))
+    }
+
     fn get_or_add_reward_settlement_mut(
         &mut self,
         reward_id: u16,
@@ -140,10 +156,8 @@ impl UserRewardPool {
         self.update_user_reward_pool(reward_pool, current_slot)?;
 
         // Claim reward
-        let reward_pool_initial_slot = reward_pool.initial_slot;
         let reward_settlement = reward_pool.get_reward_settlement_mut(reward_id)?;
-        let user_reward_settlement =
-            self.get_or_add_reward_settlement_mut(reward_id, reward_pool_initial_slot)?;
+        let user_reward_settlement = self.get_reward_settlement_mut(reward_id)?;
 
         let claimed_amount =
             user_reward_settlement.claim_reward(reward_settlement, current_slot)?;

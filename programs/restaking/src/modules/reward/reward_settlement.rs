@@ -76,45 +76,16 @@ impl RewardSettlement {
     }
 
     /// first clear stale settlement blocks and then create new settlement block.
-    ///
-    /// when block has amount 0, they are not added to settlement block queue for efficiency.
-    /// these blocks are called "transparent", and amount == 0 is guaranteed for them.
-    ///
-    /// when block has contribution 0, they are stale block so cleared immediately.
     pub fn settle_reward(
         &mut self,
         amount: u64,
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        // Prevent settlement block with non-positive block height
-        require_gt!(
-            current_slot,
-            self.settlement_blocks_last_slot,
-            ErrorCode::RewardInvalidSettlementBlockHeightException,
-        );
-
-        // Prevent settlement block with negative block contribution
-        require_gte!(
-            current_reward_pool_contribution,
-            self.settlement_blocks_last_reward_pool_contribution,
-            ErrorCode::RewardInvalidSettlementBlockContributionException,
-        );
-
         self.clear_stale_settlement_blocks();
+        self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
 
-        if amount > 0 {
-            self.settled_amount += amount;
-            if current_reward_pool_contribution
-                == self.settlement_blocks_last_reward_pool_contribution
-            {
-                // block with contribution 0 is already stale so immediately clear
-                self.remaining_amount += amount;
-            } else {
-                self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
-            }
-        }
-
+        self.settled_amount += amount;
         self.settlement_blocks_last_slot = current_slot;
         self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
 
@@ -131,6 +102,20 @@ impl RewardSettlement {
             REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN,
             self.num_settlement_blocks as usize,
             ErrorCode::RewardExceededMaxRewardSettlementBlockError
+        );
+
+        // Prevent settlement block with non-positive block height
+        require_gt!(
+            current_slot,
+            self.settlement_blocks_last_slot,
+            ErrorCode::RewardInvalidSettlementBlockHeightException,
+        );
+
+        // Prevent settlement block with negative block contribution
+        require_gte!(
+            current_reward_pool_contribution,
+            self.settlement_blocks_last_reward_pool_contribution,
+            ErrorCode::RewardInvalidSettlementBlockContributionException,
         );
 
         // push_back
@@ -190,17 +175,14 @@ impl RewardSettlementBlock {
         self.ending_reward_pool_contribution = ending_reward_pool_contribution;
     }
 
-    /// Block contribution is always > 0
     #[inline(always)]
     pub fn get_block_contribution(&self) -> u128 {
         self.ending_reward_pool_contribution - self.starting_reward_pool_contribution
     }
 
-    /// Blocks with amount 0 need not be in settlement block queue.
-    /// Therefore they are treated as stale for efficiency.
     #[inline(always)]
     pub fn is_stale(&self) -> bool {
-        self.amount == 0 || self.user_settled_contribution == self.get_block_contribution()
+        self.user_settled_contribution == self.get_block_contribution()
     }
 
     #[inline(always)]
@@ -214,7 +196,6 @@ impl RewardSettlementBlock {
             return Ok(0);
         }
 
-        // TODO: use big int arithmetic
         let amount = (self.amount as u128)
             .checked_mul(contribution)
             .and_then(|v| v.checked_div(self.get_block_contribution()))
@@ -300,22 +281,6 @@ mod tests {
             settlement.settlement_blocks_last_reward_pool_contribution;
         assert_eq!(settlement_blocks_last_reward_pool_contribution, 6);
         assert_eq!(settlement.settlement_blocks_last_slot, 3);
-        assert_eq!(settlement.num_settlement_blocks, 2);
-        assert_eq!(settlement.settlement_blocks_head, 62);
-        assert_eq!(settlement.settlement_blocks_tail, 0);
-        assert_eq!(settlement.get_settlement_blocks_iter_mut().count(), 2);
-        settlement
-            .get_settlement_blocks_iter_mut()
-            .enumerate()
-            .for_each(|(i, block)| assert_eq!(block.amount, 2 + (62 + i as u64) % 64));
-
-        settlement.settle_reward(0, 8, 4).unwrap(); // transparent
-
-        assert_eq!(settlement.settled_amount, 192);
-        let settlement_blocks_last_reward_pool_contribution =
-            settlement.settlement_blocks_last_reward_pool_contribution;
-        assert_eq!(settlement_blocks_last_reward_pool_contribution, 8);
-        assert_eq!(settlement.settlement_blocks_last_slot, 4);
         assert_eq!(settlement.num_settlement_blocks, 2);
         assert_eq!(settlement.settlement_blocks_head, 62);
         assert_eq!(settlement.settlement_blocks_tail, 0);

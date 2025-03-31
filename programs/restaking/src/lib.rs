@@ -1247,7 +1247,7 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn user_claim_rewards(
+    pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,
         reward_pool_id: u8,
         reward_id: u16,
@@ -1258,7 +1258,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.user_reward_account,
         )?
-        .process_claim_user_rewards(
+        .process_claim_user_reward(
             &ctx.accounts.reward_token_mint,
             &ctx.accounts.reward_token_program,
             &ctx.accounts.reward_reserve_account,
