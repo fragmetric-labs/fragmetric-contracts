@@ -50,6 +50,10 @@ describe("initialize", async () => {
         expect(fragSOLExtraAccountMetasAccount.length).eq(8);
     })
 
+    step("initialize fake SWTCH reward token", async () => {
+        await restaking.runAdminInitializeTestingSWTCHTokenReward();
+    })
+
     step("initialize reward pools and rewards", async function () {
         const res0 = await restaking.runFundManagerInitializeRewardPools();
 

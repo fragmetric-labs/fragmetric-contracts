@@ -187,4 +187,27 @@ describe("reward", async function () {
         expect(a6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(5)).toString(), 'a6_contrib x 5')
             .eq(b6BonusSettledContribDelta.divn(PRICING_DIFF_ERROR_MODIFIER).mul(new BN(4)).toString(), 'b6_contrib x 4');
     });
+
+    step("user can claim rewards", async () => {
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(0)});
+        await restaking.sleep(1);
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(5)});
+        await restaking.sleep(1);
+        await restaking.runFundManagerSettleReward({poolName: "base", rewardName: "SWTCH", amount: new BN(0)});
+
+        await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
+        await restaking.runFundManagerUpdateReward({source: restaking.wallet, rewardName: "SWTCH", claimable: true});
+        await restaking.sleep(1);
+
+        const res = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
+        expect(res.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(2);
+
+        await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
+        await restaking.runFundManagerSettleReward({source: restaking.wallet, poolName: "base", rewardName: "SWTCH", amount: new BN(5), transfer: true});
+
+        const res1 = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
+        expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+    })
 });

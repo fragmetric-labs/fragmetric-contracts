@@ -174,6 +174,7 @@ impl RewardAccount {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
+        claimable: bool,
     ) -> Result<()> {
         if self
             .get_rewards_iter()
@@ -195,6 +196,7 @@ impl RewardAccount {
             mint,
             program,
             decimals,
+            claimable,
         )?;
         self.num_rewards += 1;
 

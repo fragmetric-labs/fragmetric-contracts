@@ -563,12 +563,23 @@ pub mod restaking {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
+        claimable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.reward_account,
         )?
-        .process_add_reward(name, description, mint, program, decimals)?);
+        .process_add_reward(
+            ctx.accounts.reward_token_mint.as_deref(),
+            ctx.accounts.reward_token_program.as_ref(),
+            ctx.accounts.reward_token_reserve_account.as_deref(),
+            name,
+            description,
+            mint,
+            program,
+            decimals,
+            claimable,
+        )?);
 
         Ok(())
     }
@@ -576,6 +587,9 @@ pub mod restaking {
     pub fn fund_manager_update_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         reward_id: u16,
+        mint: Option<Pubkey>,
+        program: Option<Pubkey>,
+        decimals: Option<u8>,
         claimable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
@@ -587,8 +601,11 @@ pub mod restaking {
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
             ctx.accounts.source_reward_token_account.as_deref(),
-            Some(&ctx.accounts.fund_manager),
+            ctx.accounts.source_reward_token_account_owner.as_ref(),
             reward_id,
+            mint,
+            program,
+            decimals,
             claimable,
         )?);
 
@@ -611,7 +628,7 @@ pub mod restaking {
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
             ctx.accounts.source_reward_token_account.as_deref(),
-            Some(&ctx.accounts.fund_manager),
+            ctx.accounts.source_reward_token_account_owner.as_ref(),
             reward_pool_id,
             reward_id,
             amount,
@@ -1230,7 +1247,6 @@ pub mod restaking {
         Ok(())
     }
 
-    #[allow(unused_variables)]
     pub fn user_claim_rewards(
         ctx: Context<UserRewardClaimContext>,
         reward_pool_id: u8,
@@ -1247,7 +1263,7 @@ pub mod restaking {
             &ctx.accounts.reward_token_program,
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
-            &ctx.accounts.destination_reward_token_account,
+            &ctx.accounts.user_reward_token_account,
             reward_pool_id,
             reward_id,
         )?);

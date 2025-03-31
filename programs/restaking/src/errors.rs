@@ -32,11 +32,11 @@ pub enum ErrorCode {
     #[msg("reward: invalid metadata description length")]
     RewardInvalidMetadataDescriptionLengthError,
 
-    #[msg("reward: reward is claimable")]
-    RewardClaimableError,
+    #[msg("reward: reward is already claimable")]
+    RewardAlreadyClaimableError,
 
     #[msg("reward: not enough rewards to claim")]
-    RewardNotEnoughRewardsError,
+    RewardNotEnoughRewardsToClaimError,
 
     #[msg("reward: already existing reward")]
     RewardAlreadyExistingRewardError,
@@ -44,9 +44,8 @@ pub enum ErrorCode {
     #[msg("reward: already existing pool")]
     RewardAlreadyExistingPoolError,
 
-    // deprecated
-    #[msg("reward: holder not found")]
-    RewardHolderNotFoundError,
+    #[msg("reward: settlement not found")]
+    RewardSettlementNotFoundError,
 
     #[msg("reward: reward not found")]
     RewardNotFoundError,

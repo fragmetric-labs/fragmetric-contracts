@@ -48,7 +48,7 @@ impl UserRewardPool {
         self.reward_settlements_1[..self.num_reward_settlements as usize].iter()
     }
 
-    pub fn get_or_add_reward_settlement_mut(
+    fn get_or_add_reward_settlement_mut(
         &mut self,
         reward_id: u16,
         reward_pool_initial_slot: u64,
@@ -129,22 +129,26 @@ impl UserRewardPool {
         }
     }
 
+    /// returns [claimed amount, total claimed amount]
     pub fn claim_reward(
         &mut self,
         reward_pool: &mut RewardPool,
         reward_id: u16,
         current_slot: u64,
-    ) -> Result<u64> {
+    ) -> Result<(u64, u64)> {
         // First update reward pool
         self.update_user_reward_pool(reward_pool, current_slot)?;
 
         // Claim reward
         let reward_pool_initial_slot = reward_pool.initial_slot;
-        let reward_settlement =
-            reward_pool.get_or_add_reward_settlement_mut(reward_id, current_slot)?;
+        let reward_settlement = reward_pool.get_reward_settlement_mut(reward_id)?;
         let user_reward_settlement =
             self.get_or_add_reward_settlement_mut(reward_id, reward_pool_initial_slot)?;
 
-        user_reward_settlement.claim_reward(reward_settlement, current_slot)
+        let claimed_amount =
+            user_reward_settlement.claim_reward(reward_settlement, current_slot)?;
+        let total_claimed_amount = user_reward_settlement.total_claimed_amount;
+
+        Ok((claimed_amount, total_claimed_amount))
     }
 }

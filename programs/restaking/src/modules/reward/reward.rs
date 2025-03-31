@@ -32,6 +32,7 @@ impl Reward {
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,
+        claimable: bool,
     ) -> anchor_lang::Result<()> {
         let name = name.as_ref().trim_matches('\0');
         let description = description.as_ref().trim_matches('\0');
@@ -52,7 +53,7 @@ impl Reward {
         self.id = id;
         self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.description[..description.len()].copy_from_slice(description.as_bytes());
-        self.claimable = 0;
+        self.claimable = claimable as u8;
         self.mint = mint;
         self.program = program;
         self.decimals = decimals;
@@ -68,6 +69,14 @@ impl Reward {
 
     pub fn set_claimable(&mut self, claimable: bool) -> &mut Self {
         self.claimable = claimable as u8;
+        self
+    }
+
+    /// Reward token can be changed only if unclaimable
+    pub fn set_reward_token(&mut self, mint: Pubkey, program: Pubkey, decimals: u8) -> &mut Self {
+        self.mint = mint;
+        self.program = program;
+        self.decimals = decimals;
         self
     }
 }

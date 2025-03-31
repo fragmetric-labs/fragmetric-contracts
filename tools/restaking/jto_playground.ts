@@ -577,7 +577,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.debug(`JTO airdropped (+${this.lamportsToX(lamports, token.decimals, symbol)}): ${this.lamportsToX(balance, token.decimals, 'JTO')}`.padEnd(LOG_PAD_LARGE), ata.toString());
     }
 
-    public async tryAirdropRewardToken(vault: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
+    public async tryAirdropRewardToken(owner: web3.PublicKey, symbol: keyof typeof this.rewardTokenMetadata, lamports: BN) {
         const token = this.rewardTokenMetadata[symbol];
         let balanceBefore: BN;
 
@@ -586,7 +586,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 this.connection,
                 this.wallet,
                 token.mint,
-                vault,
+                owner,
                 true,
                 "confirmed",
                 {
@@ -598,7 +598,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             balanceBefore = new BN(ata.amount.toString());
 
             // If reward token is SPL stake pool token
-            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource["splStakePool"]?.address ?? null;
+            const splStakePoolAddress: web3.PublicKey | null = token.airdropSource?.splStakePool?.address ?? null;
             if (splStakePoolAddress) {
                 const {instructions, signers} = await splStakePool.depositSol(this.connection, splStakePoolAddress, this.wallet.publicKey, lamports.toNumber(), ata.address);
                 return await this.run({instructions, signers});
@@ -623,7 +623,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const ata = await (async () => {
             const ata = spl.getAssociatedTokenAddressSync(
                 token.mint,
-                vault,
+                owner,
                 true,
                 token.program,
             );
@@ -2617,6 +2617,40 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         logger.notice(`configured fragJTO reward pools and reward`.padEnd(LOG_PAD_LARGE), this.knownAddress.fragJTOReward.toString());
         const fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
         return {event, error, fragJTOReward};
+    }
+
+    public async runFundManagerUpdateReward(args: {
+        rewardName: (typeof this.distributingRewardsMetadata)[number]["name"];
+        claimable: boolean,
+    }) {
+        const { rewardName, claimable } = args;
+        let fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
+        let reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        const rewardTokenMint = this.binIsEmpty(reward.mint.toBuffer()) ? this.programId : reward.mint;
+        const rewardTokenProgram = this.binIsEmpty(reward.program.toBuffer()) ? this.programId : reward.program;
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods
+                    .fundManagerUpdateReward(reward.id, claimable)
+                    .accountsPartial({
+                        receiptTokenMint: this.knownAddress.fragJTOTokenMint,
+                        rewardTokenMint,
+                        rewardTokenProgram,
+                        rewardTokenReserveAccount: this.programId,
+                        sourceRewardTokenAccount: this.programId,
+                    })
+                    .instruction(),
+            ],
+            signerNames: ["FUND_MANAGER"],
+            events: ["fundManagerUpdatedRewardPool"],
+        });
+
+        logger.notice(`updated fragJTO reward=${reward.id}/${rewardName}), claimable=${claimable}`);
+        fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
+        reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
+
+        return {event, error, fragJTOReward, reward};
     }
 
     public async runFundManagerSettleReward(args: {

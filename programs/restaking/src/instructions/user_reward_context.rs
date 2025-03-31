@@ -187,6 +187,7 @@ pub struct UserRewardClaimContext<'info> {
     pub reward_token_program: Interface<'info, TokenInterface>,
 
     #[account(
+        mut,
         associated_token::mint = reward_token_mint,
         associated_token::authority = reward_reserve_account,
         associated_token::token_program = reward_token_program,
@@ -194,8 +195,10 @@ pub struct UserRewardClaimContext<'info> {
     pub reward_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         token::mint = reward_token_mint,
+        token::authority = user,
         token::token_program = reward_token_program,
     )]
-    pub destination_reward_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub user_reward_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }

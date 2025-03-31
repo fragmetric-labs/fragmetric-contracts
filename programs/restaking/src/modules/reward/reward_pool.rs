@@ -92,7 +92,13 @@ impl RewardPool {
             .find(|s| s.reward_id == reward_id)
     }
 
-    pub fn get_or_add_reward_settlement_mut(
+    pub fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Result<&mut RewardSettlement> {
+        self.get_reward_settlements_iter_mut()
+            .find(|s| s.reward_id == reward_id)
+            .ok_or_else(|| error!(ErrorCode::RewardSettlementNotFoundError))
+    }
+
+    fn get_or_add_reward_settlement_mut(
         &mut self,
         reward_id: u16,
         current_slot: u64,

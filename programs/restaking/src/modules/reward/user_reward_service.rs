@@ -120,13 +120,13 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
         require_eq!(
             reward_account.get_reward(reward_id)?.claimable,
-            0,
+            1,
             ErrorCode::RewardNotClaimableError
         );
 
         user_reward_account.backfill_not_existing_pools(&*reward_account)?;
         let reward_pool = reward_account.get_reward_pool_mut(reward_pool_id)?;
-        let amount = user_reward_account
+        let (claimed_amount, total_claimed_amount) = user_reward_account
             .get_user_reward_pool_mut(reward_pool_id)?
             .claim_reward(reward_pool, reward_id, self.current_slot)?;
 
@@ -141,7 +141,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
                 },
                 &[&reward_account.get_reserve_account_seeds()],
             ),
-            amount,
+            claimed_amount,
             reward_token_mint.decimals,
         )?;
 
@@ -150,7 +150,8 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             reward_token_mint: reward_token_mint.key(),
             reward_account: self.reward_account.key(),
             user_reward_account: self.user_reward_account.key(),
-            claimed_reward_token_amount: amount,
+            claimed_reward_token_amount: claimed_amount,
+            total_claimed_reward_token_amount: total_claimed_amount,
         })
     }
 }

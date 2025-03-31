@@ -52,18 +52,20 @@ pub struct FundManagerRewardDistributionContext<'info> {
     pub reward_token_program: Option<Interface<'info, TokenInterface>>,
 
     #[account(
+        mut,
         associated_token::mint = reward_token_mint,
         associated_token::authority = reward_reserve_account,
         associated_token::token_program = reward_token_program,
     )]
     pub reward_token_reserve_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
-    /// Owner could be anyone but must be delegated to fund manager
+    pub source_reward_token_account_owner: Option<Signer<'info>>,
+
     #[account(
+        mut,
         token::mint = reward_token_mint,
+        token::authority = source_reward_token_account_owner,
         token::token_program = reward_token_program,
-        constraint = source_reward_token_account.owner == fund_manager.key()
-            || source_reward_token_account.delegate.unwrap_or_default() == fund_manager.key(),
     )]
     pub source_reward_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 }
