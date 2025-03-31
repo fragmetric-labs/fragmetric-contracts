@@ -287,6 +287,21 @@ filename = "./tests/mocks/mainnet/jito_restaking_operator_8.json"
 address = "BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2"
 filename = "./tests/mocks/mainnet/jito_restaking_operator_9.json"
 
+# clone mainnet Jito restaking protocol operator: Figment
+[[test.validator.account]]
+address = "C6AF8qGCo2dL815ziRCmfdbFeL5xbRLuSTSZzTGBH68y"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_10.json"
+
+# clone mainnet Jito restaking protocol operator: Staking Facilities
+[[test.validator.account]]
+address = "EkroMQiZJfphVd9iPvR4zMCHasTW72Uh1mFYkTxtQuY6"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_11.json"
+
+# clone mainnet Jito restaking protocol operator: Adrestea
+[[test.validator.account]]
+address = "574DmorRvpaYrSrBRUwAjG7bBmrZYiTW3Fc8mvQatFqo"
+filename = "./tests/mocks/mainnet/jito_restaking_operator_12.json"
+
 ###### fragSOL ######
 # clone initial ALT of fragSOL for faster bootstrap
 [[test.validator.account]]
@@ -357,6 +372,21 @@ filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_8.js
 [[test.validator.account]]
 address = "Hpv7Q4YqYmSjtuERUn5ivZTBApQsEN9vwrf8oUb4zGHw"
 filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_9.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Figment
+[[test.validator.account]]
+address = "BPgK8cr3a6cWZgKMUSeETC45gwueNfakhEZ8KmgCTdkG"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_10.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Staking Facilities
+[[test.validator.account]]
+address = "Hau441iEzcMBrTHcHhtMxDbGLQM4iBaVMJ4e9aE4TeLY"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_11.json"
+
+# clone empty fragSOL Jito nSOL vault operator delegation: Adrastea
+[[test.validator.account]]
+address = "FEGntJqbd93nuBoX6TnMBER2TmZvY44cqe4e7ujPpxL6"
+filename = "./tests/mocks/local/fragsol_jito_nsol_vault_operator_delegation_12.json"
 
 ###### JTO ######
 # clone mainnet JTO mint to localnet

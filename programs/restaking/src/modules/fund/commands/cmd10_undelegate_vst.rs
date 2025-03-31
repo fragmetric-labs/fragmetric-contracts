@@ -22,7 +22,7 @@ pub struct UndelegateVSTCommandItem {
     allocated_supported_token_amount: u64,
 }
 
-const RESTAKING_VAULT_UNDELEGATE_BATCH_SIZE: usize = 10;
+const RESTAKING_VAULT_UNDELEGATE_BATCH_SIZE: usize = 6;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub enum UndelegateVSTCommandState {
