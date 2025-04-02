@@ -3,6 +3,7 @@ mod admin_fund_wrap_context;
 mod admin_normalized_token_pool_context;
 mod admin_receipt_token_mint_context;
 mod admin_reward_context;
+mod admin_user_reward_context;
 
 mod fund_manager_fund_context;
 mod fund_manager_fund_jito_restaking_vault_context;
@@ -30,6 +31,7 @@ pub use admin_fund_wrap_context::*;
 pub use admin_normalized_token_pool_context::*;
 pub use admin_receipt_token_mint_context::*;
 pub use admin_reward_context::*;
+pub use admin_user_reward_context::*;
 
 pub use fund_manager_fund_context::*;
 pub use fund_manager_fund_jito_restaking_vault_context::*;

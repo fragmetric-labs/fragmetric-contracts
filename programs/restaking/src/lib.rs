@@ -209,6 +209,32 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // AdminUserRewardAccountInitOrUpdateContext
+    ////////////////////////////////////////////
+
+    pub fn admin_create_user_reward_account_idempotent(
+        ctx: Context<AdminUserRewardAccountInitOrUpdateContext>,
+        desired_account_size: Option<u32>,
+    ) -> Result<()> {
+        let event = modules::reward::UserRewardConfigurationService::process_create_user_reward_account_idempotent(
+            &ctx.accounts.system_program,
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.reward_account,
+            &ctx.accounts.payer,
+            &ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_reward_account,
+            ctx.bumps.user_reward_account,
+            desired_account_size
+        )?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // FundManagerFundContext
     ////////////////////////////////////////////
 

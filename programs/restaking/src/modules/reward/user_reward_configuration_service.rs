@@ -28,7 +28,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         receipt_token_mint: &mut InterfaceAccount<'info, Mint>,
         reward_account: &mut AccountLoader<'info, RewardAccount>,
 
-        user: &Signer<'info>,
+        payer: &Signer<'info>,
         user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_account: &mut UncheckedAccount<'info>,
         user_reward_account_bump: u8,
@@ -38,11 +38,11 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         if !user_reward_account.is_initialized() {
             system_program.initialize_account(
                 user_reward_account,
-                user,
+                payer,
                 &[&[
                     UserRewardAccount::SEED,
                     receipt_token_mint.key().as_ref(),
-                    user.key().as_ref(),
+                    user_receipt_token_account.owner.as_ref(),
                     &[user_reward_account_bump],
                 ]],
                 std::cmp::min(
@@ -87,7 +87,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 &mut user_reward_account_parsed,
             )?
             .process_update_user_reward_account_if_needed(
-                user,
+                payer,
                 system_program,
                 desired_account_size,
             )?;
