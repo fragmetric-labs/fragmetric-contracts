@@ -9,11 +9,11 @@ const REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
 #[repr(C, packed(8))]
 pub(super) struct RewardSettlement {
     pub reward_id: u16,
-    pub reward_pool_id: u8,
+    // pub reward_pool_id: u8,
     num_settlement_blocks: u8,
     settlement_blocks_head: u8,
     settlement_blocks_tail: u8,
-    _padding: [u8; 2],
+    _padding: [u8; 3],
 
     /// Leftovers from each settlement block when clearing
     pub remaining_amount: u64,
@@ -28,17 +28,10 @@ pub(super) struct RewardSettlement {
 }
 
 impl RewardSettlement {
-    pub fn initialize(
-        &mut self,
-        reward_id: u16,
-        reward_pool_id: u8,
-        reward_pool_initial_slot: u64,
-        current_slot: u64,
-    ) {
+    pub fn initialize(&mut self, reward_id: u16, reward_pool_initial_slot: u64, current_slot: u64) {
         *self = Zeroable::zeroed();
 
         self.reward_id = reward_id;
-        self.reward_pool_id = reward_pool_id;
         self.claimed_amount_updated_slot = current_slot;
         self.settlement_blocks_last_slot = reward_pool_initial_slot;
     }
@@ -227,7 +220,7 @@ mod tests {
     #[test]
     fn test_settlement() {
         let mut settlement = RewardSettlement::zeroed();
-        settlement.initialize(0, 0, 0, 0);
+        settlement.initialize(0, 0, 0);
         settlement.settlement_blocks_head = 61;
         settlement.settlement_blocks_tail = 61;
 

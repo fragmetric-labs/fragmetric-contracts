@@ -75,14 +75,11 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
 
     pub fn process_add_reward_pool(
         &self,
-        name: String,
         custom_contribution_accrual_rate_enabled: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        self.reward_account.load_mut()?.add_reward_pool(
-            name,
-            custom_contribution_accrual_rate_enabled,
-            self.current_slot,
-        )?;
+        self.reward_account
+            .load_mut()?
+            .add_reward_pool(custom_contribution_accrual_rate_enabled, self.current_slot)?;
 
         self.create_fund_manager_updated_reward_pool_event()
     }

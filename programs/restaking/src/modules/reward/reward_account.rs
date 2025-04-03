@@ -12,7 +12,6 @@ use super::*;
 /// * v35: remove holder (Data Size = 342072 ~= 335KB)
 pub const REWARD_ACCOUNT_CURRENT_VERSION: u16 = 35;
 const REWARD_ACCOUNT_REWARDS_MAX_LEN_1: usize = 16;
-const REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -23,12 +22,10 @@ pub struct RewardAccount {
     reserve_account_bump: u8,
 
     max_rewards: u16,
-    max_reward_pools: u8,
-    _padding1: u8,
+    _padding1: [u8; 2],
 
     num_rewards: u16,
-    num_reward_pools: u8,
-    _padding2: [u8; 5],
+    _padding2: [u8; 6],
 
     // informative
     reserve_account: Pubkey,
@@ -36,7 +33,12 @@ pub struct RewardAccount {
     _reserved: [u8; 2592],
 
     rewards_1: [Reward; REWARD_ACCOUNT_REWARDS_MAX_LEN_1],
-    reward_pools_1: [RewardPool; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
+
+    base_reward_pool: RewardPool,
+    bonus_reward_pool: RewardPool,
+    _padding3: [u8; 83440],
+
+    _reserved2: [u8; 83440],
 }
 
 impl PDASeeds<3> for RewardAccount {
@@ -67,7 +69,6 @@ impl RewardAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.max_rewards = REWARD_ACCOUNT_REWARDS_MAX_LEN_1 as u16;
-            self.max_reward_pools = REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1 as u8;
             self.data_version = 34;
         }
 
@@ -203,46 +204,40 @@ impl RewardAccount {
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize].iter()
+        std::iter::once(&self.base_reward_pool).chain(std::iter::once(&self.bonus_reward_pool))
     }
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize].iter_mut()
+        std::iter::once(&mut self.base_reward_pool)
+            .chain(std::iter::once(&mut self.bonus_reward_pool))
     }
 
     pub(super) fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize]
-            .get_mut(id as usize)
+        self.get_reward_pools_iter_mut()
+            .nth(id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
     }
 
     pub(super) fn add_reward_pool(
         &mut self,
-        name: String,
         custom_contribution_accrual_rate_enabled: bool,
         current_slot: u64,
     ) -> Result<()> {
         if self
             .get_reward_pools_iter()
-            .any(|pool| pool.get_name() == Ok(name.trim_matches('\0')))
+            .any(|pool| pool.is_initialized())
         {
             err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }
 
-        require_gt!(
-            self.max_reward_pools,
-            self.num_reward_pools,
-            ErrorCode::RewardExceededMaxRewardPoolsError,
-        );
-
-        self.reward_pools_1[self.num_reward_pools as usize].initialize(
-            self.num_reward_pools,
-            name,
-            custom_contribution_accrual_rate_enabled,
-            current_slot,
-        )?;
-        self.num_reward_pools += 1;
+        if !custom_contribution_accrual_rate_enabled {
+            self.base_reward_pool
+                .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
+        } else {
+            self.bonus_reward_pool
+                .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
+        }
 
         Ok(())
     }
