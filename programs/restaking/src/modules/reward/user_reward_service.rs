@@ -124,7 +124,6 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             ErrorCode::RewardNotClaimableError
         );
 
-        user_reward_account.backfill_not_existing_pools(&*reward_account)?;
         let reward_pool = reward_account.get_reward_pool_mut(reward_pool_id)?;
         let (claimed_amount, total_claimed_amount) = user_reward_account
             .get_user_reward_pool_mut(reward_pool_id)?
