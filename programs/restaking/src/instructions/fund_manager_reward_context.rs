@@ -51,11 +51,6 @@ pub struct FundManagerRewardDistributionContext<'info> {
 
     pub reward_token_program: Option<Interface<'info, TokenInterface>>,
 
-    #[account(
-        mut,
-        associated_token::mint = reward_token_mint,
-        associated_token::authority = reward_reserve_account,
-        associated_token::token_program = reward_token_program,
-    )]
+    #[account(mut)]
     pub reward_token_reserve_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 }
