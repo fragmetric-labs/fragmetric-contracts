@@ -104,8 +104,8 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
 
         expect(res1.event.userDepositedToFund.updatedUserRewardAccounts.length).eq(1, '5');
         const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user4.publicKey);
-        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[0].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '6');
-        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[1].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '7');
+        expect(userRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.baseUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '6');
+        expect(userRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.bonusUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), '7');
 
         const amount2 = new BN(4 * decimals);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
@@ -124,10 +124,10 @@ module.exports = (i: number) => describe(`deposit_token#${i}`, async () => {
 
         expect(res2.event.userDepositedToFund.updatedUserRewardAccounts.length).eq(1, '11');
         const userRewardAccount2 = await restaking.getUserFragSOLRewardAccount(user4.publicKey);
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString(), 'total allocated amount').eq(mintedAmount2.toString(), 'minted fragSOL amount');
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.numRecords).eq(1, '12');
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '13');
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.numRecords).eq(2, '14');
+        expect(userRewardAccount2.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString(), 'total allocated amount').eq(mintedAmount2.toString(), 'minted fragSOL amount');
+        expect(userRewardAccount2.baseUserRewardPool.tokenAllocatedAmount.numRecords).eq(1, '12');
+        expect(userRewardAccount2.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '13');
+        expect(userRewardAccount2.bonusUserRewardPool.tokenAllocatedAmount.numRecords).eq(2, '14');
     });
 
     step('fund has correct token value data', async function () {

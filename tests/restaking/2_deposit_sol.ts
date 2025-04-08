@@ -54,8 +54,8 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
         expect(res1.event.userDepositedToFund.updatedUserRewardAccounts.length).eq(1, 'user reward account is in event');
         const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user1.publicKey);
-        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[0].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated base pool');
-        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[1].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated bonus pool');
+        expect(userRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.baseUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated base pool');
+        expect(userRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.bonusUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount.toString(), 'user reward account updated bonus pool');
 
         const [
             // fragSOLFund2,
@@ -98,8 +98,8 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
         expect(res1.event.userDepositedToFund.updatedUserRewardAccounts.length).eq(1, 'user reward account is in event');
         const userRewardAccount1 = await restaking.getUserFragSOLRewardAccount(user2.publicKey);
-        expect(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[0].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), 'user reward account updated base pool');
-        expect(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.userRewardPools1[1].tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), 'user reward account updated bonus pool');
+        expect(userRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.baseUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), 'user reward account updated base pool');
+        expect(userRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount0?.bonusUserRewardPool.tokenAllocatedAmount.totalAmount ?? new BN(0)).toString()).eq(mintedAmount1.toString(), 'user reward account updated bonus pool');
 
         const amount2 = new BN(4 * anchor.web3.LAMPORTS_PER_SOL);
         const depositMetadata2 = restaking.asType<'depositMetadata'>({
@@ -118,10 +118,10 @@ module.exports = (i: number) => describe(`deposit_sol#${i}`, async () => {
 
         expect(res2.event.userDepositedToFund.updatedUserRewardAccounts.length).eq(1, '12');
         const userRewardAccount2 = await restaking.getUserFragSOLRewardAccount(user2.publicKey);
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '13');
-        expect(userRewardAccount2.userRewardPools1[0].tokenAllocatedAmount.numRecords).eq(1, '14'); // base pool has no custom accrual rate
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '15');
-        expect(userRewardAccount2.userRewardPools1[1].tokenAllocatedAmount.numRecords).eq(2, '16');
+        expect(userRewardAccount2.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '13');
+        expect(userRewardAccount2.baseUserRewardPool.tokenAllocatedAmount.numRecords).eq(1, '14'); // base pool has no custom accrual rate
+        expect(userRewardAccount2.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(userRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(mintedAmount2.toString(), '15');
+        expect(userRewardAccount2.bonusUserRewardPool.tokenAllocatedAmount.numRecords).eq(2, '16');
     });
 
     step("user2 cannot cheat metadata", async function () {
