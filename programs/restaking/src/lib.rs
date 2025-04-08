@@ -75,47 +75,6 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // AdminFundWrapAccountRewardAccountInitialContext
-    ////////////////////////////////////////////
-
-    pub fn admin_initialize_fund_wrap_account_reward_account(
-        ctx: Context<AdminFundWrapAccountRewardAccountInitialContext>,
-    ) -> Result<()> {
-        modules::reward::UserRewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
-        )?
-        .process_initialize_user_reward_account(ctx.bumps.fund_wrap_account_reward_account)?;
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // AdminFundWrapAccountRewardAccountUpdateContext
-    ////////////////////////////////////////////
-
-    pub fn admin_update_fund_wrap_account_reward_account_if_needed(
-        ctx: Context<AdminFundWrapAccountRewardAccountUpdateContext>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()> {
-        modules::reward::UserRewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
-        )?
-        .process_update_user_reward_account_if_needed(
-            &ctx.accounts.payer,
-            &ctx.accounts.system_program,
-            desired_account_size,
-        )?;
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
     // AdminNormalizedTokenPoolInitialContext
     ////////////////////////////////////////////
 

@@ -28,7 +28,6 @@ pub struct AdminUserRewardAccountInitOrUpdateContext<'info> {
     pub receipt_token_program: Program<'info, Token2022>,
 
     #[account(
-        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
         associated_token::token_program = receipt_token_program,

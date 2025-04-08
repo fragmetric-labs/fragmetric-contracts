@@ -1274,19 +1274,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.TOKEN_2022_PROGRAM_ID,
                 ),
                 ...(currentRewardVersion == 0 ? [
-                    this.program.methods.adminInitializeFundWrapAccountRewardAccount()
+                    this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                         .accountsPartial({
                             payer: this.wallet.publicKey,
+                            user: this.knownAddress.fragJTOFundWrapAccount,
                             receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         })
                         .instruction(),
                     ]
                     : [
                         ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-                            this.program.methods
-                                .adminUpdateFundWrapAccountRewardAccountIfNeeded(null)
+                            this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                                 .accountsPartial({
                                     payer: this.wallet.publicKey,
+                                    user: this.knownAddress.fragJTOFundWrapAccount,
                                     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                                 })
                                 .instruction(),
