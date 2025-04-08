@@ -67,11 +67,9 @@ describe("initialize", async () => {
             expect(restaking.binToString(reward.description)).eq(v.description.toString());
         }
 
-        expect(res0.fragSOLReward.numRewardPools).eq(Object.values(restaking.rewardPoolsMetadata).length);
-        i = 0;
         for (const v of Object.values(restaking.rewardPoolsMetadata)) {
-            const pool = res0.fragSOLReward.rewardPools1[i++];
-            expect(restaking.binToString(pool.name)).eq(v.name.toString());
+            const pool = v.name == "base" ? res0.fragSOLReward.baseRewardPool : res0.fragSOLReward.bonusRewardPool;
+            expect(pool.initialSlot).to.not.eq(0);
         }
     });
 
@@ -82,13 +80,12 @@ describe("initialize", async () => {
             rewardName: 'fPoint',
             amount: new BN(0),
         });
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].numRewardSettlements).eq(1);
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardId).eq(res0.reward.id);
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardPoolId).eq(res0.rewardPool.id);
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(1);
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settledAmount.toNumber()).eq(0);
-        expect(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
-            .eq(res0.fragSOLReward.rewardPools1[res0.rewardPool.id].updatedSlot.toNumber());
+        expect(res0.fragSOLReward.bonusRewardPool.numRewardSettlements).eq(1);
+        expect(res0.fragSOLReward.bonusRewardPool.rewardSettlements1[0].rewardId).eq(res0.reward.id);
+        expect(res0.fragSOLReward.bonusRewardPool.rewardSettlements1[0].numSettlementBlocks).eq(1);
+        expect(res0.fragSOLReward.bonusRewardPool.rewardSettlements1[0].settledAmount.toNumber()).eq(0);
+        expect(res0.fragSOLReward.bonusRewardPool.rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
+            .eq(res0.fragSOLReward.bonusRewardPool.updatedSlot.toNumber());
     });
 
     step("create normalized token token mint", async function () {

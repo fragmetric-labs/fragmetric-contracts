@@ -213,6 +213,12 @@ impl RewardAccount {
             .chain(std::iter::once(&mut self.bonus_reward_pool))
     }
 
+    pub(super) fn get_reward_pool(&self, id: u8) -> Result<&RewardPool> {
+        self.get_reward_pools_iter()
+            .nth(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
+    }
+
     pub(super) fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
         self.get_reward_pools_iter_mut()
             .nth(id as usize)
@@ -225,8 +231,8 @@ impl RewardAccount {
         current_slot: u64,
     ) -> Result<()> {
         if self
-            .get_reward_pools_iter()
-            .any(|pool| pool.is_initialized())
+            .get_reward_pool(custom_contribution_accrual_rate_enabled as u8)?
+            .is_initialized()?
         {
             err!(ErrorCode::RewardAlreadyExistingPoolError)?
         }

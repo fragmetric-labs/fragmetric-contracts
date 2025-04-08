@@ -56,11 +56,11 @@ impl RewardPool {
         Ok(())
     }
 
-    pub fn is_initialized(&self) -> bool {
+    pub fn is_initialized(&self) -> Result<bool> {
         if self.initial_slot != 0 {
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
     }
 

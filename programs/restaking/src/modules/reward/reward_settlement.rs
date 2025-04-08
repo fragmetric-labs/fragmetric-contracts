@@ -9,7 +9,6 @@ const REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN: usize = 64;
 #[repr(C, packed(8))]
 pub(super) struct RewardSettlement {
     pub reward_id: u16,
-    // pub reward_pool_id: u8,
     num_settlement_blocks: u8,
     settlement_blocks_head: u8,
     settlement_blocks_tail: u8,

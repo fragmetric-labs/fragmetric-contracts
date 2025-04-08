@@ -14,8 +14,6 @@ pub const USER_REWARD_ACCOUNT_CURRENT_VERSION: u16 = 1;
 pub const USER_REWARD_ACCOUNT_CURRENT_SIZE: u64 =
     8 + std::mem::size_of::<UserRewardAccount>() as u64;
 
-const USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
-
 #[account(zero_copy)]
 #[repr(C)]
 pub struct UserRewardAccount {
