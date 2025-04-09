@@ -41,9 +41,6 @@ pub enum ErrorCode {
     #[msg("reward: already existing reward")]
     RewardAlreadyExistingRewardError,
 
-    #[msg("reward: already existing pool")]
-    RewardAlreadyExistingPoolError,
-
     #[msg("reward: settlement not found")]
     RewardSettlementNotFoundError,
 

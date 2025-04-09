@@ -91,10 +91,10 @@ impl TokenAllocatedAmount {
         Ok(delta)
     }
 
-    fn subtract<'a>(
-        &'a mut self,
+    fn subtract(
+        &mut self,
         mut delta: TokenAllocatedAmountDelta,
-    ) -> Result<impl IntoIterator<Item = TokenAllocatedAmountDelta> + 'a> {
+    ) -> Result<impl IntoIterator<Item = TokenAllocatedAmountDelta> + '_> {
         delta.assert_valid_subtraction()?;
 
         self.total_amount -= delta.amount;

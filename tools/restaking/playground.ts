@@ -3111,14 +3111,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerInitializeRewardPools() {
         const {event, error} = await this.run({
             instructions: [
-                ...this.rewardPoolsMetadata.map((v) => {
-                    return this.program.methods
-                        .fundManagerAddRewardPool(v.customAccrualRateEnabled)
-                        .accountsPartial({
-                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        })
-                        .instruction();
-                }),
                 ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddReward(

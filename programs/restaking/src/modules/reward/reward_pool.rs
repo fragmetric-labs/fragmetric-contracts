@@ -56,12 +56,8 @@ impl RewardPool {
         Ok(())
     }
 
-    pub fn is_initialized(&self) -> Result<bool> {
-        if self.initial_slot != 0 {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+    pub fn is_initialized(&self) -> bool {
+        self.initial_slot != 0
     }
 
     pub fn get_reward_settlements_iter(&self) -> impl Iterator<Item = &RewardSettlement> {

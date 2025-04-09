@@ -213,36 +213,33 @@ impl RewardAccount {
             .chain(std::iter::once(&mut self.bonus_reward_pool))
     }
 
-    pub(super) fn get_reward_pool(&self, id: u8) -> Result<&RewardPool> {
-        self.get_reward_pools_iter()
-            .nth(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
-    }
-
     pub(super) fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
         self.get_reward_pools_iter_mut()
             .nth(id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
     }
 
-    pub(super) fn add_reward_pool(
+    pub(super) fn is_reward_pool_initialized(&self, is_bonus: bool) -> bool {
+        if !is_bonus {
+            self.base_reward_pool.is_initialized()
+        } else {
+            self.bonus_reward_pool.is_initialized()
+        }
+    }
+
+    pub(super) fn set_reward_pool_idempotent(
         &mut self,
         custom_contribution_accrual_rate_enabled: bool,
         current_slot: u64,
     ) -> Result<()> {
-        if self
-            .get_reward_pool(custom_contribution_accrual_rate_enabled as u8)?
-            .is_initialized()?
-        {
-            err!(ErrorCode::RewardAlreadyExistingPoolError)?
-        }
-
-        if !custom_contribution_accrual_rate_enabled {
-            self.base_reward_pool
-                .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
-        } else {
-            self.bonus_reward_pool
-                .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
+        if !self.is_reward_pool_initialized(custom_contribution_accrual_rate_enabled) {
+            if !custom_contribution_accrual_rate_enabled {
+                self.base_reward_pool
+                    .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
+            } else {
+                self.bonus_reward_pool
+                    .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
+            }
         }
 
         Ok(())

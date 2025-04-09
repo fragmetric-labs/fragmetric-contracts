@@ -520,23 +520,6 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerRewardContext
-    ////////////////////////////////////////////
-
-    pub fn fund_manager_add_reward_pool(
-        ctx: Context<FundManagerRewardContext>,
-        custom_contribution_accrual_rate_enabled: bool,
-    ) -> Result<()> {
-        emit_cpi!(modules::reward::RewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
-        )?
-        .process_add_reward_pool(custom_contribution_accrual_rate_enabled)?);
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
     // FundManagerRewardDistributionContext
     ////////////////////////////////////////////
 
