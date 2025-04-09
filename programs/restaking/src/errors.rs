@@ -47,12 +47,6 @@ pub enum ErrorCode {
     #[msg("reward: reward not found")]
     RewardNotFoundError,
 
-    #[msg("reward: pool not found")]
-    RewardPoolNotFoundError,
-
-    #[msg("reward: user pool not found")]
-    RewardUserPoolNotFoundError,
-
     #[msg("reward: reward is not claimable")]
     RewardNotClaimableError,
 

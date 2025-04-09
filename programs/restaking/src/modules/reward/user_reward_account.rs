@@ -117,10 +117,15 @@ impl UserRewardAccount {
             .chain(std::iter::once(&mut self.bonus_user_reward_pool))
     }
 
-    pub(super) fn get_user_reward_pool_mut(&mut self, id: u8) -> Result<&mut UserRewardPool> {
-        self.get_user_reward_pools_iter_mut()
-            .nth(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardUserPoolNotFoundError))
+    pub(super) fn get_user_reward_pool_mut(
+        &mut self,
+        is_bonus_pool: bool,
+    ) -> Result<&mut UserRewardPool> {
+        if !is_bonus_pool {
+            Ok(&mut self.base_user_reward_pool)
+        } else {
+            Ok(&mut self.bonus_user_reward_pool)
+        }
     }
 
     pub(super) fn update_user_reward_pools(

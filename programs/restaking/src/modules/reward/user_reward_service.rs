@@ -107,7 +107,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_pool_id: u8,
+        is_bonus_pool: bool,
         reward_id: u16,
     ) -> Result<events::UserClaimedReward> {
         let mut reward_account = self.reward_account.load_mut()?;
@@ -124,9 +124,9 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             ErrorCode::RewardNotClaimableError
         );
 
-        let reward_pool = reward_account.get_reward_pool_mut(reward_pool_id)?;
+        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
         let (claimed_amount, total_claimed_amount) = user_reward_account
-            .get_user_reward_pool_mut(reward_pool_id)?
+            .get_user_reward_pool_mut(is_bonus_pool)?
             .claim_reward(reward_pool, reward_id, self.current_slot)?;
 
         anchor_spl::token_interface::transfer_checked(

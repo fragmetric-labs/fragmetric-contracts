@@ -213,14 +213,16 @@ impl RewardAccount {
             .chain(std::iter::once(&mut self.bonus_reward_pool))
     }
 
-    pub(super) fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
-        self.get_reward_pools_iter_mut()
-            .nth(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
+    pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> Result<&mut RewardPool> {
+        if !is_bonus_pool {
+            Ok(&mut self.base_reward_pool)
+        } else {
+            Ok(&mut self.bonus_reward_pool)
+        }
     }
 
-    pub(super) fn is_reward_pool_initialized(&self, is_bonus: bool) -> bool {
-        if !is_bonus {
+    pub(super) fn is_reward_pool_initialized(&self, is_bonus_pool: bool) -> bool {
+        if !is_bonus_pool {
             self.base_reward_pool.is_initialized()
         } else {
             self.bonus_reward_pool.is_initialized()

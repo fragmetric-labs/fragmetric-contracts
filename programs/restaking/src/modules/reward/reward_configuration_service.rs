@@ -176,7 +176,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
         reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
-        reward_pool_id: u8,
+        is_bonus_pool: bool,
         reward_id: u16,
         amount: u64,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
@@ -214,7 +214,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             );
         }
 
-        self.settle_reward(reward_pool_id, reward_id, amount)?;
+        self.settle_reward(is_bonus_pool, reward_id, amount)?;
 
         self.create_fund_manager_updated_reward_pool_event()
     }
@@ -222,13 +222,13 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     /// Settle reward.
     pub(in crate::modules) fn settle_reward(
         &self,
-        reward_pool_id: u8,
+        is_bonus_pool: bool,
         reward_id: u16,
         amount: u64,
     ) -> Result<()> {
         self.reward_account
             .load_mut()?
-            .get_reward_pool_mut(reward_pool_id)?
+            .get_reward_pool_mut(is_bonus_pool)?
             .settle_reward(reward_id, amount, self.current_slot)
     }
 
