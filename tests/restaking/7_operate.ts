@@ -101,7 +101,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
         await restaking.runUserWithdraw(user1, null, new BN(2));
 
         // delegate token account to fund account
-        await restaking.runAdminDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
+        await restaking.runFundManagerDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
 
         logger.info('waiting until epoch 11...');
         await restaking.sleepUntil(epochToSlot(11));

@@ -61,7 +61,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
         // await restaking.runUserWithdraw(user1, restaking.getConstantAsPublicKey('mainnetJtoMintAddress'), new BN(3));
 
         // delegate token account to fund account
-        await restaking.runAdminDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
+        await restaking.runFundManagerDelegateJitoVaultTokenAccount(vaultMetadata.vault, rewardMetadata.mint);
 
         logger.info('waiting until epoch 7...');
         await restaking.sleepUntil(epochToSlot(7)); // unrestaking takes for more than one epoch

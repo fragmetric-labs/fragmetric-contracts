@@ -2261,11 +2261,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     // need for operation & test - delegate vault_token_account to fund_account
-    public async runAdminDelegateJitoVaultTokenAccount(
+    public async runFundManagerDelegateJitoVaultTokenAccount(
         vault: keyof typeof this.restakingVaultMetadata | web3.PublicKey | string,
         tokenMint: web3.PublicKey | string,
         delegate = this.knownAddress.fragSOLFund,
-        delegateAssetAdmin: web3.Keypair | KEYCHAIN_KEYS = "ADMIN",
+        delegateAssetAdmin: web3.Keypair | KEYCHAIN_KEYS = "FUND_MANAGER",
     ) {
         vault = this.restakingVaultMetadata[vault as keyof typeof this.restakingVaultMetadata]?.vault ?? this.getPublicKey(vault);
         tokenMint = this.getPublicKey(tokenMint);
