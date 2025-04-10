@@ -819,48 +819,6 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundAccountInitialContext
-    ////////////////////////////////////////////
-    // TODO: v0.4.1 deprecating
-    pub fn user_initialize_fund_account(
-        ctx: Context<DeprecatingUserFundAccountInitialContext>,
-    ) -> Result<()> {
-        let event = modules::fund::UserFundConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.user_fund_account,
-            &ctx.accounts.user_receipt_token_account,
-        )?
-        .process_initialize_user_fund_account(ctx.bumps.user_fund_account)?;
-
-        if let Some(event) = event {
-            emit_cpi!(event);
-        }
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // UserFundAccountUpdateContext
-    ////////////////////////////////////////////
-    // TODO: v0.4.1 deprecating
-    pub fn user_update_fund_account_if_needed(
-        ctx: Context<DeprecatingUserFundAccountUpdateContext>,
-    ) -> Result<()> {
-        let event = modules::fund::UserFundConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.user_fund_account,
-            &ctx.accounts.user_receipt_token_account,
-        )?
-        .process_update_user_fund_account_if_needed()?;
-
-        if let Some(event) = event {
-            emit_cpi!(event);
-        }
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
     // UserFundContext
     ////////////////////////////////////////////
 
@@ -1130,55 +1088,6 @@ pub mod restaking {
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_reward_account,
             ctx.bumps.user_reward_account,
-            desired_account_size,
-        )?;
-
-        if let Some(event) = event {
-            emit_cpi!(event);
-        }
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // UserRewardAccountInitialContext
-    ////////////////////////////////////////////
-    // TODO: v0.4.1 deprecating
-    pub fn user_initialize_reward_account(
-        ctx: Context<DeprecatingUserRewardAccountInitialContext>,
-    ) -> Result<()> {
-        let event = modules::reward::UserRewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
-        )?
-        .process_initialize_user_reward_account(ctx.bumps.user_reward_account)?;
-
-        if let Some(event) = event {
-            emit_cpi!(event);
-        }
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // UserRewardAccountUpdateContext
-    ////////////////////////////////////////////
-    // TODO: v0.4.1 deprecating
-    pub fn user_update_reward_account_if_needed(
-        ctx: Context<DeprecatingUserRewardAccountUpdateContext>,
-        desired_account_size: Option<u32>,
-    ) -> Result<()> {
-        let event = modules::reward::UserRewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
-        )?
-        .process_update_user_reward_account_if_needed(
-            &ctx.accounts.user,
-            &ctx.accounts.system_program,
             desired_account_size,
         )?;
 
