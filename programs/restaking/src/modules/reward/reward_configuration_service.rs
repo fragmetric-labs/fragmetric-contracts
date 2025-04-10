@@ -38,9 +38,11 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             self.reward_account
                 .initialize_zero_copy_header(reward_account_bump)
         } else {
-            self.reward_account
-                .load_init()?
-                .initialize(reward_account_bump, self.receipt_token_mint.key())?;
+            self.reward_account.load_init()?.initialize(
+                reward_account_bump,
+                self.receipt_token_mint.key(),
+                self.current_slot,
+            )?;
             self.reward_account.exit(&crate::ID)
         }
     }
@@ -65,11 +67,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         )?;
 
         if new_account_size >= min_account_size {
-            let mut reward_account = self.reward_account.load_mut()?;
-            reward_account.update_if_needed(self.receipt_token_mint.key())?;
-
-            reward_account.set_reward_pool_idempotent(false, self.current_slot)?;
-            reward_account.set_reward_pool_idempotent(true, self.current_slot)?;
+            self.reward_account
+                .load_mut()?
+                .update_if_needed(self.receipt_token_mint.key(), self.current_slot)?;
         }
 
         Ok(())

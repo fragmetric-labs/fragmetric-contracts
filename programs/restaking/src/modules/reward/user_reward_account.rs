@@ -113,8 +113,11 @@ impl UserRewardAccount {
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut UserRewardPool> {
-        std::iter::once(&mut self.base_user_reward_pool)
-            .chain(std::iter::once(&mut self.bonus_user_reward_pool))
+        [
+            &mut self.base_user_reward_pool,
+            &mut self.bonus_user_reward_pool,
+        ]
+        .into_iter()
     }
 
     pub(super) fn get_user_reward_pool_mut(
@@ -128,11 +131,51 @@ impl UserRewardAccount {
         }
     }
 
+    pub(super) fn is_user_reward_pool_initialized(&self, is_bonus_pool: bool) -> bool {
+        if !is_bonus_pool {
+            self.base_user_reward_pool.is_initialized()
+        } else {
+            self.bonus_user_reward_pool.is_initialized()
+        }
+    }
+
+    fn set_user_reward_pool(
+        &mut self,
+        is_bonus_pool: bool,
+        reward_pool_initial_slot: u64,
+    ) -> Result<()> {
+        if !is_bonus_pool {
+            self.base_user_reward_pool
+                .initialize(reward_pool_initial_slot);
+        } else {
+            self.bonus_user_reward_pool
+                .initialize(reward_pool_initial_slot);
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn backfill_not_existing_pools(
+        &mut self,
+        reward_account: &RewardAccount,
+    ) -> Result<()> {
+        for is_bonus_pool in [false, true] {
+            if !self.is_user_reward_pool_initialized(is_bonus_pool) {
+                let reward_pool = reward_account.get_reward_pool(is_bonus_pool)?;
+                self.set_user_reward_pool(is_bonus_pool, reward_pool.initial_slot)?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub(super) fn update_user_reward_pools(
         &mut self,
         reward_account: &mut RewardAccount,
         current_slot: u64,
     ) -> Result<()> {
+        self.backfill_not_existing_pools(reward_account)?;
+
         self.get_user_reward_pools_iter_mut()
             .zip(reward_account.get_reward_pools_iter_mut())
             .try_for_each(|(user_reward_pool, reward_pool)| {

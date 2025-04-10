@@ -20,17 +20,15 @@ pub struct AdminUserRewardAccountInitOrUpdateContext<'info> {
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
-    /// CHECK: Third party defi account or someone else which could be pda or wallet or token account, etc.
+    /// CHECK: Third party account or someone else which could be pda or wallet or token account, etc.
     pub user: UncheckedAccount<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub receipt_token_program: Program<'info, Token2022>,
-
     #[account(
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
-        associated_token::token_program = receipt_token_program,
+        associated_token::token_program = Token2022::id(),
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 

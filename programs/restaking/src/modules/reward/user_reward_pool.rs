@@ -15,8 +15,9 @@ pub(super) struct UserRewardPool {
     /// user contribution at `updated_slot`
     pub contribution: u128,
     pub updated_slot: u64,
+    _padding: u8,
     num_reward_settlements: u8,
-    _padding: [u8; 7],
+    _padding2: [u8; 6],
 
     _reserved: [u8; 64],
 
@@ -35,11 +36,15 @@ pub(super) struct UserRewardPool {
 // And add new field user_reward_pools_1_ext_v4: [UserRewardPoolExtV4; USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1] to user reward account.
 
 impl UserRewardPool {
-    /// deprecating
     pub fn initialize(&mut self, reward_pool_initial_slot: u64) {
         *self = Zeroable::zeroed();
 
         self.updated_slot = reward_pool_initial_slot;
+    }
+
+    #[inline(always)]
+    pub(super) fn is_initialized(&self) -> bool {
+        self.updated_slot != 0
     }
 
     #[inline(always)]

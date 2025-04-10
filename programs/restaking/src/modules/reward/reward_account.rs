@@ -64,11 +64,13 @@ impl ZeroCopyHeader for RewardAccount {
 }
 
 impl RewardAccount {
-    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey) -> Result<()> {
+    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, current_slot: u64) -> Result<()> {
         if self.data_version == 0 {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.max_rewards = REWARD_ACCOUNT_REWARDS_MAX_LEN_1 as u16;
+            self.base_reward_pool.initialize(false, current_slot)?;
+            self.bonus_reward_pool.initialize(true, current_slot)?;
             self.data_version = 34;
         }
 
@@ -95,13 +97,22 @@ impl RewardAccount {
     }
 
     #[inline(always)]
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) -> Result<()> {
-        self.migrate(bump, receipt_token_mint)
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        current_slot: u64,
+    ) -> Result<()> {
+        self.migrate(bump, receipt_token_mint, current_slot)
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) -> Result<()> {
-        self.migrate(self.bump, receipt_token_mint)
+    pub(super) fn update_if_needed(
+        &mut self,
+        receipt_token_mint: Pubkey,
+        current_slot: u64,
+    ) -> Result<()> {
+        self.migrate(self.bump, receipt_token_mint, current_slot)
     }
 
     #[inline(always)]
@@ -204,13 +215,20 @@ impl RewardAccount {
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
-        std::iter::once(&self.base_reward_pool).chain(std::iter::once(&self.bonus_reward_pool))
+        [&self.base_reward_pool, &self.bonus_reward_pool].into_iter()
     }
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
-        std::iter::once(&mut self.base_reward_pool)
-            .chain(std::iter::once(&mut self.bonus_reward_pool))
+        [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
+    }
+
+    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> Result<&RewardPool> {
+        if !is_bonus_pool {
+            Ok(&self.base_reward_pool)
+        } else {
+            Ok(&self.bonus_reward_pool)
+        }
     }
 
     pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> Result<&mut RewardPool> {
@@ -219,32 +237,6 @@ impl RewardAccount {
         } else {
             Ok(&mut self.bonus_reward_pool)
         }
-    }
-
-    pub(super) fn is_reward_pool_initialized(&self, is_bonus_pool: bool) -> bool {
-        if !is_bonus_pool {
-            self.base_reward_pool.is_initialized()
-        } else {
-            self.bonus_reward_pool.is_initialized()
-        }
-    }
-
-    pub(super) fn set_reward_pool_idempotent(
-        &mut self,
-        custom_contribution_accrual_rate_enabled: bool,
-        current_slot: u64,
-    ) -> Result<()> {
-        if !self.is_reward_pool_initialized(custom_contribution_accrual_rate_enabled) {
-            if !custom_contribution_accrual_rate_enabled {
-                self.base_reward_pool
-                    .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
-            } else {
-                self.bonus_reward_pool
-                    .initialize(custom_contribution_accrual_rate_enabled, current_slot)?;
-            }
-        }
-
-        Ok(())
     }
 
     pub(super) fn get_total_reward_unclaimed_amount(&self, reward_id: u16) -> u64 {

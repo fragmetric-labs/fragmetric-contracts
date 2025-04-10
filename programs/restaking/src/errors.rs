@@ -41,11 +41,23 @@ pub enum ErrorCode {
     #[msg("reward: already existing reward")]
     RewardAlreadyExistingRewardError,
 
+    // deprecated
+    #[msg("reward: already existing pool")]
+    RewardAlreadyExistingPoolError,
+
     #[msg("reward: settlement not found")]
     RewardSettlementNotFoundError,
 
     #[msg("reward: reward not found")]
     RewardNotFoundError,
+
+    // deprecated
+    #[msg("reward: pool not found")]
+    RewardPoolNotFoundError,
+
+    // deprecated
+    #[msg("reward: user pool not found")]
+    RewardUserPoolNotFoundError,
 
     #[msg("reward: reward is not claimable")]
     RewardNotClaimableError,

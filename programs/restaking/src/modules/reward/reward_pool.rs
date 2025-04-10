@@ -56,10 +56,6 @@ impl RewardPool {
         Ok(())
     }
 
-    pub fn is_initialized(&self) -> bool {
-        self.initial_slot != 0
-    }
-
     pub fn get_reward_settlements_iter(&self) -> impl Iterator<Item = &RewardSettlement> {
         self.reward_settlements_1[..self.num_reward_settlements as usize].iter()
     }
