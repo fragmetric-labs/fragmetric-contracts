@@ -652,13 +652,6 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, OperatorFundContext<'info>>,
         force_reset_command: Option<modules::fund::commands::OperationCommandEntry>,
     ) -> Result<()> {
-        // TODO: remove this temporary authorization after audit
-        if !(ctx.accounts.operator.key() == FUND_MANAGER_PUBKEY
-            || ctx.accounts.operator.key() == ADMIN_PUBKEY)
-        {
-            err!(errors::ErrorCode::FundOperationUnauthorizedCommandError)?;
-        }
-
         // check force reset command is authorized
         if let Some(command_entry) = &force_reset_command {
             // fund manager can reset the operation state anytime.
