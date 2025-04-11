@@ -19,7 +19,7 @@ pub struct InitializeCommand {
 pub enum InitializeCommandState {
     /// Initializes a command with items based on the fund state and strategy.
     #[default]
-    NewRestakingVaultUpdate,
+    New,
     /// Prepares to execute restaking vault epoch process for the first item in the list.
     PrepareRestakingVaultUpdate {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
@@ -52,7 +52,7 @@ impl std::fmt::Debug for InitializeCommandState {
         }
 
         match self {
-            Self::NewRestakingVaultUpdate => write!(f, "NewRestakingVaultUpdate"),
+            Self::New => write!(f, "New"),
             Self::PrepareRestakingVaultUpdate { vaults, .. } => {
                 debug_vault(f, "PrepareRestakingVaultUpdate", vaults)
             }
@@ -102,7 +102,7 @@ impl SelfExecutable for InitializeCommand {
         Option<OperationCommandEntry>,
     )> {
         let (result, entry) = match &self.state {
-            NewRestakingVaultUpdate => self.execute_new_restaking_vault_update(ctx)?,
+            New => self.execute_new_restaking_vault_update(ctx)?,
             PrepareRestakingVaultUpdate { vaults } => {
                 self.execute_prepare_restaking_vault_update(ctx, accounts, vaults)?
             }

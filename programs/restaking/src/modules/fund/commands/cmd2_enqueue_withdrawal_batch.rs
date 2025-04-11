@@ -7,7 +7,14 @@ use super::{
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct EnqueueWithdrawalBatchCommand {
+    state: EnqueueWithdrawalBatchCommandState,
     forced: bool,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
+pub enum EnqueueWithdrawalBatchCommandState {
+    #[default]
+    New,
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
