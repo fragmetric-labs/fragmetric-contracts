@@ -108,10 +108,12 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         is_bonus_pool: bool,
-        reward_id: u16,
+        mint: Pubkey,
     ) -> Result<events::UserClaimedReward> {
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;
+
+        let reward_id = reward_account.get_reward_id_by_reward_mint(mint)?;
 
         require_keys_eq!(
             reward_token_reserve_account.key(),

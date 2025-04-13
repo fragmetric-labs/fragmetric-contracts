@@ -248,6 +248,15 @@ impl RewardAccount {
         })
     }
 
+    pub(super) fn get_reward_id_by_reward_mint(&self, reward_token_mint: Pubkey) -> Result<u16> {
+        let reward = self
+            .get_rewards_iter()
+            .find(|reward| reward.mint == reward_token_mint)
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))?;
+
+        Ok(reward.id)
+    }
+
     /// this operation is idempotent
     /// update contribution and clear stale blocks
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) {

@@ -120,25 +120,34 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
         reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
-        reward_id: u16,
-        mint: Option<Pubkey>,
-        program: Option<Pubkey>,
-        decimals: Option<u8>,
+        mint: Pubkey,
+        new_mint: Option<Pubkey>,
+        new_program: Option<Pubkey>,
+        new_decimals: Option<u8>,
         claimable: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
         let mut reward_account = self.reward_account.load_mut()?;
+
+        let reward_id = reward_account.get_reward_id_by_reward_mint(mint)?;
         let total_unclaimed_amount = reward_account.get_total_reward_unclaimed_amount(reward_id);
         let reward = reward_account.get_reward_mut(reward_id)?;
 
+        if let Some(new_mint) = new_mint {
+            require_keys_neq!(
+                reward.mint,
+                new_mint,
+                errors::ErrorCode::RewardAlreadyExistingRewardError
+            );
+        }
         require_eq!(
             reward.claimable,
             0,
             errors::ErrorCode::RewardAlreadyClaimableError
         );
 
-        let mint = mint.unwrap_or(reward.mint);
-        let program = program.unwrap_or(reward.program);
-        let decimals = decimals.unwrap_or(reward.decimals);
+        let mint = new_mint.unwrap_or(reward.mint);
+        let program = new_program.unwrap_or(reward.program);
+        let decimals = new_decimals.unwrap_or(reward.decimals);
 
         reward
             .set_claimable(claimable)
@@ -177,17 +186,18 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
         is_bonus_pool: bool,
-        reward_id: u16,
+        mint: Pubkey,
         amount: u64,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        let (total_unclaimed_amount, mint, program, decimals, claimable) = {
+        let (total_unclaimed_amount, reward_id, program, decimals, claimable) = {
             let reward_account = self.reward_account.load_mut()?;
+            let reward_id = reward_account.get_reward_id_by_reward_mint(mint)?;
             let total_unclaimed_amount =
                 reward_account.get_total_reward_unclaimed_amount(reward_id);
             let reward = reward_account.get_reward(reward_id)?;
             (
                 total_unclaimed_amount,
-                reward.mint,
+                reward_id,
                 reward.program,
                 reward.decimals,
                 reward.claimable,

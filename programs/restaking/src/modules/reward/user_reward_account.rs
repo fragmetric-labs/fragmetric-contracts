@@ -27,7 +27,8 @@ pub struct UserRewardAccount {
     bonus_user_reward_pool: UserRewardPool,
     _padding2: [u8; 1040],
 
-    _reserved: [u8; 1040],
+    delegate: Pubkey,
+    _reserved: [u8; 1008],
 }
 
 impl PDASeeds<4> for UserRewardAccount {
@@ -144,6 +145,10 @@ impl UserRewardAccount {
         is_bonus_pool: bool,
         reward_pool_initial_slot: u64,
     ) -> Result<()> {
+        if self.is_user_reward_pool_initialized(is_bonus_pool) {
+            err!(ErrorCode::RewardAlreadyExistingPoolError)?
+        }
+
         if !is_bonus_pool {
             self.base_user_reward_pool
                 .initialize(reward_pool_initial_slot);

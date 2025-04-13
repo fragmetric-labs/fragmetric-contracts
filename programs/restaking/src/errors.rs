@@ -41,7 +41,6 @@ pub enum ErrorCode {
     #[msg("reward: already existing reward")]
     RewardAlreadyExistingRewardError,
 
-    // deprecated
     #[msg("reward: already existing pool")]
     RewardAlreadyExistingPoolError,
 

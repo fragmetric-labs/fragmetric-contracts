@@ -553,10 +553,10 @@ pub mod restaking {
 
     pub fn fund_manager_update_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
-        reward_id: u16,
-        mint: Option<Pubkey>,
-        program: Option<Pubkey>,
-        decimals: Option<u8>,
+        mint: Pubkey,
+        new_mint: Option<Pubkey>,
+        new_program: Option<Pubkey>,
+        new_decimals: Option<u8>,
         claimable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
@@ -567,10 +567,10 @@ pub mod restaking {
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
-            reward_id,
             mint,
-            program,
-            decimals,
+            new_mint,
+            new_program,
+            new_decimals,
             claimable,
         )?);
 
@@ -580,7 +580,7 @@ pub mod restaking {
     pub fn fund_manager_settle_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
         is_bonus_pool: bool,
-        reward_id: u16,
+        reward_token_mint: Pubkey,
         amount: u64,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
@@ -592,7 +592,7 @@ pub mod restaking {
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
             is_bonus_pool,
-            reward_id,
+            reward_token_mint,
             amount,
         )?);
 
@@ -1113,7 +1113,7 @@ pub mod restaking {
     pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,
         is_bonus_pool: bool,
-        reward_id: u16,
+        reward_token_mint: Pubkey,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1128,7 +1128,7 @@ pub mod restaking {
             &ctx.accounts.reward_token_reserve_account,
             &ctx.accounts.user_reward_token_account,
             is_bonus_pool,
-            reward_id,
+            reward_token_mint,
         )?);
 
         Ok(())
