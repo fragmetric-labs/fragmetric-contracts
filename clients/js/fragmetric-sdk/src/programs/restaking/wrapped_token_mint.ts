@@ -2,7 +2,7 @@ import {
   FragmetricMetadataContext,
   TokenMintAccountContext,
 } from '../../context';
-import { createMintTransactionTemplate } from './normalized_token_mint';
+import { createMintTransactionTemplate } from './mint';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 
 export class RestakingWrappedTokenMintAccountContext extends TokenMintAccountContext<RestakingReceiptTokenMintAccountContext> {

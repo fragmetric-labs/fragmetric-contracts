@@ -8,6 +8,7 @@ import * as repl from 'node:repl';
 import * as util from 'node:util';
 import * as prepl from 'pretty-repl';
 import * as sdk from '../../index';
+import * as sdkConstants from '../../context/constants';
 import { RootCommandOptions } from '../cli.node';
 import { isAlreadyReportedError, logger } from '../utils';
 
@@ -63,6 +64,7 @@ export const connectCommand = new Command()
     const context = {
       ...rootOptions.context.programs,
       ...rootOptions.context,
+      ...sdkConstants,
       sdk,
     };
     Object.assign(server.context, context);
