@@ -238,6 +238,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             );
         }
 
+        drop(reward_account);
         self.reward_account
             .load_mut()?
             .get_reward_pool_mut(is_bonus_pool)?

@@ -2671,7 +2671,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerSettleReward(isBonusPool, rewardMetadata.mint, args.amount)
+                    .fundManagerSettleReward(rewardMetadata.mint, isBonusPool, args.amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         rewardTokenMint,

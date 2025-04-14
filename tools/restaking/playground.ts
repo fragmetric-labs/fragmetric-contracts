@@ -3274,7 +3274,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     )
                 ] : []),
                 this.program.methods
-                    .fundManagerSettleReward(isBonusPool, rewardMetadata.mint, amount)
+                    .fundManagerSettleReward(rewardMetadata.mint, isBonusPool, amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         rewardTokenMint: rewardMetadata.mint.equals(web3.SystemProgram.programId) ? this.programId : rewardMetadata.mint,
@@ -3323,7 +3323,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardMetadata.mint,
                     rewardMetadata.program,
                 ),
-                this.methods.userClaimReward(isBonusPool, rewardMetadata.mint)
+                this.methods.userClaimReward(isBonusPool)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
