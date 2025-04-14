@@ -324,6 +324,7 @@ pub mod restaking {
         Ok(())
     }
 
+    // TODO: use `FundManagerFundRestakingVaultRewardContext` to check reward_token_mint
     pub fn fund_manager_add_restaking_vault_compounding_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -341,6 +342,9 @@ pub mod restaking {
         Ok(())
     }
 
+    // TODO: add fund_manager_remove_restaking_vault_compounding_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
+
+    // TODO: use `FundManagerFundRestakingVaultRewardContext` to check reward_token_mint
     pub fn fund_manager_add_restaking_vault_distributing_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -358,6 +362,9 @@ pub mod restaking {
         Ok(())
     }
 
+    // TODO: add fund_manager_remove_restaking_vault_distributing_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
+
+    // TODO: use `FundManagerFundTokenSwapStrategyContext` to check swap source & from/to mints
     pub fn fund_manager_add_token_swap_strategy(
         ctx: Context<FundManagerFundContext>,
         from_token_mint: Pubkey,
@@ -372,6 +379,8 @@ pub mod restaking {
 
         Ok(())
     }
+
+    // TODO: add fund_manager_remove_token_swap_strategy ix, using `FundManagerFundTokenSwapStrategyContext`
 
     ////////////////////////////////////////////
     // FundManagerFundNormalizedTokenInitialContext
@@ -413,6 +422,26 @@ pub mod restaking {
             &ctx.accounts.receipt_token_wrap_account,
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.fund_wrap_account_reward_account,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // FundManagerFundWrappedTokenHolderContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_add_wrapped_token_holder(
+        ctx: Context<FundManagerFundWrappedTokenHolderContext>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_add_wrapped_token_holder(
+            &ctx.accounts.wrapped_token_holder,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.wrapped_token_holder_reward_account,
         )?);
 
         Ok(())

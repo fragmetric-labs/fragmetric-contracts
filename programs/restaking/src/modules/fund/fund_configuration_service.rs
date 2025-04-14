@@ -182,69 +182,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_set_wrapped_token(
-        &mut self,
-        wrapped_token_mint: &InterfaceAccount<'info, Mint>,
-        wrapped_token_mint_current_authority: &Signer<'info>,
-        wrapped_token_program: &Program<'info, Token>,
-        fund_wrap_account: &SystemAccount,
-        receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
-        reward_account: &mut AccountLoader<reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<reward::UserRewardAccount>,
-    ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(wrapped_token_mint).owner,
-            wrapped_token_program.key(),
-        );
-
-        require_keys_eq!(
-            receipt_token_wrap_account.mint,
-            self.receipt_token_mint.key(),
-        );
-        require_keys_eq!(receipt_token_wrap_account.owner, fund_wrap_account.key());
-
-        require_eq!(
-            wrapped_token_mint.decimals,
-            self.receipt_token_mint.decimals,
-        );
-
-        // Must be pegged 1 to 1
-        require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
-
-        // validate accounts
-        reward::UserRewardService::validate_user_reward_account(
-            self.receipt_token_mint,
-            fund_wrap_account.key,
-            reward_account,
-            fund_wrap_account_reward_account,
-        )?;
-
-        // set wrapped token
-        self.fund_account.load_mut()?.set_wrapped_token(
-            wrapped_token_mint.key(),
-            wrapped_token_program.key(),
-            wrapped_token_mint.decimals,
-            wrapped_token_mint.supply,
-        )?;
-
-        // set token mint authority
-        if wrapped_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
-            anchor_spl::token::set_authority(
-                CpiContext::new(
-                    wrapped_token_program.to_account_info(),
-                    anchor_spl::token::SetAuthority {
-                        current_authority: wrapped_token_mint_current_authority.to_account_info(),
-                        account_or_mint: wrapped_token_mint.to_account_info(),
-                    },
-                ),
-                anchor_spl::token::spl_token::instruction::AuthorityType::MintTokens,
-                Some(self.fund_account.key()),
-            )?;
-        }
-
-        self.create_fund_manager_updated_fund_event()
-    }
-
     pub fn process_add_jito_restaking_vault(
         &mut self,
         fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
@@ -335,6 +272,69 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_set_wrapped_token(
+        &mut self,
+        wrapped_token_mint: &InterfaceAccount<'info, Mint>,
+        wrapped_token_mint_current_authority: &Signer<'info>,
+        wrapped_token_program: &Program<'info, Token>,
+        fund_wrap_account: &SystemAccount,
+        receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
+        reward_account: &mut AccountLoader<reward::RewardAccount>,
+        fund_wrap_account_reward_account: &mut AccountLoader<reward::UserRewardAccount>,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(wrapped_token_mint).owner,
+            wrapped_token_program.key(),
+        );
+
+        require_keys_eq!(
+            receipt_token_wrap_account.mint,
+            self.receipt_token_mint.key(),
+        );
+        require_keys_eq!(receipt_token_wrap_account.owner, fund_wrap_account.key());
+
+        require_eq!(
+            wrapped_token_mint.decimals,
+            self.receipt_token_mint.decimals,
+        );
+
+        // Must be pegged 1 to 1
+        require_eq!(wrapped_token_mint.supply, receipt_token_wrap_account.amount);
+
+        // validate accounts
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            fund_wrap_account.key,
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?;
+
+        // set wrapped token
+        self.fund_account.load_mut()?.set_wrapped_token(
+            wrapped_token_mint.key(),
+            wrapped_token_program.key(),
+            wrapped_token_mint.decimals,
+            wrapped_token_mint.supply,
+        )?;
+
+        // set token mint authority
+        if wrapped_token_mint.mint_authority.unwrap_or_default() != self.fund_account.key() {
+            anchor_spl::token::set_authority(
+                CpiContext::new(
+                    wrapped_token_program.to_account_info(),
+                    anchor_spl::token::SetAuthority {
+                        current_authority: wrapped_token_mint_current_authority.to_account_info(),
+                        account_or_mint: wrapped_token_mint.to_account_info(),
+                    },
+                ),
+                anchor_spl::token::spl_token::instruction::AuthorityType::MintTokens,
+                Some(self.fund_account.key()),
+            )?;
+        }
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -508,6 +508,31 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .load_mut()?
             .get_restaking_vault_mut(vault)?
             .add_distributing_reward_token(distributing_reward_token_mint)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_add_wrapped_token_holder(
+        &mut self,
+        wrapped_token_holder: &InterfaceAccount<TokenAccount>,
+        reward_account: &AccountLoader<reward::RewardAccount>,
+        wrapped_token_holder_reward_account: &AccountLoader<reward::UserRewardAccount>,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            &wrapped_token_holder.key(),
+            reward_account,
+            wrapped_token_holder_reward_account,
+        )?;
+
+        let mut fund_account = self.fund_account.load_mut()?;
+        let wrapped_token = fund_account
+            .get_wrapped_token_mut()
+            .ok_or_else(|| error!(ErrorCode::FundWrappedTokenNotSetError))?;
+
+        require_keys_eq!(wrapped_token_holder.mint, wrapped_token.mint);
+
+        wrapped_token.add_holder(wrapped_token_holder.key())?;
 
         self.create_fund_manager_updated_fund_event()
     }

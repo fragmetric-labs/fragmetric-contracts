@@ -269,4 +269,13 @@ pub enum ErrorCode {
 
     #[msg("fund: exceeded max restaking vault distributing reward tokens")]
     FundExceededMaxRestakingVaultDistributingRewardTokensError,
+
+    #[msg("fund: exceeded max wrapped token holders")]
+    FundExceededMaxWrappedTokenHoldersError,
+
+    #[msg("fund: wrapped token holder already registered")]
+    FundWrappedTokenHolderAlreadyRegisteredError,
+
+    #[msg("fund: wrapped token holder not found")]
+    FundWrappedTokenHolderNotFoundError,
 }

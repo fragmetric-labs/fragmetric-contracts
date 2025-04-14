@@ -68,3 +68,46 @@ pub struct FundManagerFundWrappedTokenInitialContext<'info> {
     )]
     pub fund_wrap_account_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct FundManagerFundWrappedTokenHolderContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    pub wrapped_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        token::mint = wrapped_token_mint,
+        token::token_program = Token::id(),
+    )]
+    pub wrapped_token_holder: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), wrapped_token_holder.key().as_ref()],
+        bump = wrapped_token_holder_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = wrapped_token_holder_reward_account.load()?.user == wrapped_token_holder.key() @ error::ErrorCode::ConstraintHasOne,
+        constraint = wrapped_token_holder_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub wrapped_token_holder_reward_account: AccountLoader<'info, UserRewardAccount>,
+}
