@@ -579,8 +579,8 @@ pub mod restaking {
 
     pub fn fund_manager_settle_reward(
         ctx: Context<FundManagerRewardDistributionContext>,
-        is_bonus_pool: bool,
         reward_token_mint: Pubkey,
+        is_bonus_pool: bool,
         amount: u64,
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
@@ -591,8 +591,8 @@ pub mod restaking {
             ctx.accounts.reward_token_mint.as_deref(),
             ctx.accounts.reward_token_program.as_ref(),
             ctx.accounts.reward_token_reserve_account.as_deref(),
-            is_bonus_pool,
             reward_token_mint,
+            is_bonus_pool,
             amount,
         )?);
 
@@ -1113,7 +1113,6 @@ pub mod restaking {
     pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,
         is_bonus_pool: bool,
-        reward_token_mint: Pubkey,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1128,7 +1127,6 @@ pub mod restaking {
             &ctx.accounts.reward_token_reserve_account,
             &ctx.accounts.user_reward_token_account,
             is_bonus_pool,
-            reward_token_mint,
         )?);
 
         Ok(())

@@ -12,7 +12,6 @@ pub struct UserRewardConfigurationService<'a, 'info> {
     user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
     reward_account: &'a mut AccountLoader<'info, RewardAccount>,
     user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
-    _current_slot: u64,
 }
 
 impl Drop for UserRewardConfigurationService<'_, '_> {
@@ -65,7 +64,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 reward_account,
                 &mut user_reward_account_parsed,
             )?
-            .process_initialize_user_reward_account(user_reward_account_bump)?;
+            .initialize_user_reward_account(user_reward_account_bump)?;
 
             Ok(event)
         } else {
@@ -86,7 +85,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 reward_account,
                 &mut user_reward_account_parsed,
             )?
-            .process_update_user_reward_account_if_needed(
+            .update_user_reward_account_if_needed(
                 payer,
                 system_program,
                 desired_account_size,
@@ -107,11 +106,10 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             user_receipt_token_account,
             reward_account,
             user_reward_account,
-            _current_slot: Clock::get()?.slot,
         })
     }
 
-    pub fn process_initialize_user_reward_account(
+    fn initialize_user_reward_account(
         &mut self,
         user_reward_account_bump: u8,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
@@ -147,7 +145,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         Ok(None)
     }
 
-    pub fn process_update_user_reward_account_if_needed(
+    fn update_user_reward_account_if_needed(
         &mut self,
         payer: &Signer<'info>,
         system_program: &Program<'info, System>,

@@ -108,23 +108,20 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         is_bonus_pool: bool,
-        mint: Pubkey,
     ) -> Result<events::UserClaimedReward> {
+        let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;
 
-        let reward_id = reward_account.get_reward_id_by_reward_mint(mint)?;
+        let reward = reward_account.get_reward_by_mint(&reward_token_mint_key)?;
+        let reward_id = reward.id;
 
         require_keys_eq!(
             reward_token_reserve_account.key(),
-            reward_account.find_reward_token_reserve_account_address(reward_id)?,
+            reward_account.find_reward_token_reserve_account_address(&reward_token_mint_key)?,
         );
 
-        require_eq!(
-            reward_account.get_reward(reward_id)?.claimable,
-            1,
-            ErrorCode::RewardNotClaimableError
-        );
+        require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
 
         user_reward_account.backfill_not_existing_pools(&reward_account)?;
 

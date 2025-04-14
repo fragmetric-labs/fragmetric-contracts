@@ -143,9 +143,9 @@ impl RewardAccount {
 
     pub(super) fn find_reward_token_reserve_account_address(
         &self,
-        reward_id: u16,
+        reward_token_mint: &Pubkey,
     ) -> Result<Pubkey> {
-        let reward = self.get_reward(reward_id)?;
+        let reward = self.get_reward_by_mint(reward_token_mint)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.get_reserve_account_address()?,
@@ -165,15 +165,15 @@ impl RewardAccount {
         self.rewards_1[..self.num_rewards as usize].iter_mut()
     }
 
-    pub(super) fn get_reward(&self, id: u16) -> Result<&Reward> {
-        self.rewards_1[..self.num_rewards as usize]
-            .get(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
-    }
-
     pub(super) fn get_reward_mut(&mut self, id: u16) -> Result<&mut Reward> {
         self.rewards_1[..self.num_rewards as usize]
             .get_mut(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
+    }
+
+    pub(super) fn get_reward_by_mint(&self, reward_token_mint: &Pubkey) -> Result<&Reward> {
+        self.get_rewards_iter()
+            .find(|reward| reward.mint == *reward_token_mint)
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
@@ -188,7 +188,7 @@ impl RewardAccount {
     ) -> Result<()> {
         if self
             .get_rewards_iter()
-            .any(|reward| reward.get_name() == Ok(name.trim_matches('\0')))
+            .any(|reward| reward.get_name() == Ok(name.trim_matches('\0')) || reward.mint == mint)
         {
             err!(ErrorCode::RewardAlreadyExistingRewardError)?;
         }
@@ -246,15 +246,6 @@ impl RewardAccount {
                 .map(|settlement| settlement.settled_amount - settlement.claimed_amount)
                 .unwrap_or_default()
         })
-    }
-
-    pub(super) fn get_reward_id_by_reward_mint(&self, reward_token_mint: Pubkey) -> Result<u16> {
-        let reward = self
-            .get_rewards_iter()
-            .find(|reward| reward.mint == reward_token_mint)
-            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))?;
-
-        Ok(reward.id)
     }
 
     /// this operation is idempotent
