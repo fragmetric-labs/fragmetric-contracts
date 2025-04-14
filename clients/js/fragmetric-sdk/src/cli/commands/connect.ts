@@ -238,9 +238,13 @@ export const connectCommand = new Command()
         readline.clearLine(process.stdout, 0);
         readline.cursorTo(process.stdout, 0);
         if (isAlreadyReportedError(err)) {
-          callback(null, null);
+          if (expression) {
+            callback(err as Error, undefined);
+          } else {
+            callback(null, undefined);
+          }
         } else {
-          callback(err as any, undefined);
+          callback(err as Error, undefined);
         }
       } finally {
         stopSpinner();
@@ -253,11 +257,10 @@ export const connectCommand = new Command()
       server.eval(expression, server.context, '', async (err, res) => {
         server.close();
         logger.restoreConsole();
+
         if (err) {
-          if (err) {
-            if (!isAlreadyReportedError(err)) {
-              console.error(err);
-            }
+          if (!isAlreadyReportedError(err)) {
+            console.error(err);
           }
           process.exit(1);
         } else {
