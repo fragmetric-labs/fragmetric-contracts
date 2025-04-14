@@ -118,12 +118,6 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
             ? fund.data.wrappedToken.mint
             : null,
           supportedAssets,
-          get depositableAssets() {
-            return supportedAssets.filter((a) => a.depositable);
-          },
-          get withdrawableAssets() {
-            return supportedAssets.filter((a) => a.withdrawable);
-          },
           __lookupTableAddress: lookupTableAddress,
           __pricingSources: pricingSources,
         };
