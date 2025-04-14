@@ -5,16 +5,13 @@ use crate::errors::ErrorCode;
 
 use super::*;
 
-const REWARD_POOL_NAME_MAX_LEN: usize = 14;
 const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 // const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_2: usize = 8;
 
 #[zero_copy]
 #[repr(C, packed(8))]
 pub(super) struct RewardPool {
-    /// ID is determined by reward account.
-    pub id: u8,
-    name: [u8; REWARD_POOL_NAME_MAX_LEN],
+    _padding: [u8; 15],
 
     pub custom_contribution_accrual_rate_enabled: u8,
 
@@ -24,7 +21,7 @@ pub(super) struct RewardPool {
     pub initial_slot: u64,
     pub updated_slot: u64,
 
-    _padding: [u8; 9],
+    _padding2: [u8; 9],
     num_reward_settlements: u8,
 
     _reserved: [u8; 262],
@@ -46,35 +43,17 @@ pub(super) struct RewardPool {
 impl RewardPool {
     pub fn initialize(
         &mut self,
-        id: u8,
-        name: impl AsRef<str>,
         custom_contribution_accrual_rate_enabled: bool,
         current_slot: u64,
     ) -> Result<()> {
-        let name = name.as_ref().trim_matches('\0');
-
-        require_gte!(
-            REWARD_POOL_NAME_MAX_LEN,
-            name.len(),
-            ErrorCode::RewardInvalidMetadataNameLengthError
-        );
-
         *self = Zeroable::zeroed();
 
-        self.id = id;
-        self.name[..name.len()].copy_from_slice(name.as_bytes());
         self.custom_contribution_accrual_rate_enabled =
             custom_contribution_accrual_rate_enabled as u8;
         self.initial_slot = current_slot;
         self.updated_slot = current_slot;
 
         Ok(())
-    }
-
-    pub fn get_name(&self) -> Result<&str> {
-        Ok(std::str::from_utf8(&self.name)
-            .map_err(|_| ErrorCode::UTF8DecodingException)?
-            .trim_matches('\0'))
     }
 
     pub fn get_reward_settlements_iter(&self) -> impl Iterator<Item = &RewardSettlement> {
@@ -119,7 +98,6 @@ impl RewardPool {
 
                 self.reward_settlements_1[self.num_reward_settlements as usize].initialize(
                     reward_id,
-                    self.id,
                     self.initial_slot,
                     current_slot,
                 );

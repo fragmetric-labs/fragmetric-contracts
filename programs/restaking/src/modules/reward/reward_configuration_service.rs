@@ -38,9 +38,11 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             self.reward_account
                 .initialize_zero_copy_header(reward_account_bump)
         } else {
-            self.reward_account
-                .load_init()?
-                .initialize(reward_account_bump, self.receipt_token_mint.key())?;
+            self.reward_account.load_init()?.initialize(
+                reward_account_bump,
+                self.receipt_token_mint.key(),
+                self.current_slot,
+            )?;
             self.reward_account.exit(&crate::ID)
         }
     }
@@ -67,24 +69,10 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         if new_account_size >= min_account_size {
             self.reward_account
                 .load_mut()?
-                .update_if_needed(self.receipt_token_mint.key())?;
+                .update_if_needed(self.receipt_token_mint.key(), self.current_slot)?;
         }
 
         Ok(())
-    }
-
-    pub fn process_add_reward_pool(
-        &self,
-        name: String,
-        custom_contribution_accrual_rate_enabled: bool,
-    ) -> Result<events::FundManagerUpdatedRewardPool> {
-        self.reward_account.load_mut()?.add_reward_pool(
-            name,
-            custom_contribution_accrual_rate_enabled,
-            self.current_slot,
-        )?;
-
-        self.create_fund_manager_updated_reward_pool_event()
     }
 
     pub fn process_add_reward(
@@ -101,13 +89,12 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         claimable: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
         if claimable {
-            // Constraint check
-            let reward_token_mint =
-                reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_program =
-                reward_token_program.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_reserve_account = reward_token_reserve_account
-                .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+            let (reward_token_mint, reward_token_program, reward_token_reserve_account) = self
+                .validate_reward_token_reserve_account(
+                    reward_token_mint,
+                    reward_token_program,
+                    reward_token_reserve_account,
+                )?;
 
             require_keys_eq!(reward_token_reserve_account.mint, mint);
             require_keys_eq!(reward_token_program.key(), program);
@@ -132,44 +119,48 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
         reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
-        reward_id: u16,
-        mint: Option<Pubkey>,
-        program: Option<Pubkey>,
-        decimals: Option<u8>,
+        mint: Pubkey,
+        new_mint: Option<Pubkey>,
+        new_program: Option<Pubkey>,
+        new_decimals: Option<u8>,
         claimable: bool,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        let mut reward_account = self.reward_account.load_mut()?;
-        let total_unclaimed_amount = reward_account.get_total_reward_unclaimed_amount(reward_id);
-        let reward = reward_account.get_reward_mut(reward_id)?;
+        let reward_account = self.reward_account.load()?;
 
+        let reward = reward_account.get_reward_by_mint(&mint)?;
+        let reward_id = reward.id;
+        let total_unclaimed_amount = reward_account.get_total_reward_unclaimed_amount(reward_id);
+
+        let new_mint = new_mint.unwrap_or(reward.mint);
+        let new_program = new_program.unwrap_or(reward.program);
+        let new_decimals = new_decimals.unwrap_or(reward.decimals);
+
+        // Validations
         require_eq!(
             reward.claimable,
             0,
             errors::ErrorCode::RewardAlreadyClaimableError
         );
 
-        let mint = mint.unwrap_or(reward.mint);
-        let program = program.unwrap_or(reward.program);
-        let decimals = decimals.unwrap_or(reward.decimals);
-
-        reward
-            .set_claimable(claimable)
-            .set_reward_token(mint, program, decimals);
-
-        drop(reward_account);
+        if new_mint != mint
+            && reward_account
+                .get_rewards_iter()
+                .any(|reward| reward.mint == new_mint)
+        {
+            err!(errors::ErrorCode::RewardAlreadyExistingRewardError)?
+        }
 
         if claimable {
-            let reward_token_mint =
-                reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_program =
-                reward_token_program.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_reserve_account = reward_token_reserve_account
-                .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+            let (reward_token_mint, reward_token_program, reward_token_reserve_account) = self
+                .validate_reward_token_reserve_account(
+                    reward_token_mint,
+                    reward_token_program,
+                    reward_token_reserve_account,
+                )?;
 
-            // Constraint check
-            require_keys_eq!(reward_token_reserve_account.mint, mint);
-            require_keys_eq!(reward_token_program.key(), program);
-            require_eq!(reward_token_mint.decimals, decimals);
+            require_keys_eq!(reward_token_reserve_account.mint, new_mint);
+            require_keys_eq!(reward_token_program.key(), new_program);
+            require_eq!(reward_token_mint.decimals, new_decimals);
 
             // assert unclaimed amount <= ATA balance
             require_gte!(
@@ -179,45 +170,66 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             );
         }
 
+        drop(reward_account);
+        self.reward_account
+            .load_mut()?
+            .get_reward_mut(reward_id)?
+            .set_claimable(claimable)
+            .set_reward_token(new_mint, new_program, new_decimals);
+
         self.create_fund_manager_updated_reward_pool_event()
     }
 
     pub fn process_settle_reward(
-        &mut self,
+        &self,
         reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
         reward_token_program: Option<&Interface<'info, TokenInterface>>,
         reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
 
-        reward_pool_id: u8,
-        reward_id: u16,
+        mint: Pubkey,
+        is_bonus_pool: bool,
         amount: u64,
     ) -> Result<events::FundManagerUpdatedRewardPool> {
-        let (total_unclaimed_amount, mint, program, decimals, claimable) = {
-            let reward_account = self.reward_account.load_mut()?;
-            let total_unclaimed_amount =
-                reward_account.get_total_reward_unclaimed_amount(reward_id);
-            let reward = reward_account.get_reward(reward_id)?;
-            (
-                total_unclaimed_amount,
-                reward.mint,
-                reward.program,
-                reward.decimals,
-                reward.claimable,
-            )
-        };
+        self.settle_reward(
+            reward_token_mint,
+            reward_token_program,
+            reward_token_reserve_account,
+            mint,
+            is_bonus_pool,
+            amount,
+        )?;
 
-        if claimable == 1 {
-            let reward_token_mint =
-                reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_program =
-                reward_token_program.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
-            let reward_token_reserve_account = reward_token_reserve_account
-                .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+        self.create_fund_manager_updated_reward_pool_event()
+    }
+
+    /// Settle reward.
+    pub(in crate::modules) fn settle_reward(
+        &self,
+        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
+        reward_token_program: Option<&Interface<'info, TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+
+        mint: Pubkey,
+        is_bonus_pool: bool,
+        amount: u64,
+    ) -> Result<()> {
+        let reward_account = self.reward_account.load()?;
+        let reward = reward_account.get_reward_by_mint(&mint)?;
+        let reward_id = reward.id;
+        let total_unclaimed_amount = reward_account.get_total_reward_unclaimed_amount(reward_id);
+
+        if reward.claimable == 1 {
+            let (reward_token_mint, reward_token_program, reward_token_reserve_account) = self
+                .validate_reward_token_reserve_account(
+                    reward_token_mint,
+                    reward_token_program,
+                    reward_token_reserve_account,
+                )?;
 
             // Constraint check
-            require_keys_eq!(reward_token_reserve_account.mint, mint);
-            require_keys_eq!(reward_token_program.key(), program);
-            require_eq!(reward_token_mint.decimals, decimals);
+            require_keys_eq!(reward_token_reserve_account.mint, reward.mint);
+            require_keys_eq!(reward_token_program.key(), reward.program);
+            require_eq!(reward_token_mint.decimals, reward.decimals);
 
             require_gte!(
                 reward_token_reserve_account.amount,
@@ -226,22 +238,49 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             );
         }
 
-        self.settle_reward(reward_pool_id, reward_id, amount)?;
-
-        self.create_fund_manager_updated_reward_pool_event()
-    }
-
-    /// Settle reward.
-    pub(in crate::modules) fn settle_reward(
-        &self,
-        reward_pool_id: u8,
-        reward_id: u16,
-        amount: u64,
-    ) -> Result<()> {
+        drop(reward_account);
         self.reward_account
             .load_mut()?
-            .get_reward_pool_mut(reward_pool_id)?
+            .get_reward_pool_mut(is_bonus_pool)?
             .settle_reward(reward_id, amount, self.current_slot)
+    }
+
+    fn validate_reward_token_reserve_account<'x>(
+        &self,
+        reward_token_mint: Option<&'x InterfaceAccount<'info, Mint>>,
+        reward_token_program: Option<&'x Interface<'info, TokenInterface>>,
+        reward_token_reserve_account: Option<&'x InterfaceAccount<'info, TokenAccount>>,
+    ) -> Result<(
+        &'x InterfaceAccount<'info, Mint>,
+        &'x Interface<'info, TokenInterface>,
+        &'x InterfaceAccount<'info, TokenAccount>,
+    )> {
+        let reward_token_mint =
+            reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+        let reward_token_program =
+            reward_token_program.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+        let reward_token_reserve_account = reward_token_reserve_account
+            .ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
+
+        // Constraint check
+        let reward_account = self.reward_account.load()?;
+        let reward_reserve_account_address = reward_account.get_reserve_account_address()?;
+        let expected_reward_token_reserve_account_address =
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &reward_reserve_account_address,
+                &reward_token_mint.key(),
+                reward_token_program.key,
+            );
+        require_keys_eq!(
+            expected_reward_token_reserve_account_address,
+            reward_token_reserve_account.key(),
+        );
+
+        Ok((
+            reward_token_mint,
+            reward_token_program,
+            reward_token_reserve_account,
+        ))
     }
 
     fn create_fund_manager_updated_reward_pool_event(

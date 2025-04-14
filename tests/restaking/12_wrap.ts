@@ -58,38 +58,38 @@ describe("wrap", async function () {
         expect(res1.event.userWrappedReceiptToken.wrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
 
         // global: no change
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub( // bonus removed, so increase
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[1].amount.sub( // bonus removed, so decrease
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[1].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub( // bonus removed, so increase
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[1].amount.sub( // bonus removed, so decrease
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[1].amount).toString()).eq(amountEach.toString());
 
         // userA: decrease
-        expect(userARewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
-        expect(userARewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
-        expect(userARewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
-        expect(userARewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(userARewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[1].amount.sub(
-            res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.records[1].amount).toString()).eq(amountEach.toString());
+        expect(userARewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
+        expect(userARewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
+        expect(userARewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
+        expect(userARewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(userARewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[1].amount.sub(
+            res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.records[1].amount).toString()).eq(amountEach.toString());
 
         // wrap: increase
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.muln(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.muln(2).toString());
     })
 
     step("userA unwraps fragSOL", async () => {
@@ -116,36 +116,36 @@ describe("wrap", async function () {
         expect(res1.event.userUnwrappedReceiptToken.unwrappedReceiptTokenAmount.toString()).eq(amountEach.toString());
 
         // global: no change
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[1].amount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[1].amount).toString()).eq("0");
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[1].amount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[1].amount).toString()).eq("0");
 
         // userA: increase
-        expect(res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            userARewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            userARewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            userARewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            userARewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            userARewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            userARewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            userARewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            userARewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
 
         // wrap: decrease
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
     })
 
     step("userA transfers to userB", async () => {
@@ -206,24 +206,24 @@ describe("wrap", async function () {
         expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq("0");
 
         // global: decrease
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
 
         // wrap: decrease
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
-        expect(fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.toString());
+        expect(fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.toString());
     })
 
     step("userB wraps fragSOL and still reward not activated", async () => {
@@ -247,24 +247,24 @@ describe("wrap", async function () {
         expect(res1.wfragSOLUserTokenAccount.amount.toString()).eq(amountEach.divn(2).toString());
 
         // global: increase
-        expect(res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
 
         // wrap: increase
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
     })
 
     step("userB create accounts", async () => {
@@ -287,30 +287,30 @@ describe("wrap", async function () {
         const fragSOLReward1 = await restaking.getFragSOLRewardAccount();
 
         // global: increase
-        expect(fragSOLReward1.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(fragSOLReward1.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
-        expect(fragSOLReward1.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(fragSOLReward1.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(fragSOLReward1.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(fragSOLReward1.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(fragSOLReward1.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(fragSOLReward1.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
 
         // userB: increase
-        expect(userBRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount.toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.toString()).eq(amountEach.divn(2).toString());
 
         // wrap: no change
-        expect(fragSOLWrapAccountRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(fragSOLWrapAccountRewardAccount1.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLWrapAccountRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(fragSOLWrapAccountRewardAccount1.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLWrapAccountRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(fragSOLWrapAccountRewardAccount1.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLWrapAccountRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(fragSOLWrapAccountRewardAccount1.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
     })
 
     step("userB wraps fragSOL up to target balance", async () => {
@@ -338,35 +338,35 @@ describe("wrap", async function () {
         expect(res1.event.userWrappedReceiptToken ?? null).to.be.null;
 
         // global: no change
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLReward.rewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq("0");
-        expect(res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq("0");
-        expect(fragSOLReward0.rewardPools1[1].tokenAllocatedAmount.records[1].amount.sub(
-            res1.fragSOLReward.rewardPools1[1].tokenAllocatedAmount.records[1].amount).toString()).eq("0");
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(fragSOLReward0.baseRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLReward.baseRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq("0");
+        expect(res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq("0");
+        expect(fragSOLReward0.bonusRewardPool.tokenAllocatedAmount.records[1].amount.sub(
+            res1.fragSOLReward.bonusRewardPool.tokenAllocatedAmount.records[1].amount).toString()).eq("0");
 
         // userB: decrease
-        expect(userBRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLUserReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(userBRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            res1.fragSOLUserReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLUserReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(userBRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            res1.fragSOLUserReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
 
         // wrap: increase
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[0].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[0].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.totalAmount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
-        expect(res1.fragSOLFundWrapAccountReward.userRewardPools1[1].tokenAllocatedAmount.records[0].amount.sub(
-            fragSOLWrapAccountRewardAccount0.userRewardPools1[1].tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.baseUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.baseUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.totalAmount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.totalAmount).toString()).eq(amountEach.divn(2).toString());
+        expect(res1.fragSOLFundWrapAccountReward.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount.sub(
+            fragSOLWrapAccountRewardAccount0.bonusUserRewardPool.tokenAllocatedAmount.records[0].amount).toString()).eq(amountEach.divn(2).toString());
     })
 });

@@ -107,27 +107,27 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
-        reward_pool_id: u8,
-        reward_id: u16,
+        is_bonus_pool: bool,
     ) -> Result<events::UserClaimedReward> {
+        let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;
 
+        let reward = reward_account.get_reward_by_mint(&reward_token_mint_key)?;
+        let reward_id = reward.id;
+
         require_keys_eq!(
             reward_token_reserve_account.key(),
-            reward_account.find_reward_token_reserve_account_address(reward_id)?,
+            reward_account.find_reward_token_reserve_account_address(&reward_token_mint_key)?,
         );
 
-        require_eq!(
-            reward_account.get_reward(reward_id)?.claimable,
-            1,
-            ErrorCode::RewardNotClaimableError
-        );
+        require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
 
-        user_reward_account.backfill_not_existing_pools(&*reward_account)?;
-        let reward_pool = reward_account.get_reward_pool_mut(reward_pool_id)?;
+        user_reward_account.backfill_not_existing_pools(&reward_account)?;
+
+        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
         let (claimed_amount, total_claimed_amount) = user_reward_account
-            .get_user_reward_pool_mut(reward_pool_id)?
+            .get_user_reward_pool_mut(is_bonus_pool)?
             .claim_reward(reward_pool, reward_id, self.current_slot)?;
 
         anchor_spl::token_interface::transfer_checked(

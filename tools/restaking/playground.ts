@@ -1565,19 +1565,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.TOKEN_2022_PROGRAM_ID,
                 ),
                 ...(currentRewardVersion == 0 ? [
-                    this.program.methods.adminInitializeFundWrapAccountRewardAccount()
+                    this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                         .accountsPartial({
                             payer: this.wallet.publicKey,
+                            user: this.knownAddress.fragSOLFundWrapAccount,
                             receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         })
                         .instruction(),
                     ]
                     : [
                         ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-                            this.program.methods
-                                .adminUpdateFundWrapAccountRewardAccountIfNeeded(null)
+                            this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                                 .accountsPartial({
                                     payer: this.wallet.publicKey,
+                                    user: this.knownAddress.fragSOLFundWrapAccount,
                                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                                 })
                                 .instruction(),
@@ -3043,8 +3044,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             {
                 name: "fPoint",
                 description: "Airdrop point for fToken",
-                mint: null,
-                program: null,
+                mint: web3.SystemProgram.programId,
+                program: web3.SystemProgram.programId,
                 decimals: 4,
             },
             {
@@ -3110,21 +3111,13 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerInitializeRewardPools() {
         const {event, error} = await this.run({
             instructions: [
-                ...this.rewardPoolsMetadata.map((v) => {
-                    return this.program.methods
-                        .fundManagerAddRewardPool(v.name, v.customAccrualRateEnabled)
-                        .accountsPartial({
-                            receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        })
-                        .instruction();
-                }),
                 ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddReward(
                             v.name,
                             v.description,
-                            v.mint ?? web3.SystemProgram.programId,
-                            v.program ?? web3.SystemProgram.programId,
+                            v.mint,
+                            v.program,
                             v.decimals,
                             false,
                         )
@@ -3149,10 +3142,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerUpdateReward(args: {
         source?: web3.Keypair,
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
+        newRewardMint: web3.PublicKey,
         claimable: boolean,
         transferAmount?: BN,
     }) {
-        const { source, rewardName, claimable, transferAmount } = args;
+        const { source, rewardName, newRewardMint, claimable, transferAmount } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
@@ -3199,7 +3193,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 )
             ] : []),
             this.program.methods
-                .fundManagerUpdateReward(reward.id, rewardMetadata.mint, rewardMetadata.program, rewardMetadata.decimals, claimable)
+                .fundManagerUpdateReward(rewardMetadata.mint, newRewardMint, rewardMetadata.program, rewardMetadata.decimals, claimable)
                 .accountsPartial({
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     rewardTokenMint: rewardMetadata.mint ?? this.programId,
@@ -3233,7 +3227,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        let rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
+        const isBonusPool = poolName == "base" ? false : true;
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         const claimable = reward.claimable;
@@ -3279,11 +3274,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     )
                 ] : []),
                 this.program.methods
-                    .fundManagerSettleReward(rewardPool.id, reward.id, amount)
+                    .fundManagerSettleReward(rewardMetadata.mint, isBonusPool, amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
-                        rewardTokenMint: rewardMetadata.mint ?? this.programId,
-                        rewardTokenProgram: rewardMetadata.program ?? this.programId,
+                        rewardTokenMint: rewardMetadata.mint.equals(web3.SystemProgram.programId) ? this.programId : rewardMetadata.mint,
+                        rewardTokenProgram: rewardMetadata.program.equals(web3.SystemProgram.programId) ? this.programId : rewardMetadata.program,
                         rewardTokenReserveAccount: rewardTokenReserveAccount ?? this.programId,
                     })
                     .instruction(),
@@ -3292,9 +3287,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["fundManagerUpdatedRewardPool"],
         });
 
-        logger.notice(`settled fragSOL reward to pool=${rewardPool.id}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${amount.toString()} (decimals=${reward.decimals})`);
+        logger.notice(`settled fragSOL reward to pool=${isBonusPool}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${amount.toString()} (decimals=${reward.decimals})`);
         fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
         reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         return {event, error, fragSOLReward, rewardPool, reward};
@@ -3308,7 +3303,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let rewardPool = fragSOLReward.rewardPools1.find((r) => this.binToString(r.name) == poolName);
+        let rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
+        const isBonusPool = poolName == "base" ? false : true;
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         const userRewardTokenAccount = spl.getAssociatedTokenAddressSync(
@@ -3327,7 +3323,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     rewardMetadata.mint,
                     rewardMetadata.program,
                 ),
-                this.methods.userClaimReward(rewardPool.id, reward.id)
+                this.methods.userClaimReward(isBonusPool)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
@@ -3341,11 +3337,11 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["userClaimedReward"],
         });
 
-        logger.notice(`user claimed fragSOL reward from pool=${rewardPool.id}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${event.userClaimedReward.claimedRewardTokenAmount.toString()}`);
+        logger.notice(`user claimed fragSOL reward from pool=${isBonusPool}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${event.userClaimedReward.claimedRewardTokenAmount.toString()}`);
         fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        rewardPool = fragSOLReward.rewardPools1[rewardPool.id];
+        rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
         const userFragSOLReward = await this.getUserFragSOLRewardAccount(user.publicKey);
-        const userRewardPool = userFragSOLReward.userRewardPools1[rewardPool.id];
+        const userRewardPool = poolName == "base" ? userFragSOLReward.baseUserRewardPool : userFragSOLReward.bonusUserRewardPool;
 
         return {event, error, fragSOLReward, rewardPool, userFragSOLReward, userRewardPool};
     }

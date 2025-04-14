@@ -1274,19 +1274,20 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     spl.TOKEN_2022_PROGRAM_ID,
                 ),
                 ...(currentRewardVersion == 0 ? [
-                    this.program.methods.adminInitializeFundWrapAccountRewardAccount()
+                    this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                         .accountsPartial({
                             payer: this.wallet.publicKey,
+                            user: this.knownAddress.fragJTOFundWrapAccount,
                             receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         })
                         .instruction(),
                     ]
                     : [
                         ...new Array(targetRewardVersion - currentRewardVersion).fill(null).map((_, index, arr) =>
-                            this.program.methods
-                                .adminUpdateFundWrapAccountRewardAccountIfNeeded(null)
+                            this.program.methods.adminCreateUserRewardAccountIdempotent(null)
                                 .accountsPartial({
                                     payer: this.wallet.publicKey,
+                                    user: this.knownAddress.fragJTOFundWrapAccount,
                                     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                                 })
                                 .instruction(),
@@ -2562,8 +2563,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             {
                 name: "fPoint",
                 description: "Airdrop point for fToken",
-                mint: null,
-                program: null,
+                mint: web3.SystemProgram.programId,
+                program: web3.SystemProgram.programId,
                 decimals: 4,
             },
         ];
@@ -2591,29 +2592,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerInitializeRewardPools() {
         const {event, error} = await this.run({
             instructions: [
-                ...this.rewardPoolsMetadata.map((v) => {
-                    return this.program.methods
-                        .fundManagerAddRewardPool(v.name, v.customAccrualRateEnabled)
-                        .accountsPartial({
-                            receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-                        })
-                        .instruction();
-                }),
                 ...this.distributingRewardsMetadata.map((v) => {
                     return this.program.methods
                         .fundManagerAddReward(
                             v.name,
                             v.description,
-                            v.mint ?? web3.SystemProgram.programId,
-                            v.program ?? web3.SystemProgram.programId,
-                            v.decimals
+                            v.mint,
+                            v.program,
+                            v.decimals,
+                            false,
                         )
                         .accountsPartial({
                             receiptTokenMint: this.knownAddress.fragJTOTokenMint,
-                            rewardTokenMint: v.mint ?? this.programId,
-                            rewardTokenProgram: v.program ?? this.programId,
+                            rewardTokenMint: this.programId,
+                            rewardTokenProgram: this.programId,
                             rewardTokenReserveAccount: this.programId,
-                            sourceRewardTokenAccount: this.programId,
                         })
                         .instruction();
                 }),
@@ -2629,10 +2622,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public async runFundManagerUpdateReward(args: {
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"];
+        newRewardMint: web3.PublicKey,
         claimable: boolean,
     }) {
-        const { rewardName, claimable } = args;
+        const { rewardName, newRewardMint, claimable } = args;
         let fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
+        const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
         let reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
         const rewardTokenMint = this.binIsEmpty(reward.mint.toBuffer()) ? this.programId : reward.mint;
@@ -2640,13 +2635,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerUpdateReward(reward.id, claimable)
+                    .fundManagerUpdateReward(rewardMetadata.mint, newRewardMint, rewardMetadata.program, rewardMetadata.decimals, claimable)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         rewardTokenMint,
                         rewardTokenProgram,
                         rewardTokenReserveAccount: this.programId,
-                        sourceRewardTokenAccount: this.programId,
                     })
                     .instruction(),
             ],
@@ -2667,7 +2661,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         amount: BN
     }) {
         let fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
-        let rewardPool = fragJTOReward.rewardPools1.find((r) => this.binToString(r.name) == args.poolName);
+        const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == args.rewardName);
+        let rewardPool = args.poolName == "base" ? fragJTOReward.baseRewardPool : fragJTOReward.bonusRewardPool;
+        const isBonusPool = args.poolName == "base" ? false : true;
         let reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == args.rewardName);
 
         const rewardTokenMint = this.binIsEmpty(reward.mint.toBuffer()) ? this.programId : reward.mint;
@@ -2675,13 +2671,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerSettleReward(rewardPool.id, reward.id, args.amount, false)
+                    .fundManagerSettleReward(rewardMetadata.mint, isBonusPool, args.amount)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         rewardTokenMint,
                         rewardTokenProgram,
                         rewardTokenReserveAccount: this.programId,
-                        sourceRewardTokenAccount: this.programId,
                     })
                     .instruction(),
             ],
@@ -2689,9 +2684,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             events: ["fundManagerUpdatedRewardPool"],
         });
 
-        logger.notice(`settled fragJTO reward to pool=${rewardPool.id}/${args.poolName}, rewardId=${reward.id}/${args.rewardName}, amount=${args.amount.toString()} (decimals=${reward.decimals})`);
+        logger.notice(`settled fragJTO reward to pool=${isBonusPool}/${args.poolName}, rewardId=${reward.id}/${args.rewardName}, amount=${args.amount.toString()} (decimals=${reward.decimals})`);
         fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
-        rewardPool = fragJTOReward.rewardPools1.find((r) => this.binToString(r.name) == args.poolName);
+        rewardPool = args.poolName == "base" ? fragJTOReward.baseRewardPool : fragJTOReward.bonusRewardPool;
         reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == args.rewardName);
 
         return {event, error, fragJTOReward, rewardPool, reward};

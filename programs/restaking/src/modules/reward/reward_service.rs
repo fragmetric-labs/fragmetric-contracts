@@ -90,9 +90,12 @@ impl<'a, 'info> RewardService<'a, 'info> {
             require_keys_eq!(self.receipt_token_mint.key(), from.receipt_token_mint);
 
             from.backfill_not_existing_pools(&reward_account)?;
-            for reward_pool in reward_account.get_reward_pools_iter_mut() {
-                let user_reward_pool = from.get_user_reward_pool_mut(reward_pool.id)?;
 
+            let reward_pools_iter = reward_account.get_reward_pools_iter_mut();
+            let from_user_reward_pools_iter = from.get_user_reward_pools_iter_mut();
+            for (reward_pool, user_reward_pool) in
+                reward_pools_iter.zip(from_user_reward_pools_iter)
+            {
                 let effective_deltas = user_reward_pool.update_token_allocated_amount(
                     reward_pool,
                     vec![TokenAllocatedAmountDelta::new_negative(amount)],
@@ -110,8 +113,11 @@ impl<'a, 'info> RewardService<'a, 'info> {
             require_keys_eq!(self.receipt_token_mint.key(), to.receipt_token_mint);
 
             to.backfill_not_existing_pools(&reward_account)?;
-            for reward_pool in reward_account.get_reward_pools_iter_mut() {
-                let user_reward_pool = to.get_user_reward_pool_mut(reward_pool.id)?;
+
+            let reward_pools_iter = reward_account.get_reward_pools_iter_mut();
+            let to_user_reward_pools_iter = to.get_user_reward_pools_iter_mut();
+            for (reward_pool, user_reward_pool) in reward_pools_iter.zip(to_user_reward_pools_iter)
+            {
                 let effective_contribution_accrual_rate =
                     (reward_pool.custom_contribution_accrual_rate_enabled == 1)
                         .then_some(contribution_accrual_rate)

@@ -37,64 +37,6 @@ pub struct UserFundAccountInitOrUpdateContext<'info> {
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct DeprecatingUserFundAccountInitialContext<'info> {
-    #[account(mut)]
-    pub user: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub receipt_token_program: Program<'info, Token2022>,
-
-    #[account(
-        associated_token::mint = receipt_token_mint,
-        associated_token::token_program = receipt_token_program,
-        associated_token::authority = user,
-    )]
-    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(
-        init,
-        payer = user,
-        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump,
-        space = 8 + UserFundAccount::INIT_SPACE,
-    )]
-    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
-}
-
-#[event_cpi]
-#[derive(Accounts)]
-pub struct DeprecatingUserFundAccountUpdateContext<'info> {
-    #[account(mut)]
-    pub user: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
-
-    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    pub receipt_token_program: Program<'info, Token2022>,
-
-    #[account(
-        associated_token::mint = receipt_token_mint,
-        associated_token::authority = user,
-        associated_token::token_program = receipt_token_program,
-    )]
-    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(
-        mut,
-        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        has_one = user,
-    )]
-    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
-}
-
-#[event_cpi]
-#[derive(Accounts)]
 pub struct UserFundContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,

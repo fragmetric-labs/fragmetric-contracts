@@ -50,9 +50,11 @@ pub enum ErrorCode {
     #[msg("reward: reward not found")]
     RewardNotFoundError,
 
+    // deprecated
     #[msg("reward: pool not found")]
     RewardPoolNotFoundError,
 
+    // deprecated
     #[msg("reward: user pool not found")]
     RewardUserPoolNotFoundError,
 

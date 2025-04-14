@@ -12,7 +12,6 @@ use super::*;
 /// * v35: remove holder (Data Size = 342072 ~= 335KB)
 pub const REWARD_ACCOUNT_CURRENT_VERSION: u16 = 35;
 const REWARD_ACCOUNT_REWARDS_MAX_LEN_1: usize = 16;
-const REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1: usize = 4;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -23,12 +22,10 @@ pub struct RewardAccount {
     reserve_account_bump: u8,
 
     max_rewards: u16,
-    max_reward_pools: u8,
-    _padding1: u8,
+    _padding1: [u8; 2],
 
     num_rewards: u16,
-    num_reward_pools: u8,
-    _padding2: [u8; 5],
+    _padding2: [u8; 6],
 
     // informative
     reserve_account: Pubkey,
@@ -36,7 +33,12 @@ pub struct RewardAccount {
     _reserved: [u8; 2592],
 
     rewards_1: [Reward; REWARD_ACCOUNT_REWARDS_MAX_LEN_1],
-    reward_pools_1: [RewardPool; REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1],
+
+    base_reward_pool: RewardPool,
+    bonus_reward_pool: RewardPool,
+    _padding3: [u8; 83440],
+
+    _reserved2: [u8; 83440],
 }
 
 impl PDASeeds<3> for RewardAccount {
@@ -62,12 +64,13 @@ impl ZeroCopyHeader for RewardAccount {
 }
 
 impl RewardAccount {
-    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey) -> Result<()> {
+    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, current_slot: u64) -> Result<()> {
         if self.data_version == 0 {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.max_rewards = REWARD_ACCOUNT_REWARDS_MAX_LEN_1 as u16;
-            self.max_reward_pools = REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1 as u8;
+            self.base_reward_pool.initialize(false, current_slot)?;
+            self.bonus_reward_pool.initialize(true, current_slot)?;
             self.data_version = 34;
         }
 
@@ -94,13 +97,22 @@ impl RewardAccount {
     }
 
     #[inline(always)]
-    pub(super) fn initialize(&mut self, bump: u8, receipt_token_mint: Pubkey) -> Result<()> {
-        self.migrate(bump, receipt_token_mint)
+    pub(super) fn initialize(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        current_slot: u64,
+    ) -> Result<()> {
+        self.migrate(bump, receipt_token_mint, current_slot)
     }
 
     #[inline(always)]
-    pub(super) fn update_if_needed(&mut self, receipt_token_mint: Pubkey) -> Result<()> {
-        self.migrate(self.bump, receipt_token_mint)
+    pub(super) fn update_if_needed(
+        &mut self,
+        receipt_token_mint: Pubkey,
+        current_slot: u64,
+    ) -> Result<()> {
+        self.migrate(self.bump, receipt_token_mint, current_slot)
     }
 
     #[inline(always)]
@@ -131,9 +143,9 @@ impl RewardAccount {
 
     pub(super) fn find_reward_token_reserve_account_address(
         &self,
-        reward_id: u16,
+        reward_token_mint: &Pubkey,
     ) -> Result<Pubkey> {
-        let reward = self.get_reward(reward_id)?;
+        let reward = self.get_reward_by_mint(reward_token_mint)?;
         Ok(
             spl_associated_token_account::get_associated_token_address_with_program_id(
                 &self.get_reserve_account_address()?,
@@ -153,15 +165,15 @@ impl RewardAccount {
         self.rewards_1[..self.num_rewards as usize].iter_mut()
     }
 
-    pub(super) fn get_reward(&self, id: u16) -> Result<&Reward> {
-        self.rewards_1[..self.num_rewards as usize]
-            .get(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
-    }
-
     pub(super) fn get_reward_mut(&mut self, id: u16) -> Result<&mut Reward> {
         self.rewards_1[..self.num_rewards as usize]
             .get_mut(id as usize)
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
+    }
+
+    pub(super) fn get_reward_by_mint(&self, reward_token_mint: &Pubkey) -> Result<&Reward> {
+        self.get_rewards_iter()
+            .find(|reward| reward.mint == *reward_token_mint)
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
@@ -176,7 +188,7 @@ impl RewardAccount {
     ) -> Result<()> {
         if self
             .get_rewards_iter()
-            .any(|reward| reward.get_name() == Ok(name.trim_matches('\0')))
+            .any(|reward| reward.get_name() == Ok(name.trim_matches('\0')) || reward.mint == mint)
         {
             err!(ErrorCode::RewardAlreadyExistingRewardError)?;
         }
@@ -203,48 +215,28 @@ impl RewardAccount {
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize].iter()
+        [&self.base_reward_pool, &self.bonus_reward_pool].into_iter()
     }
 
     #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize].iter_mut()
+        [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
     }
 
-    pub(super) fn get_reward_pool_mut(&mut self, id: u8) -> Result<&mut RewardPool> {
-        self.reward_pools_1[..self.num_reward_pools as usize]
-            .get_mut(id as usize)
-            .ok_or_else(|| error!(ErrorCode::RewardPoolNotFoundError))
-    }
-
-    pub(super) fn add_reward_pool(
-        &mut self,
-        name: String,
-        custom_contribution_accrual_rate_enabled: bool,
-        current_slot: u64,
-    ) -> Result<()> {
-        if self
-            .get_reward_pools_iter()
-            .any(|pool| pool.get_name() == Ok(name.trim_matches('\0')))
-        {
-            err!(ErrorCode::RewardAlreadyExistingPoolError)?
+    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> Result<&RewardPool> {
+        if !is_bonus_pool {
+            Ok(&self.base_reward_pool)
+        } else {
+            Ok(&self.bonus_reward_pool)
         }
+    }
 
-        require_gt!(
-            self.max_reward_pools,
-            self.num_reward_pools,
-            ErrorCode::RewardExceededMaxRewardPoolsError,
-        );
-
-        self.reward_pools_1[self.num_reward_pools as usize].initialize(
-            self.num_reward_pools,
-            name,
-            custom_contribution_accrual_rate_enabled,
-            current_slot,
-        )?;
-        self.num_reward_pools += 1;
-
-        Ok(())
+    pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> Result<&mut RewardPool> {
+        if !is_bonus_pool {
+            Ok(&mut self.base_reward_pool)
+        } else {
+            Ok(&mut self.bonus_reward_pool)
+        }
     }
 
     pub(super) fn get_total_reward_unclaimed_amount(&self, reward_id: u16) -> u64 {
