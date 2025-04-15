@@ -11,15 +11,17 @@ import {
   fixDecoderSize,
   fixEncoderSize,
   getAddressEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU16Decoder,
-  getU16Encoder,
-  getU8Decoder,
-  getU8Encoder,
+  getU64Decoder,
+  getU64Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -30,11 +32,13 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -65,7 +69,9 @@ export type UserClaimRewardInstruction<
   TAccountRewardTokenReserveAccount extends
     | string
     | IAccountMeta<string> = string,
-  TAccountUserRewardTokenAccount extends string | IAccountMeta<string> = string,
+  TAccountDestinationRewardTokenAccount extends
+    | string
+    | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -74,7 +80,7 @@ export type UserClaimRewardInstruction<
   IInstructionWithAccounts<
     [
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
@@ -97,9 +103,9 @@ export type UserClaimRewardInstruction<
       TAccountRewardTokenReserveAccount extends string
         ? WritableAccount<TAccountRewardTokenReserveAccount>
         : TAccountRewardTokenReserveAccount,
-      TAccountUserRewardTokenAccount extends string
-        ? WritableAccount<TAccountUserRewardTokenAccount>
-        : TAccountUserRewardTokenAccount,
+      TAccountDestinationRewardTokenAccount extends string
+        ? WritableAccount<TAccountDestinationRewardTokenAccount>
+        : TAccountDestinationRewardTokenAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -112,21 +118,21 @@ export type UserClaimRewardInstruction<
 
 export type UserClaimRewardInstructionData = {
   discriminator: ReadonlyUint8Array;
-  rewardPoolId: number;
-  rewardId: number;
+  isBonusPool: boolean;
+  amount: Option<bigint>;
 };
 
 export type UserClaimRewardInstructionDataArgs = {
-  rewardPoolId: number;
-  rewardId: number;
+  isBonusPool: boolean;
+  amount: OptionOrNullable<number | bigint>;
 };
 
 export function getUserClaimRewardInstructionDataEncoder(): Encoder<UserClaimRewardInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['rewardPoolId', getU8Encoder()],
-      ['rewardId', getU16Encoder()],
+      ['isBonusPool', getBooleanEncoder()],
+      ['amount', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({ ...value, discriminator: USER_CLAIM_REWARD_DISCRIMINATOR })
   );
@@ -135,8 +141,8 @@ export function getUserClaimRewardInstructionDataEncoder(): Encoder<UserClaimRew
 export function getUserClaimRewardInstructionDataDecoder(): Decoder<UserClaimRewardInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['rewardPoolId', getU8Decoder()],
-    ['rewardId', getU16Decoder()],
+    ['isBonusPool', getBooleanDecoder()],
+    ['amount', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
@@ -159,7 +165,7 @@ export type UserClaimRewardAsyncInput<
   TAccountRewardTokenMint extends string = string,
   TAccountRewardTokenProgram extends string = string,
   TAccountRewardTokenReserveAccount extends string = string,
-  TAccountUserRewardTokenAccount extends string = string,
+  TAccountDestinationRewardTokenAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -171,11 +177,11 @@ export type UserClaimRewardAsyncInput<
   rewardTokenMint: Address<TAccountRewardTokenMint>;
   rewardTokenProgram: Address<TAccountRewardTokenProgram>;
   rewardTokenReserveAccount?: Address<TAccountRewardTokenReserveAccount>;
-  userRewardTokenAccount: Address<TAccountUserRewardTokenAccount>;
+  destinationRewardTokenAccount: Address<TAccountDestinationRewardTokenAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardPoolId: UserClaimRewardInstructionDataArgs['rewardPoolId'];
-  rewardId: UserClaimRewardInstructionDataArgs['rewardId'];
+  isBonusPool: UserClaimRewardInstructionDataArgs['isBonusPool'];
+  amount: UserClaimRewardInstructionDataArgs['amount'];
 };
 
 export async function getUserClaimRewardInstructionAsync<
@@ -187,7 +193,7 @@ export async function getUserClaimRewardInstructionAsync<
   TAccountRewardTokenMint extends string,
   TAccountRewardTokenProgram extends string,
   TAccountRewardTokenReserveAccount extends string,
-  TAccountUserRewardTokenAccount extends string,
+  TAccountDestinationRewardTokenAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -201,7 +207,7 @@ export async function getUserClaimRewardInstructionAsync<
     TAccountRewardTokenMint,
     TAccountRewardTokenProgram,
     TAccountRewardTokenReserveAccount,
-    TAccountUserRewardTokenAccount,
+    TAccountDestinationRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -217,7 +223,7 @@ export async function getUserClaimRewardInstructionAsync<
     TAccountRewardTokenMint,
     TAccountRewardTokenProgram,
     TAccountRewardTokenReserveAccount,
-    TAccountUserRewardTokenAccount,
+    TAccountDestinationRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -227,7 +233,7 @@ export async function getUserClaimRewardInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
@@ -253,8 +259,8 @@ export async function getUserClaimRewardInstructionAsync<
       value: input.rewardTokenReserveAccount ?? null,
       isWritable: true,
     },
-    userRewardTokenAccount: {
-      value: input.userRewardTokenAccount ?? null,
+    destinationRewardTokenAccount: {
+      value: input.destinationRewardTokenAccount ?? null,
       isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
@@ -351,7 +357,7 @@ export async function getUserClaimRewardInstructionAsync<
       getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.rewardTokenProgram),
       getAccountMeta(accounts.rewardTokenReserveAccount),
-      getAccountMeta(accounts.userRewardTokenAccount),
+      getAccountMeta(accounts.destinationRewardTokenAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -369,7 +375,7 @@ export async function getUserClaimRewardInstructionAsync<
     TAccountRewardTokenMint,
     TAccountRewardTokenProgram,
     TAccountRewardTokenReserveAccount,
-    TAccountUserRewardTokenAccount,
+    TAccountDestinationRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -386,7 +392,7 @@ export type UserClaimRewardInput<
   TAccountRewardTokenMint extends string = string,
   TAccountRewardTokenProgram extends string = string,
   TAccountRewardTokenReserveAccount extends string = string,
-  TAccountUserRewardTokenAccount extends string = string,
+  TAccountDestinationRewardTokenAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -398,11 +404,11 @@ export type UserClaimRewardInput<
   rewardTokenMint: Address<TAccountRewardTokenMint>;
   rewardTokenProgram: Address<TAccountRewardTokenProgram>;
   rewardTokenReserveAccount: Address<TAccountRewardTokenReserveAccount>;
-  userRewardTokenAccount: Address<TAccountUserRewardTokenAccount>;
+  destinationRewardTokenAccount: Address<TAccountDestinationRewardTokenAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardPoolId: UserClaimRewardInstructionDataArgs['rewardPoolId'];
-  rewardId: UserClaimRewardInstructionDataArgs['rewardId'];
+  isBonusPool: UserClaimRewardInstructionDataArgs['isBonusPool'];
+  amount: UserClaimRewardInstructionDataArgs['amount'];
 };
 
 export function getUserClaimRewardInstruction<
@@ -414,7 +420,7 @@ export function getUserClaimRewardInstruction<
   TAccountRewardTokenMint extends string,
   TAccountRewardTokenProgram extends string,
   TAccountRewardTokenReserveAccount extends string,
-  TAccountUserRewardTokenAccount extends string,
+  TAccountDestinationRewardTokenAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -428,7 +434,7 @@ export function getUserClaimRewardInstruction<
     TAccountRewardTokenMint,
     TAccountRewardTokenProgram,
     TAccountRewardTokenReserveAccount,
-    TAccountUserRewardTokenAccount,
+    TAccountDestinationRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -443,7 +449,7 @@ export function getUserClaimRewardInstruction<
   TAccountRewardTokenMint,
   TAccountRewardTokenProgram,
   TAccountRewardTokenReserveAccount,
-  TAccountUserRewardTokenAccount,
+  TAccountDestinationRewardTokenAccount,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -452,7 +458,7 @@ export function getUserClaimRewardInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
@@ -478,8 +484,8 @@ export function getUserClaimRewardInstruction<
       value: input.rewardTokenReserveAccount ?? null,
       isWritable: true,
     },
-    userRewardTokenAccount: {
-      value: input.userRewardTokenAccount ?? null,
+    destinationRewardTokenAccount: {
+      value: input.destinationRewardTokenAccount ?? null,
       isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
@@ -504,7 +510,7 @@ export function getUserClaimRewardInstruction<
       getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.rewardTokenProgram),
       getAccountMeta(accounts.rewardTokenReserveAccount),
-      getAccountMeta(accounts.userRewardTokenAccount),
+      getAccountMeta(accounts.destinationRewardTokenAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -522,7 +528,7 @@ export function getUserClaimRewardInstruction<
     TAccountRewardTokenMint,
     TAccountRewardTokenProgram,
     TAccountRewardTokenReserveAccount,
-    TAccountUserRewardTokenAccount,
+    TAccountDestinationRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -544,7 +550,7 @@ export type ParsedUserClaimRewardInstruction<
     rewardTokenMint: TAccountMetas[5];
     rewardTokenProgram: TAccountMetas[6];
     rewardTokenReserveAccount: TAccountMetas[7];
-    userRewardTokenAccount: TAccountMetas[8];
+    destinationRewardTokenAccount: TAccountMetas[8];
     eventAuthority: TAccountMetas[9];
     program: TAccountMetas[10];
   };
@@ -580,7 +586,7 @@ export function parseUserClaimRewardInstruction<
       rewardTokenMint: getNextAccount(),
       rewardTokenProgram: getNextAccount(),
       rewardTokenReserveAccount: getNextAccount(),
-      userRewardTokenAccount: getNextAccount(),
+      destinationRewardTokenAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

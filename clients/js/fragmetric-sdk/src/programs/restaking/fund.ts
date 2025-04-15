@@ -219,25 +219,10 @@ export class RestakingFundAccountContext extends AccountContext<
   }
 
   readonly wrap = new RestakingFundWrapAccountContext(this, async (parent) => {
-    const receiptTokenMint = await parent.parent.resolveAddress();
-    if (receiptTokenMint) {
-      const ix =
-        await restaking.getAdminInitializeFundWrapAccountRewardAccountInstructionAsync(
-          {
-            payer: createNoopSigner(this.program.address),
-            receiptTokenMint: receiptTokenMint,
-            program: this.program.address,
-          },
-          {
-            programAddress: this.program.address,
-          }
-        );
-      return ix.accounts[2].address;
+    const fund = await parent.resolveAccount(true);
+    if (fund?.data.wrappedToken?.enabled) {
+      return fund.data.wrapAccount;
     }
-    // const fund = await parent.resolveAccount(true);
-    // if (fund?.data.wrappedToken?.enabled) {
-    //   return fund.data.wrapAccount;
-    // }
     return null;
   });
 
@@ -1485,7 +1470,7 @@ export class RestakingFundAccountContext extends AccountContext<
                 }
               : null;
           const newDelegationStrategies =
-            partialDelegations?.slice(0, 8).map((newDelegation) => {
+            partialDelegations?.slice(0, 6).map((newDelegation) => {
               const currentDelegation = currentDelegationStrategies.find(
                 (item) => item.operator == newDelegation.operator
               )!;
@@ -1532,11 +1517,11 @@ export class RestakingFundAccountContext extends AccountContext<
     },
     async (parent, args, events) => {
       const { delegations: partialDelegations, ...partialArgs } = args;
-      if (partialDelegations?.length && partialDelegations?.length > 8) {
+      if (partialDelegations?.length && partialDelegations?.length > 6) {
         return {
           args: {
             vault: partialArgs.vault,
-            delegations: partialDelegations.slice(8),
+            delegations: partialDelegations.slice(6),
           },
         };
       }
@@ -1736,19 +1721,40 @@ export class RestakingFundAccountContext extends AccountContext<
           const fundManager = (this.program as RestakingProgram).knownAddresses
             .fundManager;
 
+          const ix = await restaking.getFundManagerInitializeFundWrappedTokenInstructionAsync(
+            {
+              admin: createNoopSigner(admin),
+              fundManager: createNoopSigner(fundManager),
+              receiptTokenMint: receiptTokenMint,
+              program: this.program.address,
+              wrappedTokenMint: args.mint as Address,
+            },
+            {
+              programAddress: this.program.address,
+            }
+          );
+          const fundWrapAccount = ix.accounts[2].address;
+
           return Promise.all([
-            restaking.getFundManagerInitializeFundWrappedTokenInstructionAsync(
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(payer! as Address),
+              mint: receiptTokenMint,
+              owner: fundWrapAccount,
+              tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
+            }),
+            restaking.getAdminCreateUserRewardAccountIdempotentInstructionAsync(
               {
-                admin: createNoopSigner(admin),
-                fundManager: createNoopSigner(fundManager),
-                receiptTokenMint: receiptTokenMint,
+                payer: createNoopSigner(payer! as Address),
+                user: fundWrapAccount,
                 program: this.program.address,
-                wrappedTokenMint: args.mint as Address,
+                receiptTokenMint: receiptTokenMint,
+                desiredAccountSize: null,
               },
               {
                 programAddress: this.program.address,
               }
             ),
+            ix,
           ]);
         },
       ],

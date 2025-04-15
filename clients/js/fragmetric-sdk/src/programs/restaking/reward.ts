@@ -34,19 +34,22 @@ export class RestakingRewardAccountContext extends AccountContext<
       bump,
       reserveAccountBump,
       maxRewards,
-      maxRewardPools,
       padding1,
       numRewards,
-      numRewardPools,
       padding2,
       reserveAccount,
       reserved,
       rewards1,
-      rewardPools1,
+      baseRewardPool,
+      bonusRewardPool,
+      padding3,
+      reserved2,
       ...props
     } = account.data;
     const rewards = rewards1.slice(0, numRewards).map((reward) => {
-      const { id, name, description, reserved, claimable, ...props } = reward;
+      const {
+        id, name, description, reserved, claimable, ...props
+      } = reward;
       return {
         id,
         name: getUtf8Decoder().decode(name),
@@ -56,22 +59,21 @@ export class RestakingRewardAccountContext extends AccountContext<
       };
     });
 
-    const pools = rewardPools1.slice(0, numRewardPools).map((rewardPool) => {
+    const pools = [baseRewardPool, bonusRewardPool].map((rewardPool) => {
       const {
         id,
-        name,
         customContributionAccrualRateEnabled,
         tokenAllocatedAmount,
         padding,
         numRewardSettlements,
         reserved,
         rewardSettlements1,
+        padding2,
         ...props
       } = rewardPool;
 
       return {
         // id,
-        // name: getUtf8Decoder().decode(name),
         customContributionAccrualRateEnabled:
           customContributionAccrualRateEnabled == 1,
         ...props,
@@ -96,8 +98,8 @@ export class RestakingRewardAccountContext extends AccountContext<
               numSettlementBlocks,
               settlementBlocksHead,
               settlementBlocksTail,
-              padding,
               settlementBlocks,
+              padding2,
               ...props
             } = settlement;
             // [ head ... tail ] or [ tail ... head ]
@@ -295,60 +297,6 @@ export class RestakingRewardAccountContext extends AccountContext<
     }
   );
 
-  // TODO [sdk]: deprecate initializePoolsTransaction
-  readonly deprecatingInitializePools = new TransactionTemplateContext(
-    this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
-    {
-      description: 'initialize global reward pools',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'fundManagerUpdatedRewardPool'
-      ),
-      instructions: [
-        async (parent, args, overrides) => {
-          const [data, payer] = await Promise.all([
-            parent.parent.resolve(true),
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          if (!data) throw new Error('invalid context');
-          const fundManager = (this.program as RestakingProgram).knownAddresses
-            .fundManager;
-
-          return Promise.all([
-            restaking.getFundManagerAddRewardPoolInstructionAsync(
-              {
-                name: 'base',
-                customContributionAccrualRateEnabled: false,
-                fundManager: createNoopSigner(fundManager),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-            restaking.getFundManagerAddRewardPoolInstructionAsync(
-              {
-                customContributionAccrualRateEnabled: true,
-                fundManager: createNoopSigner(fundManager),
-                name: 'bonus',
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-          ]);
-        },
-      ],
-    }
-  );
-
   readonly addReward = new TransactionTemplateContext(
     this,
     v.object({
@@ -446,7 +394,6 @@ export class RestakingRewardAccountContext extends AccountContext<
               : null,
             restaking.getFundManagerUpdateRewardInstructionAsync(
               {
-                rewardId: reward.id,
                 rewardTokenMint: args.claimable ? rewardMint : undefined,
                 rewardTokenProgram: args.claimable ? rewardProgram : undefined,
                 rewardTokenReserveAccount: args.claimable
@@ -458,9 +405,10 @@ export class RestakingRewardAccountContext extends AccountContext<
                       }
                     )
                   : undefined,
-                mint: args.newMint as Address,
-                programArg: args.newProgram as Address,
-                decimals: args.newDecimals,
+                mint: args.mint as Address,
+                newMint: args.newMint as Address,
+                newProgram: args.newProgram as Address,
+                newDecimals: args.newDecimals,
                 claimable: args.claimable,
                 fundManager: createNoopSigner(fundManager),
                 receiptTokenMint: receiptTokenMint,
@@ -505,11 +453,7 @@ export class RestakingRewardAccountContext extends AccountContext<
           const reward = rewardAccount?.data.rewards1
             .slice(0, rewardAccount.data.numRewards)
             .find((r) => r.mint == args.mint);
-          // TODO [sdk]: update pool related logic aligned to the new spec
-          const pool = rewardAccount?.data.rewardPools1.find(
-            (r) => (r.customContributionAccrualRateEnabled == 1) == args.isBonus
-          );
-          if (!(receiptTokenMint && rewardAccount && reward && pool))
+          if (!(receiptTokenMint && rewardAccount && reward))
             throw new Error('invalid context');
           const fundManager = (this.program as RestakingProgram).knownAddresses
             .fundManager;
@@ -517,8 +461,8 @@ export class RestakingRewardAccountContext extends AccountContext<
           return Promise.all([
             restaking.getFundManagerSettleRewardInstructionAsync(
               {
-                rewardPoolId: pool.id,
-                rewardId: reward.id,
+                isBonusPool: args.isBonus,
+                rewardTokenMintArg: args.mint as Address,
                 amount: args.amount,
                 rewardTokenMint: reward.claimable ? reward.mint : undefined,
                 rewardTokenProgram: reward.claimable

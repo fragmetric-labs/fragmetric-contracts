@@ -107,33 +107,32 @@ test('can traverse context graph', async () => {
       │   │   ├── latestWithdrawalBatches                IterativeAccount length=undefined, types=undefined
       │   │   ├── restakingVaults                        IterativeAccount length=undefined, types=undefined
       │   │   ├── wrap                                   RestakingFundWrapAccount address=undefined, lamports=undefined
-      │   │   │   ├── reward                             RestakingFundWrapAccountRewardAccount address=undefined
+      │   │   │   ├── reward                             RestakingFundWrapRewardAccount address=undefined
       │   │   │   │   ├── updatePools                    TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   │   └── initializeOrUpdateAccount      TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update a PDA's reward account
+      │   │   │   │   └── initializeOrUpdateAccount      TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
       │   │   │   └── receiptToken                       TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── treasury                               RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                    IterativeAccount length=undefined, types=undefined
       │   │   ├── addressLookupTable                     RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
-      │   │   │   └── initializeOrUpdateAccount          TransactionTemplate args=addresses, events=undefined, description=initialize or update address lookup table
+      │   │   │   └── initializeOrUpdateAccount          TransactionTemplate (chained) args=addresses, events=undefined, description=initialize or update address lookup table
       │   │   ├── updatePrices                           TransactionTemplate args=null, events=operatorUpdatedFundPrices, description=manually triggers price updates for the receipt token and underlying ass
       │   │   ├── donate                                 TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate support
-      │   │   ├── runCommand                             TransactionTemplate args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
-      │   │   ├── initializeOrUpdateAccount              TransactionTemplate args=targetVersion, events=undefined, description=initialize or update fund account
+      │   │   ├── runCommand                             TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
+      │   │   ├── initializeOrUpdateAccount              TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
       │   │   ├── updateGeneralStrategy                  TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps, event
       │   │   ├── addSupportedToken                      TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
       │   │   ├── updateAssetStrategy                    TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
       │   │   ├── addTokenSwapStrategy                   TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
       │   │   ├── addRestakingVault                      TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
       │   │   ├── addRestakingVaultDelegation            TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
-      │   │   ├── updateRestakingVaultStrategy           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
+      │   │   ├── updateRestakingVaultStrategy           TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
       │   │   ├── addRestakingVaultCompoundingReward     TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault
       │   │   ├── addRestakingVaultDistributingReward    TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new distributing reward to a restaking vault
       │   │   ├── initializeNormalizedToken              TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
       │   │   └── initializeWrappedToken                 TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
       │   ├── reward                                     RestakingRewardAccount address=undefined
       │   │   ├── updatePools                            TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global reward po
-      │   │   ├── initializeOrUpdateAccount              TransactionTemplate args=targetVersion, events=undefined, description=initialize or update reward account
-      │   │   ├── deprecatingInitializePools             TransactionTemplate args=null, events=fundManagerUpdatedRewardPool, description=initialize global reward pools
+      │   │   ├── initializeOrUpdateAccount              TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
       │   │   ├── addReward                              TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-claimabl
       │   │   ├── updateReward                           TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimable rewar
       │   │   └── settleReward                           TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
@@ -176,33 +175,32 @@ test('can traverse context graph', async () => {
       │   │   ├── latestWithdrawalBatches                IterativeAccount length=undefined, types=undefined
       │   │   ├── restakingVaults                        IterativeAccount length=undefined, types=undefined
       │   │   ├── wrap                                   RestakingFundWrapAccount address=undefined, lamports=undefined
-      │   │   │   ├── reward                             RestakingFundWrapAccountRewardAccount address=undefined
+      │   │   │   ├── reward                             RestakingFundWrapRewardAccount address=undefined
       │   │   │   │   ├── updatePools                    TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   │   └── initializeOrUpdateAccount      TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update a PDA's reward account
+      │   │   │   │   └── initializeOrUpdateAccount      TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
       │   │   │   └── receiptToken                       TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── treasury                               RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                    IterativeAccount length=undefined, types=undefined
       │   │   ├── addressLookupTable                     RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
-      │   │   │   └── initializeOrUpdateAccount          TransactionTemplate args=addresses, events=undefined, description=initialize or update address lookup table
+      │   │   │   └── initializeOrUpdateAccount          TransactionTemplate (chained) args=addresses, events=undefined, description=initialize or update address lookup table
       │   │   ├── updatePrices                           TransactionTemplate args=null, events=operatorUpdatedFundPrices, description=manually triggers price updates for the receipt token and underlying ass
       │   │   ├── donate                                 TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate support
-      │   │   ├── runCommand                             TransactionTemplate args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
-      │   │   ├── initializeOrUpdateAccount              TransactionTemplate args=targetVersion, events=undefined, description=initialize or update fund account
+      │   │   ├── runCommand                             TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
+      │   │   ├── initializeOrUpdateAccount              TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
       │   │   ├── updateGeneralStrategy                  TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps, event
       │   │   ├── addSupportedToken                      TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
       │   │   ├── updateAssetStrategy                    TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
       │   │   ├── addTokenSwapStrategy                   TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
       │   │   ├── addRestakingVault                      TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
       │   │   ├── addRestakingVaultDelegation            TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
-      │   │   ├── updateRestakingVaultStrategy           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
+      │   │   ├── updateRestakingVaultStrategy           TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
       │   │   ├── addRestakingVaultCompoundingReward     TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault
       │   │   ├── addRestakingVaultDistributingReward    TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new distributing reward to a restaking vault
       │   │   ├── initializeNormalizedToken              TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
       │   │   └── initializeWrappedToken                 TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
       │   ├── reward                                     RestakingRewardAccount address=undefined
       │   │   ├── updatePools                            TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global reward po
-      │   │   ├── initializeOrUpdateAccount              TransactionTemplate args=targetVersion, events=undefined, description=initialize or update reward account
-      │   │   ├── deprecatingInitializePools             TransactionTemplate args=null, events=fundManagerUpdatedRewardPool, description=initialize global reward pools
+      │   │   ├── initializeOrUpdateAccount              TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
       │   │   ├── addReward                              TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-claimabl
       │   │   ├── updateReward                           TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimable rewar
       │   │   └── settleReward                           TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward

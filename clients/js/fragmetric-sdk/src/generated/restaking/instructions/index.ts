@@ -6,22 +6,20 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from './adminCreateUserRewardAccountIdempotent';
 export * from './adminInitializeExtraAccountMetaList';
 export * from './adminInitializeFundAccount';
-export * from './adminInitializeFundWrapAccountRewardAccount';
 export * from './adminInitializeNormalizedTokenPoolAccount';
 export * from './adminInitializeRewardAccount';
 export * from './adminSetAddressLookupTableAccount';
 export * from './adminUpdateExtraAccountMetaListIfNeeded';
 export * from './adminUpdateFundAccountIfNeeded';
-export * from './adminUpdateFundWrapAccountRewardAccountIfNeeded';
 export * from './adminUpdateNormalizedTokenPoolAccountIfNeeded';
 export * from './adminUpdateRewardAccountIfNeeded';
 export * from './fundManagerAddNormalizedTokenPoolSupportedToken';
 export * from './fundManagerAddRestakingVaultCompoundingRewardToken';
 export * from './fundManagerAddRestakingVaultDistributingRewardToken';
 export * from './fundManagerAddReward';
-export * from './fundManagerAddRewardPool';
 export * from './fundManagerAddSupportedToken';
 export * from './fundManagerAddTokenSwapStrategy';
 export * from './fundManagerInitializeFundJitoRestakingVault';
@@ -51,12 +49,8 @@ export * from './userCreateFundAccountIdempotent';
 export * from './userCreateRewardAccountIdempotent';
 export * from './userDepositSol';
 export * from './userDepositSupportedToken';
-export * from './userInitializeFundAccount';
-export * from './userInitializeRewardAccount';
 export * from './userRequestWithdrawal';
 export * from './userUnwrapReceiptToken';
-export * from './userUpdateFundAccountIfNeeded';
-export * from './userUpdateRewardAccountIfNeeded';
 export * from './userUpdateRewardPools';
 export * from './userWithdrawSol';
 export * from './userWithdrawSupportedToken';

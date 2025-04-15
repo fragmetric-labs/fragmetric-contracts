@@ -33,6 +33,7 @@ import {
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
@@ -45,30 +46,31 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const USER_UPDATE_REWARD_ACCOUNT_IF_NEEDED_DISCRIMINATOR =
-  new Uint8Array([156, 78, 23, 8, 238, 177, 204, 173]);
+export const ADMIN_CREATE_USER_REWARD_ACCOUNT_IDEMPOTENT_DISCRIMINATOR =
+  new Uint8Array([47, 200, 202, 185, 15, 107, 195, 16]);
 
-export function getUserUpdateRewardAccountIfNeededDiscriminatorBytes() {
+export function getAdminCreateUserRewardAccountIdempotentDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    USER_UPDATE_REWARD_ACCOUNT_IF_NEEDED_DISCRIMINATOR
+    ADMIN_CREATE_USER_REWARD_ACCOUNT_IDEMPOTENT_DISCRIMINATOR
   );
 }
 
-export type UserUpdateRewardAccountIfNeededInstruction<
+export type AdminCreateUserRewardAccountIdempotentInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
+  TAccountPayer extends string | IAccountMeta<string> = string,
+  TAccountAdmin extends
+    | string
+    | IAccountMeta<string> = '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL',
   TAccountUser extends string | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
-  TAccountReceiptTokenProgram extends
-    | string
-    | IAccountMeta<string> = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
   TAccountUserReceiptTokenAccount extends
     | string
     | IAccountMeta<string> = string,
   TAccountRewardAccount extends string | IAccountMeta<string> = string,
   TAccountUserRewardAccount extends string | IAccountMeta<string> = string,
+  TAccountSystemProgram extends
+    | string
+    | IAccountMeta<string> = '11111111111111111111111111111111',
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -76,18 +78,20 @@ export type UserUpdateRewardAccountIfNeededInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountPayer extends string
+        ? WritableSignerAccount<TAccountPayer> &
+            IAccountSignerMeta<TAccountPayer>
+        : TAccountPayer,
+      TAccountAdmin extends string
+        ? ReadonlySignerAccount<TAccountAdmin> &
+            IAccountSignerMeta<TAccountAdmin>
+        : TAccountAdmin,
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlyAccount<TAccountUser>
         : TAccountUser,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
-      TAccountReceiptTokenProgram extends string
-        ? ReadonlyAccount<TAccountReceiptTokenProgram>
-        : TAccountReceiptTokenProgram,
       TAccountUserReceiptTokenAccount extends string
         ? ReadonlyAccount<TAccountUserReceiptTokenAccount>
         : TAccountUserReceiptTokenAccount,
@@ -97,6 +101,9 @@ export type UserUpdateRewardAccountIfNeededInstruction<
       TAccountUserRewardAccount extends string
         ? WritableAccount<TAccountUserRewardAccount>
         : TAccountUserRewardAccount,
+      TAccountSystemProgram extends string
+        ? ReadonlyAccount<TAccountSystemProgram>
+        : TAccountSystemProgram,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -107,16 +114,16 @@ export type UserUpdateRewardAccountIfNeededInstruction<
     ]
   >;
 
-export type UserUpdateRewardAccountIfNeededInstructionData = {
+export type AdminCreateUserRewardAccountIdempotentInstructionData = {
   discriminator: ReadonlyUint8Array;
   desiredAccountSize: Option<number>;
 };
 
-export type UserUpdateRewardAccountIfNeededInstructionDataArgs = {
+export type AdminCreateUserRewardAccountIdempotentInstructionDataArgs = {
   desiredAccountSize: OptionOrNullable<number>;
 };
 
-export function getUserUpdateRewardAccountIfNeededInstructionDataEncoder(): Encoder<UserUpdateRewardAccountIfNeededInstructionDataArgs> {
+export function getAdminCreateUserRewardAccountIdempotentInstructionDataEncoder(): Encoder<AdminCreateUserRewardAccountIdempotentInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -124,85 +131,90 @@ export function getUserUpdateRewardAccountIfNeededInstructionDataEncoder(): Enco
     ]),
     (value) => ({
       ...value,
-      discriminator: USER_UPDATE_REWARD_ACCOUNT_IF_NEEDED_DISCRIMINATOR,
+      discriminator: ADMIN_CREATE_USER_REWARD_ACCOUNT_IDEMPOTENT_DISCRIMINATOR,
     })
   );
 }
 
-export function getUserUpdateRewardAccountIfNeededInstructionDataDecoder(): Decoder<UserUpdateRewardAccountIfNeededInstructionData> {
+export function getAdminCreateUserRewardAccountIdempotentInstructionDataDecoder(): Decoder<AdminCreateUserRewardAccountIdempotentInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['desiredAccountSize', getOptionDecoder(getU32Decoder())],
   ]);
 }
 
-export function getUserUpdateRewardAccountIfNeededInstructionDataCodec(): Codec<
-  UserUpdateRewardAccountIfNeededInstructionDataArgs,
-  UserUpdateRewardAccountIfNeededInstructionData
+export function getAdminCreateUserRewardAccountIdempotentInstructionDataCodec(): Codec<
+  AdminCreateUserRewardAccountIdempotentInstructionDataArgs,
+  AdminCreateUserRewardAccountIdempotentInstructionData
 > {
   return combineCodec(
-    getUserUpdateRewardAccountIfNeededInstructionDataEncoder(),
-    getUserUpdateRewardAccountIfNeededInstructionDataDecoder()
+    getAdminCreateUserRewardAccountIdempotentInstructionDataEncoder(),
+    getAdminCreateUserRewardAccountIdempotentInstructionDataDecoder()
   );
 }
 
-export type UserUpdateRewardAccountIfNeededAsyncInput<
+export type AdminCreateUserRewardAccountIdempotentAsyncInput<
+  TAccountPayer extends string = string,
+  TAccountAdmin extends string = string,
   TAccountUser extends string = string,
-  TAccountSystemProgram extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountReceiptTokenProgram extends string = string,
   TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
+  TAccountSystemProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  user: TransactionSigner<TAccountUser>;
-  systemProgram?: Address<TAccountSystemProgram>;
+  payer: TransactionSigner<TAccountPayer>;
+  admin?: TransactionSigner<TAccountAdmin>;
+  user: Address<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  receiptTokenProgram?: Address<TAccountReceiptTokenProgram>;
   userReceiptTokenAccount?: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount?: Address<TAccountRewardAccount>;
   userRewardAccount?: Address<TAccountUserRewardAccount>;
+  systemProgram?: Address<TAccountSystemProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  desiredAccountSize: UserUpdateRewardAccountIfNeededInstructionDataArgs['desiredAccountSize'];
+  desiredAccountSize: AdminCreateUserRewardAccountIdempotentInstructionDataArgs['desiredAccountSize'];
 };
 
-export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
+export async function getAdminCreateUserRewardAccountIdempotentInstructionAsync<
+  TAccountPayer extends string,
+  TAccountAdmin extends string,
   TAccountUser extends string,
-  TAccountSystemProgram extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountReceiptTokenProgram extends string,
   TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
+  TAccountSystemProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: UserUpdateRewardAccountIfNeededAsyncInput<
+  input: AdminCreateUserRewardAccountIdempotentAsyncInput<
+    TAccountPayer,
+    TAccountAdmin,
     TAccountUser,
-    TAccountSystemProgram,
     TAccountReceiptTokenMint,
-    TAccountReceiptTokenProgram,
     TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
+    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  UserUpdateRewardAccountIfNeededInstruction<
+  AdminCreateUserRewardAccountIdempotentInstruction<
     TProgramAddress,
+    TAccountPayer,
+    TAccountAdmin,
     TAccountUser,
-    TAccountSystemProgram,
     TAccountReceiptTokenMint,
-    TAccountReceiptTokenProgram,
     TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
+    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -212,14 +224,11 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    payer: { value: input.payer ?? null, isWritable: true },
+    admin: { value: input.admin ?? null, isWritable: false },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: false,
-    },
-    receiptTokenProgram: {
-      value: input.receiptTokenProgram ?? null,
       isWritable: false,
     },
     userReceiptTokenAccount: {
@@ -231,6 +240,7 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
       value: input.userRewardAccount ?? null,
       isWritable: true,
     },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -243,13 +253,9 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-  if (!accounts.receiptTokenProgram.value) {
-    accounts.receiptTokenProgram.value =
-      'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL' as Address<'9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'>;
   }
   if (!accounts.userReceiptTokenAccount.value) {
     accounts.userReceiptTokenAccount.value = await getProgramDerivedAddress({
@@ -257,8 +263,12 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
         getAddressEncoder().encode(expectAddress(accounts.user.value)),
-        getAddressEncoder().encode(
-          expectAddress(accounts.receiptTokenProgram.value)
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 238, 117, 143, 222, 24, 66, 93, 188, 228, 108,
+            205, 218, 182, 26, 252, 77, 131, 185, 13, 39, 254, 189, 249, 40,
+            216, 161, 139, 252,
+          ])
         ),
         getAddressEncoder().encode(
           expectAddress(accounts.receiptTokenMint.value)
@@ -291,6 +301,10 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
       ],
     });
   }
+  if (!accounts.systemProgram.value) {
+    accounts.systemProgram.value =
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
+  }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
       programAddress,
@@ -308,29 +322,31 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.admin),
       getAccountMeta(accounts.user),
-      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.receiptTokenProgram),
       getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
+      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardAccountIfNeededInstructionDataEncoder().encode(
-      args as UserUpdateRewardAccountIfNeededInstructionDataArgs
+    data: getAdminCreateUserRewardAccountIdempotentInstructionDataEncoder().encode(
+      args as AdminCreateUserRewardAccountIdempotentInstructionDataArgs
     ),
-  } as UserUpdateRewardAccountIfNeededInstruction<
+  } as AdminCreateUserRewardAccountIdempotentInstruction<
     TProgramAddress,
+    TAccountPayer,
+    TAccountAdmin,
     TAccountUser,
-    TAccountSystemProgram,
     TAccountReceiptTokenMint,
-    TAccountReceiptTokenProgram,
     TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
+    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -338,62 +354,67 @@ export async function getUserUpdateRewardAccountIfNeededInstructionAsync<
   return instruction;
 }
 
-export type UserUpdateRewardAccountIfNeededInput<
+export type AdminCreateUserRewardAccountIdempotentInput<
+  TAccountPayer extends string = string,
+  TAccountAdmin extends string = string,
   TAccountUser extends string = string,
-  TAccountSystemProgram extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountReceiptTokenProgram extends string = string,
   TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
+  TAccountSystemProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  user: TransactionSigner<TAccountUser>;
-  systemProgram?: Address<TAccountSystemProgram>;
+  payer: TransactionSigner<TAccountPayer>;
+  admin?: TransactionSigner<TAccountAdmin>;
+  user: Address<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  receiptTokenProgram?: Address<TAccountReceiptTokenProgram>;
   userReceiptTokenAccount: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount: Address<TAccountRewardAccount>;
   userRewardAccount: Address<TAccountUserRewardAccount>;
+  systemProgram?: Address<TAccountSystemProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  desiredAccountSize: UserUpdateRewardAccountIfNeededInstructionDataArgs['desiredAccountSize'];
+  desiredAccountSize: AdminCreateUserRewardAccountIdempotentInstructionDataArgs['desiredAccountSize'];
 };
 
-export function getUserUpdateRewardAccountIfNeededInstruction<
+export function getAdminCreateUserRewardAccountIdempotentInstruction<
+  TAccountPayer extends string,
+  TAccountAdmin extends string,
   TAccountUser extends string,
-  TAccountSystemProgram extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountReceiptTokenProgram extends string,
   TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
+  TAccountSystemProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: UserUpdateRewardAccountIfNeededInput<
+  input: AdminCreateUserRewardAccountIdempotentInput<
+    TAccountPayer,
+    TAccountAdmin,
     TAccountUser,
-    TAccountSystemProgram,
     TAccountReceiptTokenMint,
-    TAccountReceiptTokenProgram,
     TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
+    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): UserUpdateRewardAccountIfNeededInstruction<
+): AdminCreateUserRewardAccountIdempotentInstruction<
   TProgramAddress,
+  TAccountPayer,
+  TAccountAdmin,
   TAccountUser,
-  TAccountSystemProgram,
   TAccountReceiptTokenMint,
-  TAccountReceiptTokenProgram,
   TAccountUserReceiptTokenAccount,
   TAccountRewardAccount,
   TAccountUserRewardAccount,
+  TAccountSystemProgram,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -402,14 +423,11 @@ export function getUserUpdateRewardAccountIfNeededInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    payer: { value: input.payer ?? null, isWritable: true },
+    admin: { value: input.admin ?? null, isWritable: false },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: false,
-    },
-    receiptTokenProgram: {
-      value: input.receiptTokenProgram ?? null,
       isWritable: false,
     },
     userReceiptTokenAccount: {
@@ -421,6 +439,7 @@ export function getUserUpdateRewardAccountIfNeededInstruction<
       value: input.userRewardAccount ?? null,
       isWritable: true,
     },
+    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -433,41 +452,43 @@ export function getUserUpdateRewardAccountIfNeededInstruction<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL' as Address<'9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'>;
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
-  if (!accounts.receiptTokenProgram.value) {
-    accounts.receiptTokenProgram.value =
-      'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.payer),
+      getAccountMeta(accounts.admin),
       getAccountMeta(accounts.user),
-      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.receiptTokenProgram),
       getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
+      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardAccountIfNeededInstructionDataEncoder().encode(
-      args as UserUpdateRewardAccountIfNeededInstructionDataArgs
+    data: getAdminCreateUserRewardAccountIdempotentInstructionDataEncoder().encode(
+      args as AdminCreateUserRewardAccountIdempotentInstructionDataArgs
     ),
-  } as UserUpdateRewardAccountIfNeededInstruction<
+  } as AdminCreateUserRewardAccountIdempotentInstruction<
     TProgramAddress,
+    TAccountPayer,
+    TAccountAdmin,
     TAccountUser,
-    TAccountSystemProgram,
     TAccountReceiptTokenMint,
-    TAccountReceiptTokenProgram,
     TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
+    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -475,34 +496,38 @@ export function getUserUpdateRewardAccountIfNeededInstruction<
   return instruction;
 }
 
-export type ParsedUserUpdateRewardAccountIfNeededInstruction<
+export type ParsedAdminCreateUserRewardAccountIdempotentInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    user: TAccountMetas[0];
-    systemProgram: TAccountMetas[1];
-    receiptTokenMint: TAccountMetas[2];
-    receiptTokenProgram: TAccountMetas[3];
+    payer: TAccountMetas[0];
+    admin: TAccountMetas[1];
+    user: TAccountMetas[2];
+    receiptTokenMint: TAccountMetas[3];
     userReceiptTokenAccount: TAccountMetas[4];
     rewardAccount: TAccountMetas[5];
     userRewardAccount: TAccountMetas[6];
-    eventAuthority: TAccountMetas[7];
-    program: TAccountMetas[8];
+    systemProgram: TAccountMetas[7];
+    eventAuthority: TAccountMetas[8];
+    program: TAccountMetas[9];
   };
-  data: UserUpdateRewardAccountIfNeededInstructionData;
+  data: AdminCreateUserRewardAccountIdempotentInstructionData;
 };
 
-export function parseUserUpdateRewardAccountIfNeededInstruction<
+export function parseAdminCreateUserRewardAccountIdempotentInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedUserUpdateRewardAccountIfNeededInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+): ParsedAdminCreateUserRewardAccountIdempotentInstruction<
+  TProgram,
+  TAccountMetas
+> {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -515,17 +540,18 @@ export function parseUserUpdateRewardAccountIfNeededInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      payer: getNextAccount(),
+      admin: getNextAccount(),
       user: getNextAccount(),
-      systemProgram: getNextAccount(),
       receiptTokenMint: getNextAccount(),
-      receiptTokenProgram: getNextAccount(),
       userReceiptTokenAccount: getNextAccount(),
       rewardAccount: getNextAccount(),
       userRewardAccount: getNextAccount(),
+      systemProgram: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getUserUpdateRewardAccountIfNeededInstructionDataDecoder().decode(
+    data: getAdminCreateUserRewardAccountIdempotentInstructionDataDecoder().decode(
       instruction.data
     ),
   };

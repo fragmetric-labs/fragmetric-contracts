@@ -2,7 +2,6 @@ packages:
   - clients/codegen
   - clients/js/*
   - clients/js/fragmetric-sdk/examples/*
-  - tools
 onlyBuiltDependencies:
   - bigint-buffer
   - blake-hash
@@ -15,3 +14,5 @@ onlyBuiltDependencies:
   - tiny-secp256k1
   - usb
   - utf-8-validate
+useNodeVersion: 20.19.0
+engineStrict: true

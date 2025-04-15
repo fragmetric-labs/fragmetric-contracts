@@ -154,7 +154,6 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       ctx.reward.initializeOrUpdateAccount.executeChained({
         targetVersion: 35,
       }),
-    () => ctx.reward.deprecatingInitializePools.execute(null),
     () =>
       ctx.reward.addReward.execute({
         mint: '11111111111111111111111111111111',
@@ -253,7 +252,6 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         description: `wfragSOL is Solana's SPL token version of fragSOL that maximizes DeFi support and composability.`,
         decimals: 9,
       }),
-    () => ctx.fund.wrap.reward.initializeOrUpdateAccount.execute(null),
     () =>
       ctx.fund.initializeWrappedToken.execute({
         mint: 'h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q',
@@ -348,7 +346,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         operator: '6AxtdRGAaiAyqcwxVBHsH3xtqCbQuffaiE4epT4koTxk', // Staked
       }),
     () =>
-      ctx.fund.updateRestakingVaultStrategy.execute({
+      ctx.fund.updateRestakingVaultStrategy.executeChained({
         vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
         delegations: [
           {

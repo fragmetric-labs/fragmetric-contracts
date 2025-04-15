@@ -30,23 +30,24 @@ abstract class RestakingAbstractUserRewardAccountContext<P extends AccountContex
       receiptTokenMint,
       user,
       numUserRewardPools,
-      maxUserRewardPools,
       padding,
-      userRewardPools1,
+      baseUserRewardPool,
+      bonusUserRewardPool,
+      padding2,
       ...props
     } = account.data;
-    const pools = userRewardPools1.slice(0, numUserRewardPools).map((req) => {
+    const pools = [baseUserRewardPool, bonusUserRewardPool].map((pool) => {
       const {
         tokenAllocatedAmount,
         contribution,
         updatedSlot,
         rewardPoolId,
         numRewardSettlements,
-        padding,
         reserved,
         rewardSettlements1,
+        padding2,
         ...props
-      } = req;
+      } = pool;
       return {
         // rewardPoolId,
         contribution,
@@ -176,7 +177,7 @@ abstract class RestakingAbstractUserRewardAccountContext<P extends AccountContex
               owner: user,
               tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
             }),
-            restaking.getUserCreateFundAccountIdempotentInstructionAsync(
+            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
               {
                 user: createNoopSigner(user),
                 program: this.program.address,

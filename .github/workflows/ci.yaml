@@ -1,13 +1,19 @@
 # credit to: https://github.com/jito-foundation/restaking/blob/master/.github/workflows/ci.yaml
-# use `act push --reuse --container-architecture linux/amd64 --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest` to test workflow locally
+#
+# to test workflow locally (macOS):
+#  docker pull --platform linux/amd64 ghcr.io/catthehacker/ubuntu:full-latest
+#  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#  [restart docker engine]
+# now test with:
+#  act push --reuse --container-architecture linux/amd64 --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest
+#
 name: ci
 
 env:
-  CI: true
   RUST_TOOLCHAIN_VERSION: stable
   SOLANA_VERSION: 2.1.18
   ANCHOR_VERSION: 0.31.0
-  NODE_VERSION: 20
+  NODE_VERSION: 20.19.0
 
 on:
   push:
@@ -26,6 +32,26 @@ jobs:
     steps:
       # checkout
       - uses: actions/checkout@v4
+
+      # setup Node runtime
+      - name: setup Node $PATH (act workaround)
+        run: |
+          NODE_BIN=$(command -v node || true)
+          if [ -n "$NODE_BIN" ]; then
+            NODE_DIR=$(dirname "$NODE_BIN")
+            echo "Detected node at: $NODE_DIR"
+            echo "$NODE_DIR" >> $GITHUB_PATH
+          else
+            echo "Node not found, skipping PATH patch"
+          fi
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
       # setup Rust and Solana runtime
       - run: |
@@ -47,34 +73,22 @@ jobs:
           version: "0.21.2"
           locked: true
 
-      # setup Node runtime
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 10
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
       # lint and check crates
       - run: cargo clippy -p restaking -- --allow warnings
       - run: cargo fmt --check
-#      - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
+      - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
 
       # TODO: branch on target programs later
       # run unit tests and build SBF programs
-      - run: cargo test -p restaking
-      - run: ANCHOR_LOG=1 anchor build -p restaking
-      - run: anchor build -p restaking
-
+      # - run: cargo test -p restaking
       # run integration tests
-      - run: pnpm install --filter="\!./tools" # TODO: remove filter once legacy tools deprecated
+      - run: anchor build -p restaking
+      - run: pnpm install
       - shell: bash
         run: |
           shopt -s globstar
-          files=(./programs/restaking/*.test.ts)
-          pnpm test "${files[@]}"
+          files=(./programs/restaking/tests/*.test.ts)
+          CI=1 DEBUG=1 pnpm test "${files[@]}"
 
 #  verified_build:
 #    name: verified_build

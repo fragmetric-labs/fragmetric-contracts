@@ -70,7 +70,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
       ctx.reward.initializeOrUpdateAccount.executeChained({
         targetVersion: 35,
       }),
-    () => ctx.reward.deprecatingInitializePools.execute(null),
     () =>
       ctx.reward.addReward.execute({
         mint: '11111111111111111111111111111111',
@@ -96,7 +95,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         description: `wfragJTO is Solana's SPL token version of fragJTO that maximizes DeFi support and composability.`,
         decimals: 9,
       }),
-    () => ctx.fund.wrap.reward.initializeOrUpdateAccount.execute(null),
     () =>
       ctx.fund.initializeWrappedToken.execute({
         mint: 'EAvS1wFjAccNpDYbAkW2dwUDEiC7BMvWzwUj2tjRUkHA',
@@ -191,7 +189,7 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
       }),
 
     () =>
-      ctx.fund.updateRestakingVaultStrategy.execute({
+      ctx.fund.updateRestakingVaultStrategy.executeChained({
         vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
         delegations: [
           {
