@@ -214,8 +214,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         // validate accounts
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            fund_wrap_account,
-            Some(&self.fund_account.load()?.get_wrap_account_seeds()),
+            fund_wrap_account.key,
             reward_account,
             fund_wrap_account_reward_account,
         )?;
