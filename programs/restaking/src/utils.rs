@@ -24,7 +24,7 @@ pub trait AccountLoaderExt<'info> {
     /// This operation is almost equivalent to [load_init](AccountLoader::load_init),
     /// but skips bytemuck's pointer type casting and accesses directly
     /// to byte array using offset.
-    fn initialize_zero_copy_header(&mut self, bump: u8) -> Result<()>;
+    fn initialize_zero_copy_header(&self, bump: u8) -> Result<()>;
 
     /// Reads bump directly from data without
     /// borsh deserialization or bytemuck type casting.
@@ -32,7 +32,7 @@ pub trait AccountLoaderExt<'info> {
 }
 
 impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader<'info, T> {
-    fn initialize_zero_copy_header(&mut self, bump: u8) -> Result<()> {
+    fn initialize_zero_copy_header(&self, bump: u8) -> Result<()> {
         if !self.as_ref().is_writable {
             return Err(ErrorCode::AccountNotMutable.into());
         }
