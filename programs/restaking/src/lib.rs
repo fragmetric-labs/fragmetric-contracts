@@ -175,15 +175,17 @@ pub mod restaking {
         ctx: Context<AdminUserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let event = modules::reward::UserRewardConfigurationService::process_create_user_reward_account_idempotent(
-            &ctx.accounts.system_program,
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
-            &ctx.accounts.payer,
+        let event = modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
+        )?
+        .process_create_user_reward_account_idempotent(
+            &ctx.accounts.system_program,
+            &ctx.accounts.payer,
             ctx.bumps.user_reward_account,
-            desired_account_size
+            desired_account_size,
         )?;
 
         if let Some(event) = event {
@@ -1080,13 +1082,15 @@ pub mod restaking {
         ctx: Context<UserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let event = modules::reward::UserRewardConfigurationService::process_create_user_reward_account_idempotent(
-            &ctx.accounts.system_program,
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
-            &ctx.accounts.user,
+        let event = modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
+        )?
+        .process_create_user_reward_account_idempotent(
+            &ctx.accounts.system_program,
+            &ctx.accounts.user,
             ctx.bumps.user_reward_account,
             desired_account_size,
         )?;
@@ -1113,6 +1117,7 @@ pub mod restaking {
     pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,
         is_bonus_pool: bool,
+        amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1125,8 +1130,9 @@ pub mod restaking {
             &ctx.accounts.reward_token_program,
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
-            &ctx.accounts.user_reward_token_account,
+            &ctx.accounts.destination_reward_token_account,
             is_bonus_pool,
+            amount,
         )?);
 
         Ok(())

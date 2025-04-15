@@ -171,6 +171,11 @@ impl RewardAccount {
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
+    pub(super) fn has_reward(&self, reward_token_mint: &Pubkey) -> bool {
+        self.get_rewards_iter()
+            .any(|reward| reward.mint == *reward_token_mint)
+    }
+
     pub(super) fn get_reward_by_mint(&self, reward_token_mint: &Pubkey) -> Result<&Reward> {
         self.get_rewards_iter()
             .find(|reward| reward.mint == *reward_token_mint)

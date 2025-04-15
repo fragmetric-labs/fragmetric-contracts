@@ -9,7 +9,7 @@ use super::*;
 
 pub struct RewardConfigurationService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+    reward_account: &'a AccountLoader<'info, RewardAccount>,
 
     current_slot: u64,
 }
@@ -23,7 +23,7 @@ impl Drop for RewardConfigurationService<'_, '_> {
 impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+        reward_account: &'a AccountLoader<'info, RewardAccount>,
     ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
@@ -142,11 +142,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             errors::ErrorCode::RewardAlreadyClaimableError
         );
 
-        if new_mint != mint
-            && reward_account
-                .get_rewards_iter()
-                .any(|reward| reward.mint == new_mint)
-        {
+        if new_mint != mint && reward_account.has_reward(&new_mint) {
             err!(errors::ErrorCode::RewardAlreadyExistingRewardError)?
         }
 

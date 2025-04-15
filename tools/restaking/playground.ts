@@ -3142,11 +3142,10 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runFundManagerUpdateReward(args: {
         source?: web3.Keypair,
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
-        newRewardMint: web3.PublicKey,
         claimable: boolean,
         transferAmount?: BN,
     }) {
-        const { source, rewardName, newRewardMint, claimable, transferAmount } = args;
+        const { source, rewardName, claimable, transferAmount } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
@@ -3193,7 +3192,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 )
             ] : []),
             this.program.methods
-                .fundManagerUpdateReward(rewardMetadata.mint, newRewardMint, rewardMetadata.program, rewardMetadata.decimals, claimable)
+                .fundManagerUpdateReward(rewardMetadata.mint, rewardMetadata.mint, rewardMetadata.program, rewardMetadata.decimals, claimable)
                 .accountsPartial({
                     receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     rewardTokenMint: rewardMetadata.mint ?? this.programId,
@@ -3307,7 +3306,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const isBonusPool = poolName == "base" ? false : true;
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
-        const userRewardTokenAccount = spl.getAssociatedTokenAddressSync(
+        const destinationRewardTokenAccount = spl.getAssociatedTokenAddressSync(
             rewardMetadata.mint,
             user.publicKey,
             false,
@@ -3318,18 +3317,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
-                    userRewardTokenAccount,
+                    destinationRewardTokenAccount,
                     user.publicKey,
                     rewardMetadata.mint,
                     rewardMetadata.program,
                 ),
-                this.methods.userClaimReward(isBonusPool)
+                this.methods.userClaimReward(isBonusPool, null)
                     .accountsPartial({
                         user: user.publicKey,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         rewardTokenMint: rewardMetadata.mint,
                         rewardTokenProgram: rewardMetadata.program,
-                        userRewardTokenAccount,
+                        destinationRewardTokenAccount,
                     })
                     .instruction(),
             ],

@@ -8,7 +8,7 @@ use super::*;
 
 pub struct RewardService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+    reward_account: &'a AccountLoader<'info, RewardAccount>,
 
     current_slot: u64,
 }
@@ -22,7 +22,7 @@ impl Drop for RewardService<'_, '_> {
 impl<'a, 'info> RewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
+        reward_account: &'a AccountLoader<'info, RewardAccount>,
     ) -> Result<Self> {
         Self::validate_reward_account(receipt_token_mint, reward_account)?;
 
@@ -65,8 +65,8 @@ impl<'a, 'info> RewardService<'a, 'info> {
     /// returns updated user reward accounts
     pub(in crate::modules) fn update_reward_pools_token_allocation(
         &self,
-        from_user_reward_account: Option<&mut AccountLoader<UserRewardAccount>>,
-        to_user_reward_account: Option<&mut AccountLoader<UserRewardAccount>>,
+        from_user_reward_account: Option<&AccountLoader<UserRewardAccount>>,
+        to_user_reward_account: Option<&AccountLoader<UserRewardAccount>>,
         amount: u64,
         contribution_accrual_rate: Option<u16>,
     ) -> Result<Vec<Pubkey>> {

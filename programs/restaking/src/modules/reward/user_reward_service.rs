@@ -8,8 +8,8 @@ use super::*;
 
 pub struct UserRewardService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-    user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+    reward_account: &'a AccountLoader<'info, RewardAccount>,
+    user_reward_account: &'a AccountLoader<'info, UserRewardAccount>,
     current_slot: u64,
 }
 
@@ -24,8 +24,8 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         user: &Signer,
-        reward_account: &'a mut AccountLoader<'info, RewardAccount>,
-        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+        reward_account: &'a AccountLoader<'info, RewardAccount>,
+        user_reward_account: &'a AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
         Self::validate_user_reward_account(
             receipt_token_mint,
@@ -106,8 +106,9 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_token_program: &Interface<'info, TokenInterface>,
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
-        user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         is_bonus_pool: bool,
+        amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
         let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
@@ -126,9 +127,9 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         user_reward_account.backfill_not_existing_pools(&reward_account)?;
 
         let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
-        let (claimed_amount, total_claimed_amount) = user_reward_account
-            .get_user_reward_pool_mut(is_bonus_pool)?
-            .claim_reward(reward_pool, reward_id, self.current_slot)?;
+        let user_reward_pool = user_reward_account.get_user_reward_pool_mut(is_bonus_pool)?;
+        let (claimed_amount, total_claimed_amount) =
+            user_reward_pool.claim_reward(reward_pool, reward_id, self.current_slot, amount)?;
 
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
@@ -136,7 +137,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
                 anchor_spl::token_interface::TransferChecked {
                     from: reward_token_reserve_account.to_account_info(),
                     mint: reward_token_mint.to_account_info(),
-                    to: user_reward_token_account.to_account_info(),
+                    to: destination_reward_token_account.to_account_info(),
                     authority: reward_reserve_account.to_account_info(),
                 },
                 &[&reward_account.get_reserve_account_seeds()],

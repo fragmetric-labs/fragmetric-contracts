@@ -15,7 +15,7 @@ pub(super) struct UserRewardPool {
     /// user contribution at `updated_slot`
     pub contribution: u128,
     pub updated_slot: u64,
-    pub initialized: u8,
+    _padding: u8,
     num_reward_settlements: u8,
     _padding2: [u8; 6],
 
@@ -37,12 +37,9 @@ pub(super) struct UserRewardPool {
 
 impl UserRewardPool {
     pub fn initialize(&mut self, reward_pool_initial_slot: u64) -> Result<()> {
-        require_eq!(self.initialized, 0);
-
         *self = Zeroable::zeroed();
 
         self.updated_slot = reward_pool_initial_slot;
-        self.initialized = 1;
 
         Ok(())
     }
@@ -155,16 +152,16 @@ impl UserRewardPool {
         reward_pool: &mut RewardPool,
         reward_id: u16,
         current_slot: u64,
+        amount: Option<u64>,
     ) -> Result<(u64, u64)> {
         // First update reward pool
         self.update_user_reward_pool(reward_pool, current_slot)?;
 
-        // Claim reward
         let reward_settlement = reward_pool.get_reward_settlement_mut(reward_id)?;
         let user_reward_settlement = self.get_reward_settlement_mut(reward_id)?;
 
         let claimed_amount =
-            user_reward_settlement.claim_reward(reward_settlement, current_slot)?;
+            user_reward_settlement.claim_reward(reward_settlement, current_slot, amount)?;
         let total_claimed_amount = user_reward_settlement.total_claimed_amount;
 
         Ok((claimed_amount, total_claimed_amount))

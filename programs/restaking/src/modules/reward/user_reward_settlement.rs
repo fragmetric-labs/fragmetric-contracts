@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
+use crate::errors::ErrorCode;
+
 use super::*;
 
 #[zero_copy]
@@ -111,18 +113,26 @@ impl UserRewardSettlement {
         user_block_settled_contribution
     }
 
-    /// returns claimed amount
+    /// returns claimed_amount
     pub fn claim_reward(
         &mut self,
         reward_settlement: &mut RewardSettlement,
         current_slot: u64,
+        amount: Option<u64>,
     ) -> Result<u64> {
-        let amount = self.total_settled_amount - self.total_claimed_amount;
+        let claimable_amount = self.total_settled_amount - self.total_claimed_amount;
+        let requested_amount = amount.unwrap_or(claimable_amount);
 
-        self.total_claimed_amount += amount;
-        reward_settlement.claim_user_reward(amount, current_slot)?;
+        require_gte!(
+            claimable_amount,
+            requested_amount,
+            ErrorCode::RewardNotEnoughRewardsToClaimError,
+        );
 
-        Ok(amount)
+        self.total_claimed_amount += requested_amount;
+        reward_settlement.claim_user_reward(requested_amount, current_slot)?;
+
+        Ok(requested_amount)
     }
 }
 

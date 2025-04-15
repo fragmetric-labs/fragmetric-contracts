@@ -2622,10 +2622,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public async runFundManagerUpdateReward(args: {
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"];
-        newRewardMint: web3.PublicKey,
         claimable: boolean,
     }) {
-        const { rewardName, newRewardMint, claimable } = args;
+        const { rewardName, claimable } = args;
         let fragJTOReward = await this.account.rewardAccount.fetch(this.knownAddress.fragJTOReward);
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
         let reward = fragJTOReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
@@ -2635,7 +2634,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const {event, error} = await this.run({
             instructions: [
                 this.program.methods
-                    .fundManagerUpdateReward(rewardMetadata.mint, newRewardMint, rewardMetadata.program, rewardMetadata.decimals, claimable)
+                    .fundManagerUpdateReward(rewardMetadata.mint, rewardMetadata.mint, rewardMetadata.program, rewardMetadata.decimals, claimable)
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         rewardTokenMint,

@@ -123,13 +123,13 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             user_fund_account.exit(&crate::ID)?;
         }
 
-        let mut user_reward_account_option =
-            self.user_reward_account
-                .as_account_info()
-                .parse_optional_account_loader::<UserRewardAccount>()?;
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
         RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
-                user_reward_account_option.as_mut(),
+                user_reward_account_option.as_ref(),
                 Some(self.fund_wrap_account_reward_account),
                 amount,
                 None,
@@ -248,14 +248,14 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             user_fund_account.exit(&crate::ID)?;
         }
 
-        let mut user_reward_account_option =
-            self.user_reward_account
-                .as_account_info()
-                .parse_optional_account_loader::<UserRewardAccount>()?;
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
         RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 Some(self.fund_wrap_account_reward_account),
-                user_reward_account_option.as_mut(),
+                user_reward_account_option.as_ref(),
                 amount,
                 None,
             )?;

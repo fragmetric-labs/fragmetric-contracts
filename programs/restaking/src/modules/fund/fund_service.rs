@@ -274,12 +274,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         // parse extra accounts
         let mut source_fund_account_option =
             source_fund_account_option.parse_optional_account_boxed::<UserFundAccount>()?;
-        let mut source_reward_account_option = source_reward_account_option
-            .parse_optional_account_loader::<reward::UserRewardAccount>(
-        )?;
+        let source_reward_account_option = source_reward_account_option
+            .parse_optional_account_loader::<reward::UserRewardAccount>()?;
         let mut destination_fund_account_option =
             destination_fund_account_option.parse_optional_account_boxed::<UserFundAccount>()?;
-        let mut destination_reward_account_option = destination_reward_account_option
+        let destination_reward_account_option = destination_reward_account_option
             .parse_optional_account_loader::<reward::UserRewardAccount>(
         )?;
 
@@ -287,8 +286,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         let updated_user_reward_accounts =
             reward::RewardService::new(self.receipt_token_mint, reward_account)?
                 .update_reward_pools_token_allocation(
-                    source_reward_account_option.as_mut(),
-                    destination_reward_account_option.as_mut(),
+                    source_reward_account_option.as_ref(),
+                    destination_reward_account_option.as_ref(),
                     transfer_amount,
                     None,
                 )?;
