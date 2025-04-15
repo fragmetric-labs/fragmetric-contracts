@@ -137,7 +137,7 @@ impl UserRewardAccount {
         if self.num_user_reward_pools == 0 {
             let base_reward_pool = reward_account.get_reward_pool(false)?;
             self.base_user_reward_pool
-                .initialize(base_reward_pool.initial_slot)?;
+                .initialize(BASE_REWARD_POOL_ID, base_reward_pool.initial_slot)?;
             self.num_user_reward_pools = 1;
         }
 
@@ -145,7 +145,7 @@ impl UserRewardAccount {
         if self.num_user_reward_pools == 1 {
             let bonus_reward_pool = reward_account.get_reward_pool(true)?;
             self.bonus_user_reward_pool
-                .initialize(bonus_reward_pool.initial_slot)?;
+                .initialize(BONUS_REWARD_POOL_ID, bonus_reward_pool.initial_slot)?;
             self.num_user_reward_pools = 2;
         }
 

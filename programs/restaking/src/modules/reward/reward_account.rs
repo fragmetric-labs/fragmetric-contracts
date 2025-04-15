@@ -69,8 +69,10 @@ impl RewardAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.max_rewards = REWARD_ACCOUNT_REWARDS_MAX_LEN_1 as u16;
-            self.base_reward_pool.initialize(false, current_slot)?;
-            self.bonus_reward_pool.initialize(true, current_slot)?;
+            self.base_reward_pool
+                .initialize(BASE_REWARD_POOL_ID, false, current_slot)?;
+            self.bonus_reward_pool
+                .initialize(BONUS_REWARD_POOL_ID, true, current_slot)?;
             self.data_version = 34;
         }
 
