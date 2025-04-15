@@ -106,8 +106,9 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_token_program: &Interface<'info, TokenInterface>,
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
-        user_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
         is_bonus_pool: bool,
+        amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
         let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
@@ -123,12 +124,34 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
         require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
 
+        // First update reward pool
+        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
+        user_reward_account
+            .get_user_reward_pool_mut(is_bonus_pool)?
+            .update_user_reward_pool(reward_pool, self.current_slot)?;
+
+        let requested_amount = if let Some(amount) = amount {
+            let claimable_amount = user_reward_account
+                .get_user_reward_pool(is_bonus_pool)?
+                .get_claimable_reward_amount(reward_id)?;
+            require_gte!(
+                claimable_amount,
+                amount,
+                ErrorCode::RewardNotEnoughRewardsToClaimError
+            );
+            amount
+        } else {
+            user_reward_account
+                .get_user_reward_pool(is_bonus_pool)?
+                .get_claimable_reward_amount(reward_id)?
+        };
+
         user_reward_account.backfill_not_existing_pools(&reward_account)?;
 
         let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
         let (claimed_amount, total_claimed_amount) = user_reward_account
             .get_user_reward_pool_mut(is_bonus_pool)?
-            .claim_reward(reward_pool, reward_id, self.current_slot)?;
+            .claim_reward(reward_pool, reward_id, self.current_slot, requested_amount)?;
 
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
@@ -136,7 +159,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
                 anchor_spl::token_interface::TransferChecked {
                     from: reward_token_reserve_account.to_account_info(),
                     mint: reward_token_mint.to_account_info(),
-                    to: user_reward_token_account.to_account_info(),
+                    to: destination_reward_token_account.to_account_info(),
                     authority: reward_reserve_account.to_account_info(),
                 },
                 &[&reward_account.get_reserve_account_seeds()],

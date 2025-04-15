@@ -111,14 +111,17 @@ impl UserRewardSettlement {
         user_block_settled_contribution
     }
 
+    pub(super) fn get_claimable_reward_amount(&self) -> u64 {
+        self.total_settled_amount - self.total_claimed_amount
+    }
+
     /// returns claimed amount
     pub fn claim_reward(
         &mut self,
         reward_settlement: &mut RewardSettlement,
         current_slot: u64,
+        amount: u64,
     ) -> Result<u64> {
-        let amount = self.total_settled_amount - self.total_claimed_amount;
-
         self.total_claimed_amount += amount;
         reward_settlement.claim_user_reward(amount, current_slot)?;
 

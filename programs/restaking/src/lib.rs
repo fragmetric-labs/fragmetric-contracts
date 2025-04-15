@@ -1113,6 +1113,7 @@ pub mod restaking {
     pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,
         is_bonus_pool: bool,
+        amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1125,8 +1126,9 @@ pub mod restaking {
             &ctx.accounts.reward_token_program,
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
-            &ctx.accounts.user_reward_token_account,
+            &ctx.accounts.destination_reward_token_account,
             is_bonus_pool,
+            amount,
         )?);
 
         Ok(())

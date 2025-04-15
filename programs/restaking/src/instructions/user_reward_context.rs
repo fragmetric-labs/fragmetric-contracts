@@ -74,7 +74,6 @@ pub struct UserRewardContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardClaimContext<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -119,8 +118,7 @@ pub struct UserRewardClaimContext<'info> {
     #[account(
         mut,
         token::mint = reward_token_mint,
-        token::authority = user,
         token::token_program = reward_token_program,
     )]
-    pub user_reward_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub destination_reward_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
