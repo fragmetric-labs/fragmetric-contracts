@@ -21,7 +21,8 @@ pub struct UserRewardAccount {
     bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
-    _padding: [u8; 13],
+    num_user_reward_pools: u8,
+    _padding: [u8; 12],
 
     base_user_reward_pool: UserRewardPool,
     bonus_user_reward_pool: UserRewardPool,
@@ -64,11 +65,6 @@ impl UserRewardAccount {
             self.user = user;
         }
 
-        // if self.data_version == 1 {
-        //     self.data_version = 2;
-        //     self.max_user_reward_pools += USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_2;
-        // }
-
         require_eq!(self.data_version, USER_REWARD_ACCOUNT_CURRENT_VERSION);
 
         Ok(old_data_version < self.data_version)
@@ -109,6 +105,7 @@ impl UserRewardAccount {
         self.data_version == 0
     }
 
+    /// Must backfill not existing pools first
     #[inline(always)]
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
@@ -120,6 +117,7 @@ impl UserRewardAccount {
         .into_iter()
     }
 
+    /// Must backfill not existing pools first
     pub(super) fn get_user_reward_pool_mut(
         &mut self,
         is_bonus_pool: bool,
@@ -135,17 +133,23 @@ impl UserRewardAccount {
         &mut self,
         reward_account: &RewardAccount,
     ) -> Result<()> {
-        if self.base_user_reward_pool.initialized == 0 {
+        // base user reward pool was previously user_reward_pools[0]
+        if self.num_user_reward_pools == 0 {
             let base_reward_pool = reward_account.get_reward_pool(false)?;
             self.base_user_reward_pool
                 .initialize(base_reward_pool.initial_slot)?;
+            self.num_user_reward_pools = 1;
         }
 
-        if self.bonus_user_reward_pool.initialized == 0 {
+        // bonus user reward pool was previously user_reward_pools[1]
+        if self.num_user_reward_pools == 1 {
             let bonus_reward_pool = reward_account.get_reward_pool(true)?;
             self.bonus_user_reward_pool
                 .initialize(bonus_reward_pool.initial_slot)?;
+            self.num_user_reward_pools = 2;
         }
+
+        require_eq!(self.num_user_reward_pools, 2);
 
         Ok(())
     }

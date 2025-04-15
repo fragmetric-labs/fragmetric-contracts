@@ -142,11 +142,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             errors::ErrorCode::RewardAlreadyClaimableError
         );
 
-        if new_mint != mint
-            && reward_account
-                .get_rewards_iter()
-                .any(|reward| reward.mint == new_mint)
-        {
+        if new_mint != mint && reward_account.has_reward(&new_mint) {
             err!(errors::ErrorCode::RewardAlreadyExistingRewardError)?
         }
 
