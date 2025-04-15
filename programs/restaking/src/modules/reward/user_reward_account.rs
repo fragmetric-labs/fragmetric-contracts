@@ -120,14 +120,6 @@ impl UserRewardAccount {
         .into_iter()
     }
 
-    pub(super) fn get_user_reward_pool(&self, is_bonus_pool: bool) -> Result<&UserRewardPool> {
-        if !is_bonus_pool {
-            Ok(&self.base_user_reward_pool)
-        } else {
-            Ok(&self.bonus_user_reward_pool)
-        }
-    }
-
     pub(super) fn get_user_reward_pool_mut(
         &mut self,
         is_bonus_pool: bool,

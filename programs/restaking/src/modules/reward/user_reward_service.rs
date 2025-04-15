@@ -124,34 +124,12 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
         require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
 
-        // First update reward pool
-        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
-        user_reward_account
-            .get_user_reward_pool_mut(is_bonus_pool)?
-            .update_user_reward_pool(reward_pool, self.current_slot)?;
-
-        let requested_amount = if let Some(amount) = amount {
-            let claimable_amount = user_reward_account
-                .get_user_reward_pool(is_bonus_pool)?
-                .get_claimable_reward_amount(reward_id)?;
-            require_gte!(
-                claimable_amount,
-                amount,
-                ErrorCode::RewardNotEnoughRewardsToClaimError
-            );
-            amount
-        } else {
-            user_reward_account
-                .get_user_reward_pool(is_bonus_pool)?
-                .get_claimable_reward_amount(reward_id)?
-        };
-
         user_reward_account.backfill_not_existing_pools(&reward_account)?;
 
         let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
-        let (claimed_amount, total_claimed_amount) = user_reward_account
-            .get_user_reward_pool_mut(is_bonus_pool)?
-            .claim_reward(reward_pool, reward_id, self.current_slot, requested_amount)?;
+        let user_reward_pool = user_reward_account.get_user_reward_pool_mut(is_bonus_pool)?;
+        let (claimed_amount, total_claimed_amount) =
+            user_reward_pool.claim_reward(reward_pool, reward_id, self.current_slot, amount)?;
 
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
