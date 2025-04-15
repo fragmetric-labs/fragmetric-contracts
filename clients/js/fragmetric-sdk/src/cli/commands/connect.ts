@@ -33,7 +33,7 @@ export const connectCommand = new Command()
 
     if (!expression) {
       logger.box(
-        `Connected to ${chalk.green('Fragmetric')} programs ${rootOptions.cluster} REPL.\n- Press ${chalk.bold('TAB')} to autocomplete.\n- Can use ${chalk.bold('_')} to refer the previous evaluation result.`
+        `Connected to ${chalk.green('Fragmetric')} programs ${rootOptions.cluster} REPL.\n- Press ${chalk.bold('TAB')} to autocomplete.\n- Enter ${chalk.bold('.editor')} to activate multiline editor mode.\n- Use ${chalk.bold('_')} to refer the previous evaluation result.`
       );
     }
 
@@ -77,7 +77,7 @@ export const connectCommand = new Command()
       originalCompleter(line, (err, result) => {
         if (result) {
           if (!line && !result[1]) {
-            result[0] = Object.keys(context);
+            result[0] = Object.keys(context).concat(['.editor', '.help']);
           } else {
             result[0] = result[0].filter((token) => {
               return !(

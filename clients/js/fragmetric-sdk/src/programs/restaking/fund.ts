@@ -533,7 +533,7 @@ export class RestakingFundAccountContext extends AccountContext<
             ...args,
             forceResetCommand: null,
           },
-        } as any; // cast to `any` to avoid disrupting the inferred type of ARGS_INPUT from the original schema
+        };
       }
       return null;
     }
@@ -1485,7 +1485,7 @@ export class RestakingFundAccountContext extends AccountContext<
                 }
               : null;
           const newDelegationStrategies =
-            partialDelegations?.map((newDelegation) => {
+            partialDelegations?.slice(0, 8).map((newDelegation) => {
               const currentDelegation = currentDelegationStrategies.find(
                 (item) => item.operator == newDelegation.operator
               )!;
@@ -1529,7 +1529,19 @@ export class RestakingFundAccountContext extends AccountContext<
           ]);
         },
       ],
-    }
+    },
+    async (parent, args, events) => {
+      const { delegations: partialDelegations, ...partialArgs } = args;
+      if (partialDelegations?.length && partialDelegations?.length > 8) {
+        return {
+          args: {
+            vault: partialArgs.vault,
+            delegations: partialDelegations.slice(8),
+          },
+        };
+      }
+      return null;
+    },
   );
 
   readonly addRestakingVaultCompoundingReward = new TransactionTemplateContext(

@@ -196,37 +196,57 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         delegations: [
           {
             operator: 'FzZ9EXmHv7ANCXijpALUBzCza6wYNprnsfaEHuoNx9sE',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: 'LKFpfXtBkH5b7D9mo8dPcjCLZCZpmLQC9ELkbkyVdah',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: 'GZxp4e2Tm3Pw9GyAaxuF6odT3XkRM96jpZkp3nxhoK4Y',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: 'CA8PaNSoFWzvbCJ2oK3QxBEutgyHSTT5omEptpj8YHPY',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 92n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: '7yofWXChEHkPTSnyFdKx2Smq5iWVbGB4P1dkdC6zHWYR',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
+            tokenAllocationCapacityAmount: MAX_U64,
+          },
+          {
+            operator: '29rxXT5zbTR1ctiooHtb1Sa1TD4odzhQHsrLz3D78G5w',
+            tokenAllocationWeight: 90n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: 'BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
+            tokenAllocationCapacityAmount: MAX_U64,
+          },
+          {
+            operator: '2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop',
+            tokenAllocationWeight: 0n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
           {
             operator: '5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L',
-            tokenAllocationWeight: 1n,
+            tokenAllocationWeight: 90n,
+            tokenAllocationCapacityAmount: MAX_U64,
+          },
+          {
+            operator: '6AxtdRGAaiAyqcwxVBHsH3xtqCbQuffaiE4epT4koTxk',
+            tokenAllocationWeight: 80n,
+            tokenAllocationCapacityAmount: MAX_U64,
+          },
+          {
+            operator: 'C6AF8qGCo2dL815ziRCmfdbFeL5xbRLuSTSZzTGBH68y',
+            tokenAllocationWeight: 100n,
             tokenAllocationCapacityAmount: MAX_U64,
           },
         ],

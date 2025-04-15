@@ -1,9 +1,9 @@
 import { BaseAccountContext, TokenAccountContext } from '../../context';
 import { RestakingFundAccountContext } from './fund';
-import { RestakingFundWrapAccountRewardAccountContext } from './fund_wrap_reward';
+import { RestakingFundWrapRewardAccountContext } from './user_reward';
 
 export class RestakingFundWrapAccountContext extends BaseAccountContext<RestakingFundAccountContext> {
-  readonly reward = new RestakingFundWrapAccountRewardAccountContext(this);
+  readonly reward = new RestakingFundWrapRewardAccountContext(this);
 
   readonly receiptToken = TokenAccountContext.fromAssociatedTokenSeeds2022(
     this,

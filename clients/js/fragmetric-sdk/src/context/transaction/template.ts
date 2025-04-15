@@ -197,7 +197,7 @@ export class TransactionTemplateContext<
       parent: P,
       args: ARGS,
       events: ExecutedTransactionEvents<EVENTS>
-    ) => Promise<{ args: ARGS_INPUT } | null>
+    ) => Promise<{ args: v.InferInput<ARGS_SCHEME> } | null>
   ) {
     super();
     this.config = config;
@@ -205,7 +205,7 @@ export class TransactionTemplateContext<
 
   toContextDescription() {
     const desc = super.toContextDescription();
-    return {
+    const newDesc = {
       ...desc,
       properties: {
         ...desc.properties,
@@ -222,6 +222,10 @@ export class TransactionTemplateContext<
       },
       mutable: true,
     };
+    if (this.chainedArgsBuilder) {
+      newDesc.label = `${newDesc.label} (chained)`;
+    }
+    return newDesc;
   }
 
   /**
