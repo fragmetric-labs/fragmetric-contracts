@@ -1,5 +1,7 @@
+use std::ops::Mul;
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
+use primitive_types::U256;
 
 use crate::errors::ErrorCode;
 
@@ -151,12 +153,12 @@ impl UserRewardPool {
                 let user_block_settled_amount = (block_contribution > 0)
                     .then(|| {
                         u64::try_from(
-                            user_block_settled_contribution
-                                .checked_mul(block.amount as u128)
-                                .and_then(|x| x.checked_div(block_contribution))
-                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                            U256::from(user_block_settled_contribution)
+                                .checked_mul(U256::from(block.amount))
+                                .and_then(|x| x.checked_div(U256::from(block_contribution)))
+                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
                         )
-                        .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
+                            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
                     })
                     .transpose()?
                     .unwrap_or_default();
