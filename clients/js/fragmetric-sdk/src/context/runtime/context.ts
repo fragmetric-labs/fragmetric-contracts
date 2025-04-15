@@ -226,7 +226,7 @@ export class RuntimeContext extends Context<null> implements Runtime {
       LatestBlockhashResponse
     >(this.__fetchBatchedLatestBlockhash.bind(this), {
       cache:
-        this.type == 'solana' &&
+        this.type == 'svm' &&
         this.options.rpc.blockhashCacheTTLMilliseconds > 0,
       batch:
         this.options.rpc.blockhashBatchMaxSize > 1 &&

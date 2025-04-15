@@ -5,8 +5,9 @@
 #  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 #  [restart docker engine]
 # now test with:
-#  act push --reuse --container-architecture linux/amd64 --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest
-#
+#  act push --container-architecture linux/amd64 --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest
+#  use --reuse to reuse previous container (cache might be stale)
+#  use --rm --bind to totally clear previous container
 name: ci
 
 env:
@@ -14,6 +15,10 @@ env:
   SOLANA_VERSION: 2.1.18
   ANCHOR_VERSION: 0.31.0
   NODE_VERSION: 20.19.0
+  VITEST_MAX_THREADS: 1
+  CI: true
+  DEBUG: true
+  RUNTIME: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')) && 'svm' || 'litesvm' }}
 
 on:
   push:
@@ -26,12 +31,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  ci:
     name: build and test
     runs-on: ubuntu-latest
     steps:
       # checkout
       - uses: actions/checkout@v4
+
+#      - name: Check Rust presence
+#        run: |
+#          rustc --version || echo "No rustc found"
+#          ls -lah /usr/local/rustup || true
+#          ls -lah /home/runner/.rustup || true
 
       # setup Node runtime
       - name: setup Node $PATH (act workaround)
@@ -57,10 +68,12 @@ jobs:
       - run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt, clippy
-          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+
+#      - uses: actions-rust-lang/setup-rust-toolchain@v1
+#        with:
+#          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+#          components: rustfmt, clippy
+#          override: true
       - uses: baptiste0928/cargo-install@v3
         with:
           crate: anchor-cli
@@ -73,134 +86,39 @@ jobs:
           version: "0.21.2"
           locked: true
 
-      # lint and check crates
+      # lint Rust codes and audit dependencies
       - run: cargo clippy -p restaking -- --allow warnings
       - run: cargo fmt --check
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
 
       # TODO: branch on target programs later
-      # run unit tests and build SBF programs
+      # run Rust unit tests
       # - run: cargo test -p restaking
-      # run integration tests
+      # run Typescript integration tests against SBF binaries
       - run: anchor build -p restaking
       - run: pnpm install
+      - run: pnpm build
       - shell: bash
         run: |
+          realpath /Users/dehypnosis/Works/fragmetric-contracts/programs/restaking/tests/mocks/*.so
           shopt -s globstar
           files=(./programs/restaking/tests/*.test.ts)
-          CI=1 DEBUG=1 pnpm test "${files[@]}"
+          pnpm test "${files[@]}"
 
-#  verified_build:
-#    name: verified_build
-#    runs-on: big-runner-1
+#    if: startsWith(github.ref, 'refs/tags/v')
 #    steps:
 #      - uses: actions/checkout@v4
-#        with:
-#          submodules: recursive
 #      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
 #      - uses: actions-rust-lang/setup-rust-toolchain@v1
-#      - name: Install solana-verify from crates.io
-#        uses: baptiste0928/cargo-install@v3
+#      - uses: baptiste0928/cargo-install@v3
 #        with:
 #          crate: solana-verify
-#      - run: solana-verify build --library-name jito_restaking_program --base-image solanafoundation/solana-verifiable-build:2.1.11
-#      - run: solana-verify build --library-name jito_vault_program --base-image solanafoundation/solana-verifiable-build:2.1.11
-#      - name: Upload jito_restaking_program.so
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: jito_restaking_program.so
-#          path: target/deploy/jito_restaking_program.so
-#      - name: Upload jito_vault_program.so
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: jito_vault_program.so
-#          path: target/deploy/jito_vault_program.so
-#
-#  codegen:
-#    name: code generation
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          submodules: recursive
-#      - uses: actions-rust-lang/setup-rust-toolchain@v1
-#        with:
-#          components: rustfmt, clippy
-#          toolchain: nightly-2024-07-30
-#      - name: cargo build
-#        run: cargo build --release
-#      - name: Set Node.js 22.x
-#        uses: actions/setup-node@v3
-#        with:
-#          node-version: 22.x
-#      - name: Run install
-#        uses: borales/actions-yarn@v4
-#        with:
-#          cmd: install
-#      - name: Generate kinobi IDL files
-#        uses: borales/actions-yarn@v4
-#        with:
-#          cmd: generate-clients
-#      - name: Update dependencies
-#        uses: borales/actions-yarn@v4
-#        with:
-#          cmd: update-dependencies
-#      - name: Verify no changed files
-#        uses: tj-actions/verify-changed-files@v20
-#        id: verify-changed-kinobi-files
-#      - name: Run step only when any of the above files change.
-#        if: steps.verify-changed-kinobi-files.outputs.files_changed == 'true'
-#        env:
-#          CHANGED_FILES: ${{ steps.verify-changed-kinobi-files.outputs.changed_files }}
-#        run: |
-#          echo "Changed files: $CHANGED_FILES"
-#          echo "Unexpected changes in the client files. Please run `yarn generate-clients` to regenerate the files."
-#          exit 1
-#
-#  test_sbf:
-#    name: cargo test
-#    runs-on: ubuntu-latest
-#    needs:
-#      - verified_build
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: aarcangeli/load-dotenv@v1.0.0
-#        with:
-#          path: config
-#          filenames: program.env
-#      - uses: actions-rust-lang/setup-rust-toolchain@v1
-#      - name: Download restaking program
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: jito_restaking_program.so
-#          path: target/sbf-solana-solana/release/
-#      - name: Download vault program
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: jito_vault_program.so
-#          path: target/sbf-solana-solana/release/
-#      - uses: taiki-e/install-action@nextest
-#      - run: cargo nextest run --all-features
-#        env:
-#          SBF_OUT_DIR: ${{ github.workspace }}/target/sbf-solana-solana/release
-#
-#  create_release:
-#    name: Create Release
-#    needs:
-#      - build
-#      - test_sbf
-#    runs-on: ubuntu-latest
-#    if: startsWith(github.ref, 'refs/tags/')
-#    steps:
-#      - name: Download all artifacts
-#        uses: actions/download-artifact@v4
-#        with:
-#          merge-multiple: true
+#      - run: solana-verify build --library-name restaking --base-image solanafoundation/solana-verifiable-build:2.1.11
+#        TODO: need to anchor build ...
 #      - run: ls -lh
-#      - name: Release
-#        uses: softprops/action-gh-release@v2
-#        if: startsWith(github.ref, 'refs/tags/')
+#      - uses: softprops/action-gh-release@v2
 #        with:
 #          files: |
-#            *.so
+#            target/deploy/restaking.so
+#            target/idl/restaking.so
 #          fail_on_unmatched_files: true

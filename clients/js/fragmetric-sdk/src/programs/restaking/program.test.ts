@@ -232,7 +232,7 @@ test('can traverse context graph', async () => {
       │   │   └── transfer                               TransactionTemplate args=receiptTokenAmount,recipient, events=userTransferredReceiptToken, description=transfer receipt token
       │   ├── initializeMint                             TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
       │   └── initializeOrUpdateExtraAccountMetaList     TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
-      └── parent                                         Runtime type=solana, cluster=devnet"
+      └── parent                                         Runtime type=svm, cluster=devnet"
     `);
 });
 

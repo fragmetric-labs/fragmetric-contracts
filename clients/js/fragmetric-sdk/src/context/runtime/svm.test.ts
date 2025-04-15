@@ -2,10 +2,10 @@ import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { describe, expect, test } from 'vitest';
 import { createRuntime } from './index';
 
-describe('createRuntime with SolanaRuntimeOptions', () => {
-  test('create SolanaRuntime with rpc, cluster options', async () => {
+describe('createRuntime with SVMRuntimeOptions', () => {
+  test('create SVMRuntime with rpc, cluster options', async () => {
     const runtime = createRuntime({
-      type: 'solana',
+      type: 'svm',
       rpc: createSolanaRpc('https://api.devnet.solana.com'),
       rpcSubscriptions: createSolanaRpcSubscriptions(
         'wss://api.devnet.solana.com'
@@ -16,7 +16,7 @@ describe('createRuntime with SolanaRuntimeOptions', () => {
     expect(runtime.cluster).equals('devnet');
   });
 
-  test('create SolanaRuntime without type options', async () => {
+  test('create SVMRuntime without type options', async () => {
     const runtime = createRuntime({
       rpc: createSolanaRpc('http://0.0.0.0:8888'),
       rpcSubscriptions: createSolanaRpcSubscriptions('ws://0.0.0.0:8889'),

@@ -26,16 +26,16 @@ import {
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-export class SolanaTestValidator extends TestValidator<'solana'> {
+export class SVMValidator extends TestValidator<'svm'> {
   static async initialize(
-    options: TestValidatorOptions<'solana'>
-  ): Promise<TestValidator<'solana'>> {
-    const instanceNo = options.instanceNo ?? ++SolanaTestValidator.instanceNo;
-    const instance = await SolanaTestValidator.createInstance(
+    options: TestValidatorOptions<'svm'>
+  ): Promise<TestValidator<'svm'>> {
+    const instanceNo = options.instanceNo ?? ++SVMValidator.instanceNo;
+    const instance = await SVMValidator.createInstance(
       instanceNo,
       options
     );
-    return new SolanaTestValidator(
+    return new SVMValidator(
       instanceNo,
       options,
       instance.process,
@@ -47,7 +47,7 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
 
   private static async createInstance(
     instanceNo: number,
-    options: TestValidatorOptions<'solana'> & { warpSlot?: bigint },
+    options: TestValidatorOptions<'svm'> & { warpSlot?: bigint },
     retryCount: number = 0
   ): Promise<{
     process: child_process.ChildProcess;
@@ -55,7 +55,7 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
     rpcURL: string;
     rpcSubscriptionsURL: string;
   }> {
-    const logger = SolanaTestValidator.createLogger(options);
+    const logger = SVMValidator.createLogger(options);
     try {
       const instance = await new Promise<{
         process: child_process.ChildProcess;
@@ -214,7 +214,7 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
         retryCount < 10
       ) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        return SolanaTestValidator.createInstance(
+        return SVMValidator.createInstance(
           instanceNo,
           options,
           retryCount + 1
@@ -229,7 +229,7 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
   private rpc: Rpc<SolanaRpcApi>;
   private rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
 
-  protected static createLogger(options: TestValidatorOptions<'solana'>) {
+  protected static createLogger(options: TestValidatorOptions<'svm'>) {
     if (options.debug) {
       if (options.tag) {
         return (msg: string) => console.log(`[${options.tag}] ${msg}`);
@@ -239,11 +239,11 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
     return (msg: string) => {};
   }
 
-  private logger = SolanaTestValidator.createLogger(this.options);
+  private logger = SVMValidator.createLogger(this.options);
 
   private constructor(
     private readonly instanceNo: number,
-    public readonly options: TestValidatorOptions<'solana'>,
+    public readonly options: TestValidatorOptions<'svm'>,
     private process: child_process.ChildProcess,
     private readonly ledgerPath: string,
     private readonly rpcURL: string,
@@ -257,9 +257,9 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
     );
   }
 
-  get runtime(): TestValidatorRuntime<'solana'> {
+  get runtime(): TestValidatorRuntime<'svm'> {
     return {
-      type: 'solana',
+      type: 'svm',
       instanceNo: this.instanceNo,
       cluster: 'local',
       rpc: this.rpc,
@@ -340,7 +340,7 @@ export class SolanaTestValidator extends TestValidator<'solana'> {
 
     this.process.kill('SIGINT');
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const newInstance = await SolanaTestValidator.createInstance(
+    const newInstance = await SVMValidator.createInstance(
       this.instanceNo,
       { ...this.options, warpSlot: slot }
     );

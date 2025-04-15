@@ -3,7 +3,7 @@ import * as web3 from '@solana/web3.js';
 import { afterAll, describe, expect, test } from 'vitest';
 import { TestValidator } from './validator';
 
-describe.each(['litesvm', 'solana'] as const)(
+describe.each(['litesvm', 'svm'] as const)(
   'TestValidator with %s',
   async (validatorType) => {
     const validator1 = await TestValidator.create({

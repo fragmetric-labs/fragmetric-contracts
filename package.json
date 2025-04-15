@@ -12,9 +12,9 @@
     "test": "pnpm vitest --run",
     "test:watch": "pnpm vitest --ui",
     "test:coverage": "pnpm vitest --coverage --run",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter ./clients/codegen build && pnpm --filter \\!./clients/codegen build",
     "codegen": "pnpm --filter ./clients/codegen build",
-    "keypairs:download": "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $key; echo $value > $key; done",
+    "keypairs": "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $key; echo $value > $key; done",
     "dev": "pnpm dev:restaking",
     "dev:restaking": "./programs/restaking/tests/utils/cli.executable.ts connect --keypairs ./keypairs ./keypairs/restaking ledger",
     "connect": "./clients/js/fragmetric-sdk/src/cli/cli.executable.ts connect --keypairs ./keypairs/wallet.json ./keypairs/restaking ledger"
