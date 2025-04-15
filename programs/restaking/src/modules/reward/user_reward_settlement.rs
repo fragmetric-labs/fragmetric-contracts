@@ -149,7 +149,7 @@ mod tests {
         let mut user_total_contribution_accrual_rate = 0;
         let mut user_last_contribution = 0;
         let mut user_last_updated_slot = 0;
-        reward_settlement.initialize(0, 0, current_slot);
+        reward_settlement.initialize(0, 0, 0, current_slot);
         user_reward_settlement.initialize(0, 0);
 
         // new block (10, [0, 10)) at slot=10, which is immediately stale

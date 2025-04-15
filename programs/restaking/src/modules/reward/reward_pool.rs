@@ -5,13 +5,17 @@ use crate::errors::ErrorCode;
 
 use super::*;
 
+pub(super) const BASE_REWARD_POOL_ID: u8 = 0;
+pub(super) const BONUS_REWARD_POOL_ID: u8 = 1;
 const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 // const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_2: usize = 8;
 
 #[zero_copy]
 #[repr(C, packed(8))]
 pub(super) struct RewardPool {
-    _padding: [u8; 15],
+    /// ID is determined by reward account.
+    pub id: u8,
+    _padding: [u8; 14],
 
     pub custom_contribution_accrual_rate_enabled: u8,
 
@@ -43,11 +47,13 @@ pub(super) struct RewardPool {
 impl RewardPool {
     pub fn initialize(
         &mut self,
+        id: u8,
         custom_contribution_accrual_rate_enabled: bool,
         current_slot: u64,
     ) -> Result<()> {
         *self = Zeroable::zeroed();
 
+        self.id = id;
         self.custom_contribution_accrual_rate_enabled =
             custom_contribution_accrual_rate_enabled as u8;
         self.initial_slot = current_slot;
@@ -98,6 +104,7 @@ impl RewardPool {
 
                 self.reward_settlements_1[self.num_reward_settlements as usize].initialize(
                     reward_id,
+                    self.id,
                     self.initial_slot,
                     current_slot,
                 );
