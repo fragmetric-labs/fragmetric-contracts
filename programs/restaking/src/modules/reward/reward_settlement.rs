@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
+use primitive_types::U256;
 
 use crate::errors::ErrorCode;
 
@@ -189,11 +190,13 @@ impl RewardSettlementBlock {
             return Ok(0);
         }
 
-        let amount = (self.amount as u128)
-            .checked_mul(contribution)
-            .and_then(|v| v.checked_div(self.get_block_contribution()))
-            .and_then(|v| u64::try_from(v).ok())
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let amount = u64::try_from(
+            U256::from(contribution)
+                .checked_mul(U256::from(self.amount))
+                .and_then(|x| x.checked_div(U256::from(self.get_block_contribution())))
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        )
+        .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
 
         self.user_settled_amount += amount;
         self.user_settled_contribution += contribution;

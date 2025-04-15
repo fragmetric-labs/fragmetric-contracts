@@ -43,6 +43,7 @@ spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
+primitive-types = "0.13.1"
 
 [dev-dependencies]
 proptest = { workspace = true }
