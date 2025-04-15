@@ -244,7 +244,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         vault_operator_delegation: &UncheckedAccount,
         vault: &UncheckedAccount,
         operator: &UncheckedAccount,
-        pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         let (
             delegation_index,
@@ -268,10 +267,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 delegated_amount,
                 undelegation_requested_amount + undelegating_amount,
             )?;
-
-        // validate pricing source
-        FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
 
         self.create_fund_manager_updated_fund_event()
     }
