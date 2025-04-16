@@ -17,7 +17,8 @@ use super::*;
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
 /// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)
 /// * v18: add reserved space for 60 pubkeys in wrapped token and swap strategies. (163840 = 160KB)
-pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 18;
+/// * v19: add wrapped token holder concept in wrapped token. (163840 = 160KB)
+pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
@@ -58,13 +59,13 @@ pub struct FundAccount {
     pub(super) withdrawal_enabled: u8,
     pub(super) deposit_enabled: u8,
     pub(super) donation_enabled: u8,
-    _padding4: [u8; 3],
+    _padding3: [u8; 3],
 
     /// SOL deposit & withdrawal
     pub(super) sol: AssetState,
 
     /// underlying assets
-    _padding6: [u8; 15],
+    _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
 
@@ -72,10 +73,10 @@ pub struct FundAccount {
     normalized_token: NormalizedToken,
 
     /// investments
-    _padding7: [u8; 15],
+    _padding5: [u8; 15],
     num_restaking_vaults: u8,
     restaking_vaults: [RestakingVault; FUND_ACCOUNT_MAX_RESTAKING_VAULTS],
-    _padding8: [u8; 112],
+    _reserved: [u8; 112],
 
     /// fund operation state
     pub(super) operation: OperationState,
@@ -86,10 +87,10 @@ pub struct FundAccount {
 
     /// which DEX to use for swap between two tokens
     num_token_swap_strategies: u8,
-    _padding9: [u8; 7],
+    _padding6: [u8; 7],
     token_swap_strategies: [TokenSwapStrategy; FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES],
 
-    _reserved: [u8; 3616],
+    _reserved1: [u8; 3616],
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -147,6 +148,10 @@ impl FundAccount {
         if self.data_version == 16 {
             self.num_token_swap_strategies = 0;
             self.data_version = 18;
+        }
+        if self.data_version == 18 {
+            self.wrapped_token.retained_amount = self.wrapped_token.supply;
+            self.data_version = 19;
         }
 
         require_eq!(self.data_version, FUND_ACCOUNT_CURRENT_VERSION);

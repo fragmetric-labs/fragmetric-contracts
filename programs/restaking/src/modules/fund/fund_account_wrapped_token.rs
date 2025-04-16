@@ -54,6 +54,7 @@ impl WrappedToken {
         self.program = program;
         self.decimals = decimals;
         self.supply = supply;
+        self.retained_amount = supply;
 
         Ok(())
     }
