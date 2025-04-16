@@ -15,6 +15,8 @@ const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 pub(super) struct RewardPool {
     /// ID is determined by reward account.
     pub id: u8,
+    /// previous field:
+    /// name: [u8; 14],
     _padding: [u8; 14],
 
     pub custom_contribution_accrual_rate_enabled: u8,

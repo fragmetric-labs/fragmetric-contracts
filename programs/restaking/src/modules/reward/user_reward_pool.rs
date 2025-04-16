@@ -17,9 +17,8 @@ pub(super) struct UserRewardPool {
     pub updated_slot: u64,
     pub reward_pool_id: u8,
     num_reward_settlements: u8,
-    _padding2: [u8; 6],
 
-    _reserved: [u8; 64],
+    _reserved: [u8; 70],
 
     reward_settlements_1: [UserRewardSettlement; USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1],
 }

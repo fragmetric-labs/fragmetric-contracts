@@ -22,13 +22,17 @@ pub struct UserRewardAccount {
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
     num_user_reward_pools: u8,
-    _padding: [u8; 12],
+    /// previous field:
+    /// max_user_reward_pools: u8,
+    _padding: u8,
+    _reserved: [u8; 11],
 
     base_user_reward_pool: UserRewardPool,
     bonus_user_reward_pool: UserRewardPool,
-    _padding2: [u8; 1040],
 
-    _reserved: [u8; 1040],
+    _reserved2: [u8; 1040],
+    delegate: Pubkey,
+    _reserved3: [u8; 1008],
 }
 
 impl PDASeeds<4> for UserRewardAccount {

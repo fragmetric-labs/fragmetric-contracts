@@ -22,7 +22,7 @@ pub struct RewardAccount {
     reserve_account_bump: u8,
 
     max_rewards: u16,
-    _padding1: [u8; 2],
+    _padding: [u8; 2],
 
     num_rewards: u16,
     _padding2: [u8; 6],
@@ -36,9 +36,9 @@ pub struct RewardAccount {
 
     base_reward_pool: RewardPool,
     bonus_reward_pool: RewardPool,
-    _padding3: [u8; 83440],
 
     _reserved2: [u8; 83440],
+    _reserved3: [u8; 83440],
 }
 
 impl PDASeeds<3> for RewardAccount {
@@ -89,6 +89,11 @@ impl RewardAccount {
 
             (self.reserve_account, self.reserve_account_bump) =
                 Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID);
+
+            // Clear dirty bits from previous fields, for future use
+            self._padding[0] = 0; // max_reward_pools
+            self._padding[1] = 0; // num_holders
+            self._padding2[0] = 0; // num_reward_pools
 
             self.data_version = 35;
         }
