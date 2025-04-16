@@ -70,6 +70,20 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
       ctx.reward.initializeOrUpdateAccount.executeChained({
         targetVersion: 35,
       }),
+    () =>
+      ctx.reward.addReward.execute({
+        mint: '11111111111111111111111111111111',
+        decimals: 4,
+        name: 'fPoint',
+        description: 'Airdrop point for fToken',
+      }),
+    () => validator.skipSlots(1n),
+    () =>
+      ctx.reward.settleReward.execute({
+        mint: '11111111111111111111111111111111',
+        amount: 0n,
+        isBonus: true,
+      }),
 
     // initialize address lookup table
     () =>
