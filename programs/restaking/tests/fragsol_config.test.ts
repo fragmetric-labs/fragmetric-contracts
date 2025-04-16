@@ -14,8 +14,10 @@ describe('restaking.fragSOL configuration test', async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
+  const ctx = restaking.fragSOL;
+
   test('restaking.fragSOL.resolve', async () => {
-    await expect(restaking.fragSOL.resolve(true)).resolves
+    await expect(ctx.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
@@ -81,7 +83,7 @@ describe('restaking.fragSOL configuration test', async () => {
   });
 
   test('restaking.fragSOL.fund.resolve', async () => {
-    await expect(restaking.fragSOL.fund.resolve(true)).resolves
+    await expect(ctx.fund.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "assetStrategies": [
@@ -265,7 +267,7 @@ describe('restaking.fragSOL configuration test', async () => {
   });
 
   test(`restaking.fragSOL.reward.resolve`, async () => {
-    await expectMasked(restaking.fragSOL.reward.resolve(true)).resolves
+    await expectMasked(ctx.reward.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "basePool": {

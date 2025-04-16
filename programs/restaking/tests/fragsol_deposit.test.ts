@@ -4,8 +4,7 @@ import { createTestSuiteContext, expectMasked } from './utils';
 
 describe('restaking.fragSOL deposit test', async () => {
   const testCtx = await createTestSuiteContext();
-  const { validator, restaking, initializationTasks } =
-    initializeFragSOL(testCtx);
+  const { validator, restaking, initializationTasks } = initializeFragSOL(testCtx);
 
   beforeAll(async () => {
     await initializationTasks;
@@ -27,9 +26,11 @@ describe('restaking.fragSOL deposit test', async () => {
   });
   afterAll(() => validator.quit());
 
+  const ctx = restaking.fragSOL;
+
   test('user can deposit SOL', async () => {
     const signer1 = await validator.getSigner('Daniel');
-    const user1 = restaking.fragSOL.user(signer1);
+    const user1 = ctx.user(signer1);
     await expectMasked(
       user1.deposit.execute(
         { assetMint: null, assetAmount: 5_000_000_000n },
@@ -126,7 +127,7 @@ describe('restaking.fragSOL deposit test', async () => {
 
   test('user can deposit supported tokens', async () => {
     const signer1 = await validator.getSigner('Daniel');
-    const user1 = restaking.fragSOL.user(signer1);
+    const user1 = ctx.user(signer1);
     await expectMasked(
       user1.deposit.execute(
         {
@@ -212,5 +213,7 @@ describe('restaking.fragSOL deposit test', async () => {
         "wrappedTokenMint": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q",
       }
     `);
+
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot();
   });
 });

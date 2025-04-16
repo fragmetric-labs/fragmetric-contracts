@@ -31,10 +31,7 @@ export class SVMValidator extends TestValidator<'svm'> {
     options: TestValidatorOptions<'svm'>
   ): Promise<TestValidator<'svm'>> {
     const instanceNo = options.instanceNo ?? ++SVMValidator.instanceNo;
-    const instance = await SVMValidator.createInstance(
-      instanceNo,
-      options
-    );
+    const instance = await SVMValidator.createInstance(instanceNo, options);
     return new SVMValidator(
       instanceNo,
       options,
@@ -214,11 +211,7 @@ export class SVMValidator extends TestValidator<'svm'> {
         retryCount < 10
       ) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        return SVMValidator.createInstance(
-          instanceNo,
-          options,
-          retryCount + 1
-        );
+        return SVMValidator.createInstance(instanceNo, options, retryCount + 1);
       }
       throw err;
     }
@@ -340,10 +333,10 @@ export class SVMValidator extends TestValidator<'svm'> {
 
     this.process.kill('SIGINT');
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const newInstance = await SVMValidator.createInstance(
-      this.instanceNo,
-      { ...this.options, warpSlot: slot }
-    );
+    const newInstance = await SVMValidator.createInstance(this.instanceNo, {
+      ...this.options,
+      warpSlot: slot,
+    });
     this.process = newInstance.process;
   }
 }

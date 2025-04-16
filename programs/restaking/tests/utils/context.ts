@@ -28,7 +28,10 @@ export async function createTestSuiteContext(config?: {
   const resolvedConfig = {
     slotsPerEpoch: 432000n,
     ticksPerSlot: 64,
-    validator: process.env.RUNTIME?.toLowerCase() == 'svm' ? 'svm' as const : 'litesvm' as const,
+    validator:
+      process.env.RUNTIME?.toLowerCase() == 'svm'
+        ? ('svm' as const)
+        : ('litesvm' as const),
     debug: !!process.env.DEBUG,
     useDistSDK: !!process.env.CI,
     ...config,

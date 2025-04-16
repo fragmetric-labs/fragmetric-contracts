@@ -14,8 +14,10 @@ describe('restaking.fragJTO configuration test', async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
+  const ctx = restaking.fragJTO;
+
   test(`restaking.fragJTO.resolve`, async () => {
-    await expect(restaking.fragJTO.resolve(true)).resolves
+    await expect(ctx.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
@@ -51,7 +53,7 @@ describe('restaking.fragJTO configuration test', async () => {
   });
 
   test('restaking.fragJTO.fund.resolve', async () => {
-    await expect(restaking.fragJTO.fund.resolve(true)).resolves
+    await expect(ctx.fund.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "assetStrategies": [
@@ -184,7 +186,7 @@ describe('restaking.fragJTO configuration test', async () => {
   });
 
   test(`restaking.fragJTO.reward.resolve`, async () => {
-    await expectMasked(restaking.fragJTO.reward.resolve(true)).resolves
+    await expectMasked(ctx.reward.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "basePool": {
