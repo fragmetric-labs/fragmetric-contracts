@@ -3,19 +3,20 @@ use anchor_spl::associated_token;
 use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
+use crate::modules::pricing::TokenPricingSource;
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, PDASeeds};
 
-use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct HarvestRewardCommand {
     state: HarvestRewardCommandState,
 }
+
+const HARVEST_REWARD_ITEMS_MAX_LEN: usize =
+    FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS
+        + FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub enum HarvestRewardCommandState {
@@ -26,18 +27,14 @@ pub enum HarvestRewardCommandState {
     Prepare {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
         vaults: Vec<Pubkey>,
-        // TODO distribute
-        // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(HARVEST_REWARD_ITEMS_MAX_LEN)]
         items: Vec<HarvestRewardCommandItem>,
     },
     /// Before swap, find required accounts. Swap needs a number of accounts.
     PrepareSwap {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
         vaults: Vec<Pubkey>,
-        // TODO distribute
-        // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(HARVEST_REWARD_ITEMS_MAX_LEN)]
         items: Vec<HarvestRewardCommandItem>,
     },
     /// Executes swap, transfer, or settle. Destination token account of swapped
@@ -45,12 +42,12 @@ pub enum HarvestRewardCommandState {
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
         vaults: Vec<Pubkey>,
-        // TODO distribute
-        // + FUND_ACCOUNT_RESTAKING_VAULT_MAX_DISTRIBUTING_REWARD_TOKENS
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS)]
+        #[max_len(HARVEST_REWARD_ITEMS_MAX_LEN)]
         items: Vec<HarvestRewardCommandItem>,
     },
 }
+
+use HarvestRewardCommandState::*;
 
 impl std::fmt::Debug for HarvestRewardCommandState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -72,12 +69,10 @@ impl std::fmt::Debug for HarvestRewardCommandState {
         }
 
         match self {
-            Self::New => f.write_str("New"),
-            Self::Prepare { vaults, items } => debug_vault_and_item(f, "Prepare", vaults, items),
-            Self::PrepareSwap { vaults, items } => {
-                debug_vault_and_item(f, "PrepareSwap", vaults, items)
-            }
-            Self::Execute { vaults, items } => debug_vault_and_item(f, "Execute", vaults, items),
+            New => f.write_str("New"),
+            Prepare { vaults, items } => debug_vault_and_item(f, "Prepare", vaults, items),
+            PrepareSwap { vaults, items } => debug_vault_and_item(f, "PrepareSwap", vaults, items),
+            Execute { vaults, items } => debug_vault_and_item(f, "Execute", vaults, items),
         }
     }
 }
@@ -96,30 +91,28 @@ impl std::fmt::Debug for HarvestRewardCommandItem {
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, PartialEq, Copy)]
 pub enum HarvestType {
-    Swap(Pubkey),
-    Transfer,
-    // TODO distribute
-    // Settle,
+    Compound { swap: Option<Pubkey> },
+    Distribute,
 }
 
 impl std::fmt::Debug for HarvestType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Swap(_) => f.write_str("Swap"),
-            Self::Transfer => f.write_str("Transfer"),
-            // TODO distribute
-            // Self::Settle => f.write_str("Settle"),
+            Self::Compound { swap: Some(_) } => f.write_str("Compound(swap)"),
+            Self::Compound { swap: None } => f.write_str("Compound"),
+            Self::Distribute => f.write_str("Distribute"),
         }
     }
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct HarvestRewardCommandResult {
     pub reward_token_mint: Pubkey,
     pub reward_token_amount: u64,
     pub swapped_token_mint: Option<Pubkey>,
     pub distributed_token_amount: u64,
     pub compounded_token_amount: u64,
+    pub harvest_type: HarvestType,
 }
 
 impl SelfExecutable for HarvestRewardCommand {
@@ -132,16 +125,14 @@ impl SelfExecutable for HarvestRewardCommand {
         Option<OperationCommandEntry>,
     )> {
         let (result, entry) = match &self.state {
-            HarvestRewardCommandState::New => self.execute_new(ctx)?,
-            HarvestRewardCommandState::Prepare { vaults, items } => {
-                self.execute_prepare(ctx, accounts, vaults, items)?
+            New => self.execute_new_command(ctx)?,
+            Prepare { vaults, items } => {
+                self.execute_prepare_command(ctx, accounts, vaults, items)?
             }
-            HarvestRewardCommandState::PrepareSwap { vaults, items } => {
+            PrepareSwap { vaults, items } => {
                 self.execute_prepare_swap(ctx, accounts, vaults, items)?
             }
-            HarvestRewardCommandState::Execute { vaults, items } => {
-                self.execute_execute(ctx, accounts, vaults, items)?
-            }
+            Execute { vaults, items } => self.execute_execute(ctx, accounts, vaults, items)?,
         };
 
         Ok((
@@ -154,9 +145,9 @@ impl SelfExecutable for HarvestRewardCommand {
 #[deny(clippy::wildcard_enum_match_arm)]
 impl HarvestRewardCommand {
     #[inline(never)]
-    fn execute_new<'info>(
+    fn execute_new_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -166,122 +157,151 @@ impl HarvestRewardCommand {
             .get_restaking_vaults_iter()
             .map(|vault| vault.vault);
 
-        Ok((None, self.create_prepare_command(ctx, vaults)?))
+        let entry = self.create_next_prepare_command(ctx, vaults, None)?;
+
+        Ok((None, entry))
     }
 
-    fn create_prepare_command<'info>(
+    fn create_next_prepare_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         vaults: impl Iterator<Item = Pubkey>,
+        items: Option<&[HarvestRewardCommandItem]>,
     ) -> Result<Option<OperationCommandEntry>> {
-        let (vaults, items) = self.find_command_items(ctx, vaults)?;
-        if vaults.is_empty() || items.is_empty() {
+        let mut vaults = vaults.peekable();
+        if vaults.peek().is_none() {
             return Ok(None);
         }
 
-        return Ok(self.create_prepare_command_with_items(vaults, items));
+        let Some((vaults, items)) = (match items {
+            // items of first vault is not searched yet
+            None => self.find_next_command_items(ctx, vaults)?,
+            // items of first vault is all consumed, so move to next vault
+            Some(items) if items.is_empty() => {
+                vaults.next();
+                self.find_next_command_items(ctx, vaults)?
+            }
+            // items of first vault still remains
+            Some(items) => Some((vaults.collect(), items.to_vec())),
+        }) else {
+            return Ok(None);
+        };
+
+        Ok(Some(self.create_prepare_command(ctx, vaults, items)?))
     }
 
-    fn find_command_items<'info>(
+    fn find_next_command_items(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         vaults: impl Iterator<Item = Pubkey>,
-    ) -> Result<(Vec<Pubkey>, Vec<HarvestRewardCommandItem>)> {
+    ) -> Result<Option<(Vec<Pubkey>, Vec<HarvestRewardCommandItem>)>> {
         let fund_account = ctx.fund_account.load()?;
         let mut vaults = vaults.peekable();
         while let Some(vault) = vaults.peek() {
+            let mut items = Vec::with_capacity(HARVEST_REWARD_ITEMS_MAX_LEN);
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
-            let items = {
-                // TODO distribute
-                // + restaking_vault.get_distributing_reward_tokens_iter().count();
-                let num_reward_tokens =
-                    restaking_vault.get_compounding_reward_tokens_iter().count();
-                let mut items = Vec::with_capacity(num_reward_tokens);
-                restaking_vault
-                    .get_compounding_reward_tokens_iter()
-                    .try_for_each(|reward_token_mint| {
-                        let harvest_type =
-                            if fund_account.get_supported_token(reward_token_mint).is_ok() {
-                                HarvestType::Transfer
-                            } else {
-                                let swap_strategy =
-                                    fund_account.get_token_swap_strategy(reward_token_mint)?;
-                                HarvestType::Swap(swap_strategy.to_token_mint)
-                            };
-                        items.push(HarvestRewardCommandItem {
-                            reward_token_mint: *reward_token_mint,
-                            harvest_type,
-                        });
-                        Ok::<_, Error>(())
-                    })?;
-                // TODO distribute
-                // items.extend(restaking_vault.get_distributing_reward_tokens_iter().map(
-                //     |reward_token_mint| HarvestRewardCommandItem {
-                //         reward_token_mint: *reward_token_mint,
-                //         harvest_type: HarvestType::Settle,
-                //     },
-                // ));
-                items
-            };
+
+            for reward_token_mint in restaking_vault.get_compounding_reward_tokens_iter() {
+                let swap = if fund_account.get_supported_token(reward_token_mint).is_err() {
+                    let swap_strategy = fund_account.get_token_swap_strategy(reward_token_mint)?;
+                    Some(swap_strategy.to_token_mint)
+                } else {
+                    None
+                };
+
+                items.push(HarvestRewardCommandItem {
+                    reward_token_mint: *reward_token_mint,
+                    harvest_type: HarvestType::Compound { swap },
+                });
+            }
+
+            for reward_token_mint in restaking_vault.get_distributing_reward_tokens_iter() {
+                items.push(HarvestRewardCommandItem {
+                    reward_token_mint: *reward_token_mint,
+                    harvest_type: HarvestType::Distribute,
+                });
+            }
 
             if !items.is_empty() {
-                return Ok((vaults.collect(), items));
+                return Ok(Some((vaults.collect(), items)));
             }
 
             // this vault does not have rewards, so proceed to next vault
             vaults.next();
         }
 
-        // none of the vaults has rewards
-        Ok((vec![], vec![]))
+        return Ok(None);
     }
 
-    fn create_prepare_command_with_items<'info>(
+    fn create_prepare_command(
         &self,
+        ctx: &OperationCommandContext,
         vaults: Vec<Pubkey>,
         items: Vec<HarvestRewardCommandItem>,
-    ) -> Option<OperationCommandEntry> {
-        if vaults.is_empty() || items.is_empty() {
-            return None;
-        }
+    ) -> Result<OperationCommandEntry> {
         let vault = &vaults[0];
         let item = &items[0];
 
-        // We need to check vault's token account whether
-        // the account is delegated to fund account or not.
-        // Although we do not know whether the token
-        // belongs to token program or token 2022 program,
-        // we can try both ATAs.
-        let required_accounts = [
-            (item.reward_token_mint, false),
-            (
-                associated_token::get_associated_token_address_with_program_id(
-                    vault,
-                    &item.reward_token_mint,
-                    &anchor_spl::token::ID,
-                ),
-                false,
-            ),
-            (
-                associated_token::get_associated_token_address_with_program_id(
-                    vault,
-                    &item.reward_token_mint,
-                    &anchor_spl::token_2022::ID,
-                ),
-                false,
-            ),
-        ];
-        let command = Self {
-            state: HarvestRewardCommandState::Prepare { vaults, items },
+        let receipt_token_pricing_source = ctx
+            .fund_account
+            .load()?
+            .get_restaking_vault(vault)?
+            .receipt_token_pricing_source
+            .try_deserialize()?;
+
+        let entry = match receipt_token_pricing_source {
+            Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                // We need to check vault's token account whether
+                // the account is delegated to fund account or not.
+                // Although we do not know whether the token
+                // belongs to token program or token 2022 program,
+                // we can try both ATAs.
+                let required_accounts = [
+                    (item.reward_token_mint, false),
+                    (
+                        associated_token::get_associated_token_address_with_program_id(
+                            vault,
+                            &item.reward_token_mint,
+                            &anchor_spl::token::ID,
+                        ),
+                        false,
+                    ),
+                    (
+                        associated_token::get_associated_token_address_with_program_id(
+                            vault,
+                            &item.reward_token_mint,
+                            &anchor_spl::token_2022::ID,
+                        ),
+                        false,
+                    ),
+                ];
+
+                let command = Self {
+                    state: Prepare { vaults, items },
+                };
+                command.with_required_accounts(required_accounts)
+            }
+            // otherwise fails
+            Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
         };
 
-        return Some(command.with_required_accounts(required_accounts));
+        return Ok(entry);
     }
 
     #[inline(never)]
-    fn execute_prepare<'info>(
+    fn execute_prepare_command<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
         vaults: &[Pubkey],
         items: &[HarvestRewardCommandItem],
@@ -289,96 +309,123 @@ impl HarvestRewardCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if vaults.is_empty() {
-            return Ok((None, None));
-        }
-        if items.is_empty() {
-            let vaults = vaults[1..].iter().copied();
-            return Ok((None, self.create_prepare_command(ctx, vaults)?));
+        if vaults.is_empty() || items.is_empty() {
+            let entry =
+                self.create_next_prepare_command(ctx, vaults.iter().copied(), Some(items))?;
+            return Ok((None, entry));
         }
         let vault = &vaults[0];
         let item = &items[0];
 
-        let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, ..] =
-            accounts
-        else {
-            err!(error::ErrorCode::AccountNotEnoughKeys)?
-        };
-        let reward_token_program = reward_token_mint.owner;
+        let receipt_token_pricing_source = ctx
+            .fund_account
+            .load()?
+            .get_restaking_vault(vault)?
+            .receipt_token_pricing_source
+            .try_deserialize()?;
 
-        let Some(vault_reward_token_account) = (|| {
-            let vault_reward_token_account = match reward_token_program {
-                &anchor_spl::token::ID => vault_reward_token_account,
-                &anchor_spl::token_2022::ID => vault_reward_token_2022_account,
-                _ => err!(error::ErrorCode::InvalidProgramId)?,
-            };
+        let entry = match receipt_token_pricing_source {
+            Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, ..] =
+                    accounts
+                else {
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
+                };
 
-            // Token account does not exist, so skip
-            if !vault_reward_token_account.is_initialized() {
-                return Ok(None);
+                let reward_token_program = reward_token_mint.owner;
+                let vault_reward_token_account = match reward_token_program {
+                    &anchor_spl::token::ID => vault_reward_token_account,
+                    &anchor_spl::token_2022::ID => vault_reward_token_2022_account,
+                    _ => err!(error::ErrorCode::InvalidProgramId)?,
+                };
+
+                // Token account does not exist, so move on to next item
+                if !vault_reward_token_account.is_initialized() {
+                    let entry = self.create_next_prepare_command(
+                        ctx,
+                        vaults.iter().copied(),
+                        Some(&items[1..]),
+                    )?;
+                    return Ok((None, entry));
+                }
+                require_keys_eq!(*vault_reward_token_account.owner, *reward_token_program);
+
+                let vault_reward_token_account =
+                    { InterfaceAccount::<TokenAccount>::try_from(vault_reward_token_account)? };
+                require_keys_eq!(vault_reward_token_account.mint, reward_token_mint.key());
+                require_keys_eq!(vault_reward_token_account.owner, *vault);
+
+                // Token account is not delegated to fund account, so move on to next item
+                if !vault_reward_token_account
+                    .delegate
+                    .contains(&ctx.fund_account.key())
+                {
+                    let entry = self.create_next_prepare_command(
+                        ctx,
+                        vaults.iter().copied(),
+                        Some(&items[1..]),
+                    )?;
+                    return Ok((None, entry));
+                }
+
+                let reward_token_amount = vault_reward_token_account
+                    .amount
+                    .min(vault_reward_token_account.delegated_amount);
+
+                // No reward, so move on to next item
+                if reward_token_amount == 0 {
+                    let entry = self.create_next_prepare_command(
+                        ctx,
+                        vaults.iter().copied(),
+                        Some(&items[1..]),
+                    )?;
+                    return Ok((None, entry));
+                }
+
+                // Prepare based on harvest type
+                if let HarvestType::Compound {
+                    swap: Some(supported_token_mint),
+                } = &item.harvest_type
+                {
+                    self.create_prepare_swap_command(
+                        ctx,
+                        &item.reward_token_mint,
+                        supported_token_mint,
+                        vaults.to_vec(),
+                        items.to_vec(),
+                    )?
+                } else {
+                    self.create_execute_command(
+                        ctx,
+                        &item.reward_token_mint,
+                        vault_reward_token_account.as_ref(),
+                        vaults.to_vec(),
+                        items.to_vec(),
+                    )?
+                }
             }
-            require_keys_eq!(*vault_reward_token_account.owner, *reward_token_program);
-
-            let vault_reward_token_account =
-                { InterfaceAccount::<TokenAccount>::try_from(vault_reward_token_account)? };
-            require_keys_eq!(vault_reward_token_account.mint, reward_token_mint.key());
-            require_keys_eq!(vault_reward_token_account.owner, *vault);
-
-            let reward_token_amount = vault_reward_token_account
-                .amount
-                .min(vault_reward_token_account.delegated_amount);
-
-            // No reward, so skip
-            if reward_token_amount == 0 {
-                return Ok(None);
+            // otherwise fails
+            Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
-
-            // Token account must be delegated to fund account, otherwise skip and harvest manually
-            Ok(vault_reward_token_account
-                .delegate
-                .contains(&ctx.fund_account.key())
-                .then_some(vault_reward_token_account))
-        })()?
-        else {
-            let items = &items[1..];
-            let entry = if items.is_empty() {
-                self.create_prepare_command(ctx, vaults[1..].iter().copied())?
-            } else {
-                self.create_prepare_command_with_items(vaults.to_vec(), items.to_vec())
-            };
-            return Ok((None, entry));
-        };
-
-        // Prepare based on harvest type
-        let entry = match &item.harvest_type {
-            HarvestType::Swap(supported_token_mint) => self
-                .create_prepare_swap_command_with_items(
-                    ctx,
-                    &item.reward_token_mint,
-                    supported_token_mint,
-                    vaults.to_vec(),
-                    items.to_vec(),
-                )?,
-            HarvestType::Transfer => self.create_execute_transfer_command_with_items(
-                ctx,
-                &item.reward_token_mint,
-                vault_reward_token_account.as_ref(),
-                vaults.to_vec(),
-                items.to_vec(),
-            )?,
-            // TODO distribute
-            // HarvestType::Settle => unimplemented!("distributing reward is not implemented yet"),
         };
 
         Ok((None, Some(entry)))
     }
 
-    fn create_prepare_swap_command_with_items<'info>(
+    fn create_prepare_swap_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         reward_token_mint: &Pubkey,
         supported_token_mint: &Pubkey,
-        // Ingredients for creating command
         vaults: Vec<Pubkey>,
         items: Vec<HarvestRewardCommandItem>,
     ) -> Result<OperationCommandEntry> {
@@ -386,7 +433,7 @@ impl HarvestRewardCommand {
         let swap_strategy = fund_account.get_token_swap_strategy(reward_token_mint)?;
 
         let command = Self {
-            state: HarvestRewardCommandState::PrepareSwap { vaults, items },
+            state: PrepareSwap { vaults, items },
         };
         let entry = match swap_strategy.swap_source.try_deserialize()? {
             TokenSwapSource::OrcaDEXLiquidityPool { address } => command.with_required_accounts([
@@ -399,29 +446,40 @@ impl HarvestRewardCommand {
         Ok(entry)
     }
 
-    fn create_execute_transfer_command_with_items<'info>(
+    fn create_execute_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         reward_token_mint: &Pubkey,
-        vault_reward_token_account: &AccountInfo,
+        from_reward_token_account: &AccountInfo,
         // Ingredients for creating command
         vaults: Vec<Pubkey>,
         items: Vec<HarvestRewardCommandItem>,
     ) -> Result<OperationCommandEntry> {
-        let fund_supported_token_reserve_account = ctx
-            .fund_account
-            .load()?
-            .find_supported_token_reserve_account_address(reward_token_mint)?;
-        let required_accounts = [
-            (*reward_token_mint, false),
-            (vault_reward_token_account.key(), true),
-            (fund_supported_token_reserve_account, true),
-            (*vault_reward_token_account.owner, false), // token program
-        ];
-        let entry = Self {
-            state: HarvestRewardCommandState::Execute { vaults, items },
-        }
-        .with_required_accounts(required_accounts);
+        let harvest_type = items[0].harvest_type;
+
+        let command = Self {
+            state: Execute { vaults, items },
+        };
+        let entry = match harvest_type {
+            // just transfer
+            HarvestType::Compound { .. } => {
+                let fund_supported_token_reserve_account = ctx
+                    .fund_account
+                    .load()?
+                    .find_supported_token_reserve_account_address(reward_token_mint)?;
+
+                let required_accounts = [
+                    (*reward_token_mint, false),
+                    (from_reward_token_account.key(), true),
+                    (fund_supported_token_reserve_account, true),
+                    (*from_reward_token_account.owner, false), // token program
+                ];
+
+                command.with_required_accounts(required_accounts)
+            }
+            // TODO
+            HarvestType::Distribute => unimplemented!("Distributing reward is not implemented yet"),
+        };
 
         Ok(entry)
     }
@@ -429,7 +487,7 @@ impl HarvestRewardCommand {
     #[inline(never)]
     fn execute_prepare_swap<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
         vaults: &[Pubkey],
         items: &[HarvestRewardCommandItem],
@@ -437,12 +495,10 @@ impl HarvestRewardCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if vaults.is_empty() {
-            return Ok((None, None));
-        }
-        if items.is_empty() {
-            let vaults = vaults[1..].iter().copied();
-            return Ok((None, self.create_prepare_command(ctx, vaults)?));
+        if vaults.is_empty() || items.is_empty() {
+            let entry =
+                self.create_next_prepare_command(ctx, vaults.iter().copied(), Some(items))?;
+            return Ok((None, entry));
         }
         let vault = &vaults[0];
         let item = &items[0];
@@ -454,14 +510,16 @@ impl HarvestRewardCommand {
                 let [pool_account, reward_token_mint, supported_token_mint, ..] = accounts else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
+                let HarvestType::Compound {
+                    swap: Some(supported_token_mint_key),
+                } = &item.harvest_type
+                else {
+                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                };
+
                 require_keys_eq!(pool_account.key(), address);
                 require_keys_eq!(reward_token_mint.key(), item.reward_token_mint);
-                require_keys_eq!(supported_token_mint.key(), {
-                    let HarvestType::Swap(supported_token_mint) = &item.harvest_type else {
-                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                    };
-                    *supported_token_mint
-                });
+                require_keys_eq!(supported_token_mint.key(), *supported_token_mint_key);
 
                 let accounts_to_swap = OrcaDEXLiquidityPoolService::find_accounts_to_swap(
                     pool_account,
@@ -482,7 +540,7 @@ impl HarvestRewardCommand {
                     (fund_supported_token_reserve_account, true),
                 ]);
                 let entry = Self {
-                    state: HarvestRewardCommandState::Execute {
+                    state: Execute {
                         vaults: vaults.to_vec(),
                         items: items.to_vec(),
                     },
@@ -505,23 +563,21 @@ impl HarvestRewardCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        if vaults.is_empty() {
-            return Ok((None, None));
-        }
-        if items.is_empty() {
-            let vaults = vaults[1..].iter().copied().peekable();
-            return Ok((None, self.create_prepare_command(ctx, vaults)?));
+        if vaults.is_empty() || items.is_empty() {
+            let entry =
+                self.create_next_prepare_command(ctx, vaults.iter().copied(), Some(items))?;
+            return Ok((None, entry));
         }
         let vault = &vaults[0];
         let item = &items[0];
 
         let (result, pricing_sources) = match &item.harvest_type {
-            HarvestType::Swap(supported_token_mint) => {
-                self.execute_swap(ctx, accounts, vault, item, supported_token_mint)?
-            }
-            HarvestType::Transfer => self.execute_transfer(ctx, accounts, vault, item)?,
-            // TODO distribute
-            // HarvestType::Settle => unimplemented!("Distributing reward is not implemented yet"),
+            HarvestType::Compound {
+                swap: Some(supported_token_mint),
+            } => self.swap(ctx, accounts, vault, item, supported_token_mint)?,
+            HarvestType::Compound { swap: None } => self.transfer(ctx, accounts, vault, item)?,
+            // TODO
+            HarvestType::Distribute => unimplemented!("Distributing reward is not implemented yet"),
         }
         .unzip();
 
@@ -531,17 +587,14 @@ impl HarvestRewardCommand {
                 .new_pricing_service(pricing_sources.iter().copied())?;
         }
 
-        let items = &items[1..];
-        let entry = if items.is_empty() {
-            self.create_prepare_command(ctx, vaults[1..].iter().copied())?
-        } else {
-            self.create_prepare_command_with_items(vaults.to_vec(), items.to_vec())
-        };
+        // move on to next item
+        let entry =
+            self.create_next_prepare_command(ctx, vaults.iter().copied(), Some(&items[1..]))?;
 
         Ok((result, entry))
     }
 
-    fn execute_swap<'a, 'info>(
+    fn swap<'a, 'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &'a [&'info AccountInfo<'info>],
@@ -642,6 +695,7 @@ impl HarvestRewardCommand {
 
         Ok(Some((
             HarvestRewardCommandResult {
+                harvest_type: item.harvest_type,
                 reward_token_mint: item.reward_token_mint,
                 reward_token_amount: harvested_reward_token_amount,
                 swapped_token_mint: Some(*supported_token_mint),
@@ -653,7 +707,7 @@ impl HarvestRewardCommand {
         )))
     }
 
-    fn execute_transfer<'a, 'info>(
+    fn transfer<'a, 'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &'a [&'info AccountInfo<'info>],
@@ -729,6 +783,7 @@ impl HarvestRewardCommand {
 
         Ok(Some((
             HarvestRewardCommandResult {
+                harvest_type: item.harvest_type,
                 reward_token_mint: item.reward_token_mint,
                 reward_token_amount,
                 swapped_token_mint: None,

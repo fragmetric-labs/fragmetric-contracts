@@ -75,7 +75,7 @@ module.exports = (i: number) => describe(`operate#TODO${i}`, async () => {
                 initialize: {
                     0: {
                         state: {
-                            newRestakingVaultUpdate: {},
+                            new: {},
                         }
                     }
                 }

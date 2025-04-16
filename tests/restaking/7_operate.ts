@@ -114,7 +114,7 @@ module.exports = (i: number) => describe(`operate#${i}`, async () => {
                 initialize: {
                     0: {
                         state: {
-                            newRestakingVaultUpdate: {},
+                            new: {},
                         }
                     }
                 }
