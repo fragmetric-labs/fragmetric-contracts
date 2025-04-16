@@ -276,10 +276,9 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         wrapped_token_mint: &InterfaceAccount<'info, Mint>,
         wrapped_token_mint_current_authority: &Signer<'info>,
         wrapped_token_program: &Program<'info, Token>,
-        fund_wrap_account: &SystemAccount,
         receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
-        reward_account: &mut AccountLoader<reward::RewardAccount>,
-        fund_wrap_account_reward_account: &mut AccountLoader<reward::UserRewardAccount>,
+        reward_account: &AccountLoader<reward::RewardAccount>,
+        fund_wrap_account_reward_account: &AccountLoader<reward::UserRewardAccount>,
     ) -> Result<events::FundManagerUpdatedFund> {
         require_keys_eq!(
             *AsRef::<AccountInfo>::as_ref(wrapped_token_mint).owner,
@@ -290,7 +289,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             receipt_token_wrap_account.mint,
             self.receipt_token_mint.key(),
         );
-        require_keys_eq!(receipt_token_wrap_account.owner, fund_wrap_account.key());
+        require_keys_eq!(
+            receipt_token_wrap_account.owner,
+            self.fund_account.load()?.get_wrap_account_address()?
+        );
 
         require_eq!(
             wrapped_token_mint.decimals,
@@ -303,7 +305,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         // validate accounts
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            fund_wrap_account.key,
+            &self.fund_account.load()?.get_wrap_account_address()?,
             reward_account,
             fund_wrap_account_reward_account,
         )?;
@@ -521,6 +523,61 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         require_keys_eq!(wrapped_token_holder.mint, wrapped_token.mint);
 
         wrapped_token.add_holder(wrapped_token_holder.key())?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_remove_wrapped_token_holder(
+        &self,
+        wrapped_token_holder: &InterfaceAccount<TokenAccount>,
+        reward_account: &AccountLoader<'info, reward::RewardAccount>,
+        fund_wrap_account_reward_account: &AccountLoader<reward::UserRewardAccount>,
+        wrapped_token_holder_reward_account: &AccountLoader<reward::UserRewardAccount>,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            &self.fund_account.load()?.get_wrap_account_address()?,
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?;
+
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            &wrapped_token_holder.key(),
+            reward_account,
+            wrapped_token_holder_reward_account,
+        )?;
+
+        let mut fund_account = self.fund_account.load_mut()?;
+        let wrapped_token = fund_account
+            .get_wrapped_token_mut()
+            .ok_or_else(|| error!(ErrorCode::FundWrappedTokenNotSetError))?;
+
+        let (old_wrapped_token_holder_amount, old_wrapped_token_retained_amount) =
+            wrapped_token.remove_holder(&wrapped_token_holder.key())?;
+
+        // update reward
+        let reward_service = reward::RewardService::new(self.receipt_token_mint, reward_account)?;
+
+        // holder lost `old_wrapped_token_holder_amount`
+        reward_service.update_reward_pools_token_allocation(
+            Some(wrapped_token_holder_reward_account),
+            None,
+            old_wrapped_token_holder_amount,
+            None,
+        )?;
+
+        // fund_wrap_account gained ∆wrapped_token_retained_amount
+        if wrapped_token.retained_amount > old_wrapped_token_retained_amount {
+            let wrapped_token_retained_amount_delta =
+                wrapped_token.retained_amount - old_wrapped_token_retained_amount;
+            reward_service.update_reward_pools_token_allocation(
+                None,
+                Some(fund_wrap_account_reward_account),
+                wrapped_token_retained_amount_delta,
+                None,
+            )?;
+        }
 
         self.create_fund_manager_updated_fund_event()
     }

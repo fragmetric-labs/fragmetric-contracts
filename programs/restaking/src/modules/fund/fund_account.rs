@@ -247,6 +247,13 @@ impl FundAccount {
         seeds
     }
 
+    pub(super) fn get_wrap_account_address(&self) -> Result<Pubkey> {
+        Ok(
+            Pubkey::create_program_address(&self.get_wrap_account_seeds(), &crate::ID)
+                .map_err(|_| ProgramError::InvalidSeeds)?,
+        )
+    }
+
     pub(super) fn find_supported_token_reserve_account_address(
         &self,
         token: &Pubkey,
@@ -565,9 +572,8 @@ impl FundAccount {
         Ok(())
     }
 
-    #[inline]
-    pub(super) fn get_wrapped_token(&self) -> Option<&WrappedToken> {
-        (self.wrapped_token.enabled == 1).then_some(&self.wrapped_token)
+    pub(super) fn get_wrapped_token_mint_address(&self) -> Option<&Pubkey> {
+        (self.wrapped_token.enabled == 1).then_some(&self.wrapped_token.mint)
     }
 
     pub(super) fn get_wrapped_token_mut(&mut self) -> Option<&mut WrappedToken> {
@@ -639,18 +645,6 @@ impl FundAccount {
 
         receipt_token_mint.reload()?;
         self.receipt_token_supply_amount = receipt_token_mint.supply;
-
-        Ok(())
-    }
-
-    pub(super) fn reload_wrapped_token_supply(
-        &mut self,
-        wrapped_token_mint: &mut InterfaceAccount<Mint>,
-    ) -> Result<()> {
-        require_keys_eq!(self.wrapped_token.mint, wrapped_token_mint.key());
-
-        wrapped_token_mint.reload()?;
-        self.wrapped_token.supply = wrapped_token_mint.supply;
 
         Ok(())
     }

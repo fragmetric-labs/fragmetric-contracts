@@ -418,10 +418,9 @@ pub mod restaking {
             &ctx.accounts.wrapped_token_mint,
             &ctx.accounts.admin,
             &ctx.accounts.wrapped_token_program,
-            &ctx.accounts.fund_wrap_account,
             &ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
         )?);
 
         Ok(())
@@ -1028,15 +1027,15 @@ pub mod restaking {
             &mut ctx.accounts.wrapped_token_mint,
             &ctx.accounts.wrapped_token_program,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_wrapped_token_account,
+            &ctx.accounts.user_wrapped_token_account,
             &mut ctx.accounts.user_fund_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.user_reward_account,
             &ctx.accounts.fund_wrap_account,
-            &mut ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
         )?
         .process_wrap_receipt_token(amount)?);
 
@@ -1053,15 +1052,15 @@ pub mod restaking {
             &mut ctx.accounts.wrapped_token_mint,
             &ctx.accounts.wrapped_token_program,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_wrapped_token_account,
+            &ctx.accounts.user_wrapped_token_account,
             &mut ctx.accounts.user_fund_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.user_reward_account,
             &ctx.accounts.fund_wrap_account,
-            &mut ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
         )?
         .process_wrap_receipt_token_if_needed(target_balance)?;
 
@@ -1082,15 +1081,15 @@ pub mod restaking {
             &mut ctx.accounts.wrapped_token_mint,
             &ctx.accounts.wrapped_token_program,
             &mut ctx.accounts.fund_account,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_wrapped_token_account,
+            &ctx.accounts.user_wrapped_token_account,
             &mut ctx.accounts.user_fund_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.user_reward_account,
             &ctx.accounts.fund_wrap_account,
-            &mut ctx.accounts.receipt_token_wrap_account,
-            &mut ctx.accounts.fund_wrap_account_reward_account,
+            &ctx.accounts.receipt_token_wrap_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
         )?
         .process_unwrap_receipt_token(amount)?);
 
