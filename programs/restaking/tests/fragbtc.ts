@@ -11,7 +11,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
       ctx.initializeMint.execute({
         name: 'Fragmetric Staked BTC',
         symbol: 'fragBTC',
-        uri: 'https://quicknode.quicknode-ipfs.com/ipfs/Qma6agibaJCD1tvQcisAoeZyy1haojKMb7igCZ5ziPe5jz',
+        uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmSxj4xv1LTgsAK3rHFEnEyfj6bC7tLWVtgjrtzAFbvxda',
         description: `fragBTC is redefining Bitcoin’s potential by enabling staking based returns.`,
         decimals: 8,
       }),
@@ -83,6 +83,21 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         mint: '11111111111111111111111111111111',
         amount: 0n,
         isBonus: true,
+      }),
+
+    // initialize wrapped token mint and configuration
+    () =>
+      ctx.wrappedTokenMint.initializeMint.execute({
+        mint: '9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN',
+        name: 'Wrapped Fragmetric Staked BTC',
+        symbol: 'wfragBTC',
+        uri: 'https://quicknode.quicknode-ipfs.com/ipfs/Qmb1xtUcaPAZz5zHJRdLxEYtVdFJRdivYf1fG9ud3ivRVu',
+        description: `wfragBTC is Solana's SPL token version of fragBTC that maximizes DeFi support and composability.`,
+        decimals: 8,
+      }),
+    () =>
+      ctx.fund.initializeWrappedToken.execute({
+        mint: '9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN',
       }),
 
     // initialize address lookup table

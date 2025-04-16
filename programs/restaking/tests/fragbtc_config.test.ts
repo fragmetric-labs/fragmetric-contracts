@@ -43,7 +43,7 @@ describe('restaking.fragBTC configuration test', async () => {
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
           },
         ],
-        "wrappedTokenMint": null,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
     `);
   });
@@ -107,7 +107,38 @@ describe('restaking.fragBTC configuration test', async () => {
           "contribution": 0n,
           "customContributionAccrualRateEnabled": true,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
-          "settlements": [],
+          "settlements": [
+            {
+              "blocks": [
+                {
+                  "amount": 0n,
+                  "endingContribution": 0n,
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": 0n,
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": 0n,
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": 0n,
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settlementBlocksLastRewardPoolContribution": 0n,
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
           "tokenAllocatedAmount": {
             "records": [],
             "totalAmount": 0n,
@@ -115,7 +146,17 @@ describe('restaking.fragBTC configuration test', async () => {
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
-        "rewards": [],
+        "rewards": [
+          {
+            "claimable": false,
+            "decimals": 4,
+            "description": "Airdrop point for fToken",
+            "id": 0,
+            "mint": "11111111111111111111111111111111",
+            "name": "fPoint",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+        ],
       }
     `);
   });

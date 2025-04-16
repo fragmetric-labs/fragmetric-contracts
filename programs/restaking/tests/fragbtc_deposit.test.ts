@@ -116,7 +116,7 @@ describe('restaking.fragBTC deposit test', async () => {
         "user": "JDdS2vKWBaT13BpFLFhDgDkt9aQKgB98m7wmtyKp9UA1",
         "withdrawalRequests": [],
         "wrappedTokenAmount": 0n,
-        "wrappedTokenMint": null,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
     `);
 
@@ -145,7 +145,7 @@ describe('restaking.fragBTC deposit test', async () => {
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
           },
         ],
-        "wrappedTokenMint": null,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
     `);
   });
