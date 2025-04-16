@@ -1,0 +1,124 @@
+# credit to: https://github.com/jito-foundation/restaking/blob/master/.github/workflows/ci.yaml
+#
+# to test workflow locally (macOS):
+#  docker pull --platform linux/amd64 ghcr.io/catthehacker/ubuntu:full-latest
+#  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#  [restart docker engine]
+# now test with:
+#  act push --container-architecture linux/amd64 --platform ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest
+#  use --reuse to reuse previous container (cache might be stale)
+#  use --rm --bind to totally clear previous container
+name: ci
+
+env:
+  RUST_TOOLCHAIN_VERSION: stable
+  SOLANA_VERSION: 2.1.18
+  ANCHOR_VERSION: 0.31.0
+  NODE_VERSION: 20.19.0
+  VITEST_MAX_THREADS: 1
+  CI: true
+  DEBUG: true
+  RUNTIME: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')) && 'svm' || 'litesvm' }}
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: build and test
+    runs-on: ubuntu-latest
+    steps:
+      # checkout
+      - uses: actions/checkout@v4
+
+#      - name: Check Rust presence
+#        run: |
+#          rustc --version || echo "No rustc found"
+#          ls -lah /usr/local/rustup || true
+#          ls -lah /home/runner/.rustup || true
+
+      # setup Node runtime
+      - name: setup Node $PATH (act workaround)
+        run: |
+          NODE_BIN=$(command -v node || true)
+          if [ -n "$NODE_BIN" ]; then
+            NODE_DIR=$(dirname "$NODE_BIN")
+            echo "Detected node at: $NODE_DIR"
+            echo "$NODE_DIR" >> $GITHUB_PATH
+          else
+            echo "Node not found, skipping PATH patch"
+          fi
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # setup Rust and Solana runtime
+      - run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+#      - uses: actions-rust-lang/setup-rust-toolchain@v1
+#        with:
+#          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+#          components: rustfmt, clippy
+#          override: true
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: anchor-cli
+          git: https://github.com/coral-xyz/anchor
+          tag: v${{ env.ANCHOR_VERSION }}
+          locked: true
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-audit
+          version: "0.21.2"
+          locked: true
+
+      # lint Rust codes and audit dependencies
+      - run: cargo clippy -p restaking -- --allow warnings
+      - run: cargo fmt --check
+      - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
+
+      # TODO: branch on target programs later
+      # run Rust unit tests
+      # - run: cargo test -p restaking
+      # run Typescript integration tests against SBF binaries
+      - run: anchor build -p restaking
+      - run: pnpm install
+      - run: pnpm build
+      - shell: bash
+        run: |
+          realpath /Users/dehypnosis/Works/fragmetric-contracts/programs/restaking/tests/mocks/*.so
+          shopt -s globstar
+          files=(./programs/restaking/tests/*.test.ts)
+          pnpm test "${files[@]}"
+
+#    if: startsWith(github.ref, 'refs/tags/v')
+#    steps:
+#      - uses: actions/checkout@v4
+#      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
+#      - uses: actions-rust-lang/setup-rust-toolchain@v1
+#      - uses: baptiste0928/cargo-install@v3
+#        with:
+#          crate: solana-verify
+#      - run: solana-verify build --library-name restaking --base-image solanafoundation/solana-verifiable-build:2.1.11
+#        TODO: need to anchor build ...
+#      - run: ls -lh
+#      - uses: softprops/action-gh-release@v2
+#        with:
+#          files: |
+#            target/deploy/restaking.so
+#            target/idl/restaking.so
+#          fail_on_unmatched_files: true

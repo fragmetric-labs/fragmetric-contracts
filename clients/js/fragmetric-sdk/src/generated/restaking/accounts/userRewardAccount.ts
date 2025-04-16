@@ -17,8 +17,6 @@ import {
   fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
@@ -64,9 +62,11 @@ export type UserRewardAccount = {
   receiptTokenMint: Address;
   user: Address;
   numUserRewardPools: number;
-  maxUserRewardPools: number;
   padding: ReadonlyUint8Array;
-  userRewardPools1: Array<UserRewardPool>;
+  baseUserRewardPool: UserRewardPool;
+  bonusUserRewardPool: UserRewardPool;
+  padding2: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
 };
 
 export type UserRewardAccountArgs = {
@@ -75,9 +75,11 @@ export type UserRewardAccountArgs = {
   receiptTokenMint: Address;
   user: Address;
   numUserRewardPools: number;
-  maxUserRewardPools: number;
   padding: ReadonlyUint8Array;
-  userRewardPools1: Array<UserRewardPoolArgs>;
+  baseUserRewardPool: UserRewardPoolArgs;
+  bonusUserRewardPool: UserRewardPoolArgs;
+  padding2: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getUserRewardAccountEncoder(): Encoder<UserRewardAccountArgs> {
@@ -89,12 +91,11 @@ export function getUserRewardAccountEncoder(): Encoder<UserRewardAccountArgs> {
       ['receiptTokenMint', getAddressEncoder()],
       ['user', getAddressEncoder()],
       ['numUserRewardPools', getU8Encoder()],
-      ['maxUserRewardPools', getU8Encoder()],
-      ['padding', fixEncoderSize(getBytesEncoder(), 11)],
-      [
-        'userRewardPools1',
-        getArrayEncoder(getUserRewardPoolEncoder(), { size: 4 }),
-      ],
+      ['padding', fixEncoderSize(getBytesEncoder(), 12)],
+      ['baseUserRewardPool', getUserRewardPoolEncoder()],
+      ['bonusUserRewardPool', getUserRewardPoolEncoder()],
+      ['padding2', fixEncoderSize(getBytesEncoder(), 1040)],
+      ['reserved', fixEncoderSize(getBytesEncoder(), 1040)],
     ]),
     (value) => ({ ...value, discriminator: USER_REWARD_ACCOUNT_DISCRIMINATOR })
   );
@@ -108,12 +109,11 @@ export function getUserRewardAccountDecoder(): Decoder<UserRewardAccount> {
     ['receiptTokenMint', getAddressDecoder()],
     ['user', getAddressDecoder()],
     ['numUserRewardPools', getU8Decoder()],
-    ['maxUserRewardPools', getU8Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 11)],
-    [
-      'userRewardPools1',
-      getArrayDecoder(getUserRewardPoolDecoder(), { size: 4 }),
-    ],
+    ['padding', fixDecoderSize(getBytesDecoder(), 12)],
+    ['baseUserRewardPool', getUserRewardPoolDecoder()],
+    ['bonusUserRewardPool', getUserRewardPoolDecoder()],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 1040)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 1040)],
   ]);
 }
 

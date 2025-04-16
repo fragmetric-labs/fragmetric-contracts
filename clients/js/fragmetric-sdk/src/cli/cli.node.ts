@@ -203,7 +203,7 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
             config?.contextOverrides?.programs?.restaking ??
             RestakingProgram.connect(
               {
-                type: 'solana',
+                type: 'svm',
                 cluster: opts.cluster,
                 rpc: createSolanaRpc(opts.url!),
                 rpcSubscriptions: createSolanaRpcSubscriptions(opts.ws!),

@@ -10,18 +10,17 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
   getAddressEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU16Decoder,
-  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
-  getU8Decoder,
-  getU8Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -109,14 +108,14 @@ export type FundManagerSettleRewardInstruction<
 
 export type FundManagerSettleRewardInstructionData = {
   discriminator: ReadonlyUint8Array;
-  rewardPoolId: number;
-  rewardId: number;
+  rewardTokenMint: Address;
+  isBonusPool: boolean;
   amount: bigint;
 };
 
 export type FundManagerSettleRewardInstructionDataArgs = {
-  rewardPoolId: number;
-  rewardId: number;
+  rewardTokenMint: Address;
+  isBonusPool: boolean;
   amount: number | bigint;
 };
 
@@ -124,8 +123,8 @@ export function getFundManagerSettleRewardInstructionDataEncoder(): Encoder<Fund
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['rewardPoolId', getU8Encoder()],
-      ['rewardId', getU16Encoder()],
+      ['rewardTokenMint', getAddressEncoder()],
+      ['isBonusPool', getBooleanEncoder()],
       ['amount', getU64Encoder()],
     ]),
     (value) => ({
@@ -138,8 +137,8 @@ export function getFundManagerSettleRewardInstructionDataEncoder(): Encoder<Fund
 export function getFundManagerSettleRewardInstructionDataDecoder(): Decoder<FundManagerSettleRewardInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['rewardPoolId', getU8Decoder()],
-    ['rewardId', getU16Decoder()],
+    ['rewardTokenMint', getAddressDecoder()],
+    ['isBonusPool', getBooleanDecoder()],
     ['amount', getU64Decoder()],
   ]);
 }
@@ -174,8 +173,8 @@ export type FundManagerSettleRewardAsyncInput<
   rewardTokenReserveAccount?: Address<TAccountRewardTokenReserveAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardPoolId: FundManagerSettleRewardInstructionDataArgs['rewardPoolId'];
-  rewardId: FundManagerSettleRewardInstructionDataArgs['rewardId'];
+  rewardTokenMintArg: FundManagerSettleRewardInstructionDataArgs['rewardTokenMint'];
+  isBonusPool: FundManagerSettleRewardInstructionDataArgs['isBonusPool'];
   amount: FundManagerSettleRewardInstructionDataArgs['amount'];
 };
 
@@ -253,7 +252,7 @@ export async function getFundManagerSettleRewardInstructionAsync<
   >;
 
   // Original args.
-  const args = { ...input };
+  const args = { ...input, rewardTokenMint: input.rewardTokenMintArg };
 
   // Resolve default values.
   if (!accounts.fundManager.value) {
@@ -353,8 +352,8 @@ export type FundManagerSettleRewardInput<
   rewardTokenReserveAccount?: Address<TAccountRewardTokenReserveAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardPoolId: FundManagerSettleRewardInstructionDataArgs['rewardPoolId'];
-  rewardId: FundManagerSettleRewardInstructionDataArgs['rewardId'];
+  rewardTokenMintArg: FundManagerSettleRewardInstructionDataArgs['rewardTokenMint'];
+  isBonusPool: FundManagerSettleRewardInstructionDataArgs['isBonusPool'];
   amount: FundManagerSettleRewardInstructionDataArgs['amount'];
 };
 
@@ -430,7 +429,7 @@ export function getFundManagerSettleRewardInstruction<
   >;
 
   // Original args.
-  const args = { ...input };
+  const args = { ...input, rewardTokenMint: input.rewardTokenMintArg };
 
   // Resolve default values.
   if (!accounts.fundManager.value) {

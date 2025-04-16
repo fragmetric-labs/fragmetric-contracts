@@ -42,7 +42,7 @@ export type RewardSettlement = {
   numSettlementBlocks: number;
   settlementBlocksHead: number;
   settlementBlocksTail: number;
-  padding: ReadonlyUint8Array;
+  padding2: ReadonlyUint8Array;
   /** Leftovers from each settlement block when clearing */
   remainingAmount: bigint;
   claimedAmount: bigint;
@@ -59,7 +59,7 @@ export type RewardSettlementArgs = {
   numSettlementBlocks: number;
   settlementBlocksHead: number;
   settlementBlocksTail: number;
-  padding: ReadonlyUint8Array;
+  padding2: ReadonlyUint8Array;
   /** Leftovers from each settlement block when clearing */
   remainingAmount: number | bigint;
   claimedAmount: number | bigint;
@@ -77,7 +77,7 @@ export function getRewardSettlementEncoder(): Encoder<RewardSettlementArgs> {
     ['numSettlementBlocks', getU8Encoder()],
     ['settlementBlocksHead', getU8Encoder()],
     ['settlementBlocksTail', getU8Encoder()],
-    ['padding', fixEncoderSize(getBytesEncoder(), 2)],
+    ['padding2', fixEncoderSize(getBytesEncoder(), 2)],
     ['remainingAmount', getU64Encoder()],
     ['claimedAmount', getU64Encoder()],
     ['claimedAmountUpdatedSlot', getU64Encoder()],
@@ -98,7 +98,7 @@ export function getRewardSettlementDecoder(): Decoder<RewardSettlement> {
     ['numSettlementBlocks', getU8Decoder()],
     ['settlementBlocksHead', getU8Decoder()],
     ['settlementBlocksTail', getU8Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 2)],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 2)],
     ['remainingAmount', getU64Decoder()],
     ['claimedAmount', getU64Decoder()],
     ['claimedAmountUpdatedSlot', getU64Decoder()],

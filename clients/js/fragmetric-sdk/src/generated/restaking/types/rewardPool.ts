@@ -41,13 +41,13 @@ import {
 export type RewardPool = {
   /** ID is determined by reward account. */
   id: number;
-  name: ReadonlyUint8Array;
+  padding: ReadonlyUint8Array;
   customContributionAccrualRateEnabled: number;
   tokenAllocatedAmount: TokenAllocatedAmount;
   contribution: bigint;
   initialSlot: bigint;
   updatedSlot: bigint;
-  padding: ReadonlyUint8Array;
+  padding2: ReadonlyUint8Array;
   numRewardSettlements: number;
   reserved: ReadonlyUint8Array;
   rewardSettlements1: Array<RewardSettlement>;
@@ -56,13 +56,13 @@ export type RewardPool = {
 export type RewardPoolArgs = {
   /** ID is determined by reward account. */
   id: number;
-  name: ReadonlyUint8Array;
+  padding: ReadonlyUint8Array;
   customContributionAccrualRateEnabled: number;
   tokenAllocatedAmount: TokenAllocatedAmountArgs;
   contribution: number | bigint;
   initialSlot: number | bigint;
   updatedSlot: number | bigint;
-  padding: ReadonlyUint8Array;
+  padding2: ReadonlyUint8Array;
   numRewardSettlements: number;
   reserved: ReadonlyUint8Array;
   rewardSettlements1: Array<RewardSettlementArgs>;
@@ -71,13 +71,13 @@ export type RewardPoolArgs = {
 export function getRewardPoolEncoder(): Encoder<RewardPoolArgs> {
   return getStructEncoder([
     ['id', getU8Encoder()],
-    ['name', fixEncoderSize(getBytesEncoder(), 14)],
+    ['padding', fixEncoderSize(getBytesEncoder(), 14)],
     ['customContributionAccrualRateEnabled', getU8Encoder()],
     ['tokenAllocatedAmount', getTokenAllocatedAmountEncoder()],
     ['contribution', getU128Encoder()],
     ['initialSlot', getU64Encoder()],
     ['updatedSlot', getU64Encoder()],
-    ['padding', fixEncoderSize(getBytesEncoder(), 9)],
+    ['padding2', fixEncoderSize(getBytesEncoder(), 9)],
     ['numRewardSettlements', getU8Encoder()],
     ['reserved', fixEncoderSize(getBytesEncoder(), 262)],
     [
@@ -90,13 +90,13 @@ export function getRewardPoolEncoder(): Encoder<RewardPoolArgs> {
 export function getRewardPoolDecoder(): Decoder<RewardPool> {
   return getStructDecoder([
     ['id', getU8Decoder()],
-    ['name', fixDecoderSize(getBytesDecoder(), 14)],
+    ['padding', fixDecoderSize(getBytesDecoder(), 14)],
     ['customContributionAccrualRateEnabled', getU8Decoder()],
     ['tokenAllocatedAmount', getTokenAllocatedAmountDecoder()],
     ['contribution', getU128Decoder()],
     ['initialSlot', getU64Decoder()],
     ['updatedSlot', getU64Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 9)],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 9)],
     ['numRewardSettlements', getU8Decoder()],
     ['reserved', fixDecoderSize(getBytesDecoder(), 262)],
     [

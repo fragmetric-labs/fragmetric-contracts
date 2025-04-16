@@ -15,7 +15,7 @@ import {
   transformAddressResolverVariant,
 } from '../../context';
 import * as restaking from '../../generated/restaking';
-import { LAMPORTS_PER_SOL } from './constants';
+import { LAMPORTS_PER_SOL } from '../../context/constants';
 import { RestakingFundAccountContext } from './fund';
 import { RestakingNormalizedTokenMintAccountContext } from './normalized_token_mint';
 import { RestakingNormalizedTokenPoolAccountContext } from './normalized_token_pool';

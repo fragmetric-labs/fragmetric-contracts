@@ -99,17 +99,6 @@ export class RestakingUserFundAccountContext extends AccountContext<
                 programAddress: this.program.address,
               }
             ),
-            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                program: this.program.address,
-                receiptTokenMint: receiptTokenMint,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
           ]);
         },
       ],

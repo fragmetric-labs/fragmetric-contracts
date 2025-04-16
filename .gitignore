@@ -9,6 +9,7 @@ test-ledger
 .vscode
 *.tsbuildinfo
 coverage
+.pnpm-store
 
 # keypairs
 id.json

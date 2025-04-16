@@ -7,7 +7,7 @@ import {
   getBase64Decoder,
 } from '@solana/kit';
 import * as jitoVault from '../../../generated/jito_vault';
-import { MAX_U64 } from '../constants';
+import { MAX_U64 } from '../../../context/constants';
 import { RestakingProgram } from '../program';
 
 export async function mock(this: RestakingProgram, key: string) {

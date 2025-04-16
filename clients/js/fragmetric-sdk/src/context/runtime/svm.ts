@@ -7,20 +7,20 @@ import {
   RuntimeRPCOptionalMethods,
 } from './runtime';
 
-export type SolanaRuntimeConfig = {
-  type?: 'solana';
+export type SVMRuntimeConfig = {
+  type?: 'svm';
   rpc: Rpc<RuntimeRPCMethods> & Partial<Rpc<RuntimeRPCOptionalMethods>>;
   rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
   cluster: RuntimeCluster;
 };
 
-export const createSolanaRuntime: RuntimeFactory<SolanaRuntimeConfig> = ({
+export const createSVMRuntime: RuntimeFactory<SVMRuntimeConfig> = ({
   rpc,
   rpcSubscriptions,
   cluster,
 }): Runtime => {
   return {
-    type: 'solana',
+    type: 'svm',
     cluster,
     rpc: rpc as any,
     rpcSubscriptions: rpcSubscriptions,

@@ -29,7 +29,7 @@ import type { LiteSVM } from 'litesvm';
 import { createHash } from 'node:crypto';
 import path from 'path';
 
-export type TestValidatorType = 'solana' | 'litesvm';
+export type TestValidatorType = 'svm' | 'litesvm';
 
 export type TestValidatorOptions<T extends TestValidatorType> = {
   type: T;
@@ -77,7 +77,7 @@ export type TestValidatorRuntime<T extends TestValidatorType> = {
       svm: LiteSVM;
     }
   : {
-      type: 'solana';
+      type: 'svm';
       cluster: 'local';
       rpc: Rpc<SolanaRpcApi>;
       rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
@@ -97,7 +97,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
     const resolvedOptions: TestValidatorOptions<T> = {
       slotsPerEpoch: 432000n,
       ticksPerSlot: 64,
-      type: options?.type ?? ('solana' as T),
+      type: options?.type ?? ('svm' as T),
       ...options,
     };
 
@@ -105,10 +105,10 @@ export abstract class TestValidator<T extends TestValidatorType> {
     await TestValidator.transformMockOptions(resolvedOptions.mock);
 
     // run validator
-    const validator = await (resolvedOptions.type == 'solana'
-      ? import('./solana').then((module) =>
-          module.SolanaTestValidator.initialize(
-            resolvedOptions as TestValidatorOptions<'solana'>
+    const validator = await (resolvedOptions.type == 'svm'
+      ? import('./svm').then((module) =>
+          module.SVMValidator.initialize(
+            resolvedOptions as TestValidatorOptions<'svm'>
           )
         )
       : import('./litesvm').then((module) =>
@@ -332,7 +332,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
             await tx
           );
         } else {
-          const rpc = (this.runtime as TestValidatorRuntime<'solana'>).rpc;
+          const rpc = (this.runtime as TestValidatorRuntime<'svm'>).rpc;
           return setTransactionMessageLifetimeUsingBlockhash(
             (await rpc.getLatestBlockhash().send()).value,
             await tx
@@ -353,7 +353,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
         throw new Error(`failed to mint token from faucet: ${res.toString()}`);
       }
     } else {
-      const solana = this.runtime as TestValidatorRuntime<'solana'>;
+      const solana = this.runtime as TestValidatorRuntime<'svm'>;
       const sendAndConfirm = sendAndConfirmTransactionFactory({
         rpc: solana.rpc,
         rpcSubscriptions: solana.rpcSubscriptions,

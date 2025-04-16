@@ -21,8 +21,6 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU16Decoder,
-  getU16Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -114,18 +112,18 @@ export type FundManagerUpdateRewardInstruction<
 
 export type FundManagerUpdateRewardInstructionData = {
   discriminator: ReadonlyUint8Array;
-  rewardId: number;
-  mint: Option<Address>;
-  program: Option<Address>;
-  decimals: Option<number>;
+  mint: Address;
+  newMint: Option<Address>;
+  newProgram: Option<Address>;
+  newDecimals: Option<number>;
   claimable: boolean;
 };
 
 export type FundManagerUpdateRewardInstructionDataArgs = {
-  rewardId: number;
-  mint: OptionOrNullable<Address>;
-  program: OptionOrNullable<Address>;
-  decimals: OptionOrNullable<number>;
+  mint: Address;
+  newMint: OptionOrNullable<Address>;
+  newProgram: OptionOrNullable<Address>;
+  newDecimals: OptionOrNullable<number>;
   claimable: boolean;
 };
 
@@ -133,10 +131,10 @@ export function getFundManagerUpdateRewardInstructionDataEncoder(): Encoder<Fund
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['rewardId', getU16Encoder()],
-      ['mint', getOptionEncoder(getAddressEncoder())],
-      ['program', getOptionEncoder(getAddressEncoder())],
-      ['decimals', getOptionEncoder(getU8Encoder())],
+      ['mint', getAddressEncoder()],
+      ['newMint', getOptionEncoder(getAddressEncoder())],
+      ['newProgram', getOptionEncoder(getAddressEncoder())],
+      ['newDecimals', getOptionEncoder(getU8Encoder())],
       ['claimable', getBooleanEncoder()],
     ]),
     (value) => ({
@@ -149,10 +147,10 @@ export function getFundManagerUpdateRewardInstructionDataEncoder(): Encoder<Fund
 export function getFundManagerUpdateRewardInstructionDataDecoder(): Decoder<FundManagerUpdateRewardInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['rewardId', getU16Decoder()],
-    ['mint', getOptionDecoder(getAddressDecoder())],
-    ['program', getOptionDecoder(getAddressDecoder())],
-    ['decimals', getOptionDecoder(getU8Decoder())],
+    ['mint', getAddressDecoder()],
+    ['newMint', getOptionDecoder(getAddressDecoder())],
+    ['newProgram', getOptionDecoder(getAddressDecoder())],
+    ['newDecimals', getOptionDecoder(getU8Decoder())],
     ['claimable', getBooleanDecoder()],
   ]);
 }
@@ -187,10 +185,10 @@ export type FundManagerUpdateRewardAsyncInput<
   rewardTokenReserveAccount?: Address<TAccountRewardTokenReserveAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardId: FundManagerUpdateRewardInstructionDataArgs['rewardId'];
   mint: FundManagerUpdateRewardInstructionDataArgs['mint'];
-  programArg: FundManagerUpdateRewardInstructionDataArgs['program'];
-  decimals: FundManagerUpdateRewardInstructionDataArgs['decimals'];
+  newMint: FundManagerUpdateRewardInstructionDataArgs['newMint'];
+  newProgram: FundManagerUpdateRewardInstructionDataArgs['newProgram'];
+  newDecimals: FundManagerUpdateRewardInstructionDataArgs['newDecimals'];
   claimable: FundManagerUpdateRewardInstructionDataArgs['claimable'];
 };
 
@@ -268,7 +266,7 @@ export async function getFundManagerUpdateRewardInstructionAsync<
   >;
 
   // Original args.
-  const args = { ...input, program: input.programArg };
+  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.fundManager.value) {
@@ -368,10 +366,10 @@ export type FundManagerUpdateRewardInput<
   rewardTokenReserveAccount?: Address<TAccountRewardTokenReserveAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  rewardId: FundManagerUpdateRewardInstructionDataArgs['rewardId'];
   mint: FundManagerUpdateRewardInstructionDataArgs['mint'];
-  programArg: FundManagerUpdateRewardInstructionDataArgs['program'];
-  decimals: FundManagerUpdateRewardInstructionDataArgs['decimals'];
+  newMint: FundManagerUpdateRewardInstructionDataArgs['newMint'];
+  newProgram: FundManagerUpdateRewardInstructionDataArgs['newProgram'];
+  newDecimals: FundManagerUpdateRewardInstructionDataArgs['newDecimals'];
   claimable: FundManagerUpdateRewardInstructionDataArgs['claimable'];
 };
 
@@ -447,7 +445,7 @@ export function getFundManagerUpdateRewardInstruction<
   >;
 
   // Original args.
-  const args = { ...input, program: input.programArg };
+  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.fundManager.value) {

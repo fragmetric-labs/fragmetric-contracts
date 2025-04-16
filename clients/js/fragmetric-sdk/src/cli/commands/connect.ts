@@ -8,6 +8,7 @@ import * as repl from 'node:repl';
 import * as util from 'node:util';
 import * as prepl from 'pretty-repl';
 import * as sdk from '../../index';
+import * as sdkConstants from '../../context/constants';
 import { RootCommandOptions } from '../cli.node';
 import { isAlreadyReportedError, logger } from '../utils';
 
@@ -32,7 +33,7 @@ export const connectCommand = new Command()
 
     if (!expression) {
       logger.box(
-        `Connected to ${chalk.green('Fragmetric')} programs ${rootOptions.cluster} REPL.\n- Press ${chalk.bold('TAB')} to autocomplete.\n- Can use ${chalk.bold('_')} to refer the previous evaluation result.`
+        `Connected to ${chalk.green('Fragmetric')} programs ${rootOptions.cluster} REPL.\n- Press ${chalk.bold('TAB')} to autocomplete.\n- Enter ${chalk.bold('.editor')} to activate multiline editor mode.\n- Use ${chalk.bold('_')} to refer the previous evaluation result.`
       );
     }
 
@@ -63,6 +64,7 @@ export const connectCommand = new Command()
     const context = {
       ...rootOptions.context.programs,
       ...rootOptions.context,
+      ...sdkConstants,
       sdk,
     };
     Object.assign(server.context, context);
@@ -75,7 +77,7 @@ export const connectCommand = new Command()
       originalCompleter(line, (err, result) => {
         if (result) {
           if (!line && !result[1]) {
-            result[0] = Object.keys(context);
+            result[0] = Object.keys(context).concat(['.editor', '.help']);
           } else {
             result[0] = result[0].filter((token) => {
               return !(

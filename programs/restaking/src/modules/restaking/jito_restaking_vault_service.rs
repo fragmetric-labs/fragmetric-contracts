@@ -308,7 +308,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         require_eq!(delegation_index, next_index);
 
         let next_update_index = self.get_vault_update_next_index(vault_update_state_tracker)?;
-        if next_update_index.is_some_and(|next_index| next_index == next_index) {
+        if next_update_index.is_some_and(|index| index == next_index) {
             let crank_vault_update_state_tracker_ix =
                 jito_vault_sdk::sdk::crank_vault_update_state_tracker(
                     self.vault_program.key,

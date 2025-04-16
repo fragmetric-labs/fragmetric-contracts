@@ -6,15 +6,19 @@ import { AccountContext, TransactionTemplateContext } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
 import { RestakingUserAccountContext } from './user';
+import { RestakingRewardAccountContext } from './reward';
+import { RestakingFundWrapAccountContext } from './fund_wrap';
 
-export class RestakingUserRewardAccountContext extends AccountContext<
-  RestakingUserAccountContext,
+abstract class RestakingAbstractUserRewardAccountContext<P extends AccountContext<any>> extends AccountContext<
+  P,
   Account<restaking.UserRewardAccount>
 > {
+  protected abstract __globalRewardAccount: RestakingRewardAccountContext;
+  
   async resolve(noCache = false) {
     const [account, global] = await Promise.all([
       this.resolveAccount(noCache),
-      this.parent.parent.reward.resolve(noCache),
+      this.__globalRewardAccount.resolve(noCache),
     ]);
     if (!(account && global)) {
       return null;
@@ -26,23 +30,24 @@ export class RestakingUserRewardAccountContext extends AccountContext<
       receiptTokenMint,
       user,
       numUserRewardPools,
-      maxUserRewardPools,
       padding,
-      userRewardPools1,
+      baseUserRewardPool,
+      bonusUserRewardPool,
+      padding2,
       ...props
     } = account.data;
-    const pools = userRewardPools1.slice(0, numUserRewardPools).map((req) => {
+    const pools = [baseUserRewardPool, bonusUserRewardPool].map((pool) => {
       const {
         tokenAllocatedAmount,
         contribution,
         updatedSlot,
         rewardPoolId,
         numRewardSettlements,
-        padding,
         reserved,
         rewardSettlements1,
+        padding2,
         ...props
-      } = req;
+      } = pool;
       return {
         // rewardPoolId,
         contribution,
@@ -93,11 +98,11 @@ export class RestakingUserRewardAccountContext extends AccountContext<
     };
   }
 
-  constructor(readonly parent: RestakingUserAccountContext) {
+  constructor(readonly parent: P) {
     super(parent, async (parent) => {
       const [user, receiptTokenMint] = await Promise.all([
         parent.resolveAddress(true),
-        parent.parent.resolveAddress(),
+        this.__globalRewardAccount.parent.resolveAddress(),
       ]);
       if (user && receiptTokenMint) {
         const ix =
@@ -127,7 +132,7 @@ export class RestakingUserRewardAccountContext extends AccountContext<
       instructions: [
         async (parent, args) => {
           const [receiptTokenMint, user] = await Promise.all([
-            parent.parent.parent.resolveAddress(),
+            this.__globalRewardAccount.parent.resolveAddress(),
             parent.parent.resolveAddress(true),
           ]);
           if (!(receiptTokenMint && user)) throw new Error('invalid context');
@@ -160,7 +165,7 @@ export class RestakingUserRewardAccountContext extends AccountContext<
       instructions: [
         async (parent, args) => {
           const [receiptTokenMint, user] = await Promise.all([
-            parent.parent.parent.resolveAddress(),
+            this.__globalRewardAccount.parent.resolveAddress(),
             parent.parent.resolveAddress(true),
           ]);
           if (!(receiptTokenMint && user)) throw new Error('invalid context');
@@ -172,7 +177,7 @@ export class RestakingUserRewardAccountContext extends AccountContext<
               owner: user,
               tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
             }),
-            restaking.getUserCreateFundAccountIdempotentInstructionAsync(
+            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
               {
                 user: createNoopSigner(user),
                 program: this.program.address,
@@ -188,4 +193,16 @@ export class RestakingUserRewardAccountContext extends AccountContext<
       ],
     }
   );
+}
+
+export class RestakingUserRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingUserAccountContext> {
+  protected get __globalRewardAccount() {
+    return this.parent.parent.reward;
+  }
+}
+
+export class RestakingFundWrapRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingFundWrapAccountContext> {
+  protected get __globalRewardAccount() {
+    return this.parent.parent.parent.reward;
+  }
 }

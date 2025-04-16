@@ -15,7 +15,7 @@ import {
   SolanaRpcSubscriptionsApi,
 } from '@solana/kit';
 import { LiteSVMRuntimeConfig, createLiteSVMRuntime } from './litesvm.node';
-import { SolanaRuntimeConfig, createSolanaRuntime } from './solana';
+import { SVMRuntimeConfig, createSVMRuntime } from './svm';
 
 export interface Runtime {
   type: RuntimeType;
@@ -51,15 +51,15 @@ export type RuntimeRPC = Rpc<RuntimeRPCMethods> &
 export type RuntimeRPCSubscriptions =
   RpcSubscriptions<SolanaRpcSubscriptionsApi>;
 export type RuntimeFactory<T extends RuntimeConfig> = (config: T) => Runtime;
-export type RuntimeConfig = SolanaRuntimeConfig | LiteSVMRuntimeConfig;
+export type RuntimeConfig = SVMRuntimeConfig | LiteSVMRuntimeConfig;
 export type RuntimeType = NonNullable<RuntimeConfig['type']>;
 
 export function createRuntime(config: RuntimeConfig): Runtime {
   switch (config.type) {
     case 'litesvm':
       return createLiteSVMRuntime(config);
-    case 'solana':
+    case 'svm':
     default:
-      return createSolanaRuntime(config);
+      return createSVMRuntime(config);
   }
 }

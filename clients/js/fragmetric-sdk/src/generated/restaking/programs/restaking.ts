@@ -14,22 +14,20 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
+  type ParsedAdminCreateUserRewardAccountIdempotentInstruction,
   type ParsedAdminInitializeExtraAccountMetaListInstruction,
   type ParsedAdminInitializeFundAccountInstruction,
-  type ParsedAdminInitializeFundWrapAccountRewardAccountInstruction,
   type ParsedAdminInitializeNormalizedTokenPoolAccountInstruction,
   type ParsedAdminInitializeRewardAccountInstruction,
   type ParsedAdminSetAddressLookupTableAccountInstruction,
   type ParsedAdminUpdateExtraAccountMetaListIfNeededInstruction,
   type ParsedAdminUpdateFundAccountIfNeededInstruction,
-  type ParsedAdminUpdateFundWrapAccountRewardAccountIfNeededInstruction,
   type ParsedAdminUpdateNormalizedTokenPoolAccountIfNeededInstruction,
   type ParsedAdminUpdateRewardAccountIfNeededInstruction,
   type ParsedFundManagerAddNormalizedTokenPoolSupportedTokenInstruction,
   type ParsedFundManagerAddRestakingVaultCompoundingRewardTokenInstruction,
   type ParsedFundManagerAddRestakingVaultDistributingRewardTokenInstruction,
   type ParsedFundManagerAddRewardInstruction,
-  type ParsedFundManagerAddRewardPoolInstruction,
   type ParsedFundManagerAddSupportedTokenInstruction,
   type ParsedFundManagerAddTokenSwapStrategyInstruction,
   type ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstruction,
@@ -59,12 +57,8 @@ import {
   type ParsedUserCreateRewardAccountIdempotentInstruction,
   type ParsedUserDepositSolInstruction,
   type ParsedUserDepositSupportedTokenInstruction,
-  type ParsedUserInitializeFundAccountInstruction,
-  type ParsedUserInitializeRewardAccountInstruction,
   type ParsedUserRequestWithdrawalInstruction,
   type ParsedUserUnwrapReceiptTokenInstruction,
-  type ParsedUserUpdateFundAccountIfNeededInstruction,
-  type ParsedUserUpdateRewardAccountIfNeededInstruction,
   type ParsedUserUpdateRewardPoolsInstruction,
   type ParsedUserWithdrawSolInstruction,
   type ParsedUserWithdrawSupportedTokenInstruction,
@@ -388,22 +382,20 @@ export function identifyRestakingAccount(
 }
 
 export enum RestakingInstruction {
+  AdminCreateUserRewardAccountIdempotent,
   AdminInitializeExtraAccountMetaList,
   AdminInitializeFundAccount,
-  AdminInitializeFundWrapAccountRewardAccount,
   AdminInitializeNormalizedTokenPoolAccount,
   AdminInitializeRewardAccount,
   AdminSetAddressLookupTableAccount,
   AdminUpdateExtraAccountMetaListIfNeeded,
   AdminUpdateFundAccountIfNeeded,
-  AdminUpdateFundWrapAccountRewardAccountIfNeeded,
   AdminUpdateNormalizedTokenPoolAccountIfNeeded,
   AdminUpdateRewardAccountIfNeeded,
   FundManagerAddNormalizedTokenPoolSupportedToken,
   FundManagerAddRestakingVaultCompoundingRewardToken,
   FundManagerAddRestakingVaultDistributingRewardToken,
   FundManagerAddReward,
-  FundManagerAddRewardPool,
   FundManagerAddSupportedToken,
   FundManagerAddTokenSwapStrategy,
   FundManagerInitializeFundJitoRestakingVault,
@@ -433,12 +425,8 @@ export enum RestakingInstruction {
   UserCreateRewardAccountIdempotent,
   UserDepositSol,
   UserDepositSupportedToken,
-  UserInitializeFundAccount,
-  UserInitializeRewardAccount,
   UserRequestWithdrawal,
   UserUnwrapReceiptToken,
-  UserUpdateFundAccountIfNeeded,
-  UserUpdateRewardAccountIfNeeded,
   UserUpdateRewardPools,
   UserWithdrawSol,
   UserWithdrawSupportedToken,
@@ -450,6 +438,17 @@ export function identifyRestakingInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): RestakingInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([47, 200, 202, 185, 15, 107, 195, 16])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
+  }
   if (
     containsBytes(
       data,
@@ -471,17 +470,6 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.AdminInitializeFundAccount;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([154, 148, 28, 186, 34, 182, 115, 216])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.AdminInitializeFundWrapAccountRewardAccount;
   }
   if (
     containsBytes(
@@ -537,17 +525,6 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.AdminUpdateFundAccountIfNeeded;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([3, 62, 36, 3, 185, 70, 34, 146])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.AdminUpdateFundWrapAccountRewardAccountIfNeeded;
   }
   if (
     containsBytes(
@@ -614,17 +591,6 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerAddReward;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([222, 241, 120, 225, 5, 76, 175, 136])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.FundManagerAddRewardPool;
   }
   if (
     containsBytes(
@@ -949,28 +915,6 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([237, 214, 91, 254, 184, 57, 37, 102])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.UserInitializeFundAccount;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([35, 77, 53, 232, 36, 237, 146, 246])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.UserInitializeRewardAccount;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([147, 199, 177, 14, 195, 86, 62, 134])
       ),
       0
@@ -988,28 +932,6 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.UserUnwrapReceiptToken;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([22, 10, 103, 174, 223, 166, 182, 76])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.UserUpdateFundAccountIfNeeded;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([156, 78, 23, 8, 238, 177, 204, 173])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.UserUpdateRewardAccountIfNeeded;
   }
   if (
     containsBytes(
@@ -1075,14 +997,14 @@ export type ParsedRestakingInstruction<
   TProgram extends string = '4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5',
 > =
   | ({
+      instructionType: RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
+    } & ParsedAdminCreateUserRewardAccountIdempotentInstruction<TProgram>)
+  | ({
       instructionType: RestakingInstruction.AdminInitializeExtraAccountMetaList;
     } & ParsedAdminInitializeExtraAccountMetaListInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.AdminInitializeFundAccount;
     } & ParsedAdminInitializeFundAccountInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.AdminInitializeFundWrapAccountRewardAccount;
-    } & ParsedAdminInitializeFundWrapAccountRewardAccountInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.AdminInitializeNormalizedTokenPoolAccount;
     } & ParsedAdminInitializeNormalizedTokenPoolAccountInstruction<TProgram>)
@@ -1098,9 +1020,6 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.AdminUpdateFundAccountIfNeeded;
     } & ParsedAdminUpdateFundAccountIfNeededInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.AdminUpdateFundWrapAccountRewardAccountIfNeeded;
-    } & ParsedAdminUpdateFundWrapAccountRewardAccountIfNeededInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.AdminUpdateNormalizedTokenPoolAccountIfNeeded;
     } & ParsedAdminUpdateNormalizedTokenPoolAccountIfNeededInstruction<TProgram>)
@@ -1119,9 +1038,6 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerAddReward;
     } & ParsedFundManagerAddRewardInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.FundManagerAddRewardPool;
-    } & ParsedFundManagerAddRewardPoolInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerAddSupportedToken;
     } & ParsedFundManagerAddSupportedTokenInstruction<TProgram>)
@@ -1210,23 +1126,11 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.UserDepositSupportedToken;
     } & ParsedUserDepositSupportedTokenInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.UserInitializeFundAccount;
-    } & ParsedUserInitializeFundAccountInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.UserInitializeRewardAccount;
-    } & ParsedUserInitializeRewardAccountInstruction<TProgram>)
-  | ({
       instructionType: RestakingInstruction.UserRequestWithdrawal;
     } & ParsedUserRequestWithdrawalInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.UserUnwrapReceiptToken;
     } & ParsedUserUnwrapReceiptTokenInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.UserUpdateFundAccountIfNeeded;
-    } & ParsedUserUpdateFundAccountIfNeededInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.UserUpdateRewardAccountIfNeeded;
-    } & ParsedUserUpdateRewardAccountIfNeededInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.UserUpdateRewardPools;
     } & ParsedUserUpdateRewardPoolsInstruction<TProgram>)

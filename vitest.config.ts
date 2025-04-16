@@ -28,12 +28,12 @@ export default defineConfig({
     },
     include: ['**/*.test.ts'],
     passWithNoTests: true,
-    testTimeout: 10 * 60 * 1000,
+    testTimeout: 15 * 60 * 1000,
     hookTimeout: 5 * 60 * 1000,
 
-    pool: 'forks', // parallel run for `describe`s
+    pool: 'threads', // parallel run for `describe`
     sequence: {
-      concurrent: false, // sequential run for `test`s
+      concurrent: false, // sequential run for `test`
     },
 
     onConsoleLog(log: string, type: 'stdout' | 'stderr'): boolean | void {

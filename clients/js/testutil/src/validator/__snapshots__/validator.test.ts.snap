@@ -28,7 +28,7 @@ exports[`TestValidator with litesvm > airdrop, getAccount 2`] = `
 }
 `;
 
-exports[`TestValidator with solana > airdrop, getAccount 1`] = `
+exports[`TestValidator with svm > airdrop, getAccount 1`] = `
 {
   "data": [
     "",
@@ -42,7 +42,7 @@ exports[`TestValidator with solana > airdrop, getAccount 1`] = `
 }
 `;
 
-exports[`TestValidator with solana > airdrop, getAccount 2`] = `
+exports[`TestValidator with svm > airdrop, getAccount 2`] = `
 {
   "data": [
     "",
