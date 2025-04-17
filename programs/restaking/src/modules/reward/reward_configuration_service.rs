@@ -241,15 +241,15 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
             .settle_reward(reward_id, amount, self.current_slot)
     }
 
-    fn validate_reward_token_reserve_account<'x>(
+    fn validate_reward_token_reserve_account(
         &self,
-        reward_token_mint: Option<&'x InterfaceAccount<'info, Mint>>,
-        reward_token_program: Option<&'x Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&'x InterfaceAccount<'info, TokenAccount>>,
+        reward_token_mint: Option<&'a InterfaceAccount<'info, Mint>>,
+        reward_token_program: Option<&'a Interface<'info, TokenInterface>>,
+        reward_token_reserve_account: Option<&'a InterfaceAccount<'info, TokenAccount>>,
     ) -> Result<(
-        &'x InterfaceAccount<'info, Mint>,
-        &'x Interface<'info, TokenInterface>,
-        &'x InterfaceAccount<'info, TokenAccount>,
+        &'a InterfaceAccount<'info, Mint>,
+        &'a Interface<'info, TokenInterface>,
+        &'a InterfaceAccount<'info, TokenAccount>,
     )> {
         let reward_token_mint =
             reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
