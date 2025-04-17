@@ -271,12 +271,13 @@ impl HarvestRewardCommand {
                 });
             }
 
-            for reward_token_mint in restaking_vault.get_distributing_reward_tokens_iter() {
-                items.push(HarvestRewardCommandItem {
-                    reward_token_mint: *reward_token_mint,
-                    harvest_type: HarvestType::Distribute,
-                });
-            }
+            // TODO for now ignore distributing reward
+            // for reward_token_mint in restaking_vault.get_distributing_reward_tokens_iter() {
+            //     items.push(HarvestRewardCommandItem {
+            //         reward_token_mint: *reward_token_mint,
+            //         harvest_type: HarvestType::Distribute,
+            //     });
+            // }
 
             if !items.is_empty() {
                 return Ok(Some((vaults.collect(), items)));
@@ -376,26 +377,31 @@ impl HarvestRewardCommand {
                 }
 
                 // Prepare based on harvest type
-                if let HarvestType::Compound {
-                    swap: Some(supported_token_mint),
-                } = &item.harvest_type
-                {
-                    self.create_prepare_swap_command(
+                match &item.harvest_type {
+                    HarvestType::Compound {
+                        swap: Some(supported_token_mint),
+                    } => self.create_prepare_swap_command(
                         ctx,
                         &item.reward_token_mint,
                         vault_reward_token_account.as_ref(),
                         supported_token_mint,
                         vaults.to_vec(),
                         items.to_vec(),
-                    )?
-                } else {
-                    self.create_execute_transfer_command(
+                    )?,
+                    HarvestType::Compound { swap: None } => self.create_execute_transfer_command(
                         ctx,
                         &item.reward_token_mint,
                         vault_reward_token_account.as_ref(),
                         vaults.to_vec(),
                         items.to_vec(),
-                    )?
+                    )?,
+                    HarvestType::Distribute => self.create_execute_transfer_and_settle_command(
+                        ctx,
+                        &item.reward_token_mint,
+                        vault_reward_token_account.as_ref(),
+                        vaults.to_vec(),
+                        items.to_vec(),
+                    )?,
                 }
             }
             // otherwise fails
@@ -471,6 +477,26 @@ impl HarvestRewardCommand {
         let entry = command.with_required_accounts(required_accounts);
 
         Ok(entry)
+    }
+
+    /// execute = transfer and settle
+    fn create_execute_transfer_and_settle_command(
+        &self,
+        ctx: &OperationCommandContext,
+        reward_token_mint: &Pubkey,
+        from_reward_token_account: &AccountInfo,
+        // Ingredients for creating command
+        vaults: Vec<Pubkey>,
+        items: Vec<HarvestRewardCommandItem>,
+    ) -> Result<OperationCommandEntry> {
+        // TODO for now it does not consider settle
+        self.create_execute_transfer_command(
+            ctx,
+            reward_token_mint,
+            from_reward_token_account,
+            vaults,
+            items,
+        )
     }
 
     #[inline(never)]
