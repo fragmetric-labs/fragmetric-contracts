@@ -29,8 +29,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
     ) -> Result<Self> {
         Self::validate_user_reward_account(
             receipt_token_mint,
-            user,
-            None,
+            user.key,
             reward_account,
             user_reward_account,
         )?;
@@ -44,34 +43,16 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         })
     }
 
-    pub fn validate_user_reward_account(
+    /// Validate the provided accounts have proper relationships.
+    pub(crate) fn validate_user_reward_account(
         receipt_token_mint: &InterfaceAccount<Mint>,
-        user: &AccountInfo,
-        user_signer_seeds: Option<&[&[u8]]>,
+        user: &Pubkey,
         reward_account: &AccountLoader<RewardAccount>,
         user_reward_account: &AccountLoader<UserRewardAccount>,
     ) -> Result<()> {
-        let reward_account = reward_account.load()?;
+        RewardService::validate_reward_account(receipt_token_mint, reward_account)?;
+
         let user_reward_account = user_reward_account.load()?;
-
-        if !user.is_signer {
-            require_keys_eq!(
-                user.key(),
-                Pubkey::create_program_address(
-                    user_signer_seeds.ok_or(ProgramError::MissingRequiredSignature)?,
-                    &crate::ID
-                )
-                .map_err(|_| ProgramError::InvalidSeeds)?,
-            );
-        }
-
-        // has_one = receipt_token_mint
-        // constraint = reward_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError
-        require_keys_eq!(reward_account.receipt_token_mint, receipt_token_mint.key());
-        require!(
-            reward_account.is_latest_version(),
-            ErrorCode::InvalidAccountDataVersionError,
-        );
 
         // has_one = receipt_token_mint
         // has_one = user
@@ -80,7 +61,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             user_reward_account.receipt_token_mint,
             receipt_token_mint.key()
         );
-        require_keys_eq!(user_reward_account.user, user.key());
+        require_keys_eq!(user_reward_account.user, *user);
         require!(
             user_reward_account.is_latest_version(),
             ErrorCode::InvalidAccountDataVersionError,

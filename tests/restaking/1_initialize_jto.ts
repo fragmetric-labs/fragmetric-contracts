@@ -63,11 +63,9 @@ describe("initialize", async () => {
             expect(restaking.binToString(reward.description)).eq(v.description.toString());
         }
 
-        expect(res0.fragJTOReward.numRewardPools).eq(Object.values(restaking.rewardPoolsMetadata).length);
-        i = 0;
         for (const v of Object.values(restaking.rewardPoolsMetadata)) {
-            const pool = res0.fragJTOReward.rewardPools1[i++];
-            expect(restaking.binToString(pool.name)).eq(v.name.toString());
+            const pool = v.name == "base" ? res0.fragJTOReward.baseRewardPool : res0.fragJTOReward.bonusRewardPool;
+            expect(pool.initialSlot).to.not.eq(0);
         }
     });
 
@@ -78,13 +76,13 @@ describe("initialize", async () => {
             rewardName: 'fPoint',
             amount: new BN(0),
         });
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].numRewardSettlements).eq(1);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardId).eq(res0.reward.id);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].rewardPoolId).eq(res0.rewardPool.id);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].numSettlementBlocks).eq(1);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settledAmount.toNumber()).eq(0);
-        expect(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
-            .eq(res0.fragJTOReward.rewardPools1[res0.rewardPool.id].updatedSlot.toNumber());
+        expect(res0.fragJTOReward.bonusRewardPool.numRewardSettlements).eq(1);
+        expect(res0.fragJTOReward.bonusRewardPool.rewardSettlements1[0].rewardId).eq(res0.reward.id);
+        expect(res0.fragJTOReward.bonusRewardPool.rewardSettlements1[0].rewardPoolId).eq(res0.rewardPool.id);
+        expect(res0.fragJTOReward.bonusRewardPool.rewardSettlements1[0].numSettlementBlocks).eq(1);
+        expect(res0.fragJTOReward.bonusRewardPool.rewardSettlements1[0].settledAmount.toNumber()).eq(0);
+        expect(res0.fragJTOReward.bonusRewardPool.rewardSettlements1[0].settlementBlocksLastSlot.toNumber())
+            .eq(res0.fragJTOReward.bonusRewardPool.updatedSlot.toNumber());
     });
 
     step("initialize fund supported tokens", async function () {

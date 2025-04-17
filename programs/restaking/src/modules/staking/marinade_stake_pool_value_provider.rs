@@ -20,22 +20,15 @@ impl TokenValueProvider for MarinadeStakePoolValueProvider {
         let state = MarinadeStakePoolService::deserialize_pool_account(pricing_source_accounts[0])?;
         require_keys_eq!(state.msol_mint, *token_mint);
 
-        let total_cooling_down =
-            state.stake_system.delayed_unstake_cooling_down + state.emergency_cooling_down;
-
-        let total_lamports_under_control = state.validator_system.total_active_balance
-            + total_cooling_down
-            + state.available_reserve_balance;
-
-        let total_value_staked_lamports =
-            total_lamports_under_control.saturating_sub(state.circulating_ticket_balance);
+        let total_virtual_staked_lamports =
+            MarinadeStakePoolService::get_total_virtual_staked_lamports(&state);
 
         result.numerator.clear();
         result.numerator.reserve_exact(1);
 
         result
             .numerator
-            .extend([Asset::SOL(total_value_staked_lamports)]);
+            .extend([Asset::SOL(total_virtual_staked_lamports)]);
         result.denominator = state.msol_supply;
 
         Ok(())

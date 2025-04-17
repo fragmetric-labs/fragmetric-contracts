@@ -1,8 +1,7 @@
-use anchor_lang::{prelude::*, solana_program};
-use anchor_spl::{
-    token::Token,
-    token_interface::{Mint, TokenAccount},
-};
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use marinade_cpi::marinade::accounts::{State, TicketAccountData};
 use marinade_cpi::marinade::program::MarinadeFinance;
 
@@ -168,8 +167,23 @@ impl<'info> MarinadeStakePoolService<'info> {
         Ok(accounts)
     }
 
+    pub(super) fn get_total_virtual_staked_lamports(pool_account: &Account<State>) -> u64 {
+        let total_cooling_down = pool_account.stake_system.delayed_unstake_cooling_down
+            + pool_account.emergency_cooling_down;
+
+        let total_lamports_under_control = pool_account.validator_system.total_active_balance
+            + total_cooling_down
+            + pool_account.available_reserve_balance;
+
+        total_lamports_under_control.saturating_sub(pool_account.circulating_ticket_balance)
+    }
+
     pub fn get_min_deposit_sol_amount(&self) -> u64 {
         self.pool_account.min_deposit
+    }
+
+    pub fn get_min_withdraw_sol_amount(&self) -> u64 {
+        self.pool_account.min_withdraw
     }
 
     /// returns [to_pool_token_account_amount, minted_pool_token_amount] (no fee)
@@ -191,6 +205,10 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64)> {
+        if sol_amount < self.get_min_deposit_sol_amount() {
+            return Ok((0, 0));
+        }
+
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -262,6 +280,16 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64)> {
+        let sol_amount = crate::utils::get_proportional_amount(
+            pool_token_amount,
+            Self::get_total_virtual_staked_lamports(&self.pool_account),
+            self.pool_account.msol_supply,
+        )?;
+
+        if sol_amount < self.get_min_withdraw_sol_amount() {
+            return Ok((0, 0));
+        }
+
         system_program.initialize_account(
             new_withdrawal_ticket_account,
             new_withdrawal_ticket_account_rent_payer, // payer is already signer so we don't need signer seeds
@@ -352,6 +380,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             },
         ))?;
 
+        // pay rent back to withdrawal ticket account for future use
         anchor_lang::system_program::transfer(
             CpiContext::new_with_signer(
                 system_program.to_account_info(),
