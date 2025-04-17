@@ -45,7 +45,6 @@ export type UserRewardPool = {
   updatedSlot: bigint;
   rewardPoolId: number;
   numRewardSettlements: number;
-  padding2: ReadonlyUint8Array;
   reserved: ReadonlyUint8Array;
   rewardSettlements1: Array<UserRewardSettlement>;
 };
@@ -57,7 +56,6 @@ export type UserRewardPoolArgs = {
   updatedSlot: number | bigint;
   rewardPoolId: number;
   numRewardSettlements: number;
-  padding2: ReadonlyUint8Array;
   reserved: ReadonlyUint8Array;
   rewardSettlements1: Array<UserRewardSettlementArgs>;
 };
@@ -69,8 +67,7 @@ export function getUserRewardPoolEncoder(): Encoder<UserRewardPoolArgs> {
     ['updatedSlot', getU64Encoder()],
     ['rewardPoolId', getU8Encoder()],
     ['numRewardSettlements', getU8Encoder()],
-    ['padding2', fixEncoderSize(getBytesEncoder(), 6)],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 70)],
     [
       'rewardSettlements1',
       getArrayEncoder(getUserRewardSettlementEncoder(), { size: 16 }),
@@ -85,8 +82,7 @@ export function getUserRewardPoolDecoder(): Decoder<UserRewardPool> {
     ['updatedSlot', getU64Decoder()],
     ['rewardPoolId', getU8Decoder()],
     ['numRewardSettlements', getU8Decoder()],
-    ['padding2', fixDecoderSize(getBytesDecoder(), 6)],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 70)],
     [
       'rewardSettlements1',
       getArrayDecoder(getUserRewardSettlementDecoder(), { size: 16 }),

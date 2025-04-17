@@ -41,6 +41,10 @@ import {
 export type RewardPool = {
   /** ID is determined by reward account. */
   id: number;
+  /**
+   * previous field:
+   * name: [u8; 14],
+   */
   padding: ReadonlyUint8Array;
   customContributionAccrualRateEnabled: number;
   tokenAllocatedAmount: TokenAllocatedAmount;
@@ -56,6 +60,10 @@ export type RewardPool = {
 export type RewardPoolArgs = {
   /** ID is determined by reward account. */
   id: number;
+  /**
+   * previous field:
+   * name: [u8; 14],
+   */
   padding: ReadonlyUint8Array;
   customContributionAccrualRateEnabled: number;
   tokenAllocatedAmount: TokenAllocatedAmountArgs;

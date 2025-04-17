@@ -61,12 +61,18 @@ export type UserRewardAccount = {
   bump: number;
   receiptTokenMint: Address;
   user: Address;
-  numUserRewardPools: number;
+  /**
+   * previous fields:
+   * num_user_reward_pools: u8,
+   * max_user_reward_pools: u8,
+   */
   padding: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
   baseUserRewardPool: UserRewardPool;
   bonusUserRewardPool: UserRewardPool;
-  padding2: ReadonlyUint8Array;
-  reserved: ReadonlyUint8Array;
+  reserved2: ReadonlyUint8Array;
+  delegate: Address;
+  reserved3: ReadonlyUint8Array;
 };
 
 export type UserRewardAccountArgs = {
@@ -74,12 +80,18 @@ export type UserRewardAccountArgs = {
   bump: number;
   receiptTokenMint: Address;
   user: Address;
-  numUserRewardPools: number;
+  /**
+   * previous fields:
+   * num_user_reward_pools: u8,
+   * max_user_reward_pools: u8,
+   */
   padding: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
   baseUserRewardPool: UserRewardPoolArgs;
   bonusUserRewardPool: UserRewardPoolArgs;
-  padding2: ReadonlyUint8Array;
-  reserved: ReadonlyUint8Array;
+  reserved2: ReadonlyUint8Array;
+  delegate: Address;
+  reserved3: ReadonlyUint8Array;
 };
 
 export function getUserRewardAccountEncoder(): Encoder<UserRewardAccountArgs> {
@@ -90,12 +102,13 @@ export function getUserRewardAccountEncoder(): Encoder<UserRewardAccountArgs> {
       ['bump', getU8Encoder()],
       ['receiptTokenMint', getAddressEncoder()],
       ['user', getAddressEncoder()],
-      ['numUserRewardPools', getU8Encoder()],
-      ['padding', fixEncoderSize(getBytesEncoder(), 12)],
+      ['padding', fixEncoderSize(getBytesEncoder(), 2)],
+      ['reserved', fixEncoderSize(getBytesEncoder(), 11)],
       ['baseUserRewardPool', getUserRewardPoolEncoder()],
       ['bonusUserRewardPool', getUserRewardPoolEncoder()],
-      ['padding2', fixEncoderSize(getBytesEncoder(), 1040)],
-      ['reserved', fixEncoderSize(getBytesEncoder(), 1040)],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 1040)],
+      ['delegate', getAddressEncoder()],
+      ['reserved3', fixEncoderSize(getBytesEncoder(), 1008)],
     ]),
     (value) => ({ ...value, discriminator: USER_REWARD_ACCOUNT_DISCRIMINATOR })
   );
@@ -108,12 +121,13 @@ export function getUserRewardAccountDecoder(): Decoder<UserRewardAccount> {
     ['bump', getU8Decoder()],
     ['receiptTokenMint', getAddressDecoder()],
     ['user', getAddressDecoder()],
-    ['numUserRewardPools', getU8Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 12)],
+    ['padding', fixDecoderSize(getBytesDecoder(), 2)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 11)],
     ['baseUserRewardPool', getUserRewardPoolDecoder()],
     ['bonusUserRewardPool', getUserRewardPoolDecoder()],
-    ['padding2', fixDecoderSize(getBytesDecoder(), 1040)],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 1040)],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 1040)],
+    ['delegate', getAddressDecoder()],
+    ['reserved3', fixDecoderSize(getBytesDecoder(), 1008)],
   ]);
 }
 

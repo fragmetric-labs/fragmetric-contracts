@@ -94,7 +94,7 @@ export type FundManagerSettleRewardInstruction<
         ? ReadonlyAccount<TAccountRewardTokenProgram>
         : TAccountRewardTokenProgram,
       TAccountRewardTokenReserveAccount extends string
-        ? WritableAccount<TAccountRewardTokenReserveAccount>
+        ? ReadonlyAccount<TAccountRewardTokenReserveAccount>
         : TAccountRewardTokenReserveAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
@@ -241,7 +241,7 @@ export async function getFundManagerSettleRewardInstructionAsync<
     },
     rewardTokenReserveAccount: {
       value: input.rewardTokenReserveAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
@@ -418,7 +418,7 @@ export function getFundManagerSettleRewardInstruction<
     },
     rewardTokenReserveAccount: {
       value: input.rewardTokenReserveAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },

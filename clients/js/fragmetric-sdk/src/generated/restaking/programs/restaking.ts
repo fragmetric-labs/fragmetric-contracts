@@ -15,6 +15,7 @@ import {
 } from '@solana/kit';
 import {
   type ParsedAdminCreateUserRewardAccountIdempotentInstruction,
+  type ParsedAdminDelegateFundWrapAccountRewardAccountInstruction,
   type ParsedAdminInitializeExtraAccountMetaListInstruction,
   type ParsedAdminInitializeFundAccountInstruction,
   type ParsedAdminInitializeNormalizedTokenPoolAccountInstruction,
@@ -35,6 +36,7 @@ import {
   type ParsedFundManagerInitializeFundJitoRestakingVaultInstruction,
   type ParsedFundManagerInitializeFundNormalizedTokenInstruction,
   type ParsedFundManagerInitializeFundWrappedTokenInstruction,
+  type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
@@ -56,6 +58,7 @@ import {
   type ParsedUserClaimRewardInstruction,
   type ParsedUserCreateFundAccountIdempotentInstruction,
   type ParsedUserCreateRewardAccountIdempotentInstruction,
+  type ParsedUserDelegateRewardAccountInstruction,
   type ParsedUserDepositSolInstruction,
   type ParsedUserDepositSupportedTokenInstruction,
   type ParsedUserRequestWithdrawalInstruction,
@@ -89,6 +92,7 @@ export enum RestakingAccount {
   UserClaimedReward,
   UserCreatedOrUpdatedFundAccount,
   UserCreatedOrUpdatedRewardAccount,
+  UserDelegatedRewardAccount,
   UserDepositedToFund,
   UserRequestedWithdrawalFromFund,
   UserTransferredReceiptToken,
@@ -304,6 +308,17 @@ export function identifyRestakingAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([20, 29, 149, 185, 98, 109, 121, 96])
+      ),
+      0
+    )
+  ) {
+    return RestakingAccount.UserDelegatedRewardAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([254, 40, 245, 52, 68, 65, 132, 44])
       ),
       0
@@ -384,6 +399,7 @@ export function identifyRestakingAccount(
 
 export enum RestakingInstruction {
   AdminCreateUserRewardAccountIdempotent,
+  AdminDelegateFundWrapAccountRewardAccount,
   AdminInitializeExtraAccountMetaList,
   AdminInitializeFundAccount,
   AdminInitializeNormalizedTokenPoolAccount,
@@ -404,6 +420,7 @@ export enum RestakingInstruction {
   FundManagerInitializeFundJitoRestakingVaultDelegation,
   FundManagerInitializeFundNormalizedToken,
   FundManagerInitializeFundWrappedToken,
+  FundManagerRemoveWrappedTokenHolder,
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
@@ -425,6 +442,7 @@ export enum RestakingInstruction {
   UserClaimReward,
   UserCreateFundAccountIdempotent,
   UserCreateRewardAccountIdempotent,
+  UserDelegateRewardAccount,
   UserDepositSol,
   UserDepositSupportedToken,
   UserRequestWithdrawal,
@@ -450,6 +468,17 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([112, 52, 143, 218, 23, 131, 127, 29])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.AdminDelegateFundWrapAccountRewardAccount;
   }
   if (
     containsBytes(
@@ -670,6 +699,17 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerInitializeFundWrappedToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([135, 67, 183, 108, 160, 154, 93, 50])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
   }
   if (
     containsBytes(
@@ -906,6 +946,17 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([233, 207, 38, 118, 123, 232, 184, 20])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.UserDelegateRewardAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([9, 201, 63, 79, 105, 75, 147, 47])
       ),
       0
@@ -1013,6 +1064,9 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
     } & ParsedAdminCreateUserRewardAccountIdempotentInstruction<TProgram>)
   | ({
+      instructionType: RestakingInstruction.AdminDelegateFundWrapAccountRewardAccount;
+    } & ParsedAdminDelegateFundWrapAccountRewardAccountInstruction<TProgram>)
+  | ({
       instructionType: RestakingInstruction.AdminInitializeExtraAccountMetaList;
     } & ParsedAdminInitializeExtraAccountMetaListInstruction<TProgram>)
   | ({
@@ -1072,6 +1126,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerInitializeFundWrappedToken;
     } & ParsedFundManagerInitializeFundWrappedTokenInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
+    } & ParsedFundManagerRemoveWrappedTokenHolderInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerSettleReward;
     } & ParsedFundManagerSettleRewardInstruction<TProgram>)
@@ -1135,6 +1192,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.UserCreateRewardAccountIdempotent;
     } & ParsedUserCreateRewardAccountIdempotentInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.UserDelegateRewardAccount;
+    } & ParsedUserDelegateRewardAccountInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.UserDepositSol;
     } & ParsedUserDepositSolInstruction<TProgram>)

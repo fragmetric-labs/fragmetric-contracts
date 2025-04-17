@@ -10,6 +10,7 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
@@ -22,11 +23,14 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
+  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
+  type TransactionSigner,
   type WritableAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
@@ -36,20 +40,24 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const USER_UPDATE_REWARD_POOLS_DISCRIMINATOR = new Uint8Array([
-  89, 143, 243, 236, 73, 81, 158, 100,
+export const USER_DELEGATE_REWARD_ACCOUNT_DISCRIMINATOR = new Uint8Array([
+  233, 207, 38, 118, 123, 232, 184, 20,
 ]);
 
-export function getUserUpdateRewardPoolsDiscriminatorBytes() {
+export function getUserDelegateRewardAccountDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    USER_UPDATE_REWARD_POOLS_DISCRIMINATOR
+    USER_DELEGATE_REWARD_ACCOUNT_DISCRIMINATOR
   );
 }
 
-export type UserUpdateRewardPoolsInstruction<
+export type UserDelegateRewardAccountInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
+  TAccountDelegateAuthority extends string | IAccountMeta<string> = string,
   TAccountUser extends string | IAccountMeta<string> = string,
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
+  TAccountUserReceiptTokenAccount extends
+    | string
+    | IAccountMeta<string> = string,
   TAccountRewardAccount extends string | IAccountMeta<string> = string,
   TAccountUserRewardAccount extends string | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
@@ -59,14 +67,21 @@ export type UserUpdateRewardPoolsInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
+      TAccountDelegateAuthority extends string
+        ? ReadonlySignerAccount<TAccountDelegateAuthority> &
+            IAccountSignerMeta<TAccountDelegateAuthority>
+        : TAccountDelegateAuthority,
       TAccountUser extends string
         ? ReadonlyAccount<TAccountUser>
         : TAccountUser,
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
+      TAccountUserReceiptTokenAccount extends string
+        ? ReadonlyAccount<TAccountUserReceiptTokenAccount>
+        : TAccountUserReceiptTokenAccount,
       TAccountRewardAccount extends string
-        ? WritableAccount<TAccountRewardAccount>
+        ? ReadonlyAccount<TAccountRewardAccount>
         : TAccountRewardAccount,
       TAccountUserRewardAccount extends string
         ? WritableAccount<TAccountUserRewardAccount>
@@ -81,66 +96,82 @@ export type UserUpdateRewardPoolsInstruction<
     ]
   >;
 
-export type UserUpdateRewardPoolsInstructionData = {
+export type UserDelegateRewardAccountInstructionData = {
   discriminator: ReadonlyUint8Array;
+  delegate: Address;
 };
 
-export type UserUpdateRewardPoolsInstructionDataArgs = {};
+export type UserDelegateRewardAccountInstructionDataArgs = {
+  delegate: Address;
+};
 
-export function getUserUpdateRewardPoolsInstructionDataEncoder(): Encoder<UserUpdateRewardPoolsInstructionDataArgs> {
+export function getUserDelegateRewardAccountInstructionDataEncoder(): Encoder<UserDelegateRewardAccountInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['delegate', getAddressEncoder()],
+    ]),
     (value) => ({
       ...value,
-      discriminator: USER_UPDATE_REWARD_POOLS_DISCRIMINATOR,
+      discriminator: USER_DELEGATE_REWARD_ACCOUNT_DISCRIMINATOR,
     })
   );
 }
 
-export function getUserUpdateRewardPoolsInstructionDataDecoder(): Decoder<UserUpdateRewardPoolsInstructionData> {
+export function getUserDelegateRewardAccountInstructionDataDecoder(): Decoder<UserDelegateRewardAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['delegate', getAddressDecoder()],
   ]);
 }
 
-export function getUserUpdateRewardPoolsInstructionDataCodec(): Codec<
-  UserUpdateRewardPoolsInstructionDataArgs,
-  UserUpdateRewardPoolsInstructionData
+export function getUserDelegateRewardAccountInstructionDataCodec(): Codec<
+  UserDelegateRewardAccountInstructionDataArgs,
+  UserDelegateRewardAccountInstructionData
 > {
   return combineCodec(
-    getUserUpdateRewardPoolsInstructionDataEncoder(),
-    getUserUpdateRewardPoolsInstructionDataDecoder()
+    getUserDelegateRewardAccountInstructionDataEncoder(),
+    getUserDelegateRewardAccountInstructionDataDecoder()
   );
 }
 
-export type UserUpdateRewardPoolsAsyncInput<
+export type UserDelegateRewardAccountAsyncInput<
+  TAccountDelegateAuthority extends string = string,
   TAccountUser extends string = string,
   TAccountReceiptTokenMint extends string = string,
+  TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
+  delegateAuthority: TransactionSigner<TAccountDelegateAuthority>;
   user: Address<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
+  userReceiptTokenAccount?: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount?: Address<TAccountRewardAccount>;
   userRewardAccount?: Address<TAccountUserRewardAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  delegate: UserDelegateRewardAccountInstructionDataArgs['delegate'];
 };
 
-export async function getUserUpdateRewardPoolsInstructionAsync<
+export async function getUserDelegateRewardAccountInstructionAsync<
+  TAccountDelegateAuthority extends string,
   TAccountUser extends string,
   TAccountReceiptTokenMint extends string,
+  TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: UserUpdateRewardPoolsAsyncInput<
+  input: UserDelegateRewardAccountAsyncInput<
+    TAccountDelegateAuthority,
     TAccountUser,
     TAccountReceiptTokenMint,
+    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -148,10 +179,12 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  UserUpdateRewardPoolsInstruction<
+  UserDelegateRewardAccountInstruction<
     TProgramAddress,
+    TAccountDelegateAuthority,
     TAccountUser,
     TAccountReceiptTokenMint,
+    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -163,12 +196,20 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
+    delegateAuthority: {
+      value: input.delegateAuthority ?? null,
+      isWritable: false,
+    },
     user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
     },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    userReceiptTokenAccount: {
+      value: input.userReceiptTokenAccount ?? null,
+      isWritable: false,
+    },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
       isWritable: true,
@@ -181,7 +222,29 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   // Resolve default values.
+  if (!accounts.userReceiptTokenAccount.value) {
+    accounts.userReceiptTokenAccount.value = await getProgramDerivedAddress({
+      programAddress:
+        'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
+      seeds: [
+        getAddressEncoder().encode(expectAddress(accounts.user.value)),
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 238, 117, 143, 222, 24, 66, 93, 188, 228, 108,
+            205, 218, 182, 26, 252, 77, 131, 185, 13, 39, 254, 189, 249, 40,
+            216, 161, 139, 252,
+          ])
+        ),
+        getAddressEncoder().encode(
+          expectAddress(accounts.receiptTokenMint.value)
+        ),
+      ],
+    });
+  }
   if (!accounts.rewardAccount.value) {
     accounts.rewardAccount.value = await getProgramDerivedAddress({
       programAddress,
@@ -224,19 +287,25 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.delegateAuthority),
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.receiptTokenMint),
+      getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode({}),
-  } as UserUpdateRewardPoolsInstruction<
+    data: getUserDelegateRewardAccountInstructionDataEncoder().encode(
+      args as UserDelegateRewardAccountInstructionDataArgs
+    ),
+  } as UserDelegateRewardAccountInstruction<
     TProgramAddress,
+    TAccountDelegateAuthority,
     TAccountUser,
     TAccountReceiptTokenMint,
+    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -246,44 +315,55 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
   return instruction;
 }
 
-export type UserUpdateRewardPoolsInput<
+export type UserDelegateRewardAccountInput<
+  TAccountDelegateAuthority extends string = string,
   TAccountUser extends string = string,
   TAccountReceiptTokenMint extends string = string,
+  TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
+  delegateAuthority: TransactionSigner<TAccountDelegateAuthority>;
   user: Address<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
+  userReceiptTokenAccount: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount: Address<TAccountRewardAccount>;
   userRewardAccount: Address<TAccountUserRewardAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  delegate: UserDelegateRewardAccountInstructionDataArgs['delegate'];
 };
 
-export function getUserUpdateRewardPoolsInstruction<
+export function getUserDelegateRewardAccountInstruction<
+  TAccountDelegateAuthority extends string,
   TAccountUser extends string,
   TAccountReceiptTokenMint extends string,
+  TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: UserUpdateRewardPoolsInput<
+  input: UserDelegateRewardAccountInput<
+    TAccountDelegateAuthority,
     TAccountUser,
     TAccountReceiptTokenMint,
+    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): UserUpdateRewardPoolsInstruction<
+): UserDelegateRewardAccountInstruction<
   TProgramAddress,
+  TAccountDelegateAuthority,
   TAccountUser,
   TAccountReceiptTokenMint,
+  TAccountUserReceiptTokenAccount,
   TAccountRewardAccount,
   TAccountUserRewardAccount,
   TAccountEventAuthority,
@@ -294,12 +374,20 @@ export function getUserUpdateRewardPoolsInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    delegateAuthority: {
+      value: input.delegateAuthority ?? null,
+      isWritable: false,
+    },
     user: { value: input.user ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
     },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    userReceiptTokenAccount: {
+      value: input.userReceiptTokenAccount ?? null,
+      isWritable: false,
+    },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
       isWritable: true,
@@ -312,22 +400,31 @@ export function getUserUpdateRewardPoolsInstruction<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
+      getAccountMeta(accounts.delegateAuthority),
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.receiptTokenMint),
+      getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode({}),
-  } as UserUpdateRewardPoolsInstruction<
+    data: getUserDelegateRewardAccountInstructionDataEncoder().encode(
+      args as UserDelegateRewardAccountInstructionDataArgs
+    ),
+  } as UserDelegateRewardAccountInstruction<
     TProgramAddress,
+    TAccountDelegateAuthority,
     TAccountUser,
     TAccountReceiptTokenMint,
+    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -337,31 +434,33 @@ export function getUserUpdateRewardPoolsInstruction<
   return instruction;
 }
 
-export type ParsedUserUpdateRewardPoolsInstruction<
+export type ParsedUserDelegateRewardAccountInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    user: TAccountMetas[0];
-    receiptTokenMint: TAccountMetas[1];
-    rewardAccount: TAccountMetas[2];
-    userRewardAccount: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    delegateAuthority: TAccountMetas[0];
+    user: TAccountMetas[1];
+    receiptTokenMint: TAccountMetas[2];
+    userReceiptTokenAccount: TAccountMetas[3];
+    rewardAccount: TAccountMetas[4];
+    userRewardAccount: TAccountMetas[5];
+    eventAuthority: TAccountMetas[6];
+    program: TAccountMetas[7];
   };
-  data: UserUpdateRewardPoolsInstructionData;
+  data: UserDelegateRewardAccountInstructionData;
 };
 
-export function parseUserUpdateRewardPoolsInstruction<
+export function parseUserDelegateRewardAccountInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedUserUpdateRewardPoolsInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+): ParsedUserDelegateRewardAccountInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -374,14 +473,16 @@ export function parseUserUpdateRewardPoolsInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      delegateAuthority: getNextAccount(),
       user: getNextAccount(),
       receiptTokenMint: getNextAccount(),
+      userReceiptTokenAccount: getNextAccount(),
       rewardAccount: getNextAccount(),
       userRewardAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getUserUpdateRewardPoolsInstructionDataDecoder().decode(
+    data: getUserDelegateRewardAccountInstructionDataDecoder().decode(
       instruction.data
     ),
   };

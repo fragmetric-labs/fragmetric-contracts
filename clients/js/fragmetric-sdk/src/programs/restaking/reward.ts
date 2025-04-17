@@ -34,16 +34,16 @@ export class RestakingRewardAccountContext extends AccountContext<
       bump,
       reserveAccountBump,
       maxRewards,
-      padding1,
       numRewards,
-      padding2,
       reserveAccount,
       reserved,
       rewards1,
       baseRewardPool,
       bonusRewardPool,
-      padding3,
       reserved2,
+      reserved3,
+      padding,
+      padding2,
       ...props
     } = account.data;
     const rewards = rewards1.slice(0, numRewards).map((reward) => {

@@ -27,10 +27,10 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -65,7 +65,7 @@ export type OperatorUpdateRewardPoolsInstruction<
   IInstructionWithAccounts<
     [
       TAccountOperator extends string
-        ? WritableSignerAccount<TAccountOperator> &
+        ? ReadonlySignerAccount<TAccountOperator> &
             IAccountSignerMeta<TAccountOperator>
         : TAccountOperator,
       TAccountSystemProgram extends string
@@ -169,7 +169,7 @@ export async function getOperatorUpdateRewardPoolsInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    operator: { value: input.operator ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
@@ -287,7 +287,7 @@ export function getOperatorUpdateRewardPoolsInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    operator: { value: input.operator ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,

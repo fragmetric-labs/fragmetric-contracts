@@ -9,7 +9,7 @@ describe('restaking.fragSOL new test', async () => {
   afterAll(() => ctx.validator.quit());
 
   test(`new test example`, async () => {
-    // implement some test suite then merge into existing suite if possible
+    // implement some test suite then merge into an existing suite to reduce number of test suites if possible
     expect(true).toBeTruthy();
   });
 });

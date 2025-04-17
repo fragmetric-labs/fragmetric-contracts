@@ -28,11 +28,12 @@ abstract class RestakingAbstractUserRewardAccountContext<
       bump,
       receiptTokenMint,
       user,
-      numUserRewardPools,
       padding,
       baseUserRewardPool,
       bonusUserRewardPool,
-      padding2,
+      reserved,
+      reserved2,
+      reserved3,
       ...props
     } = account.data;
     const pools = [baseUserRewardPool, bonusUserRewardPool].map((pool) => {
@@ -44,7 +45,6 @@ abstract class RestakingAbstractUserRewardAccountContext<
         numRewardSettlements,
         reserved,
         rewardSettlements1,
-        padding2,
         ...props
       } = pool;
       return {
@@ -139,7 +139,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
           return Promise.all([
             restaking.getUserUpdateRewardPoolsInstructionAsync(
               {
-                user: createNoopSigner(user),
+                user: user,
                 receiptTokenMint: receiptTokenMint,
                 program: this.program.address,
               },
