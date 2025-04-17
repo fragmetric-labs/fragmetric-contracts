@@ -97,6 +97,12 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
         );
 
         const pricingSources: ReadonlyAccount[] = supportedTokens
+          .filter(
+            (v) =>
+              this.__tokenPricingSourceDiscriminantMap.get(
+                v.pricingSource.discriminant
+              ) != 'PeggedToken'
+          ) // skip pegged token
           .map((v) => v.pricingSource.address)
           .concat(
             restakingVaults.map((v) => v.receiptTokenPricingSource.address)
@@ -124,6 +130,28 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
       }
     );
   }
+
+  public readonly __tokenPricingSourceDiscriminantMap = this.__memoized(
+    'tokenPricingSourceDiscriminantMap',
+    () => {
+      // hacky-way to calculate discriminant map to convert POD to Borsh compatible args.
+      // note that: it assumes the order of discriminants are same in POD and Borsh types.
+      const map = new Map<number, restaking.TokenPricingSource['__kind']>();
+      const decoder = restaking.getTokenPricingSourceDecoder();
+      for (let i = 0; i < 100; i++) {
+        const buffer = new Uint8Array(33);
+        buffer[0] = i;
+
+        try {
+          const [decoded] = decoder.read(buffer, 0);
+          map.set(i + 1, decoded.__kind);
+        } catch (e) {
+          break;
+        }
+      }
+      return map;
+    }
+  );
 
   readonly metadata = FragmetricMetadataContext.from(this);
 

@@ -228,6 +228,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -340,6 +341,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -380,6 +382,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }

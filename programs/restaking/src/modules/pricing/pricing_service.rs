@@ -82,7 +82,7 @@ impl<'info> PricingService<'info> {
             #[cfg(not(test))]
             require_eq!(token_pricing_source, &self.token_pricing_sources[index]);
 
-            if *updated_token_values_index_bitmap & (1 << index) > 0 {
+            if *updated_token_values_index_bitmap & (1 << index) != 0 {
                 return Ok(());
             }
 
@@ -161,6 +161,9 @@ impl<'info> PricingService<'info> {
                     &pricing_source_accounts,
                     &mut self.token_values[token_index],
                 )?
+            }
+            TokenPricingSource::PeggedToken { address } => {
+                self.token_values[token_index] = self.get_token_value(address)?.clone();
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {

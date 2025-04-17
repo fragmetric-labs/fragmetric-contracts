@@ -708,6 +708,7 @@ export class RestakingFundAccountContext extends AccountContext<
             'MarinadeStakePool',
             'OrcaDEXLiquidityPool',
             'SanctumSingleValidatorSPLStakePool',
+            'PeggedToken',
           ]),
           address: v.string(),
         }) as v.GenericSchema<
@@ -967,8 +968,8 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  private readonly __tokenSwapStrategiesDiscriminatorMap = this.__memoized(
-    'tokenSwapStrategiesDiscriminatorMap',
+  public readonly __tokenSwapStrategiesDiscriminantMap = this.__memoized(
+    'tokenSwapStrategiesDiscriminantMap',
     () => {
       // hacky-way to calculate discriminant map to convert POD to Borsh compatible args.
       // note that: it assumes the order of discriminants are same in POD and Borsh types.
@@ -1005,7 +1006,7 @@ export class RestakingFundAccountContext extends AccountContext<
             fromTokenMint: item.fromTokenMint,
             toTokenMint: item.toTokenMint,
             swapSource: {
-              __kind: this.__tokenSwapStrategiesDiscriminatorMap.get(
+              __kind: this.__tokenSwapStrategiesDiscriminantMap.get(
                 item.swapSource.discriminant
               )!,
               address: item.swapSource.address,
@@ -1071,28 +1072,6 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  private readonly __tokenPricingSourceDiscriminatorMap = this.__memoized(
-    'tokenPricingSourceDiscriminatorMap',
-    () => {
-      // hacky-way to calculate discriminant map to convert POD to Borsh compatible args.
-      // note that: it assumes the order of discriminants are same in POD and Borsh types.
-      const map = new Map<number, restaking.TokenPricingSource['__kind']>();
-      const decoder = restaking.getTokenPricingSourceDecoder();
-      for (let i = 0; i < 100; i++) {
-        const buffer = new Uint8Array(33);
-        buffer[0] = i;
-
-        try {
-          const [decoded] = decoder.read(buffer, 0);
-          map.set(i + 1, decoded.__kind);
-        } catch (e) {
-          break;
-        }
-      }
-      return map;
-    }
-  );
-
   async resolveRestakingVaultStrategies(noCache = false): Promise<
     | (restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
         pricingSource: restaking.TokenPricingSourceArgs;
@@ -1122,7 +1101,7 @@ export class RestakingFundAccountContext extends AccountContext<
         } = {
           vault: item.vault,
           pricingSource: {
-            __kind: this.__tokenPricingSourceDiscriminatorMap.get(
+            __kind: this.parent.__tokenPricingSourceDiscriminantMap.get(
               item.receiptTokenPricingSource.discriminant
             )!,
             address: item.receiptTokenPricingSource.address,

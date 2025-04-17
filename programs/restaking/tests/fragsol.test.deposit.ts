@@ -1,4 +1,4 @@
-import { beforeAll, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { initializeFragSOL } from './fragsol';
 import { expectMasked } from './utils';
 
@@ -8,27 +8,21 @@ export const fragSOLDepositTest = async (
   const { validator, feePayer, restaking, initializationTasks } = testCtx;
   const ctx = restaking.fragSOL;
 
-  beforeAll(async () => {
-    await Promise.all(
-      ['Daniel', 'Tommy', 'Ryn', 'Terry'].map((seed) =>
-        validator
-          .newSigner(seed, 100_000_000_000n)
-          .then((signer) =>
-            Promise.all([
-              validator.airdropToken(
-                signer.address,
-                'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-                100_000_000_000n
-              ),
-            ])
-          )
-      )
-    );
-  });
+  const signer1 = await validator
+    .newSigner('fragSOLDepositTestSigner1', 100_000_000_000n)
+    .then(async (signer) => {
+      await Promise.all([
+        validator.airdropToken(
+          signer.address,
+          'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+          100_000_000_000n
+        ),
+      ]);
+      return signer;
+    });
+  const user1 = ctx.user(signer1);
 
   test('user can deposit SOL', async () => {
-    const signer1 = await validator.getSigner('Daniel');
-    const user1 = ctx.user(signer1);
     await expectMasked(
       user1.deposit.execute(
         { assetMint: null, assetAmount: 5_000_000_000n },
@@ -48,13 +42,13 @@ export const fragSOLDepositTest = async (
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-            "userFundAccount": "Fv4kxFDM9b56gyHkSv3mH7vK7Huye2APGn16vLzsrDxo",
+            "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
           },
           "userCreatedOrUpdatedRewardAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-            "userRewardAccount": "4wpdD9G3nKARC75ZQaQx1w5hd7yXLs8ydzza31nr9Eib",
+            "userRewardAccount": "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
           },
           "userDepositedToFund": {
             "contributionAccrualRate": {
@@ -68,11 +62,11 @@ export const fragSOLDepositTest = async (
               "__option": "None",
             },
             "updatedUserRewardAccounts": [
-              "4wpdD9G3nKARC75ZQaQx1w5hd7yXLs8ydzza31nr9Eib",
+              "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
             ],
-            "user": "JDdS2vKWBaT13BpFLFhDgDkt9aQKgB98m7wmtyKp9UA1",
-            "userFundAccount": "Fv4kxFDM9b56gyHkSv3mH7vK7Huye2APGn16vLzsrDxo",
-            "userReceiptTokenAccount": "6epF3pjCcqUPpqoo7HaxLayh152RpJ9zu3ZqKdFKh9qG",
+            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
+            "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
+            "userReceiptTokenAccount": "BWfL432qksE6DpBEpRsuqaq4U6GdgPz1PGXKXNQkfr8M",
             "userSupportedTokenAccount": {
               "__option": "None",
             },
@@ -115,7 +109,7 @@ export const fragSOLDepositTest = async (
             "withdrawable": false,
           },
         ],
-        "user": "JDdS2vKWBaT13BpFLFhDgDkt9aQKgB98m7wmtyKp9UA1",
+        "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
         "withdrawalRequests": [],
         "wrappedTokenAmount": 0n,
         "wrappedTokenMint": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q",
@@ -123,9 +117,7 @@ export const fragSOLDepositTest = async (
     `);
   });
 
-  test('user can deposit supported tokens', async () => {
-    const signer1 = await validator.getSigner('Daniel');
-    const user1 = ctx.user(signer1);
+  test('user can deposit token with SPLStakePool pricing source', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
@@ -157,14 +149,14 @@ export const fragSOLDepositTest = async (
               "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             },
             "updatedUserRewardAccounts": [
-              "4wpdD9G3nKARC75ZQaQx1w5hd7yXLs8ydzza31nr9Eib",
+              "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
             ],
-            "user": "JDdS2vKWBaT13BpFLFhDgDkt9aQKgB98m7wmtyKp9UA1",
-            "userFundAccount": "Fv4kxFDM9b56gyHkSv3mH7vK7Huye2APGn16vLzsrDxo",
-            "userReceiptTokenAccount": "6epF3pjCcqUPpqoo7HaxLayh152RpJ9zu3ZqKdFKh9qG",
+            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
+            "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
+            "userReceiptTokenAccount": "BWfL432qksE6DpBEpRsuqaq4U6GdgPz1PGXKXNQkfr8M",
             "userSupportedTokenAccount": {
               "__option": "Some",
-              "value": "GCdYC75hGuraUcrQpAxgnLwwAyaEktDGXRvsjzMLkYME",
+              "value": "4uGht5ZgiTn77KERTVtMm4WpxTeztWmpxgXhkNYBbXcQ",
             },
             "walletProvider": {
               "__option": "None",
@@ -205,7 +197,7 @@ export const fragSOLDepositTest = async (
             "withdrawable": false,
           },
         ],
-        "user": "JDdS2vKWBaT13BpFLFhDgDkt9aQKgB98m7wmtyKp9UA1",
+        "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
         "withdrawalRequests": [],
         "wrappedTokenAmount": 0n,
         "wrappedTokenMint": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q",

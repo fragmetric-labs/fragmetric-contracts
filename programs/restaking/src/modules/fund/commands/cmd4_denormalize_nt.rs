@@ -397,6 +397,7 @@ impl DenormalizeNTCommand {
             | Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
             | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {

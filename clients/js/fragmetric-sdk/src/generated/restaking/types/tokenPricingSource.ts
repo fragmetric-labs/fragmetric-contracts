@@ -29,7 +29,8 @@ export type TokenPricingSource =
   | { __kind: 'FragmetricNormalizedTokenPool'; address: Address }
   | { __kind: 'FragmetricRestakingFund'; address: Address }
   | { __kind: 'OrcaDEXLiquidityPool'; address: Address }
-  | { __kind: 'SanctumSingleValidatorSPLStakePool'; address: Address };
+  | { __kind: 'SanctumSingleValidatorSPLStakePool'; address: Address }
+  | { __kind: 'PeggedToken'; address: Address };
 
 export type TokenPricingSourceArgs = TokenPricingSource;
 
@@ -57,6 +58,7 @@ export function getTokenPricingSourceEncoder(): Encoder<TokenPricingSourceArgs> 
       'SanctumSingleValidatorSPLStakePool',
       getStructEncoder([['address', getAddressEncoder()]]),
     ],
+    ['PeggedToken', getStructEncoder([['address', getAddressEncoder()]])],
   ]);
 }
 
@@ -84,6 +86,7 @@ export function getTokenPricingSourceDecoder(): Decoder<TokenPricingSource> {
       'SanctumSingleValidatorSPLStakePool',
       getStructDecoder([['address', getAddressDecoder()]]),
     ],
+    ['PeggedToken', getStructDecoder([['address', getAddressDecoder()]])],
   ]);
 }
 
@@ -181,6 +184,18 @@ export function tokenPricingSource(
   TokenPricingSourceArgs,
   '__kind',
   'SanctumSingleValidatorSPLStakePool'
+>;
+export function tokenPricingSource(
+  kind: 'PeggedToken',
+  data: GetDiscriminatedUnionVariantContent<
+    TokenPricingSourceArgs,
+    '__kind',
+    'PeggedToken'
+  >
+): GetDiscriminatedUnionVariant<
+  TokenPricingSourceArgs,
+  '__kind',
+  'PeggedToken'
 >;
 export function tokenPricingSource<
   K extends TokenPricingSourceArgs['__kind'],

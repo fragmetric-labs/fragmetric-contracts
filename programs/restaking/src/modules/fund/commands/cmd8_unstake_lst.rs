@@ -212,7 +212,8 @@ impl UnstakeLSTCommand {
                             )),
 
                             // not stakable tokens
-                            Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => None,
+                            Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | Some(TokenPricingSource::PeggedToken { .. }) => None,
 
                             // invalid configuration
                             Some(TokenPricingSource::JitoRestakingVault { .. })
@@ -287,6 +288,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -350,6 +352,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -425,6 +428,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -593,6 +597,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {

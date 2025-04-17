@@ -87,6 +87,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<Vec<&'info AccountInfo<'info>>> {
         let fund_account = self.fund_account.load()?;
 
+        let pricing_sources_max_len =
+            FUND_ACCOUNT_MAX_SUPPORTED_TOKENS + 1 + FUND_ACCOUNT_MAX_RESTAKING_VAULTS;
+        let mut pricing_sources = Vec::with_capacity(pricing_sources_max_len);
+
         fund_account
             .get_normalized_token()
             .into_iter()
@@ -101,7 +105,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                     .get_supported_tokens_iter()
                     .map(|supported_token| &supported_token.pricing_source),
             )
-            .map(|pricing_source| match pricing_source.try_deserialize()? {
+            .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
@@ -110,7 +114,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
                     for remaining_account in remaining_accounts {
                         if address == remaining_account.key() {
-                            return Ok(remaining_account);
+                            pricing_sources.push(remaining_account);
+                            return Ok(());
                         }
                     }
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
@@ -118,12 +123,14 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
+                Some(TokenPricingSource::PeggedToken { .. }) => Ok(()),
                 #[cfg(all(test, not(feature = "idl-build")))]
                 Some(TokenPricingSource::Mock { .. }) => {
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
-            })
-            .collect::<Result<Vec<_>>>()
+            })?;
+
+        Ok(pricing_sources)
     }
 
     pub(super) fn update_asset_values(
@@ -212,7 +219,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                         ..
                                     }
-                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
+                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. }
+                                    | TokenPricingSource::PeggedToken { .. } => {
                                         let asset =
                                             fund_account.get_asset_state_mut(Some(*token_mint))?;
                                         let asset_value_as_receipt_token_amount = pricing_service
