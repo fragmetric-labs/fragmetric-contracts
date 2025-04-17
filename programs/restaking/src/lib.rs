@@ -1117,7 +1117,7 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &ctx.accounts.user,
             ctx.bumps.user_reward_account,
-            Some(ctx.accounts.user.key()),
+            None,
             desired_account_size,
         )?;
 

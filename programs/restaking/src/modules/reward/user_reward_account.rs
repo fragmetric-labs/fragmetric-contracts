@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::spl_pod::option::Nullable;
 use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
@@ -121,14 +120,10 @@ impl UserRewardAccount {
         self.data_version == 0
     }
 
-    #[inline(always)]
-    pub fn is_delegate_set(&self) -> bool {
-        self.delegate.is_some()
-    }
-
-    pub fn validate_authority(&self, authority: Pubkey) -> Result<()> {
-        if !self.user.eq(&authority) && !self.delegate.eq(&authority) {
-            return Err(ProgramError::IncorrectAuthority.into());
+    /// authority = user or delegate
+    pub(super) fn validate_authority(&self, authority: &Pubkey) -> Result<()> {
+        if self.user != *authority && self.delegate != *authority {
+            err!(ErrorCode::RewardInvalidAuthorityError)?;
         }
 
         Ok(())

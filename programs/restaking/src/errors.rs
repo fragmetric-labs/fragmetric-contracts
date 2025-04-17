@@ -279,6 +279,10 @@ pub enum ErrorCode {
     #[msg("fund: wrapped token holder not found")]
     FundWrappedTokenHolderNotFoundError,
 
+    // TODO: rename
     #[msg("reward: reward user input error")]
     RewardUserError,
+
+    #[msg("reward: invalid authority provided")]
+    RewardInvalidAuthorityError,
 }
