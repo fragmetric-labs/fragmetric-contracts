@@ -188,6 +188,12 @@ export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR = 0x17c4;
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR = 0x17c5; // 6085
 /** FundExceededMaxRestakingVaultDistributingRewardTokensError: fund: exceeded max restaking vault distributing reward tokens */
 export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS_ERROR = 0x17c6; // 6086
+/** FundExceededMaxWrappedTokenHoldersError: fund: exceeded max wrapped token holders */
+export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_WRAPPED_TOKEN_HOLDERS_ERROR = 0x17c7; // 6087
+/** FundWrappedTokenHolderAlreadyRegisteredError: fund: wrapped token holder already registered */
+export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_ALREADY_REGISTERED_ERROR = 0x17c8; // 6088
+/** FundWrappedTokenHolderNotFoundError: fund: wrapped token holder not found */
+export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_NOT_FOUND_ERROR = 0x17c9; // 6089
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -204,6 +210,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_SUPPORTED_TOKENS_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_TOKEN_SWAP_STRATEGIES_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_WITHDRAWAL_REQUEST_ERROR
+  | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_WRAPPED_TOKEN_HOLDERS_ERROR
   | typeof RESTAKING_ERROR__FUND_INVALID_CONFIGURATION_UPDATE_ERROR
   | typeof RESTAKING_ERROR__FUND_INVALID_WITHDRAWAL_FEE_RATE_ERROR
   | typeof RESTAKING_ERROR__FUND_NORMALIZED_TOKEN_ALREADY_SET_ERROR
@@ -228,6 +235,8 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_RESERVE_EXHAUSTED_SUPPORTED_ASSET
   | typeof RESTAKING_ERROR__FUND_WRAPPED_TOKEN_ALREADY_SET_ERROR
+  | typeof RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_ALREADY_REGISTERED_ERROR
+  | typeof RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__FUND_WRAPPED_TOKEN_NOT_SET_ERROR
   | typeof RESTAKING_ERROR__INDEX_OUT_OF_BOUNDS_EXCEPTION
   | typeof RESTAKING_ERROR__INVALID_ACCOUNT_DATA_VERSION_ERROR
@@ -295,6 +304,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_SUPPORTED_TOKENS_ERROR]: `fund: exceeded max supported tokens`,
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_TOKEN_SWAP_STRATEGIES_ERROR]: `fund: exceeded max token swap strategies`,
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_WITHDRAWAL_REQUEST_ERROR]: `fund: exceeded max withdrawal request per user`,
+    [RESTAKING_ERROR__FUND_EXCEEDED_MAX_WRAPPED_TOKEN_HOLDERS_ERROR]: `fund: exceeded max wrapped token holders`,
     [RESTAKING_ERROR__FUND_INVALID_CONFIGURATION_UPDATE_ERROR]: `fund: cannot apply invalid configuration update`,
     [RESTAKING_ERROR__FUND_INVALID_WITHDRAWAL_FEE_RATE_ERROR]: `fund: invalid withdrawal fee rate`,
     [RESTAKING_ERROR__FUND_NORMALIZED_TOKEN_ALREADY_SET_ERROR]: `fund: normalized token already set`,
@@ -319,6 +329,8 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_NOT_FOUND_ERROR]: `fund: withdrawal request not found`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_RESERVE_EXHAUSTED_SUPPORTED_ASSET]: `fund: withdrawal reserve is exhausted for the given asset`,
     [RESTAKING_ERROR__FUND_WRAPPED_TOKEN_ALREADY_SET_ERROR]: `fund: wrapped token already set`,
+    [RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_ALREADY_REGISTERED_ERROR]: `fund: wrapped token holder already registered`,
+    [RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_NOT_FOUND_ERROR]: `fund: wrapped token holder not found`,
     [RESTAKING_ERROR__FUND_WRAPPED_TOKEN_NOT_SET_ERROR]: `fund: wrapped token is not set`,
     [RESTAKING_ERROR__INDEX_OUT_OF_BOUNDS_EXCEPTION]: `index out of bounds exception`,
     [RESTAKING_ERROR__INVALID_ACCOUNT_DATA_VERSION_ERROR]: `invalid account data version`,

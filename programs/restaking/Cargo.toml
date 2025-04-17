@@ -1,6 +1,6 @@
 [package]
 name = "restaking"
-version = "0.5.1"
+version = "0.6.0"
 description = "Fragmetric Liquid Restaking Program"
 authors = { workspace = true }
 repository = { workspace = true }

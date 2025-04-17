@@ -12,6 +12,8 @@ import {
   fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
@@ -26,14 +28,34 @@ import {
   type Encoder,
   type ReadonlyUint8Array,
 } from '@solana/kit';
+import {
+  getWrappedTokenHolderDecoder,
+  getWrappedTokenHolderEncoder,
+  type WrappedTokenHolder,
+  type WrappedTokenHolderArgs,
+} from '.';
 
 export type WrappedToken = {
   mint: Address;
   program: Address;
   decimals: number;
   enabled: number;
+  numHolders: number;
   padding: ReadonlyUint8Array;
   supply: bigint;
+  /**
+   * An amount of wrapped token that is not held by any holders.
+   * This value is not always equal to `supply - ∑wrapped_token_holder_amount`.
+   *
+   * Wrapped token amount of holders are updated via snapshot during operation cycle.
+   * Unless all snapshots are captured in a single instruction,
+   * their total amount might be inaccurate due to concurrency.
+   *
+   * Therefore, retained_amount is adjusted to max(0, supply - ∑wrapped_token_holder_amount)
+   */
+  retainedAmount: bigint;
+  /** List of wrapped token holders who will receive reward for their wrapped token balance. */
+  holders: Array<WrappedTokenHolder>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -42,8 +64,22 @@ export type WrappedTokenArgs = {
   program: Address;
   decimals: number;
   enabled: number;
+  numHolders: number;
   padding: ReadonlyUint8Array;
   supply: number | bigint;
+  /**
+   * An amount of wrapped token that is not held by any holders.
+   * This value is not always equal to `supply - ∑wrapped_token_holder_amount`.
+   *
+   * Wrapped token amount of holders are updated via snapshot during operation cycle.
+   * Unless all snapshots are captured in a single instruction,
+   * their total amount might be inaccurate due to concurrency.
+   *
+   * Therefore, retained_amount is adjusted to max(0, supply - ∑wrapped_token_holder_amount)
+   */
+  retainedAmount: number | bigint;
+  /** List of wrapped token holders who will receive reward for their wrapped token balance. */
+  holders: Array<WrappedTokenHolderArgs>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -53,9 +89,12 @@ export function getWrappedTokenEncoder(): Encoder<WrappedTokenArgs> {
     ['program', getAddressEncoder()],
     ['decimals', getU8Encoder()],
     ['enabled', getU8Encoder()],
-    ['padding', fixEncoderSize(getBytesEncoder(), 6)],
+    ['numHolders', getU8Encoder()],
+    ['padding', fixEncoderSize(getBytesEncoder(), 5)],
     ['supply', getU64Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 1984)],
+    ['retainedAmount', getU64Encoder()],
+    ['holders', getArrayEncoder(getWrappedTokenHolderEncoder(), { size: 30 })],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 776)],
   ]);
 }
 
@@ -65,9 +104,12 @@ export function getWrappedTokenDecoder(): Decoder<WrappedToken> {
     ['program', getAddressDecoder()],
     ['decimals', getU8Decoder()],
     ['enabled', getU8Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 6)],
+    ['numHolders', getU8Decoder()],
+    ['padding', fixDecoderSize(getBytesDecoder(), 5)],
     ['supply', getU64Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 1984)],
+    ['retainedAmount', getU64Decoder()],
+    ['holders', getArrayDecoder(getWrappedTokenHolderDecoder(), { size: 30 })],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 776)],
   ]);
 }
 

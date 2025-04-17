@@ -1724,6 +1724,7 @@ export class RestakingFundAccountContext extends AccountContext<
             }),
             restaking.getAdminCreateUserRewardAccountIdempotentInstructionAsync(
               {
+                admin: createNoopSigner(admin),
                 payer: createNoopSigner(payer! as Address),
                 user: fundWrapAccount,
                 program: this.program.address,
@@ -1735,6 +1736,74 @@ export class RestakingFundAccountContext extends AccountContext<
               }
             ),
             ix,
+          ]);
+        },
+      ],
+    }
+  );
+
+  readonly initializeWrappedTokenHolder = new TransactionTemplateContext(
+    this,
+    v.object({
+      wrappedTokenAccount: v.pipe(v.string(), v.description('any wrapped token account to isolate contribution accruals independently'))
+    }),
+    {
+      description: 'add new wrapped token holder',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'fundManagerUpdatedFund'
+      ),
+      instructions: [
+        async (parent, args, overrides) => {
+          const [wrappedTokenMint, receiptTokenMint, payer] =
+            await Promise.all([
+              parent.parent.wrappedTokenMint.resolveAddress(true),
+              parent.parent.resolveAddress(),
+              transformAddressResolverVariant(
+                overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+              )(parent),
+            ]);
+          if (!(wrappedTokenMint && receiptTokenMint))
+            throw new Error('invalid context');
+          const admin = (this.program as RestakingProgram).knownAddresses.admin;
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
+
+          return Promise.all([
+            token2022.getCreateAssociatedTokenIdempotentInstructionAsync(
+              {
+                payer: createNoopSigner(payer! as Address),
+                mint: receiptTokenMint,
+                owner: args.wrappedTokenAccount as Address,
+                tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
+              }
+            ),
+            restaking.getAdminCreateUserRewardAccountIdempotentInstructionAsync(
+              {
+                admin: createNoopSigner(admin),
+                payer: createNoopSigner(payer! as Address),
+                user: args.wrappedTokenAccount as Address,
+                receiptTokenMint: receiptTokenMint,
+                desiredAccountSize: null,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+            restaking.getFundManagerAddWrappedTokenHolderInstructionAsync(
+              {
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint: receiptTokenMint,
+                wrappedTokenMint: wrappedTokenMint,
+                wrappedTokenHolder: args.wrappedTokenAccount as Address,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
           ]);
         },
       ],

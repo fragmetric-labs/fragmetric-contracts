@@ -22,6 +22,7 @@ export * from './fundManagerAddRestakingVaultDistributingRewardToken';
 export * from './fundManagerAddReward';
 export * from './fundManagerAddSupportedToken';
 export * from './fundManagerAddTokenSwapStrategy';
+export * from './fundManagerAddWrappedTokenHolder';
 export * from './fundManagerInitializeFundJitoRestakingVault';
 export * from './fundManagerInitializeFundJitoRestakingVaultDelegation';
 export * from './fundManagerInitializeFundNormalizedToken';

@@ -117,20 +117,20 @@ export type FundAccount = {
   withdrawalEnabled: number;
   depositEnabled: number;
   donationEnabled: number;
-  padding4: ReadonlyUint8Array;
+  padding3: ReadonlyUint8Array;
   /** SOL deposit & withdrawal */
   sol: AssetState;
   /** underlying assets */
-  padding6: ReadonlyUint8Array;
+  padding4: ReadonlyUint8Array;
   numSupportedTokens: number;
   supportedTokens: Array<SupportedToken>;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedToken;
   /** investments */
-  padding7: ReadonlyUint8Array;
+  padding5: ReadonlyUint8Array;
   numRestakingVaults: number;
   restakingVaults: Array<RestakingVault>;
-  padding8: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
   /** fund operation state */
   operation: OperationState;
   /** optional wrapped token of fund receipt token */
@@ -138,9 +138,9 @@ export type FundAccount = {
   wrappedToken: WrappedToken;
   /** which DEX to use for swap between two tokens */
   numTokenSwapStrategies: number;
-  padding9: ReadonlyUint8Array;
+  padding6: ReadonlyUint8Array;
   tokenSwapStrategies: Array<TokenSwapStrategy>;
-  reserved: ReadonlyUint8Array;
+  reserved1: ReadonlyUint8Array;
 };
 
 export type FundAccountArgs = {
@@ -170,20 +170,20 @@ export type FundAccountArgs = {
   withdrawalEnabled: number;
   depositEnabled: number;
   donationEnabled: number;
-  padding4: ReadonlyUint8Array;
+  padding3: ReadonlyUint8Array;
   /** SOL deposit & withdrawal */
   sol: AssetStateArgs;
   /** underlying assets */
-  padding6: ReadonlyUint8Array;
+  padding4: ReadonlyUint8Array;
   numSupportedTokens: number;
   supportedTokens: Array<SupportedTokenArgs>;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedTokenArgs;
   /** investments */
-  padding7: ReadonlyUint8Array;
+  padding5: ReadonlyUint8Array;
   numRestakingVaults: number;
   restakingVaults: Array<RestakingVaultArgs>;
-  padding8: ReadonlyUint8Array;
+  reserved: ReadonlyUint8Array;
   /** fund operation state */
   operation: OperationStateArgs;
   /** optional wrapped token of fund receipt token */
@@ -191,9 +191,9 @@ export type FundAccountArgs = {
   wrappedToken: WrappedTokenArgs;
   /** which DEX to use for swap between two tokens */
   numTokenSwapStrategies: number;
-  padding9: ReadonlyUint8Array;
+  padding6: ReadonlyUint8Array;
   tokenSwapStrategies: Array<TokenSwapStrategyArgs>;
-  reserved: ReadonlyUint8Array;
+  reserved1: ReadonlyUint8Array;
 };
 
 export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
@@ -224,32 +224,32 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
       ['withdrawalEnabled', getU8Encoder()],
       ['depositEnabled', getU8Encoder()],
       ['donationEnabled', getU8Encoder()],
-      ['padding4', fixEncoderSize(getBytesEncoder(), 3)],
+      ['padding3', fixEncoderSize(getBytesEncoder(), 3)],
       ['sol', getAssetStateEncoder()],
-      ['padding6', fixEncoderSize(getBytesEncoder(), 15)],
+      ['padding4', fixEncoderSize(getBytesEncoder(), 15)],
       ['numSupportedTokens', getU8Encoder()],
       [
         'supportedTokens',
         getArrayEncoder(getSupportedTokenEncoder(), { size: 30 }),
       ],
       ['normalizedToken', getNormalizedTokenEncoder()],
-      ['padding7', fixEncoderSize(getBytesEncoder(), 15)],
+      ['padding5', fixEncoderSize(getBytesEncoder(), 15)],
       ['numRestakingVaults', getU8Encoder()],
       [
         'restakingVaults',
         getArrayEncoder(getRestakingVaultEncoder(), { size: 16 }),
       ],
-      ['padding8', fixEncoderSize(getBytesEncoder(), 112)],
+      ['reserved', fixEncoderSize(getBytesEncoder(), 112)],
       ['operation', getOperationStateEncoder()],
       ['wrapAccount', getAddressEncoder()],
       ['wrappedToken', getWrappedTokenEncoder()],
       ['numTokenSwapStrategies', getU8Encoder()],
-      ['padding9', fixEncoderSize(getBytesEncoder(), 7)],
+      ['padding6', fixEncoderSize(getBytesEncoder(), 7)],
       [
         'tokenSwapStrategies',
         getArrayEncoder(getTokenSwapStrategyEncoder(), { size: 30 }),
       ],
-      ['reserved', fixEncoderSize(getBytesEncoder(), 3616)],
+      ['reserved1', fixEncoderSize(getBytesEncoder(), 3616)],
     ]),
     (value) => ({ ...value, discriminator: FUND_ACCOUNT_DISCRIMINATOR })
   );
@@ -282,32 +282,32 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
     ['withdrawalEnabled', getU8Decoder()],
     ['depositEnabled', getU8Decoder()],
     ['donationEnabled', getU8Decoder()],
-    ['padding4', fixDecoderSize(getBytesDecoder(), 3)],
+    ['padding3', fixDecoderSize(getBytesDecoder(), 3)],
     ['sol', getAssetStateDecoder()],
-    ['padding6', fixDecoderSize(getBytesDecoder(), 15)],
+    ['padding4', fixDecoderSize(getBytesDecoder(), 15)],
     ['numSupportedTokens', getU8Decoder()],
     [
       'supportedTokens',
       getArrayDecoder(getSupportedTokenDecoder(), { size: 30 }),
     ],
     ['normalizedToken', getNormalizedTokenDecoder()],
-    ['padding7', fixDecoderSize(getBytesDecoder(), 15)],
+    ['padding5', fixDecoderSize(getBytesDecoder(), 15)],
     ['numRestakingVaults', getU8Decoder()],
     [
       'restakingVaults',
       getArrayDecoder(getRestakingVaultDecoder(), { size: 16 }),
     ],
-    ['padding8', fixDecoderSize(getBytesDecoder(), 112)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 112)],
     ['operation', getOperationStateDecoder()],
     ['wrapAccount', getAddressDecoder()],
     ['wrappedToken', getWrappedTokenDecoder()],
     ['numTokenSwapStrategies', getU8Decoder()],
-    ['padding9', fixDecoderSize(getBytesDecoder(), 7)],
+    ['padding6', fixDecoderSize(getBytesDecoder(), 7)],
     [
       'tokenSwapStrategies',
       getArrayDecoder(getTokenSwapStrategyDecoder(), { size: 30 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 3616)],
+    ['reserved1', fixDecoderSize(getBytesDecoder(), 3616)],
   ]);
 }
 

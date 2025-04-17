@@ -12,10 +12,10 @@ import {
   getAddressEncoder,
   getDiscriminatedUnionDecoder,
   getDiscriminatedUnionEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
-  getTupleDecoder,
-  getTupleEncoder,
   getUnitDecoder,
   getUnitEncoder,
   type Address,
@@ -24,31 +24,35 @@ import {
   type Encoder,
   type GetDiscriminatedUnionVariant,
   type GetDiscriminatedUnionVariantContent,
+  type Option,
+  type OptionOrNullable,
 } from '@solana/kit';
 
 export type HarvestType =
-  | { __kind: 'Swap'; fields: readonly [Address] }
-  | { __kind: 'Transfer' };
+  | { __kind: 'Compound'; swap: Option<Address> }
+  | { __kind: 'Distribute' };
 
-export type HarvestTypeArgs = HarvestType;
+export type HarvestTypeArgs =
+  | { __kind: 'Compound'; swap: OptionOrNullable<Address> }
+  | { __kind: 'Distribute' };
 
 export function getHarvestTypeEncoder(): Encoder<HarvestTypeArgs> {
   return getDiscriminatedUnionEncoder([
     [
-      'Swap',
-      getStructEncoder([['fields', getTupleEncoder([getAddressEncoder()])]]),
+      'Compound',
+      getStructEncoder([['swap', getOptionEncoder(getAddressEncoder())]]),
     ],
-    ['Transfer', getUnitEncoder()],
+    ['Distribute', getUnitEncoder()],
   ]);
 }
 
 export function getHarvestTypeDecoder(): Decoder<HarvestType> {
   return getDiscriminatedUnionDecoder([
     [
-      'Swap',
-      getStructDecoder([['fields', getTupleDecoder([getAddressDecoder()])]]),
+      'Compound',
+      getStructDecoder([['swap', getOptionDecoder(getAddressDecoder())]]),
     ],
-    ['Transfer', getUnitDecoder()],
+    ['Distribute', getUnitDecoder()],
   ]);
 }
 
@@ -58,16 +62,16 @@ export function getHarvestTypeCodec(): Codec<HarvestTypeArgs, HarvestType> {
 
 // Data Enum Helpers.
 export function harvestType(
-  kind: 'Swap',
+  kind: 'Compound',
   data: GetDiscriminatedUnionVariantContent<
     HarvestTypeArgs,
     '__kind',
-    'Swap'
-  >['fields']
-): GetDiscriminatedUnionVariant<HarvestTypeArgs, '__kind', 'Swap'>;
+    'Compound'
+  >
+): GetDiscriminatedUnionVariant<HarvestTypeArgs, '__kind', 'Compound'>;
 export function harvestType(
-  kind: 'Transfer'
-): GetDiscriminatedUnionVariant<HarvestTypeArgs, '__kind', 'Transfer'>;
+  kind: 'Distribute'
+): GetDiscriminatedUnionVariant<HarvestTypeArgs, '__kind', 'Distribute'>;
 export function harvestType<K extends HarvestTypeArgs['__kind'], Data>(
   kind: K,
   data?: Data

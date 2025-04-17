@@ -103,3 +103,4 @@ export * from './withdrawalBatch';
 export * from './withdrawalRequest';
 export * from './withdrawStakeItem';
 export * from './wrappedToken';
+export * from './wrappedTokenHolder';
