@@ -87,7 +87,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     ) -> Result<Vec<&'info AccountInfo<'info>>> {
         let fund_account = self.fund_account.load()?;
 
-        fund_account
+        let pricing_sources = fund_account
             .get_normalized_token()
             .into_iter()
             .map(|normalized_token| &normalized_token.pricing_source)
@@ -110,7 +110,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
                     for remaining_account in remaining_accounts {
                         if address == remaining_account.key() {
-                            return Ok(remaining_account);
+                            return Ok(Some(remaining_account));
                         }
                     }
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
@@ -118,12 +118,18 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
+                Some(TokenPricingSource::PeggedToken { .. }) => Ok(None),
                 #[cfg(all(test, not(feature = "idl-build")))]
                 Some(TokenPricingSource::Mock { .. }) => {
                     err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
             })
-            .collect::<Result<Vec<_>>>()
+            .collect::<Result<Vec<Option<_>>>>()?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+        Ok(pricing_sources)
     }
 
     pub(super) fn update_asset_values(
@@ -212,7 +218,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                         ..
                                     }
-                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
+                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. }
+                                    | TokenPricingSource::PeggedToken { .. } => {
                                         let asset =
                                             fund_account.get_asset_state_mut(Some(*token_mint))?;
                                         let asset_value_as_receipt_token_amount = pricing_service

@@ -162,6 +162,9 @@ impl<'info> PricingService<'info> {
                     &mut self.token_values[token_index],
                 )?
             }
+            TokenPricingSource::PeggedToken { address } => {
+                self.token_values[token_index] = self.get_token_value(address)?.clone();
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

@@ -53,6 +53,9 @@ impl SupportedToken {
             | TokenPricingSource::MarinadeStakePool { .. }
             | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
             | TokenPricingSource::OrcaDEXLiquidityPool { .. } => {}
+            TokenPricingSource::PeggedToken { address } => {
+                require_keys_neq!(address, mint)
+            }
             // otherwise fails
             TokenPricingSource::JitoRestakingVault { .. }
             | TokenPricingSource::FragmetricNormalizedTokenPool { .. }

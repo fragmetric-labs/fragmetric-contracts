@@ -124,6 +124,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { address }) => {
                             required_accounts.push((*address, false));
                         }
+                        Some(TokenPricingSource::PeggedToken { .. }) => {
+                            // noop
+                        }
                         // otherwise fails
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
@@ -154,6 +157,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -203,6 +207,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
                                 Ok(count + 1)
                             }
+                            Some(TokenPricingSource::PeggedToken { .. }) => Ok(count),
                             // otherwise fails
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
@@ -233,6 +238,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | Some(TokenPricingSource::PeggedToken { .. })
                             | None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
@@ -284,7 +290,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
-                        Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => (0, 0),
+                        Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. }) => (0, 0),
                         // otherwise fails
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
@@ -328,6 +335,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }

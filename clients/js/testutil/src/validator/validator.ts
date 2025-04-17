@@ -344,11 +344,13 @@ export abstract class TestValidator<T extends TestValidatorType> {
 
     if (this.runtime.type == 'litesvm') {
       const svm = (this.runtime as TestValidatorRuntime<'litesvm'>).svm;
+      svm.withBlockhashCheck(false); // TODO: remove it, idk why but multiple txs in short interval fails due to block hash not found
       const res = svm.sendTransaction(
         web3.VersionedTransaction.deserialize(
           Buffer.from(getBase64EncodedWireTransaction(tx), 'base64')
         )
       );
+      svm.withBlockhashCheck(true);
       if ('err' in res) {
         throw new Error(`failed to mint token from faucet: ${res.toString()}`);
       }

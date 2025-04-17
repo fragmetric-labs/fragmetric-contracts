@@ -76,7 +76,8 @@ impl RestakingVault {
             | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
             | TokenPricingSource::FragmetricRestakingFund { .. }
             | TokenPricingSource::OrcaDEXLiquidityPool { .. }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. } => {
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
+            | TokenPricingSource::PeggedToken { .. } => {
                 err!(ErrorCode::FundRestakingNotSupportedVaultError)?
             }
             #[cfg(all(test, not(feature = "idl-build")))]
