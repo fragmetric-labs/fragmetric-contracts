@@ -29,6 +29,7 @@ describe("reward", async function () {
     const restaking = await restakingPlayground as RestakingPlayground;
     const userA = restaking.keychain.getKeypair('MOCK_USER9');
     const userB = restaking.keychain.getKeypair('MOCK_USER10');
+    const userC = restaking.keychain.getKeypair('MOCK_USER11');
     const PRICING_DIFF_ERROR_MODIFIER = 1_000;
 
     step("try airdrop SOL to mock accounts", async function () {
@@ -214,5 +215,13 @@ describe("reward", async function () {
         const res1 = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
         expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
         expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
-    })
+    });
+
+    step("admin can create user_reward_account for the arbitrary user", async () => {
+        await restaking.runAdminCreateUserRewardAccountIdempotent(userC.publicKey);
+    });
+
+    step("the delegate user can delegate user_reward_account to userC", async () => {
+        await restaking.runUserDelegateUserRewardAccount(restaking.keychain.getKeypair("FUND_MANAGER"), userC.publicKey);
+    });
 });

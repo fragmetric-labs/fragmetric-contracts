@@ -25,13 +25,13 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
         user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
-        user_reward_account: &'a UncheckedAccount<'info>,
+        user_reward_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         Ok(Self {
             receipt_token_mint,
             user_receipt_token_account,
             reward_account,
-            user_reward_account: user_reward_account.as_account_info(),
+            user_reward_account,
         })
     }
 
@@ -40,6 +40,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         system_program: &Program<'info, System>,
         payer: &Signer<'info>,
         user_reward_account_bump: u8,
+        delegate: Option<Pubkey>,
         desired_account_size: Option<u32>,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
         let min_account_size = 8 + std::mem::size_of::<UserRewardAccount>();
@@ -104,8 +105,11 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 let initializing = user_reward_account.is_initializing();
 
                 let updated = if initializing {
-                    user_reward_account
-                        .initialize(user_reward_account_bump, self.user_receipt_token_account)?
+                    user_reward_account.initialize(
+                        user_reward_account_bump,
+                        self.user_receipt_token_account,
+                        delegate,
+                    )?
                 } else {
                     // Constraint check
                     // has_one = receipt_token_mint
@@ -119,7 +123,8 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                         self.user_receipt_token_account.owner,
                     );
 
-                    user_reward_account.update_if_needed(self.user_receipt_token_account)?
+                    user_reward_account
+                        .update_if_needed(self.user_receipt_token_account, delegate)?
                 };
 
                 (initializing, updated)
@@ -147,5 +152,33 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         }
 
         Ok(None)
+    }
+
+    pub fn process_delegate_user_reward_account(
+        &self,
+        delegate_authority: &AccountInfo,
+        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+
+        delegate: Pubkey,
+    ) -> Result<events::UserDelegatedRewardAccount> {
+        let user_reward_account =
+            AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
+
+        // TODO
+        UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            delegate_authority.key,
+            self.reward_account,
+            &user_reward_account,
+        )?;
+        UserRewardService::validate_delegate(delegate_authority, None, &user_reward_account)?;
+
+        let mut user_reward_account = user_reward_account.load_mut()?;
+        user_reward_account.update_if_needed(user_receipt_token_account, Some(delegate))?;
+
+        Ok(events::UserDelegatedRewardAccount {
+            user_reward_account: self.user_reward_account.key(),
+            delegate,
+        })
     }
 }

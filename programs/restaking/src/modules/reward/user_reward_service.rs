@@ -23,7 +23,7 @@ impl Drop for UserRewardService<'_, '_> {
 impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &Signer,
+        user: &UncheckedAccount<'info>,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
@@ -33,6 +33,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             reward_account,
             user_reward_account,
         )?;
+        Self::validate_signer(&user, None)?;
 
         let clock = Clock::get()?;
         Ok(Self {
@@ -70,6 +71,39 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         Ok(())
     }
 
+    pub(crate) fn validate_delegate(
+        current_authority: &AccountInfo,
+        authority_signer_seeds: Option<&[&[u8]]>,
+        user_reward_account: &AccountLoader<UserRewardAccount>,
+    ) -> Result<()> {
+        Self::validate_signer(current_authority, authority_signer_seeds)?;
+
+        // If delegate is set at user_reward_account, then check if delegate key is same as stored value.
+        let user_reward_account = user_reward_account.load()?;
+        if user_reward_account.is_delegate_set() {
+            user_reward_account.validate_authority(current_authority.key())?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_signer(
+        authority: &AccountInfo,
+        authority_signer_seeds: Option<&[&[u8]]>,
+    ) -> Result<()> {
+        if !authority.is_signer {
+            let authority_signer_seeds =
+                authority_signer_seeds.ok_or_else(|| ProgramError::MissingRequiredSignature)?;
+            require_keys_eq!(
+                authority.key(),
+                Pubkey::create_program_address(authority_signer_seeds, &crate::ID)
+                    .map_err(|_| ProgramError::InvalidSeeds)?
+            );
+        }
+
+        Ok(())
+    }
+
     pub fn process_update_user_reward_pools(&self) -> Result<events::UserUpdatedRewardPool> {
         self.user_reward_account
             .load_mut()?
@@ -88,9 +122,12 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        claim_authority: &Signer<'info>,
         is_bonus_pool: bool,
         amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
+        Self::validate_delegate(claim_authority, None, self.user_reward_account)?;
+
         let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;

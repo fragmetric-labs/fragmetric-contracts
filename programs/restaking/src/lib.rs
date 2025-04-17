@@ -15,6 +15,7 @@ mod instructions;
 
 use constants::*;
 use instructions::*;
+use utils::AsAccountInfo;
 
 #[program]
 pub mod restaking {
@@ -175,16 +176,19 @@ pub mod restaking {
         ctx: Context<AdminUserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
+        // ctx.accounts.assert_user_is_not_wallet()?;
+
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account,
+            ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
             &ctx.accounts.payer,
             ctx.bumps.user_reward_account,
+            Some(FUND_MANAGER_PUBKEY),
             desired_account_size,
         )?;
 
@@ -1107,12 +1111,13 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account,
+            &ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
             &ctx.accounts.user,
             ctx.bumps.user_reward_account,
+            Some(ctx.accounts.user.key()),
             desired_account_size,
         )?;
 
@@ -1152,8 +1157,32 @@ pub mod restaking {
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
             &ctx.accounts.destination_reward_token_account,
+            &ctx.accounts.claim_authority,
             is_bonus_pool,
             amount,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // UserRewardAccountDelegateContext
+    ////////////////////////////////////////////
+
+    pub fn user_delegate_user_reward_account(
+        ctx: Context<UserRewardAccountDelegateContext>,
+        delegate: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account.as_account_info(),
+        )?
+        .process_delegate_user_reward_account(
+            &ctx.accounts.delegate_authority,
+            &ctx.accounts.user_receipt_token_account,
+            delegate,
         )?);
 
         Ok(())

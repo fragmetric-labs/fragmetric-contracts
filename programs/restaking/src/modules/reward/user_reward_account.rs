@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::spl_pod::option::Nullable;
 use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
@@ -59,7 +60,13 @@ impl ZeroCopyHeader for UserRewardAccount {
 }
 
 impl UserRewardAccount {
-    fn migrate(&mut self, bump: u8, receipt_token_mint: Pubkey, user: Pubkey) -> Result<bool> {
+    fn migrate(
+        &mut self,
+        bump: u8,
+        receipt_token_mint: Pubkey,
+        user: Pubkey,
+        delegate: Option<Pubkey>,
+    ) -> Result<bool> {
         let old_data_version = self.data_version;
 
         if self.data_version == 0 {
@@ -67,6 +74,7 @@ impl UserRewardAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.user = user;
+            self.delegate = delegate.unwrap_or_default();
         }
 
         require_eq!(self.data_version, USER_REWARD_ACCOUNT_CURRENT_VERSION);
@@ -79,11 +87,13 @@ impl UserRewardAccount {
         &mut self,
         bump: u8,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+        delegate: Option<Pubkey>,
     ) -> Result<bool> {
         self.migrate(
             bump,
             user_receipt_token_account.mint,
             user_receipt_token_account.owner,
+            delegate,
         )
     }
 
@@ -91,11 +101,13 @@ impl UserRewardAccount {
     pub(super) fn update_if_needed(
         &mut self,
         user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+        delegate: Option<Pubkey>,
     ) -> Result<bool> {
         self.migrate(
             self.bump,
             user_receipt_token_account.mint,
             user_receipt_token_account.owner,
+            delegate,
         )
     }
 
@@ -107,6 +119,19 @@ impl UserRewardAccount {
     #[inline(always)]
     pub fn is_initializing(&self) -> bool {
         self.data_version == 0
+    }
+
+    #[inline(always)]
+    pub fn is_delegate_set(&self) -> bool {
+        self.delegate.is_some()
+    }
+
+    pub fn validate_authority(&self, authority: Pubkey) -> Result<()> {
+        if !self.user.eq(&authority) && !self.delegate.eq(&authority) {
+            return Err(ProgramError::IncorrectAuthority.into());
+        }
+
+        Ok(())
     }
 
     /// Must backfill not existing pools first

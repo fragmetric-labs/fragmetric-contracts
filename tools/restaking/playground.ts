@@ -2487,6 +2487,50 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {fragSOLExtraAccountMetasAccount};
     }
 
+    public async runAdminCreateUserRewardAccountIdempotent(user: web3.PublicKey) {
+        let associatedTokenAddress = spl.getAssociatedTokenAddressSync(
+            this.knownAddress.fragSOLTokenMint,
+            user,
+            true,
+            spl.TOKEN_2022_PROGRAM_ID,
+        );
+
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    associatedTokenAddress,
+                    user,
+                    this.knownAddress.fragSOLTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                this.program.methods.adminCreateUserRewardAccountIdempotent(null)
+                    .accountsPartial({
+                        payer: this.wallet.publicKey,
+                        user,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    }).instruction(),
+            ],
+            signerNames: ["ADMIN"],
+            events: ["userCreatedOrUpdatedRewardAccount"],
+        });
+        const fragSOLUserReward = await this.getUserFragSOLRewardAccount(user);
+
+        // logger.notice(`deposited: ${this.lamportsToSOL(amount)} (${this.lamportsToX(fragSOLFund.oneReceiptTokenAsSol, fragSOLFund.receiptTokenDecimals, 'SOL/fragSOL')})`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+        // logger.info(`user fragSOL balance: ${this.lamportsToFragSOL(new BN(fragSOLUserTokenAccount.amount.toString()))}`.padEnd(LOG_PAD_LARGE), user.publicKey.toString());
+
+        return {
+            event,
+            error,
+            // fragSOLFund,
+            // fragSOLFundReserveAccountBalance,
+            // fragSOLReward,
+            // fragSOLUserFund,
+            fragSOLUserReward,
+            // fragSOLUserTokenAccount
+        };
+    }
+
     public async runFundManagerAddRestakingVaultCompoundingRewardTokens() {
         const {event, error} = await this.run({
             instructions: Object.values(this.restakingVaultMetadata).flatMap(vault =>
@@ -3313,6 +3357,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             rewardMetadata.program,
         );
 
+        let userRewardAccount = this.knownAddress.fragSOLUserReward(user.publicKey);
+
         const {event, error} = await this.run({
             instructions: [
                 spl.createAssociatedTokenAccountIdempotentInstruction(
@@ -3324,7 +3370,9 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 ),
                 this.methods.userClaimReward(isBonusPool, null)
                     .accountsPartial({
-                        user: user.publicKey,
+                        claimAuthority: user.publicKey,
+                        // user: user.publicKey,
+                        userRewardAccount,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         rewardTokenMint: rewardMetadata.mint,
                         rewardTokenProgram: rewardMetadata.program,
@@ -3889,6 +3937,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             fragSOLWrapAccount,
             wfragSOLUserTokenAccount,
         };
+    }
+
+    public async runUserDelegateUserRewardAccount(user: web3.Keypair, delegate: web3.PublicKey) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods.userDelegateUserRewardAccount(delegate)
+                    .accountsPartial({
+                        delegateAuthority: user.publicKey,
+                        user: user.publicKey,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    }).instruction(),
+            ],
+            signers: [user],
+            events: ["userDelegatedRewardAccount"],
+        });
     }
 
     public lamportsToWfragSOL(lamports: BN): string {
