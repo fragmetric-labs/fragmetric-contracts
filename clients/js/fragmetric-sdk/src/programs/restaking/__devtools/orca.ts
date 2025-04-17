@@ -1,12 +1,12 @@
-import { address, Address, createNoopSigner, generateKeyPairSigner, isSome } from '@solana/kit';
+import * as orca from '@orca-so/whirlpools-client';
+import * as token from '@solana-program/token';
+import { address, createNoopSigner, generateKeyPairSigner } from '@solana/kit';
 import * as v from 'valibot';
 import {
   TransactionTemplateContext,
   transformAddressResolverVariant,
 } from '../../../context';
 import { RestakingProgram } from '../program';
-import * as token from '@solana-program/token';
-import * as orca from '@orca-so/whirlpools-client';
 
 export function createOrcaTool(program: RestakingProgram) {
   return {
@@ -26,30 +26,47 @@ export function createOrcaTool(program: RestakingProgram) {
         initialSqrtPrice: v.bigint(), // FLOOR(SQRT(tokenB/tokenA) * 2^64)
       }),
       {
-        description:
-          'initialize Orca WhirlPool',
+        description: 'initialize Orca WhirlPool',
         instructions: [
           async (parent, args, overrides) => {
             const [payer] = await Promise.all([
               transformAddressResolverVariant(
                 overrides.feePayer ??
-                program.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
+                  program.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
               )(program),
             ]);
             if (!payer) throw new Error('invalid context');
             const admin = program.knownAddresses.admin;
 
-            const whirlpoolConfigAddress = address(program.runtime.cluster == 'devnet' ? 'FcrweFY1G9HJAHG5inkGB6pKg1HZ6x9UC2WioAfWrGkR' : "2LecshUwdy9xi7meFgHtFJQNSKk4KdTrcpvaB56dP2NQ");
+            const whirlpoolConfigAddress = address(
+              program.runtime.cluster == 'devnet'
+                ? 'FcrweFY1G9HJAHG5inkGB6pKg1HZ6x9UC2WioAfWrGkR'
+                : '2LecshUwdy9xi7meFgHtFJQNSKk4KdTrcpvaB56dP2NQ'
+            );
             const tokenMintA = address(args.mintA);
             const tokenMintB = address(args.mintB);
-            const [tokenBadgeA] = await orca.getTokenBadgeAddress(whirlpoolConfigAddress, tokenMintA)
-            const [tokenBadgeB] = await orca.getTokenBadgeAddress(whirlpoolConfigAddress, tokenMintB)
+            const [tokenBadgeA] = await orca.getTokenBadgeAddress(
+              whirlpoolConfigAddress,
+              tokenMintA
+            );
+            const [tokenBadgeB] = await orca.getTokenBadgeAddress(
+              whirlpoolConfigAddress,
+              tokenMintB
+            );
             const tickSpacing = args.tickSpacing;
-            const [whirlpool] = await orca.getWhirlpoolAddress(whirlpoolConfigAddress, tokenMintA, tokenMintB, tickSpacing);
+            const [whirlpool] = await orca.getWhirlpoolAddress(
+              whirlpoolConfigAddress,
+              tokenMintA,
+              tokenMintB,
+              tickSpacing
+            );
             const tokenVaultA = await generateKeyPairSigner();
             const tokenVaultB = await generateKeyPairSigner();
-            const [feeTier] = await orca.getFeeTierAddress(whirlpoolConfigAddress, tickSpacing);
+            const [feeTier] = await orca.getFeeTierAddress(
+              whirlpoolConfigAddress,
+              tickSpacing
+            );
             const initialSqrtPrice = args.initialSqrtPrice;
 
             return Promise.all([
@@ -67,12 +84,12 @@ export function createOrcaTool(program: RestakingProgram) {
                 tickSpacing,
                 tokenProgramA: token.TOKEN_PROGRAM_ADDRESS,
                 tokenProgramB: token.TOKEN_PROGRAM_ADDRESS,
-                initialSqrtPrice
+                initialSqrtPrice,
               }),
             ]);
           },
         ],
       }
     ),
-  }
+  };
 }

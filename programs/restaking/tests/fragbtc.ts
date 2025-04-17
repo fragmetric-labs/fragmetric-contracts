@@ -64,6 +64,28 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
+    // HOW TO ADD cbBTC with same pricing source?
+    // () =>
+    //   ctx.fund.addSupportedToken.execute({
+    //     mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    //     pricingSource: {
+    //       __kind: 'OrcaDEXLiquidityPool',
+    //       address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+    //     },
+    //   }),
+    // () =>
+    //   ctx.fund.updateAssetStrategy.execute({
+    //     tokenMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    //     tokenDepositable: true,
+    //     tokenAccumulatedDepositAmount: null,
+    //     tokenAccumulatedDepositCapacityAmount: MAX_U64,
+    //     tokenWithdrawable: true,
+    //     tokenWithdrawalNormalReserveRateBps: 0,
+    //     tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+    //     tokenRebalancingAmount: 0n,
+    //     solAllocationWeight: 0n,
+    //     solAllocationCapacityAmount: MAX_U64,
+    //   }),
 
     // initialize reward account and configuration
     () =>

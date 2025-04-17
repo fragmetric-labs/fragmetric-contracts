@@ -30,8 +30,8 @@ export function createTokenTool(program: RestakingProgram) {
               token.fetchMint(program.runtime.rpc, args.mint as Address),
               transformAddressResolverVariant(
                 overrides.feePayer ??
-                program.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
+                  program.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
               )(program),
             ]);
             if (!(mint && payer)) throw new Error('invalid context');
@@ -63,5 +63,5 @@ export function createTokenTool(program: RestakingProgram) {
         ],
       }
     ),
-  }
+  };
 }

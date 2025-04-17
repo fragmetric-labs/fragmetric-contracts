@@ -1,13 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { beforeAll, expect, test } from 'vitest';
 import { initializeFragSOL } from './fragsol';
-import { createTestSuiteContext, expectMasked } from './utils';
+import { expectMasked } from './utils';
 
-describe('restaking.fragSOL deposit test', async () => {
-  const testCtx = await createTestSuiteContext();
-  const { validator, restaking, initializationTasks } = initializeFragSOL(testCtx);
+export const fragSOLDepositTest = async (
+  testCtx: ReturnType<typeof initializeFragSOL>
+) => {
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.fragSOL;
 
   beforeAll(async () => {
-    await initializationTasks;
     await Promise.all(
       ['Daniel', 'Tommy', 'Ryn', 'Terry'].map((seed) =>
         validator
@@ -24,9 +25,6 @@ describe('restaking.fragSOL deposit test', async () => {
       )
     );
   });
-  afterAll(() => validator.quit());
-
-  const ctx = restaking.fragSOL;
 
   test('user can deposit SOL', async () => {
     const signer1 = await validator.getSigner('Daniel');
@@ -214,6 +212,67 @@ describe('restaking.fragSOL deposit test', async () => {
       }
     `);
 
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot();
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__pricingSources": [
+          {
+            "address": "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi",
+            "role": 0,
+          },
+          {
+            "address": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
+            "role": 0,
+          },
+          {
+            "address": "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC",
+            "role": 0,
+          },
+          {
+            "address": "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r",
+            "role": 0,
+          },
+          {
+            "address": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq",
+            "role": 0,
+          },
+          {
+            "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "role": 0,
+          },
+          {
+            "address": "GVqitNXDVx1PdG47PMNeNEoHSEnVNqybW7E8NckmSJ2R",
+            "role": 0,
+          },
+        ],
+        "metadata": null,
+        "receiptTokenDecimals": 9,
+        "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+        "receiptTokenSupply": 10803579770n,
+        "supportedAssets": [
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": null,
+            "oneTokenAsReceiptToken": 1000000000n,
+            "oneTokenAsSol": 1000000000n,
+            "program": null,
+            "withdrawable": true,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+          },
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+            "oneTokenAsReceiptToken": 1160715954n,
+            "oneTokenAsSol": 1160715954n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": false,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+          },
+        ],
+        "wrappedTokenMint": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q",
+      }
+    `);
   });
-});
+};

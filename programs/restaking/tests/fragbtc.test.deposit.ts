@@ -1,14 +1,14 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { beforeAll, expect, test } from 'vitest';
 import { initializeFragBTC } from './fragbtc';
-import { createTestSuiteContext, expectMasked } from './utils';
+import { expectMasked } from './utils';
 
-describe('restaking.fragBTC deposit test', async () => {
-  const testCtx = await createTestSuiteContext();
-  const { validator, restaking, initializationTasks } =
-    initializeFragBTC(testCtx);
+export const fragBTCDepositTest = async (
+  testCtx: ReturnType<typeof initializeFragBTC>
+) => {
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.fragBTC;
 
   beforeAll(async () => {
-    await initializationTasks;
     await Promise.all(
       ['Daniel', 'Tommy', 'Ryn', 'Terry'].map((seed) =>
         validator
@@ -25,11 +25,10 @@ describe('restaking.fragBTC deposit test', async () => {
       )
     );
   });
-  afterAll(() => validator.quit());
 
   test('user can deposit supported tokens', async () => {
     const signer1 = await validator.getSigner('Daniel');
-    const user1 = restaking.fragBTC.user(signer1);
+    const user1 = ctx.user(signer1);
     await expectMasked(
       user1.deposit.execute(
         {
@@ -120,7 +119,7 @@ describe('restaking.fragBTC deposit test', async () => {
       }
     `);
 
-    await expect(restaking.fragBTC.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
         "__pricingSources": [
@@ -149,4 +148,4 @@ describe('restaking.fragBTC deposit test', async () => {
       }
     `);
   });
-});
+};

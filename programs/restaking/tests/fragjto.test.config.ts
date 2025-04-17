@@ -1,24 +1,19 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { initializeFragJTO } from './fragjto';
-import { createTestSuiteContext, expectMasked } from './utils';
+import { expectMasked } from './utils';
 
-describe('restaking.fragJTO configuration test', async () => {
-  const testCtx = await createTestSuiteContext();
-  const { validator, feePayer, restaking, initializationTasks } =
-    initializeFragJTO(testCtx);
-
-  beforeAll(() => initializationTasks);
-  afterAll(() => validator.quit());
+export const fragJTOConfigurationTest = async (
+  testCtx: ReturnType<typeof initializeFragJTO>
+) => {
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.fragJTO;
 
   test(`restaking.fragJTO initializationTasks snapshot`, async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
-  const ctx = restaking.fragJTO;
-
   test(`restaking.fragJTO.resolve`, async () => {
-    await expect(ctx.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
         "__pricingSources": [
@@ -53,8 +48,7 @@ describe('restaking.fragJTO configuration test', async () => {
   });
 
   test('restaking.fragJTO.fund.resolve', async () => {
-    await expect(ctx.fund.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "assetStrategies": [
           {
@@ -257,4 +251,4 @@ describe('restaking.fragJTO configuration test', async () => {
       }
     `);
   });
-});
+};

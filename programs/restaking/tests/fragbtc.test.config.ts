@@ -1,24 +1,19 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { initializeFragBTC } from './fragbtc';
-import { createTestSuiteContext, expectMasked } from './utils';
+import { expectMasked } from './utils';
 
-describe('restaking.fragBTC configuration test', async () => {
-  const testCtx = await createTestSuiteContext();
-  const { validator, feePayer, restaking, initializationTasks } =
-    initializeFragBTC(testCtx);
-
-  beforeAll(() => initializationTasks);
-  afterAll(() => validator.quit());
+export const fragBTCConfigurationTest = async (
+  testCtx: ReturnType<typeof initializeFragBTC>
+) => {
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.fragBTC;
 
   test(`restaking.fragBTC initializationTasks snapshot`, async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
-  const ctx = restaking.fragBTC;
-
   test(`restaking.fragBTC.resolve`, async () => {
-    await expect(ctx.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
         "__pricingSources": [
@@ -49,8 +44,7 @@ describe('restaking.fragBTC configuration test', async () => {
   });
 
   test('restaking.fragBTC.fund.resolve', async () => {
-    await expect(ctx.fund.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "assetStrategies": [
           {
@@ -160,4 +154,4 @@ describe('restaking.fragBTC configuration test', async () => {
       }
     `);
   });
-});
+};

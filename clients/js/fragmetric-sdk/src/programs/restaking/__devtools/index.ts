@@ -1,6 +1,6 @@
 import { RestakingProgram } from '../program';
+import { createTokenTool } from './mint';
 import { createMockTool } from './mock';
-import { createTokenTool } from './mint'
 import { createOrcaTool } from './orca';
 
 /**
