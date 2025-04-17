@@ -82,7 +82,7 @@ impl<'info> PricingService<'info> {
             #[cfg(not(test))]
             require_eq!(token_pricing_source, &self.token_pricing_sources[index]);
 
-            if *updated_token_values_index_bitmap & (1 << index) > 0 {
+            if *updated_token_values_index_bitmap & (1 << index) != 0 {
                 return Ok(());
             }
 
