@@ -1179,11 +1179,7 @@ pub mod restaking {
             &ctx.accounts.reward_account,
             &ctx.accounts.user_reward_account.as_account_info(),
         )?
-        .process_delegate_user_reward_account(
-            &ctx.accounts.delegate_authority,
-            &ctx.accounts.user_receipt_token_account,
-            delegate,
-        )?);
+        .process_delegate_user_reward_account(&ctx.accounts.delegate_authority, delegate)?);
 
         Ok(())
     }

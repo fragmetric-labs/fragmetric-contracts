@@ -88,7 +88,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
-        claim_authority: &Signer<'info>,
+        authority: &Signer<'info>,
         is_bonus_pool: bool,
         amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
@@ -96,7 +96,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;
 
-        user_reward_account.validate_authority(claim_authority.key)?;
+        user_reward_account.validate_authority(authority.key)?;
 
         let reward = reward_account.get_reward_by_mint(&reward_token_mint_key)?;
         let reward_id = reward.id;

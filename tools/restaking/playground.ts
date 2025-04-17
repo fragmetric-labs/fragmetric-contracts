@@ -3939,17 +3939,17 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         };
     }
 
-    public async runUserDelegateUserRewardAccount(user: web3.Keypair, delegate: web3.PublicKey) {
+    public async runUserDelegateUserRewardAccount(delegateAuthority: web3.Keypair, newDelegate: web3.PublicKey, user: web3.PublicKey) {
         const {event, error} = await this.run({
             instructions: [
-                this.program.methods.userDelegateUserRewardAccount(delegate)
+                this.program.methods.userDelegateUserRewardAccount(newDelegate)
                     .accountsPartial({
-                        delegateAuthority: user.publicKey,
-                        user: user.publicKey,
+                        delegateAuthority: delegateAuthority.publicKey,
+                        user,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                     }).instruction(),
             ],
-            signers: [user],
+            signers: [delegateAuthority],
             events: ["userDelegatedRewardAccount"],
         });
     }
@@ -4202,7 +4202,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     })
                     .instruction(),
             ],
-            signers: [user],
             events: ['userUpdatedRewardPool'],
         });
 

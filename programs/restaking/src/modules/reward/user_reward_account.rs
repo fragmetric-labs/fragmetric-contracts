@@ -110,6 +110,10 @@ impl UserRewardAccount {
         )
     }
 
+    pub(super) fn set_delegate(&mut self, delegate: Option<Pubkey>) {
+        self.delegate = delegate.unwrap_or_default();
+    }
+
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == USER_REWARD_ACCOUNT_CURRENT_VERSION

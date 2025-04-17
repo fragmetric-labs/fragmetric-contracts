@@ -156,18 +156,16 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
 
     pub fn process_delegate_user_reward_account(
         &self,
-        delegate_authority: &Signer,
-        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
-
+        authority: &Signer,
         delegate: Pubkey,
     ) -> Result<events::UserDelegatedRewardAccount> {
         let user_reward_account =
             AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
         let mut user_reward_account = user_reward_account.load_mut()?;
 
-        user_reward_account.validate_authority(delegate_authority.key)?;
+        user_reward_account.validate_authority(authority.key)?;
 
-        user_reward_account.update_if_needed(user_receipt_token_account, Some(delegate))?;
+        user_reward_account.set_delegate(Some(delegate));
 
         Ok(events::UserDelegatedRewardAccount {
             user_reward_account: self.user_reward_account.key(),

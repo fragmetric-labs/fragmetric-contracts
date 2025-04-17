@@ -222,6 +222,6 @@ describe("reward", async function () {
     });
 
     step("the delegate user can delegate user_reward_account to userC", async () => {
-        await restaking.runUserDelegateUserRewardAccount(restaking.keychain.getKeypair("FUND_MANAGER"), userC.publicKey);
+        await restaking.runUserDelegateUserRewardAccount(restaking.keychain.getKeypair("FUND_MANAGER"), userC.publicKey, userC.publicKey);
     });
 });
