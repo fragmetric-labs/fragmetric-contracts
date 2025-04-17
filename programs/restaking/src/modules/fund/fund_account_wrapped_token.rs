@@ -17,24 +17,20 @@ pub(super) struct WrappedToken {
     _padding: [u8; 5],
     pub supply: u64,
 
-    /// Total amount of wrapped token held by holders.
-    /// This value is always equal to the sum of each wrapped token balance of holders.
-    pub total_amount_held_by_holders: u64,
-
     /// An amount of wrapped token that is not held by any holders.
-    /// This value is not always equal to `supply - total_amount_held_by_holders`.
+    /// This value is not always equal to `supply - ∑wrapped_token_holder_amount`.
     ///
     /// Wrapped token amount of holders are updated via snapshot during operation cycle.
     /// Unless all snapshots are captured in a single instruction,
     /// their total amount might be inaccurate due to concurrency.
     ///
-    /// Therefore, retained_amount is adjusted to max(0, supply - total_amount_held_by_holders)
+    /// Therefore, retained_amount is adjusted to max(0, supply - ∑wrapped_token_holder_amount)
     pub retained_amount: u64,
 
     /// List of wrapped token holders who will receive reward for their wrapped token balance.
     holders: [WrappedTokenHolder; FUND_ACCOUNT_WRAPPED_TOKEN_MAX_HOLDERS],
 
-    _reserved: [u8; 768], // 768 = 32 * 24
+    _reserved: [u8; 776], // 768 = 32 * 24 + 8
 }
 
 impl WrappedToken {
@@ -71,6 +67,11 @@ impl WrappedToken {
         let old_wrapped_token_retained_amount = self.update_retained_amount();
 
         Ok(old_wrapped_token_retained_amount)
+    }
+
+    fn get_total_wrapped_token_holder_amount(&self) -> u64 {
+        self.get_holders_iter()
+            .fold(0, |acc, holder| acc + holder.amount)
     }
 
     pub fn get_holders_iter(&self) -> impl Iterator<Item = &WrappedTokenHolder> {
@@ -122,7 +123,6 @@ impl WrappedToken {
 
         // deduct the wrapped token amount of this holder
         let old_wrapped_token_holder_amount = holder.update_amount(0);
-        self.total_amount_held_by_holders -= old_wrapped_token_holder_amount;
         let old_wrapped_token_retained_amount = self.update_retained_amount();
 
         // remove holder: list of holders need not preserve the order
@@ -145,13 +145,11 @@ impl WrappedToken {
         let holder = self.get_holder_mut(wrapped_token_account)?;
 
         let old_wrapped_token_holder_amount = holder.update_amount(wrapped_token_amount);
-        self.total_amount_held_by_holders -= old_wrapped_token_holder_amount;
-        self.total_amount_held_by_holders += wrapped_token_amount;
-        let old_wrapped_token_receivable_amount = self.update_retained_amount();
+        let old_wrapped_token_retained_amount = self.update_retained_amount();
 
         Ok((
             old_wrapped_token_holder_amount,
-            old_wrapped_token_receivable_amount,
+            old_wrapped_token_retained_amount,
         ))
     }
 
@@ -160,7 +158,7 @@ impl WrappedToken {
         let old_retained_amount = self.retained_amount;
         self.retained_amount = self
             .supply
-            .saturating_sub(self.total_amount_held_by_holders);
+            .saturating_sub(self.get_total_wrapped_token_holder_amount());
 
         old_retained_amount
     }
