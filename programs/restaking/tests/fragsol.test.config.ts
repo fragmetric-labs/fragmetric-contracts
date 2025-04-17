@@ -1,22 +1,19 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { initializeFragSOL } from './fragsol';
-import { createTestSuiteContext, expectMasked } from './utils';
+import { expectMasked } from './utils';
 
-describe('restaking.fragSOL configuration test', async () => {
-  const testCtx = await createTestSuiteContext();
-  const { validator, feePayer, restaking, initializationTasks } =
-    initializeFragSOL(testCtx);
-
-  beforeAll(() => initializationTasks);
-  afterAll(() => validator.quit());
+export const fragSOLConfigurationTest = async (
+  testCtx: ReturnType<typeof initializeFragSOL>
+) => {
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.fragSOL;
 
   test(`restaking.fragSOL initializationTasks snapshot`, async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
   test('restaking.fragSOL.resolve', async () => {
-    await expect(restaking.fragSOL.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
         "__pricingSources": [
@@ -81,8 +78,7 @@ describe('restaking.fragSOL configuration test', async () => {
   });
 
   test('restaking.fragSOL.fund.resolve', async () => {
-    await expect(restaking.fragSOL.fund.resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expect(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "assetStrategies": [
           {
@@ -265,7 +261,7 @@ describe('restaking.fragSOL configuration test', async () => {
   });
 
   test(`restaking.fragSOL.reward.resolve`, async () => {
-    await expectMasked(restaking.fragSOL.reward.resolve(true)).resolves
+    await expectMasked(ctx.reward.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       {
         "basePool": {
@@ -376,4 +372,4 @@ describe('restaking.fragSOL configuration test', async () => {
       }
     `);
   });
-});
+};

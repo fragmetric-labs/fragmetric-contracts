@@ -1,5 +1,7 @@
 import { RestakingProgram } from '../program';
-import { mock } from './mock';
+import { createTokenTool } from './mint';
+import { createMockTool } from './mock';
+import { createOrcaTool } from './orca';
 
 /**
  * Dev-Only Tools (`__dev`)
@@ -17,6 +19,8 @@ import { mock } from './mock';
 
 export function createDevTools(program: RestakingProgram) {
   return {
-    mock: mock.bind(program),
+    mock: createMockTool(program),
+    token: createTokenTool(program),
+    orca: createOrcaTool(program),
   };
 }

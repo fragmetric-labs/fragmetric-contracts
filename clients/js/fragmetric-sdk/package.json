@@ -1,6 +1,6 @@
 {
   "name": "@fragmetric-labs/sdk",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM and UMD formats) as well as Node.js bundles (in ESM formats).",
   "repository": {
     "type": "git",
@@ -63,15 +63,16 @@
     "@ledgerhq/hw-app-solana": "^7.2.4",
     "@ledgerhq/hw-transport": "^6.31.4",
     "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5",
-    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
-    "@metaplex-foundation/umi": "^1.1.1",
-    "@metaplex-foundation/umi-bundle-defaults": "^1.1.1",
     "commander": "^13.1.0",
     "node-hid": "^3.1.2",
     "pretty-repl": "^4.0.1",
     "terminal-link": "^2.1.1"
   },
   "devDependencies": {
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.1.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.1.1",
+    "@orca-so/whirlpools-client": "^1.0.5",
     "@rollup/plugin-alias": "^5.1.1",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",

@@ -1,5 +1,6 @@
 #!/usr/bin/env pnpm tsx --no-warnings
 
+import { initializeFragBTC } from '../fragbtc';
 import { initializeFragJTO } from '../fragjto';
 import { initializeFragSOL } from '../fragsol';
 import { createTestSuiteContext } from './context';
@@ -12,6 +13,10 @@ createTestSuiteContext({ validator: 'litesvm' })
       .initializationTasks.then(() => {
         ctx.sdk.logger.start('Initialize fragJTO...');
         return initializeFragJTO(ctx).initializationTasks;
+      })
+      .then(() => {
+        ctx.sdk.logger.start('Initialize fragBTC...');
+        return initializeFragBTC(ctx).initializationTasks;
       })
       .catch((err: any) => {
         ctx.sdk.logger.error(err);

@@ -1,15 +1,24 @@
-import { TokenMintAccountContext, TransactionTemplateContext, transformAddressResolverVariant } from '../../context';
-import * as v from 'valibot';
-import { RestakingProgram } from './program';
-import * as umiBundle from '@metaplex-foundation/umi-bundle-defaults';
 import * as mpl from '@metaplex-foundation/mpl-token-metadata';
 import * as umi from '@metaplex-foundation/umi';
-import { AccountRole, Address, createNoopSigner, IInstruction } from '@solana/kit';
-import * as token from '@solana-program/token';
+import * as umiBundle from '@metaplex-foundation/umi-bundle-defaults';
 import * as system from '@solana-program/system';
+import * as token from '@solana-program/token';
+import {
+  AccountRole,
+  Address,
+  createNoopSigner,
+  IInstruction,
+} from '@solana/kit';
+import * as v from 'valibot';
+import {
+  ProgramDerivedContext,
+  TransactionTemplateContext,
+  transformAddressResolverVariant,
+} from '../../context';
+import { RestakingProgram } from './program';
 
 export function createMintTransactionTemplate<
-  T extends TokenMintAccountContext<any>,
+  T extends ProgramDerivedContext<any>,
 >(self: T, description: string) {
   return new TransactionTemplateContext(
     self,
@@ -25,20 +34,18 @@ export function createMintTransactionTemplate<
       description: description,
       instructions: [
         async (parent, args, overrides) => {
-          const [existingNormalizedTokenMint, payer] = await Promise.all([
-            parent.resolveAddress(),
+          const [payer] = await Promise.all([
             transformAddressResolverVariant(
               overrides.feePayer ??
-              self.runtime.options.transaction.feePayer ??
-              (() => Promise.resolve(null))
+                self.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
             )(parent),
           ]);
-          if (existingNormalizedTokenMint) throw new Error('invalid context');
           const admin = (self.program as RestakingProgram).knownAddresses.admin;
 
           // build metaplex metadata creation ix
           const umiInstance = umiBundle
-            .createUmi('https://api.mainnet-beta.solana.com')
+            .createUmi('https://api.mainnet-beta.solana.com') // this RPC won't be used
             .use(mpl.mplTokenMetadata());
           umiInstance.use(
             umi.signerIdentity(umi.createNoopSigner(payer as any))

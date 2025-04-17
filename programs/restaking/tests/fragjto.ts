@@ -261,6 +261,9 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
             addresses,
           })
         ),
+
+    // wait for two slots to activate ALT
+    () => validator.skipSlots(2n),
   ].reduce(
     async (prevLogs, task) => {
       const logs = await prevLogs;

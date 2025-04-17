@@ -1,6 +1,9 @@
-import { FragmetricMetadataContext, TokenMintAccountContext } from '../../context';
-import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
+import {
+  FragmetricMetadataContext,
+  TokenMintAccountContext,
+} from '../../context';
 import { createMintTransactionTemplate } from './mint';
+import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 
 export class RestakingNormalizedTokenMintAccountContext extends TokenMintAccountContext<RestakingReceiptTokenMintAccountContext> {
   constructor(readonly parent: RestakingReceiptTokenMintAccountContext) {

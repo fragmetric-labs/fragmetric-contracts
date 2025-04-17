@@ -699,6 +699,11 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(user),
+              mint: data.wrappedTokenMint,
+              owner: user,
+            }),
             args.receiptTokenAmountAsTargetBalance
               ? restaking.getUserWrapReceiptTokenIfNeededInstructionAsync(
                   {
@@ -754,6 +759,12 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(user),
+              mint: data.receiptTokenMint,
+              owner: user,
+              tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
+            }),
             restaking.getUserUnwrapReceiptTokenInstructionAsync(
               {
                 user: createNoopSigner(user),

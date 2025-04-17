@@ -47,9 +47,7 @@ export class RestakingRewardAccountContext extends AccountContext<
       ...props
     } = account.data;
     const rewards = rewards1.slice(0, numRewards).map((reward) => {
-      const {
-        id, name, description, reserved, claimable, ...props
-      } = reward;
+      const { id, name, description, reserved, claimable, ...props } = reward;
       return {
         id,
         name: getUtf8Decoder().decode(name),
@@ -285,13 +283,12 @@ export class RestakingRewardAccountContext extends AccountContext<
     async (parent, args, events) => {
       const currentVersion = await parent
         .resolveAccount(true)
-        .then((reward) => reward?.data.dataVersion ?? 0)
-        .catch((err) => 35);
+        .then((reward) => reward?.data.dataVersion ?? 0);
 
       if (currentVersion < args.targetVersion) {
         return {
           args,
-        } as any;
+        };
       }
       return null;
     }

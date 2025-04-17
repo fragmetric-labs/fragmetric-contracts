@@ -1526,7 +1526,7 @@ export class RestakingFundAccountContext extends AccountContext<
         };
       }
       return null;
-    },
+    }
   );
 
   readonly addRestakingVaultCompoundingReward = new TransactionTemplateContext(
@@ -1721,18 +1721,19 @@ export class RestakingFundAccountContext extends AccountContext<
           const fundManager = (this.program as RestakingProgram).knownAddresses
             .fundManager;
 
-          const ix = await restaking.getFundManagerInitializeFundWrappedTokenInstructionAsync(
-            {
-              admin: createNoopSigner(admin),
-              fundManager: createNoopSigner(fundManager),
-              receiptTokenMint: receiptTokenMint,
-              program: this.program.address,
-              wrappedTokenMint: args.mint as Address,
-            },
-            {
-              programAddress: this.program.address,
-            }
-          );
+          const ix =
+            await restaking.getFundManagerInitializeFundWrappedTokenInstructionAsync(
+              {
+                admin: createNoopSigner(admin),
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint: receiptTokenMint,
+                program: this.program.address,
+                wrappedTokenMint: args.mint as Address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            );
           const fundWrapAccount = ix.accounts[2].address;
 
           return Promise.all([

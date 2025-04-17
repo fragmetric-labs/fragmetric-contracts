@@ -26,23 +26,24 @@ export class RestakingProgram extends ProgramContext {
     (() => {
       switch (this.runtime.cluster) {
         case 'mainnet':
-          return {
-            admin: address('fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby'),
-            fundManager: address(
-              '79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84'
-            ),
-            fragSOL: address('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
-            fragJTO: address('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
-          };
         case 'devnet':
+          const isMainnet = this.runtime.cluster === 'mainnet';
           return {
-            admin: address('fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP'),
+            admin: address(
+              isMainnet
+                ? 'fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby'
+                : 'fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP'
+            ),
             fundManager: address(
-              '5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2'
+              isMainnet
+                ? '79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84'
+                : '5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2'
             ),
             fragSOL: address('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
             fragJTO: address('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
+            fragBTC: address('FRAGB4KZGLMy3wH1nBajP3Q17MHnecEvTPT6wb4pX5MB'),
           };
+        case 'local':
         default:
           return {
             admin: address('9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'),
@@ -51,6 +52,7 @@ export class RestakingProgram extends ProgramContext {
             ),
             fragSOL: address('Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD'),
             fragJTO: address('bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v'),
+            fragBTC: address('ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz'),
           };
       }
     })()
@@ -67,4 +69,6 @@ export class RestakingProgram extends ProgramContext {
   readonly fragSOL = this.receiptTokenMint(this.knownAddresses.fragSOL);
 
   readonly fragJTO = this.receiptTokenMint(this.knownAddresses.fragJTO);
+
+  readonly fragBTC = this.receiptTokenMint(this.knownAddresses.fragBTC);
 }

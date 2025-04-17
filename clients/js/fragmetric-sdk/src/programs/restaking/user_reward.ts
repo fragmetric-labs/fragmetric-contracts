@@ -5,16 +5,15 @@ import * as v from 'valibot';
 import { AccountContext, TransactionTemplateContext } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
-import { RestakingUserAccountContext } from './user';
-import { RestakingRewardAccountContext } from './reward';
 import { RestakingFundWrapAccountContext } from './fund_wrap';
+import { RestakingRewardAccountContext } from './reward';
+import { RestakingUserAccountContext } from './user';
 
-abstract class RestakingAbstractUserRewardAccountContext<P extends AccountContext<any>> extends AccountContext<
-  P,
-  Account<restaking.UserRewardAccount>
-> {
+abstract class RestakingAbstractUserRewardAccountContext<
+  P extends AccountContext<any>,
+> extends AccountContext<P, Account<restaking.UserRewardAccount>> {
   protected abstract __globalRewardAccount: RestakingRewardAccountContext;
-  
+
   async resolve(noCache = false) {
     const [account, global] = await Promise.all([
       this.resolveAccount(noCache),
