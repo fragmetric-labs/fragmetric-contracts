@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::constants::*;
 use crate::errors::ErrorCode;
 use crate::modules::reward::{RewardAccount, UserRewardAccount};
-use crate::utils::{AccountInfoExt, AccountLoaderExt, PDASeeds};
+use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -46,15 +46,4 @@ pub struct AdminUserRewardAccountInitOrUpdateContext<'info> {
     pub user_reward_account: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
-}
-
-impl<'info> AdminUserRewardAccountInitOrUpdateContext<'info> {
-    pub fn assert_user_is_not_wallet(&self) -> Result<()> {
-        // TODO
-        if self.user.is_initialized() {
-            err!(ErrorCode::RewardUserError)?
-        }
-
-        Ok(())
-    }
 }

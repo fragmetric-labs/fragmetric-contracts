@@ -176,8 +176,6 @@ pub mod restaking {
         ctx: Context<AdminUserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        // ctx.accounts.assert_user_is_not_wallet()?;
-
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
@@ -1132,8 +1130,8 @@ pub mod restaking {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
         )?
         .process_update_user_reward_pools()?);
 
@@ -1148,8 +1146,8 @@ pub mod restaking {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
         )?
         .process_claim_user_reward(
             &ctx.accounts.reward_token_mint,

@@ -136,6 +136,7 @@ impl WrappedToken {
         ))
     }
 
+    #[allow(dead_code)] // Implemented for future use
     /// returns [old_wrapped_token_holder_amount, old_wrapped_token_retained_amount]
     pub fn update_holder_amount(
         &mut self,

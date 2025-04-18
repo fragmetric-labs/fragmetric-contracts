@@ -164,7 +164,6 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         let mut user_reward_account = user_reward_account.load_mut()?;
 
         user_reward_account.validate_authority(authority.key)?;
-
         user_reward_account.set_delegate(Some(delegate));
 
         Ok(events::UserDelegatedRewardAccount {

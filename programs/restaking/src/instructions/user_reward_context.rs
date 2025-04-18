@@ -46,7 +46,7 @@ pub struct UserRewardAccountInitOrUpdateContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardContext<'info> {
-    /// CHECK:
+    /// CHECK: This context does not require user's signature - it only updates user reward pools.
     pub user: UncheckedAccount<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -74,10 +74,10 @@ pub struct UserRewardContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardClaimContext<'info> {
-    // Could be user or delegate
+    // Claim authority could be user or delegate
     pub claim_authority: Signer<'info>,
 
-    /// CHECK:
+    /// CHECK: This context does not require user's signature, but claim authority's signature
     pub user: UncheckedAccount<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -130,10 +130,10 @@ pub struct UserRewardClaimContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserRewardAccountDelegateContext<'info> {
-    // Could be user or fund_manager or delegate
+    // Could be user or delegate
     pub delegate_authority: Signer<'info>,
 
-    /// CHECK: Just need for seeds
+    /// CHECK: This context does not require user's signature, but delegate authority's signature
     pub user: UncheckedAccount<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -146,6 +146,7 @@ pub struct UserRewardAccountDelegateContext<'info> {
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,

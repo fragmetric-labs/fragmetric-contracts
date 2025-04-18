@@ -110,10 +110,6 @@ impl UserRewardAccount {
         )
     }
 
-    pub(super) fn set_delegate(&mut self, delegate: Option<Pubkey>) {
-        self.delegate = delegate.unwrap_or_default();
-    }
-
     #[inline(always)]
     pub fn is_latest_version(&self) -> bool {
         self.data_version == USER_REWARD_ACCOUNT_CURRENT_VERSION
@@ -127,10 +123,14 @@ impl UserRewardAccount {
     /// authority = user or delegate
     pub(super) fn validate_authority(&self, authority: &Pubkey) -> Result<()> {
         if self.user != *authority && self.delegate != *authority {
-            err!(ErrorCode::RewardInvalidAuthorityError)?;
+            err!(ErrorCode::RewardInvalidUserRewardAccountAuthorityError)?;
         }
 
         Ok(())
+    }
+
+    pub(super) fn set_delegate(&mut self, delegate: Option<Pubkey>) {
+        self.delegate = delegate.unwrap_or_default();
     }
 
     /// Must backfill not existing pools first

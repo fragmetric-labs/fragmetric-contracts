@@ -23,7 +23,7 @@ impl Drop for UserRewardService<'_, '_> {
 impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &UncheckedAccount<'info>,
+        user: &AccountInfo,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
@@ -44,7 +44,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
     }
 
     /// Validate the provided accounts have proper relationships.
-    pub(crate) fn validate_user_reward_account(
+    pub fn validate_user_reward_account(
         receipt_token_mint: &InterfaceAccount<Mint>,
         user: &Pubkey,
         reward_account: &AccountLoader<RewardAccount>,
@@ -100,11 +100,6 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
         let reward = reward_account.get_reward_by_mint(&reward_token_mint_key)?;
         let reward_id = reward.id;
-
-        require_keys_eq!(
-            reward_token_reserve_account.key(),
-            reward_account.find_reward_token_reserve_account_address(&reward_token_mint_key)?,
-        );
 
         require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
 
