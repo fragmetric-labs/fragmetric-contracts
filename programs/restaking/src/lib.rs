@@ -1167,7 +1167,7 @@ pub mod restaking {
     // UserRewardAccountDelegateContext
     ////////////////////////////////////////////
 
-    pub fn user_delegate_user_reward_account(
+    pub fn user_delegate_reward_account(
         ctx: Context<UserRewardAccountDelegateContext>,
         delegate: Pubkey,
     ) -> Result<()> {

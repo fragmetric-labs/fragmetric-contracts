@@ -3350,7 +3350,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     public async runUserDelegateRewardAccount(user: web3.PublicKey, newDelegate: web3.PublicKey, delegateAuthority: web3.Keypair) {
         const {event, error} = await this.run({
             instructions: [
-                this.program.methods.userDelegateUserRewardAccount(newDelegate)
+                this.program.methods.userDelegateRewardAccount(newDelegate)
                     .accountsPartial({
                         delegateAuthority: delegateAuthority.publicKey,
                         user,
