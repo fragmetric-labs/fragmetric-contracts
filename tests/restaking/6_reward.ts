@@ -207,6 +207,8 @@ describe("reward", async function () {
         const res = await restaking.runUserClaimReward(userA.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH", amount: new BN(1)});
         expect(res.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(1);
         expect(res.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(1);
+        expect(res.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res.destinationRewardTokenAccount.address.toString());
+        expect(res.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
         expect(res.destinationRewardTokenAccount.amount.toString()).eq("1");
 
         await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
@@ -215,6 +217,8 @@ describe("reward", async function () {
         const res1 = await restaking.runUserClaimReward(userA.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH"});
         expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(3);
         expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+        expect(res1.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res1.destinationRewardTokenAccount.address.toString());
+        expect(res1.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
         expect(res1.destinationRewardTokenAccount.amount.toString()).eq("4");
     });
 
@@ -239,6 +243,8 @@ describe("reward", async function () {
         const res1 = await restaking.runUserClaimReward(userB.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH"});
         expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(4);
         expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+        expect(res1.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res1.destinationRewardTokenAccount.address.toString());
+        expect(res1.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
         expect(res1.destinationRewardTokenAccount.amount.toString()).eq("8");
     })
 });
