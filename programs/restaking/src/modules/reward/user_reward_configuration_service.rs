@@ -14,12 +14,6 @@ pub struct UserRewardConfigurationService<'a, 'info> {
     user_reward_account: &'info AccountInfo<'info>,
 }
 
-impl Drop for UserRewardConfigurationService<'_, '_> {
-    fn drop(&mut self) {
-        self.reward_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,

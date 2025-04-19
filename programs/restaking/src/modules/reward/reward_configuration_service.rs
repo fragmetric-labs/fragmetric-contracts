@@ -14,12 +14,6 @@ pub struct RewardConfigurationService<'a, 'info> {
     current_slot: u64,
 }
 
-impl Drop for RewardConfigurationService<'_, '_> {
-    fn drop(&mut self) {
-        self.reward_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
@@ -42,8 +36,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
                 reward_account_bump,
                 self.receipt_token_mint.key(),
                 self.current_slot,
-            )?;
-            self.reward_account.exit(&crate::ID)
+            )
         }
     }
 

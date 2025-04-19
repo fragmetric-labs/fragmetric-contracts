@@ -146,7 +146,6 @@ pub struct UserRewardAccountDelegateContext<'info> {
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,

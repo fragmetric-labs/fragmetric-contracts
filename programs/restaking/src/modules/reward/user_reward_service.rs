@@ -13,13 +13,6 @@ pub struct UserRewardService<'a, 'info> {
     current_slot: u64,
 }
 
-impl Drop for UserRewardService<'_, '_> {
-    fn drop(&mut self) {
-        self.reward_account.exit(&crate::ID).unwrap();
-        self.user_reward_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
