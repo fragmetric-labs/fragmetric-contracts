@@ -576,7 +576,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerRewardDistributionContext
+    // FundManagerRewardContext
     ////////////////////////////////////////////
 
     pub fn fund_manager_add_reward(
