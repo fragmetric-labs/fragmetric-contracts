@@ -25,13 +25,12 @@ pub mod restaking {
     pub fn admin_delegate_fund_wrap_account_reward_account(
         ctx: Context<AdminDelegateFundWrapAccountRewardAccount>,
     ) -> Result<()> {
-        modules::reward::UserRewardConfigurationService::new(
-            &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.receipt_token_wrap_account,
-            &ctx.accounts.reward_account,
-            &ctx.accounts.fund_wrap_account_reward_account,
-        )?
-        .process_delegate_user_reward_account(authority, Some(FUND_MANAGER_PUBKEY))?;
+        ctx.accounts
+            .fund_wrap_account_reward_account
+            .load_mut()?
+            .set_delegate_unchecked(FUND_MANAGER_PUBKEY);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
