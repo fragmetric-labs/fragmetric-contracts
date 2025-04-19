@@ -84,8 +84,10 @@ impl RewardAccount {
             // // bit 1 (deprecated): is closed
             // // bit 2 (deprecated): has holder? (not provided for default holder (fragmetric))
             // reward_pool_bitmap: u8,
-            self.get_reward_pools_iter_mut()
-                .for_each(|pool| pool.custom_contribution_accrual_rate_enabled &= 1);
+            self.base_reward_pool
+                .custom_contribution_accrual_rate_enabled &= 1;
+            self.bonus_reward_pool
+                .custom_contribution_accrual_rate_enabled &= 1;
 
             (self.reserve_account, self.reserve_account_bump) =
                 Pubkey::find_program_address(&self.get_reserve_account_seed_phrase(), &crate::ID);
@@ -253,14 +255,6 @@ impl RewardAccount {
     #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
         [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
-    }
-
-    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> &RewardPool {
-        if !is_bonus_pool {
-            &self.base_reward_pool
-        } else {
-            &self.bonus_reward_pool
-        }
     }
 
     pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut RewardPool {

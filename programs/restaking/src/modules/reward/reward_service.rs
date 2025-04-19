@@ -83,8 +83,6 @@ impl<'a, 'info> RewardService<'a, 'info> {
 
             require_keys_eq!(self.receipt_token_mint.key(), from.receipt_token_mint);
 
-            from.backfill_not_existing_pools(&reward_account)?;
-
             let reward_pools_iter = reward_account.get_reward_pools_iter_mut();
             let from_user_reward_pools_iter = from.get_user_reward_pools_iter_mut();
             for (reward_pool, user_reward_pool) in
@@ -105,8 +103,6 @@ impl<'a, 'info> RewardService<'a, 'info> {
             let mut to = to_user_reward_account.load_mut()?;
 
             require_keys_eq!(self.receipt_token_mint.key(), to.receipt_token_mint);
-
-            to.backfill_not_existing_pools(&reward_account)?;
 
             let reward_pools_iter = reward_account.get_reward_pools_iter_mut();
             let to_user_reward_pools_iter = to.get_user_reward_pools_iter_mut();

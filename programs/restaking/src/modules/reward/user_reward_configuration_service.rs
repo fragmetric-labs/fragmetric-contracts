@@ -101,6 +101,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 let updated = if initializing {
                     user_reward_account.initialize(
                         user_reward_account_bump,
+                        &*self.reward_account.load()?,
                         self.user_receipt_token_account,
                         delegate,
                     )?
@@ -117,8 +118,11 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                         self.user_receipt_token_account.owner,
                     );
 
-                    user_reward_account
-                        .update_if_needed(self.user_receipt_token_account, delegate)?
+                    user_reward_account.update_if_needed(
+                        &*self.reward_account.load()?,
+                        self.user_receipt_token_account,
+                        delegate,
+                    )?
                 };
 
                 (initializing, updated)
@@ -158,7 +162,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
 
         user_reward_account
             .load_mut()?
-            .set_delegate(authority.key, Some(delegate))?;
+            .set_delegate(authority.key, delegate)?;
 
         Ok(events::UserDelegatedRewardAccount {
             user_reward_account: self.user_reward_account.key(),

@@ -21,10 +21,10 @@ pub struct UserRewardAccount {
     bump: u8,
     pub receipt_token_mint: Pubkey,
     pub user: Pubkey,
-    num_user_reward_pools: u8,
-    /// previous field:
+    /// previous fields:
+    /// num_user_reward_pools: u8,
     /// max_user_reward_pools: u8,
-    _padding: u8,
+    _padding: [u8; 2],
     _reserved: [u8; 11],
 
     pub(super) base_user_reward_pool: UserRewardPool,
@@ -62,6 +62,7 @@ impl UserRewardAccount {
     fn migrate(
         &mut self,
         bump: u8,
+        reward_account: &RewardAccount,
         receipt_token_mint: Pubkey,
         user: Pubkey,
         delegate: Option<Pubkey>,
@@ -73,6 +74,12 @@ impl UserRewardAccount {
             self.bump = bump;
             self.receipt_token_mint = receipt_token_mint;
             self.user = user;
+
+            self.base_user_reward_pool
+                .initialize(&reward_account.base_reward_pool)?;
+            self.bonus_user_reward_pool
+                .initialize(&reward_account.bonus_reward_pool)?;
+
             self.delegate = delegate.unwrap_or_default();
         }
 
@@ -85,11 +92,13 @@ impl UserRewardAccount {
     pub(super) fn initialize(
         &mut self,
         bump: u8,
-        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+        reward_account: &RewardAccount,
+        user_receipt_token_account: &TokenAccount,
         delegate: Option<Pubkey>,
     ) -> Result<bool> {
         self.migrate(
             bump,
+            reward_account,
             user_receipt_token_account.mint,
             user_receipt_token_account.owner,
             delegate,
@@ -99,11 +108,13 @@ impl UserRewardAccount {
     #[inline(always)]
     pub(super) fn update_if_needed(
         &mut self,
-        user_receipt_token_account: &InterfaceAccount<TokenAccount>,
+        reward_account: &RewardAccount,
+        user_receipt_token_account: &TokenAccount,
         delegate: Option<Pubkey>,
     ) -> Result<bool> {
         self.migrate(
             self.bump,
+            reward_account,
             user_receipt_token_account.mint,
             user_receipt_token_account.owner,
             delegate,
@@ -129,18 +140,13 @@ impl UserRewardAccount {
         Ok(())
     }
 
-    pub(super) fn set_delegate(
-        &mut self,
-        authority: &Pubkey,
-        delegate: Option<Pubkey>,
-    ) -> Result<()> {
+    pub(super) fn set_delegate(&mut self, authority: &Pubkey, delegate: Pubkey) -> Result<()> {
         self.assert_authority_is_user_or_delegate(authority)?;
-        self.delegate = delegate.unwrap_or_default();
+        self.delegate = delegate;
 
         Ok(())
     }
 
-    /// Must backfill not existing pools first
     #[inline(always)]
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
@@ -152,7 +158,6 @@ impl UserRewardAccount {
         .into_iter()
     }
 
-    /// Must backfill not existing pools first
     pub(super) fn get_user_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut UserRewardPool {
         if !is_bonus_pool {
             &mut self.base_user_reward_pool
@@ -161,43 +166,17 @@ impl UserRewardAccount {
         }
     }
 
-    pub(super) fn backfill_not_existing_pools(
-        &mut self,
-        reward_account: &RewardAccount,
-    ) -> Result<()> {
-        // base user reward pool was previously user_reward_pools[0]
-        if self.num_user_reward_pools == 0 {
-            let base_reward_pool = reward_account.get_reward_pool(false);
-            self.base_user_reward_pool
-                .initialize(BASE_REWARD_POOL_ID, base_reward_pool.initial_slot)?;
-            self.num_user_reward_pools = 1;
-        }
-
-        // bonus user reward pool was previously user_reward_pools[1]
-        if self.num_user_reward_pools == 1 {
-            let bonus_reward_pool = reward_account.get_reward_pool(true);
-            self.bonus_user_reward_pool
-                .initialize(BONUS_REWARD_POOL_ID, bonus_reward_pool.initial_slot)?;
-            self.num_user_reward_pools = 2;
-        }
-
-        require_eq!(self.num_user_reward_pools, 2);
-
-        Ok(())
-    }
-
     pub(super) fn update_user_reward_pools(
         &mut self,
         reward_account: &mut RewardAccount,
         current_slot: u64,
     ) -> Result<()> {
-        self.backfill_not_existing_pools(reward_account)?;
+        self.base_user_reward_pool
+            .update_user_reward_pool(&mut reward_account.base_reward_pool, current_slot)?;
+        self.bonus_user_reward_pool
+            .update_user_reward_pool(&mut reward_account.bonus_reward_pool, current_slot)?;
 
-        self.get_user_reward_pools_iter_mut()
-            .zip(reward_account.get_reward_pools_iter_mut())
-            .try_for_each(|(user_reward_pool, reward_pool)| {
-                user_reward_pool.update_user_reward_pool(reward_pool, current_slot)
-            })
+        Ok(())
     }
 
     /// returns [claimed amount, total claimed amount]
@@ -210,8 +189,6 @@ impl UserRewardAccount {
         amount: Option<u64>,
         current_slot: u64,
     ) -> Result<(u64, u64)> {
-        self.backfill_not_existing_pools(reward_account)?;
-
         self.assert_authority_is_user_or_delegate(authority)?;
         require_eq!(
             reward_account.get_reward(reward_id)?.claimable,
