@@ -276,6 +276,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         wrapped_token_mint: &InterfaceAccount<'info, Mint>,
         wrapped_token_mint_current_authority: &Signer<'info>,
         wrapped_token_program: &Program<'info, Token>,
+        fund_wrap_account: &SystemAccount,
         receipt_token_wrap_account: &InterfaceAccount<TokenAccount>,
         reward_account: &AccountLoader<reward::RewardAccount>,
         fund_wrap_account_reward_account: &AccountLoader<reward::UserRewardAccount>,
@@ -305,7 +306,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         // validate accounts
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            &self.fund_account.load()?.get_wrap_account_address()?,
+            fund_wrap_account,
             reward_account,
             fund_wrap_account_reward_account,
         )?;
@@ -510,7 +511,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     ) -> Result<events::FundManagerUpdatedFund> {
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            &wrapped_token_holder.key(),
+            wrapped_token_holder.as_ref(),
             reward_account,
             wrapped_token_holder_reward_account,
         )?;
@@ -529,6 +530,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_remove_wrapped_token_holder(
         &self,
+        fund_wrap_account: &SystemAccount,
         wrapped_token_holder: &InterfaceAccount<TokenAccount>,
         reward_account: &AccountLoader<'info, reward::RewardAccount>,
         fund_wrap_account_reward_account: &AccountLoader<reward::UserRewardAccount>,
@@ -536,14 +538,14 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     ) -> Result<events::FundManagerUpdatedFund> {
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            &self.fund_account.load()?.get_wrap_account_address()?,
+            fund_wrap_account,
             reward_account,
             fund_wrap_account_reward_account,
         )?;
 
         reward::UserRewardService::validate_user_reward_account(
             self.receipt_token_mint,
-            &wrapped_token_holder.key(),
+            wrapped_token_holder.as_ref(),
             reward_account,
             wrapped_token_holder_reward_account,
         )?;

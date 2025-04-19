@@ -118,6 +118,12 @@ impl RewardPool {
         Ok(&mut self.reward_settlements_1[index])
     }
 
+    pub fn get_unclaimed_reward_amount(&self, reward_id: u16) -> u64 {
+        self.get_reward_settlement(reward_id)
+            .map(|settlement| settlement.get_unclaimed_reward_amount())
+            .unwrap_or_default()
+    }
+
     /// Updates the contribution of the pool into recent value.
     ///
     /// this operation is idempotent

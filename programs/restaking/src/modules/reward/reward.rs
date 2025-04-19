@@ -67,16 +67,33 @@ impl Reward {
             .trim_matches('\0'))
     }
 
-    pub fn set_claimable(&mut self, claimable: bool) -> &mut Self {
-        self.claimable = claimable as u8;
-        self
+    /// Reward token can be changed only if unclaimable
+    pub fn set_reward_token(
+        &mut self,
+        mint: Option<Pubkey>,
+        program: Option<Pubkey>,
+        decimals: Option<u8>,
+    ) -> Result<&mut Self> {
+        require_eq!(self.claimable, 0, ErrorCode::RewardAlreadyClaimableError);
+
+        if let Some(mint) = mint {
+            self.mint = mint;
+        }
+        if let Some(program) = program {
+            self.program = program;
+        }
+        if let Some(decimals) = decimals {
+            self.decimals = decimals;
+        }
+
+        Ok(self)
     }
 
-    /// Reward token can be changed only if unclaimable
-    pub fn set_reward_token(&mut self, mint: Pubkey, program: Pubkey, decimals: u8) -> &mut Self {
-        self.mint = mint;
-        self.program = program;
-        self.decimals = decimals;
-        self
+    pub fn set_claimable(&mut self, claimable: bool) -> Result<&mut Self> {
+        require_eq!(self.claimable, 0, ErrorCode::RewardAlreadyClaimableError);
+
+        self.claimable = claimable as u8;
+
+        Ok(self)
     }
 }

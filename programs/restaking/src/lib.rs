@@ -420,6 +420,7 @@ pub mod restaking {
             &ctx.accounts.wrapped_token_mint,
             &ctx.accounts.admin,
             &ctx.accounts.wrapped_token_program,
+            &ctx.accounts.fund_wrap_account,
             &ctx.accounts.receipt_token_wrap_account,
             &ctx.accounts.reward_account,
             &ctx.accounts.fund_wrap_account_reward_account,
@@ -442,6 +443,24 @@ pub mod restaking {
         .process_add_wrapped_token_holder(
             &ctx.accounts.wrapped_token_holder,
             &ctx.accounts.reward_account,
+            &ctx.accounts.wrapped_token_holder_reward_account,
+        )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_remove_wrapped_token_holder(
+        ctx: Context<FundManagerFundWrappedTokenHolderContext>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_remove_wrapped_token_holder(
+            &ctx.accounts.fund_wrap_account,
+            &ctx.accounts.wrapped_token_holder,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
             &ctx.accounts.wrapped_token_holder_reward_account,
         )?);
 
@@ -549,7 +568,7 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn fund_manager_add_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         name: String,
         description: String,
         mint: Pubkey,
@@ -577,7 +596,7 @@ pub mod restaking {
     }
 
     pub fn fund_manager_update_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         mint: Pubkey,
         new_mint: Option<Pubkey>,
         new_program: Option<Pubkey>,
@@ -603,7 +622,7 @@ pub mod restaking {
     }
 
     pub fn fund_manager_settle_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         reward_token_mint: Pubkey,
         is_bonus_pool: bool,
         amount: u64,

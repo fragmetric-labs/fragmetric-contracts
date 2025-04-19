@@ -34,8 +34,8 @@ pub struct RewardAccount {
 
     rewards_1: [Reward; REWARD_ACCOUNT_REWARDS_MAX_LEN_1],
 
-    base_reward_pool: RewardPool,
-    bonus_reward_pool: RewardPool,
+    pub(super) base_reward_pool: RewardPool,
+    pub(super) bonus_reward_pool: RewardPool,
 
     _reserved2: [u8; 83440],
     _reserved3: [u8; 83440],
@@ -158,23 +158,25 @@ impl RewardAccount {
         self.rewards_1[..self.num_rewards as usize].iter_mut()
     }
 
-    pub(super) fn get_reward_mut(&mut self, id: u16) -> Result<&mut Reward> {
+    pub(super) fn get_reward(&self, reward_id: u16) -> Result<&Reward> {
         self.rewards_1[..self.num_rewards as usize]
-            .get_mut(id as usize)
+            .get(reward_id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
-    pub(super) fn has_reward(&self, reward_token_mint: &Pubkey) -> bool {
-        self.get_rewards_iter()
-            .any(|reward| reward.mint == *reward_token_mint)
-    }
-
-    pub(super) fn get_reward_by_mint(&self, reward_token_mint: &Pubkey) -> Result<&Reward> {
-        self.get_rewards_iter()
-            .find(|reward| reward.mint == *reward_token_mint)
+    pub(super) fn get_reward_mut(&mut self, reward_id: u16) -> Result<&mut Reward> {
+        self.rewards_1[..self.num_rewards as usize]
+            .get_mut(reward_id as usize)
             .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
     }
 
+    pub(super) fn get_reward_id(&self, reward_token_mint: &Pubkey) -> Result<u16> {
+        self.get_rewards_iter()
+            .find_map(|reward| (reward.mint == *reward_token_mint).then_some(reward.id))
+            .ok_or_else(|| error!(ErrorCode::RewardNotFoundError))
+    }
+
+    /// returns reward id
     pub(super) fn add_reward(
         &mut self,
         name: String,
@@ -183,7 +185,7 @@ impl RewardAccount {
         program: Pubkey,
         decimals: u8,
         claimable: bool,
-    ) -> Result<()> {
+    ) -> Result<u16> {
         if self
             .get_rewards_iter()
             .any(|reward| reward.get_name() == Ok(name.trim_matches('\0')) || reward.mint == mint)
@@ -197,8 +199,9 @@ impl RewardAccount {
             ErrorCode::RewardExceededMaxRewardsError,
         );
 
-        self.rewards_1[self.num_rewards as usize].initialize(
-            self.num_rewards,
+        let reward_id = self.num_rewards;
+        self.rewards_1[reward_id as usize].initialize(
+            reward_id,
             name,
             description,
             mint,
@@ -208,12 +211,43 @@ impl RewardAccount {
         )?;
         self.num_rewards += 1;
 
+        Ok(reward_id)
+    }
+
+    pub(super) fn update_reward(
+        &mut self,
+        reward_id: u16,
+        new_mint: Option<Pubkey>,
+        new_program: Option<Pubkey>,
+        new_decimals: Option<u8>,
+        claimable: bool,
+    ) -> Result<()> {
+        // New mint should not be duplicated with other reward mints.
+        if new_mint.as_ref().is_some_and(|new_mint| {
+            self.get_rewards_iter()
+                .any(|reward| reward.id != reward_id && reward.mint == *new_mint)
+        }) {
+            err!(ErrorCode::RewardAlreadyExistingRewardError)?
+        }
+
+        self.get_reward_mut(reward_id)?
+            .set_reward_token(new_mint, new_program, new_decimals)?
+            .set_claimable(claimable)?;
+
         Ok(())
     }
 
-    #[inline(always)]
-    pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
-        [&self.base_reward_pool, &self.bonus_reward_pool].into_iter()
+    pub(super) fn settle_reward(
+        &mut self,
+        reward_id: u16,
+        is_bonus_pool: bool,
+        amount: u64,
+        current_slot: u64,
+    ) -> Result<()> {
+        self.get_reward_pool_mut(is_bonus_pool)
+            .settle_reward(reward_id, amount, current_slot)?;
+
+        Ok(())
     }
 
     #[inline(always)]
@@ -221,36 +255,37 @@ impl RewardAccount {
         [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
     }
 
-    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> Result<&RewardPool> {
+    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> &RewardPool {
         if !is_bonus_pool {
-            Ok(&self.base_reward_pool)
+            &self.base_reward_pool
         } else {
-            Ok(&self.bonus_reward_pool)
+            &self.bonus_reward_pool
         }
     }
 
-    pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> Result<&mut RewardPool> {
+    pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut RewardPool {
         if !is_bonus_pool {
-            Ok(&mut self.base_reward_pool)
+            &mut self.base_reward_pool
         } else {
-            Ok(&mut self.bonus_reward_pool)
+            &mut self.bonus_reward_pool
         }
     }
 
-    pub(super) fn get_total_reward_unclaimed_amount(&self, reward_id: u16) -> u64 {
-        self.get_reward_pools_iter().fold(0, |sum, pool| {
-            sum + pool
-                .get_reward_settlement(reward_id)
-                .map(|settlement| settlement.settled_amount - settlement.claimed_amount)
-                .unwrap_or_default()
-        })
+    pub(super) fn get_unclaimed_reward_amount(&self, reward_id: u16) -> u64 {
+        let base_pool_unclaimed_amount =
+            self.base_reward_pool.get_unclaimed_reward_amount(reward_id);
+        let bonus_pool_unclaimed_amount = self
+            .bonus_reward_pool
+            .get_unclaimed_reward_amount(reward_id);
+
+        base_pool_unclaimed_amount + bonus_pool_unclaimed_amount
     }
 
+    /// Updates the contribution of the pools and clear stale settlement blocks.
+    ///
     /// this operation is idempotent
-    /// update contribution and clear stale blocks
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) {
-        self.get_reward_pools_iter_mut().for_each(|pool| {
-            pool.update_reward_pool(current_slot);
-        });
+        self.base_reward_pool.update_reward_pool(current_slot);
+        self.bonus_reward_pool.update_reward_pool(current_slot);
     }
 }

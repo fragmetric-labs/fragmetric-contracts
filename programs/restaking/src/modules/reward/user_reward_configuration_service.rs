@@ -161,10 +161,10 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     ) -> Result<events::UserDelegatedRewardAccount> {
         let user_reward_account =
             AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
-        let mut user_reward_account = user_reward_account.load_mut()?;
 
-        user_reward_account.validate_authority(authority.key)?;
-        user_reward_account.set_delegate(Some(delegate));
+        user_reward_account
+            .load_mut()?
+            .set_delegate(authority.key, Some(delegate))?;
 
         Ok(events::UserDelegatedRewardAccount {
             user_reward_account: self.user_reward_account.key(),

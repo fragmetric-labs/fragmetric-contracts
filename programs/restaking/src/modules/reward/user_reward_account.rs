@@ -27,8 +27,8 @@ pub struct UserRewardAccount {
     _padding: u8,
     _reserved: [u8; 11],
 
-    base_user_reward_pool: UserRewardPool,
-    bonus_user_reward_pool: UserRewardPool,
+    pub(super) base_user_reward_pool: UserRewardPool,
+    pub(super) bonus_user_reward_pool: UserRewardPool,
 
     _reserved2: [u8; 1040],
     delegate: Pubkey,
@@ -121,7 +121,7 @@ impl UserRewardAccount {
     }
 
     /// authority = user or delegate
-    pub(super) fn validate_authority(&self, authority: &Pubkey) -> Result<()> {
+    fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
         if self.user != *authority && self.delegate != *authority {
             err!(ErrorCode::RewardInvalidUserRewardAccountAuthorityError)?;
         }
@@ -129,8 +129,15 @@ impl UserRewardAccount {
         Ok(())
     }
 
-    pub(super) fn set_delegate(&mut self, delegate: Option<Pubkey>) {
+    pub(super) fn set_delegate(
+        &mut self,
+        authority: &Pubkey,
+        delegate: Option<Pubkey>,
+    ) -> Result<()> {
+        self.assert_authority_is_user_or_delegate(authority)?;
         self.delegate = delegate.unwrap_or_default();
+
+        Ok(())
     }
 
     /// Must backfill not existing pools first
@@ -146,14 +153,11 @@ impl UserRewardAccount {
     }
 
     /// Must backfill not existing pools first
-    pub(super) fn get_user_reward_pool_mut(
-        &mut self,
-        is_bonus_pool: bool,
-    ) -> Result<&mut UserRewardPool> {
+    pub(super) fn get_user_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut UserRewardPool {
         if !is_bonus_pool {
-            Ok(&mut self.base_user_reward_pool)
+            &mut self.base_user_reward_pool
         } else {
-            Ok(&mut self.bonus_user_reward_pool)
+            &mut self.bonus_user_reward_pool
         }
     }
 
@@ -163,7 +167,7 @@ impl UserRewardAccount {
     ) -> Result<()> {
         // base user reward pool was previously user_reward_pools[0]
         if self.num_user_reward_pools == 0 {
-            let base_reward_pool = reward_account.get_reward_pool(false)?;
+            let base_reward_pool = reward_account.get_reward_pool(false);
             self.base_user_reward_pool
                 .initialize(BASE_REWARD_POOL_ID, base_reward_pool.initial_slot)?;
             self.num_user_reward_pools = 1;
@@ -171,7 +175,7 @@ impl UserRewardAccount {
 
         // bonus user reward pool was previously user_reward_pools[1]
         if self.num_user_reward_pools == 1 {
-            let bonus_reward_pool = reward_account.get_reward_pool(true)?;
+            let bonus_reward_pool = reward_account.get_reward_pool(true);
             self.bonus_user_reward_pool
                 .initialize(BONUS_REWARD_POOL_ID, bonus_reward_pool.initial_slot)?;
             self.num_user_reward_pools = 2;
@@ -194,5 +198,30 @@ impl UserRewardAccount {
             .try_for_each(|(user_reward_pool, reward_pool)| {
                 user_reward_pool.update_user_reward_pool(reward_pool, current_slot)
             })
+    }
+
+    /// returns [claimed amount, total claimed amount]
+    pub(super) fn claim_reward(
+        &mut self,
+        reward_account: &mut RewardAccount,
+        authority: &Pubkey,
+        reward_id: u16,
+        is_bonus_pool: bool,
+        amount: Option<u64>,
+        current_slot: u64,
+    ) -> Result<(u64, u64)> {
+        self.backfill_not_existing_pools(reward_account)?;
+
+        self.assert_authority_is_user_or_delegate(authority)?;
+        require_eq!(
+            reward_account.get_reward(reward_id)?.claimable,
+            1,
+            ErrorCode::RewardNotClaimableError,
+        );
+
+        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool);
+        let user_reward_pool = self.get_user_reward_pool_mut(is_bonus_pool);
+
+        user_reward_pool.claim_reward(reward_pool, reward_id, current_slot, amount)
     }
 }
