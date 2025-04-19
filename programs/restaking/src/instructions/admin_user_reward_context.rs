@@ -47,3 +47,44 @@ pub struct AdminUserRewardAccountInitOrUpdateContext<'info> {
 
     pub system_program: Program<'info, System>,
 }
+
+/// TODO remove this ix after migration (v0.6.0)
+#[derive(Accounts)]
+pub struct AdminDelegateFundWrapAccountRewardAccount<'info> {
+    #[account(address = ADMIN_PUBKEY)]
+    pub admin: Signer<'info>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        seeds = [crate::modules::fund::FundAccount::WRAP_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_wrap_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_wrap_account,
+        associated_token::token_program = Token2022::id(),
+    )]
+    pub receipt_token_wrap_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), fund_wrap_account.key().as_ref()],
+        bump = fund_wrap_account_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_wrap_account_reward_account.load()?.user == fund_wrap_account.key() @ error::ErrorCode::ConstraintHasOne,
+        constraint = fund_wrap_account_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_wrap_account_reward_account: AccountLoader<'info, UserRewardAccount>,
+}

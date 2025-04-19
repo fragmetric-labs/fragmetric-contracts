@@ -147,6 +147,11 @@ impl UserRewardAccount {
         Ok(())
     }
 
+    /// TODO remove this method after migration (v0.6.0)
+    pub fn set_delegate_unchecked(&mut self, delegate: Pubkey) {
+        self.delegate = delegate;
+    }
+
     #[inline(always)]
     pub(super) fn get_user_reward_pools_iter_mut(
         &mut self,
