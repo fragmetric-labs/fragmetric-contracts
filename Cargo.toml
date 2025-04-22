@@ -24,8 +24,8 @@ readme = "README.md"
 edition = "2021"
 
 [workspace.dependencies]
-anchor-lang = { version = "0.31.0", features = ["event-cpi"] }
-anchor-spl = { version = "0.31.0", features = ["memo"] }
+anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
+anchor-spl = { version = "0.31.1", features = ["memo"] }
 bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
 jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "9efa55c30b3427d94975b22dcd27a82181c776ba" }
 jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "9efa55c30b3427d94975b22dcd27a82181c776ba" }

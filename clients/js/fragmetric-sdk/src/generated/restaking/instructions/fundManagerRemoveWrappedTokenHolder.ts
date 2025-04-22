@@ -39,16 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_ADD_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR =
-  new Uint8Array([168, 128, 19, 89, 96, 185, 8, 38]);
+export const FUND_MANAGER_REMOVE_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR =
+  new Uint8Array([135, 67, 183, 108, 160, 154, 93, 50]);
 
-export function getFundManagerAddWrappedTokenHolderDiscriminatorBytes() {
+export function getFundManagerRemoveWrappedTokenHolderDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_ADD_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR
+    FUND_MANAGER_REMOVE_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR
   );
 }
 
-export type FundManagerAddWrappedTokenHolderInstruction<
+export type FundManagerRemoveWrappedTokenHolderInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -110,39 +110,39 @@ export type FundManagerAddWrappedTokenHolderInstruction<
     ]
   >;
 
-export type FundManagerAddWrappedTokenHolderInstructionData = {
+export type FundManagerRemoveWrappedTokenHolderInstructionData = {
   discriminator: ReadonlyUint8Array;
 };
 
-export type FundManagerAddWrappedTokenHolderInstructionDataArgs = {};
+export type FundManagerRemoveWrappedTokenHolderInstructionDataArgs = {};
 
-export function getFundManagerAddWrappedTokenHolderInstructionDataEncoder(): Encoder<FundManagerAddWrappedTokenHolderInstructionDataArgs> {
+export function getFundManagerRemoveWrappedTokenHolderInstructionDataEncoder(): Encoder<FundManagerRemoveWrappedTokenHolderInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
-      discriminator: FUND_MANAGER_ADD_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR,
+      discriminator: FUND_MANAGER_REMOVE_WRAPPED_TOKEN_HOLDER_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerAddWrappedTokenHolderInstructionDataDecoder(): Decoder<FundManagerAddWrappedTokenHolderInstructionData> {
+export function getFundManagerRemoveWrappedTokenHolderInstructionDataDecoder(): Decoder<FundManagerRemoveWrappedTokenHolderInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getFundManagerAddWrappedTokenHolderInstructionDataCodec(): Codec<
-  FundManagerAddWrappedTokenHolderInstructionDataArgs,
-  FundManagerAddWrappedTokenHolderInstructionData
+export function getFundManagerRemoveWrappedTokenHolderInstructionDataCodec(): Codec<
+  FundManagerRemoveWrappedTokenHolderInstructionDataArgs,
+  FundManagerRemoveWrappedTokenHolderInstructionData
 > {
   return combineCodec(
-    getFundManagerAddWrappedTokenHolderInstructionDataEncoder(),
-    getFundManagerAddWrappedTokenHolderInstructionDataDecoder()
+    getFundManagerRemoveWrappedTokenHolderInstructionDataEncoder(),
+    getFundManagerRemoveWrappedTokenHolderInstructionDataDecoder()
   );
 }
 
-export type FundManagerAddWrappedTokenHolderAsyncInput<
+export type FundManagerRemoveWrappedTokenHolderAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountWrappedTokenMint extends string = string,
@@ -168,7 +168,7 @@ export type FundManagerAddWrappedTokenHolderAsyncInput<
   program: Address<TAccountProgram>;
 };
 
-export async function getFundManagerAddWrappedTokenHolderInstructionAsync<
+export async function getFundManagerRemoveWrappedTokenHolderInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountWrappedTokenMint extends string,
@@ -182,7 +182,7 @@ export async function getFundManagerAddWrappedTokenHolderInstructionAsync<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerAddWrappedTokenHolderAsyncInput<
+  input: FundManagerRemoveWrappedTokenHolderAsyncInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountWrappedTokenMint,
@@ -197,7 +197,7 @@ export async function getFundManagerAddWrappedTokenHolderInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerAddWrappedTokenHolderInstruction<
+  FundManagerRemoveWrappedTokenHolderInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -360,10 +360,10 @@ export async function getFundManagerAddWrappedTokenHolderInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerAddWrappedTokenHolderInstructionDataEncoder().encode(
+    data: getFundManagerRemoveWrappedTokenHolderInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerAddWrappedTokenHolderInstruction<
+  } as FundManagerRemoveWrappedTokenHolderInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -381,7 +381,7 @@ export async function getFundManagerAddWrappedTokenHolderInstructionAsync<
   return instruction;
 }
 
-export type FundManagerAddWrappedTokenHolderInput<
+export type FundManagerRemoveWrappedTokenHolderInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountWrappedTokenMint extends string = string,
@@ -407,7 +407,7 @@ export type FundManagerAddWrappedTokenHolderInput<
   program: Address<TAccountProgram>;
 };
 
-export function getFundManagerAddWrappedTokenHolderInstruction<
+export function getFundManagerRemoveWrappedTokenHolderInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountWrappedTokenMint extends string,
@@ -421,7 +421,7 @@ export function getFundManagerAddWrappedTokenHolderInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerAddWrappedTokenHolderInput<
+  input: FundManagerRemoveWrappedTokenHolderInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountWrappedTokenMint,
@@ -435,7 +435,7 @@ export function getFundManagerAddWrappedTokenHolderInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerAddWrappedTokenHolderInstruction<
+): FundManagerRemoveWrappedTokenHolderInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountReceiptTokenMint,
@@ -511,10 +511,10 @@ export function getFundManagerAddWrappedTokenHolderInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerAddWrappedTokenHolderInstructionDataEncoder().encode(
+    data: getFundManagerRemoveWrappedTokenHolderInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerAddWrappedTokenHolderInstruction<
+  } as FundManagerRemoveWrappedTokenHolderInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -532,7 +532,7 @@ export function getFundManagerAddWrappedTokenHolderInstruction<
   return instruction;
 }
 
-export type ParsedFundManagerAddWrappedTokenHolderInstruction<
+export type ParsedFundManagerRemoveWrappedTokenHolderInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -550,17 +550,20 @@ export type ParsedFundManagerAddWrappedTokenHolderInstruction<
     eventAuthority: TAccountMetas[9];
     program: TAccountMetas[10];
   };
-  data: FundManagerAddWrappedTokenHolderInstructionData;
+  data: FundManagerRemoveWrappedTokenHolderInstructionData;
 };
 
-export function parseFundManagerAddWrappedTokenHolderInstruction<
+export function parseFundManagerRemoveWrappedTokenHolderInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerAddWrappedTokenHolderInstruction<TProgram, TAccountMetas> {
+): ParsedFundManagerRemoveWrappedTokenHolderInstruction<
+  TProgram,
+  TAccountMetas
+> {
   if (instruction.accounts.length < 11) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -586,7 +589,7 @@ export function parseFundManagerAddWrappedTokenHolderInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerAddWrappedTokenHolderInstructionDataDecoder().decode(
+    data: getFundManagerRemoveWrappedTokenHolderInstructionDataDecoder().decode(
       instruction.data
     ),
   };

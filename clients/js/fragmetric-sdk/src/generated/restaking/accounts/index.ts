@@ -22,6 +22,7 @@ export * from './userCanceledWithdrawalRequestFromFund';
 export * from './userClaimedReward';
 export * from './userCreatedOrUpdatedFundAccount';
 export * from './userCreatedOrUpdatedRewardAccount';
+export * from './userDelegatedRewardAccount';
 export * from './userDepositedToFund';
 export * from './userFundAccount';
 export * from './userRequestedWithdrawalFromFund';

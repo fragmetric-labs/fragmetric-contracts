@@ -7,6 +7,7 @@
  */
 
 export * from './adminCreateUserRewardAccountIdempotent';
+export * from './adminDelegateFundWrapAccountRewardAccount';
 export * from './adminInitializeExtraAccountMetaList';
 export * from './adminInitializeFundAccount';
 export * from './adminInitializeNormalizedTokenPoolAccount';
@@ -27,6 +28,7 @@ export * from './fundManagerInitializeFundJitoRestakingVault';
 export * from './fundManagerInitializeFundJitoRestakingVaultDelegation';
 export * from './fundManagerInitializeFundNormalizedToken';
 export * from './fundManagerInitializeFundWrappedToken';
+export * from './fundManagerRemoveWrappedTokenHolder';
 export * from './fundManagerSettleReward';
 export * from './fundManagerUpdateFundStrategy';
 export * from './fundManagerUpdateRestakingVaultDelegationStrategy';
@@ -48,6 +50,7 @@ export * from './userCancelWithdrawalRequest';
 export * from './userClaimReward';
 export * from './userCreateFundAccountIdempotent';
 export * from './userCreateRewardAccountIdempotent';
+export * from './userDelegateRewardAccount';
 export * from './userDepositSol';
 export * from './userDepositSupportedToken';
 export * from './userRequestWithdrawal';

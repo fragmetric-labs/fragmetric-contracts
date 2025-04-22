@@ -194,6 +194,8 @@ export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_WRAPPED_TOKEN_HOLDERS_ERROR = 0x
 export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_ALREADY_REGISTERED_ERROR = 0x17c8; // 6088
 /** FundWrappedTokenHolderNotFoundError: fund: wrapped token holder not found */
 export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_NOT_FOUND_ERROR = 0x17c9; // 6089
+/** RewardInvalidUserRewardAccountAuthorityError: reward: user reward account authority must be either user or delegate */
+export const RESTAKING_ERROR__REWARD_INVALID_USER_REWARD_ACCOUNT_AUTHORITY_ERROR = 0x17ca; // 6090
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -272,6 +274,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_INVALID_TOTAL_USER_SETTLED_AMOUNT_EXCEPTION
   | typeof RESTAKING_ERROR__REWARD_INVALID_TOTAL_USER_SETTLED_CONTRIBUTION_EXCEPTION
   | typeof RESTAKING_ERROR__REWARD_INVALID_TRANSFER_ARGS_EXCEPTION
+  | typeof RESTAKING_ERROR__REWARD_INVALID_USER_REWARD_ACCOUNT_AUTHORITY_ERROR
   | typeof RESTAKING_ERROR__REWARD_NOT_CLAIMABLE_ERROR
   | typeof RESTAKING_ERROR__REWARD_NOT_ENOUGH_REWARDS_TO_CLAIM_ERROR
   | typeof RESTAKING_ERROR__REWARD_NOT_FOUND_ERROR
@@ -366,6 +369,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_INVALID_TOTAL_USER_SETTLED_AMOUNT_EXCEPTION]: `reward: sum of user settled amount cannot exceed total amount`,
     [RESTAKING_ERROR__REWARD_INVALID_TOTAL_USER_SETTLED_CONTRIBUTION_EXCEPTION]: `reward: sum of user settled contribution cannot exceed total contribution`,
     [RESTAKING_ERROR__REWARD_INVALID_TRANSFER_ARGS_EXCEPTION]: `reward: invalid token transfer args`,
+    [RESTAKING_ERROR__REWARD_INVALID_USER_REWARD_ACCOUNT_AUTHORITY_ERROR]: `reward: user reward account authority must be either user or delegate`,
     [RESTAKING_ERROR__REWARD_NOT_CLAIMABLE_ERROR]: `reward: reward is not claimable`,
     [RESTAKING_ERROR__REWARD_NOT_ENOUGH_REWARDS_TO_CLAIM_ERROR]: `reward: not enough rewards to claim`,
     [RESTAKING_ERROR__REWARD_NOT_FOUND_ERROR]: `reward: reward not found`,

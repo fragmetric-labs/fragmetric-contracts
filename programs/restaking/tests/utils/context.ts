@@ -136,6 +136,7 @@ export async function createTestSuiteContext(config?: {
       ],
       executionHooks: executionHooks,
     },
+    // debug: true,
   });
 
   return { validator, sdk, restaking, feePayer };
