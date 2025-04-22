@@ -61,10 +61,13 @@ export class SVMValidator extends TestValidator<'svm'> {
         rpcSubscriptionsURL: string;
       }>(async (resolve, reject) => {
         const ledgerPath = path.join(
-          __dirname,
-          'test-ledgers',
-          instanceNo.toString()
+          os.tmpdir(),
+          '@fragmetric-labs',
+          'testutil',
+          'ledgers',
+          instanceNo.toString(),
         );
+        fs.mkdirSync(ledgerPath, { recursive: true });
         const cmd = 'solana-test-validator';
         const argsBuilder = [
           ['--ledger', ledgerPath],
