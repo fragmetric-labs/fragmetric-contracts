@@ -8,7 +8,6 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[event_cpi]
 #[derive(Accounts)]
 pub struct OperatorRewardContext<'info> {
-    #[account(mut)]
     pub operator: Signer<'info>,
 
     pub system_program: Program<'info, System>,

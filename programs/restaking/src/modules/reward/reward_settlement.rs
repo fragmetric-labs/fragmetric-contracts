@@ -134,6 +134,10 @@ impl RewardSettlement {
         Ok(())
     }
 
+    pub fn get_unclaimed_reward_amount(&self) -> u64 {
+        self.settled_amount - self.claimed_amount
+    }
+
     pub fn claim_user_reward(&mut self, amount: u64, current_slot: u64) -> Result<()> {
         require_gte!(current_slot, self.claimed_amount_updated_slot);
         require_gte!(self.settled_amount, self.claimed_amount + amount);

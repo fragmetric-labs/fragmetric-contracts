@@ -204,15 +204,47 @@ describe("reward", async function () {
         await restaking.runFundManagerUpdateReward({source: restaking.wallet, rewardName: "SWTCH", claimable: true, transferAmount: new BN(5)});
         await restaking.sleep(1);
 
-        const res = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
-        expect(res.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
-        expect(res.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(2);
+        const res = await restaking.runUserClaimReward(userA.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH", amount: new BN(1)});
+        expect(res.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(1);
+        expect(res.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(1);
+        expect(res.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res.destinationRewardTokenAccount.address.toString());
+        expect(res.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
+        expect(res.destinationRewardTokenAccount.amount.toString()).eq("1");
 
         await restaking.tryAirdropRewardToken(restaking.wallet.publicKey, "SWTCH", new BN(5));
         await restaking.runFundManagerSettleReward({source: restaking.wallet, poolName: "base", rewardName: "SWTCH", amount: new BN(5)});
 
-        const res1 = await restaking.runUserClaimReward(userA, {poolName: "base", rewardName: "SWTCH"});
-        expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(2);
+        const res1 = await restaking.runUserClaimReward(userA.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(3);
         expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+        expect(res1.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res1.destinationRewardTokenAccount.address.toString());
+        expect(res1.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
+        expect(res1.destinationRewardTokenAccount.amount.toString()).eq("4");
+    });
+
+    step("admin can create user_reward_account for the arbitrary user", async () => {
+        let user = web3.PublicKey.unique();
+        const res1 = await restaking.runAdminCreateUserRewardAccountIdempotent(user);
+        expect(res1.fragSOLUserReward.delegate.toString()).eq(restaking.keychain.getPublicKey("FUND_MANAGER").toString());
+    });
+
+    step("user or delegate can delegate user_reward_account", async () => {
+        expect(restaking.runUserDelegateRewardAccount(userB.publicKey, userA.publicKey, userA)).rejectedWith("RewardInvalidUserRewardAccountAuthorityError");
+
+        const dummy = web3.Keypair.generate();
+        const res1 = await restaking.runUserDelegateRewardAccount(userB.publicKey, dummy.publicKey, userB);
+        expect(res1.userFragSOLReward.delegate.toString()).eq(dummy.publicKey.toString());
+
+        const res2 = await restaking.runUserDelegateRewardAccount(userB.publicKey, userA.publicKey, dummy);
+        expect(res2.userFragSOLReward.delegate.toString()).eq(userA.publicKey.toString());
+    })
+
+    step("delegate can claim rewards", async () => {
+        const res1 = await restaking.runUserClaimReward(userB.publicKey, userA.publicKey, userA, {poolName: "base", rewardName: "SWTCH"});
+        expect(res1.event.userClaimedReward.claimedRewardTokenAmount.toNumber()).eq(4);
+        expect(res1.event.userClaimedReward.totalClaimedRewardTokenAmount.toNumber()).eq(4);
+        expect(res1.event.userClaimedReward.destinationRewardTokenAccount.toString()).eq(res1.destinationRewardTokenAccount.address.toString());
+        expect(res1.destinationRewardTokenAccount.owner.toString()).eq(userA.publicKey.toString());
+        expect(res1.destinationRewardTokenAccount.amount.toString()).eq("8");
     })
 });

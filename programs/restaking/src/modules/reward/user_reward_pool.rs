@@ -17,9 +17,8 @@ pub(super) struct UserRewardPool {
     pub updated_slot: u64,
     pub reward_pool_id: u8,
     num_reward_settlements: u8,
-    _padding2: [u8; 6],
 
-    _reserved: [u8; 64],
+    _reserved: [u8; 70],
 
     reward_settlements_1: [UserRewardSettlement; USER_REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1],
 }
@@ -36,11 +35,11 @@ pub(super) struct UserRewardPool {
 // And add new field user_reward_pools_1_ext_v4: [UserRewardPoolExtV4; USER_REWARD_ACCOUNT_REWARD_POOLS_MAX_LEN_1] to user reward account.
 
 impl UserRewardPool {
-    pub fn initialize(&mut self, reward_pool_id: u8, reward_pool_initial_slot: u64) -> Result<()> {
+    pub fn initialize(&mut self, reward_pool: &RewardPool) -> Result<()> {
         *self = Zeroable::zeroed();
 
-        self.reward_pool_id = reward_pool_id;
-        self.updated_slot = reward_pool_initial_slot;
+        self.reward_pool_id = reward_pool.id;
+        self.updated_slot = reward_pool.initial_slot;
 
         Ok(())
     }

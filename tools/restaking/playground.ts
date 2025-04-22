@@ -3294,21 +3294,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         return {event, error, fragSOLReward, rewardPool, reward};
     }
 
-    public async runUserClaimReward(user: web3.Keypair, args: {
+    public async runUserClaimReward(user: web3.PublicKey, recipient: web3.PublicKey, claimAuthority: web3.Keypair, args: {
         poolName: (typeof this.rewardPoolsMetadata)[number]["name"],
         rewardName: (typeof this.distributingRewardsMetadata)[number]["name"],
+        amount?: BN,
     }) {
-        const { poolName, rewardName } = args;
+        const { poolName, rewardName, amount = null } = args;
         const rewardMetadata = this.distributingRewardsMetadata.find(r => r.name == rewardName);
+        const isBonusPool = poolName == "base" ? false : true;
 
         let fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        let rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
-        const isBonusPool = poolName == "base" ? false : true;
         let reward = fragSOLReward.rewards1.find((r) => this.binToString(r.name) == rewardName);
 
-        const destinationRewardTokenAccount = spl.getAssociatedTokenAddressSync(
+        const destinationRewardTokenAccountAddress = spl.getAssociatedTokenAddressSync(
             rewardMetadata.mint,
-            user.publicKey,
+            recipient,
             false,
             rewardMetadata.program,
         );
@@ -3317,32 +3317,54 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             instructions: [
                 spl.createAssociatedTokenAccountIdempotentInstruction(
                     this.wallet.publicKey,
-                    destinationRewardTokenAccount,
-                    user.publicKey,
+                    destinationRewardTokenAccountAddress,
+                    recipient,
                     rewardMetadata.mint,
                     rewardMetadata.program,
                 ),
-                this.methods.userClaimReward(isBonusPool, null)
+                this.methods.userClaimReward(isBonusPool, amount)
                     .accountsPartial({
-                        user: user.publicKey,
+                        claimAuthority: claimAuthority.publicKey,
+                        user,
                         receiptTokenMint: this.knownAddress.fragSOLTokenMint,
                         rewardTokenMint: rewardMetadata.mint,
                         rewardTokenProgram: rewardMetadata.program,
-                        destinationRewardTokenAccount,
+                        destinationRewardTokenAccount: destinationRewardTokenAccountAddress,
                     })
                     .instruction(),
             ],
-            signers: [user],
+            signers: [claimAuthority],
             events: ["userClaimedReward"],
         });
 
         logger.notice(`user claimed fragSOL reward from pool=${isBonusPool}/${poolName}, rewardId=${reward.id}/${rewardName}, amount=${event.userClaimedReward.claimedRewardTokenAmount.toString()}`);
         fragSOLReward = await this.account.rewardAccount.fetch(this.knownAddress.fragSOLReward);
-        rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
-        const userFragSOLReward = await this.getUserFragSOLRewardAccount(user.publicKey);
+        const rewardPool = poolName == "base" ? fragSOLReward.baseRewardPool : fragSOLReward.bonusRewardPool;
+        const userFragSOLReward = await this.getUserFragSOLRewardAccount(user);
         const userRewardPool = poolName == "base" ? userFragSOLReward.baseUserRewardPool : userFragSOLReward.bonusUserRewardPool;
+        const destinationRewardTokenAccount = await spl.getAccount(this.connection, destinationRewardTokenAccountAddress, 'confirmed', rewardMetadata.program);
 
-        return {event, error, fragSOLReward, rewardPool, userFragSOLReward, userRewardPool};
+        return {event, error, fragSOLReward, rewardPool, userFragSOLReward, userRewardPool, destinationRewardTokenAccount};
+    }
+
+    public async runUserDelegateRewardAccount(user: web3.PublicKey, newDelegate: web3.PublicKey, delegateAuthority: web3.Keypair) {
+        const {event, error} = await this.run({
+            instructions: [
+                this.program.methods.userDelegateRewardAccount(newDelegate)
+                    .accountsPartial({
+                        delegateAuthority: delegateAuthority.publicKey,
+                        user,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    }).instruction(),
+            ],
+            signers: [delegateAuthority],
+            events: ["userDelegatedRewardAccount"],
+        });
+
+        logger.notice(`user delegated fragSOL reward account, delegate=${newDelegate}`);
+        const userFragSOLReward = await this.getUserFragSOLRewardAccount(user);
+
+        return {event, error, userFragSOLReward};
     }
 
     private async getInstructionsToUpdateUserFragSOLFundAndRewardAccounts(user: web3.Keypair) {
@@ -3426,6 +3448,42 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
             ],
             signers: [user],
         });
+    }
+
+    public async runAdminCreateUserRewardAccountIdempotent(user: web3.PublicKey) {
+        let associatedTokenAddress = spl.getAssociatedTokenAddressSync(
+            this.knownAddress.fragSOLTokenMint,
+            user,
+            true,
+            spl.TOKEN_2022_PROGRAM_ID,
+        );
+
+        const {event, error} = await this.run({
+            instructions: [
+                spl.createAssociatedTokenAccountIdempotentInstruction(
+                    this.wallet.publicKey,
+                    associatedTokenAddress,
+                    user,
+                    this.knownAddress.fragSOLTokenMint,
+                    spl.TOKEN_2022_PROGRAM_ID,
+                ),
+                this.program.methods.adminCreateUserRewardAccountIdempotent(null)
+                    .accountsPartial({
+                        payer: this.wallet.publicKey,
+                        user,
+                        receiptTokenMint: this.knownAddress.fragSOLTokenMint,
+                    }).instruction(),
+            ],
+            signerNames: ["ADMIN"],
+            events: ["userCreatedOrUpdatedRewardAccount"],
+        });
+        const fragSOLUserReward = await this.getUserFragSOLRewardAccount(user);
+
+        return {
+            event,
+            error,
+            fragSOLUserReward,
+        };
     }
 
     public async runUserDepositSOL(user: web3.Keypair, amount: BN, depositMetadata: IdlTypes<Restaking>["depositMetadata"]|null = null, depositMetadataSigningKeypair: web3.Keypair|null = null) {
@@ -4139,7 +4197,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     })
                     .instruction(),
             ],
-            signers: [user],
             events: ['userUpdatedRewardPool'],
         });
 

@@ -13,23 +13,16 @@ pub struct UserRewardService<'a, 'info> {
     current_slot: u64,
 }
 
-impl Drop for UserRewardService<'_, '_> {
-    fn drop(&mut self) {
-        self.reward_account.exit(&crate::ID).unwrap();
-        self.user_reward_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> UserRewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user: &Signer,
+        user: &AccountInfo,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
         user_reward_account: &'a AccountLoader<'info, UserRewardAccount>,
     ) -> Result<Self> {
         Self::validate_user_reward_account(
             receipt_token_mint,
-            user.key,
+            user,
             reward_account,
             user_reward_account,
         )?;
@@ -44,9 +37,9 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
     }
 
     /// Validate the provided accounts have proper relationships.
-    pub(crate) fn validate_user_reward_account(
+    pub fn validate_user_reward_account(
         receipt_token_mint: &InterfaceAccount<Mint>,
-        user: &Pubkey,
+        user: &AccountInfo,
         reward_account: &AccountLoader<RewardAccount>,
         user_reward_account: &AccountLoader<UserRewardAccount>,
     ) -> Result<()> {
@@ -61,7 +54,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             user_reward_account.receipt_token_mint,
             receipt_token_mint.key()
         );
-        require_keys_eq!(user_reward_account.user, *user);
+        require_keys_eq!(user_reward_account.user, user.key());
         require!(
             user_reward_account.is_latest_version(),
             ErrorCode::InvalidAccountDataVersionError,
@@ -88,29 +81,22 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
+        authority: &Signer<'info>,
         is_bonus_pool: bool,
         amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
-        let reward_token_mint_key = reward_token_mint.key();
         let mut reward_account = self.reward_account.load_mut()?;
         let mut user_reward_account = self.user_reward_account.load_mut()?;
+        let reward_id = reward_account.get_reward_id(&reward_token_mint.key())?;
 
-        let reward = reward_account.get_reward_by_mint(&reward_token_mint_key)?;
-        let reward_id = reward.id;
-
-        require_keys_eq!(
-            reward_token_reserve_account.key(),
-            reward_account.find_reward_token_reserve_account_address(&reward_token_mint_key)?,
-        );
-
-        require_eq!(reward.claimable, 1, ErrorCode::RewardNotClaimableError);
-
-        user_reward_account.backfill_not_existing_pools(&reward_account)?;
-
-        let reward_pool = reward_account.get_reward_pool_mut(is_bonus_pool)?;
-        let user_reward_pool = user_reward_account.get_user_reward_pool_mut(is_bonus_pool)?;
-        let (claimed_amount, total_claimed_amount) =
-            user_reward_pool.claim_reward(reward_pool, reward_id, self.current_slot, amount)?;
+        let (claimed_amount, total_claimed_amount) = user_reward_account.claim_reward(
+            &mut *reward_account,
+            authority.key,
+            reward_id,
+            is_bonus_pool,
+            amount,
+            self.current_slot,
+        )?;
 
         anchor_spl::token_interface::transfer_checked(
             CpiContext::new_with_signer(
@@ -130,6 +116,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         Ok(events::UserClaimedReward {
             receipt_token_mint: self.receipt_token_mint.key(),
             reward_token_mint: reward_token_mint.key(),
+            destination_reward_token_account: destination_reward_token_account.key(),
             updated_reward_account: self.reward_account.key(),
             updated_user_reward_account: self.user_reward_account.key(),
             claimed_reward_token_amount: claimed_amount,

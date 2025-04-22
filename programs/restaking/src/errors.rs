@@ -278,4 +278,7 @@ pub enum ErrorCode {
 
     #[msg("fund: wrapped token holder not found")]
     FundWrappedTokenHolderNotFoundError,
+
+    #[msg("reward: user reward account authority must be either user or delegate")]
+    RewardInvalidUserRewardAccountAuthorityError,
 }

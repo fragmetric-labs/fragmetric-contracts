@@ -15,6 +15,8 @@ const REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1: usize = 16;
 pub(super) struct RewardPool {
     /// ID is determined by reward account.
     pub id: u8,
+    /// previous field:
+    /// name: [u8; 14],
     _padding: [u8; 14],
 
     pub custom_contribution_accrual_rate_enabled: u8,
@@ -114,6 +116,12 @@ impl RewardPool {
         };
 
         Ok(&mut self.reward_settlements_1[index])
+    }
+
+    pub fn get_unclaimed_reward_amount(&self, reward_id: u16) -> u64 {
+        self.get_reward_settlement(reward_id)
+            .map(|settlement| settlement.get_unclaimed_reward_amount())
+            .unwrap_or_default()
     }
 
     /// Updates the contribution of the pool into recent value.

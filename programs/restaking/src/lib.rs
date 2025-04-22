@@ -15,10 +15,23 @@ mod instructions;
 
 use constants::*;
 use instructions::*;
+use utils::AsAccountInfo;
 
 #[program]
 pub mod restaking {
     use super::*;
+
+    /// TODO remove this ix after migration (v0.6.0)
+    pub fn admin_delegate_fund_wrap_account_reward_account(
+        ctx: Context<AdminDelegateFundWrapAccountRewardAccount>,
+    ) -> Result<()> {
+        ctx.accounts
+            .fund_wrap_account_reward_account
+            .load_mut()?
+            .set_delegate_unchecked(FUND_MANAGER_PUBKEY);
+
+        Ok(())
+    }
 
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
@@ -179,12 +192,13 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account,
+            ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
             &ctx.accounts.payer,
             ctx.bumps.user_reward_account,
+            Some(FUND_MANAGER_PUBKEY),
             desired_account_size,
         )?;
 
@@ -418,6 +432,7 @@ pub mod restaking {
             &ctx.accounts.wrapped_token_mint,
             &ctx.accounts.admin,
             &ctx.accounts.wrapped_token_program,
+            &ctx.accounts.fund_wrap_account,
             &ctx.accounts.receipt_token_wrap_account,
             &ctx.accounts.reward_account,
             &ctx.accounts.fund_wrap_account_reward_account,
@@ -440,6 +455,24 @@ pub mod restaking {
         .process_add_wrapped_token_holder(
             &ctx.accounts.wrapped_token_holder,
             &ctx.accounts.reward_account,
+            &ctx.accounts.wrapped_token_holder_reward_account,
+        )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_remove_wrapped_token_holder(
+        ctx: Context<FundManagerFundWrappedTokenHolderContext>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_remove_wrapped_token_holder(
+            &ctx.accounts.fund_wrap_account,
+            &ctx.accounts.wrapped_token_holder,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.fund_wrap_account_reward_account,
             &ctx.accounts.wrapped_token_holder_reward_account,
         )?);
 
@@ -543,11 +576,11 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerRewardDistributionContext
+    // FundManagerRewardContext
     ////////////////////////////////////////////
 
     pub fn fund_manager_add_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         name: String,
         description: String,
         mint: Pubkey,
@@ -575,7 +608,7 @@ pub mod restaking {
     }
 
     pub fn fund_manager_update_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         mint: Pubkey,
         new_mint: Option<Pubkey>,
         new_program: Option<Pubkey>,
@@ -601,7 +634,7 @@ pub mod restaking {
     }
 
     pub fn fund_manager_settle_reward(
-        ctx: Context<FundManagerRewardDistributionContext>,
+        ctx: Context<FundManagerRewardContext>,
         reward_token_mint: Pubkey,
         is_bonus_pool: bool,
         amount: u64,
@@ -1107,12 +1140,13 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account,
+            &ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
             &ctx.accounts.user,
             ctx.bumps.user_reward_account,
+            None,
             desired_account_size,
         )?;
 
@@ -1127,8 +1161,8 @@ pub mod restaking {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
         )?
         .process_update_user_reward_pools()?);
 
@@ -1143,8 +1177,8 @@ pub mod restaking {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
-            &mut ctx.accounts.reward_account,
-            &mut ctx.accounts.user_reward_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account,
         )?
         .process_claim_user_reward(
             &ctx.accounts.reward_token_mint,
@@ -1152,9 +1186,29 @@ pub mod restaking {
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
             &ctx.accounts.destination_reward_token_account,
+            &ctx.accounts.claim_authority,
             is_bonus_pool,
             amount,
         )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // UserRewardAccountDelegateContext
+    ////////////////////////////////////////////
+
+    pub fn user_delegate_reward_account(
+        ctx: Context<UserRewardAccountDelegateContext>,
+        delegate: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.user_receipt_token_account,
+            &ctx.accounts.reward_account,
+            &ctx.accounts.user_reward_account.as_account_info(),
+        )?
+        .process_delegate_user_reward_account(&ctx.accounts.delegate_authority, delegate)?);
 
         Ok(())
     }

@@ -8,7 +8,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct FundManagerRewardDistributionContext<'info> {
+pub struct FundManagerRewardContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
@@ -33,6 +33,5 @@ pub struct FundManagerRewardDistributionContext<'info> {
 
     pub reward_token_program: Option<Interface<'info, TokenInterface>>,
 
-    #[account(mut)]
     pub reward_token_reserve_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 }
