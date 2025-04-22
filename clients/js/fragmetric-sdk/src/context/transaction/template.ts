@@ -245,6 +245,7 @@ export class TransactionTemplateContext<
       minContextSlot?: Slot;
       preflightCommitment?: Commitment;
       skipPreflight?: boolean;
+      chainingIntervalSeconds?: number;
     },
     options?: RpcSendOptions
   ) {
@@ -254,9 +255,13 @@ export class TransactionTemplateContext<
     abortSignal.addEventListener('abort', () => {
       aborted = true;
     });
-    let res = await this.execute(args, overrides, config, options);
+    const { chainingIntervalSeconds = 0, ...partialConfig } = config ?? {};
+    let res = await this.execute(args, overrides, partialConfig, options);
     if (res.succeeded) {
       while (res.executeChainedTransaction && !aborted) {
+        if (chainingIntervalSeconds) {
+          await new Promise(resolve => setTimeout(resolve, chainingIntervalSeconds * 1000));
+        }
         res = await res.executeChainedTransaction();
         if (!res.succeeded) {
           break;
