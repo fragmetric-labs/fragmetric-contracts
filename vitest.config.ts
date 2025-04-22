@@ -1,4 +1,4 @@
-import path from 'path';
+import * as path from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -32,6 +32,8 @@ export default defineConfig({
     hookTimeout: 5 * 60 * 1000,
 
     pool: 'threads', // parallel run for `describe`
+    // maxWorkers: process.env.CI ? 1 : 4,
+    // minWorkers: 1,
     sequence: {
       concurrent: false, // sequential run for `test`
     },
