@@ -15,12 +15,14 @@ env:
   RUSTUP_TOOLCHAIN_VERSION: stable
   RUSTUP_PERMIT_COPY_RENAME: 1
   RUSTFLAGS: "-A dead_code"
-  SOLANA_VERSION: 2.1.18
-  ANCHOR_VERSION: 0.31.1
+  SOLANA_VERSION: stable #v2.1.21
+  ANCHOR_VERSION: v0.31.1
   NODE_VERSION: 20.19.0
   CI: true
   DEBUG: true
-  RUNTIME: ${{ (github.ref_name == 'main' || github.ref_name == 'dev') && 'svm' || 'litesvm' }}
+  RUNTIME: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
+    (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
+    (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'svm' || 'litesvm' }}
 
 on:
   push:
@@ -31,6 +33,7 @@ on:
       - '**/*.md'
       - '**/*.ts'
       - '**/*.js'
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -38,7 +41,7 @@ concurrency:
 
 jobs:
   ci:
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
     runs-on: macos-latest
     #runs-on: ubuntu-latest
@@ -47,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # setup Node runtime
-      - name: setup Node $PATH (act workaround)
+      - name: setup Node $PATH
         run: |
           NODE_BIN=$(command -v node || true)
           if [ -n "$NODE_BIN" ]; then
@@ -69,7 +72,7 @@ jobs:
 
       # setup Rust and Solana runtime
       - run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -86,7 +89,7 @@ jobs:
         with:
           crate: anchor-cli
           git: https://github.com/solana-foundation/anchor
-          tag: v${{ env.ANCHOR_VERSION }}
+          tag: ${{ env.ANCHOR_VERSION }}
           locked: true
 
       # lint Rust codes and audit dependencies
