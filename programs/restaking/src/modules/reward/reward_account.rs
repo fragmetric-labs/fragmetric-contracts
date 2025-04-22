@@ -247,9 +247,7 @@ impl RewardAccount {
         current_slot: u64,
     ) -> Result<()> {
         self.get_reward_pool_mut(is_bonus_pool)
-            .settle_reward(reward_id, amount, current_slot)?;
-
-        Ok(())
+            .settle_reward(reward_id, amount, current_slot)
     }
 
     #[inline(always)]

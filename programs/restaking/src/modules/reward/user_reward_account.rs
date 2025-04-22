@@ -31,7 +31,9 @@ pub struct UserRewardAccount {
     pub(super) bonus_user_reward_pool: UserRewardPool,
 
     _reserved2: [u8; 1040],
-    delegate: Pubkey,
+
+    pub(super) delegate: Pubkey,
+
     _reserved3: [u8; 1008],
 }
 
