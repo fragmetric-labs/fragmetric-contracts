@@ -153,11 +153,11 @@ impl RestakingVault {
             .position(|reward_token| *reward_token == compounding_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)?;
 
-        // shift left starting from matched_idx
-        for idx in matched_idx..self.num_compounding_reward_tokens as usize - 1 {
-            self.compounding_reward_token_mints[idx] = self.compounding_reward_token_mints[idx + 1];
-        }
         self.num_compounding_reward_tokens -= 1;
+        self.compounding_reward_token_mints
+            .swap(matched_idx, self.num_compounding_reward_tokens as usize);
+        self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
+            Pubkey::default();
 
         Ok(())
     }
@@ -199,12 +199,11 @@ impl RestakingVault {
             .position(|reward_token| *reward_token == distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
-        // shift left starting from matched_idx
-        for idx in matched_idx..self.num_distributing_reward_tokens as usize - 1 {
-            self.distributing_reward_token_mints[idx] =
-                self.distributing_reward_token_mints[idx + 1];
-        }
         self.num_distributing_reward_tokens -= 1;
+        self.distributing_reward_token_mints
+            .swap(matched_idx, self.num_distributing_reward_tokens as usize);
+        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
+            Pubkey::default();
 
         Ok(())
     }
