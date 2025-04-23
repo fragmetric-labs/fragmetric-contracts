@@ -1,6 +1,5 @@
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { Command } from 'commander';
-import * as util from 'node:util';
 import packageJSON from '../../package.json' with { type: 'json' };
 import {
   createTransactionSignerResolversMap,
@@ -176,16 +175,6 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
 
       // enable default hook inspection for non-mainnet cluster
       opts.inspection = opts.inspection ?? opts.cluster != 'mainnet';
-
-      // enable pretty inspection and JSON serialization ...
-      const inspectOptions = util.inspect.defaultOptions;
-      inspectOptions.showProxy = false;
-      inspectOptions.showHidden = false;
-      inspectOptions.depth = 10;
-      inspectOptions.maxArrayLength = 100;
-      inspectOptions.colors = !process.env.CI;
-      inspectOptions.customInspect = true;
-      inspectOptions.numericSeparator = true;
 
       setContextCustomInspectionEnabled(true);
       createBigIntToJSONShim();
