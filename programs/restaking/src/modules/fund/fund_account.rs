@@ -577,6 +577,10 @@ impl FundAccount {
         (self.wrapped_token.enabled == 1).then_some(&self.wrapped_token.mint)
     }
 
+    pub(super) fn get_wrapped_token(&self) -> Option<&WrappedToken> {
+        (self.wrapped_token.enabled == 1).then_some(&self.wrapped_token)
+    }
+
     pub(super) fn get_wrapped_token_mut(&mut self) -> Option<&mut WrappedToken> {
         (self.wrapped_token.enabled == 1).then_some(&mut self.wrapped_token)
     }

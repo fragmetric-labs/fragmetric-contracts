@@ -129,6 +129,10 @@ impl RewardAccount {
         self.data_version == REWARD_ACCOUNT_CURRENT_VERSION
     }
 
+    pub fn find_account_address(receipt_token_mint: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(&[Self::SEED, receipt_token_mint.as_ref()], &crate::ID).0
+    }
+
     pub const RESERVE_SEED: &'static [u8] = b"reward_reserve";
 
     #[inline(always)]

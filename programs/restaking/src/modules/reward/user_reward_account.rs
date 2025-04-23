@@ -133,6 +133,14 @@ impl UserRewardAccount {
         self.data_version == 0
     }
 
+    pub fn find_account_address(receipt_token_mint: &Pubkey, user: &Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[Self::SEED, receipt_token_mint.as_ref(), user.as_ref()],
+            &crate::ID,
+        )
+        .0
+    }
+
     /// authority = user or delegate
     fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
         if self.user != *authority && self.delegate != *authority {
