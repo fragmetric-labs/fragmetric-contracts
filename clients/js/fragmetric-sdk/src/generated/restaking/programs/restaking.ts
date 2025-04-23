@@ -36,6 +36,8 @@ import {
   type ParsedFundManagerInitializeFundJitoRestakingVaultInstruction,
   type ParsedFundManagerInitializeFundNormalizedTokenInstruction,
   type ParsedFundManagerInitializeFundWrappedTokenInstruction,
+  type ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction,
+  type ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction,
   type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
@@ -420,6 +422,8 @@ export enum RestakingInstruction {
   FundManagerInitializeFundJitoRestakingVaultDelegation,
   FundManagerInitializeFundNormalizedToken,
   FundManagerInitializeFundWrappedToken,
+  FundManagerRemoveRestakingVaultCompoundingRewardToken,
+  FundManagerRemoveRestakingVaultDistributingRewardToken,
   FundManagerRemoveWrappedTokenHolder,
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
@@ -699,6 +703,28 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerInitializeFundWrappedToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([103, 237, 63, 36, 105, 160, 171, 66])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRemoveRestakingVaultCompoundingRewardToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([188, 146, 18, 253, 217, 15, 37, 10])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRemoveRestakingVaultDistributingRewardToken;
   }
   if (
     containsBytes(
@@ -1126,6 +1152,12 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerInitializeFundWrappedToken;
     } & ParsedFundManagerInitializeFundWrappedTokenInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerRemoveRestakingVaultCompoundingRewardToken;
+    } & ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerRemoveRestakingVaultDistributingRewardToken;
+    } & ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
     } & ParsedFundManagerRemoveWrappedTokenHolderInstruction<TProgram>)

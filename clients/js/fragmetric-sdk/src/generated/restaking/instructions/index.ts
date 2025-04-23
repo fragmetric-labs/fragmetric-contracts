@@ -28,6 +28,8 @@ export * from './fundManagerInitializeFundJitoRestakingVault';
 export * from './fundManagerInitializeFundJitoRestakingVaultDelegation';
 export * from './fundManagerInitializeFundNormalizedToken';
 export * from './fundManagerInitializeFundWrappedToken';
+export * from './fundManagerRemoveRestakingVaultCompoundingRewardToken';
+export * from './fundManagerRemoveRestakingVaultDistributingRewardToken';
 export * from './fundManagerRemoveWrappedTokenHolder';
 export * from './fundManagerSettleReward';
 export * from './fundManagerUpdateFundStrategy';

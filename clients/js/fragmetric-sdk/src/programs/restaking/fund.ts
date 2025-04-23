@@ -1571,8 +1571,8 @@ export class RestakingFundAccountContext extends AccountContext<
             parent.parent.resolve(true),
             transformAddressResolverVariant(
               overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
             )(parent),
           ]);
           if (!data) throw new Error('invalid context');
@@ -1581,6 +1581,51 @@ export class RestakingFundAccountContext extends AccountContext<
 
           return Promise.all([
             restaking.getFundManagerAddRestakingVaultDistributingRewardTokenInstructionAsync(
+              {
+                vault: args.vault as Address,
+                distributingRewardTokenMint: args.rewardTokenMint as Address,
+                fundManager: createNoopSigner(fundManager),
+                program: this.program.address,
+                receiptTokenMint: data.receiptTokenMint,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
+
+  readonly removeRestakingVaultDistributingReward = new TransactionTemplateContext(
+    this,
+    v.object({
+      vault: v.string(),
+      rewardTokenMint: v.string(),
+    }),
+    {
+      description: 'remove a distributing reward from a restaking vault',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'fundManagerUpdatedFund'
+      ),
+      addressLookupTables: [this.__resolveAddressLookupTable],
+      instructions: [
+        async (parent, args, overrides) => {
+          const [data, payer] = await Promise.all([
+            parent.parent.resolve(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
+            )(parent),
+          ]);
+          if (!data) throw new Error('invalid context');
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
+
+          return Promise.all([
+            restaking.getFundManagerRemoveRestakingVaultDistributingRewardTokenInstructionAsync(
               {
                 vault: args.vault as Address,
                 distributingRewardTokenMint: args.rewardTokenMint as Address,
