@@ -356,7 +356,6 @@ pub mod restaking {
         Ok(())
     }
 
-    // TODO: add fund_manager_remove_restaking_vault_compounding_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
     pub fn fund_manager_remove_restaking_vault_compounding_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -392,7 +391,6 @@ pub mod restaking {
         Ok(())
     }
 
-    // TODO: add fund_manager_remove_restaking_vault_distributing_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
     pub fn fund_manager_remove_restaking_vault_distributing_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,

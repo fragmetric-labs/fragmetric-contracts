@@ -201,9 +201,6 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max restaking vault compounding reward tokens")]
     FundExceededMaxRestakingVaultCompoundingRewardTokensError,
 
-    #[msg("fund: restaking vault compounding reward token not resgistered")]
-    FundRestakingVaultCompoundingRewardTokenNotRegisteredError,
-
     #[msg("fund: unauhorized operation command")]
     FundOperationUnauthorizedCommandError,
 
@@ -273,9 +270,6 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max restaking vault distributing reward tokens")]
     FundExceededMaxRestakingVaultDistributingRewardTokensError,
 
-    #[msg("fund: restaking vault distributing reward token not registered")]
-    FundRestakingVaultDistributingRewardTokenNotRegisteredError,
-
     #[msg("fund: exceeded max wrapped token holders")]
     FundExceededMaxWrappedTokenHoldersError,
 
@@ -287,4 +281,10 @@ pub enum ErrorCode {
 
     #[msg("reward: user reward account authority must be either user or delegate")]
     RewardInvalidUserRewardAccountAuthorityError,
+
+    #[msg("fund: restaking vault compounding reward token not resgistered")]
+    FundRestakingVaultCompoundingRewardTokenNotRegisteredError,
+
+    #[msg("fund: restaking vault distributing reward token not registered")]
+    FundRestakingVaultDistributingRewardTokenNotRegisteredError,
 }
