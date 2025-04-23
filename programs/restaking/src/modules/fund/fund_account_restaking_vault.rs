@@ -201,10 +201,11 @@ impl RestakingVault {
 
         // shift left starting from matched_idx
         for idx in matched_idx..self.num_distributing_reward_tokens as usize - 1 {
-            self.distributing_reward_token_mints[idx] = self.distributing_reward_token_mints[idx + 1];
+            self.distributing_reward_token_mints[idx] =
+                self.distributing_reward_token_mints[idx + 1];
         }
         self.num_distributing_reward_tokens -= 1;
-    
+
         Ok(())
     }
 
