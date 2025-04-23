@@ -131,6 +131,13 @@ impl RestakingVault {
             err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
 
+        if self
+            .get_distributing_reward_tokens_iter()
+            .any(|reward_token| *reward_token == compounding_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
+        }
+
         require_gt!(
             FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS,
             self.num_compounding_reward_tokens as usize,
@@ -175,6 +182,13 @@ impl RestakingVault {
             .any(|reward_token| *reward_token == distributing_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
+        }
+
+        if self
+            .get_compounding_reward_tokens_iter()
+            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
 
         require_gt!(
