@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe } from 'vitest';
 import { initializeFragBTC } from './fragbtc';
 import { fragBTCConfigurationTest } from './fragbtc.test.config';
 import { fragBTCDepositTest } from './fragbtc.test.deposit';
+import { fragBTCPeggingTest } from './fragbtc.test.pegging';
 import { createTestSuiteContext } from './utils';
 
 describe('restaking.fragBTC test', async () => {
@@ -12,4 +13,5 @@ describe('restaking.fragBTC test', async () => {
 
   await fragBTCConfigurationTest(testCtx);
   await fragBTCDepositTest(testCtx);
+  await fragBTCPeggingTest(testCtx);
 });
