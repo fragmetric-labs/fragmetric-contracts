@@ -520,7 +520,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         vault: &Pubkey,
         distributing_reward_token_mint: Pubkey,
-    ) -> Result<(events::FundManagerUpdatedFund)> {
+    ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
