@@ -12,6 +12,7 @@ $ sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
 # install Rust toolchain
 $ sh -c "$(curl -sSfL https://sh.rustup.rs)"
 $ rustup default stable
+$ rustup update
 
 # install AVM (anchor version manager)
 $ cargo install --git https://github.com/coral-xyz/anchor avm --force

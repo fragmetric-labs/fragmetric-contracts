@@ -415,11 +415,13 @@ export class RestakingFundAccountContext extends AccountContext<
             parent.resolveAccount(true),
             args.operator
               ? args.operator
-              : transformAddressResolverVariant(
-                  overrides.feePayer ??
-                    this.runtime.options.transaction.feePayer ??
-                    (() => Promise.resolve(null))
-                )(parent),
+              : args.forceResetCommand
+                ? (this.program as RestakingProgram).knownAddresses.admin
+                : transformAddressResolverVariant(
+                    overrides.feePayer ??
+                      this.runtime.options.transaction.feePayer ??
+                      (() => Promise.resolve(null))
+                  )(parent),
           ]);
           if (!(data && fund && operator)) throw new Error('invalid context');
 

@@ -8,26 +8,40 @@
 
 import {
   combineCodec,
-  getEnumDecoder,
-  getEnumEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
+  getDiscriminatedUnionDecoder,
+  getDiscriminatedUnionEncoder,
+  getStructDecoder,
+  getStructEncoder,
+  getUnitDecoder,
+  getUnitEncoder,
   type Codec,
   type Decoder,
   type Encoder,
+  type GetDiscriminatedUnionVariant,
+  type GetDiscriminatedUnionVariantContent,
 } from '@solana/kit';
 
-export enum EnqueueWithdrawalBatchCommandState {
-  New,
-}
+export type EnqueueWithdrawalBatchCommandState =
+  | { __kind: 'New' }
+  | { __kind: 'Unused'; unused: boolean };
 
 export type EnqueueWithdrawalBatchCommandStateArgs =
   EnqueueWithdrawalBatchCommandState;
 
 export function getEnqueueWithdrawalBatchCommandStateEncoder(): Encoder<EnqueueWithdrawalBatchCommandStateArgs> {
-  return getEnumEncoder(EnqueueWithdrawalBatchCommandState);
+  return getDiscriminatedUnionEncoder([
+    ['New', getUnitEncoder()],
+    ['Unused', getStructEncoder([['unused', getBooleanEncoder()]])],
+  ]);
 }
 
 export function getEnqueueWithdrawalBatchCommandStateDecoder(): Decoder<EnqueueWithdrawalBatchCommandState> {
-  return getEnumDecoder(EnqueueWithdrawalBatchCommandState);
+  return getDiscriminatedUnionDecoder([
+    ['New', getUnitDecoder()],
+    ['Unused', getStructDecoder([['unused', getBooleanDecoder()]])],
+  ]);
 }
 
 export function getEnqueueWithdrawalBatchCommandStateCodec(): Codec<
@@ -38,4 +52,42 @@ export function getEnqueueWithdrawalBatchCommandStateCodec(): Codec<
     getEnqueueWithdrawalBatchCommandStateEncoder(),
     getEnqueueWithdrawalBatchCommandStateDecoder()
   );
+}
+
+// Data Enum Helpers.
+export function enqueueWithdrawalBatchCommandState(
+  kind: 'New'
+): GetDiscriminatedUnionVariant<
+  EnqueueWithdrawalBatchCommandStateArgs,
+  '__kind',
+  'New'
+>;
+export function enqueueWithdrawalBatchCommandState(
+  kind: 'Unused',
+  data: GetDiscriminatedUnionVariantContent<
+    EnqueueWithdrawalBatchCommandStateArgs,
+    '__kind',
+    'Unused'
+  >
+): GetDiscriminatedUnionVariant<
+  EnqueueWithdrawalBatchCommandStateArgs,
+  '__kind',
+  'Unused'
+>;
+export function enqueueWithdrawalBatchCommandState<
+  K extends EnqueueWithdrawalBatchCommandStateArgs['__kind'],
+  Data,
+>(kind: K, data?: Data) {
+  return Array.isArray(data)
+    ? { __kind: kind, fields: data }
+    : { __kind: kind, ...(data ?? {}) };
+}
+
+export function isEnqueueWithdrawalBatchCommandState<
+  K extends EnqueueWithdrawalBatchCommandState['__kind'],
+>(
+  kind: K,
+  value: EnqueueWithdrawalBatchCommandState
+): value is EnqueueWithdrawalBatchCommandState & { __kind: K } {
+  return value.__kind === kind;
 }
