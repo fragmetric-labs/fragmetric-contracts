@@ -357,6 +357,22 @@ pub mod restaking {
     }
 
     // TODO: add fund_manager_remove_restaking_vault_compounding_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
+    pub fn fund_manager_remove_restaking_vault_compounding_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
+        vault: Pubkey,
+        compounding_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_remove_restaking_vault_compounding_reward_token(
+            &vault,
+            compounding_reward_token_mint,
+        )?);
+
+        Ok(())
+    }
 
     // TODO: use `FundManagerFundRestakingVaultRewardContext` to check reward_token_mint
     pub fn fund_manager_add_restaking_vault_distributing_reward_token(
@@ -377,6 +393,22 @@ pub mod restaking {
     }
 
     // TODO: add fund_manager_remove_restaking_vault_distributing_reward_token ix, using `FundManagerFundRestakingVaultRewardContext`
+    pub fn fund_manager_remove_restaking_vault_distributing_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
+        vault: Pubkey,
+        distributing_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_remove_restaking_vault_distributing_reward_token(
+            &vault,
+            distributing_reward_token_mint
+        )?);
+
+        Ok(())
+    }
 
     // TODO: use `FundManagerFundTokenSwapStrategyContext` to check swap source & from/to mints
     pub fn fund_manager_add_token_swap_strategy(
