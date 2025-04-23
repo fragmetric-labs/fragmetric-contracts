@@ -1,3 +1,4 @@
+import { isSome } from '@solana/kit';
 import { expect, test } from 'vitest';
 import { initializeFragBTC } from './fragbtc';
 import { expectMasked } from './utils';
@@ -136,6 +137,7 @@ export const fragBTCDepositTest = async (
           },
         ],
         "metadata": null,
+        "oneReceiptTokenAsSOL": 647695086539n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 100000000n,
@@ -146,9 +148,14 @@ export const fragBTCDepositTest = async (
             "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
             "oneTokenAsReceiptToken": 100000000n,
             "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 100000000n,
+            "operationTotalAmount": 100000000n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
           },
           {
             "decimals": 8,
@@ -156,9 +163,14 @@ export const fragBTCDepositTest = async (
             "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
             "oneTokenAsReceiptToken": 100000000n,
             "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
           },
         ],
         "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
@@ -263,6 +275,7 @@ export const fragBTCDepositTest = async (
           },
         ],
         "metadata": null,
+        "oneReceiptTokenAsSOL": 647695086539n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 200000000n,
@@ -273,9 +286,14 @@ export const fragBTCDepositTest = async (
             "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
             "oneTokenAsReceiptToken": 100000000n,
             "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 100000000n,
+            "operationTotalAmount": 100000000n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
           },
           {
             "decimals": 8,
@@ -283,13 +301,186 @@ export const fragBTCDepositTest = async (
             "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
             "oneTokenAsReceiptToken": 100000000n,
             "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 100000000n,
+            "operationTotalAmount": 100000000n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
           },
         ],
         "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
     `);
+  });
+
+  test('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
+    let expectedReceiptTokenSupply = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply);
+
+    for (let i = 1; i <= 10; i++) {
+      const assetMint =
+        i % 2 == 0
+          ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
+          : 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+      const assetAmount = 123_456_789n * BigInt(i);
+      expectedReceiptTokenSupply += assetAmount;
+
+      await expect(
+        user1.deposit.execute(
+          {
+            assetMint,
+            assetAmount,
+          },
+          { signers: [signer1] }
+        )
+      ).resolves.toMatchObject({
+        events: {
+          userDepositedToFund: {
+            depositedAmount: assetAmount,
+            mintedReceiptTokenAmount: assetAmount,
+          },
+        },
+      });
+    }
+
+    await expect(
+      ctx.resolve(true),
+      'receiptTokenSupply should be exactly increased as much as newly deposited asset amount'
+    ).resolves.toMatchObject({
+      receiptTokenSupply: expectedReceiptTokenSupply,
+    });
+
+    for (let i = 1; i <= 4; i++) {
+      const receiptTokenAmount = 23_456_789n * BigInt(i);
+      const assetMint =
+        i % 2 == 0
+          ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
+          : 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+      expectedReceiptTokenSupply -= receiptTokenAmount;
+
+      await expect(
+        user1.requestWithdrawal.execute(
+          {
+            assetMint: assetMint,
+            receiptTokenAmount: receiptTokenAmount,
+          },
+          { signers: [signer1] }
+        )
+      ).resolves.toMatchObject({
+        events: {
+          userRequestedWithdrawalFromFund: {
+            supportedTokenMint: { value: assetMint },
+            requestedReceiptTokenAmount: receiptTokenAmount,
+          },
+        },
+      });
+    }
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+    });
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.ProcessWithdrawalBatchCommandResult)
+      : null;
+    expect(result!.requestedReceiptTokenAmount).toEqual(
+      result!.processedReceiptTokenAmount
+    );
+    expect(
+      result!.reservedAssetUserAmount + result!.deductedAssetFeeAmount,
+      'reduced asset amount must be equal to burnt receipt token amount'
+    ).toEqual(result!.processedReceiptTokenAmount);
+
+    for (let assetMint of [
+      'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    ]) {
+      for (let i = 1; i <= 2; i++) {
+        const res = await user1.withdraw.execute(
+          {
+            assetMint,
+            requestId: BigInt(i),
+          },
+          { signers: [signer1] }
+        );
+        const evt = res.events!.userWithdrewFromFund!;
+        expect(
+          evt.burntReceiptTokenAmount,
+          'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+        ).toBeOneOf([
+          evt.withdrawnAmount + evt.deductedFeeAmount,
+          evt.withdrawnAmount + evt.deductedFeeAmount + 1n,
+        ]);
+      }
+    }
+
+    await expect(
+      ctx.resolve(true),
+      'receipt token supply reduced as withdrawal reqs being processed'
+    ).resolves.toMatchObject({
+      receiptTokenSupply: expectedReceiptTokenSupply,
+    });
+
+    await expect(
+      ctx
+        .resolve(true)
+        .then((data) =>
+          data!.supportedAssets.reduce(
+            (sum, asset) => sum + asset.operationTotalAmount,
+            0n
+          )
+        ),
+      'sum of all underlying assets must be equal to receipt token supply (fund accounting)'
+    ).resolves.toEqual(expectedReceiptTokenSupply);
+
+    await expect(
+      ctx.fund.reserve.supportedTokens
+        .resolve(true)
+        .then((accounts) =>
+          accounts.reduce(
+            (sum, tokenAccount) =>
+              tokenAccount ? sum + tokenAccount.amount : sum,
+            0n
+          )
+        ),
+      'sum of all assets must be equal to receipt token supply (token account)'
+    ).resolves.toEqual(expectedReceiptTokenSupply);
+
+    for (let i = 1; i <= 5; i++) {
+      const assetMint =
+        i % 2 == 0
+          ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
+          : 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+      const assetAmount = BigInt(i);
+      expectedReceiptTokenSupply += assetAmount;
+
+      await expect(
+        user1.deposit.execute(
+          {
+            assetMint,
+            assetAmount,
+          },
+          { signers: [signer1] }
+        )
+      ).resolves.toMatchObject({
+        events: {
+          userDepositedToFund: {
+            depositedAmount: assetAmount,
+            mintedReceiptTokenAmount: assetAmount,
+          },
+        },
+      });
+    }
+
+    await expect(ctx.resolve(true)).resolves.toMatchObject({
+      receiptTokenSupply: expectedReceiptTokenSupply,
+    });
   });
 };

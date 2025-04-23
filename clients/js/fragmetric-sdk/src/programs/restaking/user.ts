@@ -579,7 +579,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         async (parent, args) => {
           const [data, userData] = await Promise.all([
             parent.parent.resolve(true),
-            parent.resolve(),
+            parent.resolve(true),
           ]);
           if (!(data && userData)) throw new Error('invalid context');
 
@@ -589,6 +589,8 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
               r.supportedAssetMint == args.assetMint &&
               r.requestId == args.requestId
           );
+          if (!request)
+            throw new Error('invalid context (withdrawal request not found)');
 
           return Promise.all([
             args.assetMint

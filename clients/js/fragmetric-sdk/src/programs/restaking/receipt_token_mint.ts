@@ -68,9 +68,17 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
               : 0n,
             depositable: !!data.sol.depositable,
             withdrawable: !!data.sol.withdrawable,
+            withdrawableValueAsReceiptTokenAmount:
+              data.sol.withdrawableValueAsReceiptTokenAmount,
+            withdrawalUserReservedAmount: data.sol.withdrawalUserReservedAmount,
             withdrawalLastBatchProcessedAt: new Date(
               Number(data.sol.withdrawalLastBatchProcessedAt) * 1000
             ),
+            operationTotalAmount:
+              data.sol.operationReservedAmount +
+              data.sol.operationReceivableAmount,
+            operationReservedAmount: data.sol.operationReservedAmount,
+            operationReceivableAmount: data.sol.operationReceivableAmount,
           },
         ]
           .concat(
@@ -83,9 +91,18 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
                 oneTokenAsReceiptToken: v.oneTokenAsReceiptToken,
                 depositable: !!v.token.depositable,
                 withdrawable: !!v.token.withdrawable,
+                withdrawableValueAsReceiptTokenAmount:
+                  v.token.withdrawableValueAsReceiptTokenAmount,
+                withdrawalUserReservedAmount:
+                  v.token.withdrawalUserReservedAmount,
                 withdrawalLastBatchProcessedAt: new Date(
                   Number(v.token.withdrawalLastBatchProcessedAt) * 1000
                 ),
+                operationTotalAmount:
+                  v.token.operationReservedAmount +
+                  v.token.operationReceivableAmount,
+                operationReservedAmount: v.token.operationReservedAmount,
+                operationReceivableAmount: v.token.operationReceivableAmount,
               };
             })
           )
@@ -120,6 +137,7 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
           receiptTokenMint: receiptTokenMint.address,
           receiptTokenSupply: receiptTokenMint.data.supply,
           receiptTokenDecimals: receiptTokenMint.data.decimals,
+          oneReceiptTokenAsSOL: fund.data.oneReceiptTokenAsSol,
           wrappedTokenMint: fund.data.wrappedToken.enabled
             ? fund.data.wrappedToken.mint
             : null,
