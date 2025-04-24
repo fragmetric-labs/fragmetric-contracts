@@ -281,4 +281,10 @@ pub enum ErrorCode {
 
     #[msg("reward: user reward account authority must be either user or delegate")]
     RewardInvalidUserRewardAccountAuthorityError,
+
+    #[msg("fund: restaking vault compounding reward token not resgistered")]
+    FundRestakingVaultCompoundingRewardTokenNotRegisteredError,
+
+    #[msg("fund: restaking vault distributing reward token not registered")]
+    FundRestakingVaultDistributingRewardTokenNotRegisteredError,
 }

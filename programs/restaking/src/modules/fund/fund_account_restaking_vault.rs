@@ -131,6 +131,13 @@ impl RestakingVault {
             err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
 
+        if self
+            .get_distributing_reward_tokens_iter()
+            .any(|reward_token| *reward_token == compounding_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
+        }
+
         require_gt!(
             FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS,
             self.num_compounding_reward_tokens as usize,
@@ -140,6 +147,24 @@ impl RestakingVault {
         self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
             compounding_reward_token_mint;
         self.num_compounding_reward_tokens += 1;
+
+        Ok(())
+    }
+
+    pub fn remove_compounding_reward_token(
+        &mut self,
+        compounding_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        let matched_idx = self
+            .get_compounding_reward_tokens_iter()
+            .position(|reward_token| *reward_token == compounding_reward_token_mint)
+            .ok_or(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)?;
+
+        self.num_compounding_reward_tokens -= 1;
+        self.compounding_reward_token_mints
+            .swap(matched_idx, self.num_compounding_reward_tokens as usize);
+        self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
+            Pubkey::default();
 
         Ok(())
     }
@@ -159,6 +184,13 @@ impl RestakingVault {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
         }
 
+        if self
+            .get_compounding_reward_tokens_iter()
+            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+        {
+            err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
+        }
+
         require_gt!(
             FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS,
             self.num_distributing_reward_tokens as usize,
@@ -168,6 +200,24 @@ impl RestakingVault {
         self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
             distributing_reward_token_mint;
         self.num_distributing_reward_tokens += 1;
+
+        Ok(())
+    }
+
+    pub fn remove_distributing_reward_token(
+        &mut self,
+        distributing_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        let matched_idx = self
+            .get_compounding_reward_tokens_iter()
+            .position(|reward_token| *reward_token == distributing_reward_token_mint)
+            .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
+
+        self.num_distributing_reward_tokens -= 1;
+        self.distributing_reward_token_mints
+            .swap(matched_idx, self.num_distributing_reward_tokens as usize);
+        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
+            Pubkey::default();
 
         Ok(())
     }

@@ -490,6 +490,19 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
+    pub fn process_remove_restaking_vault_compounding_reward_token(
+        &mut self,
+        vault: &Pubkey,
+        compounding_reward_token_mint: Pubkey,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .remove_compounding_reward_token(compounding_reward_token_mint)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
     pub fn process_add_restaking_vault_distributing_reward_token(
         &mut self,
         vault: &Pubkey,
@@ -499,6 +512,19 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .load_mut()?
             .get_restaking_vault_mut(vault)?
             .add_distributing_reward_token(distributing_reward_token_mint)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_remove_restaking_vault_distributing_reward_token(
+        &mut self,
+        vault: &Pubkey,
+        distributing_reward_token_mint: Pubkey,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .remove_distributing_reward_token(distributing_reward_token_mint)?;
 
         self.create_fund_manager_updated_fund_event()
     }

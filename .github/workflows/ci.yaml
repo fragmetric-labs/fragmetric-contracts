@@ -33,6 +33,7 @@ on:
       - '**/*.md'
       - '**/*.ts'
       - '**/*.js'
+      - '**/*.lock'
   workflow_dispatch: {}
 
 concurrency:
