@@ -1199,7 +1199,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                         CpiContext::new_with_signer(
                             system_program.to_account_info(),
                             anchor_lang::system_program::Transfer {
-                                from: fund_treasury_account.clone(),
+                                from: fund_treasury_account.to_account_info(),
                                 to: program_revenue_account.to_account_info(),
                             },
                             &[&fund_account.get_treasury_account_seeds()],

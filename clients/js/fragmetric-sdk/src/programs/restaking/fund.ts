@@ -1,5 +1,5 @@
 import { getSetComputeUnitLimitInstruction } from '@solana-program/compute-budget';
-import { SYSTEM_PROGRAM_ADDRESS } from '@solana-program/system';
+import * as system from '@solana-program/system';
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
 import {
@@ -132,7 +132,7 @@ export class RestakingFundAccountContext extends AccountContext<
     asset: restaking.AssetState,
     receiptTokenMint: string
   ) {
-    if (asset.tokenMint == SYSTEM_PROGRAM_ADDRESS) {
+    if (asset.tokenMint == system.SYSTEM_PROGRAM_ADDRESS) {
       const ix = await restaking.getUserWithdrawSolInstructionAsync(
         {
           user: { address: receiptTokenMint },
@@ -537,18 +537,21 @@ export class RestakingFundAccountContext extends AccountContext<
       instructions: [
         getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
         async (parent, args, overrides) => {
-          const [receiptTokenMint, currentVersion, payer] = await Promise.all([
-            parent.parent.resolveAddress(),
-            parent
-              .resolveAccount(true)
-              .then((fund) => fund?.data.dataVersion ?? 0)
-              .catch((err) => 35),
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
+          const [receiptTokenMint, reserve, treasury, currentVersion, payer] =
+            await Promise.all([
+              parent.parent.resolveAddress(),
+              parent.reserve.resolveAddress(),
+              parent.treasury.resolveAddress(),
+              parent
+                .resolveAccount(true)
+                .then((fund) => fund?.data.dataVersion ?? 0)
+                .catch((err) => 35),
+              transformAddressResolverVariant(
+                overrides.feePayer ??
+                  this.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
+              )(parent),
+            ]);
           if (!receiptTokenMint) throw new Error('invalid context');
           const admin = (this.program as RestakingProgram).knownAddresses.admin;
 
@@ -568,8 +571,21 @@ export class RestakingFundAccountContext extends AccountContext<
                       }
                     );
                   const fundAccount = ix.accounts[5].address;
+                  const minLamportsForSystemAccount = await this.runtime.rpc
+                    .getMinimumBalanceForRentExemption(0n)
+                    .send();
 
                   return Promise.all([
+                    system.getTransferSolInstruction({
+                      source: createNoopSigner(payer! as Address),
+                      destination: reserve!,
+                      amount: minLamportsForSystemAccount,
+                    }),
+                    system.getTransferSolInstruction({
+                      source: createNoopSigner(payer! as Address),
+                      destination: treasury!,
+                      amount: minLamportsForSystemAccount,
+                    }),
                     token2022.getCreateAssociatedTokenIdempotentInstructionAsync(
                       {
                         payer: createNoopSigner(payer! as Address),
