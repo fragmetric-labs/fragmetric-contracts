@@ -127,7 +127,7 @@ impl FundAccount {
             self.receipt_token_mint = receipt_token_mint;
             self.receipt_token_program = token_2022::ID;
             self.receipt_token_decimals = receipt_token_decimals;
-            self.receipt_token_supply_amount = receipt_token_supply;
+            require_eq!(receipt_token_supply, 0);
             self.sol.initialize(None, 0);
 
             // Must calculate addresses at last
