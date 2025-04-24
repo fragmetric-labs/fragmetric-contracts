@@ -1164,6 +1164,7 @@ pub mod restaking {
     ////////////////////////////////////////////
     // UserRewardAccountInitOrUpdateContext
     ////////////////////////////////////////////
+
     pub fn user_create_reward_account_idempotent(
         ctx: Context<UserRewardAccountInitOrUpdateContext>,
         desired_account_size: Option<u32>,
@@ -1189,6 +1190,10 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // UserRewardContext
+    ////////////////////////////////////////////
+
     pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1200,6 +1205,10 @@ pub mod restaking {
 
         Ok(())
     }
+
+    ////////////////////////////////////////////
+    // UserRewardClaimContext
+    ////////////////////////////////////////////
 
     pub fn user_claim_reward(
         ctx: Context<UserRewardClaimContext>,

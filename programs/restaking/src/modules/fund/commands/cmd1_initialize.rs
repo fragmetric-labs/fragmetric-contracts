@@ -142,10 +142,7 @@ impl SelfExecutable for InitializeCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             // 1. restaking_vault_update
             New | NewRestakingVaultUpdate => {
@@ -200,10 +197,7 @@ impl InitializeCommand {
         ctx: &OperationCommandContext,
         previous_vault: Option<&Pubkey>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
         let mut vaults_iter = fund_account
             .get_restaking_vaults_iter()
@@ -257,10 +251,7 @@ impl InitializeCommand {
         ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(vault)?;
 
@@ -311,10 +302,7 @@ impl InitializeCommand {
         vault: &Pubkey,
         items: &[InitializeCommandRestakingVaultDelegationUpdateItem],
         next_item_indices: &[u64],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut fund_account = ctx.fund_account.load_mut()?;
         let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
 
@@ -472,10 +460,7 @@ impl InitializeCommand {
         &self,
         ctx: &OperationCommandContext,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
         let Some(wrapped_token) = fund_account.get_wrapped_token() else {
             return Ok((previous_execution_result, None));
@@ -505,10 +490,7 @@ impl InitializeCommand {
         ctx: &OperationCommandContext,
         wrapped_token_accounts: Vec<Pubkey>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if wrapped_token_accounts.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -561,10 +543,7 @@ impl InitializeCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         wrapped_token_accounts: &[Pubkey],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if wrapped_token_accounts.is_empty() {
             return Ok((None, None));
         }

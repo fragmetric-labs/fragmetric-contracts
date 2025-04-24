@@ -154,6 +154,27 @@ impl RewardAccount {
         )
     }
 
+    /// returns None if reward isn't claimable
+    pub fn find_reward_token_reserve_account_address(
+        &self,
+        token: &Pubkey,
+    ) -> Result<Option<Pubkey>> {
+        let reward_id = self.get_reward_id(token)?;
+        let reward = self.get_reward(reward_id)?;
+
+        if reward.claimable == 0 {
+            return Ok(None);
+        }
+
+        Ok(Some(
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &self.get_reserve_account_address()?,
+                &reward.mint,
+                &reward.program,
+            ),
+        ))
+    }
+
     #[inline(always)]
     pub(super) fn get_rewards_iter(&self) -> impl Iterator<Item = &Reward> {
         self.rewards_1[..self.num_rewards as usize].iter()

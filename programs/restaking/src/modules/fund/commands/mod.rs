@@ -490,10 +490,7 @@ impl SelfExecutable for OperationCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         match self {
             OperationCommand::Initialize(command) => command.execute(ctx, accounts),
             OperationCommand::EnqueueWithdrawalBatch(command) => command.execute(ctx, accounts),
@@ -513,15 +510,17 @@ impl SelfExecutable for OperationCommand {
     }
 }
 
+type ExecutionResult = Result<(
+    Option<OperationCommandResult>,
+    Option<OperationCommandEntry>,
+)>;
+
 pub(super) trait SelfExecutable: Into<OperationCommand> {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )>;
+    ) -> ExecutionResult;
 
     fn with_required_accounts(
         self,
@@ -537,6 +536,20 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
         OperationCommandEntry {
             command: self.into(),
             required_accounts: Vec::with_capacity(0),
+        }
+    }
+}
+
+trait DebugStructExt {
+    fn field_first_element<T: std::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self;
+}
+
+impl DebugStructExt for std::fmt::DebugStruct<'_, '_> {
+    fn field_first_element<T: std::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self {
+        if values.is_empty() {
+            self
+        } else {
+            self.field(name, &values[0])
         }
     }
 }

@@ -201,7 +201,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         Ok(accounts)
     }
 
-    /// returns [to_token_account_amount, from_token_swapped_amount, to_token_swapped_amount]
+    /// returns [from_token_swapped_amount, to_token_swapped_amount]
     #[inline(never)]
     pub fn swap(
         &self,
@@ -219,7 +219,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         token_account_signer_seeds: &[&[&[u8]]],
 
         from_token_amount: u64,
-    ) -> Result<(u64, u64, u64)> {
+    ) -> Result<(u64, u64)> {
         let mut from_token_account =
             InterfaceAccount::<TokenAccount>::try_from(from_token_account)?;
         let mut to_token_account = InterfaceAccount::<TokenAccount>::try_from(to_token_account)?;
@@ -288,10 +288,6 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
             to_token_swapped_amount,
         );
 
-        Ok((
-            to_token_account_amount,
-            from_token_swapped_amount,
-            to_token_swapped_amount,
-        ))
+        Ok((from_token_swapped_amount, to_token_swapped_amount))
     }
 }
