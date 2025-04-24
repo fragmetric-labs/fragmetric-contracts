@@ -117,6 +117,10 @@ impl DelegateVSTCommand {
                 let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
                 command.with_required_accounts(required_accounts)
             }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                command.without_required_accounts()
+            }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -224,6 +228,13 @@ impl DelegateVSTCommand {
                 .with_required_accounts(required_accounts);
 
                 Ok((None, Some(entry)))
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok((
+                    None,
+                    self.create_prepare_command(ctx, vaults[1..].to_vec())?,
+                ))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -348,6 +359,13 @@ impl DelegateVSTCommand {
                     let vaults = vaults[1..].to_vec();
                     Ok((Some(result), self.create_prepare_command(ctx, vaults)?))
                 }
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok((
+                    None,
+                    self.create_prepare_command(ctx, vaults[1..].to_vec())?,
+                ))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })

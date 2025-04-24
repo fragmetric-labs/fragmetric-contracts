@@ -179,12 +179,12 @@ export async function createTestSuiteContext(config?: {
     : (undefined as unknown as _sdk.RestakingProgram);
 
   const solv = resolvedConfig.programs.solv
-    ? sdk.SolvVaultProgram.connect(validator.runtime, {
+    ? sdk.SolvBTCVaultProgram.connect(validator.runtime, {
         rpc: rpcConfig,
         transaction: transactionConfig,
         // debug: true,
       })
-    : (undefined as unknown as _sdk.SolvVaultProgram);
+    : (undefined as unknown as _sdk.SolvBTCVaultProgram);
 
   return { validator, sdk, solv, restaking, feePayer };
 }

@@ -159,6 +159,7 @@ impl StakeSOLCommand {
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::SolvBTCVault { .. })
                         | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
                         #[cfg(all(test, not(feature = "idl-build")))]
                         Some(TokenPricingSource::Mock { .. }) => {
@@ -225,6 +226,7 @@ impl StakeSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -269,6 +271,7 @@ impl StakeSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -319,6 +322,7 @@ impl StakeSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {

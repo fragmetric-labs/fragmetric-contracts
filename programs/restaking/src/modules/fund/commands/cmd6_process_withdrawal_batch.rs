@@ -131,6 +131,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::SolvBTCVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -147,7 +148,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
-                        Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                        Some(TokenPricingSource::JitoRestakingVault { address })
+                        | Some(TokenPricingSource::SolvBTCVault { address }) => {
                             required_accounts.push((*address, false));
                         }
                         // otherwise fails
@@ -212,6 +214,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                            | Some(TokenPricingSource::SolvBTCVault { .. })
                             | None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
@@ -228,7 +231,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .receipt_token_pricing_source
                             .try_deserialize()?
                         {
-                            Some(TokenPricingSource::JitoRestakingVault { .. }) => Ok(count + 1),
+                            Some(TokenPricingSource::JitoRestakingVault { .. })
+                            | Some(TokenPricingSource::SolvBTCVault { .. }) => Ok(count + 1),
                             // otherwise fails
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -296,6 +300,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::SolvBTCVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -327,6 +332,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             let account = restaking_vault_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
+                        }
+                        Some(TokenPricingSource::SolvBTCVault { address }) => {
+                            let account = restaking_vault_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            // TODO/v0.7.0: deal with solv vault if needed
+                            (0, 0)
                         }
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })

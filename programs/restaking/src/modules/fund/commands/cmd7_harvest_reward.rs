@@ -342,6 +342,13 @@ impl HarvestRewardCommand {
                     }
                 }
             }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                let command = Self {
+                    state: ExecuteCompound { vault, reward_token_mints },
+                };
+                command.without_required_accounts()
+            }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -547,6 +554,10 @@ impl HarvestRewardCommand {
 
                 Ok(Some(entry))
             }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok(None)
+            }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -659,6 +670,10 @@ impl HarvestRewardCommand {
                 Some(TokenPricingSource::JitoRestakingVault { .. }) => {
                     // Transfer
                     self.execute_transfer(ctx, &mut accounts, &reward_token_mints[0])?
+                }
+                Some(TokenPricingSource::SolvBTCVault {..}) => {
+                    // TODO/v0.7.0: deal with solv vault if needed
+                    None
                 }
                 // otherwise fails
                 Some(TokenPricingSource::SPLStakePool { .. })
@@ -939,6 +954,9 @@ impl HarvestRewardCommand {
                 .into();
 
                 Ok(Some(result))
+            }
+            Some(TokenPricingSource::SolvBTCVault {..}) => {
+                Ok(None)
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })

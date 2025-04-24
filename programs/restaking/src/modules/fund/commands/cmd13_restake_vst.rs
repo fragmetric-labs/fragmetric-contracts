@@ -221,6 +221,11 @@ impl SelfExecutable for RestakeVSTCommand {
                                 ),
                             ));
                         }
+                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                            // TODO/v0.7.0: deal with solv vault if needed
+                            remaining_items =
+                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                        }
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -334,6 +339,11 @@ impl SelfExecutable for RestakeVSTCommand {
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                         }
+                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                            // TODO/v0.7.0: deal with solv vault if needed
+                            remaining_items =
+                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                        }
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -366,14 +376,25 @@ impl SelfExecutable for RestakeVSTCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?;
 
-                    RestakeVSTCommand {
-                        state: RestakeVSTCommandState::Prepare {
-                            items: remaining_items,
-                        },
-                    }
-                    .with_required_accounts(match pricing_source {
+                    match pricing_source {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                            JitoRestakingVaultService::find_accounts_to_new(address)?
+                            RestakeVSTCommand {
+                                state: RestakeVSTCommandState::Prepare {
+                                    items: remaining_items,
+                                },
+                            }
+                            .with_required_accounts(
+                                JitoRestakingVaultService::find_accounts_to_new(address)?,
+                            )
+                        }
+                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                            // TODO/v0.7.0: deal with solv vault if needed
+                            RestakeVSTCommand {
+                                state: RestakeVSTCommandState::Prepare {
+                                    items: remaining_items,
+                                },
+                            }
+                            .without_required_accounts()
                         }
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
@@ -390,7 +411,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         Some(TokenPricingSource::Mock { .. }) => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
-                    })
+                    }
                 }
                 _ => DelegateVSTCommand::default().without_required_accounts(),
             }),

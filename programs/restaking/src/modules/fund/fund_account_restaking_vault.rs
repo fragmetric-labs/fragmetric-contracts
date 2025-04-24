@@ -69,7 +69,8 @@ impl RestakingVault {
         receipt_token_operation_reserved_amount: u64,
     ) -> Result<()> {
         match receipt_token_pricing_source {
-            TokenPricingSource::JitoRestakingVault { .. } => {}
+            TokenPricingSource::JitoRestakingVault { .. }
+            | TokenPricingSource::SolvBTCVault { .. } => {}
             // otherwise fails
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }

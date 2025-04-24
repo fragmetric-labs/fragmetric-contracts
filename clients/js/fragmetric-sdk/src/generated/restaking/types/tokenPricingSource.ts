@@ -30,7 +30,8 @@ export type TokenPricingSource =
   | { __kind: 'FragmetricRestakingFund'; address: Address }
   | { __kind: 'OrcaDEXLiquidityPool'; address: Address }
   | { __kind: 'SanctumSingleValidatorSPLStakePool'; address: Address }
-  | { __kind: 'PeggedToken'; address: Address };
+  | { __kind: 'PeggedToken'; address: Address }
+  | { __kind: 'SolvBTCVault'; address: Address };
 
 export type TokenPricingSourceArgs = TokenPricingSource;
 
@@ -59,6 +60,7 @@ export function getTokenPricingSourceEncoder(): Encoder<TokenPricingSourceArgs> 
       getStructEncoder([['address', getAddressEncoder()]]),
     ],
     ['PeggedToken', getStructEncoder([['address', getAddressEncoder()]])],
+    ['SolvBTCVault', getStructEncoder([['address', getAddressEncoder()]])],
   ]);
 }
 
@@ -87,6 +89,7 @@ export function getTokenPricingSourceDecoder(): Decoder<TokenPricingSource> {
       getStructDecoder([['address', getAddressDecoder()]]),
     ],
     ['PeggedToken', getStructDecoder([['address', getAddressDecoder()]])],
+    ['SolvBTCVault', getStructDecoder([['address', getAddressDecoder()]])],
   ]);
 }
 
@@ -196,6 +199,18 @@ export function tokenPricingSource(
   TokenPricingSourceArgs,
   '__kind',
   'PeggedToken'
+>;
+export function tokenPricingSource(
+  kind: 'SolvBTCVault',
+  data: GetDiscriminatedUnionVariantContent<
+    TokenPricingSourceArgs,
+    '__kind',
+    'SolvBTCVault'
+  >
+): GetDiscriminatedUnionVariant<
+  TokenPricingSourceArgs,
+  '__kind',
+  'SolvBTCVault'
 >;
 export function tokenPricingSource<
   K extends TokenPricingSourceArgs['__kind'],

@@ -8,28 +8,27 @@ import {
   TransactionTemplateContext,
   transformAddressResolverVariant,
 } from '../../context';
-import { SolvVaultProgram } from './program';
+import { SolvBTCVaultProgram } from './program';
 import { SolvVaultAccountContext } from './vault';
 
-export class SolvVaultReceiptTokenMintAccountContext extends TokenMintAccountContext<SolvVaultProgram> {
+export class SolvVaultReceiptTokenMintAccountContext extends TokenMintAccountContext<SolvBTCVaultProgram> {
   async resolve(noCache = false) {
     // TODO: impl main resolve fn for solv BTC VRT
     const [receiptTokenMint, supportedTokenMint, vault] = await Promise.all([
-      this.resolveAccount(noCache),
+      this.resolveAddress(),
       this.supportedTokenMint.resolveAddress(),
       this.vault.resolveAddress(),
     ]);
-    if (!receiptTokenMint) return null;
     return {
-      receiptTokenMint: receiptTokenMint.address,
+      receiptTokenMint: receiptTokenMint,
       supportedTokenMint: supportedTokenMint,
       vault: vault,
     };
   }
 
   constructor(
-    parent: SolvVaultProgram,
-    addressResolver: AccountAddressResolverVariant<SolvVaultProgram>,
+    parent: SolvBTCVaultProgram,
+    addressResolver: AccountAddressResolverVariant<SolvBTCVaultProgram>,
     supportedTokenMint: Address | string
   ) {
     super(parent, addressResolver);

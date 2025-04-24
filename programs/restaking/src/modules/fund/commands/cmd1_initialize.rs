@@ -227,6 +227,10 @@ impl InitializeCommand {
                 };
                 command.with_required_accounts(required_accounts)
             }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                command.without_required_accounts()
+            }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -275,6 +279,13 @@ impl InitializeCommand {
                     restaking_vault,
                     &next_item_indices,
                 )?
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok((
+                    None,
+                    self.create_prepare_restaking_vault_update_command(ctx, vaults[1..].to_vec())?,
+                ))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -399,6 +410,7 @@ impl InitializeCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. }) // TODO/v0.7.0: deal with solv vault if needed
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {

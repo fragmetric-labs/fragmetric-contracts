@@ -111,7 +111,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
-                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
+                | Some(TokenPricingSource::SolvBTCVault { address }) => {
                     for remaining_account in remaining_accounts {
                         if address == remaining_account.key() {
                             pricing_sources.push(remaining_account);
@@ -246,6 +247,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                             withdrawal_requested_receipt_token_amount;
                                     }
                                     TokenPricingSource::JitoRestakingVault { .. }
+                                    | TokenPricingSource::SolvBTCVault { .. }
                                     | TokenPricingSource::FragmetricNormalizedTokenPool {
                                         ..
                                     }

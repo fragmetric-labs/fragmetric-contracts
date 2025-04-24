@@ -556,6 +556,30 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // FundManagerFundJitoRestakingVaultInitialContext
+    ////////////////////////////////////////////
+    // TODO/v0.7.0: merge with jito restaking vault related ix
+    pub fn fund_manager_initialize_fund_solv_btc_vault<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundSolvBTCVaultInitialContext<'info>>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_add_solv_btc_vault(
+            &ctx.accounts.fund_vault_supported_token_account,
+            &ctx.accounts.fund_vault_receipt_token_account,
+            &ctx.accounts.vault_supported_token_mint,
+            &ctx.accounts.vault_account,
+            &ctx.accounts.vault_program,
+            &ctx.accounts.vault_receipt_token_mint,
+            ctx.remaining_accounts,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // FundManagerFundSupportedTokenContext
     ////////////////////////////////////////////
 

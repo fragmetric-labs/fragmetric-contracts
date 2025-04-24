@@ -10,7 +10,7 @@ import {
   TransactionSignerResolver,
 } from '../context';
 import { RestakingProgram } from '../programs';
-import { SolvVaultProgram } from '../programs/solv/program';
+import { SolvBTCVaultProgram } from '../programs/solv/program';
 import { subCommands } from './commands';
 import {
   createBigIntToJSONShim,
@@ -30,7 +30,7 @@ export type RootCommandOptions = {
     signers: Record<string, TransactionSignerResolver>;
     programs: {
       restaking: RestakingProgram;
-      solv: SolvVaultProgram;
+      solv: SolvBTCVaultProgram;
     };
   };
 };
@@ -227,7 +227,7 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
             RestakingProgram.connect(programConfig, programOptions),
           solv:
             config?.contextOverrides?.programs?.solv ??
-            SolvVaultProgram.connect(programConfig, programOptions),
+            SolvBTCVaultProgram.connect(programConfig, programOptions),
         },
       };
     });

@@ -6,7 +6,7 @@ import {
 } from '../../context';
 import { SolvVaultReceiptTokenMintAccountContext } from './receipt_token_mint';
 
-export class SolvVaultProgram extends ProgramContext {
+export class SolvBTCVaultProgram extends ProgramContext {
   async resolve(noCache = false) {
     await Promise.all(
       Object.values(this)
@@ -55,7 +55,7 @@ export class SolvVaultProgram extends ProgramContext {
   });
 
   receiptTokenMint(
-    mintAddressResolver: AccountAddressResolverVariant<SolvVaultProgram>,
+    mintAddressResolver: AccountAddressResolverVariant<SolvBTCVaultProgram>,
     supportedTokenMintAddress: string
   ) {
     return new SolvVaultReceiptTokenMintAccountContext(

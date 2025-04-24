@@ -205,6 +205,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -261,6 +262,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -335,6 +337,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -467,6 +470,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
