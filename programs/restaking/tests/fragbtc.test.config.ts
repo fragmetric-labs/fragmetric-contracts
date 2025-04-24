@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
+import { expectMasked } from '../../testutil';
 import { initializeFragBTC } from './fragbtc';
-import { expectMasked } from './utils';
 
 export const fragBTCConfigurationTest = async (
   testCtx: ReturnType<typeof initializeFragBTC>

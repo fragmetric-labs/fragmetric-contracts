@@ -17,8 +17,8 @@ mainnet-id.json
 
 keypairs/**/*
 !keypairs/shared_*
-!keypairs/restaking/
-!keypairs/restaking/shared_*
+!keypairs/*/
+!keypairs/*/shared_*
 
 # test snapshots
 tests/restaking.snapshot.txt

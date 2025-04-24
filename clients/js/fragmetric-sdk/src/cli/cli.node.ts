@@ -10,6 +10,7 @@ import {
   TransactionSignerResolver,
 } from '../context';
 import { RestakingProgram } from '../programs';
+import { SolvVaultProgram } from '../programs/solv/program';
 import { subCommands } from './commands';
 import {
   createBigIntToJSONShim,
@@ -29,8 +30,17 @@ export type RootCommandOptions = {
     signers: Record<string, TransactionSignerResolver>;
     programs: {
       restaking: RestakingProgram;
+      solv: SolvVaultProgram;
     };
   };
+};
+
+type TwoLevelPartial<T> = {
+  [K in keyof T]?: T[K] extends object
+    ? T[K] extends any[]
+      ? T[K]
+      : { [P in keyof T[K]]?: T[K][P] }
+    : T[K];
 };
 
 export type CommandLineInterfaceConfig = {
@@ -38,8 +48,11 @@ export type CommandLineInterfaceConfig = {
   runtimeContextOptions?: RuntimeContextPartialOptions;
 
   // totally overrides VM context
-  contextOverrides?: Partial<RootCommandOptions['context']> &
-    Record<string, any>;
+  contextOverrides?: Partial<
+    Omit<RootCommandOptions['context'], 'programs'>
+  > & {
+    programs?: Partial<RootCommandOptions['context']['programs']>;
+  } & Record<string, any>;
 };
 
 export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
@@ -180,6 +193,27 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
       createBigIntToJSONShim();
 
       // setup vm context
+      const programConfig = {
+        type: 'svm',
+        cluster: opts.cluster,
+        rpc: createSolanaRpc(opts.url!),
+        rpcSubscriptions: createSolanaRpcSubscriptions(opts.ws!),
+      } as const;
+      const programOptions = {
+        ...config?.runtimeContextOptions,
+        transaction: {
+          ...config?.runtimeContextOptions?.transaction,
+          signers: [
+            ...(config?.runtimeContextOptions?.transaction?.signers ?? []),
+            ...Object.values(signers),
+          ],
+          executionHooks: createDefaultTransactionExecutionHooks({
+            mergeWith:
+              config?.runtimeContextOptions?.transaction?.executionHooks,
+            inspection: opts.inspection,
+          }),
+        },
+      };
       opts.context = {
         ...config?.contextOverrides,
         signers: {
@@ -190,31 +224,10 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
           ...config?.contextOverrides?.programs,
           restaking:
             config?.contextOverrides?.programs?.restaking ??
-            RestakingProgram.connect(
-              {
-                type: 'svm',
-                cluster: opts.cluster,
-                rpc: createSolanaRpc(opts.url!),
-                rpcSubscriptions: createSolanaRpcSubscriptions(opts.ws!),
-              },
-              {
-                ...config?.runtimeContextOptions,
-                transaction: {
-                  ...config?.runtimeContextOptions?.transaction,
-                  signers: [
-                    ...(config?.runtimeContextOptions?.transaction?.signers ??
-                      []),
-                    ...Object.values(signers),
-                  ],
-                  executionHooks: createDefaultTransactionExecutionHooks({
-                    mergeWith:
-                      config?.runtimeContextOptions?.transaction
-                        ?.executionHooks,
-                    inspection: opts.inspection,
-                  }),
-                },
-              }
-            ),
+            RestakingProgram.connect(programConfig, programOptions),
+          solv:
+            config?.contextOverrides?.programs?.solv ??
+            SolvVaultProgram.connect(programConfig, programOptions),
         },
       };
     });

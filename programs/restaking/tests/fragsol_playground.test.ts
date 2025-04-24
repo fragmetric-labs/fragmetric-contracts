@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { createTestSuiteContext } from '../../testutil';
 import { initializeFragSOL } from './fragsol';
-import { createTestSuiteContext } from './utils';
 
 describe('restaking.fragSOL new test', async () => {
-  const ctx = initializeFragSOL(await createTestSuiteContext());
+  const ctx = initializeFragSOL(
+    await createTestSuiteContext({ programs: { solv: false } })
+  );
 
   beforeAll(() => ctx.initializationTasks);
   afterAll(() => ctx.validator.quit());

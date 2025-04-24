@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe } from 'vitest';
+import { createTestSuiteContext } from '../../testutil';
 import { initializeFragJTO } from './fragjto';
 import { fragJTOConfigurationTest } from './fragjto.test.config';
-import { createTestSuiteContext } from './utils';
 
 describe('restaking.fragJTO test', async () => {
-  const ctx = initializeFragJTO(await createTestSuiteContext());
+  const ctx = initializeFragJTO(
+    await createTestSuiteContext({ programs: { solv: false } })
+  );
 
   beforeAll(() => ctx.initializationTasks);
   afterAll(() => ctx.validator.quit());

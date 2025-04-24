@@ -22,41 +22,37 @@ export class RestakingProgram extends ProgramContext {
     local: '4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5',
   };
 
-  readonly knownAddresses = Object.freeze(
-    (() => {
-      switch (this.runtime.cluster) {
-        case 'mainnet':
-        case 'devnet':
-          const isMainnet = this.runtime.cluster === 'mainnet';
-          return {
-            admin: address(
-              isMainnet
-                ? 'fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby'
-                : 'fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP'
-            ),
-            fundManager: address(
-              isMainnet
-                ? '79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84'
-                : '5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2'
-            ),
-            fragSOL: address('FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'),
-            fragJTO: address('FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'),
-            fragBTC: address('FRAGB4KZGLMy3wH1nBajP3Q17MHnecEvTPT6wb4pX5MB'),
-          };
-        case 'local':
-        default:
-          return {
-            admin: address('9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'),
-            fundManager: address(
-              '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx'
-            ),
-            fragSOL: address('Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD'),
-            fragJTO: address('bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v'),
-            fragBTC: address('ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz'),
-          };
-      }
-    })()
-  );
+  readonly knownAddresses = Object.freeze({
+    admin: address(
+      this.runtime.cluster === 'mainnet'
+        ? 'fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby'
+        : this.runtime.cluster === 'devnet'
+          ? 'fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP'
+          : '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'
+    ),
+    fundManager: address(
+      this.runtime.cluster === 'mainnet'
+        ? '79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84'
+        : this.runtime.cluster == 'devnet'
+          ? '5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2'
+          : '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx'
+    ),
+    fragSOL: address(
+      this.runtime.cluster != 'local'
+        ? 'FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo'
+        : 'Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD'
+    ),
+    fragJTO: address(
+      this.runtime.cluster != 'local'
+        ? 'FRAGJ157KSDfGvBJtCSrsTWUqFnZhrw4aC8N8LqHuoos'
+        : 'bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v'
+    ),
+    fragBTC: address(
+      this.runtime.cluster != 'local'
+        ? 'FRAGB4KZGLMy3wH1nBajP3Q17MHnecEvTPT6wb4pX5MB'
+        : 'ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz'
+    ),
+  });
 
   readonly __dev = createDevTools(this);
 

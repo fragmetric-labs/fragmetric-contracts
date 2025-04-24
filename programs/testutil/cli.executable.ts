@@ -1,8 +1,8 @@
 #!/usr/bin/env pnpm tsx --no-warnings
 
-import { initializeFragBTC } from '../fragbtc';
-import { initializeFragJTO } from '../fragjto';
-import { initializeFragSOL } from '../fragsol';
+import { initializeFragBTC } from '../restaking/tests/fragbtc';
+import { initializeFragJTO } from '../restaking/tests/fragjto';
+import { initializeFragSOL } from '../restaking/tests/fragsol';
 import { createTestSuiteContext } from './context';
 
 createTestSuiteContext({ validator: 'litesvm' })
@@ -25,7 +25,7 @@ createTestSuiteContext({ validator: 'litesvm' })
       .then(() => {
         ctx.sdk.startCommandLineInterface({
           contextOverrides: {
-            programs: { restaking: ctx.restaking },
+            programs: { restaking: ctx.restaking, solv: ctx.solv },
             validator: ctx.validator,
           },
         });

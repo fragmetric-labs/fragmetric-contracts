@@ -36,6 +36,12 @@ const codegenConfig: {
       javascript: true,
       visitors: [anchorTransformEventsToAccountsVisitor],
     },
+    'fragmetric-sdk/src/generated/solv': {
+      idlFilePath: '../../target/idl/solv.json',
+      rust: false,
+      javascript: true,
+      visitors: [anchorTransformEventsToAccountsVisitor],
+    },
     'fragmetric-sdk/src/generated/jito_vault': {
       idlFilePath: './idls/jito-vault.json',
       rust: false,

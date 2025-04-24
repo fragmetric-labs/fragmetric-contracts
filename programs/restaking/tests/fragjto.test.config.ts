@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
+import { expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto';
-import { expectMasked } from './utils';
 
 export const fragJTOConfigurationTest = async (
   testCtx: ReturnType<typeof initializeFragJTO>

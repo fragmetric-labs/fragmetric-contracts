@@ -1,4 +1,4 @@
-import type { TestSuiteContext } from './utils';
+import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
   const { validator, restaking, sdk } = testCtx;

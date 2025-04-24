@@ -27,38 +27,50 @@ $ pnpm i
  
 ## 2. Configure Program KeyPairs
 ```shell
-$ mkdir -p ./target/deploy
-$ cp ./keypairs/restaking/shared_local_program_4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5.json ./target/deploy/restaking_keypair.json
+# to sync shared local keypairs
+$ pnpm keypairs:local
+
+# to sync authorized keypairs for in-house engineers
+$ pnpm keypairs
 ```
 
 ## 3. Build Program
 ```shell
-# for local development and testing
+# to build all artifacts
+$ anchor build
+
+# to build a single program
 $ anchor build -p restaking
 
 # for releases
-$ anchor build -p restaking -- --features devnet 
 $ anchor build -p restaking -- --features mainnet
+$ anchor build -p solv -- --features devnet 
 ```
 
 ## 4. Run Unit Tests
 ```shell
+$ cargo test-sbf
+
+# or
 $ cargo test-sbf -p restaking
 ```
 
 ## 5. Run Integration Tests
 ```shell
-# ensure a fresh local build
-$ anchor build -p restaking
+# ensure fresh local builds
+$ anchor build
 
 # using LiteSVM - which is quite faster than solana-test-validator
-$ pnpm test ./programs/restaking/tests/**
+$ pnpm test ./programs/restaking/tests/*.test.ts
 
 # using solana-test-validator
-$ RUNTIME=svm pnpm test ./programs/restaking/tests/**
+$ RUNTIME=svm pnpm test ./programs/restaking/tests/*.test.ts
 
 # with logs for debugging
-$ DEBUG=1 pnpm test ./programs/restaking/tests/**
+$ DEBUG=1 pnpm test ./programs/restaking/tests/*.test.ts
+
+# to test all programs
+$ pnpm test ./programs/**/*test.ts
 ```
 
 ## 6. Operation
@@ -101,8 +113,8 @@ While end-user package is delivered as [@fragmetric-labs/sdk](https://www.npmjs.
 See [README.md](./clients/js/fragmetric-sdk/README.md) for details of the SDK.
 
 ```
-# ensure a fresh local build
-$ anchor build -p restaking
+# ensure fresh local builds
+$ anchor build
 
 # run codegen
 $ pnpm codegen
@@ -115,14 +127,14 @@ $ pnpm build
 
 # can test distirubiton bundle with existing test suites
 # when CI env is set, test suites utilize dist bundle instead of source code of SDK.
-$ CI=1 pnpm test ./programs/restaking/tests/**
+$ CI=1 pnpm test ./programs/**/*.test.ts
 ```
 
 ## 8. Integration Test Development
-Implement new features into SDK and extend existing test suites in `./programs/restaking/tests/...`.
+Implement new features into SDK and extend existing test suites in `./programs/*/tests/...`.
 
 A few backgrounds until details are ready:
-- Programs and mock accounts in `./programs/restaking/tests/mocks/..` are automatically loaded for all test suites.
+- Programs and mock accounts in `./programs/*/tests/mocks/..` are automatically loaded for all test suites.
 - From mock accounts, testing runtime will automatically find token mints to create token airdrop faucets.
 - Implements all the business logic into SDK - `./clients/js/fragmetric-sdk/src/...`, even for local only purposes.
 - ...

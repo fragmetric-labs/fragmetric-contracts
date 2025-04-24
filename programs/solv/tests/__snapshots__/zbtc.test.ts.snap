@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`solv.zBTC vault test > solv.zBTC initializationTasks snapshot 1`] = `
+[
+  [
+    "Program 11111111111111111111111111111111 invoke [1]",
+    "Program 11111111111111111111111111111111 success",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]",
+    "Program log: Instruction: InitializeMint2",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+  ],
+]
+`;

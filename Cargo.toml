@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/*",
+    "programs/restaking",
+    "programs/solv",
     "clients/rust/*"
 ]
 resolver = "2"
@@ -36,6 +37,7 @@ spl-discriminator = "0.4.1"
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
 borsh1 = { package = "borsh", version = "1.5.5" } # This version is used in spl-stake-pool
 proptest = "1.6.0"
+primitive-types = "0.13.1"
 
 #borsh = "0.10.3"
 #thiserror = "1"

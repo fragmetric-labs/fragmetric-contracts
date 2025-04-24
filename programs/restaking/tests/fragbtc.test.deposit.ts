@@ -1,7 +1,8 @@
+import type { restakingTypes } from '@fragmetric-labs/sdk';
 import { isSome } from '@solana/kit';
 import { expect, test } from 'vitest';
+import { expectMasked } from '../../testutil';
 import { initializeFragBTC } from './fragbtc';
-import { expectMasked } from './utils';
 
 export const fragBTCDepositTest = async (
   testCtx: ReturnType<typeof initializeFragBTC>
@@ -21,6 +22,11 @@ export const fragBTCDepositTest = async (
         validator.airdropToken(
           signer.address,
           'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+          100_000_000_000n
+        ),
+        validator.airdropToken(
+          signer.address,
+          '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
           100_000_000_000n
         ),
       ]);
@@ -119,6 +125,14 @@ export const fragBTCDepositTest = async (
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
           },
+          {
+            "amount": 100000000000n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
         ],
         "user": "J6n5QRwPqcZMFK3AK8bgQhmpnHKzLteziJEAmkEnzG1z",
         "withdrawalRequests": [],
@@ -161,6 +175,21 @@ export const fragBTCDepositTest = async (
             "decimals": 8,
             "depositable": true,
             "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 100000000n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
             "oneTokenAsReceiptToken": 100000000n,
             "oneTokenAsSol": 647695086539n,
             "operationReceivableAmount": 0n,
@@ -257,6 +286,14 @@ export const fragBTCDepositTest = async (
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
           },
+          {
+            "amount": 100000000000n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
         ],
         "user": "J6n5QRwPqcZMFK3AK8bgQhmpnHKzLteziJEAmkEnzG1z",
         "withdrawalRequests": [],
@@ -310,6 +347,21 @@ export const fragBTCDepositTest = async (
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
             "withdrawalUserReservedAmount": 0n,
           },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 100000000n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
+          },
         ],
         "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
@@ -321,11 +373,12 @@ export const fragBTCDepositTest = async (
       .resolve(true)
       .then((data) => data!.receiptTokenSupply);
 
-    for (let i = 1; i <= 10; i++) {
-      const assetMint =
-        i % 2 == 0
-          ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
-          : 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+    for (let i = 1; i <= 9; i++) {
+      const assetMint = [
+        'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+      ][i % 3];
       const assetAmount = 123_456_789n * BigInt(i);
       expectedReceiptTokenSupply += assetAmount;
 
@@ -356,10 +409,10 @@ export const fragBTCDepositTest = async (
 
     for (let i = 1; i <= 4; i++) {
       const receiptTokenAmount = 23_456_789n * BigInt(i);
-      const assetMint =
-        i % 2 == 0
-          ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
-          : 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij';
+      const assetMint = [
+        'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      ][i % 2];
       expectedReceiptTokenSupply -= receiptTokenAmount;
 
       await expect(

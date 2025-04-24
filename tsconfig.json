@@ -6,8 +6,8 @@
     "moduleResolution": "node",
     "module": "esnext",
     "paths": {
-      "@fragmetric-labs/sdk": ["./clients/js/fragmetric-sdk/src/index.ts"],
-      "@fragmetric-labs/testutil": ["./clients/js/testutil/index.ts"]
+      "@fragmetric-labs/sdk": ["./clients/js/fragmetric-sdk/src"],
+      "@fragmetric-labs/testutil": ["./clients/js/testutil"]
     }
   },
   "exclude": [
