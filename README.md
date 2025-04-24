@@ -71,6 +71,9 @@ $ DEBUG=1 pnpm test ./programs/restaking/tests/*.test.ts
 
 # to test all programs
 $ pnpm test ./programs/**/*test.ts
+
+# to utilize watch & web-ui support
+$ pnpm test:watch ./programs/**/*test.ts
 ```
 
 ## 6. Operation

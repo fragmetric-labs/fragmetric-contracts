@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe } from 'vitest';
 import { createTestSuiteContext } from '../../testutil';
 import { initializeFragJTO } from './fragjto';
-import { fragJTOConfigurationTest } from './fragjto.test.config';
+import { fragJTOConfigurationTest } from './fragjto.config';
 
 describe('restaking.fragJTO test', async () => {
   const ctx = initializeFragJTO(

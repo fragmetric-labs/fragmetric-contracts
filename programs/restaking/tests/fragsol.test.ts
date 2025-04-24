@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe } from 'vitest';
 import { createTestSuiteContext } from '../../testutil';
 import { initializeFragSOL } from './fragsol';
-import { fragSOLConfigurationTest } from './fragsol.test.config';
-import { fragSOLDepositTest } from './fragsol.test.deposit';
+import { fragSOLConfigurationTest } from './fragsol.config';
+import { fragSOLDepositTest } from './fragsol.deposit';
+import { fragSOLPlaygroundTest } from './fragsol.playground';
 
 describe('restaking.fragSOL test', async () => {
   const ctx = initializeFragSOL(
@@ -14,4 +15,5 @@ describe('restaking.fragSOL test', async () => {
 
   await fragSOLConfigurationTest(ctx);
   await fragSOLDepositTest(ctx);
+  await fragSOLPlaygroundTest(ctx);
 });

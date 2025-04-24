@@ -589,8 +589,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
               r.supportedAssetMint == args.assetMint &&
               r.requestId == args.requestId
           );
-          if (!request)
-            throw new Error('invalid context (withdrawal request not found)');
+          if (!request) throw new Error('invalid context (request not found)');
 
           return Promise.all([
             args.assetMint

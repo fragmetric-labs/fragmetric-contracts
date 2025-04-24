@@ -1,8 +1,8 @@
 import type { restakingTypes } from '@fragmetric-labs/sdk';
 import { isSome } from '@solana/kit';
 import { expect, test } from 'vitest';
+import { expectMasked } from '../../testutil';
 import { initializeFragBTC } from './fragbtc';
-import { expectMasked } from './utils';
 
 export const fragBTCDepositTest = async (
   testCtx: ReturnType<typeof initializeFragBTC>
@@ -398,7 +398,11 @@ export const fragBTCDepositTest = async (
       .then((data) => data!.receiptTokenSupply);
 
     for (let i = 1; i <= 9; i++) {
-      const assetMint = ['zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg', 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij', '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh'][i % 3];
+      const assetMint = [
+        'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+      ][i % 3];
       const assetAmount = 123_456_789n * BigInt(i);
       expectedReceiptTokenSupply += assetAmount;
 
@@ -429,7 +433,10 @@ export const fragBTCDepositTest = async (
 
     for (let i = 1; i <= 4; i++) {
       const receiptTokenAmount = 23_456_789n * BigInt(i);
-      const assetMint = ['zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg', 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij'][i % 2];
+      const assetMint = [
+        'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      ][i % 2];
       expectedReceiptTokenSupply -= receiptTokenAmount;
 
       await expect(

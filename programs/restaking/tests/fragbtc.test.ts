@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe } from 'vitest';
 import { createTestSuiteContext } from '../../testutil';
 import { initializeFragBTC } from './fragbtc';
-import { fragBTCConfigurationTest } from './fragbtc.test.config';
-import { fragBTCDepositTest } from './fragbtc.test.deposit';
-import { fragBTCOperationTest } from './fragbtc.test.operation';
+import { fragBTCConfigurationTest } from './fragbtc.config';
+import { fragBTCDepositTest } from './fragbtc.deposit';
+import { fragBTCOperationTest } from './fragbtc.operation';
 
 describe('restaking.fragBTC test', async () => {
   const testCtx = initializeFragBTC(
