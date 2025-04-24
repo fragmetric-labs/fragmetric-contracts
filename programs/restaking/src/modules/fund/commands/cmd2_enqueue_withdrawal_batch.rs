@@ -15,6 +15,8 @@ pub struct EnqueueWithdrawalBatchCommand {
 pub enum EnqueueWithdrawalBatchCommandState {
     #[default]
     New,
+    /// Unused state, just to ensure that any kind of XXXCommandState is generated as a ComplexEnum in client-side code generation.
+    Unused { unused: bool },
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]

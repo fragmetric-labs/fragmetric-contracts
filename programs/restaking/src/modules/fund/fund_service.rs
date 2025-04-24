@@ -190,8 +190,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 .unwrap_or_default();
 
             let mut receipt_token_value = TokenValue::default();
-            pricing_service
-                .flatten_token_value(receipt_token_mint_key, &mut receipt_token_value)?;
+            pricing_service.flatten_token_value(
+                receipt_token_mint_key,
+                &mut receipt_token_value,
+                false,
+            )?;
             receipt_token_value.serialize_as_pod(&mut fund_account.receipt_token_value)?;
 
             fund_account.receipt_token_value_updated_slot = self.current_slot;

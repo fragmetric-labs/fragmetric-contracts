@@ -269,7 +269,7 @@ export const connectCommand = new Command()
           if (rootOptions.format == 'json') {
             console.log(JSON.stringify(res, null, 2));
           } else {
-            console.log(util.inspect(res, false, null, true));
+            console.log(util.inspect(res));
           }
           process.exit(0);
         }

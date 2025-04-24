@@ -1,35 +1,50 @@
-import { consola, LogObject } from 'consola';
+import { createConsola, LogObject } from 'consola';
+import * as util from 'node:util';
 import stripAnsi from 'strip-ansi';
 
+// enable pretty inspection and JSON serialization ...
+const inspectOptions = util.inspect.defaultOptions;
+inspectOptions.showProxy = false;
+inspectOptions.showHidden = false;
+inspectOptions.depth = 10;
+inspectOptions.maxArrayLength = 100;
+inspectOptions.colors = !process.env.CI;
+inspectOptions.customInspect = true;
+inspectOptions.numericSeparator = true;
+
 // well... refactor it later when possible
-const loggerOriginalReporters = [...consola.options.reporters];
 export let loggerFormat = 'pretty';
 export const logger = setLogger({ format: loggerFormat as any });
 
 export function setLogger(options?: { format?: 'pretty' | 'json' }) {
-  switch (options?.format) {
-    case 'json':
-      loggerFormat = 'json';
-      consola.setReporters([
-        {
-          log(logObj: LogObject) {
-            for (let i = 0; i < logObj.args.length; i++) {
-              if (typeof logObj.args[i] === 'string') {
-                logObj.args[i] = stripAnsi(logObj.args[i]);
-              }
-            }
-            process.stdout.write(JSON.stringify(logObj, null, 2) + '\n');
+  loggerFormat = options?.format == 'json' ? 'json' : 'pretty';
+  const logger = createConsola(
+    loggerFormat == 'json'
+      ? {
+          reporters: [
+            {
+              log(logObj: LogObject) {
+                for (let i = 0; i < logObj.args.length; i++) {
+                  if (typeof logObj.args[i] === 'string') {
+                    logObj.args[i] = stripAnsi(logObj.args[i]);
+                  }
+                }
+                process.stdout.write(JSON.stringify(logObj, null, 2) + '\n');
+              },
+            },
+          ],
+          formatOptions: {
+            date: true,
           },
-        },
-      ]);
-      consola.options.formatOptions.date = true;
-      break;
-    default:
-      loggerFormat = 'pretty';
-      consola.setReporters(loggerOriginalReporters);
-      consola.options.formatOptions.date = false;
-  }
-
-  consola.wrapConsole();
-  return consola;
+        }
+      : {
+          fancy: true,
+          formatOptions: {
+            date: false,
+            compact: false,
+          },
+        }
+  );
+  logger.wrapConsole();
+  return logger;
 }

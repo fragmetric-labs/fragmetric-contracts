@@ -38,10 +38,10 @@ export function createDefaultTransactionExecutionHooks(opts?: {
     },
     onError: (parent, err, args) => {
       if (loggerFormat === 'pretty') {
-        log.error(util.inspect(err, false, 10, true));
+        log.error(util.inspect(err));
       } else {
         log.error('transaction error', {
-          error: util.inspect(err, false, 10, false),
+          error: util.inspect(err),
           parent: parent.toContextDescription(),
         });
       }

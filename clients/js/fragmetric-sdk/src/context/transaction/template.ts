@@ -260,7 +260,9 @@ export class TransactionTemplateContext<
     if (res.succeeded) {
       while (res.executeChainedTransaction && !aborted) {
         if (chainingIntervalSeconds) {
-          await new Promise(resolve => setTimeout(resolve, chainingIntervalSeconds * 1000));
+          await new Promise((resolve) =>
+            setTimeout(resolve, chainingIntervalSeconds * 1000)
+          );
         }
         res = await res.executeChainedTransaction();
         if (!res.succeeded) {

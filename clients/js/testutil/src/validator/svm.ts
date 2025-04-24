@@ -65,7 +65,7 @@ export class SVMValidator extends TestValidator<'svm'> {
           '@fragmetric-labs',
           'testutil',
           'ledgers',
-          instanceNo.toString(),
+          instanceNo.toString()
         );
         fs.mkdirSync(ledgerPath, { recursive: true });
         const cmd = 'solana-test-validator';
