@@ -993,7 +993,7 @@ impl HarvestRewardCommand {
                 let reward_token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
                 require_keys_eq!(reward_token_mint.key(), reward_token_mints[0]);
 
-                let from_reward_token_account =
+                let mut from_reward_token_account =
                     InterfaceAccount::<TokenAccount>::try_from(from_reward_token_account)?;
                 require_keys_eq!(from_reward_token_account.mint, reward_token_mints[0]);
 
@@ -1004,7 +1004,7 @@ impl HarvestRewardCommand {
                     // reward isn't claimable, so move on to next item.
                     return Ok(None);
                 };
-                let reward_token_reserve_account =
+                let mut reward_token_reserve_account =
                     InterfaceAccount::<TokenAccount>::try_from(reward_token_reserve_account)?;
                 require_keys_eq!(
                     reward_token_reserve_account.key(),
@@ -1036,6 +1036,8 @@ impl HarvestRewardCommand {
                     reward_token_amount,
                     reward_token_mint.decimals,
                 )?;
+                from_reward_token_account.reload()?;
+                reward_token_reserve_account.reload()?;
 
                 RewardConfigurationService::new(ctx.receipt_token_mint, &reward_account)?
                     .settle_reward(
