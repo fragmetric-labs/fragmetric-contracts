@@ -33,7 +33,7 @@ export const fragBTCOperationTest = async (
             },
             "fundAccount": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
             "nextSequence": 0,
-            "numOperated": 30n,
+            "numOperated": 28n,
             "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
             "result": {
               "__option": "None",

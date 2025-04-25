@@ -210,7 +210,7 @@ impl InitializeCommand {
         } else {
             vaults_iter.next()
         }) else {
-            // 2. wrapped_token_update
+            // fallback: 2. wrapped_token_update
             return self.execute_new_wrapped_token_update_command(ctx, previous_execution_result);
         };
 
@@ -218,32 +218,45 @@ impl InitializeCommand {
             .get_restaking_vault(vault)?
             .receipt_token_pricing_source
             .try_deserialize()?;
-        let entry = match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
+        let Some(entry) = (|| {
+            let entry = match receipt_token_pricing_source {
+                Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                    let required_accounts =
+                        JitoRestakingVaultService::find_accounts_to_new(address)?;
 
-                let command = Self {
-                    state: PrepareRestakingVaultUpdate { vault: *vault },
-                };
-                command.with_required_accounts(required_accounts)
-            }
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
-                return self.execute_new_restaking_vault_update_command(ctx, Some(vault), None);
-            }
-            // otherwise fails
-            Some(TokenPricingSource::SPLStakePool { .. })
-            | Some(TokenPricingSource::MarinadeStakePool { .. })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | Some(TokenPricingSource::PeggedToken { .. })
-            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
+                    let command = Self {
+                        state: PrepareRestakingVaultUpdate { vault: *vault },
+                    };
+                    command.with_required_accounts(required_accounts)
+                }
+                Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                    // TODO/v0.7.0: deal with solv vault if needed
+                    return Ok(None);
+                }
+                // otherwise fails
+                Some(TokenPricingSource::SPLStakePool { .. })
+                | Some(TokenPricingSource::MarinadeStakePool { .. })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                | Some(TokenPricingSource::PeggedToken { .. })
+                | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                }
+            };
+
+            Result::Ok(Some(entry))
+        })()?
+        else {
+            // fallback: next vault
+            return self.execute_new_restaking_vault_update_command(
+                ctx,
+                Some(vault),
+                previous_execution_result,
+            );
         };
 
         Ok((previous_execution_result, Some(entry)))
@@ -262,44 +275,52 @@ impl InitializeCommand {
         let receipt_token_pricing_source = restaking_vault
             .receipt_token_pricing_source
             .try_deserialize()?;
-        let entry = match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                let [vault_program, vault_config, vault_account, ..] = accounts else {
-                    err!(error::ErrorCode::AccountNotEnoughKeys)?
-                };
-                require_keys_eq!(address, vault_account.key());
+        let Some(entry) = (|| {
+            let entry = match receipt_token_pricing_source {
+                Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                    let [vault_program, vault_config, vault_account, ..] = accounts else {
+                        err!(error::ErrorCode::AccountNotEnoughKeys)?
+                    };
+                    require_keys_eq!(address, vault_account.key());
 
-                let vault_service =
-                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
+                    let vault_service =
+                        JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
 
-                let next_item_indices = vault_service.get_ordered_vault_update_indices();
+                    let next_item_indices = vault_service.get_ordered_vault_update_indices();
 
-                Some(self.create_next_jito_restaking_vault_update_command(
-                    &vault_service,
-                    restaking_vault,
-                    &next_item_indices,
-                )?)
-            }
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
-                None
-            }
-            // otherwise fails
-            Some(TokenPricingSource::SPLStakePool { .. })
-            | Some(TokenPricingSource::MarinadeStakePool { .. })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | Some(TokenPricingSource::PeggedToken { .. })
-            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
+                    self.create_next_jito_restaking_vault_update_command(
+                        &vault_service,
+                        restaking_vault,
+                        &next_item_indices,
+                    )?
+                }
+                Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                    // TODO/v0.7.0: deal with solv vault if needed
+                    return Ok(None);
+                }
+                // otherwise fails
+                Some(TokenPricingSource::SPLStakePool { .. })
+                | Some(TokenPricingSource::MarinadeStakePool { .. })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                | Some(TokenPricingSource::PeggedToken { .. })
+                | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                }
+            };
+
+            Result::Ok(Some(entry))
+        })()?
+        else {
+            // fallback: next vault
+            return self.execute_new_restaking_vault_update_command(ctx, Some(vault), None);
         };
 
-        Ok((None, entry))
+        Ok((None, Some(entry)))
     }
 
     #[inline(never)]
@@ -397,8 +418,10 @@ impl InitializeCommand {
                     &[],
                 )?;
 
-                result
+                Some(result)
             }
+            // TODO/v0.7.0: deal with solv vault if needed
+            Some(TokenPricingSource::SolvBTCVault { .. }) => None,
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -407,7 +430,6 @@ impl InitializeCommand {
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) // TODO/v0.7.0: deal with solv vault if needed
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -417,7 +439,7 @@ impl InitializeCommand {
 
         drop(fund_account);
         // move on to next vault
-        self.execute_new_restaking_vault_update_command(ctx, Some(vault), Some(result))
+        self.execute_new_restaking_vault_update_command(ctx, Some(vault), result)
     }
 
     fn create_next_jito_restaking_vault_update_command(
