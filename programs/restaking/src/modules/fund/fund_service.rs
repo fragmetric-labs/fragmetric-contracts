@@ -1197,10 +1197,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
             None => {
                 let rent = Rent::get()?;
+                let min_lamports_for_system_account = rent.minimum_balance(0);
                 let treasury_account_lamports = fund_treasury_account
                     .lamports()
-                    .saturating_sub(rent.minimum_balance(0));
-                if treasury_account_lamports == 0 {
+                    .saturating_sub(min_lamports_for_system_account);
+                if treasury_account_lamports < min_lamports_for_system_account {
                     Ok(0)
                 } else {
                     anchor_lang::system_program::transfer(
