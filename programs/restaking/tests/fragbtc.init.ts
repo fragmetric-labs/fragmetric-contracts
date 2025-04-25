@@ -158,6 +158,18 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         vault: (await solv.zBTC.vault.resolveAddress())!,
         rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
       }),
+    async () =>
+      ctx.reward.addReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        decimals: 6,
+        name: 'ZEUS',
+        description: 'ZEUS Incentive',
+      }),
+    async () =>
+      ctx.reward.updateReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        claimable: true,
+      }),
 
     // initialize Solv BTC vault (cbBTC)
     async () =>

@@ -55,7 +55,6 @@ export class JitoVaultAccountContext extends AccountContext<
 
   static knownAddresses(cluster: RuntimeCluster) {
     return {
-      // program: jitoVault.JITO_VAULT_PROGRAM_ADDRESS,
       config: 'UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3' as Address,
       programFeeWallet: (cluster == 'devnet'
         ? '9eZbWiHsPRsxLSiHxzg2pkXsAuQMwAjQrda7C7e21Fw6'

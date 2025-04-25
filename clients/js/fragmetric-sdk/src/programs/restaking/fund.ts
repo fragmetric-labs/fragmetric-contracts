@@ -215,6 +215,8 @@ export class RestakingFundAccountContext extends AccountContext<
     switch (program) {
       case jitoVault.JITO_VAULT_PROGRAM_ADDRESS:
         return new JitoVaultAccountContext(this, address);
+      case SolvBTCVaultProgram.connect(this.runtime.config).address:
+        return new JitoVaultAccountContext(this, address); // TODO: implement SolvBTCVaultAccountContext or abstract it
     }
     return null;
   }
@@ -512,6 +514,11 @@ export class RestakingFundAccountContext extends AccountContext<
       ],
     },
     async (parent, args, events) => {
+      if (!events?.operatorRanFundCommand) {
+        throw new Error(
+          `invalid context: failed to parse event during chaining`
+        );
+      }
       if (
         typeof events?.operatorRanFundCommand?.nextSequence != 'undefined' &&
         events.operatorRanFundCommand.nextSequence != 0
