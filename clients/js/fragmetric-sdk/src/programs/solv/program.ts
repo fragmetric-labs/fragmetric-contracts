@@ -4,7 +4,7 @@ import {
   AccountContext,
   ProgramContext,
 } from '../../context';
-import { SolvVaultReceiptTokenMintAccountContext } from './receipt_token_mint';
+import { SolvVaultAccountContext } from './vault';
 
 export class SolvBTCVaultProgram extends ProgramContext {
   async resolve(noCache = false) {
@@ -22,30 +22,30 @@ export class SolvBTCVaultProgram extends ProgramContext {
   };
 
   readonly knownAddresses = Object.freeze({
-    zBTC: address(
+    zBTCVST: address(
       this.runtime.cluster != 'devnet'
         ? 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg'
         : 'FaKEZbaAE42h7aCSzzUMKP8woZYBXh43v5bPzqb8CyH'
-    ),
-    cbBTC: address(
-      this.runtime.cluster != 'devnet'
-        ? 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij'
-        : 'FakEcBQk7MfreV3anJK6q136sPcieQ5dmmxXjaxfskGt'
-    ),
-    wBTC: address(
-      this.runtime.cluster != 'devnet'
-        ? '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh'
-        : 'FaKEwBj5eNHg8en4Tv1YuQYUSjXnR9TZfVLaMsy3qv7s'
     ),
     zBTCVRT: address(
       this.runtime.cluster != 'local'
         ? 'VRTZTymeYQQZHQXV9ZkPYd5ug77dg4wvXoYkZEfUnQy'
         : 'DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf'
     ),
+    cbBTCVST: address(
+      this.runtime.cluster != 'devnet'
+        ? 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij'
+        : 'FakEcBQk7MfreV3anJK6q136sPcieQ5dmmxXjaxfskGt'
+    ),
     cbBTCVRT: address(
       this.runtime.cluster != 'local'
         ? 'VRTCayksMFJk3qtLGxL9Cgpoxi386MEiGbpr4Nbvb8i'
         : 'BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh'
+    ),
+    wBTCVST: address(
+      this.runtime.cluster != 'devnet'
+        ? '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh'
+        : 'FaKEwBj5eNHg8en4Tv1YuQYUSjXnR9TZfVLaMsy3qv7s'
     ),
     wBTCVRT: address(
       this.runtime.cluster != 'local'
@@ -54,29 +54,24 @@ export class SolvBTCVaultProgram extends ProgramContext {
     ),
   });
 
-  receiptTokenMint(
-    mintAddressResolver: AccountAddressResolverVariant<SolvBTCVaultProgram>,
-    supportedTokenMintAddress: string
+  vault(
+    vaultAddressResolver: AccountAddressResolverVariant<SolvBTCVaultProgram>
   ) {
-    return new SolvVaultReceiptTokenMintAccountContext(
-      this,
-      mintAddressResolver,
-      supportedTokenMintAddress
-    );
+    return new SolvVaultAccountContext(this, vaultAddressResolver);
   }
 
-  readonly zBTC = this.receiptTokenMint(
-    this.knownAddresses.zBTCVRT,
-    this.knownAddresses.zBTC
-  );
+  readonly zBTC = SolvVaultAccountContext.fromSeeds(this, {
+    supportedTokenMint: this.knownAddresses.zBTCVST,
+    receiptTokenMint: this.knownAddresses.zBTCVRT,
+  });
 
-  readonly cbBTC = this.receiptTokenMint(
-    this.knownAddresses.cbBTCVRT,
-    this.knownAddresses.cbBTC
-  );
+  readonly cbBTC = SolvVaultAccountContext.fromSeeds(this, {
+    supportedTokenMint: this.knownAddresses.cbBTCVST,
+    receiptTokenMint: this.knownAddresses.cbBTCVRT,
+  });
 
-  readonly wBTC = this.receiptTokenMint(
-    this.knownAddresses.wBTCVRT,
-    this.knownAddresses.wBTC
-  );
+  readonly wBTC = SolvVaultAccountContext.fromSeeds(this, {
+    supportedTokenMint: this.knownAddresses.wBTCVST,
+    receiptTokenMint: this.knownAddresses.wBTCVRT,
+  });
 }

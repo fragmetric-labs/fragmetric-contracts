@@ -3,9 +3,7 @@ import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto.init';
 
 describe('restaking.fragJTO test', async () => {
-  const testCtx = initializeFragJTO(
-    await createTestSuiteContext({ programs: { solv: false } })
-  );
+  const testCtx = initializeFragJTO(await createTestSuiteContext());
 
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
@@ -196,7 +194,7 @@ describe('restaking.fragJTO test', async () => {
       .toMatchInlineSnapshot(`
       {
         "basePool": {
-          "contribution": "MASKED(contribution)",
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
           "customContributionAccrualRateEnabled": false,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
           "settlements": [],
@@ -207,7 +205,7 @@ describe('restaking.fragJTO test', async () => {
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
         "bonusPool": {
-          "contribution": "MASKED(contribution)",
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
           "customContributionAccrualRateEnabled": true,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
           "settlements": [
@@ -215,14 +213,14 @@ describe('restaking.fragJTO test', async () => {
               "blocks": [
                 {
                   "amount": 0n,
-                  "endingContribution": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": 0n,
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": 0n,
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "startingSlot": "MASKED(/[.*S|s]lots?$/)",
                   "userSettledAmount": 0n,
-                  "userSettledContribution": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                 },
               ],
               "claimedAmount": 0n,
@@ -238,7 +236,7 @@ describe('restaking.fragJTO test', async () => {
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
               "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
             },
           ],

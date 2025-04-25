@@ -48,11 +48,8 @@ export type CommandLineInterfaceConfig = {
   runtimeContextOptions?: RuntimeContextPartialOptions;
 
   // totally overrides VM context
-  contextOverrides?: Partial<
-    Omit<RootCommandOptions['context'], 'programs'>
-  > & {
-    programs?: Partial<RootCommandOptions['context']['programs']>;
-  } & Record<string, any>;
+  contextOverrides?: Partial<RootCommandOptions['context']> &
+    Record<string, any>;
 };
 
 export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
@@ -157,11 +154,14 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
 
       // handle context overriding
       if (config?.contextOverrides?.programs) {
-        const firstProgram = Object.values(config.contextOverrides.programs)[0];
-        const firstRuntime = firstProgram!.runtime.toString();
+        const programs = Object.values(config.contextOverrides.programs).filter(
+          (program) => !!program
+        );
+        const firstProgram = programs[0]!;
+        const firstRuntime = firstProgram.runtime.toString();
         if (
-          !Object.values(config.contextOverrides.programs).every(
-            (program) => program.runtime.toString() == firstRuntime.toString()
+          programs.some(
+            (program) => program.runtime.toString() != firstRuntime.toString()
           )
         ) {
           throw new Error(
@@ -176,7 +176,7 @@ export function startCommandLineInterface(config?: CommandLineInterfaceConfig) {
         }
 
         // override transaction hooks
-        Object.values(config.contextOverrides.programs).forEach((program) => {
+        programs.forEach((program) => {
           program.runtime.options.transaction.executionHooks =
             createDefaultTransactionExecutionHooks({
               mergeWith:

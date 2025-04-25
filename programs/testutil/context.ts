@@ -24,7 +24,6 @@ export async function createTestSuiteContext(config?: {
   slotsPerEpoch?: bigint;
   ticksPerSlot?: number;
   useDistSDK?: boolean;
-  programs?: { restaking?: boolean; solv?: boolean };
 }) {
   const resolvedConfig = {
     slotsPerEpoch: 432000n,
@@ -36,11 +35,6 @@ export async function createTestSuiteContext(config?: {
     debug: !!process.env.DEBUG,
     useDistSDK: !!process.env.CI,
     ...config,
-    programs: {
-      restaking: true,
-      solv: true,
-      ...config?.programs,
-    },
   };
 
   const validator = await TestValidator.create({
@@ -57,69 +51,53 @@ export async function createTestSuiteContext(config?: {
     mock: {
       rootDir: __dirname,
       programs: [
-        ...(resolvedConfig.programs.restaking
-          ? [
-              {
-                // keypairFilePath: '../../target/deploy/restaking-keypair.json',
-                pubkey: '4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5',
-                soFilePath: '../../target/deploy/restaking.so',
-              },
-              {
-                pubkey: 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
-                soFilePath: '../restaking/tests/mocks/metaplex.so',
-              },
-              {
-                pubkey: 'SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy',
-                soFilePath: '../restaking/tests/mocks/spl_stake_pool.so',
-              },
-              {
-                pubkey: 'MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD',
-                soFilePath: '../restaking/tests/mocks/marinade_stake_pool.so',
-              },
-              {
-                pubkey: 'SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY',
-                soFilePath:
-                  '../restaking/tests/mocks/sanctum_single_validator_stake_pool.so',
-              },
-              {
-                pubkey: 'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8',
-                soFilePath: '../restaking/tests/mocks/jito_vault.so',
-              },
-              {
-                pubkey: 'RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q',
-                soFilePath: '../restaking/tests/mocks/jito_restaking.so',
-              },
-              {
-                pubkey: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-                soFilePath: '../restaking/tests/mocks/orca_whirlpool.so',
-              },
-            ]
-          : []),
-        ...(resolvedConfig.programs.solv
-          ? [
-              {
-                // keypairFilePath: '../../target/deploy/solv-keypair.json',
-                pubkey: '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
-                soFilePath: '../../target/deploy/solv.so',
-              },
-            ]
-          : []),
+        {
+          // keypairFilePath: '../../target/deploy/restaking-keypair.json',
+          pubkey: '4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5',
+          soFilePath: '../../target/deploy/restaking.so',
+        },
+        {
+          pubkey: 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
+          soFilePath: '../restaking/tests/mocks/metaplex.so',
+        },
+        {
+          pubkey: 'SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy',
+          soFilePath: '../restaking/tests/mocks/spl_stake_pool.so',
+        },
+        {
+          pubkey: 'MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD',
+          soFilePath: '../restaking/tests/mocks/marinade_stake_pool.so',
+        },
+        {
+          pubkey: 'SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY',
+          soFilePath:
+            '../restaking/tests/mocks/sanctum_single_validator_stake_pool.so',
+        },
+        {
+          pubkey: 'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8',
+          soFilePath: '../restaking/tests/mocks/jito_vault.so',
+        },
+        {
+          pubkey: 'RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q',
+          soFilePath: '../restaking/tests/mocks/jito_restaking.so',
+        },
+        {
+          pubkey: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
+          soFilePath: '../restaking/tests/mocks/orca_whirlpool.so',
+        },
+        {
+          // keypairFilePath: '../../target/deploy/solv-keypair.json',
+          pubkey: '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
+          soFilePath: '../../target/deploy/solv.so',
+        },
       ],
       accounts: [
-        ...(resolvedConfig.programs.restaking
-          ? [
-              {
-                jsonFileDirPath: '../restaking/tests/mocks',
-              },
-            ]
-          : []),
-        ...(resolvedConfig.programs.solv
-          ? [
-              {
-                jsonFileDirPath: '../solv/tests/mocks',
-              },
-            ]
-          : []),
+        {
+          jsonFileDirPath: '../restaking/tests/mocks',
+        },
+        {
+          jsonFileDirPath: '../solv/tests/mocks',
+        },
       ],
     },
   });
@@ -160,31 +138,25 @@ export async function createTestSuiteContext(config?: {
         rootDir: __dirname,
         keypairs: [
           '../../keypairs/shared_wallet_GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF.json',
-          ...(resolvedConfig.programs.restaking
-            ? ['../../keypairs/restaking']
-            : []),
-          ...(resolvedConfig.programs.solv ? ['../../keypairs/solv'] : []),
+          '../../keypairs/restaking',
+          '../../keypairs/solv',
         ],
       }),
     ],
     executionHooks: executionHooks,
   };
 
-  const restaking = resolvedConfig.programs.restaking
-    ? sdk.RestakingProgram.connect(validator.runtime, {
-        rpc: rpcConfig,
-        transaction: transactionConfig,
-        // debug: true,
-      })
-    : (undefined as unknown as _sdk.RestakingProgram);
+  const restaking = sdk.RestakingProgram.connect(validator.runtime, {
+    rpc: rpcConfig,
+    transaction: transactionConfig,
+    // debug: true,
+  });
 
-  const solv = resolvedConfig.programs.solv
-    ? sdk.SolvBTCVaultProgram.connect(validator.runtime, {
-        rpc: rpcConfig,
-        transaction: transactionConfig,
-        // debug: true,
-      })
-    : (undefined as unknown as _sdk.SolvBTCVaultProgram);
+  const solv = sdk.SolvBTCVaultProgram.connect(validator.runtime, {
+    rpc: rpcConfig,
+    transaction: transactionConfig,
+    // debug: true,
+  });
 
   return { validator, sdk, solv, restaking, feePayer };
 }

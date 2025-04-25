@@ -3,9 +3,7 @@ import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
 
 describe('restaking.fragSOL test', async () => {
-  const testCtx = initializeFragSOL(
-    await createTestSuiteContext({ programs: { solv: false } })
-  );
+  const testCtx = initializeFragSOL(await createTestSuiteContext());
 
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
@@ -298,7 +296,7 @@ describe('restaking.fragSOL test', async () => {
       .toMatchInlineSnapshot(`
       {
         "basePool": {
-          "contribution": "MASKED(contribution)",
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
           "customContributionAccrualRateEnabled": false,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
           "settlements": [
@@ -306,14 +304,14 @@ describe('restaking.fragSOL test', async () => {
               "blocks": [
                 {
                   "amount": 0n,
-                  "endingContribution": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": 0n,
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": 0n,
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "startingSlot": "MASKED(/[.*S|s]lots?$/)",
                   "userSettledAmount": 0n,
-                  "userSettledContribution": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                 },
               ],
               "claimedAmount": 0n,
@@ -329,7 +327,7 @@ describe('restaking.fragSOL test', async () => {
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
               "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
             },
           ],
@@ -340,7 +338,7 @@ describe('restaking.fragSOL test', async () => {
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
         "bonusPool": {
-          "contribution": "MASKED(contribution)",
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
           "customContributionAccrualRateEnabled": true,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
           "settlements": [
@@ -348,14 +346,14 @@ describe('restaking.fragSOL test', async () => {
               "blocks": [
                 {
                   "amount": 0n,
-                  "endingContribution": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": 0n,
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": 0n,
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
                   "startingSlot": "MASKED(/[.*S|s]lots?$/)",
                   "userSettledAmount": 0n,
-                  "userSettledContribution": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
                 },
               ],
               "claimedAmount": 0n,
@@ -371,7 +369,7 @@ describe('restaking.fragSOL test', async () => {
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
               "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
             },
           ],

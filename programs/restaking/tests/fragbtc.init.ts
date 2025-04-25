@@ -128,95 +128,84 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
       }),
 
     // initialize Solv BTC vault (zBTC)
-    async () =>
-      solv.zBTC.initializeMint.execute({
-        // temporarily set VRT mint authority to fund manager
-        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+    () =>
+      solv.zBTC.initialize.execute({
+        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+        supportedTokenMint: solv.knownAddresses.zBTCVST,
+        receiptTokenMint: solv.knownAddresses.zBTCVRT,
       }),
     async () => {
-      const [vault, vrt, vst] = await Promise.all([
-        solv.zBTC.vault.resolveAddress(),
-        solv.zBTC.resolveAddress(),
-        solv.zBTC.supportedTokenMint.resolveAddress(),
-      ]);
+      await solv.zBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({
-        vault: vault!,
+        vault: solv.zBTC.address!,
         pricingSource: {
           __kind: 'SolvBTCVault',
-          address: vault!,
-        },
-        temp: {
-          vrt: vrt!,
-          vst: vst!,
+          address: solv.zBTC.address!,
         },
       });
     },
 
     // configure reward settings (zBTC vault)
-    async () =>
-      ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: (await solv.zBTC.vault.resolveAddress())!,
-        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+    () =>
+      solv.zBTC.delegateRewardTokenAccount.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        delegate: ctx.fund.address!,
       }),
     async () =>
+      ctx.fund.addRestakingVaultDistributingReward.execute({
+        vault: (await solv.zBTC.resolveAddress())!,
+        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      }),
+    () =>
       ctx.reward.addReward.execute({
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         decimals: 6,
         name: 'ZEUS',
         description: 'ZEUS Incentive',
       }),
-    async () =>
+    () =>
       ctx.reward.updateReward.execute({
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         claimable: true,
       }),
+    () =>
+      ctx.reward.settleReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: 0n,
+      }),
 
     // initialize Solv BTC vault (cbBTC)
-    async () =>
-      solv.cbBTC.initializeMint.execute({
-        // temporarily set VRT mint authority to fund manager
-        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+    () =>
+      solv.cbBTC.initialize.execute({
+        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+        supportedTokenMint: solv.knownAddresses.cbBTCVST,
+        receiptTokenMint: solv.knownAddresses.cbBTCVRT,
       }),
     async () => {
-      const [vault, vrt, vst] = await Promise.all([
-        solv.cbBTC.vault.resolveAddress(),
-        solv.cbBTC.resolveAddress(),
-        solv.cbBTC.supportedTokenMint.resolveAddress(),
-      ]);
+      await solv.cbBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({
-        vault: vault!,
+        vault: solv.cbBTC.address!,
         pricingSource: {
           __kind: 'SolvBTCVault',
-          address: vault!,
-        },
-        temp: {
-          vrt: vrt!,
-          vst: vst!,
+          address: solv.cbBTC.address!,
         },
       });
     },
 
     // initialize Solv BTC vault (wBTC)
-    async () =>
-      solv.wBTC.initializeMint.execute({
-        // temporarily set VRT mint authority to fund manager
-        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+    () =>
+      solv.wBTC.initialize.execute({
+        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+        supportedTokenMint: solv.knownAddresses.wBTCVST,
+        receiptTokenMint: solv.knownAddresses.wBTCVRT,
       }),
     async () => {
-      const [vault, vrt, vst] = await Promise.all([
-        solv.wBTC.vault.resolveAddress(),
-        solv.wBTC.resolveAddress(),
-        solv.wBTC.supportedTokenMint.resolveAddress(),
-      ]);
+      await solv.wBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({
-        vault: vault!,
+        vault: solv.wBTC.address!,
         pricingSource: {
           __kind: 'SolvBTCVault',
-          address: vault!,
-        },
-        temp: {
-          vrt: vrt!,
-          vst: vst!,
+          address: solv.wBTC.address!,
         },
       });
     },

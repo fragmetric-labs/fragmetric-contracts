@@ -123,7 +123,7 @@ test('can traverse context graph', async () => {
       │   │   ├── addSupportedToken                         TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
       │   │   ├── updateAssetStrategy                       TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
       │   │   ├── addTokenSwapStrategy                      TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
-      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource,temp, events=fundManagerUpdatedFund, description=add a new restaking vault
+      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
       │   │   ├── addRestakingVaultDelegation               TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
       │   │   ├── updateRestakingVaultStrategy              TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
       │   │   ├── addRestakingVaultCompoundingReward        TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault
@@ -194,7 +194,7 @@ test('can traverse context graph', async () => {
       │   │   ├── addSupportedToken                         TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
       │   │   ├── updateAssetStrategy                       TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
       │   │   ├── addTokenSwapStrategy                      TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
-      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource,temp, events=fundManagerUpdatedFund, description=add a new restaking vault
+      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
       │   │   ├── addRestakingVaultDelegation               TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
       │   │   ├── updateRestakingVaultStrategy              TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
       │   │   ├── addRestakingVaultCompoundingReward        TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault
@@ -265,7 +265,7 @@ test('can traverse context graph', async () => {
       │   │   ├── addSupportedToken                         TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
       │   │   ├── updateAssetStrategy                       TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
       │   │   ├── addTokenSwapStrategy                      TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
-      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource,temp, events=fundManagerUpdatedFund, description=add a new restaking vault
+      │   │   ├── addRestakingVault                         TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
       │   │   ├── addRestakingVaultDelegation               TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
       │   │   ├── updateRestakingVaultStrategy              TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
       │   │   ├── addRestakingVaultCompoundingReward        TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault

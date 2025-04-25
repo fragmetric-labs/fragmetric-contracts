@@ -13,7 +13,10 @@ import {
   type Address,
   type ReadonlyUint8Array,
 } from '@solana/kit';
-import { type ParsedInitializeVaultAccountInstruction } from '../instructions';
+import {
+  type ParsedDelegateVaultRewardTokenAccountInstruction,
+  type ParsedInitializeVaultAccountInstruction,
+} from '../instructions';
 
 export const SOLV_PROGRAM_ADDRESS =
   '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz' as Address<'9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz'>;
@@ -43,6 +46,7 @@ export function identifySolvAccount(
 }
 
 export enum SolvInstruction {
+  DelegateVaultRewardTokenAccount,
   InitializeVaultAccount,
 }
 
@@ -50,6 +54,17 @@ export function identifySolvInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): SolvInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([26, 32, 241, 204, 47, 71, 155, 24])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.DelegateVaultRewardTokenAccount;
+  }
   if (
     containsBytes(
       data,
@@ -68,6 +83,10 @@ export function identifySolvInstruction(
 
 export type ParsedSolvInstruction<
   TProgram extends string = '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
-> = {
-  instructionType: SolvInstruction.InitializeVaultAccount;
-} & ParsedInitializeVaultAccountInstruction<TProgram>;
+> =
+  | ({
+      instructionType: SolvInstruction.DelegateVaultRewardTokenAccount;
+    } & ParsedDelegateVaultRewardTokenAccountInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.InitializeVaultAccount;
+    } & ParsedInitializeVaultAccountInstruction<TProgram>);

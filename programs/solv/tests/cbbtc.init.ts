@@ -1,22 +1,17 @@
 import type { TestSuiteContext } from '../../testutil';
 
-export function initializeZBTCVault(testCtx: TestSuiteContext) {
+export function initializeCBBTCVault(testCtx: TestSuiteContext) {
   const { validator, solv, sdk, feePayer } = testCtx;
 
-  const ctx = solv.zBTC;
+  const ctx = solv.cbBTC;
   const admin = '7hc9hViLRVvoTkJj8515EPM6CuJa7Sep8v5AFoTE8jYE'; // local admin
   const initializationTasks = [
     // initialize receipt token mint and vault
     () =>
       ctx.initialize.execute({
         admin: admin,
-        receiptTokenMint: solv.knownAddresses.zBTCVRT,
-        supportedTokenMint: solv.knownAddresses.zBTCVST,
-      }),
-    () =>
-      ctx.delegateRewardTokenAccount.execute({
-        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-        delegate: admin,
+        receiptTokenMint: solv.knownAddresses.cbBTCVRT,
+        supportedTokenMint: solv.knownAddresses.cbBTCVST,
       }),
   ].reduce(
     async (prevLogs, task) => {

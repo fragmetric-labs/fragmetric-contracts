@@ -1,44 +1,35 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
-import { initializeZBTCVault } from './zbtc.init';
+import { initializeWBTCVault } from './wbtc.init';
 
-describe('solv.zBTC test', async () => {
-  const testCtx = initializeZBTCVault(await createTestSuiteContext());
+describe('solv.wBTC test', async () => {
+  const testCtx = initializeWBTCVault(await createTestSuiteContext());
 
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
   /** 1. configuration **/
   const { validator, feePayer, solv, initializationTasks, admin } = testCtx;
-  const ctx = solv.zBTC;
+  const ctx = solv.wBTC;
 
-  test(`solv.zBTC initializationTasks snapshot`, async () => {
+  test(`solv.wBTC initializationTasks snapshot`, async () => {
     await expectMasked(initializationTasks).resolves.toMatchSnapshot();
   });
 
-  test(`solv.zBTC.resolve`, async () => {
+  test(`solv.wBTC.resolve`, async () => {
     await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "admin": "7hc9hViLRVvoTkJj8515EPM6CuJa7Sep8v5AFoTE8jYE",
         "delegateRewardTokenAdmin": "7hc9hViLRVvoTkJj8515EPM6CuJa7Sep8v5AFoTE8jYE",
-        "delegatedRewardTokens": [
-          {
-            "amount": 0n,
-            "delegate": {
-              "__option": "Some",
-              "value": "7hc9hViLRVvoTkJj8515EPM6CuJa7Sep8v5AFoTE8jYE",
-            },
-            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-          },
-        ],
+        "delegatedRewardTokens": [],
         "receiptTokenDecimals": 8,
         "receiptTokenLockedAmount": 0n,
-        "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 0n,
         "supportedTokenAmount": 0n,
         "supportedTokenDecimals": 8,
-        "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       }
     `);
