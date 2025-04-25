@@ -29,10 +29,10 @@ pub mod check_account_init_space {
     use super::*;
     use crate::modules::reward::reward_pool::RewardPool;
 
-    pub const CHECK_REWARD_ACCOUNT_SIZE: usize = std::mem::size_of::<RewardAccount>(); // 342064 ~= 335KB
-    pub const CHECK_REWARD_POOL_SIZE: usize = std::mem::size_of::<RewardPool>(); // 83440 ~= 81.5KiB
-    pub const CHECK_USER_REWARD_ACCOUNT_SIZE: usize = std::mem::size_of::<UserRewardAccount>(); // 4240 ~= 4.15KiB
-    pub const CHECK_USER_REWARD_POOL_SIZE: usize = std::mem::size_of::<UserRewardPool>(); // 1040 ~= 1.02KiB
+    pub const CHECK_REWARD_ACCOUNT_SIZE: usize = 8 + std::mem::size_of::<RewardAccount>(); // 342064 ~= 335KB
+    pub const CHECK_REWARD_POOL_SIZE: usize = 8 + std::mem::size_of::<RewardPool>(); // 83440 ~= 81.5KiB
+    pub const CHECK_USER_REWARD_ACCOUNT_SIZE: usize = 8 + std::mem::size_of::<UserRewardAccount>(); // 4240 ~= 4.15KiB
+    pub const CHECK_USER_REWARD_POOL_SIZE: usize = 8 + std::mem::size_of::<UserRewardPool>(); // 1040 ~= 1.02KiB
 
     #[test]
     fn check_size() {
