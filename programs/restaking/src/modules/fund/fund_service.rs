@@ -563,10 +563,15 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             ),
             _ => (None, None, None, None, None),
         };
+        let rent = Rent::get()?;
         let asset_treasury_reserved_amount = fund_supported_token_treasury_account
             .as_ref()
             .map(|account| account.amount)
-            .unwrap_or_else(|| fund_treasury_account.lamports());
+            .unwrap_or_else(|| {
+                fund_treasury_account
+                    .lamports()
+                    .saturating_sub(rent.minimum_balance(0))
+            });
 
         let mut asset_user_amount_processing = 0;
         let mut asset_fee_amount_processing = 0;
@@ -1191,7 +1196,10 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 }
             }
             None => {
-                let treasury_account_lamports = fund_treasury_account.lamports();
+                let rent = Rent::get()?;
+                let treasury_account_lamports = fund_treasury_account
+                    .lamports()
+                    .saturating_sub(rent.minimum_balance(0));
                 if treasury_account_lamports == 0 {
                     Ok(0)
                 } else {

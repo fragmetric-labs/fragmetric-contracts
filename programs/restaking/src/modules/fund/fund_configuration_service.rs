@@ -42,7 +42,36 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         receipt_token_program: &Program<'info, Token2022>,
         receipt_token_mint_current_authority: &Signer<'info>,
         fund_account_bump: u8,
+
+        payer: &Signer<'info>,
+        system_program: &Program<'info, System>,
+        fund_reserve_account: &SystemAccount<'info>,
+        fund_treasury_account: &SystemAccount<'info>,
     ) -> Result<()> {
+        // fund possible SOL accounts to ensure rent-exempt
+        let min_lamports_for_system_account = Rent::get()?.minimum_balance(0);
+        anchor_lang::system_program::transfer(
+            CpiContext::new(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: payer.to_account_info(),
+                    to: fund_reserve_account.to_account_info(),
+                },
+            ),
+            min_lamports_for_system_account,
+        )?;
+        anchor_lang::system_program::transfer(
+            CpiContext::new(
+                system_program.to_account_info(),
+                anchor_lang::system_program::Transfer {
+                    from: payer.to_account_info(),
+                    to: fund_treasury_account.to_account_info(),
+                },
+            ),
+            min_lamports_for_system_account,
+        )?;
+
+        // initialize header or entire buffer
         if self.fund_account.as_ref().data_len() < 8 + std::mem::size_of::<FundAccount>() {
             self.fund_account
                 .initialize_zero_copy_header(fund_account_bump)?;

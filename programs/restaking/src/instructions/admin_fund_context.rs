@@ -48,10 +48,18 @@ pub struct AdminFundAccountInitialContext<'info> {
     pub fund_receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
+        mut,
         seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_reserve_account: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::TREASURY_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_treasury_account: SystemAccount<'info>,
 }
 
 #[event_cpi]
@@ -73,12 +81,6 @@ pub struct AdminFundAccountUpdateContext<'info> {
         bump = fund_account.get_bump()?,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
-
-    #[account(
-        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
-        bump,
-    )]
-    pub fund_reserve_account: SystemAccount<'info>,
 }
 
 #[event_cpi]

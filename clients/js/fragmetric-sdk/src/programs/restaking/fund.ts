@@ -571,21 +571,7 @@ export class RestakingFundAccountContext extends AccountContext<
                       }
                     );
                   const fundAccount = ix.accounts[5].address;
-                  const minLamportsForSystemAccount = await this.runtime.rpc
-                    .getMinimumBalanceForRentExemption(0n)
-                    .send();
-
                   return Promise.all([
-                    system.getTransferSolInstruction({
-                      source: createNoopSigner(payer! as Address),
-                      destination: reserve!,
-                      amount: minLamportsForSystemAccount,
-                    }),
-                    system.getTransferSolInstruction({
-                      source: createNoopSigner(payer! as Address),
-                      destination: treasury!,
-                      amount: minLamportsForSystemAccount,
-                    }),
                     token2022.getCreateAssociatedTokenIdempotentInstructionAsync(
                       {
                         payer: createNoopSigner(payer! as Address),

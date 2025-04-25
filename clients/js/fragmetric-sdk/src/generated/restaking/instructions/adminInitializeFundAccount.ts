@@ -68,6 +68,7 @@ export type AdminInitializeFundAccountInstruction<
     | string
     | IAccountMeta<string> = string,
   TAccountFundReserveAccount extends string | IAccountMeta<string> = string,
+  TAccountFundTreasuryAccount extends string | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -99,8 +100,11 @@ export type AdminInitializeFundAccountInstruction<
         ? ReadonlyAccount<TAccountFundReceiptTokenLockAccount>
         : TAccountFundReceiptTokenLockAccount,
       TAccountFundReserveAccount extends string
-        ? ReadonlyAccount<TAccountFundReserveAccount>
+        ? WritableAccount<TAccountFundReserveAccount>
         : TAccountFundReserveAccount,
+      TAccountFundTreasuryAccount extends string
+        ? WritableAccount<TAccountFundTreasuryAccount>
+        : TAccountFundTreasuryAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -152,6 +156,7 @@ export type AdminInitializeFundAccountAsyncInput<
   TAccountFundAccount extends string = string,
   TAccountFundReceiptTokenLockAccount extends string = string,
   TAccountFundReserveAccount extends string = string,
+  TAccountFundTreasuryAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -168,6 +173,7 @@ export type AdminInitializeFundAccountAsyncInput<
   fundAccount?: Address<TAccountFundAccount>;
   fundReceiptTokenLockAccount?: Address<TAccountFundReceiptTokenLockAccount>;
   fundReserveAccount?: Address<TAccountFundReserveAccount>;
+  fundTreasuryAccount?: Address<TAccountFundTreasuryAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
 };
@@ -181,6 +187,7 @@ export async function getAdminInitializeFundAccountInstructionAsync<
   TAccountFundAccount extends string,
   TAccountFundReceiptTokenLockAccount extends string,
   TAccountFundReserveAccount extends string,
+  TAccountFundTreasuryAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -194,6 +201,7 @@ export async function getAdminInitializeFundAccountInstructionAsync<
     TAccountFundAccount,
     TAccountFundReceiptTokenLockAccount,
     TAccountFundReserveAccount,
+    TAccountFundTreasuryAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -209,6 +217,7 @@ export async function getAdminInitializeFundAccountInstructionAsync<
     TAccountFundAccount,
     TAccountFundReceiptTokenLockAccount,
     TAccountFundReserveAccount,
+    TAccountFundTreasuryAccount,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -236,7 +245,11 @@ export async function getAdminInitializeFundAccountInstructionAsync<
     },
     fundReserveAccount: {
       value: input.fundReserveAccount ?? null,
-      isWritable: false,
+      isWritable: true,
+    },
+    fundTreasuryAccount: {
+      value: input.fundTreasuryAccount ?? null,
+      isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
@@ -302,6 +315,21 @@ export async function getAdminInitializeFundAccountInstructionAsync<
       ],
     });
   }
+  if (!accounts.fundTreasuryAccount.value) {
+    accounts.fundTreasuryAccount.value = await getProgramDerivedAddress({
+      programAddress,
+      seeds: [
+        getBytesEncoder().encode(
+          new Uint8Array([
+            102, 117, 110, 100, 95, 116, 114, 101, 97, 115, 117, 114, 121,
+          ])
+        ),
+        getAddressEncoder().encode(
+          expectAddress(accounts.receiptTokenMint.value)
+        ),
+      ],
+    });
+  }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
       programAddress,
@@ -327,6 +355,7 @@ export async function getAdminInitializeFundAccountInstructionAsync<
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.fundReceiptTokenLockAccount),
       getAccountMeta(accounts.fundReserveAccount),
+      getAccountMeta(accounts.fundTreasuryAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -342,6 +371,7 @@ export async function getAdminInitializeFundAccountInstructionAsync<
     TAccountFundAccount,
     TAccountFundReceiptTokenLockAccount,
     TAccountFundReserveAccount,
+    TAccountFundTreasuryAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -358,6 +388,7 @@ export type AdminInitializeFundAccountInput<
   TAccountFundAccount extends string = string,
   TAccountFundReceiptTokenLockAccount extends string = string,
   TAccountFundReserveAccount extends string = string,
+  TAccountFundTreasuryAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -374,6 +405,7 @@ export type AdminInitializeFundAccountInput<
   fundAccount: Address<TAccountFundAccount>;
   fundReceiptTokenLockAccount: Address<TAccountFundReceiptTokenLockAccount>;
   fundReserveAccount: Address<TAccountFundReserveAccount>;
+  fundTreasuryAccount: Address<TAccountFundTreasuryAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
 };
@@ -387,6 +419,7 @@ export function getAdminInitializeFundAccountInstruction<
   TAccountFundAccount extends string,
   TAccountFundReceiptTokenLockAccount extends string,
   TAccountFundReserveAccount extends string,
+  TAccountFundTreasuryAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -400,6 +433,7 @@ export function getAdminInitializeFundAccountInstruction<
     TAccountFundAccount,
     TAccountFundReceiptTokenLockAccount,
     TAccountFundReserveAccount,
+    TAccountFundTreasuryAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -414,6 +448,7 @@ export function getAdminInitializeFundAccountInstruction<
   TAccountFundAccount,
   TAccountFundReceiptTokenLockAccount,
   TAccountFundReserveAccount,
+  TAccountFundTreasuryAccount,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -440,7 +475,11 @@ export function getAdminInitializeFundAccountInstruction<
     },
     fundReserveAccount: {
       value: input.fundReserveAccount ?? null,
-      isWritable: false,
+      isWritable: true,
+    },
+    fundTreasuryAccount: {
+      value: input.fundTreasuryAccount ?? null,
+      isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
@@ -475,6 +514,7 @@ export function getAdminInitializeFundAccountInstruction<
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.fundReceiptTokenLockAccount),
       getAccountMeta(accounts.fundReserveAccount),
+      getAccountMeta(accounts.fundTreasuryAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -490,6 +530,7 @@ export function getAdminInitializeFundAccountInstruction<
     TAccountFundAccount,
     TAccountFundReceiptTokenLockAccount,
     TAccountFundReserveAccount,
+    TAccountFundTreasuryAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -517,8 +558,9 @@ export type ParsedAdminInitializeFundAccountInstruction<
     fundAccount: TAccountMetas[5];
     fundReceiptTokenLockAccount: TAccountMetas[6];
     fundReserveAccount: TAccountMetas[7];
-    eventAuthority: TAccountMetas[8];
-    program: TAccountMetas[9];
+    fundTreasuryAccount: TAccountMetas[8];
+    eventAuthority: TAccountMetas[9];
+    program: TAccountMetas[10];
   };
   data: AdminInitializeFundAccountInstructionData;
 };
@@ -531,7 +573,7 @@ export function parseAdminInitializeFundAccountInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminInitializeFundAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 11) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -552,6 +594,7 @@ export function parseAdminInitializeFundAccountInstruction<
       fundAccount: getNextAccount(),
       fundReceiptTokenLockAccount: getNextAccount(),
       fundReserveAccount: getNextAccount(),
+      fundTreasuryAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

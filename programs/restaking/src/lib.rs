@@ -48,6 +48,10 @@ pub mod restaking {
             &ctx.accounts.receipt_token_program,
             &ctx.accounts.admin,
             ctx.bumps.fund_account,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &ctx.accounts.fund_reserve_account,
+            &ctx.accounts.fund_treasury_account,
         )
     }
 

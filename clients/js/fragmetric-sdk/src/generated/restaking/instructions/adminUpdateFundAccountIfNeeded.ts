@@ -67,7 +67,6 @@ export type AdminUpdateFundAccountIfNeededInstruction<
     | IAccountMeta<string> = '11111111111111111111111111111111',
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountFundAccount extends string | IAccountMeta<string> = string,
-  TAccountFundReserveAccount extends string | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -92,9 +91,6 @@ export type AdminUpdateFundAccountIfNeededInstruction<
       TAccountFundAccount extends string
         ? WritableAccount<TAccountFundAccount>
         : TAccountFundAccount,
-      TAccountFundReserveAccount extends string
-        ? ReadonlyAccount<TAccountFundReserveAccount>
-        : TAccountFundReserveAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -150,7 +146,6 @@ export type AdminUpdateFundAccountIfNeededAsyncInput<
   TAccountSystemProgram extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
-  TAccountFundReserveAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -159,7 +154,6 @@ export type AdminUpdateFundAccountIfNeededAsyncInput<
   systemProgram?: Address<TAccountSystemProgram>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount?: Address<TAccountFundAccount>;
-  fundReserveAccount?: Address<TAccountFundReserveAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   desiredAccountSize: AdminUpdateFundAccountIfNeededInstructionDataArgs['desiredAccountSize'];
@@ -171,7 +165,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
   TAccountSystemProgram extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
-  TAccountFundReserveAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -182,7 +175,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
     TAccountSystemProgram,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
-    TAccountFundReserveAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -195,7 +187,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
     TAccountSystemProgram,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
-    TAccountFundReserveAccount,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -213,10 +204,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
-    fundReserveAccount: {
-      value: input.fundReserveAccount ?? null,
-      isWritable: false,
-    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -248,21 +235,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
       ],
     });
   }
-  if (!accounts.fundReserveAccount.value) {
-    accounts.fundReserveAccount.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            102, 117, 110, 100, 95, 114, 101, 115, 101, 114, 118, 101,
-          ])
-        ),
-        getAddressEncoder().encode(
-          expectAddress(accounts.receiptTokenMint.value)
-        ),
-      ],
-    });
-  }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
       programAddress,
@@ -285,7 +257,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
-      getAccountMeta(accounts.fundReserveAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -300,7 +271,6 @@ export async function getAdminUpdateFundAccountIfNeededInstructionAsync<
     TAccountSystemProgram,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
-    TAccountFundReserveAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -314,7 +284,6 @@ export type AdminUpdateFundAccountIfNeededInput<
   TAccountSystemProgram extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
-  TAccountFundReserveAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -323,7 +292,6 @@ export type AdminUpdateFundAccountIfNeededInput<
   systemProgram?: Address<TAccountSystemProgram>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount: Address<TAccountFundAccount>;
-  fundReserveAccount: Address<TAccountFundReserveAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   desiredAccountSize: AdminUpdateFundAccountIfNeededInstructionDataArgs['desiredAccountSize'];
@@ -335,7 +303,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
   TAccountSystemProgram extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
-  TAccountFundReserveAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -346,7 +313,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
     TAccountSystemProgram,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
-    TAccountFundReserveAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -358,7 +324,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
   TAccountSystemProgram,
   TAccountReceiptTokenMint,
   TAccountFundAccount,
-  TAccountFundReserveAccount,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -375,10 +340,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
-    fundReserveAccount: {
-      value: input.fundReserveAccount ?? null,
-      isWritable: false,
-    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -408,7 +369,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
-      getAccountMeta(accounts.fundReserveAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -423,7 +383,6 @@ export function getAdminUpdateFundAccountIfNeededInstruction<
     TAccountSystemProgram,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
-    TAccountFundReserveAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -442,9 +401,8 @@ export type ParsedAdminUpdateFundAccountIfNeededInstruction<
     systemProgram: TAccountMetas[2];
     receiptTokenMint: TAccountMetas[3];
     fundAccount: TAccountMetas[4];
-    fundReserveAccount: TAccountMetas[5];
-    eventAuthority: TAccountMetas[6];
-    program: TAccountMetas[7];
+    eventAuthority: TAccountMetas[5];
+    program: TAccountMetas[6];
   };
   data: AdminUpdateFundAccountIfNeededInstructionData;
 };
@@ -457,7 +415,7 @@ export function parseAdminUpdateFundAccountIfNeededInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminUpdateFundAccountIfNeededInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 8) {
+  if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -475,7 +433,6 @@ export function parseAdminUpdateFundAccountIfNeededInstruction<
       systemProgram: getNextAccount(),
       receiptTokenMint: getNextAccount(),
       fundAccount: getNextAccount(),
-      fundReserveAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
