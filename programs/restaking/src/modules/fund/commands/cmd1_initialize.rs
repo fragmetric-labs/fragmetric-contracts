@@ -229,7 +229,7 @@ impl InitializeCommand {
             }
             Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
-                command.without_required_accounts()
+                return self.execute_new_restaking_vault_update_command(ctx, Some(vault), None);
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -274,18 +274,15 @@ impl InitializeCommand {
 
                 let next_item_indices = vault_service.get_ordered_vault_update_indices();
 
-                self.create_next_jito_restaking_vault_update_command(
+                Some(self.create_next_jito_restaking_vault_update_command(
                     &vault_service,
                     restaking_vault,
                     &next_item_indices,
-                )?
+                )?)
             }
             Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
-                Ok((
-                    None,
-                    self.create_prepare_restaking_vault_update_command(ctx, vaults[1..].to_vec())?,
-                ))
+                None
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -302,7 +299,7 @@ impl InitializeCommand {
             }
         };
 
-        Ok((None, Some(entry)))
+        Ok((None, entry))
     }
 
     #[inline(never)]

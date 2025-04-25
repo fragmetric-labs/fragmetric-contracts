@@ -58,6 +58,7 @@ pub enum HarvestRewardCommandState {
     },
 }
 
+use crate::entry;
 use HarvestRewardCommandState::*;
 
 impl std::fmt::Debug for HarvestRewardCommandState {
@@ -288,79 +289,140 @@ impl HarvestRewardCommand {
             .get_restaking_vault(&vault)?
             .receipt_token_pricing_source
             .try_deserialize()?;
-        let entry = match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+
+        let entry = match harvest_type {
+            HarvestType::Compound => {
+                let reward_token_mint = reward_token_mints[0];
+                let mut required_accounts = vec![(reward_token_mint, false)];
+
                 // We need to check vault's token account whether
                 // the account is delegated to fund account or not.
                 // Although we do not know whether the token
                 // belongs to token program or token 2022 program,
                 // we can try both ATAs.
-                let required_accounts = [
-                    (reward_token_mints[0], false),
-                    (
-                        associated_token::get_associated_token_address_with_program_id(
-                            &vault,
-                            &reward_token_mints[0],
-                            &anchor_spl::token::ID,
-                        ),
-                        false,
-                    ),
-                    (
-                        associated_token::get_associated_token_address_with_program_id(
-                            &vault,
-                            &reward_token_mints[0],
-                            &anchor_spl::token_2022::ID,
-                        ),
-                        false,
-                    ),
-                ];
-
-                match harvest_type {
-                    HarvestType::Compound => {
-                        let command = Self {
-                            state: PrepareCompound {
-                                vault,
-                                reward_token_mints,
-                            },
-                        };
-                        command.with_required_accounts(required_accounts)
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                        required_accounts.extend_from_slice(&[
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token::ID,
+                                ),
+                                false,
+                            ),
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token_2022::ID,
+                                ),
+                                false,
+                            ),
+                        ]);
                     }
-                    HarvestType::Distribute => {
-                        let reward_account =
-                            RewardAccount::find_account_address(&ctx.receipt_token_mint.key());
-                        let required_accounts = required_accounts
-                            .into_iter()
-                            .chain([(reward_account, false)]);
-
-                        let command = Self {
-                            state: PrepareDistribute {
-                                vault,
-                                reward_token_mints,
-                            },
-                        };
-                        command.with_required_accounts(required_accounts)
+                    Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        // TODO/v0.7.0: deal with solv vault if needed
+                        // noop
+                    }
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                     }
                 }
-            }
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
+
                 let command = Self {
-                    state: ExecuteCompound { vault, reward_token_mints },
+                    state: PrepareCompound {
+                        vault,
+                        reward_token_mints,
+                    },
                 };
-                command.without_required_accounts()
+                command.with_required_accounts(required_accounts)
             }
-            // otherwise fails
-            Some(TokenPricingSource::SPLStakePool { .. })
-            | Some(TokenPricingSource::MarinadeStakePool { .. })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-            | Some(TokenPricingSource::PeggedToken { .. })
-            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-            #[cfg(all(test, not(feature = "idl-build")))]
-            Some(TokenPricingSource::Mock { .. }) => {
-                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            HarvestType::Distribute => {
+                let reward_account =
+                    RewardAccount::find_account_address(&ctx.receipt_token_mint.key());
+                let reward_token_mint = reward_token_mints[0];
+                let mut required_accounts =
+                    vec![(reward_account, false), (reward_token_mint, false)];
+
+                // We need to check vault's token account whether
+                // the account is delegated to fund account or not.
+                // Although we do not know whether the token
+                // belongs to token program or token 2022 program,
+                // we can try both ATAs.
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+                        required_accounts.extend(&[
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token::ID,
+                                ),
+                                false,
+                            ),
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token_2022::ID,
+                                ),
+                                false,
+                            ),
+                        ]);
+                    }
+                    Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        required_accounts.extend(&[
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token::ID,
+                                ),
+                                false,
+                            ),
+                            (
+                                associated_token::get_associated_token_address_with_program_id(
+                                    &vault,
+                                    &reward_token_mint,
+                                    &anchor_spl::token_2022::ID,
+                                ),
+                                false,
+                            ),
+                        ]);
+                    }
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
+                };
+
+                let command = Self {
+                    state: PrepareDistribute {
+                        vault,
+                        reward_token_mints,
+                    },
+                };
+                command.with_required_accounts(required_accounts)
             }
         };
 
@@ -671,7 +733,7 @@ impl HarvestRewardCommand {
                     // Transfer
                     self.execute_transfer(ctx, &mut accounts, &reward_token_mints[0])?
                 }
-                Some(TokenPricingSource::SolvBTCVault {..}) => {
+                Some(TokenPricingSource::SolvBTCVault { .. }) => {
                     // TODO/v0.7.0: deal with solv vault if needed
                     None
                 }
@@ -876,9 +938,10 @@ impl HarvestRewardCommand {
             .receipt_token_pricing_source
             .try_deserialize()?;
         let result = (|| match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // Transfer & Settle
-                let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, ..] =
+                let [reward_account, reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, ..] =
                     accounts
                 else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -954,9 +1017,6 @@ impl HarvestRewardCommand {
                 .into();
 
                 Ok(Some(result))
-            }
-            Some(TokenPricingSource::SolvBTCVault {..}) => {
-                Ok(None)
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
