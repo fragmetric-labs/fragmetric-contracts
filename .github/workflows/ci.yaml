@@ -28,11 +28,6 @@ on:
     branches: ['main', 'dev']
   pull_request:
     branches: ['main', 'dev']
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.ts'
-      - '**/*.js'
-      - '**/*.lock'
   workflow_dispatch: {}
 
 concurrency:
@@ -95,18 +90,15 @@ jobs:
       # lint Rust codes and audit dependencies
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
       - run: cargo fmt --check
-
-      # TODO: branch on target programs later
-      - run: cargo clean -p restaking
-      - run: cargo clippy -p restaking -- --allow warnings
-      - run: cargo test-sbf -p restaking
-      - run: anchor build -p restaking
+      - run: cargo clippy -- --allow warnings
+      - run: cargo test-sbf
+      - run: anchor build
       - run: pnpm build
       - name: Run integration tests
         shell: bash
         run: |
           shopt -s globstar
-          files=(./programs/restaking/tests/*.test.ts)
+          files=(./programs/**/*.test.ts)
           # run test with LiteSVM or SVM
           pnpm test "${files[@]}"
 

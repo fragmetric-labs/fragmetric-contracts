@@ -53,7 +53,7 @@ describe('RestakingFundOperatorContext on devnet', async () => {
     });
   });
 
-  test('can execute runCommandTransaction', async () => {
+  test('can execute runCommandTransaction (fails as unauthorized)', async () => {
     // const forceResetCommand: restaking.OperationCommandEntryArgs = {
     //   command: {
     //     __kind: 'ProcessWithdrawalBatch',
@@ -61,6 +61,7 @@ describe('RestakingFundOperatorContext on devnet', async () => {
     //   },
     //   requiredAccounts: [],
     // };
+    const fnOnSignature = vi.fn();
     const fnOnResult = vi.fn();
     const fnOnError = vi.fn();
     await expect(
@@ -68,23 +69,25 @@ describe('RestakingFundOperatorContext on devnet', async () => {
         .execute(
           {
             forceResetCommand: 'ProcessWithdrawalBatch',
+            operator: signer.address,
           },
           {
             feePayer: signer,
             executionHooks: {
+              onSignature: fnOnSignature,
               onResult: fnOnResult,
               onError: fnOnError,
             },
-          },
-          {
-            skipPreflight: true,
           }
         )
-        .then((res) => res.result?.meta?.logMessages ?? [])
+        .catch((err) => {
+          return err.context.logs.join('\n');
+        })
     ).resolves.toContain(
-      'Program log: AnchorError thrown in programs/restaking/src/lib.rs:644. Error Code: FundOperationUnauthorizedCommandError. Error Number: 6064. Error Message: fund: unauhorized operation command.'
+      'Error Code: FundOperationUnauthorizedCommandError. Error Number: 6064. Error Message: fund: unauhorized operation command.'
     );
-    expect(fnOnResult).toHaveBeenCalledOnce();
-    expect(fnOnError).not.toHaveBeenCalled();
+    expect(fnOnSignature).not.toHaveBeenCalled();
+    expect(fnOnResult).not.toHaveBeenCalled();
+    expect(fnOnError).toHaveBeenCalledOnce();
   });
 });

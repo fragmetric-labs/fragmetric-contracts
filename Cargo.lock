@@ -1825,7 +1825,7 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "restaking"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -2807,6 +2807,17 @@ dependencies = [
  "subtle",
  "thiserror 1.0.69",
  "zeroize",
+]
+
+[[package]]
+name = "solv"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "borsh 1.5.5",
+ "bytemuck",
+ "proptest",
 ]
 
 [[package]]

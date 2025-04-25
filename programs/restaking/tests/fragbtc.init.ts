@@ -1,7 +1,8 @@
-import type { TestSuiteContext } from './utils';
+import type { RestakingProgram } from '@fragmetric-labs/sdk';
+import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragBTC(testCtx: TestSuiteContext) {
-  const { validator, restaking, sdk } = testCtx;
+  const { validator, restaking, solv, sdk } = testCtx;
   const { MAX_U64 } = sdk;
 
   const ctx = restaking.fragBTC;
@@ -22,7 +23,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.updateGeneralStrategy.execute({
         depositEnabled: true,
-        donationEnabled: true,
+        donationEnabled: false,
         transferEnabled: true,
         withdrawalEnabled: true,
         withdrawalBatchThresholdSeconds: 86400,
@@ -84,6 +85,27 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: true,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 0n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
 
     // initialize reward account and configuration
     () =>
@@ -104,6 +126,100 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         amount: 0n,
         isBonus: true,
       }),
+
+    // initialize Solv BTC vault (zBTC)
+    async () =>
+      solv.zBTC.initializeMint.execute({
+        // temporarily set VRT mint authority to fund manager
+        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+      }),
+    async () => {
+      const [vault, vrt, vst] = await Promise.all([
+        solv.zBTC.vault.resolveAddress(),
+        solv.zBTC.resolveAddress(),
+        solv.zBTC.supportedTokenMint.resolveAddress(),
+      ]);
+      return ctx.fund.addRestakingVault.execute({
+        vault: vault!,
+        pricingSource: {
+          __kind: 'SolvBTCVault',
+          address: vault!,
+        },
+        temp: {
+          vrt: vrt!,
+          vst: vst!,
+        },
+      });
+    },
+
+    // configure reward settings (zBTC vault)
+    async () =>
+      ctx.fund.addRestakingVaultDistributingReward.execute({
+        vault: (await solv.zBTC.vault.resolveAddress())!,
+        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      }),
+    async () =>
+      ctx.reward.addReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        decimals: 6,
+        name: 'ZEUS',
+        description: 'ZEUS Incentive',
+      }),
+    async () =>
+      ctx.reward.updateReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        claimable: true,
+      }),
+
+    // initialize Solv BTC vault (cbBTC)
+    async () =>
+      solv.cbBTC.initializeMint.execute({
+        // temporarily set VRT mint authority to fund manager
+        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+      }),
+    async () => {
+      const [vault, vrt, vst] = await Promise.all([
+        solv.cbBTC.vault.resolveAddress(),
+        solv.cbBTC.resolveAddress(),
+        solv.cbBTC.supportedTokenMint.resolveAddress(),
+      ]);
+      return ctx.fund.addRestakingVault.execute({
+        vault: vault!,
+        pricingSource: {
+          __kind: 'SolvBTCVault',
+          address: vault!,
+        },
+        temp: {
+          vrt: vrt!,
+          vst: vst!,
+        },
+      });
+    },
+
+    // initialize Solv BTC vault (wBTC)
+    async () =>
+      solv.wBTC.initializeMint.execute({
+        // temporarily set VRT mint authority to fund manager
+        authority: (ctx.program as RestakingProgram).knownAddresses.fundManager,
+      }),
+    async () => {
+      const [vault, vrt, vst] = await Promise.all([
+        solv.wBTC.vault.resolveAddress(),
+        solv.wBTC.resolveAddress(),
+        solv.wBTC.supportedTokenMint.resolveAddress(),
+      ]);
+      return ctx.fund.addRestakingVault.execute({
+        vault: vault!,
+        pricingSource: {
+          __kind: 'SolvBTCVault',
+          address: vault!,
+        },
+        temp: {
+          vrt: vrt!,
+          vst: vst!,
+        },
+      });
+    },
 
     // initialize wrapped token mint and configuration
     () =>

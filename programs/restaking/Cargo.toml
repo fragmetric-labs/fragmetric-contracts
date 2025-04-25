@@ -1,6 +1,6 @@
 [package]
 name = "restaking"
-version = "0.6.0"
+version = "0.6.1"
 description = "Fragmetric Liquid Restaking Program"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -43,7 +43,7 @@ spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
-primitive-types = "0.13.1"
+primitive-types = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

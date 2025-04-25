@@ -31,6 +31,9 @@ pub enum TokenPricingSource {
     PeggedToken {
         address: Pubkey,
     },
+    SolvBTCVault {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -59,6 +62,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::PeggedToken { address } => {
                 write!(f, "PeggedToken({})", address)
+            }
+            Self::SolvBTCVault { address } => {
+                write!(f, "SolvBTCVault({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -99,6 +105,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::PeggedToken { address } => {
                 pod.discriminant = 8;
+                pod.address = *address;
+            }
+            TokenPricingSource::SolvBTCVault { address } => {
+                pod.discriminant = 9;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -154,6 +164,9 @@ impl TokenPricingSourcePod {
                 address: self.address,
             },
             8 => TokenPricingSource::PeggedToken {
+                address: self.address,
+            },
+            9 => TokenPricingSource::SolvBTCVault {
                 address: self.address,
             },
             #[cfg(all(test, not(feature = "idl-build")))]

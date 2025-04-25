@@ -99,7 +99,7 @@ describe('RestakingUserContext on devnet', async () => {
     });
   });
 
-  test('can execute depositTransaction with metadata', async () => {
+  test('can execute depositTransaction with metadata (fails as unauthorized)', async () => {
     await expect(
       user.deposit
         .execute(
@@ -116,14 +116,13 @@ describe('RestakingUserContext on devnet', async () => {
           },
           {
             signers: [signer],
-          },
-          {
-            skipPreflight: true,
           }
         )
-        .then((res) => res.result?.meta?.logMessages ?? [])
+        .catch((err) => {
+          return err.context.logs.join('\n');
+        })
     ).resolves.toContain(
-      'Program log: AnchorError thrown in programs/restaking/src/modules/ed25519/signature_verification_service.rs:80. Error Code: InvalidSignatureError. Error Number: 6003. Error Message: signature verification failed.'
+      'Error Code: InvalidSignatureError. Error Number: 6003. Error Message: signature verification failed.'
     );
   });
 
@@ -142,12 +141,7 @@ describe('RestakingUserContext on devnet', async () => {
             { signers: [signer] },
             { skipPreflight: true }
           )
-        ).resolves.toMatchObject({
-          events: {
-            unknown: [],
-          },
-          succeeded: false,
-        });
+        ).rejects.toThrowError('invalid context');
       } else if (request.state == 'cancelable') {
         await expect(
           user.cancelWithdrawalRequest.execute(

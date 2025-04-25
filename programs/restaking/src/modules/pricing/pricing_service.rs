@@ -166,6 +166,9 @@ impl<'info> PricingService<'info> {
                 require_keys_neq!(*address, *token_mint);
                 self.token_values[token_index] = self.get_token_value(address)?.clone();
             }
+            TokenPricingSource::SolvBTCVault { .. } => {
+                self.token_values[token_index] = TokenValue::default();
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

@@ -24,6 +24,7 @@ import {
 import * as jitoRestaking from '../../generated/jito_restaking';
 import * as jitoVault from '../../generated/jito_vault';
 import * as restaking from '../../generated/restaking';
+import { SolvBTCVaultProgram } from '../solv';
 import { getRestakingAnchorEventDecoders } from './events';
 import { RestakingFundAddressLookupTableAccountContext } from './fund_address_lookup_table';
 import { RestakingFundReserveAccountContext } from './fund_reserve';
@@ -214,6 +215,8 @@ export class RestakingFundAccountContext extends AccountContext<
     switch (program) {
       case jitoVault.JITO_VAULT_PROGRAM_ADDRESS:
         return new JitoVaultAccountContext(this, address);
+      case SolvBTCVaultProgram.connect(this.runtime.config).address:
+        return new JitoVaultAccountContext(this, address); // TODO: implement SolvBTCVaultAccountContext or abstract it
     }
     return null;
   }
@@ -511,6 +514,11 @@ export class RestakingFundAccountContext extends AccountContext<
       ],
     },
     async (parent, args, events) => {
+      if (!events?.operatorRanFundCommand) {
+        throw new Error(
+          `invalid context: failed to parse event during chaining`
+        );
+      }
       if (
         typeof events?.operatorRanFundCommand?.nextSequence != 'undefined' &&
         events.operatorRanFundCommand.nextSequence != 0
@@ -1148,13 +1156,20 @@ export class RestakingFundAccountContext extends AccountContext<
       vault: v.string(),
       pricingSource: v.pipe(
         v.object({
-          __kind: v.picklist(['JitoRestakingVault']),
+          __kind: v.picklist(['JitoRestakingVault', 'SolvBTCVault']),
           address: v.string(),
         }) as v.GenericSchema<
           Omit<restaking.TokenPricingSourceArgs, 'address'> & {
             address: string;
           }
         >
+      ),
+      temp: v.nullish(
+        v.object({
+          vrt: v.string(),
+          vst: v.string(),
+        }),
+        null
       ),
     }),
     {
@@ -1254,6 +1269,54 @@ export class RestakingFundAccountContext extends AccountContext<
                 newAdmin: fund,
                 vaultAdminRole: jitoVault.VaultAdminRole.DelegationAdmin,
               }),
+              ix,
+            ]);
+          } else if (args.pricingSource.__kind == 'SolvBTCVault') {
+            // TODO/v0.7.0: elaborate solv restaking vault registration using SolvBTCVaultProgram or whatever, vault should be initialized before fund registration
+            const solvProgram = SolvBTCVaultProgram.connect(
+              parent.runtime.config
+            );
+            const ix =
+              await restaking.getFundManagerInitializeFundSolvBtcVaultInstructionAsync(
+                {
+                  vaultAccount: args.vault as Address,
+                  vaultProgram: solvProgram.address,
+                  vaultReceiptTokenMint: args.temp!.vrt as Address,
+                  vaultSupportedTokenMint: args.temp!.vst as Address,
+                  fundManager: createNoopSigner(fundManager),
+                  receiptTokenMint: data.receiptTokenMint,
+                  program: this.program.address,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              );
+            for (const accountMeta of data.__pricingSources) {
+              ix.accounts.push(accountMeta);
+            }
+            ix.accounts.push({
+              address: args.pricingSource.address as Address,
+              role: AccountRole.READONLY,
+            });
+
+            const fundReserve = ix.accounts[3].address;
+            return Promise.all([
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: args.temp!.vrt as Address,
+                owner: fundReserve,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              }),
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: args.temp!.vst as Address,
+                owner: args.vault as Address,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              }),
+              // solv.getInitializeVaultAccountInstructionAsync({
+              //   authority: fundReserve,
+              //   // ...
+              // }),
               ix,
             ]);
           }

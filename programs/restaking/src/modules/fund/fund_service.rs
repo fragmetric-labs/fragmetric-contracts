@@ -111,7 +111,8 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
-                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address }) => {
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
+                | Some(TokenPricingSource::SolvBTCVault { address }) => {
                     for remaining_account in remaining_accounts {
                         if address == remaining_account.key() {
                             pricing_sources.push(remaining_account);
@@ -246,6 +247,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
                                             withdrawal_requested_receipt_token_amount;
                                     }
                                     TokenPricingSource::JitoRestakingVault { .. }
+                                    | TokenPricingSource::SolvBTCVault { .. }
                                     | TokenPricingSource::FragmetricNormalizedTokenPool {
                                         ..
                                     }
@@ -1197,10 +1199,11 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
             None => {
                 let rent = Rent::get()?;
+                let min_lamports_for_system_account = rent.minimum_balance(0);
                 let treasury_account_lamports = fund_treasury_account
                     .lamports()
-                    .saturating_sub(rent.minimum_balance(0));
-                if treasury_account_lamports == 0 {
+                    .saturating_sub(min_lamports_for_system_account);
+                if treasury_account_lamports < min_lamports_for_system_account {
                     Ok(0)
                 } else {
                     anchor_lang::system_program::transfer(

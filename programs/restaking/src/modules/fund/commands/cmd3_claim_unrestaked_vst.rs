@@ -212,6 +212,20 @@ impl ClaimUnrestakedVSTCommand {
                     ),
                 ))
             }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok((
+                    None,
+                    Some(
+                        ClaimUnrestakedVSTCommand {
+                            state: ClaimUnrestakedVSTCommandState::Execute {
+                                items: items.clone(),
+                            },
+                        }
+                        .without_required_accounts(),
+                    ),
+                ))
+            }
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -394,6 +408,10 @@ impl ClaimUnrestakedVSTCommand {
                 } else {
                     None
                 }
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                None
             }
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })

@@ -207,6 +207,58 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
+    // TODO/v0.7.0: merge with process_add_jito_restaking_vault
+    pub fn process_add_solv_btc_vault(
+        &mut self,
+        fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
+        fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
+
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+
+        vault: &UncheckedAccount,
+        vault_program: &UncheckedAccount,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
+
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<events::FundManagerUpdatedFund> {
+        require_keys_eq!(
+            fund_vault_supported_token_account.owner,
+            self.fund_account.load()?.get_reserve_account_address()?,
+        );
+        require_keys_eq!(
+            fund_vault_supported_token_account.mint,
+            vault_supported_token_mint.key()
+        );
+
+        require_keys_eq!(
+            fund_vault_receipt_token_account.owner,
+            self.fund_account.load()?.get_reserve_account_address()?,
+        );
+        require_keys_eq!(
+            fund_vault_receipt_token_account.mint,
+            vault_receipt_token_mint.key()
+        );
+
+        self.fund_account.load_mut()?.add_restaking_vault(
+            vault.key(),
+            vault_program.key(),
+            vault_supported_token_mint.key(),
+            vault_receipt_token_mint.key(),
+            *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
+            vault_receipt_token_mint.decimals,
+            TokenPricingSource::SolvBTCVault {
+                address: vault.key(),
+            },
+            fund_vault_receipt_token_account.amount,
+        )?;
+
+        // validate pricing source
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
     pub fn process_add_jito_restaking_vault(
         &mut self,
         fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,

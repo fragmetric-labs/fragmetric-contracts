@@ -368,21 +368,29 @@ impl UnrestakeVRTCommand {
         items: Vec<UnrestakeVSTCommandItem>,
     ) -> Result<Option<OperationCommandEntry>> {
         Ok(if items.len() > 0 {
-            let required_accounts = match fund_account
-                .get_restaking_vault(&items[0].vault)?
-                .receipt_token_pricing_source
-                .try_deserialize()?
-            {
-                Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                    JitoRestakingVaultService::find_accounts_to_new(address)?
-                }
-                _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
-            };
             Some(
-                UnrestakeVRTCommand {
-                    state: UnrestakeVRTCommandState::Prepare { items },
-                }
-                .with_required_accounts(required_accounts),
+                match fund_account
+                    .get_restaking_vault(&items[0].vault)?
+                    .receipt_token_pricing_source
+                    .try_deserialize()?
+                {
+                    Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                        UnrestakeVRTCommand {
+                            state: UnrestakeVRTCommandState::Prepare { items },
+                        }
+                        .with_required_accounts(
+                            JitoRestakingVaultService::find_accounts_to_new(address)?,
+                        )
+                    }
+                    Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        // TODO/v0.7.0: deal with solv vault if needed - where is match arm constraints gone here?
+                        UnrestakeVRTCommand {
+                            state: UnrestakeVRTCommandState::Prepare { items },
+                        }
+                        .without_required_accounts()
+                    }
+                    _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                },
             )
         } else {
             None
@@ -466,6 +474,16 @@ impl UnrestakeVRTCommand {
                         }
                         .with_required_accounts(required_accounts),
                     ),
+                ))
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                Ok((
+                    None,
+                    self.create_prepare_command_with_items(
+                        fund_account,
+                        items.iter().skip(1).copied().collect::<Vec<_>>(),
+                    )?,
                 ))
             }
             // invalid configuration
@@ -603,6 +621,10 @@ impl UnrestakeVRTCommand {
                 } else {
                     None
                 }
+            }
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                // TODO/v0.7.0: deal with solv vault if needed
+                None
             }
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
