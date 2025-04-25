@@ -16,6 +16,8 @@ import {
   getDiscriminatedUnionEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   getUnitDecoder,
   getUnitEncoder,
   type Address,
@@ -34,41 +36,78 @@ import {
 
 export type InitializeCommandState =
   | { __kind: 'New' }
-  | { __kind: 'PrepareRestakingVaultUpdate'; vaults: Array<Address> }
+  | { __kind: 'NewRestakingVaultUpdate' }
+  | { __kind: 'PrepareRestakingVaultUpdate'; vault: Address }
   | {
       __kind: 'ExecuteRestakingVaultUpdate';
-      vaults: Array<Address>;
+      vault: Address;
       /** Items could be empty. */
       items: Array<InitializeCommandRestakingVaultDelegationUpdateItem>;
+      nextItemIndices: Array<bigint>;
+    }
+  | { __kind: 'NewWrappedTokenUpdate' }
+  | {
+      __kind: 'PrepareWrappedTokenUpdate';
+      wrappedTokenAccounts: Array<Address>;
+    }
+  | {
+      __kind: 'ExecuteWrappedTokenUpdate';
+      wrappedTokenAccounts: Array<Address>;
     };
 
 export type InitializeCommandStateArgs =
   | { __kind: 'New' }
-  | { __kind: 'PrepareRestakingVaultUpdate'; vaults: Array<Address> }
+  | { __kind: 'NewRestakingVaultUpdate' }
+  | { __kind: 'PrepareRestakingVaultUpdate'; vault: Address }
   | {
       __kind: 'ExecuteRestakingVaultUpdate';
-      vaults: Array<Address>;
+      vault: Address;
       /** Items could be empty. */
       items: Array<InitializeCommandRestakingVaultDelegationUpdateItemArgs>;
+      nextItemIndices: Array<number | bigint>;
+    }
+  | { __kind: 'NewWrappedTokenUpdate' }
+  | {
+      __kind: 'PrepareWrappedTokenUpdate';
+      wrappedTokenAccounts: Array<Address>;
+    }
+  | {
+      __kind: 'ExecuteWrappedTokenUpdate';
+      wrappedTokenAccounts: Array<Address>;
     };
 
 export function getInitializeCommandStateEncoder(): Encoder<InitializeCommandStateArgs> {
   return getDiscriminatedUnionEncoder([
     ['New', getUnitEncoder()],
+    ['NewRestakingVaultUpdate', getUnitEncoder()],
     [
       'PrepareRestakingVaultUpdate',
-      getStructEncoder([['vaults', getArrayEncoder(getAddressEncoder())]]),
+      getStructEncoder([['vault', getAddressEncoder()]]),
     ],
     [
       'ExecuteRestakingVaultUpdate',
       getStructEncoder([
-        ['vaults', getArrayEncoder(getAddressEncoder())],
+        ['vault', getAddressEncoder()],
         [
           'items',
           getArrayEncoder(
             getInitializeCommandRestakingVaultDelegationUpdateItemEncoder()
           ),
         ],
+        ['nextItemIndices', getArrayEncoder(getU64Encoder())],
+      ]),
+    ],
+    ['NewWrappedTokenUpdate', getUnitEncoder()],
+    [
+      'PrepareWrappedTokenUpdate',
+      getStructEncoder([
+        ['wrappedTokenAccounts', getArrayEncoder(getAddressEncoder())],
+      ]),
+    ],
+    [
+      'ExecuteWrappedTokenUpdate',
+      getStructEncoder([
+        ['wrappedTokenAccounts', getArrayEncoder(getAddressEncoder())],
       ]),
     ],
   ]);
@@ -77,20 +116,35 @@ export function getInitializeCommandStateEncoder(): Encoder<InitializeCommandSta
 export function getInitializeCommandStateDecoder(): Decoder<InitializeCommandState> {
   return getDiscriminatedUnionDecoder([
     ['New', getUnitDecoder()],
+    ['NewRestakingVaultUpdate', getUnitDecoder()],
     [
       'PrepareRestakingVaultUpdate',
-      getStructDecoder([['vaults', getArrayDecoder(getAddressDecoder())]]),
+      getStructDecoder([['vault', getAddressDecoder()]]),
     ],
     [
       'ExecuteRestakingVaultUpdate',
       getStructDecoder([
-        ['vaults', getArrayDecoder(getAddressDecoder())],
+        ['vault', getAddressDecoder()],
         [
           'items',
           getArrayDecoder(
             getInitializeCommandRestakingVaultDelegationUpdateItemDecoder()
           ),
         ],
+        ['nextItemIndices', getArrayDecoder(getU64Decoder())],
+      ]),
+    ],
+    ['NewWrappedTokenUpdate', getUnitDecoder()],
+    [
+      'PrepareWrappedTokenUpdate',
+      getStructDecoder([
+        ['wrappedTokenAccounts', getArrayDecoder(getAddressDecoder())],
+      ]),
+    ],
+    [
+      'ExecuteWrappedTokenUpdate',
+      getStructDecoder([
+        ['wrappedTokenAccounts', getArrayDecoder(getAddressDecoder())],
       ]),
     ],
   ]);
@@ -110,6 +164,13 @@ export function getInitializeCommandStateCodec(): Codec<
 export function initializeCommandState(
   kind: 'New'
 ): GetDiscriminatedUnionVariant<InitializeCommandStateArgs, '__kind', 'New'>;
+export function initializeCommandState(
+  kind: 'NewRestakingVaultUpdate'
+): GetDiscriminatedUnionVariant<
+  InitializeCommandStateArgs,
+  '__kind',
+  'NewRestakingVaultUpdate'
+>;
 export function initializeCommandState(
   kind: 'PrepareRestakingVaultUpdate',
   data: GetDiscriminatedUnionVariantContent<
@@ -133,6 +194,37 @@ export function initializeCommandState(
   InitializeCommandStateArgs,
   '__kind',
   'ExecuteRestakingVaultUpdate'
+>;
+export function initializeCommandState(
+  kind: 'NewWrappedTokenUpdate'
+): GetDiscriminatedUnionVariant<
+  InitializeCommandStateArgs,
+  '__kind',
+  'NewWrappedTokenUpdate'
+>;
+export function initializeCommandState(
+  kind: 'PrepareWrappedTokenUpdate',
+  data: GetDiscriminatedUnionVariantContent<
+    InitializeCommandStateArgs,
+    '__kind',
+    'PrepareWrappedTokenUpdate'
+  >
+): GetDiscriminatedUnionVariant<
+  InitializeCommandStateArgs,
+  '__kind',
+  'PrepareWrappedTokenUpdate'
+>;
+export function initializeCommandState(
+  kind: 'ExecuteWrappedTokenUpdate',
+  data: GetDiscriminatedUnionVariantContent<
+    InitializeCommandStateArgs,
+    '__kind',
+    'ExecuteWrappedTokenUpdate'
+  >
+): GetDiscriminatedUnionVariant<
+  InitializeCommandStateArgs,
+  '__kind',
+  'ExecuteWrappedTokenUpdate'
 >;
 export function initializeCommandState<
   K extends InitializeCommandStateArgs['__kind'],

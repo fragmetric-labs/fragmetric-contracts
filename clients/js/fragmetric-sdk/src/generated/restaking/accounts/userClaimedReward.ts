@@ -52,6 +52,7 @@ export type UserClaimedReward = {
   receiptTokenMint: Address;
   rewardTokenMint: Address;
   destinationRewardTokenAccount: Address;
+  destinationRewardTokenAccountOwner: Address;
   updatedRewardAccount: Address;
   updatedUserRewardAccount: Address;
   claimedRewardTokenAmount: bigint;
@@ -63,6 +64,7 @@ export type UserClaimedRewardArgs = {
   receiptTokenMint: Address;
   rewardTokenMint: Address;
   destinationRewardTokenAccount: Address;
+  destinationRewardTokenAccountOwner: Address;
   updatedRewardAccount: Address;
   updatedUserRewardAccount: Address;
   claimedRewardTokenAmount: number | bigint;
@@ -76,6 +78,7 @@ export function getUserClaimedRewardEncoder(): Encoder<UserClaimedRewardArgs> {
       ['receiptTokenMint', getAddressEncoder()],
       ['rewardTokenMint', getAddressEncoder()],
       ['destinationRewardTokenAccount', getAddressEncoder()],
+      ['destinationRewardTokenAccountOwner', getAddressEncoder()],
       ['updatedRewardAccount', getAddressEncoder()],
       ['updatedUserRewardAccount', getAddressEncoder()],
       ['claimedRewardTokenAmount', getU64Encoder()],
@@ -94,6 +97,7 @@ export function getUserClaimedRewardDecoder(): Decoder<UserClaimedReward> {
     ['receiptTokenMint', getAddressDecoder()],
     ['rewardTokenMint', getAddressDecoder()],
     ['destinationRewardTokenAccount', getAddressDecoder()],
+    ['destinationRewardTokenAccountOwner', getAddressDecoder()],
     ['updatedRewardAccount', getAddressDecoder()],
     ['updatedUserRewardAccount', getAddressDecoder()],
     ['claimedRewardTokenAmount', getU64Decoder()],
