@@ -25,71 +25,73 @@ import {
   type GetDiscriminatedUnionVariant,
   type GetDiscriminatedUnionVariantContent,
 } from '@solana/kit';
-import {
-  getHarvestRewardCommandItemDecoder,
-  getHarvestRewardCommandItemEncoder,
-  type HarvestRewardCommandItem,
-  type HarvestRewardCommandItemArgs,
-} from '.';
 
 export type HarvestRewardCommandState =
   | { __kind: 'New' }
+  | { __kind: 'NewCompound' }
   | {
-      __kind: 'Prepare';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItem>;
+      __kind: 'PrepareCompound';
+      vault: Address;
+      rewardTokenMints: Array<Address>;
+    }
+  | { __kind: 'PrepareSwap'; vault: Address; rewardTokenMints: Array<Address> }
+  | {
+      __kind: 'ExecuteCompound';
+      vault: Address;
+      rewardTokenMints: Array<Address>;
+    }
+  | { __kind: 'NewDistribute' }
+  | {
+      __kind: 'PrepareDistribute';
+      vault: Address;
+      rewardTokenMints: Array<Address>;
     }
   | {
-      __kind: 'PrepareSwap';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItem>;
-    }
-  | {
-      __kind: 'Execute';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItem>;
+      __kind: 'ExecuteDistribute';
+      vault: Address;
+      rewardTokenMints: Array<Address>;
     };
 
-export type HarvestRewardCommandStateArgs =
-  | { __kind: 'New' }
-  | {
-      __kind: 'Prepare';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItemArgs>;
-    }
-  | {
-      __kind: 'PrepareSwap';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItemArgs>;
-    }
-  | {
-      __kind: 'Execute';
-      vaults: Array<Address>;
-      items: Array<HarvestRewardCommandItemArgs>;
-    };
+export type HarvestRewardCommandStateArgs = HarvestRewardCommandState;
 
 export function getHarvestRewardCommandStateEncoder(): Encoder<HarvestRewardCommandStateArgs> {
   return getDiscriminatedUnionEncoder([
     ['New', getUnitEncoder()],
+    ['NewCompound', getUnitEncoder()],
     [
-      'Prepare',
+      'PrepareCompound',
       getStructEncoder([
-        ['vaults', getArrayEncoder(getAddressEncoder())],
-        ['items', getArrayEncoder(getHarvestRewardCommandItemEncoder())],
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
       ]),
     ],
     [
       'PrepareSwap',
       getStructEncoder([
-        ['vaults', getArrayEncoder(getAddressEncoder())],
-        ['items', getArrayEncoder(getHarvestRewardCommandItemEncoder())],
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
       ]),
     ],
     [
-      'Execute',
+      'ExecuteCompound',
       getStructEncoder([
-        ['vaults', getArrayEncoder(getAddressEncoder())],
-        ['items', getArrayEncoder(getHarvestRewardCommandItemEncoder())],
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
+      ]),
+    ],
+    ['NewDistribute', getUnitEncoder()],
+    [
+      'PrepareDistribute',
+      getStructEncoder([
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
+      ]),
+    ],
+    [
+      'ExecuteDistribute',
+      getStructEncoder([
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
       ]),
     ],
   ]);
@@ -98,25 +100,41 @@ export function getHarvestRewardCommandStateEncoder(): Encoder<HarvestRewardComm
 export function getHarvestRewardCommandStateDecoder(): Decoder<HarvestRewardCommandState> {
   return getDiscriminatedUnionDecoder([
     ['New', getUnitDecoder()],
+    ['NewCompound', getUnitDecoder()],
     [
-      'Prepare',
+      'PrepareCompound',
       getStructDecoder([
-        ['vaults', getArrayDecoder(getAddressDecoder())],
-        ['items', getArrayDecoder(getHarvestRewardCommandItemDecoder())],
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
       ]),
     ],
     [
       'PrepareSwap',
       getStructDecoder([
-        ['vaults', getArrayDecoder(getAddressDecoder())],
-        ['items', getArrayDecoder(getHarvestRewardCommandItemDecoder())],
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
       ]),
     ],
     [
-      'Execute',
+      'ExecuteCompound',
       getStructDecoder([
-        ['vaults', getArrayDecoder(getAddressDecoder())],
-        ['items', getArrayDecoder(getHarvestRewardCommandItemDecoder())],
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
+      ]),
+    ],
+    ['NewDistribute', getUnitDecoder()],
+    [
+      'PrepareDistribute',
+      getStructDecoder([
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
+      ]),
+    ],
+    [
+      'ExecuteDistribute',
+      getStructDecoder([
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
       ]),
     ],
   ]);
@@ -137,16 +155,23 @@ export function harvestRewardCommandState(
   kind: 'New'
 ): GetDiscriminatedUnionVariant<HarvestRewardCommandStateArgs, '__kind', 'New'>;
 export function harvestRewardCommandState(
-  kind: 'Prepare',
+  kind: 'NewCompound'
+): GetDiscriminatedUnionVariant<
+  HarvestRewardCommandStateArgs,
+  '__kind',
+  'NewCompound'
+>;
+export function harvestRewardCommandState(
+  kind: 'PrepareCompound',
   data: GetDiscriminatedUnionVariantContent<
     HarvestRewardCommandStateArgs,
     '__kind',
-    'Prepare'
+    'PrepareCompound'
   >
 ): GetDiscriminatedUnionVariant<
   HarvestRewardCommandStateArgs,
   '__kind',
-  'Prepare'
+  'PrepareCompound'
 >;
 export function harvestRewardCommandState(
   kind: 'PrepareSwap',
@@ -161,16 +186,47 @@ export function harvestRewardCommandState(
   'PrepareSwap'
 >;
 export function harvestRewardCommandState(
-  kind: 'Execute',
+  kind: 'ExecuteCompound',
   data: GetDiscriminatedUnionVariantContent<
     HarvestRewardCommandStateArgs,
     '__kind',
-    'Execute'
+    'ExecuteCompound'
   >
 ): GetDiscriminatedUnionVariant<
   HarvestRewardCommandStateArgs,
   '__kind',
-  'Execute'
+  'ExecuteCompound'
+>;
+export function harvestRewardCommandState(
+  kind: 'NewDistribute'
+): GetDiscriminatedUnionVariant<
+  HarvestRewardCommandStateArgs,
+  '__kind',
+  'NewDistribute'
+>;
+export function harvestRewardCommandState(
+  kind: 'PrepareDistribute',
+  data: GetDiscriminatedUnionVariantContent<
+    HarvestRewardCommandStateArgs,
+    '__kind',
+    'PrepareDistribute'
+  >
+): GetDiscriminatedUnionVariant<
+  HarvestRewardCommandStateArgs,
+  '__kind',
+  'PrepareDistribute'
+>;
+export function harvestRewardCommandState(
+  kind: 'ExecuteDistribute',
+  data: GetDiscriminatedUnionVariantContent<
+    HarvestRewardCommandStateArgs,
+    '__kind',
+    'ExecuteDistribute'
+  >
+): GetDiscriminatedUnionVariant<
+  HarvestRewardCommandStateArgs,
+  '__kind',
+  'ExecuteDistribute'
 >;
 export function harvestRewardCommandState<
   K extends HarvestRewardCommandStateArgs['__kind'],

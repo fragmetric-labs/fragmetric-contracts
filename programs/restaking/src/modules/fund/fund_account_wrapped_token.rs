@@ -4,7 +4,7 @@ use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 
-const FUND_ACCOUNT_WRAPPED_TOKEN_MAX_HOLDERS: usize = 30;
+pub const FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS: usize = 30;
 
 #[zero_copy]
 #[repr(C)]
@@ -28,7 +28,7 @@ pub(super) struct WrappedToken {
     pub retained_amount: u64,
 
     /// List of wrapped token holders who will receive reward for their wrapped token balance.
-    holders: [WrappedTokenHolder; FUND_ACCOUNT_WRAPPED_TOKEN_MAX_HOLDERS],
+    holders: [WrappedTokenHolder; FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS],
 
     _reserved: [u8; 776], // 768 = 32 * 24 + 8
 }
@@ -101,7 +101,7 @@ impl WrappedToken {
         }
 
         require_gt!(
-            FUND_ACCOUNT_WRAPPED_TOKEN_MAX_HOLDERS,
+            FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS,
             self.num_holders as usize,
             ErrorCode::FundExceededMaxWrappedTokenHoldersError,
         );
@@ -136,9 +136,8 @@ impl WrappedToken {
         ))
     }
 
-    #[allow(dead_code)] // Implemented for future use
     /// returns [old_wrapped_token_holder_amount, old_wrapped_token_retained_amount]
-    pub fn update_holder_amount(
+    pub fn update_holder(
         &mut self,
         wrapped_token_account: &Pubkey,
         wrapped_token_amount: u64,

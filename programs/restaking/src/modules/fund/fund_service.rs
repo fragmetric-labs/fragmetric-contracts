@@ -1221,6 +1221,94 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         }
     }
 
+    pub(super) fn update_wrapped_token_holder(
+        &self,
+        // fixed
+        reward_account: &AccountLoader<'info, reward::RewardAccount>,
+        fund_wrap_account: &SystemAccount,
+        fund_wrap_account_reward_account: &AccountLoader<reward::UserRewardAccount>,
+
+        // variant
+        wrapped_token_holder: &InterfaceAccount<TokenAccount>,
+        wrapped_token_holder_reward_account: &AccountLoader<reward::UserRewardAccount>,
+    ) -> Result<()> {
+        let mut fund_account = self.fund_account.load_mut()?;
+        require_keys_eq!(
+            fund_wrap_account.key(),
+            fund_account.get_wrap_account_address()?,
+        );
+
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            fund_wrap_account,
+            reward_account,
+            fund_wrap_account_reward_account,
+        )?;
+
+        reward::UserRewardService::validate_user_reward_account(
+            self.receipt_token_mint,
+            wrapped_token_holder.as_ref(),
+            reward_account,
+            wrapped_token_holder_reward_account,
+        )?;
+
+        let wrapped_token = fund_account
+            .get_wrapped_token_mut()
+            .ok_or_else(|| error!(ErrorCode::FundWrappedTokenNotSetError))?;
+
+        let (old_wrapped_token_holder_amount, old_wrapped_token_retained_amount) = wrapped_token
+            .update_holder(&wrapped_token_holder.key(), wrapped_token_holder.amount)?;
+
+        // update reward
+        let reward_service = reward::RewardService::new(self.receipt_token_mint, reward_account)?;
+
+        // holder gained or lost ∆wrapped_token_holder_amount
+        let wrapped_token_holder_amount_delta = wrapped_token_holder
+            .amount
+            .abs_diff(old_wrapped_token_holder_amount);
+        let wrapped_token_holder_amount_increased =
+            wrapped_token_holder.amount > old_wrapped_token_holder_amount;
+        if wrapped_token_holder_amount_increased {
+            reward_service.update_reward_pools_token_allocation(
+                None,
+                Some(wrapped_token_holder_reward_account),
+                wrapped_token_holder_amount_delta,
+                None,
+            )?;
+        } else {
+            reward_service.update_reward_pools_token_allocation(
+                Some(wrapped_token_holder_reward_account),
+                None,
+                wrapped_token_holder_amount_delta,
+                None,
+            )?;
+        }
+
+        // fund_wrap_account gained or lost ∆wrapped_token_retained_amount
+        let wrapped_token_retained_amount_delta = wrapped_token
+            .retained_amount
+            .abs_diff(old_wrapped_token_retained_amount);
+        let wrapped_token_retained_amount_increased =
+            wrapped_token.retained_amount > old_wrapped_token_retained_amount;
+        if wrapped_token_retained_amount_increased {
+            reward_service.update_reward_pools_token_allocation(
+                None,
+                Some(fund_wrap_account_reward_account),
+                wrapped_token_retained_amount_delta,
+                None,
+            )?;
+        } else {
+            reward_service.update_reward_pools_token_allocation(
+                Some(fund_wrap_account_reward_account),
+                None,
+                wrapped_token_retained_amount_delta,
+                None,
+            )?;
+        }
+
+        Ok(())
+    }
+
     pub fn process_donate_sol(
         &mut self,
         operator: &Signer<'info>,

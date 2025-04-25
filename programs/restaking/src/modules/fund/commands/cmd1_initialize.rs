@@ -1,38 +1,52 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
+use crate::modules::reward::{RewardAccount, UserRewardAccount};
 
-use super::{
-    EnqueueWithdrawalBatchCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct InitializeCommand {
     state: InitializeCommandState,
 }
 
+const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 6;
+const WRAPPED_TOKEN_UPDATE_BATCH_SIZE: usize = 12;
+
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub enum InitializeCommandState {
-    /// Initializes a command with items based on the fund state and strategy.
+    /// Initializes a command based on the fund state and strategy.
     #[default]
     New,
-    /// Prepares to execute restaking vault epoch process for the first item in the list.
-    PrepareRestakingVaultUpdate {
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
-        vaults: Vec<Pubkey>,
-    },
-    /// Executes restaking vault epoch process for the first item and transitions to the next command,
-    /// either preparing the next item or performing a withdrawal operation.
+    /// Initializes restaking vault epoch process based on the fund state.
+    NewRestakingVaultUpdate,
+    /// Prepares to execute restaking vault epoch process.
+    PrepareRestakingVaultUpdate { vault: Pubkey },
+    /// Executes restaking vault epoch process and transitions to the next command,
+    /// either preparing the next item or initializing wrapped token holder update process.
     ExecuteRestakingVaultUpdate {
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULTS)]
-        vaults: Vec<Pubkey>,
+        vault: Pubkey,
         /// Items could be empty.
-        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS)]
+        #[max_len(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)]
         items: Vec<InitializeCommandRestakingVaultDelegationUpdateItem>,
+        #[max_len(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS)]
+        next_item_indices: Vec<u64>,
+    },
+    /// Initializes wrapped token holder update process based on the fund state.
+    NewWrappedTokenUpdate,
+    /// Prepares to execute wrapped token holder update process.
+    PrepareWrappedTokenUpdate {
+        #[max_len(FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS)]
+        wrapped_token_accounts: Vec<Pubkey>,
+    },
+    /// Executes wrapped token holder update process and transitions to the next command,
+    /// either preparing the next item or performing a withdrawal operation.
+    ExecuteWrappedTokenUpdate {
+        #[max_len(FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS)]
+        wrapped_token_accounts: Vec<Pubkey>,
     },
 }
 
@@ -40,24 +54,23 @@ use InitializeCommandState::*;
 
 impl std::fmt::Debug for InitializeCommandState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fn debug_vault(
-            f: &mut std::fmt::Formatter,
-            variant: &'static str,
-            vaults: &[Pubkey],
-        ) -> std::fmt::Result {
-            if vaults.is_empty() {
-                return f.write_str(variant);
-            }
-            f.debug_struct(variant).field("vault", &vaults[0]).finish()
-        }
-
         match self {
             Self::New => write!(f, "New"),
-            Self::PrepareRestakingVaultUpdate { vaults, .. } => {
-                debug_vault(f, "PrepareRestakingVaultUpdate", vaults)
+            Self::NewRestakingVaultUpdate => write!(f, "NewRestakingVaultUpdate"),
+            Self::PrepareRestakingVaultUpdate { vault } => f
+                .debug_struct("PrepareRestakingVaultUpdate")
+                .field("vault", vault)
+                .finish(),
+            Self::ExecuteRestakingVaultUpdate { vault, .. } => f
+                .debug_struct("ExecuteRestakingVaultUpdate")
+                .field("vault", vault)
+                .finish(),
+            Self::NewWrappedTokenUpdate => write!(f, "NewWrappedTokenUpdate"),
+            Self::PrepareWrappedTokenUpdate { .. } => {
+                f.debug_struct("PrepareWrappedTokenUpdate").finish()
             }
-            Self::ExecuteRestakingVaultUpdate { vaults, .. } => {
-                debug_vault(f, "ExecuteRestakingVaultUpdate", vaults)
+            Self::ExecuteWrappedTokenUpdate { .. } => {
+                f.debug_struct("ExecuteWrappedTokenUpdate").finish()
             }
         }
     }
@@ -69,11 +82,10 @@ pub struct InitializeCommandRestakingVaultDelegationUpdateItem {
     pub index: u64,
 }
 
-const RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE: usize = 6;
-
-#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Default)]
 pub struct InitializeCommandResult {
     pub restaking_vault_updated: Option<InitializeCommandResultRestakingVaultUpdated>,
+    pub wrapped_token_updated: Option<InitializeCommandResultWrappedTokenUpdated>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
@@ -85,6 +97,16 @@ pub struct InitializeCommandResultRestakingVaultUpdated {
     pub delegations: Vec<InitializeCommandResultRestakingVaultDelegationUpdate>,
 }
 
+impl From<InitializeCommandResultRestakingVaultUpdated> for OperationCommandResult {
+    fn from(value: InitializeCommandResultRestakingVaultUpdated) -> Self {
+        InitializeCommandResult {
+            restaking_vault_updated: Some(value),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct InitializeCommandResultRestakingVaultDelegationUpdate {
     pub operator: Pubkey,
@@ -92,23 +114,70 @@ pub struct InitializeCommandResultRestakingVaultDelegationUpdate {
     pub undelegating_amount: u64,
 }
 
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct InitializeCommandResultWrappedTokenUpdated {
+    pub receipt_token_mint: Pubkey,
+    pub finalized: bool,
+    pub wrapped_token_holders: Vec<InitializeCommandResultWrappedTokenHolderUpdate>,
+}
+
+impl From<InitializeCommandResultWrappedTokenUpdated> for OperationCommandResult {
+    fn from(value: InitializeCommandResultWrappedTokenUpdated) -> Self {
+        InitializeCommandResult {
+            wrapped_token_updated: Some(value),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct InitializeCommandResultWrappedTokenHolderUpdate {
+    pub wrapped_token_account: Pubkey,
+    pub wrapped_token_amount: u64,
+}
+
 impl SelfExecutable for InitializeCommand {
     fn execute<'a, 'info: 'a>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
-            New => self.execute_new_restaking_vault_update(ctx)?,
-            PrepareRestakingVaultUpdate { vaults } => {
-                self.execute_prepare_restaking_vault_update(ctx, accounts, vaults)?
+            // 1. restaking_vault_update
+            New | NewRestakingVaultUpdate => {
+                self.execute_new_restaking_vault_update_command(ctx, None, None)?
             }
-            ExecuteRestakingVaultUpdate { vaults, items } => {
-                self.execute_execute_restaking_vault_update(ctx, accounts, vaults, items)?
+            PrepareRestakingVaultUpdate { vault } => {
+                self.execute_prepare_restaking_vault_update_command(ctx, accounts, vault)?
             }
+            ExecuteRestakingVaultUpdate {
+                vault,
+                items,
+                next_item_indices,
+            } => self.execute_execute_restaking_vault_update_command(
+                ctx,
+                accounts,
+                vault,
+                items,
+                next_item_indices,
+            )?,
+            // 2. wrapped_token_update
+            NewWrappedTokenUpdate => self.execute_new_wrapped_token_update_command(ctx, None)?,
+            PrepareWrappedTokenUpdate {
+                wrapped_token_accounts,
+            } => self.execute_prepare_wrapped_token_update_command(
+                ctx,
+                wrapped_token_accounts.clone(),
+                None,
+            )?,
+            ExecuteWrappedTokenUpdate {
+                wrapped_token_accounts,
+            } => self.execute_execute_wrapped_token_update_command(
+                ctx,
+                accounts,
+                wrapped_token_accounts,
+            )?,
         };
 
         Ok((
@@ -123,50 +192,39 @@ impl SelfExecutable for InitializeCommand {
 #[deny(clippy::wildcard_enum_match_arm)]
 impl InitializeCommand {
     #[inline(never)]
-    fn execute_new_restaking_vault_update<'info>(
+    fn execute_new_restaking_vault_update_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
-        // 1. restaking_vault_update
+        ctx: &OperationCommandContext,
+        previous_vault: Option<&Pubkey>,
+        previous_execution_result: Option<OperationCommandResult>,
+    ) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
-        let mut vaults = Vec::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
-        for restaking_vault in fund_account.get_restaking_vaults_iter() {
-            vaults.push(restaking_vault.vault);
-        }
+        let mut vaults_iter = fund_account
+            .get_restaking_vaults_iter()
+            .map(|restaking_vault| &restaking_vault.vault);
+        let Some(vault) = (if let Some(previous_vault) = previous_vault {
+            vaults_iter
+                .skip_while(|vault| *vault != previous_vault)
+                .skip(1)
+                .next()
+        } else {
+            vaults_iter.next()
+        }) else {
+            // 2. wrapped_token_update
+            return self.execute_new_wrapped_token_update_command(ctx, previous_execution_result);
+        };
 
-        if let Some(entry) = self.create_prepare_restaking_vault_update_command(ctx, vaults)? {
-            return Ok((None, Some(entry)));
-        }
-
-        // // move on to next initialize operation
-        // self.execute_new_another_operation(ctx, None)
-        Ok((None, None))
-    }
-
-    fn create_prepare_restaking_vault_update_command<'info>(
-        &self,
-        ctx: &OperationCommandContext<'info, '_>,
-        vaults: Vec<Pubkey>,
-    ) -> Result<Option<OperationCommandEntry>> {
-        if vaults.is_empty() {
-            return Ok(None);
-        }
-        let receipt_token_pricing_source = ctx
-            .fund_account
-            .load()?
-            .get_restaking_vault(&vaults[0])?
+        let receipt_token_pricing_source = fund_account
+            .get_restaking_vault(vault)?
             .receipt_token_pricing_source
             .try_deserialize()?;
-
-        let command = Self {
-            state: PrepareRestakingVaultUpdate { vaults },
-        };
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
+
+                let command = Self {
+                    state: PrepareRestakingVaultUpdate { vault: *vault },
+                };
                 command.with_required_accounts(required_accounts)
             }
             // otherwise fails
@@ -184,31 +242,23 @@ impl InitializeCommand {
             }
         };
 
-        Ok(Some(entry))
+        Ok((previous_execution_result, Some(entry)))
     }
 
     #[inline(never)]
-    fn execute_prepare_restaking_vault_update<'info>(
+    fn execute_prepare_restaking_vault_update_command<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
-        vaults: &[Pubkey],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
-        if vaults.is_empty() {
-            // // move on to next initialize operation
-            // return self.execute_new_another_operation(ctx, None);
-            return Ok((None, None));
-        }
+        vault: &Pubkey,
+    ) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(&vaults[0])?;
+        let restaking_vault = fund_account.get_restaking_vault(vault)?;
 
         let receipt_token_pricing_source = restaking_vault
             .receipt_token_pricing_source
             .try_deserialize()?;
-        match receipt_token_pricing_source {
+        let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 let [vault_program, vault_config, vault_account, ..] = accounts else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -218,50 +268,13 @@ impl InitializeCommand {
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
 
-                // find items
-                let ordered_indices = vault_service.get_ordered_vault_update_indices();
+                let next_item_indices = vault_service.get_ordered_vault_update_indices();
 
-                let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS);
-                for index in ordered_indices {
-                    let operator = restaking_vault
-                        .get_delegations_iter()
-                        .skip(index as usize)
-                        .next()
-                        .ok_or_else(|| {
-                            error!(ErrorCode::FundOperationCommandExecutionFailedException)
-                        })?
-                        .operator;
-                    items.push(InitializeCommandRestakingVaultDelegationUpdateItem {
-                        operator,
-                        index,
-                    });
-                }
-
-                // create next command entry
-                let operators = items
-                    .iter()
-                    .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
-                    .map(|item| item.operator)
-                    .collect::<Vec<_>>(); // this may be empty
-                let accounts_to_update_vault_delegation_state =
-                    vault_service.find_accounts_to_update_vault_state()?;
-                let accounts_to_update_operator_delegation_state =
-                    operators.iter().flat_map(|operator| {
-                        vault_service.find_accounts_to_update_delegation_state(*operator)
-                    });
-                let required_accounts = accounts_to_update_vault_delegation_state
-                    .chain(accounts_to_update_operator_delegation_state);
-                let command = Self {
-                    state: ExecuteRestakingVaultUpdate {
-                        vaults: vaults.to_vec(),
-                        items,
-                    },
-                };
-
-                Ok((
-                    None,
-                    Some(command.with_required_accounts(required_accounts)),
-                ))
+                self.create_next_jito_restaking_vault_update_command(
+                    &vault_service,
+                    restaking_vault,
+                    &next_item_indices,
+                )?
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -276,41 +289,29 @@ impl InitializeCommand {
             Some(TokenPricingSource::Mock { .. }) => {
                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
-        }
+        };
+
+        Ok((None, Some(entry)))
     }
 
     #[inline(never)]
-    fn execute_execute_restaking_vault_update<'info>(
+    fn execute_execute_restaking_vault_update_command<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        vaults: &[Pubkey],
+        vault: &Pubkey,
         items: &[InitializeCommandRestakingVaultDelegationUpdateItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
-        if vaults.is_empty() {
-            // // move on to next initialize operation
-            // return self.execute_new_another_operation(ctx, None);
-            return Ok((None, None));
-        }
+        next_item_indices: &[u64],
+    ) -> ExecutionResult {
         let mut fund_account = ctx.fund_account.load_mut()?;
-        let restaking_vault = fund_account.get_restaking_vault_mut(&vaults[0])?;
+        let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
 
-        let batch_size = items
-            .len()
-            .min(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
-
-        let mut restaking_vault_delegation_update_items =
-            Vec::<InitializeCommandResultRestakingVaultDelegationUpdate>::with_capacity(
-                RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE,
-            );
+        let mut result = Vec::with_capacity(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
 
         let receipt_token_pricing_source = restaking_vault
             .receipt_token_pricing_source
             .try_deserialize()?;
-        match receipt_token_pricing_source {
+        let result = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 let [vault_program, vault_config, vault_account, vault_update_state_tracker, remaining_accounts @ ..] =
                     accounts
@@ -319,11 +320,11 @@ impl InitializeCommand {
                 };
                 require_keys_eq!(address, vault_account.key());
 
-                if remaining_accounts.len() < 2 * batch_size {
+                if remaining_accounts.len() < 2 * items.len() {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
                 }
                 let (accounts_to_update_delegation_state, _) =
-                    remaining_accounts.split_at(2 * batch_size);
+                    remaining_accounts.split_at(2 * items.len());
 
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
@@ -335,7 +336,7 @@ impl InitializeCommand {
                     &[],
                 )?;
 
-                for (i, item) in items.iter().take(batch_size).enumerate() {
+                for (i, item) in items.iter().enumerate() {
                     let vault_operator_delegation = accounts_to_update_delegation_state[2 * i];
                     let operator = accounts_to_update_delegation_state[2 * i + 1];
                     require_keys_eq!(operator.key(), item.operator);
@@ -355,71 +356,40 @@ impl InitializeCommand {
                         undelegation_requested_amount + undelegating_amount;
 
                     // store result items
-                    restaking_vault_delegation_update_items.push(
-                        InitializeCommandResultRestakingVaultDelegationUpdate {
-                            operator: operator.key(),
-                            delegated_amount: delegation.supported_token_delegated_amount,
-                            undelegating_amount: delegation.supported_token_undelegating_amount,
-                        },
-                    );
+                    result.push(InitializeCommandResultRestakingVaultDelegationUpdate {
+                        operator: operator.key(),
+                        delegated_amount: delegation.supported_token_delegated_amount,
+                        undelegating_amount: delegation.supported_token_undelegating_amount,
+                    });
                 }
 
-                let finalized = batch_size == items.len();
-                if finalized {
-                    vault_service.close_vault_update_state_tracker_if_needed(
-                        vault_update_state_tracker,
-                        ctx.operator,
-                        &[],
-                    )?;
-                }
-
-                let result = InitializeCommandResult {
-                    restaking_vault_updated: Some(InitializeCommandResultRestakingVaultUpdated {
-                        vault: restaking_vault.vault,
-                        epoch: vault_service.get_current_epoch(),
-                        finalized,
-                        supported_token_mint: restaking_vault.supported_token_mint,
-                        delegations: restaking_vault_delegation_update_items,
-                    }),
+                let finalized = next_item_indices.is_empty();
+                let result = InitializeCommandResultRestakingVaultUpdated {
+                    vault: restaking_vault.vault,
+                    epoch: vault_service.get_current_epoch(),
+                    finalized,
+                    supported_token_mint: restaking_vault.supported_token_mint,
+                    delegations: result,
                 }
                 .into();
 
-                // move on to next delegations or vault or initialize operation
                 if !finalized {
-                    // move on to next delegations
-                    let items = &items[batch_size..];
-                    let accounts_to_update_vault_delegation_state =
-                        vault_service.find_accounts_to_update_vault_state()?;
-                    let accounts_to_update_operator_delegation_state = items
-                        .iter()
-                        .take(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE)
-                        .flat_map(|item| {
-                            vault_service.find_accounts_to_update_delegation_state(item.operator)
-                        });
-                    let required_accounts = accounts_to_update_vault_delegation_state
-                        .chain(accounts_to_update_operator_delegation_state);
-                    let entry = Self {
-                        state: ExecuteRestakingVaultUpdate {
-                            vaults: vaults.to_vec(),
-                            items: items.to_vec(),
-                        },
-                    }
-                    .with_required_accounts(required_accounts);
+                    let entry = self.create_next_jito_restaking_vault_update_command(
+                        &vault_service,
+                        restaking_vault,
+                        next_item_indices,
+                    )?;
 
-                    Ok((Some(result), Some(entry)))
-                } else {
-                    drop(fund_account);
-                    // move on to next vault
-                    if let Some(entry) = self
-                        .create_prepare_restaking_vault_update_command(ctx, vaults[1..].to_vec())?
-                    {
-                        Ok((Some(result), Some(entry)))
-                    } else {
-                        // // move on to next initialize operation
-                        // self.execute_new_another_operation(ctx, result)
-                        Ok((Some(result), None))
-                    }
+                    return Ok((Some(result), Some(entry)));
                 }
+
+                vault_service.close_vault_update_state_tracker_if_needed(
+                    vault_update_state_tracker,
+                    ctx.operator,
+                    &[],
+                )?;
+
+                result
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -434,6 +404,215 @@ impl InitializeCommand {
             Some(TokenPricingSource::Mock { .. }) => {
                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
             }
+        };
+
+        drop(fund_account);
+        // move on to next vault
+        self.execute_new_restaking_vault_update_command(ctx, Some(vault), Some(result))
+    }
+
+    fn create_next_jito_restaking_vault_update_command(
+        &self,
+        vault_service: &JitoRestakingVaultService,
+        restaking_vault: &RestakingVault,
+        next_item_indices: &[u64],
+    ) -> Result<OperationCommandEntry> {
+        // find next batch
+        let batch_size = next_item_indices
+            .len()
+            .min(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
+        let mut items = Vec::with_capacity(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
+        for i in 0..batch_size {
+            let index = next_item_indices[i];
+            let operator = restaking_vault
+                .get_delegation_by_index(index as usize)?
+                .operator;
+            items.push(InitializeCommandRestakingVaultDelegationUpdateItem { operator, index });
         }
+        let next_item_indices = next_item_indices[batch_size..].to_vec();
+
+        // create next command entry
+        let accounts_to_update_vault_delegation_state =
+            vault_service.find_accounts_to_update_vault_state()?;
+        let accounts_to_update_operator_delegation_state = items
+            .iter()
+            .map(|item| item.operator)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flat_map(|operator| vault_service.find_accounts_to_update_delegation_state(operator));
+        let required_accounts = accounts_to_update_vault_delegation_state
+            .chain(accounts_to_update_operator_delegation_state);
+
+        let command = Self {
+            state: ExecuteRestakingVaultUpdate {
+                vault: restaking_vault.vault,
+                items,
+                next_item_indices,
+            },
+        };
+        let entry = command.with_required_accounts(required_accounts);
+
+        Ok(entry)
+    }
+
+    #[inline(never)]
+    fn execute_new_wrapped_token_update_command(
+        &self,
+        ctx: &OperationCommandContext,
+        previous_execution_result: Option<OperationCommandResult>,
+    ) -> ExecutionResult {
+        let fund_account = ctx.fund_account.load()?;
+        let Some(wrapped_token) = fund_account.get_wrapped_token() else {
+            return Ok((previous_execution_result, None));
+        };
+
+        let mut wrapped_token_accounts = wrapped_token
+            .get_holders_iter()
+            .map(|holder| holder.token_account)
+            .collect::<Vec<_>>();
+        if wrapped_token_accounts.len() > 0 {
+            // pseudo-randomize the order
+            let clock = Clock::get()?;
+            let start_idx = clock.slot as usize % wrapped_token_accounts.len();
+            wrapped_token_accounts.rotate_left(start_idx);
+        }
+
+        self.execute_prepare_wrapped_token_update_command(
+            ctx,
+            wrapped_token_accounts,
+            previous_execution_result,
+        )
+    }
+
+    #[inline(never)]
+    fn execute_prepare_wrapped_token_update_command(
+        &self,
+        ctx: &OperationCommandContext,
+        wrapped_token_accounts: Vec<Pubkey>,
+        previous_execution_result: Option<OperationCommandResult>,
+    ) -> ExecutionResult {
+        if wrapped_token_accounts.is_empty() {
+            return Ok((previous_execution_result, None));
+        }
+
+        let fund_account = ctx.fund_account.load()?;
+
+        let reward_account = RewardAccount::find_account_address(&ctx.receipt_token_mint.key());
+        let fund_wrap_account = fund_account.get_wrap_account_address()?;
+        let fund_wrap_account_reward_account = UserRewardAccount::find_account_address(
+            &ctx.receipt_token_mint.key(),
+            &fund_wrap_account,
+        );
+        let accounts_to_update_holders = wrapped_token_accounts
+            .iter()
+            .copied()
+            .take(WRAPPED_TOKEN_UPDATE_BATCH_SIZE)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flat_map(|wrapped_token_account| {
+                let wrapped_token_holder_reward_account = UserRewardAccount::find_account_address(
+                    &ctx.receipt_token_mint.key(),
+                    &wrapped_token_account,
+                );
+                [
+                    (wrapped_token_account, false),
+                    (wrapped_token_holder_reward_account, true),
+                ]
+            });
+        let required_accounts = [
+            (reward_account, true),
+            (fund_wrap_account, false),
+            (fund_wrap_account_reward_account, true),
+        ]
+        .into_iter()
+        .chain(accounts_to_update_holders);
+
+        let command = Self {
+            state: ExecuteWrappedTokenUpdate {
+                wrapped_token_accounts,
+            },
+        };
+        let entry = command.with_required_accounts(required_accounts);
+
+        Ok((previous_execution_result, Some(entry)))
+    }
+
+    #[inline(never)]
+    fn execute_execute_wrapped_token_update_command<'info>(
+        &self,
+        ctx: &mut OperationCommandContext<'info, '_>,
+        accounts: &[&'info AccountInfo<'info>],
+        wrapped_token_accounts: &[Pubkey],
+    ) -> ExecutionResult {
+        if wrapped_token_accounts.is_empty() {
+            return Ok((None, None));
+        }
+        let batch_size = wrapped_token_accounts
+            .len()
+            .min(WRAPPED_TOKEN_UPDATE_BATCH_SIZE);
+
+        let [reward_account, fund_wrap_account, fund_wrap_account_reward_account, remaining_account @ ..] =
+            accounts
+        else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+
+        if remaining_account.len() < 2 * batch_size {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        }
+        let (accounts_to_update_holder, _) = remaining_account.split_at(2 * batch_size);
+
+        let fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+
+        let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
+        let fund_wrap_account = SystemAccount::try_from(fund_wrap_account)?;
+        let fund_wrap_account_reward_account =
+            AccountLoader::<UserRewardAccount>::try_from(fund_wrap_account_reward_account)?;
+
+        let mut result = Vec::with_capacity(WRAPPED_TOKEN_UPDATE_BATCH_SIZE);
+        for (i, wrapped_token_account) in wrapped_token_accounts.iter().take(batch_size).enumerate()
+        {
+            let wrapped_token_holder = accounts_to_update_holder[2 * i];
+            let wrapped_token_holder_reward_account = accounts_to_update_holder[2 * i + 1];
+            require_keys_eq!(wrapped_token_holder.key(), *wrapped_token_account);
+
+            let wrapped_token_holder =
+                InterfaceAccount::<TokenAccount>::try_from(wrapped_token_holder)?;
+            let wrapped_token_holder_reward_account =
+                AccountLoader::<UserRewardAccount>::try_from(wrapped_token_holder_reward_account)?;
+
+            fund_service.update_wrapped_token_holder(
+                &reward_account,
+                &fund_wrap_account,
+                &fund_wrap_account_reward_account,
+                &wrapped_token_holder,
+                &wrapped_token_holder_reward_account,
+            )?;
+
+            result.push(InitializeCommandResultWrappedTokenHolderUpdate {
+                wrapped_token_account: wrapped_token_holder.key(),
+                wrapped_token_amount: wrapped_token_holder.amount,
+            })
+        }
+
+        drop(fund_service);
+
+        let finalized = batch_size == wrapped_token_accounts.len();
+        let result = InitializeCommandResultWrappedTokenUpdated {
+            receipt_token_mint: ctx.receipt_token_mint.key(),
+            finalized,
+            wrapped_token_holders: result,
+        }
+        .into();
+
+        if !finalized {
+            return self.execute_prepare_wrapped_token_update_command(
+                ctx,
+                wrapped_token_accounts[batch_size..].to_vec(),
+                Some(result),
+            );
+        }
+
+        Ok((Some(result), None))
     }
 }

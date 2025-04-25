@@ -21,16 +21,22 @@ import {
 import {
   getInitializeCommandResultRestakingVaultUpdatedDecoder,
   getInitializeCommandResultRestakingVaultUpdatedEncoder,
+  getInitializeCommandResultWrappedTokenUpdatedDecoder,
+  getInitializeCommandResultWrappedTokenUpdatedEncoder,
   type InitializeCommandResultRestakingVaultUpdated,
   type InitializeCommandResultRestakingVaultUpdatedArgs,
+  type InitializeCommandResultWrappedTokenUpdated,
+  type InitializeCommandResultWrappedTokenUpdatedArgs,
 } from '.';
 
 export type InitializeCommandResult = {
   restakingVaultUpdated: Option<InitializeCommandResultRestakingVaultUpdated>;
+  wrappedTokenUpdated: Option<InitializeCommandResultWrappedTokenUpdated>;
 };
 
 export type InitializeCommandResultArgs = {
   restakingVaultUpdated: OptionOrNullable<InitializeCommandResultRestakingVaultUpdatedArgs>;
+  wrappedTokenUpdated: OptionOrNullable<InitializeCommandResultWrappedTokenUpdatedArgs>;
 };
 
 export function getInitializeCommandResultEncoder(): Encoder<InitializeCommandResultArgs> {
@@ -40,6 +46,10 @@ export function getInitializeCommandResultEncoder(): Encoder<InitializeCommandRe
       getOptionEncoder(
         getInitializeCommandResultRestakingVaultUpdatedEncoder()
       ),
+    ],
+    [
+      'wrappedTokenUpdated',
+      getOptionEncoder(getInitializeCommandResultWrappedTokenUpdatedEncoder()),
     ],
   ]);
 }
@@ -51,6 +61,10 @@ export function getInitializeCommandResultDecoder(): Decoder<InitializeCommandRe
       getOptionDecoder(
         getInitializeCommandResultRestakingVaultUpdatedDecoder()
       ),
+    ],
+    [
+      'wrappedTokenUpdated',
+      getOptionDecoder(getInitializeCommandResultWrappedTokenUpdatedDecoder()),
     ],
   ]);
 }

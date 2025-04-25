@@ -284,6 +284,12 @@ impl RestakingVault {
             .find(|op| op.operator == *operator)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
+
+    pub fn get_delegation_by_index(&self, index: usize) -> Result<&RestakingVaultDelegation> {
+        self.delegations[..self.num_delegations as usize]
+            .get(index)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
+    }
 }
 
 #[zero_copy]
