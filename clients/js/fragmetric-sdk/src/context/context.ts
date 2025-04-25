@@ -100,7 +100,11 @@ export abstract class Context<P extends Context<any> | null> {
       const items = Array.isArray(value) ? value : [value];
       for (let i = 0; i < items.length; i++) {
         const v = items[i];
-        if (v instanceof Context && v !== this.parent) {
+        if (
+          v instanceof Context &&
+          v !== this.parent &&
+          !key.startsWith('__')
+        ) {
           entries.push([Array.isArray(value) ? `${key}.${i}` : key, v]);
         }
       }

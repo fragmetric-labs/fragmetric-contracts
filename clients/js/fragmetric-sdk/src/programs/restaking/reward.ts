@@ -175,48 +175,43 @@ export class RestakingRewardAccountContext extends AccountContext<
   }
 
   /** operator transactions **/
-  readonly updatePools = new TransactionTemplateContext(
-    this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
-    {
-      description:
-        'manually triggers contribution synchronization for the global reward pools',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'operatorUpdatedRewardPools'
-      ),
-      instructions: [
-        async (parent, args, overrides) => {
-          const [data, operator] = await Promise.all([
-            parent.parent.resolve(true),
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          if (!(data && operator)) throw new Error('invalid context');
+  readonly updatePools = new TransactionTemplateContext(this, null, {
+    description:
+      'manually triggers contribution synchronization for the global reward pools',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'operatorUpdatedRewardPools'
+    ),
+    instructions: [
+      async (parent, args, overrides) => {
+        const [data, operator] = await Promise.all([
+          parent.parent.resolve(true),
+          transformAddressResolverVariant(
+            overrides.feePayer ??
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
+          )(parent),
+        ]);
+        if (!(data && operator)) throw new Error('invalid context');
 
-          const ix =
-            await restaking.getOperatorUpdateRewardPoolsInstructionAsync(
-              {
-                operator: createNoopSigner(operator as Address),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            );
-
-          for (const accountMeta of data.__pricingSources) {
-            ix.accounts.push(accountMeta);
+        const ix = await restaking.getOperatorUpdateRewardPoolsInstructionAsync(
+          {
+            operator: createNoopSigner(operator as Address),
+            program: this.program.address,
+            receiptTokenMint: data.receiptTokenMint,
+          },
+          {
+            programAddress: this.program.address,
           }
+        );
 
-          return [ix];
-        },
-      ],
-    }
-  );
+        for (const accountMeta of data.__pricingSources) {
+          ix.accounts.push(accountMeta);
+        }
+
+        return [ix];
+      },
+    ],
+  });
 
   /** authorized transactions **/
   readonly initializeOrUpdateAccount = new TransactionTemplateContext(

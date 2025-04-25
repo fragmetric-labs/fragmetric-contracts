@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`solv.zBTC test > solv.zBTC initializationTasks snapshot 1`] = `
+exports[`solv.wBTC test > solv.wBTC initializationTasks snapshot 1`] = `
 [
   [
     "Program 11111111111111111111111111111111 invoke [1]",
@@ -57,37 +57,6 @@ exports[`solv.zBTC test > solv.zBTC initializationTasks snapshot 1`] = `
     "Program 11111111111111111111111111111111 success",
     "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
     "Program log: Instruction: SetAuthority",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program 9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz success",
-  ],
-  [
-    "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]",
-    "Program log: CreateIdempotent",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
-    "Program log: Instruction: GetAccountDataSize",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program return: TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA pQAAAAAAAAA=",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
-    "Program 11111111111111111111111111111111 invoke [2]",
-    "Program 11111111111111111111111111111111 success",
-    "Program log: Initialize the associated token account",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
-    "Program log: Instruction: InitializeImmutableOwner",
-    "Program log: Please upgrade to SPL Token 2022 for immutable owner support",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
-    "Program log: Instruction: InitializeAccount3",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success",
-    "Program 9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz invoke [1]",
-    "Program log: Instruction: DelegateVaultRewardTokenAccount",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
-    "Program log: Instruction: Approve",
     "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
     "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
     "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",

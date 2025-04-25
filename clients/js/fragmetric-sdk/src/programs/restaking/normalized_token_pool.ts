@@ -97,51 +97,47 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
     parent.parent.resolve().then((data) => data?.__lookupTableAddress ?? null);
 
   /** operator transactions **/
-  readonly updatePrices = new TransactionTemplateContext(
-    this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
-    {
-      description:
-        'manually triggers price updates for the normalized token and underlying assets',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'operatorUpdatedNormalizedTokenPoolPrices'
-      ),
-      addressLookupTables: [this.__resolveAddressLookupTable],
-      instructions: [
-        getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
-        async (parent, args, overrides) => {
-          const [data, ntp, operator] = await Promise.all([
-            parent.parent.resolve(true),
-            parent.resolveAccount(),
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          if (!(data && ntp && operator)) throw new Error('invalid context');
+  readonly updatePrices = new TransactionTemplateContext(this, null, {
+    description:
+      'manually triggers price updates for the normalized token and underlying assets',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'operatorUpdatedNormalizedTokenPoolPrices'
+    ),
+    addressLookupTables: [this.__resolveAddressLookupTable],
+    instructions: [
+      getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
+      async (parent, args, overrides) => {
+        const [data, ntp, operator] = await Promise.all([
+          parent.parent.resolve(true),
+          parent.resolveAccount(),
+          transformAddressResolverVariant(
+            overrides.feePayer ??
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
+          )(parent),
+        ]);
+        if (!(data && ntp && operator)) throw new Error('invalid context');
 
-          const ix =
-            await restaking.getOperatorUpdateNormalizedTokenPoolPricesInstructionAsync(
-              {
-                operator: createNoopSigner(operator as Address),
-                program: this.program.address,
-                normalizedTokenMint: ntp.data.normalizedTokenMint,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            );
+        const ix =
+          await restaking.getOperatorUpdateNormalizedTokenPoolPricesInstructionAsync(
+            {
+              operator: createNoopSigner(operator as Address),
+              program: this.program.address,
+              normalizedTokenMint: ntp.data.normalizedTokenMint,
+            },
+            {
+              programAddress: this.program.address,
+            }
+          );
 
-          for (const accountMeta of data.__pricingSources) {
-            ix.accounts.push(accountMeta);
-          }
+        for (const accountMeta of data.__pricingSources) {
+          ix.accounts.push(accountMeta);
+        }
 
-          return [ix];
-        },
-      ],
-    }
-  );
+        return [ix];
+      },
+    ],
+  });
 
   /** authorized transactions **/
   readonly addSupportedToken = new TransactionTemplateContext(

@@ -1,7 +1,6 @@
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
 import { Account, createNoopSigner, EncodedAccount } from '@solana/kit';
-import * as v from 'valibot';
 import { AccountContext, TransactionTemplateContext } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
@@ -67,7 +66,7 @@ export class RestakingUserFundAccountContext extends AccountContext<
 
   readonly initializeOrUpdateAccount = new TransactionTemplateContext(
     this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
+    null,
     {
       description: 'initialize or update user fund account',
       anchorEventDecoders: getRestakingAnchorEventDecoders(

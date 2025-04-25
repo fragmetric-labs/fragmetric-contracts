@@ -24,7 +24,9 @@ import {
 import * as jitoRestaking from '../../generated/jito_restaking';
 import * as jitoVault from '../../generated/jito_vault';
 import * as restaking from '../../generated/restaking';
+import * as solv from '../../generated/solv';
 import { SolvBTCVaultProgram } from '../solv';
+import { SolvVaultAccountContext } from '../solv/vault';
 import { getRestakingAnchorEventDecoders } from './events';
 import { RestakingFundAddressLookupTableAccountContext } from './fund_address_lookup_table';
 import { RestakingFundReserveAccountContext } from './fund_reserve';
@@ -191,11 +193,11 @@ export class RestakingFundAccountContext extends AccountContext<
   );
 
   readonly restakingVaults = new IterativeAccountContext<
-    RestakingFundAccountContext,
-    JitoVaultAccountContext // expand as union for new vault types
+    any,
+    AccountContext<any, Account<jitoVault.Vault | solv.VaultAccount>>
   >(
     this,
-    async (parent) => {
+    async (parent: RestakingFundAccountContext) => {
       const fund = await parent.resolveAccount(true);
       if (!fund) return null;
 
@@ -207,18 +209,32 @@ export class RestakingFundAccountContext extends AccountContext<
     },
     async (parent, address) => {
       const [vault, program] = address.split('/');
-      return this.restakingVault(vault, program)!;
+      return this.restakingVault(vault, program) as AccountContext<
+        any,
+        Account<jitoVault.Vault | solv.VaultAccount>
+      >;
     }
   );
 
-  restakingVault(address: string, program: string) {
+  get jitoRestakingVaults(): JitoVaultAccountContext[] | undefined {
+    return this.restakingVaults.account?.filter(
+      (v) => v instanceof JitoVaultAccountContext
+    );
+  }
+
+  get solvBTCVaults(): SolvVaultAccountContext[] | undefined {
+    return this.restakingVaults.account?.filter(
+      (v) => v instanceof SolvVaultAccountContext
+    );
+  }
+
+  restakingVault(vault: string, program: string) {
     switch (program) {
       case jitoVault.JITO_VAULT_PROGRAM_ADDRESS:
-        return new JitoVaultAccountContext(this, address);
-      case SolvBTCVaultProgram.connect(this.runtime.config).address:
-        return new JitoVaultAccountContext(this, address); // TODO: implement SolvBTCVaultAccountContext or abstract it
+        return new JitoVaultAccountContext(this, vault);
+      case this.__solvBTCVaultProgram.address:
+        return this.__solvBTCVaultProgram.vault(vault);
     }
-    return null;
   }
 
   readonly wrap = new RestakingFundWrapAccountContext(this, async (parent) => {
@@ -240,50 +256,45 @@ export class RestakingFundAccountContext extends AccountContext<
       .then((data) => data?.__lookupTableAddress ?? null);
 
   /** operator transactions **/
-  readonly updatePrices = new TransactionTemplateContext(
-    this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
-    {
-      description:
-        'manually triggers price updates for the receipt token and underlying assets',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'operatorUpdatedFundPrices'
-      ),
-      addressLookupTables: [this.__resolveAddressLookupTable],
-      instructions: [
-        getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
-        async (parent, args, overrides) => {
-          const [data, operator] = await Promise.all([
-            parent.parent.resolve(true),
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          if (!(data && operator)) throw new Error('invalid context');
+  readonly updatePrices = new TransactionTemplateContext(this, null, {
+    description:
+      'manually triggers price updates for the receipt token and underlying assets',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'operatorUpdatedFundPrices'
+    ),
+    addressLookupTables: [this.__resolveAddressLookupTable],
+    instructions: [
+      getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
+      async (parent, args, overrides) => {
+        const [data, operator] = await Promise.all([
+          parent.parent.resolve(true),
+          transformAddressResolverVariant(
+            overrides.feePayer ??
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
+          )(parent),
+        ]);
+        if (!(data && operator)) throw new Error('invalid context');
 
-          const ix =
-            await restaking.getOperatorUpdateFundPricesInstructionAsync(
-              {
-                operator: createNoopSigner(operator as Address),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint!,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            );
-
-          for (const accountMeta of data.__pricingSources) {
-            ix.accounts.push(accountMeta);
+        const ix = await restaking.getOperatorUpdateFundPricesInstructionAsync(
+          {
+            operator: createNoopSigner(operator as Address),
+            program: this.program.address,
+            receiptTokenMint: data.receiptTokenMint!,
+          },
+          {
+            programAddress: this.program.address,
           }
+        );
 
-          return [ix];
-        },
-      ],
-    }
-  );
+        for (const accountMeta of data.__pricingSources) {
+          ix.accounts.push(accountMeta);
+        }
+
+        return [ix];
+      },
+    ],
+  });
 
   readonly donate = new TransactionTemplateContext(
     this,
@@ -1150,6 +1161,10 @@ export class RestakingFundAccountContext extends AccountContext<
       });
   }
 
+  readonly __solvBTCVaultProgram = this.__memoized('solv', () => {
+    return SolvBTCVaultProgram.connect(this.runtime.config);
+  });
+
   readonly addRestakingVault = new TransactionTemplateContext(
     this,
     v.object({
@@ -1163,13 +1178,6 @@ export class RestakingFundAccountContext extends AccountContext<
             address: string;
           }
         >
-      ),
-      temp: v.nullish(
-        v.object({
-          vrt: v.string(),
-          vst: v.string(),
-        }),
-        null
       ),
     }),
     {
@@ -1194,19 +1202,18 @@ export class RestakingFundAccountContext extends AccountContext<
             .fundManager;
 
           if (args.pricingSource.__kind == 'JitoRestakingVault') {
-            const vaultContext = await parent.restakingVault(
+            const vaultContext = parent.restakingVault(
               args.vault,
               jitoVault.JITO_VAULT_PROGRAM_ADDRESS
             );
-            const vaultAccount = await vaultContext?.resolveAccount(true);
             if (
-              !(
-                vaultContext &&
-                vaultContext instanceof JitoVaultAccountContext &&
-                vaultAccount
-              )
+              !(vaultContext && vaultContext instanceof JitoVaultAccountContext)
             ) {
               throw new Error('invalid context: jito vault not found');
+            }
+            const vaultAccount = await vaultContext?.resolveAccount(true);
+            if (!vaultAccount) {
+              throw new Error('invalid context: jito vault account not found');
             }
 
             const ix =
@@ -1272,17 +1279,27 @@ export class RestakingFundAccountContext extends AccountContext<
               ix,
             ]);
           } else if (args.pricingSource.__kind == 'SolvBTCVault') {
-            // TODO/v0.7.0: elaborate solv restaking vault registration using SolvBTCVaultProgram or whatever, vault should be initialized before fund registration
-            const solvProgram = SolvBTCVaultProgram.connect(
-              parent.runtime.config
+            const vaultContext = parent.restakingVault(
+              args.vault,
+              this.__solvBTCVaultProgram.address
             );
+            if (
+              !(vaultContext && vaultContext instanceof SolvVaultAccountContext)
+            ) {
+              throw new Error('invalid context: solv vault not found');
+            }
+            const vaultAccount = await vaultContext?.resolveAccount(true);
+            if (!vaultAccount) {
+              throw new Error('invalid context: solv vault account not found');
+            }
+
             const ix =
               await restaking.getFundManagerInitializeFundSolvBtcVaultInstructionAsync(
                 {
-                  vaultAccount: args.vault as Address,
-                  vaultProgram: solvProgram.address,
-                  vaultReceiptTokenMint: args.temp!.vrt as Address,
-                  vaultSupportedTokenMint: args.temp!.vst as Address,
+                  vaultAccount: vaultAccount.address,
+                  vaultProgram: this.__solvBTCVaultProgram.address,
+                  vaultReceiptTokenMint: vaultAccount.data.receiptTokenMint,
+                  vaultSupportedTokenMint: vaultAccount.data.supportedTokenMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
                   program: this.program.address,
@@ -1303,18 +1320,18 @@ export class RestakingFundAccountContext extends AccountContext<
             return Promise.all([
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: args.temp!.vrt as Address,
+                mint: vaultAccount.data.receiptTokenMint,
                 owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: args.temp!.vst as Address,
+                mint: vaultAccount.data.supportedTokenMint,
                 owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
-              // solv.getInitializeVaultAccountInstructionAsync({
-              //   authority: fundReserve,
+              // TODO: delegate deposit/withdraw authority to fund (?)
+              // solv.getSetVaultAdminInstructionAsync({
               //   // ...
               // }),
               ix,

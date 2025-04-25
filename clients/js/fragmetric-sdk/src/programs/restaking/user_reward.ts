@@ -1,7 +1,6 @@
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
 import { Account, createNoopSigner, EncodedAccount } from '@solana/kit';
-import * as v from 'valibot';
 import { AccountContext, TransactionTemplateContext } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
@@ -119,43 +118,39 @@ abstract class RestakingAbstractUserRewardAccountContext<
     return restaking.decodeUserRewardAccount(account);
   }
 
-  readonly updatePools = new TransactionTemplateContext(
-    this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
-    {
-      description:
-        'manually triggers contribution synchronization for the user reward pools',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'userUpdatedRewardPool'
-      ),
-      instructions: [
-        async (parent, args) => {
-          const [receiptTokenMint, user] = await Promise.all([
-            this.__globalRewardAccount.parent.resolveAddress(),
-            parent.parent.resolveAddress(true),
-          ]);
-          if (!(receiptTokenMint && user)) throw new Error('invalid context');
+  readonly updatePools = new TransactionTemplateContext(this, null, {
+    description:
+      'manually triggers contribution synchronization for the user reward pools',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'userUpdatedRewardPool'
+    ),
+    instructions: [
+      async (parent, args) => {
+        const [receiptTokenMint, user] = await Promise.all([
+          this.__globalRewardAccount.parent.resolveAddress(),
+          parent.parent.resolveAddress(true),
+        ]);
+        if (!(receiptTokenMint && user)) throw new Error('invalid context');
 
-          return Promise.all([
-            restaking.getUserUpdateRewardPoolsInstructionAsync(
-              {
-                user: user,
-                receiptTokenMint: receiptTokenMint,
-                program: this.program.address,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-          ]);
-        },
-      ],
-    }
-  );
+        return Promise.all([
+          restaking.getUserUpdateRewardPoolsInstructionAsync(
+            {
+              user: user,
+              receiptTokenMint: receiptTokenMint,
+              program: this.program.address,
+            },
+            {
+              programAddress: this.program.address,
+            }
+          ),
+        ]);
+      },
+    ],
+  });
 
   readonly initializeOrUpdateAccount = new TransactionTemplateContext(
     this,
-    v.pipe(v.nullish(v.null(), null), v.description('no args required')),
+    null,
     {
       description: 'initialize or update user reward account',
       anchorEventDecoders: getRestakingAnchorEventDecoders(

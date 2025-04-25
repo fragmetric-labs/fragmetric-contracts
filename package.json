@@ -16,7 +16,9 @@
     "codegen": "pnpm --filter ./clients/codegen build",
     "keypairs:local": "mkdir -p ./target/deploy && cp ./keypairs/restaking/shared_local_program_4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5.json ./target/deploy/restaking_keypair.json && cp ./keypairs/solv/shared_local_program_9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz.json ./target/deploy/solv_keypair.json",
     "keypairs": "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $key; echo $value > $key; done",
-    "dev": "./programs/testutil/cli.executable.ts connect --keypairs ./keypairs ./keypairs/restaking ./keypairs/solv ledger",
+    "dev": "pnpm dev:restaking",
+    "dev:restaking": "PROGRAM=restaking ./programs/testutil/cli.executable.ts connect --keypairs ./keypairs ./keypairs/restaking ./keypairs/solv ledger",
+    "dev:solv": "PROGRAM=solv ./programs/testutil/cli.executable.ts connect --keypairs ./keypairs ./keypairs/restaking ./keypairs/solv ledger",
     "connect": "./clients/js/fragmetric-sdk/src/cli/cli.executable.ts connect --keypairs ./keypairs/wallet.json ./keypairs/restaking ./keypairs/solv ledger"
   },
   "devDependencies": {

@@ -34,7 +34,7 @@ export async function masked(
     /[.*S|s]lots?$/,
     /.*At?$/,
     'signature',
-    'contribution',
+    /[.*C|c]ontribution?$/,
     ...(options?.extraKeys ?? []),
   ];
   const values = options?.values ?? [

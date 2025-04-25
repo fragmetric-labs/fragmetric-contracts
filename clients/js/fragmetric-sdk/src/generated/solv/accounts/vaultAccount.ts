@@ -15,10 +15,18 @@ import {
   fetchEncodedAccounts,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
+  getAddressEncoder,
+  getArrayDecoder,
+  getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
+  getU8Decoder,
+  getU8Encoder,
   transformEncoder,
   type Account,
   type Address,
@@ -45,16 +53,60 @@ export function getVaultAccountDiscriminatorBytes() {
 
 export type VaultAccount = {
   discriminator: ReadonlyUint8Array;
-  todo: ReadonlyUint8Array;
+  dataVersion: number;
+  bump: number;
+  padding2: ReadonlyUint8Array;
+  admin: Address;
+  delegateRewardTokenAdmin: Address;
+  reserved: ReadonlyUint8Array;
+  receiptTokenMint: Address;
+  supportedTokenMint: Address;
+  tokenProgram: Address;
+  tokenDecimals: number;
+  padding3: ReadonlyUint8Array;
+  numDelegatedRewardTokenMints: number;
+  delegatedRewardTokenMints: Array<Address>;
+  reserved2: ReadonlyUint8Array;
 };
 
-export type VaultAccountArgs = { todo: ReadonlyUint8Array };
+export type VaultAccountArgs = {
+  dataVersion: number;
+  bump: number;
+  padding2: ReadonlyUint8Array;
+  admin: Address;
+  delegateRewardTokenAdmin: Address;
+  reserved: ReadonlyUint8Array;
+  receiptTokenMint: Address;
+  supportedTokenMint: Address;
+  tokenProgram: Address;
+  tokenDecimals: number;
+  padding3: ReadonlyUint8Array;
+  numDelegatedRewardTokenMints: number;
+  delegatedRewardTokenMints: Array<Address>;
+  reserved2: ReadonlyUint8Array;
+};
 
 export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['todo', fixEncoderSize(getBytesEncoder(), 10240)],
+      ['dataVersion', getU16Encoder()],
+      ['bump', getU8Encoder()],
+      ['padding2', fixEncoderSize(getBytesEncoder(), 13)],
+      ['admin', getAddressEncoder()],
+      ['delegateRewardTokenAdmin', getAddressEncoder()],
+      ['reserved', fixEncoderSize(getBytesEncoder(), 960)],
+      ['receiptTokenMint', getAddressEncoder()],
+      ['supportedTokenMint', getAddressEncoder()],
+      ['tokenProgram', getAddressEncoder()],
+      ['tokenDecimals', getU8Encoder()],
+      ['padding3', fixEncoderSize(getBytesEncoder(), 14)],
+      ['numDelegatedRewardTokenMints', getU8Encoder()],
+      [
+        'delegatedRewardTokenMints',
+        getArrayEncoder(getAddressEncoder(), { size: 30 }),
+      ],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 8120)],
     ]),
     (value) => ({ ...value, discriminator: VAULT_ACCOUNT_DISCRIMINATOR })
   );
@@ -63,7 +115,23 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
 export function getVaultAccountDecoder(): Decoder<VaultAccount> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['todo', fixDecoderSize(getBytesDecoder(), 10240)],
+    ['dataVersion', getU16Decoder()],
+    ['bump', getU8Decoder()],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 13)],
+    ['admin', getAddressDecoder()],
+    ['delegateRewardTokenAdmin', getAddressDecoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 960)],
+    ['receiptTokenMint', getAddressDecoder()],
+    ['supportedTokenMint', getAddressDecoder()],
+    ['tokenProgram', getAddressDecoder()],
+    ['tokenDecimals', getU8Decoder()],
+    ['padding3', fixDecoderSize(getBytesDecoder(), 14)],
+    ['numDelegatedRewardTokenMints', getU8Decoder()],
+    [
+      'delegatedRewardTokenMints',
+      getArrayDecoder(getAddressDecoder(), { size: 30 }),
+    ],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 8120)],
   ]);
 }
 
@@ -125,5 +193,5 @@ export async function fetchAllMaybeVaultAccount(
 }
 
 export function getVaultAccountSize(): number {
-  return 10248;
+  return 10240;
 }

@@ -31,7 +31,6 @@ import {
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { SOLV_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -40,36 +39,27 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const INITIALIZE_VAULT_ACCOUNT_DISCRIMINATOR = new Uint8Array([
-  189, 142, 99, 76, 44, 159, 107, 65,
-]);
+export const DELEGATE_VAULT_REWARD_TOKEN_ACCOUNT_DISCRIMINATOR = new Uint8Array(
+  [26, 32, 241, 204, 47, 71, 155, 24]
+);
 
-export function getInitializeVaultAccountDiscriminatorBytes() {
+export function getDelegateVaultRewardTokenAccountDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    INITIALIZE_VAULT_ACCOUNT_DISCRIMINATOR
+    DELEGATE_VAULT_REWARD_TOKEN_ACCOUNT_DISCRIMINATOR
   );
 }
 
-export type InitializeVaultAccountInstruction<
+export type DelegateVaultRewardTokenAccountInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
-  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountAdmin extends string | IAccountMeta<string> = string,
-  TAccountDelegateRewardTokenAdmin extends
-    | string
-    | IAccountMeta<string> = string,
-  TAccountSystemProgram extends
-    | string
-    | IAccountMeta<string> = '11111111111111111111111111111111',
+  TAccountDelegate extends string | IAccountMeta<string> = string,
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
-  TAccountSupportedTokenMint extends string | IAccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
     | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   TAccountVaultAccount extends string | IAccountMeta<string> = string,
-  TAccountVaultReceiptTokenAccount extends
-    | string
-    | IAccountMeta<string> = string,
-  TAccountVaultSupportedTokenAccount extends
+  TAccountRewardTokenMint extends string | IAccountMeta<string> = string,
+  TAccountVaultRewardTokenAccount extends
     | string
     | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
@@ -79,39 +69,28 @@ export type InitializeVaultAccountInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountAdmin extends string
         ? ReadonlySignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
         : TAccountAdmin,
-      TAccountDelegateRewardTokenAdmin extends string
-        ? ReadonlySignerAccount<TAccountDelegateRewardTokenAdmin> &
-            IAccountSignerMeta<TAccountDelegateRewardTokenAdmin>
-        : TAccountDelegateRewardTokenAdmin,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
+      TAccountDelegate extends string
+        ? ReadonlyAccount<TAccountDelegate>
+        : TAccountDelegate,
       TAccountReceiptTokenMint extends string
-        ? WritableAccount<TAccountReceiptTokenMint>
+        ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
-      TAccountSupportedTokenMint extends string
-        ? ReadonlyAccount<TAccountSupportedTokenMint>
-        : TAccountSupportedTokenMint,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
       TAccountVaultAccount extends string
         ? WritableAccount<TAccountVaultAccount>
         : TAccountVaultAccount,
-      TAccountVaultReceiptTokenAccount extends string
-        ? ReadonlyAccount<TAccountVaultReceiptTokenAccount>
-        : TAccountVaultReceiptTokenAccount,
-      TAccountVaultSupportedTokenAccount extends string
-        ? ReadonlyAccount<TAccountVaultSupportedTokenAccount>
-        : TAccountVaultSupportedTokenAccount,
+      TAccountRewardTokenMint extends string
+        ? ReadonlyAccount<TAccountRewardTokenMint>
+        : TAccountRewardTokenMint,
+      TAccountVaultRewardTokenAccount extends string
+        ? WritableAccount<TAccountVaultRewardTokenAccount>
+        : TAccountVaultRewardTokenAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -122,110 +101,94 @@ export type InitializeVaultAccountInstruction<
     ]
   >;
 
-export type InitializeVaultAccountInstructionData = {
+export type DelegateVaultRewardTokenAccountInstructionData = {
   discriminator: ReadonlyUint8Array;
 };
 
-export type InitializeVaultAccountInstructionDataArgs = {};
+export type DelegateVaultRewardTokenAccountInstructionDataArgs = {};
 
-export function getInitializeVaultAccountInstructionDataEncoder(): Encoder<InitializeVaultAccountInstructionDataArgs> {
+export function getDelegateVaultRewardTokenAccountInstructionDataEncoder(): Encoder<DelegateVaultRewardTokenAccountInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
-      discriminator: INITIALIZE_VAULT_ACCOUNT_DISCRIMINATOR,
+      discriminator: DELEGATE_VAULT_REWARD_TOKEN_ACCOUNT_DISCRIMINATOR,
     })
   );
 }
 
-export function getInitializeVaultAccountInstructionDataDecoder(): Decoder<InitializeVaultAccountInstructionData> {
+export function getDelegateVaultRewardTokenAccountInstructionDataDecoder(): Decoder<DelegateVaultRewardTokenAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getInitializeVaultAccountInstructionDataCodec(): Codec<
-  InitializeVaultAccountInstructionDataArgs,
-  InitializeVaultAccountInstructionData
+export function getDelegateVaultRewardTokenAccountInstructionDataCodec(): Codec<
+  DelegateVaultRewardTokenAccountInstructionDataArgs,
+  DelegateVaultRewardTokenAccountInstructionData
 > {
   return combineCodec(
-    getInitializeVaultAccountInstructionDataEncoder(),
-    getInitializeVaultAccountInstructionDataDecoder()
+    getDelegateVaultRewardTokenAccountInstructionDataEncoder(),
+    getDelegateVaultRewardTokenAccountInstructionDataDecoder()
   );
 }
 
-export type InitializeVaultAccountAsyncInput<
-  TAccountPayer extends string = string,
+export type DelegateVaultRewardTokenAccountAsyncInput<
   TAccountAdmin extends string = string,
-  TAccountDelegateRewardTokenAdmin extends string = string,
-  TAccountSystemProgram extends string = string,
+  TAccountDelegate extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountSupportedTokenMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountVaultAccount extends string = string,
-  TAccountVaultReceiptTokenAccount extends string = string,
-  TAccountVaultSupportedTokenAccount extends string = string,
+  TAccountRewardTokenMint extends string = string,
+  TAccountVaultRewardTokenAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
-  /** TODO: later it will be delegated to a PDA (restaking fund) */
   admin: TransactionSigner<TAccountAdmin>;
-  delegateRewardTokenAdmin: TransactionSigner<TAccountDelegateRewardTokenAdmin>;
-  systemProgram?: Address<TAccountSystemProgram>;
+  delegate: Address<TAccountDelegate>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  supportedTokenMint: Address<TAccountSupportedTokenMint>;
   tokenProgram?: Address<TAccountTokenProgram>;
   vaultAccount?: Address<TAccountVaultAccount>;
-  vaultReceiptTokenAccount?: Address<TAccountVaultReceiptTokenAccount>;
-  vaultSupportedTokenAccount?: Address<TAccountVaultSupportedTokenAccount>;
+  rewardTokenMint: Address<TAccountRewardTokenMint>;
+  vaultRewardTokenAccount?: Address<TAccountVaultRewardTokenAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
 };
 
-export async function getInitializeVaultAccountInstructionAsync<
-  TAccountPayer extends string,
+export async function getDelegateVaultRewardTokenAccountInstructionAsync<
   TAccountAdmin extends string,
-  TAccountDelegateRewardTokenAdmin extends string,
-  TAccountSystemProgram extends string,
+  TAccountDelegate extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountSupportedTokenMint extends string,
   TAccountTokenProgram extends string,
   TAccountVaultAccount extends string,
-  TAccountVaultReceiptTokenAccount extends string,
-  TAccountVaultSupportedTokenAccount extends string,
+  TAccountRewardTokenMint extends string,
+  TAccountVaultRewardTokenAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: InitializeVaultAccountAsyncInput<
-    TAccountPayer,
+  input: DelegateVaultRewardTokenAccountAsyncInput<
     TAccountAdmin,
-    TAccountDelegateRewardTokenAdmin,
-    TAccountSystemProgram,
+    TAccountDelegate,
     TAccountReceiptTokenMint,
-    TAccountSupportedTokenMint,
     TAccountTokenProgram,
     TAccountVaultAccount,
-    TAccountVaultReceiptTokenAccount,
-    TAccountVaultSupportedTokenAccount,
+    TAccountRewardTokenMint,
+    TAccountVaultRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  InitializeVaultAccountInstruction<
+  DelegateVaultRewardTokenAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
-    TAccountDelegateRewardTokenAdmin,
-    TAccountSystemProgram,
+    TAccountDelegate,
     TAccountReceiptTokenMint,
-    TAccountSupportedTokenMint,
     TAccountTokenProgram,
     TAccountVaultAccount,
-    TAccountVaultReceiptTokenAccount,
-    TAccountVaultSupportedTokenAccount,
+    TAccountRewardTokenMint,
+    TAccountVaultRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -235,30 +198,21 @@ export async function getInitializeVaultAccountInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: true },
     admin: { value: input.admin ?? null, isWritable: false },
-    delegateRewardTokenAdmin: {
-      value: input.delegateRewardTokenAdmin ?? null,
-      isWritable: false,
-    },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    delegate: { value: input.delegate ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
-    },
-    supportedTokenMint: {
-      value: input.supportedTokenMint ?? null,
       isWritable: false,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
-    vaultReceiptTokenAccount: {
-      value: input.vaultReceiptTokenAccount ?? null,
+    rewardTokenMint: {
+      value: input.rewardTokenMint ?? null,
       isWritable: false,
     },
-    vaultSupportedTokenAccount: {
-      value: input.vaultSupportedTokenAccount ?? null,
-      isWritable: false,
+    vaultRewardTokenAccount: {
+      value: input.vaultRewardTokenAccount ?? null,
+      isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
@@ -269,10 +223,6 @@ export async function getInitializeVaultAccountInstructionAsync<
   >;
 
   // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
@@ -288,28 +238,15 @@ export async function getInitializeVaultAccountInstructionAsync<
       ],
     });
   }
-  if (!accounts.vaultReceiptTokenAccount.value) {
-    accounts.vaultReceiptTokenAccount.value = await getProgramDerivedAddress({
+  if (!accounts.vaultRewardTokenAccount.value) {
+    accounts.vaultRewardTokenAccount.value = await getProgramDerivedAddress({
       programAddress:
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
         getAddressEncoder().encode(expectAddress(accounts.vaultAccount.value)),
         getAddressEncoder().encode(expectAddress(accounts.tokenProgram.value)),
         getAddressEncoder().encode(
-          expectAddress(accounts.receiptTokenMint.value)
-        ),
-      ],
-    });
-  }
-  if (!accounts.vaultSupportedTokenAccount.value) {
-    accounts.vaultSupportedTokenAccount.value = await getProgramDerivedAddress({
-      programAddress:
-        'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
-      seeds: [
-        getAddressEncoder().encode(expectAddress(accounts.vaultAccount.value)),
-        getAddressEncoder().encode(expectAddress(accounts.tokenProgram.value)),
-        getAddressEncoder().encode(
-          expectAddress(accounts.supportedTokenMint.value)
+          expectAddress(accounts.rewardTokenMint.value)
         ),
       ],
     });
@@ -331,33 +268,27 @@ export async function getInitializeVaultAccountInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
-      getAccountMeta(accounts.delegateRewardTokenAdmin),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.delegate),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.supportedTokenMint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.vaultAccount),
-      getAccountMeta(accounts.vaultReceiptTokenAccount),
-      getAccountMeta(accounts.vaultSupportedTokenAccount),
+      getAccountMeta(accounts.rewardTokenMint),
+      getAccountMeta(accounts.vaultRewardTokenAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getInitializeVaultAccountInstructionDataEncoder().encode({}),
-  } as InitializeVaultAccountInstruction<
+    data: getDelegateVaultRewardTokenAccountInstructionDataEncoder().encode({}),
+  } as DelegateVaultRewardTokenAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
-    TAccountDelegateRewardTokenAdmin,
-    TAccountSystemProgram,
+    TAccountDelegate,
     TAccountReceiptTokenMint,
-    TAccountSupportedTokenMint,
     TAccountTokenProgram,
     TAccountVaultAccount,
-    TAccountVaultReceiptTokenAccount,
-    TAccountVaultSupportedTokenAccount,
+    TAccountRewardTokenMint,
+    TAccountVaultRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -365,77 +296,61 @@ export async function getInitializeVaultAccountInstructionAsync<
   return instruction;
 }
 
-export type InitializeVaultAccountInput<
-  TAccountPayer extends string = string,
+export type DelegateVaultRewardTokenAccountInput<
   TAccountAdmin extends string = string,
-  TAccountDelegateRewardTokenAdmin extends string = string,
-  TAccountSystemProgram extends string = string,
+  TAccountDelegate extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountSupportedTokenMint extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountVaultAccount extends string = string,
-  TAccountVaultReceiptTokenAccount extends string = string,
-  TAccountVaultSupportedTokenAccount extends string = string,
+  TAccountRewardTokenMint extends string = string,
+  TAccountVaultRewardTokenAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
-  /** TODO: later it will be delegated to a PDA (restaking fund) */
   admin: TransactionSigner<TAccountAdmin>;
-  delegateRewardTokenAdmin: TransactionSigner<TAccountDelegateRewardTokenAdmin>;
-  systemProgram?: Address<TAccountSystemProgram>;
+  delegate: Address<TAccountDelegate>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  supportedTokenMint: Address<TAccountSupportedTokenMint>;
   tokenProgram?: Address<TAccountTokenProgram>;
   vaultAccount: Address<TAccountVaultAccount>;
-  vaultReceiptTokenAccount: Address<TAccountVaultReceiptTokenAccount>;
-  vaultSupportedTokenAccount: Address<TAccountVaultSupportedTokenAccount>;
+  rewardTokenMint: Address<TAccountRewardTokenMint>;
+  vaultRewardTokenAccount: Address<TAccountVaultRewardTokenAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
 };
 
-export function getInitializeVaultAccountInstruction<
-  TAccountPayer extends string,
+export function getDelegateVaultRewardTokenAccountInstruction<
   TAccountAdmin extends string,
-  TAccountDelegateRewardTokenAdmin extends string,
-  TAccountSystemProgram extends string,
+  TAccountDelegate extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountSupportedTokenMint extends string,
   TAccountTokenProgram extends string,
   TAccountVaultAccount extends string,
-  TAccountVaultReceiptTokenAccount extends string,
-  TAccountVaultSupportedTokenAccount extends string,
+  TAccountRewardTokenMint extends string,
+  TAccountVaultRewardTokenAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: InitializeVaultAccountInput<
-    TAccountPayer,
+  input: DelegateVaultRewardTokenAccountInput<
     TAccountAdmin,
-    TAccountDelegateRewardTokenAdmin,
-    TAccountSystemProgram,
+    TAccountDelegate,
     TAccountReceiptTokenMint,
-    TAccountSupportedTokenMint,
     TAccountTokenProgram,
     TAccountVaultAccount,
-    TAccountVaultReceiptTokenAccount,
-    TAccountVaultSupportedTokenAccount,
+    TAccountRewardTokenMint,
+    TAccountVaultRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): InitializeVaultAccountInstruction<
+): DelegateVaultRewardTokenAccountInstruction<
   TProgramAddress,
-  TAccountPayer,
   TAccountAdmin,
-  TAccountDelegateRewardTokenAdmin,
-  TAccountSystemProgram,
+  TAccountDelegate,
   TAccountReceiptTokenMint,
-  TAccountSupportedTokenMint,
   TAccountTokenProgram,
   TAccountVaultAccount,
-  TAccountVaultReceiptTokenAccount,
-  TAccountVaultSupportedTokenAccount,
+  TAccountRewardTokenMint,
+  TAccountVaultRewardTokenAccount,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -444,30 +359,21 @@ export function getInitializeVaultAccountInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: true },
     admin: { value: input.admin ?? null, isWritable: false },
-    delegateRewardTokenAdmin: {
-      value: input.delegateRewardTokenAdmin ?? null,
-      isWritable: false,
-    },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    delegate: { value: input.delegate ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
-    },
-    supportedTokenMint: {
-      value: input.supportedTokenMint ?? null,
       isWritable: false,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
-    vaultReceiptTokenAccount: {
-      value: input.vaultReceiptTokenAccount ?? null,
+    rewardTokenMint: {
+      value: input.rewardTokenMint ?? null,
       isWritable: false,
     },
-    vaultSupportedTokenAccount: {
-      value: input.vaultSupportedTokenAccount ?? null,
-      isWritable: false,
+    vaultRewardTokenAccount: {
+      value: input.vaultRewardTokenAccount ?? null,
+      isWritable: true,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
@@ -478,10 +384,6 @@ export function getInitializeVaultAccountInstruction<
   >;
 
   // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
-  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
@@ -490,33 +392,27 @@ export function getInitializeVaultAccountInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
-      getAccountMeta(accounts.delegateRewardTokenAdmin),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta(accounts.delegate),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.supportedTokenMint),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.vaultAccount),
-      getAccountMeta(accounts.vaultReceiptTokenAccount),
-      getAccountMeta(accounts.vaultSupportedTokenAccount),
+      getAccountMeta(accounts.rewardTokenMint),
+      getAccountMeta(accounts.vaultRewardTokenAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getInitializeVaultAccountInstructionDataEncoder().encode({}),
-  } as InitializeVaultAccountInstruction<
+    data: getDelegateVaultRewardTokenAccountInstructionDataEncoder().encode({}),
+  } as DelegateVaultRewardTokenAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
-    TAccountDelegateRewardTokenAdmin,
-    TAccountSystemProgram,
+    TAccountDelegate,
     TAccountReceiptTokenMint,
-    TAccountSupportedTokenMint,
     TAccountTokenProgram,
     TAccountVaultAccount,
-    TAccountVaultReceiptTokenAccount,
-    TAccountVaultSupportedTokenAccount,
+    TAccountRewardTokenMint,
+    TAccountVaultRewardTokenAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -524,38 +420,34 @@ export function getInitializeVaultAccountInstruction<
   return instruction;
 }
 
-export type ParsedInitializeVaultAccountInstruction<
+export type ParsedDelegateVaultRewardTokenAccountInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    payer: TAccountMetas[0];
-    /** TODO: later it will be delegated to a PDA (restaking fund) */
-    admin: TAccountMetas[1];
-    delegateRewardTokenAdmin: TAccountMetas[2];
-    systemProgram: TAccountMetas[3];
-    receiptTokenMint: TAccountMetas[4];
-    supportedTokenMint: TAccountMetas[5];
-    tokenProgram: TAccountMetas[6];
-    vaultAccount: TAccountMetas[7];
-    vaultReceiptTokenAccount: TAccountMetas[8];
-    vaultSupportedTokenAccount: TAccountMetas[9];
-    eventAuthority: TAccountMetas[10];
-    program: TAccountMetas[11];
+    admin: TAccountMetas[0];
+    delegate: TAccountMetas[1];
+    receiptTokenMint: TAccountMetas[2];
+    tokenProgram: TAccountMetas[3];
+    vaultAccount: TAccountMetas[4];
+    rewardTokenMint: TAccountMetas[5];
+    vaultRewardTokenAccount: TAccountMetas[6];
+    eventAuthority: TAccountMetas[7];
+    program: TAccountMetas[8];
   };
-  data: InitializeVaultAccountInstructionData;
+  data: DelegateVaultRewardTokenAccountInstructionData;
 };
 
-export function parseInitializeVaultAccountInstruction<
+export function parseDelegateVaultRewardTokenAccountInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedInitializeVaultAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 12) {
+): ParsedDelegateVaultRewardTokenAccountInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 9) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -568,20 +460,17 @@ export function parseInitializeVaultAccountInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
       admin: getNextAccount(),
-      delegateRewardTokenAdmin: getNextAccount(),
-      systemProgram: getNextAccount(),
+      delegate: getNextAccount(),
       receiptTokenMint: getNextAccount(),
-      supportedTokenMint: getNextAccount(),
       tokenProgram: getNextAccount(),
       vaultAccount: getNextAccount(),
-      vaultReceiptTokenAccount: getNextAccount(),
-      vaultSupportedTokenAccount: getNextAccount(),
+      rewardTokenMint: getNextAccount(),
+      vaultRewardTokenAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getInitializeVaultAccountInstructionDataDecoder().decode(
+    data: getDelegateVaultRewardTokenAccountInstructionDataDecoder().decode(
       instruction.data
     ),
   };
