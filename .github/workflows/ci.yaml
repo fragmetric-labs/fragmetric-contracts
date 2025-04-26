@@ -86,6 +86,9 @@ jobs:
           git: https://github.com/solana-foundation/anchor
           tag: ${{ env.ANCHOR_VERSION }}
           locked: true
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: solana-verify
 
       # lint Rust codes and audit dependencies
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
@@ -102,22 +105,105 @@ jobs:
           # run test with LiteSVM or SVM
           pnpm test list "${files[@]}"
 
-#    TODO: setup release after open-sourcing
-#    if: startsWith(github.ref, 'refs/tags/v')
-#    steps:
-#      - uses: actions/checkout@v4
-#      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
-#      - uses: actions-rust-lang/setup-rust-toolchain@v1
-#      - uses: baptiste0928/cargo-install@v3
-#        with:
-#          crate: solana-verify
-#      - run: solana-verify build --library-name restaking --base-image solanafoundation/solana-verifiable-build:2.1.11
-#      - run: ls -lh
-#      - uses: softprops/action-gh-release@v2
-#        with:
-#          files: |
-#            target/deploy/restaking.so
-#            target/idl/restaking.json
-#            target/types/restaking.ts
-#            clients/js/fragmetric-sdk/src/generated/restaking/* # zip it
-#          fail_on_unmatched_files: true
+      # build artifacts
+      # TODO: anchor build --verifiable
+      - name: build and package release candidates
+        # if: github.ref_name == 'dev' || github.ref_name == 'main'
+        id: package
+        shell: bash
+        env:
+          KEYPAIR_RESTAKING_PROGRAM_DEVNET: ${{ secrets.KEYPAIR_RESTAKING_PROGRAM_DEVNET }}
+          KEYPAIR_RESTAKING_PROGRAM_MAINNET: ${{ secrets.KEYPAIR_RESTAKING_PROGRAM_MAINNET }}
+          KEYPAIR_SOLV_PROGRAM_DEVNET: ${{ secrets.KEYPAIR_SOLV_PROGRAM_DEVNET }}
+          KEYPAIR_SOLV_PROGRAM_MAINNET: ${{ secrets.KEYPAIR_SOLV_PROGRAM_MAINNET }}
+        run: |
+          set -euo pipefail
+          
+          PKG=$(mktemp -d)
+          echo "path=$PKG" >> "$GITHUB_OUTPUT"
+          
+          # common artifacts
+          mkdir "$PKG/common"
+          cp target/idl/restaking.json "$PKG/common/restaking.anchor-idl.json"
+          cp target/types/restaking.ts "$PKG/common/restaking.anchor-idl.ts"
+          cp target/idl/solv.json "$PKG/common/solv.anchor-idl.json"
+          cp target/types/solv.ts "$PKG/common/solv.anchor-idl.ts"
+          (cd clients/js/fragmetric-sdk/src/generated && zip -r "$PKG/common/codama-generated-typescript.zip" .)
+
+          echo "### Programs" >> $GITHUB_STEP_SUMMARY
+          echo "| Cluster | Program | Address | Hash |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+          # devnet artifacts
+          mkdir "$PKG/devnet"
+          printf '%s\n' "$KEYPAIR_RESTAKING_PROGRAM_DEVNET" > target/deploy/restaking-keypair.json
+          printf '%s\n' "$KEYPAIR_SOLV_PROGRAM_DEVNET" > target/deploy/solv-keypair.json
+          anchor build --no-idl -- --features devnet
+          
+          ADDRESS=$(solana address -k target/deploy/restaking-keypair.json)
+          echo $ADDRESS > "$PKG/devnet/restaking.address.txt"
+          HASH=$(solana-verify get-executable-hash target/deploy/restaking.so)
+          echo $HASH > "$PKG/devnet/restaking.hash.txt"
+          cp target/deploy/restaking.so "$PKG/devnet/restaking.so"
+          echo "| devnet | restaking.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
+          
+          ADDRESS=$(solana address -k target/deploy/solv-keypair.json)
+          echo $ADDRESS > "$PKG/devnet/solv.address.txt"
+          HASH=$(solana-verify get-executable-hash target/deploy/solv.so)
+          echo $HASH > "$PKG/devnet/solv.hash.txt"
+          cp target/deploy/solv.so "$PKG/devnet/solv.so"
+          echo "| devnet | solv.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
+          
+          # mainnet artifacts
+          mkdir "$PKG/mainnet"
+          printf '%s\n' "$KEYPAIR_RESTAKING_PROGRAM_MAINNET" > target/deploy/restaking-keypair.json
+          printf '%s\n' "$KEYPAIR_SOLV_PROGRAM_MAINNET" > target/deploy/solv-keypair.json
+          anchor build --no-idl -- --features mainnet
+          
+          ADDRESS=$(solana address -k target/deploy/restaking-keypair.json)
+          echo $ADDRESS > "$PKG/mainnet/restaking.address.txt"
+          HASH=$(solana-verify get-executable-hash target/deploy/restaking.so)
+          echo $HASH > "$PKG/mainnet/restaking.hash.txt"
+          cp target/deploy/restaking.so "$PKG/mainnet/restaking.so"
+          echo "| mainnet | restaking.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
+          
+          ADDRESS=$(solana address -k target/deploy/solv-keypair.json)
+          echo $ADDRESS > "$PKG/mainnet/solv.address.txt"
+          HASH=$(solana-verify get-executable-hash target/deploy/solv.so)
+          echo $HASH > "$PKG/mainnet/solv.hash.txt"
+          cp target/deploy/solv.so "$PKG/mainnet/solv.so"
+          echo "| mainnet | solv.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          {
+            echo "### Hash Verification Example"
+            echo '```'
+            echo "# install solana-verify"
+            echo "$ cargo install solana-verify"
+            echo "# verify local build"
+            echo "$ solana-verify get-executable-hash ./target/deploy/restaking.so"
+            echo "# verify program buffer"
+            echo "$ solana-verify get-buffer-hash tg1aXtRpWgbLP7PtyqrJoeaVfB67rMRbyqnRF8SjSSH -u mainnet"
+            echo "# verify deployed program"
+            echo "$ solana-verify get-program-hash fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3 -u mainnet"
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Artifacts List" >> $GITHUB_STEP_SUMMARY
+          {
+            echo '```'
+            (cd "$PKG" && find . -type f ! -name '.DS_Store' | sort)
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        # if: github.ref_name == 'dev' || github.ref_name == 'main'
+        with:
+          name: artifacts-${{ github.sha }}
+          path: ${{ steps.package.outputs.path }}
+
+      # TODO: release artifacts
+      # - uses: softprops/action-gh-release@v2
+      #  with:
+      #    files: artifacts-${{ github.sha }}
+      #    fail_on_unmatched_files: true
