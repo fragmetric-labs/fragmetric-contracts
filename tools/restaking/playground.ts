@@ -980,12 +980,12 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public getFragSOLFundReserveAccountBalance() {
         return this.connection.getBalance(this.knownAddress.fragSOLFundReserveAccount, "confirmed")
-            .then(v => new BN(v));
+            .then(v => new BN(v - 890880)); // FOR LEGACY TEST COMPATIBILITY, IGNORES RENT EXEMPT FEE
     }
 
     public getFragSOLFundTreasuryAccountBalance() {
         return this.connection.getBalance(this.knownAddress.fragSOLFundTreasuryAccount, "confirmed")
-            .then(v => new BN(v));
+            .then(v => new BN(v - 890880)); // FOR LEGACY TEST COMPATIBILITY, IGNORES RENT EXEMPT FEE
     }
 
     public getNSOLTokenPoolAccount() {

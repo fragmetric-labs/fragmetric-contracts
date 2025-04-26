@@ -26,7 +26,7 @@ startup_wait = 50000
 
 [test.validator]
 #url = "https://api.mainnet-beta.solana.com" # where to clone below acconts from
-slots_per_epoch = "64"
+slots_per_epoch = "128"
 bind_address = "0.0.0.0"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
@@ -223,7 +223,7 @@ program = "./tests/mocks/mainnet/jito_vault_program.so"
 # clone mainnet Jito restaking vault protocol global config to localnet
 [[test.validator.account]]
 address = "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-filename = "./tests/mocks/mainnet/jito_vault_config_epoch_length_64.json"
+filename = "./tests/mocks/mainnet/jito_vault_config_epoch_length_128.json"
 
 # clone mainnet Jito restaking vault protocol program fee wallet to localnet
 [[test.validator.account]]

@@ -925,35 +925,30 @@ impl<'info> JitoRestakingVaultService<'info> {
     }
 
     /// If there is more idle(not staked) vst than required amount for withdrawals, delegate them
-    /// ref: https://github.com/jito-foundation/restaking/blob/master/vault_core/src/vault.rs#L1110
+    /// ref: https://github.com/jito-foundation/restaking/blob/df9f051/vault_core/src/vault.rs#L1200
     pub fn get_available_amount_to_delegate(&self) -> Result<u64> {
         let data = &Self::borrow_account_data(self.vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
 
-        // requested_for_withdrawal = vrt_to_vst_price * (vrt_enqueued + vrt_cooling_down + vrt_ready_to_claim)
-        let amount_requested_for_withdrawals = vault
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+        // ref: just check vault.delegate fn for constraints
+
+        // there is some protection built-in to the vault to avoid over delegating assets
+        // this number is denominated in the supported token units
+        let amount_to_reserve_for_vrts = vault
             .calculate_supported_assets_requested_for_withdrawal()
             .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
 
-        // available_for_withdrawal = tokens_deposited - staked
-        // note that this included undelegating amount
-        let available_amount_for_withdrawal =
-            vault.tokens_deposited() - vault.delegation_state.staked_amount();
+        let amount_available_for_delegation = vault
+            .tokens_deposited()
+            .saturating_sub(
+                vault
+                    .delegation_state
+                    .total_security()
+                    .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?,
+            )
+            .saturating_sub(amount_to_reserve_for_vrts);
 
-        let surplus_amount =
-            available_amount_for_withdrawal.saturating_sub(amount_requested_for_withdrawals);
-
-        // available_for_delegation = tokens_deposited - (staked + enqueued + cooling_down)
-        let available_amount_for_delegation = vault.tokens_deposited()
-            - vault
-                .delegation_state
-                .total_security()
-                .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
-
-        // undelegating amounts are not able to delegate..
-        let amount_to_delegate = surplus_amount.min(available_amount_for_delegation);
-
-        Ok(amount_to_delegate)
+        Ok(amount_available_for_delegation)
     }
 
     pub fn add_delegation(
