@@ -100,7 +100,7 @@ jobs:
           shopt -s globstar
           files=(./programs/**/*.test.ts)
           # run test with LiteSVM or SVM
-          pnpm test "${files[@]}"
+          pnpm test list "${files[@]}"
 
 #    TODO: setup release after open-sourcing
 #    if: startsWith(github.ref, 'refs/tags/v')

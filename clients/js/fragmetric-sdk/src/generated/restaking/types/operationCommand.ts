@@ -90,19 +90,19 @@ export type OperationCommand =
       fields: readonly [ClaimUnrestakedVSTCommand];
     }
   | { __kind: 'DenormalizeNT'; fields: readonly [DenormalizeNTCommand] }
-  | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommand] }
-  | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommand] }
   | { __kind: 'ClaimUnstakedSOL'; fields: readonly [ClaimUnstakedSOLCommand] }
   | {
       __kind: 'ProcessWithdrawalBatch';
       fields: readonly [ProcessWithdrawalBatchCommand];
     }
   | { __kind: 'UnstakeLST'; fields: readonly [UnstakeLSTCommand] }
+  | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommand] }
+  | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommand] }
+  | { __kind: 'HarvestReward'; fields: readonly [HarvestRewardCommand] }
   | { __kind: 'StakeSOL'; fields: readonly [StakeSOLCommand] }
   | { __kind: 'NormalizeST'; fields: readonly [NormalizeSTCommand] }
   | { __kind: 'RestakeVST'; fields: readonly [RestakeVSTCommand] }
-  | { __kind: 'DelegateVST'; fields: readonly [DelegateVSTCommand] }
-  | { __kind: 'HarvestReward'; fields: readonly [HarvestRewardCommand] };
+  | { __kind: 'DelegateVST'; fields: readonly [DelegateVSTCommand] };
 
 export type OperationCommandArgs =
   | { __kind: 'Initialize'; fields: readonly [InitializeCommandArgs] }
@@ -115,8 +115,6 @@ export type OperationCommandArgs =
       fields: readonly [ClaimUnrestakedVSTCommandArgs];
     }
   | { __kind: 'DenormalizeNT'; fields: readonly [DenormalizeNTCommandArgs] }
-  | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommandArgs] }
-  | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommandArgs] }
   | {
       __kind: 'ClaimUnstakedSOL';
       fields: readonly [ClaimUnstakedSOLCommandArgs];
@@ -126,11 +124,13 @@ export type OperationCommandArgs =
       fields: readonly [ProcessWithdrawalBatchCommandArgs];
     }
   | { __kind: 'UnstakeLST'; fields: readonly [UnstakeLSTCommandArgs] }
+  | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommandArgs] }
+  | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommandArgs] }
+  | { __kind: 'HarvestReward'; fields: readonly [HarvestRewardCommandArgs] }
   | { __kind: 'StakeSOL'; fields: readonly [StakeSOLCommandArgs] }
   | { __kind: 'NormalizeST'; fields: readonly [NormalizeSTCommandArgs] }
   | { __kind: 'RestakeVST'; fields: readonly [RestakeVSTCommandArgs] }
-  | { __kind: 'DelegateVST'; fields: readonly [DelegateVSTCommandArgs] }
-  | { __kind: 'HarvestReward'; fields: readonly [HarvestRewardCommandArgs] };
+  | { __kind: 'DelegateVST'; fields: readonly [DelegateVSTCommandArgs] };
 
 export function getOperationCommandEncoder(): Encoder<OperationCommandArgs> {
   return getDiscriminatedUnionEncoder([
@@ -162,18 +162,6 @@ export function getOperationCommandEncoder(): Encoder<OperationCommandArgs> {
       ]),
     ],
     [
-      'UndelegateVST',
-      getStructEncoder([
-        ['fields', getTupleEncoder([getUndelegateVSTCommandEncoder()])],
-      ]),
-    ],
-    [
-      'UnrestakeVRT',
-      getStructEncoder([
-        ['fields', getTupleEncoder([getUnrestakeVRTCommandEncoder()])],
-      ]),
-    ],
-    [
       'ClaimUnstakedSOL',
       getStructEncoder([
         ['fields', getTupleEncoder([getClaimUnstakedSOLCommandEncoder()])],
@@ -192,6 +180,24 @@ export function getOperationCommandEncoder(): Encoder<OperationCommandArgs> {
       'UnstakeLST',
       getStructEncoder([
         ['fields', getTupleEncoder([getUnstakeLSTCommandEncoder()])],
+      ]),
+    ],
+    [
+      'UnrestakeVRT',
+      getStructEncoder([
+        ['fields', getTupleEncoder([getUnrestakeVRTCommandEncoder()])],
+      ]),
+    ],
+    [
+      'UndelegateVST',
+      getStructEncoder([
+        ['fields', getTupleEncoder([getUndelegateVSTCommandEncoder()])],
+      ]),
+    ],
+    [
+      'HarvestReward',
+      getStructEncoder([
+        ['fields', getTupleEncoder([getHarvestRewardCommandEncoder()])],
       ]),
     ],
     [
@@ -216,12 +222,6 @@ export function getOperationCommandEncoder(): Encoder<OperationCommandArgs> {
       'DelegateVST',
       getStructEncoder([
         ['fields', getTupleEncoder([getDelegateVSTCommandEncoder()])],
-      ]),
-    ],
-    [
-      'HarvestReward',
-      getStructEncoder([
-        ['fields', getTupleEncoder([getHarvestRewardCommandEncoder()])],
       ]),
     ],
   ]);
@@ -257,18 +257,6 @@ export function getOperationCommandDecoder(): Decoder<OperationCommand> {
       ]),
     ],
     [
-      'UndelegateVST',
-      getStructDecoder([
-        ['fields', getTupleDecoder([getUndelegateVSTCommandDecoder()])],
-      ]),
-    ],
-    [
-      'UnrestakeVRT',
-      getStructDecoder([
-        ['fields', getTupleDecoder([getUnrestakeVRTCommandDecoder()])],
-      ]),
-    ],
-    [
       'ClaimUnstakedSOL',
       getStructDecoder([
         ['fields', getTupleDecoder([getClaimUnstakedSOLCommandDecoder()])],
@@ -287,6 +275,24 @@ export function getOperationCommandDecoder(): Decoder<OperationCommand> {
       'UnstakeLST',
       getStructDecoder([
         ['fields', getTupleDecoder([getUnstakeLSTCommandDecoder()])],
+      ]),
+    ],
+    [
+      'UnrestakeVRT',
+      getStructDecoder([
+        ['fields', getTupleDecoder([getUnrestakeVRTCommandDecoder()])],
+      ]),
+    ],
+    [
+      'UndelegateVST',
+      getStructDecoder([
+        ['fields', getTupleDecoder([getUndelegateVSTCommandDecoder()])],
+      ]),
+    ],
+    [
+      'HarvestReward',
+      getStructDecoder([
+        ['fields', getTupleDecoder([getHarvestRewardCommandDecoder()])],
       ]),
     ],
     [
@@ -311,12 +317,6 @@ export function getOperationCommandDecoder(): Decoder<OperationCommand> {
       'DelegateVST',
       getStructDecoder([
         ['fields', getTupleDecoder([getDelegateVSTCommandDecoder()])],
-      ]),
-    ],
-    [
-      'HarvestReward',
-      getStructDecoder([
-        ['fields', getTupleDecoder([getHarvestRewardCommandDecoder()])],
       ]),
     ],
   ]);
@@ -378,26 +378,6 @@ export function operationCommand(
   'DenormalizeNT'
 >;
 export function operationCommand(
-  kind: 'UndelegateVST',
-  data: GetDiscriminatedUnionVariantContent<
-    OperationCommandArgs,
-    '__kind',
-    'UndelegateVST'
-  >['fields']
-): GetDiscriminatedUnionVariant<
-  OperationCommandArgs,
-  '__kind',
-  'UndelegateVST'
->;
-export function operationCommand(
-  kind: 'UnrestakeVRT',
-  data: GetDiscriminatedUnionVariantContent<
-    OperationCommandArgs,
-    '__kind',
-    'UnrestakeVRT'
-  >['fields']
-): GetDiscriminatedUnionVariant<OperationCommandArgs, '__kind', 'UnrestakeVRT'>;
-export function operationCommand(
   kind: 'ClaimUnstakedSOL',
   data: GetDiscriminatedUnionVariantContent<
     OperationCommandArgs,
@@ -430,6 +410,38 @@ export function operationCommand(
   >['fields']
 ): GetDiscriminatedUnionVariant<OperationCommandArgs, '__kind', 'UnstakeLST'>;
 export function operationCommand(
+  kind: 'UnrestakeVRT',
+  data: GetDiscriminatedUnionVariantContent<
+    OperationCommandArgs,
+    '__kind',
+    'UnrestakeVRT'
+  >['fields']
+): GetDiscriminatedUnionVariant<OperationCommandArgs, '__kind', 'UnrestakeVRT'>;
+export function operationCommand(
+  kind: 'UndelegateVST',
+  data: GetDiscriminatedUnionVariantContent<
+    OperationCommandArgs,
+    '__kind',
+    'UndelegateVST'
+  >['fields']
+): GetDiscriminatedUnionVariant<
+  OperationCommandArgs,
+  '__kind',
+  'UndelegateVST'
+>;
+export function operationCommand(
+  kind: 'HarvestReward',
+  data: GetDiscriminatedUnionVariantContent<
+    OperationCommandArgs,
+    '__kind',
+    'HarvestReward'
+  >['fields']
+): GetDiscriminatedUnionVariant<
+  OperationCommandArgs,
+  '__kind',
+  'HarvestReward'
+>;
+export function operationCommand(
   kind: 'StakeSOL',
   data: GetDiscriminatedUnionVariantContent<
     OperationCommandArgs,
@@ -461,18 +473,6 @@ export function operationCommand(
     'DelegateVST'
   >['fields']
 ): GetDiscriminatedUnionVariant<OperationCommandArgs, '__kind', 'DelegateVST'>;
-export function operationCommand(
-  kind: 'HarvestReward',
-  data: GetDiscriminatedUnionVariantContent<
-    OperationCommandArgs,
-    '__kind',
-    'HarvestReward'
-  >['fields']
-): GetDiscriminatedUnionVariant<
-  OperationCommandArgs,
-  '__kind',
-  'HarvestReward'
->;
 export function operationCommand<
   K extends OperationCommandArgs['__kind'],
   Data,

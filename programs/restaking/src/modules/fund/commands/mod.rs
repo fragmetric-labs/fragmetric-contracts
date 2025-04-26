@@ -1,4 +1,4 @@
-mod cmd10_undelegate_vst;
+mod cmd10_harvest_reward;
 mod cmd11_stake_sol;
 mod cmd12_normalize_st;
 mod cmd13_restake_vst;
@@ -9,11 +9,11 @@ mod cmd3_claim_unrestaked_vst;
 mod cmd4_denormalize_nt;
 mod cmd5_claim_unstaked_sol;
 mod cmd6_process_withdrawal_batch;
-mod cmd7_harvest_reward;
-mod cmd8_unstake_lst;
-mod cmd9_unrestake_vrt;
+mod cmd7_unstake_lst;
+mod cmd8_unrestake_vrt;
+mod cmd9_undelegate_vst;
 
-pub use cmd10_undelegate_vst::*;
+pub use cmd10_harvest_reward::*;
 pub use cmd11_stake_sol::*;
 pub use cmd12_normalize_st::*;
 pub use cmd13_restake_vst::*;
@@ -24,9 +24,9 @@ pub use cmd3_claim_unrestaked_vst::*;
 pub use cmd4_denormalize_nt::*;
 pub use cmd5_claim_unstaked_sol::*;
 pub use cmd6_process_withdrawal_batch::*;
-pub use cmd7_harvest_reward::*;
-pub use cmd8_unstake_lst::*;
-pub use cmd9_unrestake_vrt::*;
+pub use cmd7_unstake_lst::*;
+pub use cmd8_unrestake_vrt::*;
+pub use cmd9_undelegate_vst::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
@@ -50,16 +50,16 @@ pub enum OperationCommand {
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommand),
     ClaimUnrestakedVST(ClaimUnrestakedVSTCommand),
     DenormalizeNT(DenormalizeNTCommand),
-    UndelegateVST(UndelegateVSTCommand),
-    UnrestakeVRT(UnrestakeVRTCommand),
     ClaimUnstakedSOL(ClaimUnstakedSOLCommand),
     ProcessWithdrawalBatch(ProcessWithdrawalBatchCommand),
     UnstakeLST(UnstakeLSTCommand),
+    UnrestakeVRT(UnrestakeVRTCommand),
+    UndelegateVST(UndelegateVSTCommand),
+    HarvestReward(HarvestRewardCommand),
     StakeSOL(StakeSOLCommand),
     NormalizeST(NormalizeSTCommand),
     RestakeVST(RestakeVSTCommand),
     DelegateVST(DelegateVSTCommand),
-    HarvestReward(HarvestRewardCommand),
 }
 
 impl std::fmt::Debug for OperationCommand {
@@ -69,16 +69,16 @@ impl std::fmt::Debug for OperationCommand {
             OperationCommand::EnqueueWithdrawalBatch(command) => command.fmt(f),
             OperationCommand::ClaimUnrestakedVST(command) => command.fmt(f),
             OperationCommand::DenormalizeNT(command) => command.fmt(f),
-            OperationCommand::UndelegateVST(command) => command.fmt(f),
-            OperationCommand::UnrestakeVRT(command) => command.fmt(f),
             OperationCommand::ClaimUnstakedSOL(command) => command.fmt(f),
             OperationCommand::ProcessWithdrawalBatch(command) => command.fmt(f),
             OperationCommand::UnstakeLST(command) => command.fmt(f),
+            OperationCommand::UndelegateVST(command) => command.fmt(f),
+            OperationCommand::UnrestakeVRT(command) => command.fmt(f),
+            OperationCommand::HarvestReward(command) => command.fmt(f),
             OperationCommand::StakeSOL(command) => command.fmt(f),
             OperationCommand::NormalizeST(command) => command.fmt(f),
             OperationCommand::RestakeVST(command) => command.fmt(f),
             OperationCommand::DelegateVST(command) => command.fmt(f),
-            OperationCommand::HarvestReward(command) => command.fmt(f),
         }
     }
 }
@@ -89,16 +89,16 @@ pub enum OperationCommandResult {
     EnqueueWithdrawalBatch(EnqueueWithdrawalBatchCommandResult),
     ClaimUnrestakedVST(ClaimUnrestakedVSTCommandResult),
     DenormalizeNT(DenormalizeNTCommandResult),
-    UndelegateVST(UndelegateVSTCommandResult),
-    UnrestakeVRT(UnrestakeVRTCommandResult),
     ClaimUnstakedSOL(ClaimUnstakedSOLCommandResult),
     ProcessWithdrawalBatch(ProcessWithdrawalBatchCommandResult),
     UnstakeLST(UnstakeLSTCommandResult),
+    UnrestakeVRT(UnrestakeVRTCommandResult),
+    UndelegateVST(UndelegateVSTCommandResult),
+    HarvestReward(HarvestRewardCommandResult),
     StakeSOL(StakeSOLCommandResult),
     NormalizeST(NormalizeSTCommandResult),
     RestakeVST(RestakeVSTCommandResult),
     DelegateVST(DelegateVSTCommandResult),
-    HarvestReward(HarvestRewardCommandResult),
 }
 
 // cmd1
@@ -291,15 +291,15 @@ impl OperationCommand {
             OperationCommand::ClaimUnrestakedVST(_) => 3,
             OperationCommand::DenormalizeNT(_) => 4,
             OperationCommand::ClaimUnstakedSOL(_) => 5,
-            OperationCommand::ProcessWithdrawalBatch(_) => 7,
-            OperationCommand::UnstakeLST(_) => 6,
+            OperationCommand::ProcessWithdrawalBatch(_) => 6,
+            OperationCommand::UnstakeLST(_) => 7,
             OperationCommand::UnrestakeVRT(_) => 8,
             OperationCommand::UndelegateVST(_) => 9,
             OperationCommand::StakeSOL(_) => 10,
-            OperationCommand::NormalizeST(_) => 11,
-            OperationCommand::RestakeVST(_) => 12,
-            OperationCommand::DelegateVST(_) => 13,
-            OperationCommand::HarvestReward(_) => 14,
+            OperationCommand::HarvestReward(_) => 11,
+            OperationCommand::NormalizeST(_) => 12,
+            OperationCommand::RestakeVST(_) => 13,
+            OperationCommand::DelegateVST(_) => 14,
         }
     }
 
@@ -496,16 +496,16 @@ impl SelfExecutable for OperationCommand {
             OperationCommand::EnqueueWithdrawalBatch(command) => command.execute(ctx, accounts),
             OperationCommand::ClaimUnrestakedVST(command) => command.execute(ctx, accounts),
             OperationCommand::DenormalizeNT(command) => command.execute(ctx, accounts),
-            OperationCommand::UndelegateVST(command) => command.execute(ctx, accounts),
-            OperationCommand::UnrestakeVRT(command) => command.execute(ctx, accounts),
             OperationCommand::ClaimUnstakedSOL(command) => command.execute(ctx, accounts),
             OperationCommand::ProcessWithdrawalBatch(command) => command.execute(ctx, accounts),
             OperationCommand::UnstakeLST(command) => command.execute(ctx, accounts),
+            OperationCommand::UnrestakeVRT(command) => command.execute(ctx, accounts),
+            OperationCommand::UndelegateVST(command) => command.execute(ctx, accounts),
+            OperationCommand::HarvestReward(command) => command.execute(ctx, accounts),
             OperationCommand::StakeSOL(command) => command.execute(ctx, accounts),
             OperationCommand::NormalizeST(command) => command.execute(ctx, accounts),
             OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
             OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
-            OperationCommand::HarvestReward(command) => command.execute(ctx, accounts),
         }
     }
 }

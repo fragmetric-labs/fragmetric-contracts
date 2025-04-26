@@ -1,4 +1,4 @@
-#!/usr/bin/env pnpm tsx --no-warnings
+#!/usr/bin/env pnpm tsx --no-warnings=ExperimentalWarning
 
 import { initializeFragBTC } from '../restaking/tests/fragbtc.init';
 import { initializeFragJTO } from '../restaking/tests/fragjto.init';

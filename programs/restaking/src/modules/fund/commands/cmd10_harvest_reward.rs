@@ -165,7 +165,7 @@ impl SelfExecutable for HarvestRewardCommand {
 
         Ok((
             result,
-            entry.or_else(|| Some(UnstakeLSTCommand::default().without_required_accounts())),
+            entry.or_else(|| Some(StakeSOLCommand::default().without_required_accounts())),
         ))
     }
 }

@@ -9,7 +9,7 @@
   "scripts": {
     "lint": "prettier \"**/*.{ts,mjs,cjs}\" --write",
     "lint:check": "prettier \"**/*.{ts,mjs,cjs}\" --check",
-    "test": "pnpm vitest --run",
+    "test": "NODE_OPTIONS=--no-warnings=ExperimentalWarning pnpm vitest --run",
     "test:watch": "pnpm vitest --ui",
     "test:coverage": "pnpm vitest --coverage --run",
     "build": "pnpm --filter ./clients/codegen build && pnpm --filter \\!./clients/codegen build",

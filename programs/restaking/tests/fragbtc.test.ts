@@ -956,8 +956,12 @@ describe('restaking.fragBTC test', async () => {
     // check user reward accounts
     await user1.reward.updatePools.execute(null);
     const user1Reward1 = await user1.reward.resolve(true);
-    expect(user1Reward1?.basePool.settlements[0].settledAmount).toBeGreaterThan(0n);
-    expect(user1Reward1?.basePool.settlements[0].reward.mint).toEqual('ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq');
+    expect(user1Reward1?.basePool.settlements[0].settledAmount).toBeGreaterThan(
+      0n
+    );
+    expect(user1Reward1?.basePool.settlements[0].reward.mint).toEqual(
+      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+    );
   });
 
   /** 4. withdraw and pegging **/
