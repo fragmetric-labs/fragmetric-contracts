@@ -38,8 +38,7 @@ jobs:
   ci:
     if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
-    runs-on: macos-latest
-    #runs-on: ubuntu-latest
+    runs-on: macos-latest # arch: arm64
     steps:
       # checkout
       - uses: actions/checkout@v4
@@ -177,6 +176,7 @@ jobs:
           
           {
             echo "### Hash Verification Example"
+            echo "The program binary hashes listed above were computed on a macOS (arm64) system for now."
             echo '```'
             echo "# install solana-verify"
             echo "$ cargo install solana-verify"
@@ -195,15 +195,25 @@ jobs:
             (cd "$PKG" && find . -type f ! -name '.DS_Store' | sort)
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
+          
+          cat "$GITHUB_STEP_SUMMARY" > "$PKG/README.md"
 
       - uses: actions/upload-artifact@v4
         if: github.ref_name == 'dev' || github.ref_name == 'main'
         with:
-          name: artifacts-${{ github.sha }}
+          name: fragmetric-contracts-${{ github.sha }}
           path: ${{ steps.package.outputs.path }}
 
-      # TODO: release artifacts
-      # - uses: softprops/action-gh-release@v2
-      #  with:
-      #    files: artifacts-${{ github.sha }}
-      #    fail_on_unmatched_files: true
+      - if: github.ref_name == 'main'
+        uses: actions/download-artifact@v4
+        with:
+          name: fragmetric-contracts-${{ github.sha }}
+          path: release-artifacts
+
+      - if: github.ref_name == 'main'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**
+          fail_on_unmatched_files: true
+          draft: true
+          body_path: "${{ steps.package.outputs.path }}/README.md"
