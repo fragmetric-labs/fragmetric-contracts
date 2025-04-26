@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn");
+declare_id!("FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH");
 
 #[constant]
 pub const TARGET: &str = "mainnet";
