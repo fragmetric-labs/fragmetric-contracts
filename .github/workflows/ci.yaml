@@ -122,55 +122,52 @@ jobs:
           echo "path=$PKG" >> "$GITHUB_OUTPUT"
           
           # common artifacts
-          mkdir "$PKG/common"
-          cp target/idl/restaking.json "$PKG/common/restaking.anchor-idl.json"
-          cp target/types/restaking.ts "$PKG/common/restaking.anchor-idl.ts"
-          cp target/idl/solv.json "$PKG/common/solv.anchor-idl.json"
-          cp target/types/solv.ts "$PKG/common/solv.anchor-idl.ts"
-          (cd clients/js/fragmetric-sdk/src/generated && zip -r "$PKG/common/codama-generated-typescript.zip" .)
+          cp target/idl/restaking.json "$PKG/common.restaking.anchor-idl.json"
+          cp target/types/restaking.ts "$PKG/common.restaking.anchor-idl.ts"
+          cp target/idl/solv.json "$PKG/common.solv.anchor-idl.json"
+          cp target/types/solv.ts "$PKG/common.solv.anchor-idl.ts"
+          (cd clients/js/fragmetric-sdk/src/generated && zip -r "$PKG/common.codama-generated-typescript.zip" .)
 
           echo "### Programs" >> $GITHUB_STEP_SUMMARY
           echo "| Cluster | Program | Address | Hash |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|--------|--------|--------|" >> $GITHUB_STEP_SUMMARY
         
           # devnet artifacts
-          mkdir "$PKG/devnet"
           printf '%s\n' "$KEYPAIR_RESTAKING_PROGRAM_DEVNET" > target/deploy/restaking-keypair.json
           printf '%s\n' "$KEYPAIR_SOLV_PROGRAM_DEVNET" > target/deploy/solv-keypair.json
           anchor build --no-idl -- --features devnet
           
           ADDRESS=$(solana address -k target/deploy/restaking-keypair.json)
-          echo $ADDRESS > "$PKG/devnet/restaking.address.txt"
+          echo $ADDRESS > "$PKG/devnet.restaking.address.txt"
           HASH=$(solana-verify get-executable-hash target/deploy/restaking.so)
-          echo $HASH > "$PKG/devnet/restaking.hash.txt"
-          cp target/deploy/restaking.so "$PKG/devnet/restaking.so"
+          echo $HASH > "$PKG/devnet.restaking.hash.txt"
+          cp target/deploy/restaking.so "$PKG/devnet.restaking.so"
           echo "| devnet | restaking.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
           
           ADDRESS=$(solana address -k target/deploy/solv-keypair.json)
-          echo $ADDRESS > "$PKG/devnet/solv.address.txt"
+          echo $ADDRESS > "$PKG/devnet.solv.address.txt"
           HASH=$(solana-verify get-executable-hash target/deploy/solv.so)
-          echo $HASH > "$PKG/devnet/solv.hash.txt"
-          cp target/deploy/solv.so "$PKG/devnet/solv.so"
+          echo $HASH > "$PKG/devnet.solv.hash.txt"
+          cp target/deploy/solv.so "$PKG/devnet.solv.so"
           echo "| devnet | solv.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
           
           # mainnet artifacts
-          mkdir "$PKG/mainnet"
           printf '%s\n' "$KEYPAIR_RESTAKING_PROGRAM_MAINNET" > target/deploy/restaking-keypair.json
           printf '%s\n' "$KEYPAIR_SOLV_PROGRAM_MAINNET" > target/deploy/solv-keypair.json
           anchor build --no-idl -- --features mainnet
           
           ADDRESS=$(solana address -k target/deploy/restaking-keypair.json)
-          echo $ADDRESS > "$PKG/mainnet/restaking.address.txt"
+          echo $ADDRESS > "$PKG/mainnet.restaking.address.txt"
           HASH=$(solana-verify get-executable-hash target/deploy/restaking.so)
-          echo $HASH > "$PKG/mainnet/restaking.hash.txt"
-          cp target/deploy/restaking.so "$PKG/mainnet/restaking.so"
+          echo $HASH > "$PKG/mainnet.restaking.hash.txt"
+          cp target/deploy/restaking.so "$PKG/mainnet.restaking.so"
           echo "| mainnet | restaking.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
           
           ADDRESS=$(solana address -k target/deploy/solv-keypair.json)
-          echo $ADDRESS > "$PKG/mainnet/solv.address.txt"
+          echo $ADDRESS > "$PKG/mainnet.solv.address.txt"
           HASH=$(solana-verify get-executable-hash target/deploy/solv.so)
-          echo $HASH > "$PKG/mainnet/solv.hash.txt"
-          cp target/deploy/solv.so "$PKG/mainnet/solv.so"
+          echo $HASH > "$PKG/mainnet.solv.hash.txt"
+          cp target/deploy/solv.so "$PKG/mainnet.solv.so"
           echo "| mainnet | solv.so | $ADDRESS | $HASH |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
@@ -212,8 +209,11 @@ jobs:
 
       - if: github.ref_name == 'main'
         uses: softprops/action-gh-release@v2
+        continue-on-error: true # idk why but release draft created but failed with Not Found error, ref: https://github.com/softprops/action-gh-release/issues/373
         with:
+          token: '${{ secrets.RELEASE_GITHUB_PAT }}'
           files: release-artifacts/**
           fail_on_unmatched_files: true
           draft: true
+
           body_path: "${{ steps.package.outputs.path }}/README.md"
