@@ -102,7 +102,7 @@ jobs:
           shopt -s globstar
           files=(./programs/**/*.test.ts)
           # run test with LiteSVM or SVM
-          pnpm test list "${files[@]}"
+          pnpm test "${files[@]}"
 
       # build artifacts
       # TODO: anchor build --verifiable
