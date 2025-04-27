@@ -243,19 +243,19 @@ impl HarvestRewardCommand {
                 HarvestType::Compound => {
                     self.execute_new_distribute_command(ctx, None, previous_execution_result)
                 }
-                // fallback: cmd8: unstake_lst
+                // fallback: cmd11: stake_sol
                 HarvestType::Distribute => Ok((previous_execution_result, None)),
             };
         };
 
-        let Some(entry) =
+        if let Some(entry) =
             self.create_prepare_command(ctx, harvest_type, vault, reward_token_mints)?
-        else {
+        {
+            Ok((previous_execution_result, Some(entry)))
+        } else {
             // fallback: next vault
-            return self.execute_new_command(ctx, harvest_type, Some(&vault), None);
-        };
-
-        Ok((previous_execution_result, Some(entry)))
+            self.execute_new_command(ctx, harvest_type, Some(&vault), previous_execution_result)
+        }
     }
 
     fn create_prepare_compound_command(
