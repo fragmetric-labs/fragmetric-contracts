@@ -114,6 +114,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
         )? {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
+                user: self.user_receipt_token_account.owner,
                 user_fund_account: self.user_fund_account.key(),
                 receipt_token_amount: self.user_receipt_token_account.amount,
                 created: true,
@@ -133,6 +134,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
         {
             Ok(Some(events::UserCreatedOrUpdatedFundAccount {
                 receipt_token_mint: self.receipt_token_mint.key(),
+                user: self.user_receipt_token_account.owner,
                 user_fund_account: self.user_fund_account.key(),
                 receipt_token_amount: self.user_receipt_token_account.amount,
                 created: initializing,

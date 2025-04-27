@@ -51,12 +51,16 @@ export function getUserDelegatedRewardAccountDiscriminatorBytes() {
 
 export type UserDelegatedRewardAccount = {
   discriminator: ReadonlyUint8Array;
+  receiptTokenMint: Address;
+  user: Address;
   userRewardAccount: Address;
   delegate: Option<Address>;
 };
 
 export type UserDelegatedRewardAccountArgs = {
   discriminator?: ReadonlyUint8Array;
+  receiptTokenMint: Address;
+  user: Address;
   userRewardAccount: Address;
   delegate: OptionOrNullable<Address>;
 };
@@ -65,6 +69,8 @@ export function getUserDelegatedRewardAccountEncoder(): Encoder<UserDelegatedRew
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['receiptTokenMint', getAddressEncoder()],
+      ['user', getAddressEncoder()],
       ['userRewardAccount', getAddressEncoder()],
       ['delegate', getOptionEncoder(getAddressEncoder())],
     ]),
@@ -79,6 +85,8 @@ export function getUserDelegatedRewardAccountEncoder(): Encoder<UserDelegatedRew
 export function getUserDelegatedRewardAccountDecoder(): Decoder<UserDelegatedRewardAccount> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['receiptTokenMint', getAddressDecoder()],
+    ['user', getAddressDecoder()],
     ['userRewardAccount', getAddressDecoder()],
     ['delegate', getOptionDecoder(getAddressDecoder())],
   ]);

@@ -50,6 +50,7 @@ export function getUserClaimedRewardDiscriminatorBytes() {
 export type UserClaimedReward = {
   discriminator: ReadonlyUint8Array;
   receiptTokenMint: Address;
+  user: Address;
   rewardTokenMint: Address;
   destinationRewardTokenAccount: Address;
   destinationRewardTokenAccountOwner: Address;
@@ -62,6 +63,7 @@ export type UserClaimedReward = {
 export type UserClaimedRewardArgs = {
   discriminator?: ReadonlyUint8Array;
   receiptTokenMint: Address;
+  user: Address;
   rewardTokenMint: Address;
   destinationRewardTokenAccount: Address;
   destinationRewardTokenAccountOwner: Address;
@@ -76,6 +78,7 @@ export function getUserClaimedRewardEncoder(): Encoder<UserClaimedRewardArgs> {
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['receiptTokenMint', getAddressEncoder()],
+      ['user', getAddressEncoder()],
       ['rewardTokenMint', getAddressEncoder()],
       ['destinationRewardTokenAccount', getAddressEncoder()],
       ['destinationRewardTokenAccountOwner', getAddressEncoder()],
@@ -95,6 +98,7 @@ export function getUserClaimedRewardDecoder(): Decoder<UserClaimedReward> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['receiptTokenMint', getAddressDecoder()],
+    ['user', getAddressDecoder()],
     ['rewardTokenMint', getAddressDecoder()],
     ['destinationRewardTokenAccount', getAddressDecoder()],
     ['destinationRewardTokenAccountOwner', getAddressDecoder()],

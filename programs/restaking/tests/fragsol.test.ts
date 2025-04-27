@@ -425,12 +425,14 @@ describe('restaking.fragSOL test', async () => {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
             "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
           },
           "userCreatedOrUpdatedRewardAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
             "userRewardAccount": "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
           },
           "userDepositedToFund": {

@@ -386,12 +386,14 @@ describe('restaking.fragBTC test', async () => {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
             "userFundAccount": "DdVfA4rT4tSJRMi688zb5SeZitH91AcKXU79Q4A3pCHg",
           },
           "userCreatedOrUpdatedRewardAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
             "userRewardAccount": "8XYL5QhcGSVZFX1wCdvVatXhehd7fwx9CYY4og1Fobt9",
           },
           "userDepositedToFund": {
@@ -665,12 +667,14 @@ describe('restaking.fragBTC test', async () => {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
             "userFundAccount": "4qyutWBhvuM6k73kehvo6drqQg93aLJaEiPo4ticeQE1",
           },
           "userCreatedOrUpdatedRewardAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
             "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
             "userRewardAccount": "5vjNrtqwKRB68nTfwN3gZayEADap2947MuZp43bCdLo1",
           },
           "userDepositedToFund": {

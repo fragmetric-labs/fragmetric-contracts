@@ -115,6 +115,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
         Ok(events::UserClaimedReward {
             receipt_token_mint: self.receipt_token_mint.key(),
+            user: user_reward_account.user,
             reward_token_mint: reward_token_mint.key(),
             destination_reward_token_account: destination_reward_token_account.key(),
             destination_reward_token_account_owner: destination_reward_token_account.owner,

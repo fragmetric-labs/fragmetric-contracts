@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[event]
 pub struct UserClaimedReward {
     pub receipt_token_mint: Pubkey,
+    pub user: Pubkey,
     pub reward_token_mint: Pubkey,
     pub destination_reward_token_account: Pubkey,
     pub destination_reward_token_account_owner: Pubkey,

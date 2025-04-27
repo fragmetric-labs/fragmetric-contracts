@@ -51,6 +51,7 @@ export function getUserCreatedOrUpdatedRewardAccountDiscriminatorBytes() {
 export type UserCreatedOrUpdatedRewardAccount = {
   discriminator: ReadonlyUint8Array;
   receiptTokenMint: Address;
+  user: Address;
   userRewardAccount: Address;
   receiptTokenAmount: bigint;
   created: boolean;
@@ -59,6 +60,7 @@ export type UserCreatedOrUpdatedRewardAccount = {
 export type UserCreatedOrUpdatedRewardAccountArgs = {
   discriminator?: ReadonlyUint8Array;
   receiptTokenMint: Address;
+  user: Address;
   userRewardAccount: Address;
   receiptTokenAmount: number | bigint;
   created: boolean;
@@ -69,6 +71,7 @@ export function getUserCreatedOrUpdatedRewardAccountEncoder(): Encoder<UserCreat
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['receiptTokenMint', getAddressEncoder()],
+      ['user', getAddressEncoder()],
       ['userRewardAccount', getAddressEncoder()],
       ['receiptTokenAmount', getU64Encoder()],
       ['created', getBooleanEncoder()],
@@ -86,6 +89,7 @@ export function getUserCreatedOrUpdatedRewardAccountDecoder(): Decoder<UserCreat
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['receiptTokenMint', getAddressDecoder()],
+    ['user', getAddressDecoder()],
     ['userRewardAccount', getAddressDecoder()],
     ['receiptTokenAmount', getU64Decoder()],
     ['created', getBooleanDecoder()],
