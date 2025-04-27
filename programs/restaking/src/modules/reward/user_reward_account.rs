@@ -150,14 +150,17 @@ impl UserRewardAccount {
         Ok(())
     }
 
-    pub(super) fn set_delegate(&mut self, authority: &Pubkey, delegate: Pubkey) -> Result<()> {
+    pub(super) fn set_delegate(
+        &mut self,
+        authority: &Pubkey,
+        delegate: Option<Pubkey>,
+    ) -> Result<()> {
         self.assert_authority_is_user_or_delegate(authority)?;
-        self.delegate = delegate;
+        self.delegate = delegate.unwrap_or_else(|| Pubkey::default());
 
         Ok(())
     }
 
-    /// TODO remove this method after migration (v0.6.0)
     pub fn set_delegate_unchecked(&mut self, delegate: Pubkey) {
         self.delegate = delegate;
     }

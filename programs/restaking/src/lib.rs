@@ -21,18 +21,6 @@ use utils::AsAccountInfo;
 pub mod restaking {
     use super::*;
 
-    /// TODO remove this ix after migration (v0.6.0)
-    pub fn admin_delegate_fund_wrap_account_reward_account(
-        ctx: Context<AdminDelegateFundWrapAccountRewardAccount>,
-    ) -> Result<()> {
-        ctx.accounts
-            .fund_wrap_account_reward_account
-            .load_mut()?
-            .set_delegate_unchecked(FUND_MANAGER_PUBKEY);
-
-        Ok(())
-    }
-
     ////////////////////////////////////////////
     // AdminFundAccountInitialContext
     ////////////////////////////////////////////
@@ -474,6 +462,21 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // FundManagerDelegateFundWrapAccountRewardAccount
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_reset_fund_wrap_account_reward_account_delegate(
+        ctx: Context<FundManagerDelegateFundWrapAccountRewardAccount>,
+    ) -> Result<()> {
+        ctx.accounts
+            .fund_wrap_account_reward_account
+            .load_mut()?
+            .set_delegate_unchecked(FUND_MANAGER_PUBKEY);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // FundManagerFundWrappedTokenHolderContext
     ////////////////////////////////////////////
 
@@ -507,6 +510,17 @@ pub mod restaking {
             &ctx.accounts.fund_wrap_account_reward_account,
             &ctx.accounts.wrapped_token_holder_reward_account,
         )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_reset_wrapped_token_holder_reward_account_delegate(
+        ctx: Context<FundManagerFundWrappedTokenHolderContext>,
+    ) -> Result<()> {
+        ctx.accounts
+            .wrapped_token_holder_reward_account
+            .load_mut()?
+            .set_delegate_unchecked(FUND_MANAGER_PUBKEY);
 
         Ok(())
     }
@@ -1265,7 +1279,7 @@ pub mod restaking {
 
     pub fn user_delegate_reward_account(
         ctx: Context<UserRewardAccountDelegateContext>,
-        delegate: Pubkey,
+        delegate: Option<Pubkey>,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,

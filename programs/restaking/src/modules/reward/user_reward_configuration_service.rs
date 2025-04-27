@@ -155,7 +155,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn process_delegate_user_reward_account(
         &self,
         authority: &Signer,
-        delegate: Pubkey,
+        delegate: Option<Pubkey>,
     ) -> Result<events::UserDelegatedRewardAccount> {
         let user_reward_account =
             AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
