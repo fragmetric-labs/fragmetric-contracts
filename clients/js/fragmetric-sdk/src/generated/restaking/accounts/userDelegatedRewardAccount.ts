@@ -19,6 +19,8 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
   transformEncoder,
@@ -32,6 +34,8 @@ import {
   type FetchAccountsConfig,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyUint8Array,
 } from '@solana/kit';
 
@@ -48,13 +52,13 @@ export function getUserDelegatedRewardAccountDiscriminatorBytes() {
 export type UserDelegatedRewardAccount = {
   discriminator: ReadonlyUint8Array;
   userRewardAccount: Address;
-  delegate: Address;
+  delegate: Option<Address>;
 };
 
 export type UserDelegatedRewardAccountArgs = {
   discriminator?: ReadonlyUint8Array;
   userRewardAccount: Address;
-  delegate: Address;
+  delegate: OptionOrNullable<Address>;
 };
 
 export function getUserDelegatedRewardAccountEncoder(): Encoder<UserDelegatedRewardAccountArgs> {
@@ -62,7 +66,7 @@ export function getUserDelegatedRewardAccountEncoder(): Encoder<UserDelegatedRew
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['userRewardAccount', getAddressEncoder()],
-      ['delegate', getAddressEncoder()],
+      ['delegate', getOptionEncoder(getAddressEncoder())],
     ]),
     (value) => ({
       ...value,
@@ -76,7 +80,7 @@ export function getUserDelegatedRewardAccountDecoder(): Decoder<UserDelegatedRew
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['userRewardAccount', getAddressDecoder()],
-    ['delegate', getAddressDecoder()],
+    ['delegate', getOptionDecoder(getAddressDecoder())],
   ]);
 }
 

@@ -15,7 +15,6 @@ import {
 } from '@solana/kit';
 import {
   type ParsedAdminCreateUserRewardAccountIdempotentInstruction,
-  type ParsedAdminDelegateFundWrapAccountRewardAccountInstruction,
   type ParsedAdminInitializeExtraAccountMetaListInstruction,
   type ParsedAdminInitializeFundAccountInstruction,
   type ParsedAdminInitializeNormalizedTokenPoolAccountInstruction,
@@ -40,6 +39,8 @@ import {
   type ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction,
   type ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction,
   type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
+  type ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction,
+  type ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction,
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
@@ -402,7 +403,6 @@ export function identifyRestakingAccount(
 
 export enum RestakingInstruction {
   AdminCreateUserRewardAccountIdempotent,
-  AdminDelegateFundWrapAccountRewardAccount,
   AdminInitializeExtraAccountMetaList,
   AdminInitializeFundAccount,
   AdminInitializeNormalizedTokenPoolAccount,
@@ -427,6 +427,8 @@ export enum RestakingInstruction {
   FundManagerRemoveRestakingVaultCompoundingRewardToken,
   FundManagerRemoveRestakingVaultDistributingRewardToken,
   FundManagerRemoveWrappedTokenHolder,
+  FundManagerResetFundWrapAccountRewardAccountDelegate,
+  FundManagerResetWrappedTokenHolderRewardAccountDelegate,
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
@@ -474,17 +476,6 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([112, 52, 143, 218, 23, 131, 127, 29])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.AdminDelegateFundWrapAccountRewardAccount;
   }
   if (
     containsBytes(
@@ -749,6 +740,28 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([164, 118, 178, 185, 40, 72, 135, 224])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerResetFundWrapAccountRewardAccountDelegate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([120, 182, 254, 197, 157, 225, 30, 159])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerResetWrappedTokenHolderRewardAccountDelegate;
   }
   if (
     containsBytes(
@@ -1103,9 +1116,6 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.AdminCreateUserRewardAccountIdempotent;
     } & ParsedAdminCreateUserRewardAccountIdempotentInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.AdminDelegateFundWrapAccountRewardAccount;
-    } & ParsedAdminDelegateFundWrapAccountRewardAccountInstruction<TProgram>)
-  | ({
       instructionType: RestakingInstruction.AdminInitializeExtraAccountMetaList;
     } & ParsedAdminInitializeExtraAccountMetaListInstruction<TProgram>)
   | ({
@@ -1177,6 +1187,12 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
     } & ParsedFundManagerRemoveWrappedTokenHolderInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerResetFundWrapAccountRewardAccountDelegate;
+    } & ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerResetWrappedTokenHolderRewardAccountDelegate;
+    } & ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerSettleReward;
     } & ParsedFundManagerSettleRewardInstruction<TProgram>)

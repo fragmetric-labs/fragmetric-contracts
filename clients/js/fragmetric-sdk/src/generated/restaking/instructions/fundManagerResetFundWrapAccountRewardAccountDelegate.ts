@@ -39,20 +39,20 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const ADMIN_DELEGATE_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DISCRIMINATOR =
-  new Uint8Array([112, 52, 143, 218, 23, 131, 127, 29]);
+export const FUND_MANAGER_RESET_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DELEGATE_DISCRIMINATOR =
+  new Uint8Array([164, 118, 178, 185, 40, 72, 135, 224]);
 
-export function getAdminDelegateFundWrapAccountRewardAccountDiscriminatorBytes() {
+export function getFundManagerResetFundWrapAccountRewardAccountDelegateDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    ADMIN_DELEGATE_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DISCRIMINATOR
+    FUND_MANAGER_RESET_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DELEGATE_DISCRIMINATOR
   );
 }
 
-export type AdminDelegateFundWrapAccountRewardAccountInstruction<
+export type FundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
-  TAccountAdmin extends
+  TAccountFundManager extends
     | string
-    | IAccountMeta<string> = '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL',
+    | IAccountMeta<string> = '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx',
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountFundWrapAccount extends string | IAccountMeta<string> = string,
   TAccountFundWrapAccountRewardAccount extends
@@ -63,10 +63,10 @@ export type AdminDelegateFundWrapAccountRewardAccountInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountAdmin extends string
-        ? ReadonlySignerAccount<TAccountAdmin> &
-            IAccountSignerMeta<TAccountAdmin>
-        : TAccountAdmin,
+      TAccountFundManager extends string
+        ? ReadonlySignerAccount<TAccountFundManager> &
+            IAccountSignerMeta<TAccountFundManager>
+        : TAccountFundManager,
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
@@ -80,69 +80,69 @@ export type AdminDelegateFundWrapAccountRewardAccountInstruction<
     ]
   >;
 
-export type AdminDelegateFundWrapAccountRewardAccountInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type FundManagerResetFundWrapAccountRewardAccountDelegateInstructionData =
+  { discriminator: ReadonlyUint8Array };
 
-export type AdminDelegateFundWrapAccountRewardAccountInstructionDataArgs = {};
+export type FundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataArgs =
+  {};
 
-export function getAdminDelegateFundWrapAccountRewardAccountInstructionDataEncoder(): Encoder<AdminDelegateFundWrapAccountRewardAccountInstructionDataArgs> {
+export function getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataEncoder(): Encoder<FundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
       discriminator:
-        ADMIN_DELEGATE_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DISCRIMINATOR,
+        FUND_MANAGER_RESET_FUND_WRAP_ACCOUNT_REWARD_ACCOUNT_DELEGATE_DISCRIMINATOR,
     })
   );
 }
 
-export function getAdminDelegateFundWrapAccountRewardAccountInstructionDataDecoder(): Decoder<AdminDelegateFundWrapAccountRewardAccountInstructionData> {
+export function getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataDecoder(): Decoder<FundManagerResetFundWrapAccountRewardAccountDelegateInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getAdminDelegateFundWrapAccountRewardAccountInstructionDataCodec(): Codec<
-  AdminDelegateFundWrapAccountRewardAccountInstructionDataArgs,
-  AdminDelegateFundWrapAccountRewardAccountInstructionData
+export function getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataCodec(): Codec<
+  FundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataArgs,
+  FundManagerResetFundWrapAccountRewardAccountDelegateInstructionData
 > {
   return combineCodec(
-    getAdminDelegateFundWrapAccountRewardAccountInstructionDataEncoder(),
-    getAdminDelegateFundWrapAccountRewardAccountInstructionDataDecoder()
+    getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataEncoder(),
+    getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataDecoder()
   );
 }
 
-export type AdminDelegateFundWrapAccountRewardAccountAsyncInput<
-  TAccountAdmin extends string = string,
+export type FundManagerResetFundWrapAccountRewardAccountDelegateAsyncInput<
+  TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundWrapAccount extends string = string,
   TAccountFundWrapAccountRewardAccount extends string = string,
 > = {
-  admin?: TransactionSigner<TAccountAdmin>;
+  fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundWrapAccount?: Address<TAccountFundWrapAccount>;
   fundWrapAccountRewardAccount?: Address<TAccountFundWrapAccountRewardAccount>;
 };
 
-export async function getAdminDelegateFundWrapAccountRewardAccountInstructionAsync<
-  TAccountAdmin extends string,
+export async function getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionAsync<
+  TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundWrapAccount extends string,
   TAccountFundWrapAccountRewardAccount extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: AdminDelegateFundWrapAccountRewardAccountAsyncInput<
-    TAccountAdmin,
+  input: FundManagerResetFundWrapAccountRewardAccountDelegateAsyncInput<
+    TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundWrapAccount,
     TAccountFundWrapAccountRewardAccount
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  AdminDelegateFundWrapAccountRewardAccountInstruction<
+  FundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
     TProgramAddress,
-    TAccountAdmin,
+    TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundWrapAccount,
     TAccountFundWrapAccountRewardAccount
@@ -153,7 +153,7 @@ export async function getAdminDelegateFundWrapAccountRewardAccountInstructionAsy
 
   // Original accounts.
   const originalAccounts = {
-    admin: { value: input.admin ?? null, isWritable: false },
+    fundManager: { value: input.fundManager ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
@@ -173,9 +173,9 @@ export async function getAdminDelegateFundWrapAccountRewardAccountInstructionAsy
   >;
 
   // Resolve default values.
-  if (!accounts.admin.value) {
-    accounts.admin.value =
-      '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL' as Address<'9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'>;
+  if (!accounts.fundManager.value) {
+    accounts.fundManager.value =
+      '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx' as Address<'5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx'>;
   }
   if (!accounts.fundWrapAccount.value) {
     accounts.fundWrapAccount.value = await getProgramDerivedAddress({
@@ -213,18 +213,18 @@ export async function getAdminDelegateFundWrapAccountRewardAccountInstructionAsy
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.admin),
+      getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundWrapAccount),
       getAccountMeta(accounts.fundWrapAccountRewardAccount),
     ],
     programAddress,
-    data: getAdminDelegateFundWrapAccountRewardAccountInstructionDataEncoder().encode(
+    data: getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataEncoder().encode(
       {}
     ),
-  } as AdminDelegateFundWrapAccountRewardAccountInstruction<
+  } as FundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
     TProgramAddress,
-    TAccountAdmin,
+    TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundWrapAccount,
     TAccountFundWrapAccountRewardAccount
@@ -233,35 +233,35 @@ export async function getAdminDelegateFundWrapAccountRewardAccountInstructionAsy
   return instruction;
 }
 
-export type AdminDelegateFundWrapAccountRewardAccountInput<
-  TAccountAdmin extends string = string,
+export type FundManagerResetFundWrapAccountRewardAccountDelegateInput<
+  TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundWrapAccount extends string = string,
   TAccountFundWrapAccountRewardAccount extends string = string,
 > = {
-  admin?: TransactionSigner<TAccountAdmin>;
+  fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundWrapAccount: Address<TAccountFundWrapAccount>;
   fundWrapAccountRewardAccount: Address<TAccountFundWrapAccountRewardAccount>;
 };
 
-export function getAdminDelegateFundWrapAccountRewardAccountInstruction<
-  TAccountAdmin extends string,
+export function getFundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
+  TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundWrapAccount extends string,
   TAccountFundWrapAccountRewardAccount extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: AdminDelegateFundWrapAccountRewardAccountInput<
-    TAccountAdmin,
+  input: FundManagerResetFundWrapAccountRewardAccountDelegateInput<
+    TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundWrapAccount,
     TAccountFundWrapAccountRewardAccount
   >,
   config?: { programAddress?: TProgramAddress }
-): AdminDelegateFundWrapAccountRewardAccountInstruction<
+): FundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
   TProgramAddress,
-  TAccountAdmin,
+  TAccountFundManager,
   TAccountReceiptTokenMint,
   TAccountFundWrapAccount,
   TAccountFundWrapAccountRewardAccount
@@ -271,7 +271,7 @@ export function getAdminDelegateFundWrapAccountRewardAccountInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    admin: { value: input.admin ?? null, isWritable: false },
+    fundManager: { value: input.fundManager ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
       isWritable: false,
@@ -291,26 +291,26 @@ export function getAdminDelegateFundWrapAccountRewardAccountInstruction<
   >;
 
   // Resolve default values.
-  if (!accounts.admin.value) {
-    accounts.admin.value =
-      '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL' as Address<'9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'>;
+  if (!accounts.fundManager.value) {
+    accounts.fundManager.value =
+      '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx' as Address<'5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx'>;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.admin),
+      getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundWrapAccount),
       getAccountMeta(accounts.fundWrapAccountRewardAccount),
     ],
     programAddress,
-    data: getAdminDelegateFundWrapAccountRewardAccountInstructionDataEncoder().encode(
+    data: getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataEncoder().encode(
       {}
     ),
-  } as AdminDelegateFundWrapAccountRewardAccountInstruction<
+  } as FundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
     TProgramAddress,
-    TAccountAdmin,
+    TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundWrapAccount,
     TAccountFundWrapAccountRewardAccount
@@ -319,28 +319,28 @@ export function getAdminDelegateFundWrapAccountRewardAccountInstruction<
   return instruction;
 }
 
-export type ParsedAdminDelegateFundWrapAccountRewardAccountInstruction<
+export type ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    admin: TAccountMetas[0];
+    fundManager: TAccountMetas[0];
     receiptTokenMint: TAccountMetas[1];
     fundWrapAccount: TAccountMetas[2];
     fundWrapAccountRewardAccount: TAccountMetas[3];
   };
-  data: AdminDelegateFundWrapAccountRewardAccountInstructionData;
+  data: FundManagerResetFundWrapAccountRewardAccountDelegateInstructionData;
 };
 
-export function parseAdminDelegateFundWrapAccountRewardAccountInstruction<
+export function parseFundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedAdminDelegateFundWrapAccountRewardAccountInstruction<
+): ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction<
   TProgram,
   TAccountMetas
 > {
@@ -357,12 +357,12 @@ export function parseAdminDelegateFundWrapAccountRewardAccountInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      admin: getNextAccount(),
+      fundManager: getNextAccount(),
       receiptTokenMint: getNextAccount(),
       fundWrapAccount: getNextAccount(),
       fundWrapAccountRewardAccount: getNextAccount(),
     },
-    data: getAdminDelegateFundWrapAccountRewardAccountInstructionDataDecoder().decode(
+    data: getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionDataDecoder().decode(
       instruction.data
     ),
   };

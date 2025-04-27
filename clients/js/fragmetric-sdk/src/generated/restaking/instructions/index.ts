@@ -7,7 +7,6 @@
  */
 
 export * from './adminCreateUserRewardAccountIdempotent';
-export * from './adminDelegateFundWrapAccountRewardAccount';
 export * from './adminInitializeExtraAccountMetaList';
 export * from './adminInitializeFundAccount';
 export * from './adminInitializeNormalizedTokenPoolAccount';
@@ -32,6 +31,8 @@ export * from './fundManagerInitializeFundWrappedToken';
 export * from './fundManagerRemoveRestakingVaultCompoundingRewardToken';
 export * from './fundManagerRemoveRestakingVaultDistributingRewardToken';
 export * from './fundManagerRemoveWrappedTokenHolder';
+export * from './fundManagerResetFundWrapAccountRewardAccountDelegate';
+export * from './fundManagerResetWrappedTokenHolderRewardAccountDelegate';
 export * from './fundManagerSettleReward';
 export * from './fundManagerUpdateFundStrategy';
 export * from './fundManagerUpdateRestakingVaultDelegationStrategy';

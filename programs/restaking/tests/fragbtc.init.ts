@@ -161,7 +161,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         decimals: 6,
         name: 'ZEUS',
-        description: 'ZEUS Incentive',
+        description: 'ZEUS incentive',
       }),
     () =>
       ctx.reward.updateReward.execute({

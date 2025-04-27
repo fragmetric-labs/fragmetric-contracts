@@ -1,10 +1,22 @@
+import * as system from '@solana-program/system';
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
-import { Account, createNoopSigner, EncodedAccount } from '@solana/kit';
-import { AccountContext, TransactionTemplateContext } from '../../context';
+import {
+  Account,
+  Address,
+  createNoopSigner,
+  EncodedAccount,
+} from '@solana/kit';
+import * as v from 'valibot';
+import {
+  AccountContext,
+  TransactionTemplateContext,
+  transformAddressResolverVariant,
+} from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
 import { RestakingFundWrapAccountContext } from './fund_wrap';
+import { RestakingProgram } from './program';
 import { RestakingRewardAccountContext } from './reward';
 import { RestakingUserAccountContext } from './user';
 
@@ -33,6 +45,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
       reserved,
       reserved2,
       reserved3,
+      delegate,
       ...props
     } = account.data;
     const pools = [baseUserRewardPool, bonusUserRewardPool].map((pool) => {
@@ -88,6 +101,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
     });
     return {
       user,
+      delegate: delegate == system.SYSTEM_PROGRAM_ADDRESS ? null : delegate,
       // dataVersion,
       receiptTokenMint,
       ...props,
@@ -187,6 +201,246 @@ abstract class RestakingAbstractUserRewardAccountContext<
       ],
     }
   );
+
+  readonly claim = new TransactionTemplateContext(
+    this,
+    v.object({
+      delegate: v.pipe(
+        v.nullish(v.string(), null),
+        v.description('set delegate signer if eligible')
+      ),
+      isBonus: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description(
+          'whether the reward is from bonus reward pool, default is false'
+        )
+      ),
+      mint: v.string(),
+      amount: v.union(
+        [v.bigint(), v.null()],
+        'set null to claim all the possible amount'
+      ),
+      recipient: v.union(
+        [v.string(), v.null()],
+        'set recipient address (owner of ATA), set null to send to reward account owner'
+      ),
+    }),
+    {
+      description: 'claim rewards',
+      anchorEventDecoders: getRestakingAnchorEventDecoders('userClaimedReward'),
+      instructions: [
+        async (parent, args, overrides) => {
+          let [receiptTokenMint, reward, userAddress, user, userReward, payer] =
+            await Promise.all([
+              this.__globalRewardAccount.parent.resolveAddress(),
+              this.__globalRewardAccount.resolve(),
+              parent.parent.resolveAddress(true),
+              parent.parent.resolveAccount(true),
+              parent.resolveAccount(true),
+              transformAddressResolverVariant(
+                overrides.feePayer ??
+                  this.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
+              )(parent),
+            ]);
+          userAddress =
+            userAddress ?? (user?.address as Address | null) ?? null;
+          if (!(receiptTokenMint && reward && userAddress && userReward))
+            throw new Error('invalid context');
+
+          const targetReward = reward.rewards.find(
+            (item) => item.mint == args.mint
+          );
+          if (!targetReward)
+            throw new Error('invalid context: reward not found');
+          if (!targetReward.claimable)
+            throw new Error('invalid context: non-claimable reward');
+
+          // Determine the correct signer—either the user or the current delegate if not given explicitly.
+          // If the user is a PDA (e.g., a token account for a fund wrapper or its holders), treat the current delegate as the required authority.
+          // If no delegate is set, fall back to the user as the authority.
+          const claimAuthority = (args.delegate ??
+            (user && user.programAddress == system.SYSTEM_PROGRAM_ADDRESS
+              ? userAddress
+              : userReward.data.delegate == system.SYSTEM_PROGRAM_ADDRESS
+                ? userAddress
+                : userReward.data.delegate)) as Address;
+
+          // prevent possible human fault when the recipient is not given while the user account is PDA.
+          if (
+            !args.recipient &&
+            user?.programAddress != system.SYSTEM_PROGRAM_ADDRESS
+          )
+            throw new Error(
+              'invalid context: set recipient address explicitly to send reward to ATA of PDA'
+            );
+
+          const recipient = (args.recipient ?? userAddress) as Address;
+          const ix =
+            await token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(payer! as Address),
+              mint: targetReward.mint,
+              owner: recipient,
+              tokenProgram: targetReward.program,
+            });
+          const recipientRewardTokenAccount = ix.accounts[1].address;
+
+          return Promise.all([
+            ix,
+            restaking.getUserClaimRewardInstructionAsync(
+              {
+                claimAuthority: createNoopSigner(claimAuthority),
+                user: userAddress as Address,
+                receiptTokenMint: receiptTokenMint,
+                rewardTokenMint: targetReward.mint,
+                rewardTokenProgram: targetReward.program,
+                destinationRewardTokenAccount: recipientRewardTokenAccount,
+                isBonusPool: args.isBonus,
+                amount: args.amount,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
+
+  readonly delegate = new TransactionTemplateContext(
+    this,
+    v.object({
+      delegate: v.nullish(v.string(), null),
+      newDelegate: v.string(),
+    }),
+    {
+      description: 'delegate user reward account',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'userDelegatedRewardAccount'
+      ),
+      instructions: [
+        async (parent, args) => {
+          let [receiptTokenMint, userAddress, user, userReward] =
+            await Promise.all([
+              this.__globalRewardAccount.parent.resolveAddress(),
+              parent.parent.resolveAddress(true),
+              parent.parent.resolveAccount(true),
+              parent.resolveAccount(true),
+            ]);
+          userAddress =
+            userAddress ?? (user?.address as Address | null) ?? null;
+          if (!(receiptTokenMint && userAddress && userReward))
+            throw new Error('invalid context');
+
+          // Determine the correct signer—either the user or the current delegate if not given explicitly.
+          // If the user is a PDA (e.g., a token account for a fund wrapper or its holders), treat the current delegate as the required authority.
+          // If no delegate is set, fall back to the user as the authority.
+          const delegateAuthority = (args.delegate ??
+            (user && user.programAddress == system.SYSTEM_PROGRAM_ADDRESS
+              ? userAddress
+              : userReward.data.delegate == system.SYSTEM_PROGRAM_ADDRESS
+                ? userAddress
+                : userReward.data.delegate)) as Address;
+          const newDelegate =
+            args.newDelegate == system.SYSTEM_PROGRAM_ADDRESS
+              ? null
+              : (args.newDelegate as Address);
+          if (
+            user?.programAddress != system.SYSTEM_PROGRAM_ADDRESS &&
+            !newDelegate
+          ) {
+            throw new Error(
+              'invalid context: irreversible delegation is not allowed for PDA user'
+            );
+          }
+
+          return Promise.all([
+            restaking.getUserDelegateRewardAccountInstructionAsync(
+              {
+                delegateAuthority: createNoopSigner(delegateAuthority),
+                user: userAddress,
+                receiptTokenMint: receiptTokenMint,
+                delegate: newDelegate,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
+
+  readonly resetDelegate = new TransactionTemplateContext(this, null, {
+    description:
+      'reset delegate of reward account (in case of either fund wrap or wrapped token holder, delegate will be reset to fund manager)',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'userDelegatedRewardAccount'
+    ),
+    instructions: [
+      async (parent, args) => {
+        let [receiptTokenMint, wrappedTokenMint, fundWrap, userAddress, user] =
+          await Promise.all([
+            this.__globalRewardAccount.parent.resolveAddress(),
+            this.__globalRewardAccount.parent.wrappedTokenMint.resolveAddress(),
+            this.__globalRewardAccount.parent.fund.wrap.resolveAddress(),
+            this.parent.resolveAddress(true),
+            this.parent.resolveAccount(true),
+          ]);
+        userAddress =
+          userAddress ?? (user?.address as Address | null) ?? null;
+        if (!(receiptTokenMint && wrappedTokenMint && fundWrap && userAddress))
+          throw new Error('invalid context');
+        return Promise.all([
+          userAddress == fundWrap
+            ? restaking.getFundManagerResetFundWrapAccountRewardAccountDelegateInstructionAsync(
+                {
+                  fundManager: createNoopSigner(
+                    (this.program as RestakingProgram).knownAddresses
+                      .fundManager
+                  ),
+                  receiptTokenMint: receiptTokenMint,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              )
+            : (user && user.programAddress == system.SYSTEM_PROGRAM_ADDRESS)
+              ? restaking.getUserDelegateRewardAccountInstructionAsync(
+                  {
+                    delegateAuthority: createNoopSigner(userAddress),
+                    user: userAddress,
+                    receiptTokenMint: receiptTokenMint,
+                    delegate: null,
+                    program: this.program.address,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : restaking.getFundManagerResetWrappedTokenHolderRewardAccountDelegateInstructionAsync(
+                  {
+                    fundManager: createNoopSigner(
+                      (this.program as RestakingProgram).knownAddresses
+                        .fundManager
+                    ),
+                    receiptTokenMint: receiptTokenMint,
+                    wrappedTokenMint: wrappedTokenMint,
+                    wrappedTokenHolder: userAddress,
+                    program: this.program.address,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                ),
+        ]);
+      },
+    ],
+  });
 }
 
 export class RestakingUserRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingUserAccountContext> {

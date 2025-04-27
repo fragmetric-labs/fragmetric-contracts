@@ -16,10 +16,14 @@ import {
   getOperatorUpdatedRewardPoolsDiscriminatorBytes,
   getUserCanceledWithdrawalRequestFromFundDecoder,
   getUserCanceledWithdrawalRequestFromFundDiscriminatorBytes,
+  getUserClaimedRewardDecoder,
+  getUserClaimedRewardDiscriminatorBytes,
   getUserCreatedOrUpdatedFundAccountDecoder,
   getUserCreatedOrUpdatedFundAccountDiscriminatorBytes,
   getUserCreatedOrUpdatedRewardAccountDecoder,
   getUserCreatedOrUpdatedRewardAccountDiscriminatorBytes,
+  getUserDelegatedRewardAccountDecoder,
+  getUserDelegatedRewardAccountDiscriminatorBytes,
   getUserDepositedToFundDecoder,
   getUserDepositedToFundDiscriminatorBytes,
   getUserRequestedWithdrawalFromFundDecoder,
@@ -52,7 +56,7 @@ export function getRestakingAnchorEventDecoders<
   return partial as Pick<typeof restakingAnchorEventDecoders, EVENT_NAMES>;
 }
 
-// 17 events on v0.5.1
+// 19 events on v0.6.1
 export const restakingAnchorEventDecoders = {
   // fund manager
   fundManagerUpdatedFund: {
@@ -127,6 +131,14 @@ export const restakingAnchorEventDecoders = {
   userUpdatedRewardPool: {
     discriminator: getUserUpdatedRewardPoolDiscriminatorBytes(),
     decoder: getUserUpdatedRewardPoolDecoder(),
+  },
+  userClaimedReward: {
+    discriminator: getUserClaimedRewardDiscriminatorBytes(),
+    decoder: getUserClaimedRewardDecoder(),
+  },
+  userDelegatedRewardAccount: {
+    discriminator: getUserDelegatedRewardAccountDiscriminatorBytes(),
+    decoder: getUserDelegatedRewardAccountDecoder(),
   },
 } satisfies {
   [k in string]: {

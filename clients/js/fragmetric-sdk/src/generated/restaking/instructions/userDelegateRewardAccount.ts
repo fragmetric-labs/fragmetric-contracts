@@ -14,6 +14,8 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
@@ -27,6 +29,8 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
@@ -98,18 +102,18 @@ export type UserDelegateRewardAccountInstruction<
 
 export type UserDelegateRewardAccountInstructionData = {
   discriminator: ReadonlyUint8Array;
-  delegate: Address;
+  delegate: Option<Address>;
 };
 
 export type UserDelegateRewardAccountInstructionDataArgs = {
-  delegate: Address;
+  delegate: OptionOrNullable<Address>;
 };
 
 export function getUserDelegateRewardAccountInstructionDataEncoder(): Encoder<UserDelegateRewardAccountInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['delegate', getAddressEncoder()],
+      ['delegate', getOptionEncoder(getAddressEncoder())],
     ]),
     (value) => ({
       ...value,
@@ -121,7 +125,7 @@ export function getUserDelegateRewardAccountInstructionDataEncoder(): Encoder<Us
 export function getUserDelegateRewardAccountInstructionDataDecoder(): Decoder<UserDelegateRewardAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['delegate', getAddressDecoder()],
+    ['delegate', getOptionDecoder(getAddressDecoder())],
   ]);
 }
 

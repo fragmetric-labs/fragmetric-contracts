@@ -278,7 +278,7 @@ describe('restaking.fragBTC test', async () => {
               "reward": {
                 "claimable": true,
                 "decimals": 6,
-                "description": "ZEUS Incentive",
+                "description": "ZEUS incentive",
                 "id": 1,
                 "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
                 "name": "ZEUS",
@@ -351,7 +351,7 @@ describe('restaking.fragBTC test', async () => {
           {
             "claimable": true,
             "decimals": 6,
-            "description": "ZEUS Incentive",
+            "description": "ZEUS incentive",
             "id": 1,
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
             "name": "ZEUS",

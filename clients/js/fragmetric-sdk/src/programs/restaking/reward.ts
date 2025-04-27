@@ -18,6 +18,7 @@ import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
 import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
+import { RestakingRewardReserveAccountContext } from './reward_reserve';
 
 export class RestakingRewardAccountContext extends AccountContext<
   RestakingReceiptTokenMintAccountContext,
@@ -170,9 +171,12 @@ export class RestakingRewardAccountContext extends AccountContext<
       return null;
     });
   }
+
   protected __decodeAccount(account: EncodedAccount) {
     return restaking.decodeRewardAccount(account);
   }
+
+  readonly reserve = new RestakingRewardReserveAccountContext(this);
 
   /** operator transactions **/
   readonly updatePools = new TransactionTemplateContext(this, null, {

@@ -196,7 +196,7 @@ export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_ALREADY_REGISTERED_ERROR
 export const RESTAKING_ERROR__FUND_WRAPPED_TOKEN_HOLDER_NOT_FOUND_ERROR = 0x17c9; // 6089
 /** RewardInvalidUserRewardAccountAuthorityError: reward: user reward account authority must be either user or delegate */
 export const RESTAKING_ERROR__REWARD_INVALID_USER_REWARD_ACCOUNT_AUTHORITY_ERROR = 0x17ca; // 6090
-/** FundRestakingVaultCompoundingRewardTokenNotRegisteredError: fund: restaking vault compounding reward token not resgistered */
+/** FundRestakingVaultCompoundingRewardTokenNotRegisteredError: fund: restaking vault compounding reward token not registered */
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_REGISTERED_ERROR = 0x17cb; // 6091
 /** FundRestakingVaultDistributingRewardTokenNotRegisteredError: fund: restaking vault distributing reward token not registered */
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_NOT_REGISTERED_ERROR = 0x17cc; // 6092
@@ -325,7 +325,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR]: `fund: not supported restaking vault`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR]: `fund: restaking vault already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR]: `fund: restaking vault compounding reward token already registered`,
-    [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_REGISTERED_ERROR]: `fund: restaking vault compounding reward token not resgistered`,
+    [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_REGISTERED_ERROR]: `fund: restaking vault compounding reward token not registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR]: `fund: restaking vault distributing reward token already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_NOT_REGISTERED_ERROR]: `fund: restaking vault distributing reward token not registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_NOT_FOUND_ERROR]: `fund: restaking vault not found`,

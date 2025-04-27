@@ -109,7 +109,10 @@ test('can traverse context graph', async () => {
       │   │   ├── wrap                                      RestakingFundWrapAccount address=undefined, lamports=undefined
       │   │   │   ├── reward                                RestakingFundWrapRewardAccount address=undefined
       │   │   │   │   ├── updatePools                       TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   │   └── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
@@ -134,6 +137,8 @@ test('can traverse context graph', async () => {
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
       │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
       │   ├── reward                                        RestakingRewardAccount address=undefined
+      │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
+      │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
       │   │   ├── updatePools                               TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global reward
       │   │   ├── initializeOrUpdateAccount                 TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
       │   │   ├── addReward                                 TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-claim
@@ -154,7 +159,10 @@ test('can traverse context graph', async () => {
       │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
       │   │   ├── reward                                    RestakingUserRewardAccount address=undefined
       │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
@@ -180,7 +188,10 @@ test('can traverse context graph', async () => {
       │   │   ├── wrap                                      RestakingFundWrapAccount address=undefined, lamports=undefined
       │   │   │   ├── reward                                RestakingFundWrapRewardAccount address=undefined
       │   │   │   │   ├── updatePools                       TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   │   └── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
@@ -205,6 +216,8 @@ test('can traverse context graph', async () => {
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
       │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
       │   ├── reward                                        RestakingRewardAccount address=undefined
+      │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
+      │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
       │   │   ├── updatePools                               TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global reward
       │   │   ├── initializeOrUpdateAccount                 TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
       │   │   ├── addReward                                 TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-claim
@@ -225,7 +238,10 @@ test('can traverse context graph', async () => {
       │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
       │   │   ├── reward                                    RestakingUserRewardAccount address=undefined
       │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
@@ -251,7 +267,10 @@ test('can traverse context graph', async () => {
       │   │   ├── wrap                                      RestakingFundWrapAccount address=undefined, lamports=undefined
       │   │   │   ├── reward                                RestakingFundWrapRewardAccount address=undefined
       │   │   │   │   ├── updatePools                       TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   │   └── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── initializeOrUpdateAccount         TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
@@ -276,6 +295,8 @@ test('can traverse context graph', async () => {
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
       │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
       │   ├── reward                                        RestakingRewardAccount address=undefined
+      │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
+      │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
       │   │   ├── updatePools                               TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global reward
       │   │   ├── initializeOrUpdateAccount                 TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
       │   │   ├── addReward                                 TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-claim
@@ -296,7 +317,10 @@ test('can traverse context graph', async () => {
       │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
       │   │   ├── reward                                    RestakingUserRewardAccount address=undefined
       │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward pools
-      │   │   │   └── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+      │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+      │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+      │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
