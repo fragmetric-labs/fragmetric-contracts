@@ -210,7 +210,7 @@ impl RestakingVault {
         distributing_reward_token_mint: Pubkey,
     ) -> Result<()> {
         let matched_idx = self
-            .get_compounding_reward_tokens_iter()
+            .get_distributing_reward_tokens_iter()
             .position(|reward_token| *reward_token == distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
