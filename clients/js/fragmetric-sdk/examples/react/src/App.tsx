@@ -41,7 +41,7 @@ function Main() {
       try {
         const versionedTx = web3.VersionedTransaction.deserialize(Buffer.from(tx, 'base64'));
         const signedTx = await signTransaction(versionedTx);
-        await restaking.runtime.rpc.sendTransaction(Buffer.from(signedTx.serialize()).toString('base64') as Base64EncodedWireTransaction, { encoding: 'base64' }).send();
+        console.log(await restaking.runtime.rpc.sendTransaction(Buffer.from(signedTx.serialize()).toString('base64') as Base64EncodedWireTransaction, { encoding: 'base64' }).send());
       } catch (e) {
         console.error(e);
       }

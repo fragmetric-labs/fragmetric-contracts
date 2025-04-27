@@ -17,6 +17,7 @@ import {
   createDefaultTransactionExecutionHooks,
   setLogger,
 } from './utils';
+export { createDefaultTransactionExecutionHooks } from './utils';
 
 export type RootCommandOptions = {
   url: string;
