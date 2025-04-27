@@ -116,8 +116,9 @@ pub struct HarvestRewardCommandResult {
     pub reward_token_mint: Pubkey,
     pub reward_token_amount: u64,
     pub swapped_token_mint: Option<Pubkey>,
-    pub distributed_token_amount: u64,
     pub compounded_token_amount: u64,
+    pub distributed_token_amount: u64,
+    pub updated_reward_account: Option<Pubkey>,
 }
 
 #[derive(Clone, Copy)]
@@ -889,8 +890,9 @@ impl HarvestRewardCommand {
                     reward_token_mint: *reward_token_mint,
                     reward_token_amount: from_token_swapped_amount,
                     swapped_token_mint: Some(*supported_token_mint),
-                    distributed_token_amount: 0,
                     compounded_token_amount: to_token_swapped_amount,
+                    distributed_token_amount: 0,
+                    updated_reward_account: None,
                 }
             }
         };
@@ -952,8 +954,9 @@ impl HarvestRewardCommand {
             reward_token_mint: *supported_token_mint,
             reward_token_amount,
             swapped_token_mint: None,
-            distributed_token_amount: 0,
             compounded_token_amount: reward_token_amount,
+            distributed_token_amount: 0,
+            updated_reward_account: None,
         };
 
         Ok(Some(result))
@@ -1053,8 +1056,9 @@ impl HarvestRewardCommand {
                     reward_token_mint: reward_token_mint.key(),
                     reward_token_amount,
                     swapped_token_mint: None,
-                    distributed_token_amount: reward_token_amount,
                     compounded_token_amount: 0,
+                    distributed_token_amount: reward_token_amount,
+                    updated_reward_account: Some(reward_account.key()),
                 }
                 .into();
 

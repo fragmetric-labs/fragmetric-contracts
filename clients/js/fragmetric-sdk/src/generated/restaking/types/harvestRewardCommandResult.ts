@@ -28,16 +28,18 @@ export type HarvestRewardCommandResult = {
   rewardTokenMint: Address;
   rewardTokenAmount: bigint;
   swappedTokenMint: Option<Address>;
-  distributedTokenAmount: bigint;
   compoundedTokenAmount: bigint;
+  distributedTokenAmount: bigint;
+  updatedRewardAccount: Option<Address>;
 };
 
 export type HarvestRewardCommandResultArgs = {
   rewardTokenMint: Address;
   rewardTokenAmount: number | bigint;
   swappedTokenMint: OptionOrNullable<Address>;
-  distributedTokenAmount: number | bigint;
   compoundedTokenAmount: number | bigint;
+  distributedTokenAmount: number | bigint;
+  updatedRewardAccount: OptionOrNullable<Address>;
 };
 
 export function getHarvestRewardCommandResultEncoder(): Encoder<HarvestRewardCommandResultArgs> {
@@ -45,8 +47,9 @@ export function getHarvestRewardCommandResultEncoder(): Encoder<HarvestRewardCom
     ['rewardTokenMint', getAddressEncoder()],
     ['rewardTokenAmount', getU64Encoder()],
     ['swappedTokenMint', getOptionEncoder(getAddressEncoder())],
-    ['distributedTokenAmount', getU64Encoder()],
     ['compoundedTokenAmount', getU64Encoder()],
+    ['distributedTokenAmount', getU64Encoder()],
+    ['updatedRewardAccount', getOptionEncoder(getAddressEncoder())],
   ]);
 }
 
@@ -55,8 +58,9 @@ export function getHarvestRewardCommandResultDecoder(): Decoder<HarvestRewardCom
     ['rewardTokenMint', getAddressDecoder()],
     ['rewardTokenAmount', getU64Decoder()],
     ['swappedTokenMint', getOptionDecoder(getAddressDecoder())],
-    ['distributedTokenAmount', getU64Decoder()],
     ['compoundedTokenAmount', getU64Decoder()],
+    ['distributedTokenAmount', getU64Decoder()],
+    ['updatedRewardAccount', getOptionDecoder(getAddressDecoder())],
   ]);
 }
 
