@@ -58,7 +58,6 @@ pub enum HarvestRewardCommandState {
     },
 }
 
-use crate::entry;
 use HarvestRewardCommandState::*;
 
 impl std::fmt::Debug for HarvestRewardCommandState {

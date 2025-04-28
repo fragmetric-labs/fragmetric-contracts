@@ -15,13 +15,13 @@ import {
 } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
-import { RestakingFundWrapAccountContext } from './fund_wrap';
+import { RestakingFundWrapAccountContext, RestakingFundWrappedTokenHolderContext } from './fund_wrap';
 import { RestakingProgram } from './program';
 import { RestakingRewardAccountContext } from './reward';
 import { RestakingUserAccountContext } from './user';
 
 abstract class RestakingAbstractUserRewardAccountContext<
-  P extends AccountContext<any>,
+  P extends AccountContext<any, Account<any>>,
 > extends AccountContext<P, Account<restaking.UserRewardAccount>> {
   protected abstract __globalRewardAccount: RestakingRewardAccountContext;
 
@@ -452,5 +452,11 @@ export class RestakingUserRewardAccountContext extends RestakingAbstractUserRewa
 export class RestakingFundWrapRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingFundWrapAccountContext> {
   protected get __globalRewardAccount() {
     return this.parent.parent.parent.reward;
+  }
+}
+
+export class RestakingFundWrappedTokenHolderRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingFundWrappedTokenHolderContext> {
+  protected get __globalRewardAccount() {
+    return this.parent.parent.parent.parent.reward;
   }
 }
