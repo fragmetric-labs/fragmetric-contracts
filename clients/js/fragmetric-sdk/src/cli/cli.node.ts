@@ -9,15 +9,14 @@ import {
   setContextCustomInspectionEnabled,
   TransactionSignerResolver,
 } from '../context';
-import { RestakingProgram } from '../programs';
-import { SolvBTCVaultProgram } from '../programs/solv/program';
+import { RestakingProgram, SolvBTCVaultProgram } from '../programs';
 import { subCommands } from './commands';
 import {
   createBigIntToJSONShim,
   createDefaultTransactionExecutionHooks,
   setLogger,
 } from './utils';
-export { createDefaultTransactionExecutionHooks } from './utils';
+export { createDefaultTransactionExecutionHooks, logger } from './utils';
 
 export type RootCommandOptions = {
   url: string;

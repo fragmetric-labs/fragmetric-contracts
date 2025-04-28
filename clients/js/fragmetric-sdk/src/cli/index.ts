@@ -1,2 +1,2 @@
-export { startCommandLineInterface, createDefaultTransactionExecutionHooks } from './cli.node';
+export { startCommandLineInterface, createDefaultTransactionExecutionHooks, logger } from './cli.node';
 
