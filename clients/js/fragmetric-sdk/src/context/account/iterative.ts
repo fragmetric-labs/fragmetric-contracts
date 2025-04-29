@@ -8,7 +8,7 @@ export class IterativeAccountContext<
     A = C extends AccountContext<P, infer A> ? A : EncodedAccount,
   >
   extends AccountContext<P, (A | null)[]>
-  implements Iterable<AccountContext<P, A>>
+  implements Iterable<C>
 {
   async resolve(noCache?: boolean) {
     await this.resolveAccount(noCache);
@@ -23,7 +23,7 @@ export class IterativeAccountContext<
     protected readonly accountResolver: (
       parent: P,
       address: string
-    ) => Promise<AccountContext<P, A> | null>
+    ) => Promise<C | null>
   ) {
     super(parent, async (parent) => {
       return addressesResolver(parent).then((addresses) =>
@@ -32,7 +32,7 @@ export class IterativeAccountContext<
     });
   }
 
-  protected readonly __children: AccountContext<P, A>[] = [];
+  protected readonly __children: C[] = [];
 
   get children() {
     return this.__children;
@@ -42,7 +42,7 @@ export class IterativeAccountContext<
     return this.__children.length;
   }
 
-  [Symbol.iterator](): Iterator<AccountContext<P, A>> {
+  [Symbol.iterator](): Iterator<C> {
     return this.children.values();
   }
 

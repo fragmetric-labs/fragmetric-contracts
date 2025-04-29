@@ -1931,6 +1931,7 @@ export class RestakingFundAccountContext extends AccountContext<
     {
       description: 'add new wrapped token holder',
       anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'userCreatedOrUpdatedRewardAccount',
         'fundManagerUpdatedFund'
       ),
       instructions: [
