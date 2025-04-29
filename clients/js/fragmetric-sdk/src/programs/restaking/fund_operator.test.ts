@@ -24,8 +24,7 @@ describe('RestakingFundOperatorContext on devnet', async () => {
     });
   });
 
-  // TODO [sdk]: ix context changed in program but not deployed on devnet yet
-  test.skip('can execute donateTransaction', async () => {
+  test('can execute donateTransaction', async () => {
     await expect(
       program.fragSOL.fund.donate.execute(
         {

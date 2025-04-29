@@ -113,7 +113,8 @@ test('can traverse context graph', async () => {
       │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
       │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
       │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
-      │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   ├── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   └── holders                               IterativeAccount length=undefined, types=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
       │   │   ├── addressLookupTable                        RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
@@ -135,7 +136,7 @@ test('can traverse context graph', async () => {
       │   │   ├── removeRestakingVaultDistributingReward    TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=remove a distributing reward from a restaking vault
       │   │   ├── initializeNormalizedToken                 TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
-      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
+      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped token h
       │   ├── reward                                        RestakingRewardAccount address=undefined
       │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
       │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
@@ -192,7 +193,8 @@ test('can traverse context graph', async () => {
       │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
       │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
       │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
-      │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   ├── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   └── holders                               IterativeAccount length=undefined, types=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
       │   │   ├── addressLookupTable                        RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
@@ -214,7 +216,7 @@ test('can traverse context graph', async () => {
       │   │   ├── removeRestakingVaultDistributingReward    TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=remove a distributing reward from a restaking vault
       │   │   ├── initializeNormalizedToken                 TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
-      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
+      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped token h
       │   ├── reward                                        RestakingRewardAccount address=undefined
       │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
       │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
@@ -271,7 +273,8 @@ test('can traverse context graph', async () => {
       │   │   │   │   ├── claim                             TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
       │   │   │   │   ├── delegate                          TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
       │   │   │   │   └── resetDelegate                     TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or wra
-      │   │   │   └── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   ├── receiptToken                          TokenAccount address=undefined, amount=undefined, mint=undefined
+      │   │   │   └── holders                               IterativeAccount length=undefined, types=undefined
       │   │   ├── treasury                                  RestakingFundTreasuryAccount address=undefined, lamports=undefined
       │   │   │   └── supportedTokens                       IterativeAccount length=undefined, types=undefined
       │   │   ├── addressLookupTable                        RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
@@ -293,7 +296,7 @@ test('can traverse context graph', async () => {
       │   │   ├── removeRestakingVaultDistributingReward    TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=remove a distributing reward from a restaking vault
       │   │   ├── initializeNormalizedToken                 TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
       │   │   ├── initializeWrappedToken                    TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
-      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=fundManagerUpdatedFund, description=add new wrapped token holder
+      │   │   └── initializeWrappedTokenHolder              TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped token h
       │   ├── reward                                        RestakingRewardAccount address=undefined
       │   │   ├── reserve                                   RestakingRewardReserveAccount address=undefined, lamports=undefined
       │   │   │   └── rewardTokens                          IterativeAccount length=undefined, types=undefined
