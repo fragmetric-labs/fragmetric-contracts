@@ -113,6 +113,7 @@ impl std::fmt::Debug for HarvestRewardCommandState {
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct HarvestRewardCommandResult {
+    pub vault: Pubkey,
     pub reward_token_mint: Pubkey,
     pub reward_token_amount: u64,
     pub swapped_token_mint: Option<Pubkey>,
@@ -764,7 +765,7 @@ impl HarvestRewardCommand {
             .is_err()
         {
             // Swap
-            self.execute_swap(ctx, &mut accounts, &reward_token_mints[0])?
+            self.execute_swap(ctx, &mut accounts, vault, &reward_token_mints[0])?
         } else {
             let receipt_token_pricing_source = fund_account
                 .get_restaking_vault(vault)?
@@ -773,7 +774,7 @@ impl HarvestRewardCommand {
             match receipt_token_pricing_source {
                 Some(TokenPricingSource::JitoRestakingVault { .. }) => {
                     // Transfer
-                    self.execute_transfer(ctx, &mut accounts, &reward_token_mints[0])?
+                    self.execute_transfer(ctx, &mut accounts, vault, &reward_token_mints[0])?
                 }
                 Some(TokenPricingSource::SolvBTCVault { .. }) => {
                     // TODO/v0.7.0: deal with solv vault if needed
@@ -829,6 +830,7 @@ impl HarvestRewardCommand {
         &self,
         ctx: &OperationCommandContext<'info, '_>,
         accounts: &mut &[&'info AccountInfo<'info>],
+        vault: &Pubkey,
         reward_token_mint: &Pubkey,
     ) -> Result<Option<HarvestRewardCommandResult>> {
         let fund_account = ctx.fund_account.load()?;
@@ -887,6 +889,7 @@ impl HarvestRewardCommand {
                 }
 
                 HarvestRewardCommandResult {
+                    vault: *vault,
                     reward_token_mint: *reward_token_mint,
                     reward_token_amount: from_token_swapped_amount,
                     swapped_token_mint: Some(*supported_token_mint),
@@ -904,6 +907,7 @@ impl HarvestRewardCommand {
         &self,
         ctx: &OperationCommandContext<'info, '_>,
         accounts: &mut &[&'info AccountInfo<'info>],
+        vault: &Pubkey,
         supported_token_mint: &Pubkey,
     ) -> Result<Option<HarvestRewardCommandResult>> {
         let fund_account = ctx.fund_account.load()?;
@@ -951,6 +955,7 @@ impl HarvestRewardCommand {
         )?;
 
         let result = HarvestRewardCommandResult {
+            vault: *vault,
             reward_token_mint: *supported_token_mint,
             reward_token_amount,
             swapped_token_mint: None,
@@ -1053,6 +1058,7 @@ impl HarvestRewardCommand {
                     )?;
 
                 let result = HarvestRewardCommandResult {
+                    vault: *vault,
                     reward_token_mint: reward_token_mint.key(),
                     reward_token_amount,
                     swapped_token_mint: None,
