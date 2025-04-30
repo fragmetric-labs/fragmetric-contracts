@@ -1234,11 +1234,6 @@ describe('restaking.fragJTO test', async () => {
     `);
     const user4SlotAfterDeposit =
       await user4.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.bonusPool.updatedSlot);
-
-      console.error(
-        await user4.reward.resolve(true)
-          .then((userRewardAccount) => userRewardAccount!.bonusPool)
-      );
     
     // user4 gets 100 FRAGJTO from user3.
     // user4 now has 300 FRAGJTO - 200FRAGJTO(150 accrual rate) + 100FRAGJTO(100 accrual rate))
@@ -1285,11 +1280,12 @@ describe('restaking.fragJTO test', async () => {
         "succeeded": true,
       }
     `);
+    const user4SlotAfterTransfer = 
+      await user4.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.bonusPool.updatedSlot);
 
     await user4.reward.updatePools.execute(null);
     await restaking.fragJTO.reward.updatePools.execute(null);
     const user4RewardPoolAtSlot1000 = await user4.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
-    const user4Slot1000 = user4RewardPoolAtSlot1000.updatedSlot;
 
     validator.skipSlots(100n);
 
@@ -1302,7 +1298,7 @@ describe('restaking.fragJTO test', async () => {
     expect(user4RewardAccountAtSlot1100!.bonusPool.contribution)
       .toEqual(
         200n * (user4Slot1100 - user4SlotAfterDeposit) * 150n * AMOUNT_PER_FRAGJTO
-        + 100n * (user4Slot1100 - user4Slot1000) * BASIC_ACCRUAL_RATE * AMOUNT_PER_FRAGJTO
+        + 100n * (user4Slot1100 - user4SlotAfterTransfer) * BASIC_ACCRUAL_RATE * AMOUNT_PER_FRAGJTO
       );
     
     // user4 deposits 100 JTO with 130 accrual rate enabled
