@@ -25,6 +25,7 @@ import {
 } from '@solana/kit';
 
 export type HarvestRewardCommandResult = {
+  vault: Address;
   rewardTokenMint: Address;
   rewardTokenAmount: bigint;
   swappedTokenMint: Option<Address>;
@@ -34,6 +35,7 @@ export type HarvestRewardCommandResult = {
 };
 
 export type HarvestRewardCommandResultArgs = {
+  vault: Address;
   rewardTokenMint: Address;
   rewardTokenAmount: number | bigint;
   swappedTokenMint: OptionOrNullable<Address>;
@@ -44,6 +46,7 @@ export type HarvestRewardCommandResultArgs = {
 
 export function getHarvestRewardCommandResultEncoder(): Encoder<HarvestRewardCommandResultArgs> {
   return getStructEncoder([
+    ['vault', getAddressEncoder()],
     ['rewardTokenMint', getAddressEncoder()],
     ['rewardTokenAmount', getU64Encoder()],
     ['swappedTokenMint', getOptionEncoder(getAddressEncoder())],
@@ -55,6 +58,7 @@ export function getHarvestRewardCommandResultEncoder(): Encoder<HarvestRewardCom
 
 export function getHarvestRewardCommandResultDecoder(): Decoder<HarvestRewardCommandResult> {
   return getStructDecoder([
+    ['vault', getAddressDecoder()],
     ['rewardTokenMint', getAddressDecoder()],
     ['rewardTokenAmount', getU64Decoder()],
     ['swappedTokenMint', getOptionDecoder(getAddressDecoder())],
