@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto.init';
 import { createKeyPairSignerFromBytes } from '@solana/kit';
-import { LAMPORTS_PER_SOL } from '@fragmetric-labs/sdk';
 
 describe('restaking.fragJTO test', async () => {
   const testCtx = initializeFragJTO(await createTestSuiteContext());
@@ -28,7 +27,7 @@ describe('restaking.fragJTO test', async () => {
   /* create users */
   const [signer1, signer2, signer3, signer4] = await Promise.all([
     validator
-      .newSigner('fragJTOTestSigner1', 100n * LAMPORTS_PER_SOL)
+      .newSigner('fragJTOTestSigner1', 100n * 1_000_000_000n)
       .then(async (signer) => {
         await Promise.all([
           validator.airdropToken(
@@ -40,7 +39,7 @@ describe('restaking.fragJTO test', async () => {
         return signer;
       }),
     validator
-      .newSigner('fragJTOTestSigner2', 100n * LAMPORTS_PER_SOL)
+      .newSigner('fragJTOTestSigner2', 100n * 1_000_000_000n)
       .then(async (signer) => {
         await Promise.all([
           validator.airdropToken(
@@ -52,7 +51,7 @@ describe('restaking.fragJTO test', async () => {
         return signer;
       }),
     validator
-      .newSigner('fragJTOTestSigner3', 100n * LAMPORTS_PER_SOL)
+      .newSigner('fragJTOTestSigner3', 100n * 1_000_000_000n)
       .then(async (signer) => {
         await Promise.all([
           validator.airdropToken(
@@ -64,7 +63,7 @@ describe('restaking.fragJTO test', async () => {
         return signer;
       }),
     validator
-      .newSigner('fragJTOTestSigner4', 100n * LAMPORTS_PER_SOL)
+      .newSigner('fragJTOTestSigner4', 100n * 1_000_000_000n)
       .then(async (signer) => {
         await Promise.all([
           validator.airdropToken(
@@ -409,7 +408,7 @@ describe('restaking.fragJTO test', async () => {
     expect(currentUser1RewardAccount!.bonusPool.contribution).toEqual(0n);
     
     // *** 100 slot elapsed ***
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     // user2 deposits 200 JTO and get 200 fragJTO 
     await expectMasked(
@@ -484,7 +483,7 @@ describe('restaking.fragJTO test', async () => {
     expect(currentUser2RewardAccount!.bonusPool.contribution).toEqual(0n);
 
     // *** 100 slot elapsed ***
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     // user1 deposits 300 JTO and get 300 fragJTO
     await expectMasked(
@@ -559,7 +558,7 @@ describe('restaking.fragJTO test', async () => {
     expect(currentContributionOfUser2).toEqual(200n * (user2Slot200 - user2Slot100) * BASIC_ACCRUAL_RATE * AMOUNT_PER_FRAGJTO);
 
     // *** 100 slot elapsed ***
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
     await user1.reward.updatePools.execute(null);
     await user2.reward.updatePools.execute(null);
     const user1Slot300 = await user1.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool.updatedSlot); // 300 slot elapsed from the start
@@ -604,7 +603,7 @@ describe('restaking.fragJTO test', async () => {
     expect(amountToSettle).toEqual(settledAmount);
 
     // *** 100 slot elapsed ***
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
     await user1.reward.updatePools.execute(null);
     await user2.reward.updatePools.execute(null);
 
@@ -616,11 +615,11 @@ describe('restaking.fragJTO test', async () => {
     const user2SettledAmount = currentUser2RewardAccount!.bonusPool.settlements[0].settledAmount;
     const user2SettledContribution = currentUser2RewardAccount!.bonusPool.settlements[0].settledContribution;
 
-    const user1Ratio = Number(user1SettledAmount) / Number(user1SettledContribution);
-    const user2Ratio = Number(user2SettledAmount) / Number(user2SettledContribution);
+    const ratio1 = Number(user1SettledAmount) / Number(user1SettledContribution);
+    const ratio2 = Number(user2SettledAmount) / Number(user2SettledContribution);
 
-    expect(Math.abs(user1Ratio - user2Ratio)
-    ).toBeLessThanOrEqual(Number.EPSILON);
+    expect(Math.abs(ratio1 - ratio2)
+    ).toBeLessThanOrEqual(Number.EPSILON * 10000);
   });
   
   /** 3. custom accrual rate test */
@@ -752,7 +751,7 @@ describe('restaking.fragJTO test', async () => {
     `);
 
     // *** 100 slot elapsed ***
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
     await user1.reward.updatePools.execute(null);
     await user2.reward.updatePools.execute(null);
     const user1PrevBonusPool = await user1.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.bonusPool);
@@ -896,7 +895,7 @@ describe('restaking.fragJTO test', async () => {
         "succeeded": true,
       }
     `);
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     // user3 transfers 100 FRAGJTO to user4
     await expectMasked(
@@ -947,7 +946,7 @@ describe('restaking.fragJTO test', async () => {
     const user3RewardPoolAtSlot600 = await user3.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
     const userSlot600 = user3RewardPoolAtSlot600.updatedSlot;
 
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     await restaking.fragJTO.reward.updatePools.execute(null);
     let rewardPoolAtSlot700 = await restaking.fragJTO.reward.resolve(true).then((rewardAccount) => rewardAccount!.basePool);
@@ -1013,7 +1012,7 @@ describe('restaking.fragJTO test', async () => {
     user3RewardPoolAtSlot700 = await user3.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
     userSlot700 = user3RewardPoolAtSlot700.updatedSlot;
 
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     await restaking.fragJTO.reward.updatePools.execute(null);
     const rewardPoolAtSlot800 = await restaking.fragJTO.reward.resolve(true).then((rewardAccount) => rewardAccount!.basePool);
@@ -1076,7 +1075,7 @@ describe('restaking.fragJTO test', async () => {
     const user3RewardPoolAtSlot800 = await user3.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
     const userSlot800 = user3RewardPoolAtSlot800.updatedSlot;
 
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     await restaking.fragJTO.reward.updatePools.execute(null);
     let rewardPoolAtSlot900 = await restaking.fragJTO.reward.resolve(true).then((rewardAccount) => rewardAccount!.basePool);
@@ -1136,7 +1135,7 @@ describe('restaking.fragJTO test', async () => {
     user3RewardPoolAtSlot900 = await user3.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
     userSlot900 = user3RewardPoolAtSlot900.updatedSlot;
 
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     await restaking.fragJTO.reward.updatePools.execute(null);
     const rewardPoolAtSlot1000 = await restaking.fragJTO.reward.resolve(true).then((rewardAccount) => rewardAccount!.basePool);
@@ -1287,7 +1286,7 @@ describe('restaking.fragJTO test', async () => {
     await restaking.fragJTO.reward.updatePools.execute(null);
     const user4RewardPoolAtSlot1000 = await user4.reward.resolve(true).then((userRewardAccount) => userRewardAccount!.basePool);
 
-    validator.skipSlots(100n);
+    await validator.skipSlots(100n);
 
     await user4.reward.updatePools.execute(null);
     await restaking.fragJTO.reward.updatePools.execute(null);
