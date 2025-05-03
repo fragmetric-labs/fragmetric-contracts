@@ -313,7 +313,7 @@ export class SVMValidator extends TestValidator<'svm'> {
 
   async warpToSlot(slot: bigint): Promise<void> {
     this.logger(`PREPARE WARP TO SLOT ${slot}`);
-    const fullSnapshotReadySlot = ((await this.getSlot()) / 100n + 1n) * 100n;
+    const fullSnapshotReadySlot = await this.getSlot() + 101n;
 
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
