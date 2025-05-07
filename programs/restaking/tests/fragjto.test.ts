@@ -634,9 +634,9 @@ describe('restaking.fragJTO test', async () => {
             user: user2.address!.toString(),
             walletProvider: 'STIMPACK',
             contributionAccrualRate: 150,
-            expiredAt: new Date(),
+            expiredAt: new Date('9999-01-01T00:00:00Z'),
             signerKeyPair: adminSigner.keyPair,
-          }
+          },
         },
         { signers: [signer2] }
       )
@@ -1158,7 +1158,7 @@ describe('restaking.fragJTO test', async () => {
             user: user4.address!.toString(),
             walletProvider: 'TERRY',
             contributionAccrualRate: 150,
-            expiredAt: new Date(),
+            expiredAt: new Date('9999-01-01T00:00:00Z'),
             signerKeyPair: adminSigner.keyPair,
           },
         },
@@ -1310,7 +1310,7 @@ describe('restaking.fragJTO test', async () => {
             user: user4.address!.toString(),
             walletProvider: 'BACKPACK',
             contributionAccrualRate: 130,
-            expiredAt: new Date(),
+            expiredAt: new Date('9999-01-01T00:00:00Z'),
             signerKeyPair: adminSigner.keyPair,
           },
         },

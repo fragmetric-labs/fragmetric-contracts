@@ -176,6 +176,10 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
     return this.svm.getClock().slot;
   }
 
+  async getProcessedSlot(): Promise<bigint> {
+    return this.svm.getClock().slot;
+  }
+
   async warpToSlot(slot: bigint): Promise<void> {
     const currentSlot = this.svm.getClock().slot;
     if (slot < currentSlot) {
