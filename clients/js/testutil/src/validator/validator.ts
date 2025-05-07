@@ -30,11 +30,15 @@ import { createHash } from 'node:crypto';
 import path from 'path';
 
 export type TestValidatorType = 'svm' | 'litesvm';
+export type Commitment = 'processed' | 'confirmed' | 'finalized';
+export interface GetSlotOptions {
+  commitment?: Commitment;
+}
 
 export type TestValidatorOptions<T extends TestValidatorType> = {
   type: T;
   slotsPerEpoch: bigint; // default: 432000
-  ticksPerSlot: number; // default: 64 ~= 400ms
+  ticksPerSlot: number; // default: 16 ~= 100ms
   mock?: TestValidatorMockOptions;
   debug?: boolean;
 
@@ -96,7 +100,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
   ): Promise<TestValidator<T>> {
     const resolvedOptions: TestValidatorOptions<T> = {
       slotsPerEpoch: 432000n,
-      ticksPerSlot: 64,
+      ticksPerSlot: 16,
       type: options?.type ?? ('svm' as T),
       ...options,
     };
@@ -130,12 +134,11 @@ export abstract class TestValidator<T extends TestValidatorType> {
   abstract get options(): TestValidatorOptions<T>;
   abstract quit(): Promise<void>;
 
-  abstract getSlot(): Promise<bigint>;
-  abstract getProcessedSlot(): Promise<bigint>;
+  abstract getSlot(opts?: GetSlotOptions): Promise<bigint>;
 
   abstract warpToSlot(slot: bigint): Promise<void>;
   async skipSlots(slots: bigint): Promise<void> {
-    const currentSlot = await this.getProcessedSlot();
+    const currentSlot = await this.getSlot({commitment: 'processed'});
     await this.warpToSlot(currentSlot + slots);
   }
 
