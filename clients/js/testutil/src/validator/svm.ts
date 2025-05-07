@@ -78,8 +78,8 @@ export class SVMValidator extends TestValidator<'svm'> {
             ? ['--slots-per-epoch', options.slotsPerEpoch.toString()]
             : [],
           options.ticksPerSlot && !options.warpSlot
-            ? ['--ticks-per-slot', options.ticksPerSlot.toString()]
-            : [],
+            ? ['--ticks-per-slot', 16] // TODO: verify whether manipulating ticks-per-slot is appropriate
+            : ['--ticks-per-slot', 16],
           options.warpSlot
             ? ['--warp-slot', options.warpSlot.toString()]
             : ['--reset'],
@@ -221,9 +221,9 @@ export class SVMValidator extends TestValidator<'svm'> {
   }
 
   private static instanceNo = 0;
-
   private rpc: Rpc<SolanaRpcApi>;
   private rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
+  private initialSlot = 0n;
 
   protected static createLogger(options: TestValidatorOptions<'svm'>) {
     if (options.debug) {
@@ -307,21 +307,28 @@ export class SVMValidator extends TestValidator<'svm'> {
     return res.value;
   }
 
-  getSlot(): Promise<bigint> {
+
+  async getSlot(): Promise<bigint> {
     return this.rpc.getSlot({ commitment: 'finalized' }).send();
+  }
+
+  async getProcessedSlot(): Promise<bigint> {
+    return this.rpc.getSlot({ commitment: 'processed' }).send();
   }
 
   async warpToSlot(slot: bigint): Promise<void> {
     this.logger(`PREPARE WARP TO SLOT ${slot}`);
-    const fullSnapshotReadySlot = await this.getSlot() + 101n;
+    const fullSnapshotReadySlot = await this.getProcessedSlot() + 100n;
 
     while (true) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const currentSlot = await this.getSlot();
-      if (currentSlot >= slot) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const currentProcessedSlot = await this.getProcessedSlot();
+      const currentFinalizedSlot = await this.getSlot();
+
+      if (currentProcessedSlot >= slot) {
         this.logger(`NO NEED TO WARP TO SLOT ${slot}`);
         return;
-      } else if (currentSlot > fullSnapshotReadySlot) {
+      } else if (currentFinalizedSlot > fullSnapshotReadySlot) {
         this.logger(
           `FULL SNAPSHOT POSSIBLY TAKEN AT SLOT ${fullSnapshotReadySlot}`
         );
@@ -340,6 +347,7 @@ export class SVMValidator extends TestValidator<'svm'> {
       ...this.options,
       warpSlot: slot,
     });
+    this.initialSlot = slot;
     this.process = newInstance.process;
   }
 }
