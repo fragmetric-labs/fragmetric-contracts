@@ -486,7 +486,7 @@ impl OperationCommandEntryPod {
 }
 
 impl SelfExecutable for OperationCommand {
-    fn execute<'a, 'info: 'a>(
+    fn execute<'a, 'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],
@@ -516,7 +516,7 @@ type ExecutionResult = Result<(
 )>;
 
 pub(super) trait SelfExecutable: Into<OperationCommand> {
-    fn execute<'a, 'info: 'a>(
+    fn execute<'a, 'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],

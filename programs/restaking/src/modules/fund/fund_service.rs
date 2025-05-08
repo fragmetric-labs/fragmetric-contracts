@@ -13,7 +13,7 @@ use crate::utils::*;
 use super::commands::{OperationCommandContext, OperationCommandEntry, SelfExecutable};
 use super::*;
 
-pub struct FundService<'info: 'a, 'a> {
+pub struct FundService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
     current_timestamp: i64,
@@ -26,7 +26,7 @@ impl Drop for FundService<'_, '_> {
     }
 }
 
-impl<'info: 'a, 'a> FundService<'info, 'a> {
+impl<'a, 'info> FundService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut AccountLoader<'info, FundAccount>,

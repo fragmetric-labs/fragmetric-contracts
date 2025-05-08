@@ -23,7 +23,7 @@ impl Drop for NormalizedTokenPoolService<'_, '_> {
     }
 }
 
-impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
+impl<'a, 'info> NormalizedTokenPoolService<'a, 'info> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
         normalized_token_mint: &'a mut InterfaceAccount<'info, Mint>,
