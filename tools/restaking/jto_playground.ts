@@ -246,8 +246,8 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         const jitoVaultProgramFeeWallet = this.getConstantAsPublicKey('jitoVaultProgramFeeWallet');
         const jitoVaultFeeWallet = this.keychain.getPublicKey('FUND_MANAGER');
         const jitoVaultConfig = this.getConstantAsPublicKey('jitoVaultConfigAddress');
-        const jitoRestakingProgram = this.getConstantAsPublicKey('jitoRestakingProgramId');
-        const jitoRestakingConfig = this.getConstantAsPublicKey('jitoRestakingConfigAddress');
+        const jitoRestakingProgram = new web3.PublicKey("RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q");
+        const jitoRestakingConfig = new web3.PublicKey("4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn");
 
         // fragJTO jito vault
         const fragJTOJitoVaultUpdateStateTracker = (vaultAccount: web3.PublicKey) => {
@@ -1229,7 +1229,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction()),
             this.methods.adminSetAddressLookupTableAccount(knownAddressLookupTableAddress).accountsPartial({
-                payer: this.wallet.publicKey,
                 receiptTokenMint: this.knownAddress.fragJTOTokenMint,
             }).instruction(),
         ];
@@ -1354,7 +1353,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                         this.knownAddress.jitoVaultProgramFeeWallet,
                         v.VRTMint,
                     ),
-                    this.program.methods.fundManagerInitializeFundJitoRestakingVault()
+                    this.program.methods.fundManagerInitializeFundRestakingVault()
                         .accountsPartial({
                             receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                             vaultAccount: v.vault,
@@ -1402,7 +1401,7 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
                     this.knownAddress.jitoVaultProgramFeeWallet,
                     vault.VRTMint,
                 ),
-                this.program.methods.fundManagerInitializeFundJitoRestakingVault()
+                this.program.methods.fundManagerInitializeFundRestakingVault()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault.vault,
@@ -1439,16 +1438,21 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
 
     public async runFundManagerAddJitoRestakingVaultDelegations(batchSize = 6) {
         const instructions = Object.values(this.restakingVaultMetadata).flatMap(vault =>
-            Object.values(vault.operators).map(operator =>
-                this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
+            Object.values(vault.operators).map(operator => {
+                const [vaultOperatorDelegation] = web3.PublicKey.findProgramAddressSync(
+                    [Buffer.from("vault_operator_delegation"), vault.vault.toBuffer(), (operator as web3.PublicKey).toBuffer()],
+                    this.knownAddress.jitoVaultProgram,
+                );
+                return this.methods.fundManagerInitializeFundRestakingVaultDelegation()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault.vault,
                         operatorAccount: operator as web3.PublicKey,
+                        vaultOperatorDelegation,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
-                    .instruction(),
-            )
+                    .instruction();
+            })
         );
 
         for (let i = 0; i < instructions.length / batchSize; i++) {
@@ -1470,13 +1474,18 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
     }
 
     public async runFundManagerAddJitoRestakingVaultDelegation(vault: web3.PublicKey, operator: web3.PublicKey) {
+        const [vaultOperatorDelegation] = web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("vault_operator_delegation"), vault.toBuffer(), operator.toBuffer()],
+            this.knownAddress.jitoVaultProgram,
+        );
         const {event, error} = await this.run({
             instructions: [
-                this.methods.fundManagerInitializeFundJitoRestakingVaultDelegation()
+                this.methods.fundManagerInitializeFundRestakingVaultDelegation()
                     .accountsPartial({
                         receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                         vaultAccount: vault,
                         operatorAccount: operator,
+                        vaultOperatorDelegation,
                     })
                     .remainingAccounts(this.pricingSourceAccounts)
                     .instruction(),
@@ -2121,7 +2130,6 @@ export class RestakingPlayground extends AnchorPlayground<Restaking, KEYCHAIN_KE
         await this.run({
             instructions: [
                 this.program.methods.adminUpdateExtraAccountMetaListIfNeeded().accounts({
-                    payer: this.wallet.publicKey,
                     receiptTokenMint: this.knownAddress.fragJTOTokenMint,
                 }).instruction(),
             ],
